@@ -96,7 +96,7 @@ A number of plant models are available in the plant architecture library, which 
 |------------------------------------------|------------------------------------|----------------------------|----------------------------------------------------|
 | Almond Tree (*Prunus dulcis*)            | Nonpareil                          | "almond"                   | trunk, scaffold, proleptic                         |
 | Almond Tree (*Prunus dulcis*)            | Independence                       | "almond_independence"      | trunk, scaffold, proleptic                         |
-| Apple Tree (*Malus pumila*)              | Fuji                               | "apple"                    | trunk, proleptic                                   |
+| Apple Tree (*Malus pumila*)              | Fuji                               | "apple"                    | trunk, proleptic, spur                             |
 | Bindweed (*Convolvulus arvensis*)        | generic                            | "bindweed"                 | base, offshoots, children                          |
 | Butter Lettuce (*Lactuca sativa*)        | generic                            | "butterlettuce"            | mainstem                                           |
 | Capsicum Pepper (*Capsicum annuum*)      | generic                            | "capsicum"                 | mainstem                                           |
@@ -170,9 +170,9 @@ int main(){
 }
 ~~~~~~
 
-\subsection PlantArchBuildParams Customizing Plant Training System Parameters
+\subsection PlantArchBuildParams Customizing Species-Specific Build Parameters
 
-The plant library supports customizable training system parameters that allow you to specify species-specific architectural features without modifying the source code. These parameters control aspects like trunk height, trellis dimensions, scaffold branch configuration, and other training-related characteristics.
+Some features of a library plant are specific to its species and have no place in the generic shoot and phytomer parameter structures: the dimensions of a grapevine trellis, the trunk height and scaffold configuration of an orchard tree, the size of grape berries and clusters, the number of tillers of a sorghum plant, or the form and color of a sorghum panicle. These are set per plant through build parameters, without modifying the source code.
 
 \subsubsection PlantArchBuildParamsAPI Using Build Parameters
 
@@ -237,25 +237,50 @@ The Wye grapevine model is a quadrilateral-cordon vine on a Wye (open gable) tre
 | vine_spacing | 1.8 | 0.5-5.0 | m | Plant-to-plant spacing along the row (each cordon spans half this distance, with one shoot position about every 8 cm) |
 | catch_wire_height | trunk_height + 0.6 | 0.5-4.0 | m | Height of the top gable wires. Must be greater than trunk_height. |
 
+<b>Grape clusters (grapevine_VSP and grapevine_Wye)</b>
+
+Both grapevine models also accept the cluster parameters below. A cluster's size follows from its berries: it grows in proportion to berry diameter and with the cube root of berry count, so the defaults give a cluster about 12 cm long (Cabernet Sauvignon).
+
+| Parameter | Default | Valid Range | Units | Description |
+|-----------|---------|-------------|-------|-------------|
+| berry_diameter | 0.012 | 0.004-0.03 | m | Diameter of a berry. Berry size varies by about 7% between berries. |
+| cluster_berry_count | 90 | 10-400 | - | Mean number of berries in a cluster. The count of each cluster varies by up to 17% either side of it. |
+
+<b>Sorghum (sorghum)</b>
+
+The sorghum model accepts the panicle parameters listed in \ref SorghumPanicle, which set the form, size and color of its panicle, with "panicle_type" selecting compact, semi-compact or loose head types, and the number of tillers.
+
+| Parameter | Default | Valid Range | Units | Description |
+|-----------|---------|-------------|-------|-------------|
+| tiller_count | 0 | 0-6 | - | Number of tillers. See \ref SorghumTillering. |
+
 <b>Tree Species (almond, apple, walnut, pistachio)</b>
 
 Tree species use a simplified height-based training system. The code automatically calculates trunk node counts based on species-specific internode lengths (almond: 3cm, apple: 4cm, walnut: 4cm, pistachio: 5cm).
 
 | Parameter | Default | Valid Range | Units | Description |
 |-----------|---------|-------------|-------|-------------|
-| trunk_height | 0.6-1.0* | 0.1-3.0 | m | Total desired trunk height |
+| trunk_height | 0.78-1.0* | 0.1-3.0 | m | Total desired trunk height |
 | num_scaffolds | 4 | 2-8 | - | Number of scaffold branches |
-| scaffold_angle | 40-50* | 20-70 | deg | Scaffold branch angle from vertical |
+| scaffold_angle | 40-57* | 20-70** | deg | Scaffold branch angle from vertical |
 
-*Default values: almond/apple: 0.6m trunk, 40° scaffolds; walnut: 0.8m trunk, 50° scaffolds; pistachio: 1.0m trunk, 57° scaffolds
+*Default values: almond and almond_independence: 0.78 m trunk, 52° scaffolds; apple: 0.8 m trunk, 40° scaffolds; walnut: 0.8 m trunk, 40° scaffolds; pistachio: 1.0 m trunk, 57° scaffolds
+
+**25-60 for walnut
 
 The pistachio model also trains the young tree as California orchards do (UC ANR pistachio establishment guidelines): each scaffold is tipped at 0.45 m during its first growing season and regrows from the buds below the cut, and in the first winter the secondaries on each scaffold are thinned to three and headed to 0.30 m, regrowing from below those cuts the next season. After that the tree grows without further pruning. The training runs from the model's phytomer callback (see \ref PlantArchCallbackEdits) and is always applied.
 
 \subsubsection PlantArchBuildParamsValidation Parameter Validation
 
-All build parameters are validated to ensure they fall within acceptable ranges. If a parameter value is outside the valid range, a `helios_runtime_error` will be thrown with a clear error message indicating the parameter name, the provided value, and the valid range.
+All build parameters are validated when the plant is built, before any geometry is created. If a parameter value is outside the valid range, or is not a finite number, a `helios_runtime_error` will be thrown with a clear error message indicating the parameter name, the provided value, and the valid range. A parameter name that the model does not accept, such as a misspelled name or one belonging to another species, also throws, and the message lists the names the model does accept. \ref PlantArchitecture::getPlantModelBuildParameterNames() returns the accepted names of a model.
 
-Parameters specified as floats will be automatically cast to unsigned integers where appropriate (e.g., node counts, scaffold counts).
+Parameters that count something (e.g., scaffold counts, branch counts, grain counts) must be whole numbers; a fractional value such as 3.9 throws rather than being rounded or truncated. A parameter that is a mean, such as cluster_berry_count, may be fractional.
+
+A plant keeps the build parameters it was built with for its whole life, because some of them, such as the sorghum tiller count and the panicle and grape cluster parameters, are read as the plant grows. \ref PlantArchitecture::getPlantBuildParameters() returns them. They are copied by \ref PlantArchitecture::duplicatePlantInstance(), and written to and read back from the plant structure XML (see \ref PlantArchitecture::writePlantStructureXML()) together with the name of the model, so that they can be validated when the file is read.
+
+Plants built with different parameters can share a PlantArchitecture. Flower and fruit prototypes are cached for each distinct set of the parameters that shape the flowers and fruit, so plants that differ only in other parameters, such as trellis dimensions or tiller count, or not at all, share their prototypes.
+
+A custom flower or fruit prototype function assigned to a library model (see \ref SorghumPanicle for an example) receives the parameters that shape the model's flowers and fruit as its last argument. It can read only the parameters the model declares for its flowers and fruit; it cannot be given parameters of its own, because a name the model does not declare is rejected.
 
 \subsubsection PlantArchBuildParamsExamples Common Use Case Examples
 
@@ -289,6 +314,26 @@ std::map<std::string, float> params = {
 plantarchitecture.buildPlantInstanceFromLibrary( position, age, params );
 ~~~~~~
 
+<b>Example 4: Grapevine VSP with Large-Berried Clusters</b>
+~~~~~~
+std::map<std::string, float> params = {
+    {"berry_diameter", 0.018},      // 18 mm table-grape berries
+    {"cluster_berry_count", 120}    // 120 berries per cluster on average
+};
+plantarchitecture.buildPlantInstanceFromLibrary( position, age, params );
+~~~~~~
+
+<b>Example 5: Sorghum with a Loose, Red-Grained Panicle</b>
+~~~~~~
+std::map<std::string, float> params = {
+    {"panicle_type", 1.0},          // loose, open head
+    {"grain_color_r", 0.55},        // red-brown grain
+    {"grain_color_g", 0.28},
+    {"grain_color_b", 0.14}
+};
+plantarchitecture.buildPlantInstanceFromLibrary( position, age, params );
+~~~~~~
+
 \subsection PlantArchGrowth Growing the Model over Time
 
 The model can be grown over time by calling the \ref PlantArchitecture::advanceTime() method after the plant instance has been created, where the argument to this method is the timestep to advance in days. The timestep value can be larger than the phyllochron, such that multiple phytomers and shoots can be produced in a single call to \ref PlantArchitecture::advanceTime().
@@ -305,7 +350,7 @@ Each time \ref PlantArchitecture::advanceTime() is called, the geometry is updat
 
 When the carbohydrate model is not enabled, perennial plants that cycle through winter dormancy are shaped by two processes applied once per season, at the dormancy boundary: branch mortality, which governs how long shoots survive, and growth priority, which lets a few shoots become limbs while their siblings stay twigs. Neither requires per-species parameters, and both are disabled when the carbohydrate model is active, which prunes branches on carbon starvation instead.
 
-Both processes need to know where the crown is shaded. Each plant carries a coarse voxel grid into which every leaf deposits "shadow", following the shadow-propagation model of Palubicki et al. (2009), <i>Self-organizing tree models for image synthesis</i>, ACM Transactions on Graphics 28(3). This is a cheap surrogate for light interception: shadow is scattered additively into a sparse array, and no ray tracing, visibility queries or radiative transfer are performed. The grid is captured at the season's peak canopy, so that when dormancy empties the canopy it still records what each branch stood in while in leaf. The local light exposure at any point can be queried with \ref PlantArchitecture::getShadowLightExposureAtPoint().
+Both processes need to know where the crown is shaded. Each plant carries a coarse voxel grid into which every leaf deposits "shadow", following the shadow-propagation model of Palubicki et al. (2009), <i>Self-organizing tree models for image synthesis</i>, ACM Transactions on Graphics 28(3). This is a cheap surrogate for light interception: shadow is scattered additively into a sparse array, and no ray tracing, visibility queries or radiative transfer are performed. The grid is captured at the season's peak canopy, so that when dormancy empties the canopy it still records what each branch stood in while in leaf. The local light exposure at any point under the current canopy can be queried with \ref PlantArchitecture::getShadowLightExposureAtPoint(), and under the canopy of the most recent seasonal peak with \ref PlantArchitecture::getSeasonPeakLightExposureAtPoint(). Through dormancy the first is 1 everywhere, while the second still gives the light of the past summer.
 
 Three deliberate deviations from the published model adapt it to mature, trained orchard crowns rather than the free-growing trees it was developed for. First, light exposure attenuates exponentially with accumulated shadow rather than linearly: the linear form saturates to exactly zero once a few dozen leaves are overhead, which on a dense mature crown makes the whole interior indistinguishable. Second, a leaf's shadow falls off with horizontal offset, not only with vertical distance, so a leaf does not shade a point far off to the side as strongly as the point directly beneath it. Third, exposure also accounts for how deep a point sits beneath the crown surface in any direction, which supplies the diffuse side-light component; without it a low branch on the outside of the crown is penalized as heavily as one buried in the middle, which prunes away the lower canopy of a vase-shaped crown.
 
@@ -568,9 +613,9 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | radial_subdivisions | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of radial subdivisions segments of the internode tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **petiole** --- ||||
 | petioles_per_internode | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of petioles emanating from a single internode (e.g., for an 'opposite' growth pattern, = 2) |
-| pitch | RandomParameter_float | degrees | Angle of the petiole base axis with respect to its parent phytomer axis. |
+| pitch | RandomParameter_float | degrees | Angle of the petiole base axis with respect to its parent phytomer axis. Not used for leaves without a petiole (length of 0). |
 | radius | RandomParameter_float | meters | Radius of petiole cross-section. If either radius or length is 0, no petiole geometry is created and leaves attach directly at the internode tip. |
-| length | RandomParameter_float | meters | Length of the petiole tube. If either radius or length is 0, no petiole geometry is created and leaves attach directly at the internode tip. |
+| length | RandomParameter_float | meters | Length of the petiole tube. If either radius or length is 0, no petiole geometry is created and leaves attach directly at the internode tip. A length of exactly 0 means the leaf has no petiole at all, as for a grass: see \ref PlantArchSessileLeaves. |
 | curvature | RandomParameter_float | degrees/meter | Curvature angle of the petiole per unit length of petiole. If curvature is positive, petiole curves upward toward vertical. If negative, curvature is downward. |
 | taper | RandomParameter_float | - | Ratio between the petiole radius at the tip to the radius at the base (e.g., =1 has no taper, =0 comes to a point at the tip). |
 | color | helios::RGBcolor | - | Diffuse color of the petiole tube. |
@@ -580,7 +625,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | flexibility_aging | RandomParameter_float | days | Timescale of the linear growth of the petiole bending compliance with age: the compliance is flexibility &times; (1 + age / flexibility_aging), without a ceiling, so a petiole keeps lowering after its leaf has stopped growing. =0 (default) disables ageing, so a petiole stops bending once its leaf is full-grown. |
 | --- **leaf** --- ||||
 | leaves_per_petiole | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of leaves on each petiole. >1 creates a compound leaf. |
-| pitch | RandomParameter_float | degrees | Angle of the leaf axis with respect to its parent petiole axis. |
+| pitch | RandomParameter_float | degrees | Angle of the leaf axis with respect to its parent petiole axis; positive values turn the leaf toward its upper surface. For a leaf without a petiole it is the angle off the internode and must be zero or negative (see \ref PlantArchSessileLeaves). |
 | yaw | RandomParameter_float | degrees | Rotation angle of the leaf about its base along the plane of its lamina. |
 | roll | RandomParameter_float | degrees | Rotation angle of the leaf about it's own axis (midrib). |
 | leaflet_offset | RandomParameter_float | - | If a compound leaf (leaves_per_petiole>1), this sets the spacing between adjacent leaflets along the petiole as a fraction of the petiole length. Note that the first two leaves from the tip will be offset from the tip by half this value. |
@@ -595,7 +640,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | roll | RandomParameter_float | degrees | Rotation angle of the peduncle about it's own axis. |
 | yaw | RandomParameter_float | degrees | Angle by which the peduncle is turned about its parent internode axis, away from the side of the node its leaf is on. At 0 (the default) the peduncle leaves the node from the leaf axil; at 180 it is on the opposite side of the node from the leaf, as a grapevine cluster is. |
 | curvature | RandomParameter_float | degrees/meter | Curvature angle of the peduncle per unit length of peduncle. If curvature is positive, peduncle curves upward toward vertical. If negative, curvature is downward. |
-| color | helios::RGBcolor | - | Diffuse color of the peduncle tube. |
+| color | helios::RGBcolor | - | Diffuse color of the peduncle tube. For a terminal inflorescence on a herbaceous stem, whose peduncle continues the culm, this is the color at the top of the peduncle: the color is blended along its length from the internode color at its base, so the peduncle meets the culm without a step and can be colored to match the inflorescence it carries. A lateral peduncle, or one on a woody stem, is this color throughout. The blend is drawn in steps of one length segment. |
 | length_segments | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of longitudinal segment subdivisions of the inflorescence supporting structure. |
 | radial_subdivisions | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of radial subdivisions segments of the inflorescence supporting structure (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **inflorescence** --- ||||
@@ -604,9 +649,9 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | pitch | RandomParameter_float | degrees | Angle of the fruit axis with respect to its parent peduncle axis. |
 | roll | RandomParameter_float | degrees | Rotation angle of the fruit about it's own axis (x-axis of fruit prototype). |
 | flower_prototype_scale | RandomParameter_float | - | Scaling factor applied to the flower prototype. Usually the prototype has unit length, so this sets the physical length of the flower. |
-| flower_prototype_function | function pointer | - | Pointer to a function that generates the flower prototype model. Function takes arguments ( helios::Context*, uint subdivisions, bool flower_is_open ) and returns an object ID (uint). |
+| flower_prototype_function | function pointer | - | Pointer to a function that generates the flower prototype model. Function takes arguments ( helios::Context*, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters ) and returns an object ID (uint). The build parameters are those the plant was built with (see \ref PlantArchBuildParams), and are empty for a plant not built from the library. |
 | fruit_prototype_scale | RandomParameter_float | - | Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit. |
-| fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint). |
+| fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, const std::map<std::string, float> &build_parameters ) and returns an object ID (uint). The build parameters are those the plant was built with (see \ref PlantArchBuildParams), and are empty for a plant not built from the library. |
 | inflorescence_maturity_period | RandomParameter_float | days | Time for the inflorescence to expand from its initial quarter size to full size. A non-positive value (the default) defers to the plant-level fruit-maturity threshold set by <code>setPlantPhenologicalThresholds()</code>. Set this where the inflorescence finishes elongating on a different schedule from the fruit, as in maize, where the tassel is fully expanded at VT roughly two months before the ear finishes grain fill. |
 | unique_prototypes | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of unique flower/fruit prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
 
@@ -633,6 +678,26 @@ phytomer.peduncle.length = 0.1;
 The figure below provides some examples of how various shoot growth patterns (e.g., alternate, opposite) can be created by varying the model parameters.
 
 \image html growth_pattern_schematic.jpeg
+
+\subsection PlantArchSessileLeaves Leaves Without a Petiole
+
+A leaf with no petiole, such as the leaf of a grass, sits directly on the stem. It is defined by a petiole length of exactly 0. None of the other petiole parameters are then used:
+
+<ul>
+<li>The leaf base is at the node.</li>
+<li>The leaf pitch is the angle between the base of the blade and the internode, rather than an angle relative to a petiole. It must be zero or negative: a pitch of -20 gives a blade leaving the stem at 20 degrees.</li>
+<li>The blade is posed in the frame of the stem: its upper face is turned toward the stem, however the stem is tilted. A leaf on a petiole is instead turned to face the sky, as a petiole can twist to do.</li>
+<li>The leaf roll turns the blade about its midrib, and a pitch added with Phytomer::rotateLeaf() turns it toward the stem when positive, as for a leaf on a petiole.</li>
+<li>The leaf must be simple (one leaf per petiole); a compound leaf needs a petiole to carry its leaflets.</li>
+</ul>
+
+~~~~~~
+PhytomerParameters grass;
+grass.petiole.length = 0;              // no petiole: the blade sits on the culm
+grass.leaf.pitch.uniformDistribution(-25, -12);  // 12-25 degrees off the culm
+~~~~~~
+
+The library grasses ("maize", "rice", "sorghum" and "wheat") have leaves without a petiole. A small positive petiole length instead gives a short petiole, whose leaf is posed from the petiole as for any other leaf.
 
 \subsection PlantArchOrgans Creating Plant Organ Prototypes
 
@@ -696,6 +761,131 @@ Fruit geometry creation is similar to that of flowers, except the prototype func
 ~~~~~~
 uint(*prototype_function)( helios::Context*, uint subdivisions )
 ~~~~~~
+
+\subsubsection SorghumPanicle Procedural Sorghum Panicle
+
+The sorghum panicle is generated procedurally by \ref buildSorghumPanicle() from a \ref SorghumPanicleParameters structure, with every grain resolved as its own small mesh rather than suggested by a texture. The panicle is a central rachis bearing whorls of primary branches. The distal, fertile part of each primary branch carries short racemes, and each raceme carries a row of grains, each grain partly enclosed by a pair of glumes. The parameters are meant to cover the range of panicle types seen across grain sorghum genotypes, from compact cylindrical heads with short, erect branches to loose, open heads with long, spreading branches that expose the rachis.
+
+Two quantities set most of what distinguishes one genotype's head from another's. The <I>outline</I> of the head comes from the primary branches: their length at the base, middle and tip of the rachis (a conical head has long basal branches, a cylindrical head roughly equal ones), and their insertion angle from the rachis. The <I>density</I> of the head comes from \htmlonly<span style="font-family: Courier, monospace; color: blue;">compactness</span>\endhtmlonly. A real head holds its grain in a layer a few grains deep over the branches rather than solid through, and compactness draws the grains into such a layer just inside the branch envelope until they bear on one another. At zero each grain stays where its raceme places it; at one the head is a closed surface of grain with the branches hidden beneath it. Because the layer follows the branch envelope, compaction closes the head without shrinking it, and grains are not wasted in the hidden interior.
+
+The panicle is built in meters along +x from its attachment at the origin, so the library sorghum uses it with a \htmlonly<span style="font-family: Courier, monospace; color: blue;">fruit_prototype_scale</span>\endhtmlonly of 1. Its primitives all carry the object_label "fruit".
+
+<b>Primitive cost.</b> Each grain costs 4 x \htmlonly<span style="font-family: Courier, monospace; color: blue;">grain_subdivisions</span>\endhtmlonly triangles and its glumes 4 more; the rachis, branches and racemes add a few thousand. The default panicle of 2000 grains is therefore about 44,000 triangles, against about 12,000 for the rest of a mature library sorghum plant. The grain count is the main lever on cost. Reducing \htmlonly<span style="font-family: Courier, monospace; color: blue;">grain_subdivisions</span>\endhtmlonly to 3 or omitting the glumes trims a further 20%, at the cost of a more angular grain or a uniform grain color. Raising \htmlonly<span style="font-family: Courier, monospace; color: blue;">grain_subdivisions</span>\endhtmlonly to 5 gives rounder grains for close-range imaging at about 10% more triangles.
+
+| Parameter | Default | Description |
+| ------| ------ | ------ |
+| --- **overall form** --- |||
+| length | 0.25 m | Length of the panicle from its lowest branch to its tip. |
+| length_variation | 0.08 | Coefficient of variation of panicle length between panicles. Grain count varies in proportion to length. |
+| compactness | 0.8 | How strongly the grains are drawn into a continuous layer over the head, from 0 (loose) to 1 (closed). |
+| rachis_length_fraction | 0.85 | Fraction of the panicle length spanned by the rachis; the uppermost branches fill the rest. |
+| rachis_curvature | 0 deg | Total bend of the rachis from base to tip, in a plane of random orientation. |
+| rachis_radius | 0.0046 m | Radius of the rachis at its base. It continues the peduncle, so it should match the peduncle radius; the default matches the library sorghum peduncle at maturity. |
+| --- **primary branches** --- |||
+| primary_branch_count | 70 | Number of primary branches on the rachis. |
+| branch_length_base, branch_length_middle, branch_length_tip | 0.2, 0.21, 0.12 | Primary branch length at the base, middle and tip of the rachis, as fractions of the panicle length. |
+| branch_length_variation | 0.2 | Coefficient of variation of primary branch length. |
+| branch_angle_base, branch_angle_tip | 45, 25 deg | Insertion angle of the primary branches from the rachis axis, at the base and tip of the rachis. |
+| branch_upcurve | 15 deg | Angle through which each branch turns back toward the rachis direction along its length. |
+| branch_bare_fraction | 0.15 | Fraction of each branch, from its base, that bears no racemes. |
+| splayed_branch_fraction, splayed_branch_angle | 0.04, 65 deg | Fraction of branches that splay out of the head, and their insertion angle, giving the ragged outline common in the field. |
+| branch_radius | 0.0007 m | Radius of a primary branch at its base. |
+| --- **racemes** --- |||
+| grains_per_raceme | 5 | Mean number of grains on each raceme. |
+| raceme_length_fraction | 0.2 | Raceme length as a fraction of the length of the branch bearing it. |
+| raceme_angle | 35 deg | Angle between a raceme and its primary branch. |
+| --- **grain** --- |||
+| grain_count | 2000 | Mean number of grains on a panicle of the nominal length. |
+| grain_length, grain_width, grain_thickness | 4.5, 4.0, 3.4 mm | Grain dimensions. |
+| grain_size_variation | 0.08 | Coefficient of variation of grain size. |
+| grain_color | (0.78, 0.62, 0.42) | Mean grain color. |
+| grain_color_variation | 0.08 | Coefficient of variation of grain brightness. |
+| grain_subdivisions | 4 | Number of facets around a grain. |
+| --- **glumes** --- |||
+| glume_length_fraction | 0.55 | Glume length as a fraction of grain length; 0 omits the glumes, values near 1 enclose the grain. |
+| glume_spread | 5 deg | Angle by which the glumes gape open from the grain. |
+| glume_color | (0.45, 0.30, 0.18) | Mean glume color. |
+| --- **branches** --- |||
+| branch_color | (0.42, 0.45, 0.28) | Color of the rachis, branches and racemes. The library sorghum gives its peduncle this default as the color at its top, blending down to the culm color at its base, so a custom color should also be set on `peduncle.color` to keep the junction seamless. |
+| branch_radial_subdivisions | 3 | Radial subdivisions of the branch and raceme tubes. |
+| rachis_radial_subdivisions | 10 | Radial subdivisions of the rachis tube; the default matches the library sorghum peduncle. |
+
+\ref SorghumPanicleParameters::compact() and \ref SorghumPanicleParameters::loose() return the two ends of the range of head types. Grain and glume color are independent of head type; white, cream, tan, red and brown grain with straw to near-black glumes are all common, and are set directly through the color parameters.
+
+The panicle of a library sorghum plant is chosen through its build parameters (see \ref PlantArchBuildParams), so plants of different genotypes can be built side by side. The key "panicle_type" is applied first: 0 gives \ref SorghumPanicleParameters::compact(), 0.5 the defaults above, and 1 \ref SorghumPanicleParameters::loose(), with values in between blending linearly between neighbouring presets. Each key in the table below then sets one field, overriding the preset, and fields not given keep their value.
+
+| Build parameter | Field | Valid Range |
+| ------| ------ | ------ |
+| panicle_type | (preset) | 0-1 |
+| panicle_length | length | 0.05-0.6 m |
+| panicle_length_variation | length_variation | 0-0.3 |
+| panicle_rachis_length_fraction | rachis_length_fraction | 0.3-1 |
+| panicle_rachis_curvature | rachis_curvature | 0-180 deg |
+| panicle_compactness | compactness | 0-1 |
+| panicle_branch_count | primary_branch_count | 5-200 |
+| panicle_branch_length_base, panicle_branch_length_middle, panicle_branch_length_tip | branch_length_base, branch_length_middle, branch_length_tip | 0.02-0.6 |
+| panicle_branch_length_variation | branch_length_variation | 0-0.5 |
+| panicle_branch_angle_base, panicle_branch_angle_tip | branch_angle_base, branch_angle_tip | 0-90 deg |
+| panicle_branch_upcurve | branch_upcurve | 0-90 deg |
+| panicle_branch_bare_fraction | branch_bare_fraction | 0-0.9 |
+| panicle_splayed_branch_fraction | splayed_branch_fraction | 0-1 |
+| panicle_splayed_branch_angle | splayed_branch_angle | 0-120 deg |
+| panicle_branch_radius | branch_radius | 0.0002-0.003 m |
+| panicle_grains_per_raceme | grains_per_raceme | 1-20 |
+| panicle_raceme_length_fraction | raceme_length_fraction | 0.02-1 |
+| panicle_raceme_angle | raceme_angle | 0-90 deg |
+| grain_count | grain_count | 100-10000 |
+| grain_length, grain_width, grain_thickness | grain_length, grain_width, grain_thickness | 0.001-0.01 m |
+| grain_size_variation | grain_size_variation | 0-0.3 |
+| grain_color_r, grain_color_g, grain_color_b | grain_color | 0-1 |
+| grain_color_variation | grain_color_variation | 0-0.5 |
+| grain_subdivisions | grain_subdivisions | 3-12 |
+| glume_length_fraction | glume_length_fraction | 0-1.2 |
+| glume_spread | glume_spread | 0-90 deg |
+| glume_color_r, glume_color_g, glume_color_b | glume_color | 0-1 |
+
+The rachis radius, branch color and tube subdivisions are not build parameters, because they are matched to the library peduncle, which is not built from the panicle parameters.
+
+~~~~~~{.cpp}
+plantarchitecture.loadPlantModelFromLibrary("sorghum");
+uint compact_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 120, {{"panicle_type", 0}});
+uint loose_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0.5, 0, 0), 120, {{"panicle_type", 1}, {"grain_count", 1500}});
+~~~~~~
+
+For full control, including the fields that are not build parameters, write a prototype function of your own that builds the panicle from its parameters, and assign it to the shoot type after the library model is loaded. The build parameters of the plant are passed to it, and can be ignored:
+
+~~~~~~{.cpp}
+uint RedCompactPanicle(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
+    SorghumPanicleParameters parameters = SorghumPanicleParameters::compact();
+    parameters.grain_color = make_RGBcolor(0.55, 0.28, 0.14);
+    parameters.glume_length_fraction = 0.8;
+    return buildSorghumPanicle(context_ptr, parameters);
+}
+
+plantarchitecture.loadPlantModelFromLibrary("sorghum");
+ShootParameters mainstem = plantarchitecture.getCurrentShootParameters("mainstem");
+mainstem.phytomer_parameters.inflorescence.fruit_prototype_function = RedCompactPanicle;
+plantarchitecture.defineShootType("mainstem", mainstem);
+~~~~~~
+
+Panicles of the library sorghum are copied from three prototypes, so neighbouring plants differ in branch layout and grain placement.
+
+\subsubsection SorghumTillering Sorghum Tillering
+
+A library sorghum plant has no tillers by default. The build parameter "tiller_count" (0-6, see \ref PlantArchBuildParams) gives it tillers, which grow from axillary buds in the axils of the lowest main-stem leaves as the plant grows:
+
+~~~~~~
+plantarchitecture.loadPlantModelFromLibrary( "sorghum" );
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( make_vec3(0,0,0), 90, {{"tiller_count", 2}} );
+~~~~~~
+
+<ul>
+<li><b>Position.</b> Tiller Tn grows from the axil of main-stem leaf n. Tillers are added in the order T3, T4, T2, T1, T5, T6, which is the hierarchy of tiller emergence, fertility and grain number reported by Lafarge, Broad & Hammer (2002, Annals of Botany 90:87). For field hybrids, Kim et al. (2010, Annals of Botany 106:57) likewise found fertile tillers mostly at T2-T4. A tiller_count of 2 therefore gives T3 and T4.</li>
+<li><b>Timing.</b> A tiller emerges about 9 days (2.5 phyllochrons) after the leaf that subtends it, so T3 appears as main-stem leaves 5-6 appear (Kim et al. 2010).</li>
+<li><b>Leaf number.</b> Each tiller has one leaf fewer than the main stem for every main-stem leaf below its own: on a 16-leaf main stem, T1 has 15 leaves and T6 has 10. This brings the final leaves of all tillers out together, shortly after the main stem's, as Lafarge et al. (2002) observed. Every tiller ends in a panicle, so a plant has tiller_count + 1 panicles.</li>
+<li><b>Crown.</b> The lowest six main-stem internodes do not elongate (each is 8 mm long), so the lowest leaves and all tillers emerge at the soil surface. The next two internodes are transitional and the rest elongate fully, following the basal internodes of sweet sorghum (Nakamura & Goto 1996, Japanese Journal of Crop Science 65:324).</li>
+<li><b>Orientation.</b> A tiller leans out over its subtending leaf, within the main stem's leaf plane. Its prophyll faces the main stem and its first leaf is opposite, so its own leaves begin in a plane parallel to that of the main stem (Choob 2022, Frontiers in Plant Science 13:855146). The tiller leaves the main stem at 15-30 degrees from vertical, and gravitropism brings it back to 10-20 degrees from base to tip by maturity. No measurements of these angles were found for sorghum, so they are estimates. They are set by the "tiller" shoot type and can be changed with \ref PlantArchitecture::updateCurrentShootParameters().</li>
+</ul>
 
 \subsection PlantArch_leafdroop Leaf Droop Under Self-Weight
 
@@ -1000,7 +1190,7 @@ Maize leaf area follows a bell-shaped profile along the stem that peaks at or ju
 
 The flag leaf is also the <I>most erect</I> leaf on a maize plant, which is the opposite of sorghum, where it is the most horizontal. Modern hybrids are bred for an erectophile upper canopy, and leaf angle from vertical decreases steadily toward the top of the plant without reversing at the tassel. Two consequences for anyone retuning this model:
 
-- The near-zero petiole pitch that \ref PlantArchitecture applies to the last phytomer of every shoot would leave the flag leaf lying along the tassel's peduncle, so maize rotates it 18 degrees clear. What that value has to preserve is the flag leaf's blade angle, not its insertion angle: the erectophile gradient in this model comes from the stiffening of the upper leaves rather than from how they are inserted, since every rank draws its petiole pitch from the same distribution. Rotating far enough to match sorghum's 25 degrees would begin to flatten the blade toward the lower canopy's posture.
+- A flag leaf leaving the culm nearly along it would lie along the tassel's peduncle, so maize sets its flag leaf 23 degrees off the culm. What that value has to preserve is the flag leaf's blade angle, not its insertion angle: the erectophile gradient in this model comes from the stiffening of the upper leaves rather than from how they are inserted, since every rank draws its leaf pitch from the same distribution. An angle as large as sorghum's 30 degrees would begin to flatten the blade toward the lower canopy's posture.
 - Because the upper leaves are stiffened rather than re-inserted, blade curvature rather than insertion angle is the lever for upper-canopy posture. See the discussion of <span style="font-family: Courier, monospace;">flexibility</span> above.
 
 \subsection PlantArchShootTypeDiscovery Discovering Available Shoot Types
@@ -1526,6 +1716,10 @@ constructing one from degrees. \ref ShootParameters::girth_area_factor is in cm<
 cross-sectional area per m<sup>2</sup> of downstream leaf area. \ref ShootParameters::tortuosity is in
 degrees per metre, and \ref ShootParameters::gravitropic_curvature in degrees per metre.
 
+\subsection PlantArchMovingPlant Moving a Plant
+
+\ref PlantArchitecture::setPlantBasePosition() sets where a plant is rooted. Called on a plant that has no shoots yet (for example, one just created with \ref PlantArchitecture::addPlantInstance()), it only stores the position, and the first shoot added with \ref PlantArchitecture::addBaseStemShoot() is placed there. Called on a plant that has already been built or grown, it moves the whole plant by the difference between the new and old base positions: the plant's objects in the Context, the node, petiole, leaf, peduncle, flower and fruit positions stored by the model, the plant's own attraction points, and the cached shading state used by branch shedding. Later calls to \ref PlantArchitecture::advanceTime() continue growing the plant from its new position, and \ref PlantArchitecture::getPlantBasePosition() reports the new position. Because the Context objects are moved by this call, do not also translate them yourself.
+
 \section PlantArchPruning Shoot Pruning and Hierarchical Management
 
 The PlantArchitecture plugin provides comprehensive methods for querying shoot hierarchy and performing pruning operations. These methods enable systematic management of plant structure based on branching patterns, shoot ranks, and topological relationships.
@@ -1647,7 +1841,7 @@ void MyPhytomerCallback(std::shared_ptr<Phytomer> phytomer) {
 - \ref PlantArchitecture::loadPlantModelFromLibrary() and the overload of \ref PlantArchitecture::updateCurrentShootParameters() taking a map, which replace every shoot type while a library build may still be reading them.
 - Phytomer::deletePhytomer() and Shoot::buildShootPhytomers() -- use \ref PlantArchitecture::pruneBranch() to remove phytomers.
 
-<b>Operations that raise an error inside a callback.</b> The following return the ID of the structure they create, and there is no meaningful ID to return for a call that is not carried out, so a call made from a callback raises an error instead: \ref PlantArchitecture::appendPhytomerToShoot(), \ref PlantArchitecture::addBaseStemShoot(), \ref PlantArchitecture::appendShoot(), \ref PlantArchitecture::addChildShoot(), \ref PlantArchitecture::addShootFromNodePositions(), \ref PlantArchitecture::addEpicormicShoot(), \ref PlantArchitecture::duplicatePlantInstance(), \ref PlantArchitecture::buildPlantInstanceFromLibrary(), \ref PlantArchitecture::buildPlantCanopyFromLibrary(), \ref PlantArchitecture::generatePlantFromString(), and \ref PlantArchitecture::readPlantStructureXML(). To add structure in response to something a callback observed, record it in the callback and make the call between calls to \ref PlantArchitecture::advanceTime(). To release growth below a cut from a callback, set the state of the buds there to active instead of adding shoots, subject to the timing rule below.
+<b>Operations that raise an error inside a callback.</b> The following return the ID of the structure they create, and there is no meaningful ID to return for a call that is not carried out, so a call made from a callback raises an error instead: \ref PlantArchitecture::appendPhytomerToShoot(), \ref PlantArchitecture::addBaseStemShoot(), \ref PlantArchitecture::appendShoot(), \ref PlantArchitecture::addChildShoot(), \ref PlantArchitecture::addShootFromNodePositions(), \ref PlantArchitecture::addEpicormicShoot(), \ref PlantArchitecture::duplicatePlantInstance(), \ref PlantArchitecture::buildPlantInstanceFromLibrary(), \ref PlantArchitecture::buildPlantCanopyFromLibrary(), \ref PlantArchitecture::generatePlantFromString(), and \ref PlantArchitecture::readPlantStructureXML(). \ref PlantArchitecture::setPlantBasePosition() also raises an error inside a callback, because the shoot being grown holds positions that would not be moved with the plant. To add structure in response to something a callback observed, record it in the callback and make the call between calls to \ref PlantArchitecture::advanceTime(). To release growth below a cut from a callback, set the state of the buds there to active instead of adding shoots, subject to the timing rule below.
 
 <b>Setting buds active: timing.</b> A bud set to active grows into a shoot at the next opportunity, but only if its state survives until then. When a plant breaks dormancy, every vegetative bud that is not dead is drawn again, active or dead, from the shoot type's bud-break probabilities, so a bud set to active while the plant is dormant is overwritten by that draw. The per-step callback of a phytomer also runs before its shoot breaks dormancy in the same time step, so this includes the step on which dormancy ends. Set buds active only once the phytomer's shoot is out of dormancy (<tt>!phytomer->parent_shoot_ptr->isdormant</tt>), which is from the time step after that shoot breaks dormancy. Use the shoot's flag rather than <tt>phytomer->isdormant</tt>: a shoot's tip phytomer is also marked dormant when the shoot reaches its node cap for the season, while the plant is still growing. Nor is \ref PlantArchitecture::isPlantDormant() a safe test on the time step dormancy ends, since shoots break dormancy one at a time within that step. A rule that acts in winter, such as a heading cut, therefore has to record what it did and release the buds below the cut in a later callback, once the plant is growing again. Buds set active during the growing season grow within that season.
 
@@ -1942,5 +2136,101 @@ std::vector<uint> leaf_vein_UUIDs = context.filterPrimitivesByData( plant_UUIDs,
 ~~~~~~
 
 For custom user-defined organ prototypes, users should follow the convention of grouping the above sub-components into separate object groups with the labels given in the table above.
+
+\section PlantArchUSDExport Exporting Plants to USD
+
+Plants can be written to Universal Scene Description (USD) files in the ASCII <span style="font-family: Courier, monospace; color: blue;">.usda</span> format for use in other software. Two exports are available, and they serve different purposes:
+
+| Method | Purpose | Contents |
+| ------ | ------- | -------- |
+| \ref PlantArchitecture::writePlantStructureUSD() | Physics simulation of the plant in NVIDIA IsaacSim (PhysX) | One frame. The plant as an articulated rigid body: rigid links, sprung joints, masses, collision shapes, and visual meshes. |
+| \ref PlantArchitecture::writePlantGrowthUSD() | Rendering an animation of plant growth, e.g., in Blender | Many frames. Visual meshes only, with time-sampled transforms. No physics prims, joints, or collision shapes. |
+
+Both exports write one plant per file, use units of meters with the z-axis up (matching Helios), and name the root prim <span style="font-family: Courier, monospace; color: blue;">Plant_<plantID></span>, which is also the file's default prim. All materials are nested under that prim, so the plant can be referenced into another USD stage as a self-contained asset. Any texture images used by the plant are copied into a <span style="font-family: Courier, monospace; color: blue;">textures/</span> directory beside the output file and referenced by relative path, so the output file and its <span style="font-family: Courier, monospace; color: blue;">textures/</span> directory should be moved together. The file name must end in <span style="font-family: Courier, monospace; color: blue;">.usda</span>, and its directory must already exist.
+
+\subsection PlantArchUSDPhysics Articulated Plants for Physics Simulation
+
+\ref PlantArchitecture::writePlantStructureUSD() writes the plant as a PhysX articulation that bends and sways under gravity and contact when the simulation is run in IsaacSim.
+
+~~~~~~
+Context context;
+PlantArchitecture plantarchitecture(&context);
+
+plantarchitecture.loadPlantModelFromLibrary("bean");
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+
+plantarchitecture.writePlantStructureUSD(plantID, "bean.usda");
+~~~~~~
+
+The plant is converted to an articulation as follows:
+
+- <b>Woody and tube segments.</b> Each segment of the internode, petiole, and peduncle tubes becomes a rigid link with a capsule collision shape and the corresponding piece of the tube mesh as its visual geometry. Its mass is computed from the capsule volume and \ref USDExportParameters::wood_density. Segments shorter than \ref USDExportParameters::min_segment_length are skipped.
+- <b>Organs.</b> Each leaf, flower, and fruit becomes a rigid link carrying its full visual mesh, with a convex-hull collision mesh. Leaf mass is the leaf area times \ref USDExportParameters::leaf_mass_per_area; flowers and fruit are given the fixed masses \ref USDExportParameters::flower_mass and \ref USDExportParameters::fruit_mass. Petioles and peduncles are only exported if they carry at least one leaf, flower, or fruit.
+- <b>Joints.</b> Adjacent links are connected by D6 joints that lock translation, limit bending to +/-60 degrees about the two axes perpendicular to the parent segment, and carry a rotational spring on each axis. The rest pose of each joint is the plant's pose at export, so the exported plant starts in the shape it had in Helios. Joints between tube segments have the beam bending stiffness \f$K = E I / L\f$, where \f$E\f$ is \ref USDExportParameters::elastic_modulus, \f$I = \pi r^4/4\f$ uses the mean radius of the two segments, and \f$L\f$ is the segment length. Their damping is \f$K\f$ times \ref USDExportParameters::damping_time_constant. Joints attaching leaves, flowers, and fruit instead use the fixed \ref USDExportParameters::organ_spring_stiffness and \ref USDExportParameters::organ_spring_damping.
+- <b>Anchoring.</b> The base of the plant is attached to the world by a fixed joint, so the plant stays rooted in place. Self-collision within the plant is disabled.
+- <b>Scene.</b> A <span style="font-family: Courier, monospace; color: blue;">PhysicsScene</span> prim is written with gravity of 9.81 m/s<sup>2</sup> in the -z direction, GPU dynamics, and the TGS solver. Collision shapes use a physics material with the friction and restitution given in \ref USDExportParameters.
+
+<b>Numerical stability.</b> The beam stiffness of a short, light segment is far higher than a physics solver can integrate at a typical step rate. A plant exported with the physical values alone collapses as soon as the simulation starts. To prevent this, each joint is given <i>armature</i>, an artificial rotational inertia. The armature is sized so that the joint's own natural frequency, \f$\sqrt{K/\mathrm{armature}}\f$, does not exceed \ref USDExportParameters::armature_stability_ratio times \ref USDExportParameters::physics_steps_per_second. The armature adds no weight, so the deflection of the plant under gravity is unchanged, and it is small compared with the inertia of the limb beyond each joint, so limb-scale motion is largely unaffected. Two practical consequences follow:
+
+- \ref USDExportParameters::physics_steps_per_second must match the step rate the simulation will actually run at (60 Hz by default). If the simulation runs at a coarser step, the plant may be unstable.
+- If a plant still behaves erratically, lower \ref USDExportParameters::armature_stability_ratio. Lower values are more stable but add more armature, which slows the swaying of small limbs.
+
+The export parameters are set by passing a \ref USDExportParameters structure:
+
+~~~~~~
+USDExportParameters params;
+params.elastic_modulus = 2e9;            // Pa; a more flexible stem than the default
+params.physics_steps_per_second = 120;   // the simulation will be stepped at 120 Hz
+params.leaf_mass_per_area = 0.08;        // kg/m^2
+
+plantarchitecture.writePlantStructureUSD(plantID, "bean.usda", params);
+~~~~~~
+
+| Parameter | Default | Units | Description |
+| --------- | ------- | ----- | ----------- |
+| elastic_modulus | 5e9 | Pa | Young's modulus used for the bending stiffness of tube-segment joints. |
+| wood_density | 800 | kg/m<sup>3</sup> | Density used to compute the mass of tube segments from their capsule volume. |
+| damping_time_constant | 0.02 | s | Damping of tube-segment joints, as a multiple of their stiffness. Must be non-negative. |
+| armature_stability_ratio | 8 | - | Cap on each joint's natural frequency, as a multiple of the physics step rate. Lower is more stable. Must be positive. |
+| physics_steps_per_second | 60 | Hz | Physics step rate the simulation will run at, used to size the joint armature. Must be positive. |
+| static_friction | 0.5 | - | Static friction coefficient of the collision material. |
+| dynamic_friction | 0.3 | - | Dynamic friction coefficient of the collision material. |
+| restitution | 0.1 | - | Restitution (bounciness) of the collision material. |
+| organ_spring_stiffness | 10 | N m/rad | Stiffness of the joints attaching leaves, flowers, and fruit. |
+| organ_spring_damping | 1 | N m s/rad | Damping of the joints attaching leaves, flowers, and fruit. |
+| leaf_mass_per_area | 0.05 | kg/m<sup>2</sup> | Leaf mass per unit leaf area. |
+| fruit_mass | 0.01 | kg | Mass of each fruit. |
+| flower_mass | 0.002 | kg | Mass of each flower. |
+| solver_position_iterations | 32 | - | PhysX articulation solver position iteration count. |
+| min_segment_length | 0.001 | m | Tube segments shorter than this are skipped. |
+
+To use the plant in IsaacSim, open the <span style="font-family: Courier, monospace; color: blue;">.usda</span> file directly, or add it to an existing stage as a reference. When it is added to an existing stage, \ref USDExportParameters::physics_steps_per_second should match the step rate of that stage's simulation.
+
+\subsection PlantArchUSDGrowth Growth Animations
+
+\ref PlantArchitecture::writePlantGrowthUSD() writes a visual-only animation of the plant growing, built from snapshots ("frames") of the plant taken during the simulation. A frame is captured by calling \ref PlantArchitecture::registerGrowthFrame() after each call to \ref PlantArchitecture::advanceTime(), and the frames are written to file once growth is complete:
+
+~~~~~~
+Context context;
+PlantArchitecture plantarchitecture(&context);
+
+plantarchitecture.loadPlantModelFromLibrary("bean");
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 10);
+plantarchitecture.registerGrowthFrame(plantID);
+
+for (int day = 0; day < 20; day += 2) {
+    plantarchitecture.advanceTime(2);
+    plantarchitecture.registerGrowthFrame(plantID);
+}
+
+// each growth frame is held for 0.5 seconds of animation
+plantarchitecture.writePlantGrowthUSD(plantID, "bean_growth.usda", 0.5);
+~~~~~~
+
+Each organ and tube segment is written as its own prim, with time-sampled position and orientation. An organ that first appears partway through growth is hidden in the frames before it exists, both by its USD visibility and by scaling it to zero (Blender's importer does not reliably respect visibility alone). Transitions between growth frames are instantaneous rather than interpolated, so each frame is held unchanged for its full duration and then replaced by the next. Each prim's mesh is the geometry from the last frame in which it appears, so the mesh itself does not change shape between frames; growth appears as organs and segments appearing and moving.
+
+The animation is written at 24 frames per second, with each growth frame lasting the number of seconds given by the <span style="font-family: Courier, monospace; color: blue;">seconds_per_frame</span> argument (1 second by default). For example, 11 growth frames at 0.5 s per frame gives an animation of 5 seconds, since the last frame is the end of the animation. The file can be imported directly into Blender (File > Import > Universal Scene Description), which reads the frame rate and animation range from the file.
+
+Growth frames are stored in memory by the \ref PlantArchitecture instance until they are written. Every captured frame holds a full copy of the plant's mesh, so registering many frames of a large plant can use substantial memory. The number of frames registered for a plant is returned by \ref PlantArchitecture::getGrowthFrameCount(), and the stored frames are discarded by \ref PlantArchitecture::clearGrowthFrames(). Frames are not cleared when the file is written, so clear them before recording a new animation of the same plant. Segments shorter than the optional <span style="font-family: Courier, monospace; color: blue;">min_segment_length</span> argument of \ref PlantArchitecture::registerGrowthFrame() (1 mm by default) are omitted from that frame.
 
 */

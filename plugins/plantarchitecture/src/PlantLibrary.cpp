@@ -202,7 +202,7 @@ static uint grapevineTrunkPath(helios::Context *context_ptr, const vec3 &base_po
     return trunk_nodes;
 }
 
-float PlantArchitecture::getParameterValue(const std::map<std::string, float> &build_parameters, const std::string &parameter_name, float default_value, float min_value, float max_value, const std::string &parameter_description) const {
+float getBuildParameterValue(const std::map<std::string, float> &build_parameters, const std::string &parameter_name, float default_value, float min_value, float max_value, const std::string &parameter_description) {
 
     // Check if parameter is specified in the map
     auto it = build_parameters.find(parameter_name);
@@ -213,13 +213,21 @@ float PlantArchitecture::getParameterValue(const std::map<std::string, float> &b
 
     float value = it->second;
 
-    // Validate parameter is within valid range
-    if (value < min_value || value > max_value) {
-        helios_runtime_error("ERROR (PlantArchitecture::getParameterValue): build parameter '" + parameter_name + "' (" + parameter_description + ") has value " + std::to_string(value) + " which is outside the valid range [" +
+    // Validate parameter is within valid range. Written so that a NaN, which compares false with everything, fails it too.
+    if (!(value >= min_value && value <= max_value)) {
+        helios_runtime_error("ERROR (getBuildParameterValue): build parameter '" + parameter_name + "' (" + parameter_description + ") has value " + std::to_string(value) + " which is outside the valid range [" +
                              std::to_string(min_value) + ", " + std::to_string(max_value) + "].");
     }
 
     return value;
+}
+
+int getBuildParameterIntegerValue(const std::map<std::string, float> &build_parameters, const std::string &parameter_name, int default_value, int min_value, int max_value, const std::string &parameter_description) {
+    const float value = getBuildParameterValue(build_parameters, parameter_name, float(default_value), float(min_value), float(max_value), parameter_description);
+    if (value != std::round(value)) {
+        helios_runtime_error("ERROR (getBuildParameterIntegerValue): build parameter '" + parameter_name + "' (" + parameter_description + ") has value " + std::to_string(value) + ", but it must be a whole number.");
+    }
+    return int(value);
 }
 
 void PlantArchitecture::initializePlantModelRegistrations() {
@@ -285,6 +293,77 @@ void PlantArchitecture::initializePlantModelRegistrations() {
     registerPlantModel("walnut", [this]() { initializeWalnutTreeShoots(); }, [this](const helios::vec3 &pos) { return buildWalnutTree(pos); }, "tree");
 
     registerPlantModel("wheat", [this]() { initializeWheatShoots(); }, [this](const helios::vec3 &pos) { return buildWheatPlant(pos); });
+
+    // Build parameters read by each model's builder (structure) and by its flower and fruit prototype functions (organs). Any other key passed to buildPlantInstanceFromLibrary() is rejected.
+    const std::vector<std::string> tree_training_parameters = {"trunk_height", "num_scaffolds", "scaffold_angle"};
+    registerPlantModelBuildParameters("almond", tree_training_parameters);
+    registerPlantModelBuildParameters("almond_independence", tree_training_parameters);
+    registerPlantModelBuildParameters("apple", tree_training_parameters);
+    registerPlantModelBuildParameters("pistachio", tree_training_parameters);
+    registerPlantModelBuildParameters("walnut", tree_training_parameters);
+
+    auto validate_grape_cluster_parameters = [](const std::map<std::string, float> &parameters) { static_cast<void>(GrapeClusterParameters::fromBuildParameters(parameters)); };
+    registerPlantModelBuildParameters("grapevine_VSP", {"vine_spacing", "trunk_height"}, GrapeClusterParameters::buildParameterNames(), validate_grape_cluster_parameters);
+    registerPlantModelBuildParameters("grapevine_Wye", {"trunk_height", "cordon_spacing", "vine_spacing", "catch_wire_height"}, GrapeClusterParameters::buildParameterNames(), validate_grape_cluster_parameters);
+
+    registerPlantModelBuildParameters("sorghum", {"tiller_count"}, SorghumPanicleParameters::buildParameterNames(),
+                                      [](const std::map<std::string, float> &parameters) { static_cast<void>(SorghumPanicleParameters::fromBuildParameters(parameters)); });
+}
+
+void PlantArchitecture::registerPlantModelBuildParameters(const std::string &name, const std::vector<std::string> &structure_parameter_names, const std::vector<std::string> &organ_parameter_names,
+                                                          std::function<void(const std::map<std::string, float> &)> validate_organ_parameters) {
+    if (plant_builders.find(name) == plant_builders.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::registerPlantModelBuildParameters): Plant model '" + name + "' has not been registered. Call registerPlantModel() first.");
+    }
+    if (!organ_parameter_names.empty() && !validate_organ_parameters) {
+        helios_runtime_error("ERROR (PlantArchitecture::registerPlantModelBuildParameters): Plant model '" + name + "' declares organ parameters but no function to validate them.");
+    }
+    plant_model_build_parameters[name] = {structure_parameter_names, organ_parameter_names, validate_organ_parameters};
+}
+
+std::vector<std::string> PlantArchitecture::getPlantModelBuildParameterNames(const std::string &plant_model_name) const {
+    if (plant_builders.find(plant_model_name) == plant_builders.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantModelBuildParameterNames): plant label of " + plant_model_name + " does not exist in the library.");
+    }
+    auto declaration_it = plant_model_build_parameters.find(plant_model_name);
+    if (declaration_it == plant_model_build_parameters.end()) {
+        return {};
+    }
+    std::vector<std::string> names = declaration_it->second.structure_parameter_names;
+    names.insert(names.end(), declaration_it->second.organ_parameter_names.begin(), declaration_it->second.organ_parameter_names.end());
+    return names;
+}
+
+std::map<std::string, float> PlantArchitecture::validateBuildParameters(const std::string &plant_model_name, const std::map<std::string, float> &build_parameters, const std::string &calling_function) const {
+    std::map<std::string, float> organ_parameters;
+    if (build_parameters.empty()) {
+        return organ_parameters;
+    }
+
+    auto declaration_it = plant_model_build_parameters.find(plant_model_name);
+    const std::vector<std::string> no_names;
+    const std::vector<std::string> &structure_names = declaration_it == plant_model_build_parameters.end() ? no_names : declaration_it->second.structure_parameter_names;
+    const std::vector<std::string> &organ_names = declaration_it == plant_model_build_parameters.end() ? no_names : declaration_it->second.organ_parameter_names;
+
+    std::string accepted_names;
+    for (const std::string &name: getPlantModelBuildParameterNames(plant_model_name)) {
+        accepted_names += (accepted_names.empty() ? "" : ", ") + name;
+    }
+
+    for (const auto &[parameter_name, value]: build_parameters) {
+        if (std::find(organ_names.begin(), organ_names.end(), parameter_name) != organ_names.end()) {
+            organ_parameters[parameter_name] = value;
+        } else if (std::find(structure_names.begin(), structure_names.end(), parameter_name) == structure_names.end()) {
+            helios_runtime_error("ERROR (" + calling_function + "): Build parameter '" + parameter_name + "' is not accepted by plant model '" + plant_model_name + "'. " +
+                                 (accepted_names.empty() ? std::string("This model accepts no build parameters.") : "Accepted parameters are: " + accepted_names + "."));
+        }
+    }
+
+    // Organ parameters are otherwise read only when the first flower or fruit forms, so checking them here makes an invalid value fail now rather than partway through the plant's growth
+    if (!organ_parameters.empty()) {
+        declaration_it->second.validate_organ_parameters(organ_parameters);
+    }
+    return organ_parameters;
 }
 
 void PlantArchitecture::loadPlantModelFromLibrary(const std::string &plant_label) {
@@ -319,14 +398,25 @@ uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_p
         helios_runtime_error("ERROR (PlantArchitecture::buildPlantInstanceFromLibrary): plant label of " + current_plant_model + " does not exist in the library.");
     }
 
-    // Set current build parameters so builder functions can access them
+    // Reject any parameter the model does not read, so that a misspelled name fails instead of leaving the default silently in place
+    const std::map<std::string, float> organ_build_parameters = validateBuildParameters(current_plant_model, build_parameters, "PlantArchitecture::buildPlantInstanceFromLibrary");
+
+    // The builder reads the build parameters, and addPlantInstance() attaches them to the plant it creates. They are cleared on every exit, including when the builder throws, so that
+    // they cannot reach a plant created later outside a library build.
+    struct BuildParameterScope {
+        std::map<std::string, float> &build_parameters;
+        std::map<std::string, float> &organ_build_parameters;
+        ~BuildParameterScope() {
+            build_parameters.clear();
+            organ_build_parameters.clear();
+        }
+    } build_parameter_scope{current_build_parameters, current_organ_build_parameters};
     current_build_parameters = build_parameters;
+    current_organ_build_parameters = organ_build_parameters;
 
     // Call the builder function
     uint plantID = builder_it->second(base_position);
 
-    // Clear build parameters after use
-    current_build_parameters.clear();
 
     plant_instances.at(plantID).plant_name = current_plant_model;
 
@@ -816,9 +906,9 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position) {
     // scaffolds emerge at 40 degrees and curve upward, so they need vertical distance to spread. Raising the
     // trunk simply empties the lower crown. Reproducing the real architecture needs the scaffold geometry
     // changed, not the trunk raised. See projects/QSMCalibration.
-    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.78f, 0.1f, 3.f, "total trunk height in meters");
-    auto num_scaffolds = uint(getParameterValue(current_build_parameters, "num_scaffolds", 4.f, 2.f, 8.f, "number of scaffold branches"));
-    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 52.f, 20.f, 70.f, "scaffold branch angle in degrees");
+    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 0.78f, 0.1f, 3.f, "total trunk height in meters");
+    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, "num_scaffolds", 4, 2, 8, "number of scaffold branches"));
+    auto scaffold_angle = getBuildParameterValue(current_build_parameters, "scaffold_angle", 52.f, 20.f, 70.f, "scaffold branch angle in degrees");
 
     // Calculate trunk nodes based on desired height and internode length
     float trunk_internode_length = 0.03f; // Default internode length for almond
@@ -1530,9 +1620,9 @@ uint PlantArchitecture::buildAlmondTreeIndependence(const helios::vec3 &base_pos
     // scaffolds emerge at 40 degrees and curve upward, so they need vertical distance to spread. Raising the
     // trunk simply empties the lower crown. Reproducing the real architecture needs the scaffold geometry
     // changed, not the trunk raised. See projects/QSMCalibration.
-    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.78f, 0.1f, 3.f, "total trunk height in meters");
-    auto num_scaffolds = uint(getParameterValue(current_build_parameters, "num_scaffolds", 4.f, 2.f, 8.f, "number of scaffold branches"));
-    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 52.f, 20.f, 70.f, "scaffold branch angle in degrees");
+    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 0.78f, 0.1f, 3.f, "total trunk height in meters");
+    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, "num_scaffolds", 4, 2, 8, "number of scaffold branches"));
+    auto scaffold_angle = getBuildParameterValue(current_build_parameters, "scaffold_angle", 52.f, 20.f, 70.f, "scaffold branch angle in degrees");
 
     // Calculate trunk nodes based on desired height and internode length
     float trunk_internode_length = 0.03f; // Default internode length for almond
@@ -1794,7 +1884,9 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     phytomer_parameters_apple.internode.radius_initial = 0.004;
     phytomer_parameters_apple.internode.length_segments = 1;
     phytomer_parameters_apple.internode.image_texture = "AppleBark.jpg";
-    phytomer_parameters_apple.internode.max_floral_buds_per_petiole = 1;
+    // An apple flower bud is a mixed bud that opens into a cluster of flowers. Each floral bud of the model carries one flower on its
+    // own pedicel, so a cluster is several buds: up to three in the leaf axil of a long shoot, whose axillary clusters are small.
+    phytomer_parameters_apple.internode.max_floral_buds_per_petiole = 3;
 
     phytomer_parameters_apple.petiole.petioles_per_internode = 1;
     phytomer_parameters_apple.petiole.pitch.uniformDistribution(-40, -25);
@@ -1807,12 +1899,13 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     phytomer_parameters_apple.petiole.color = make_RGBcolor(0.61, 0.5, 0.24);
 
     phytomer_parameters_apple.leaf.leaves_per_petiole = 1;
-    phytomer_parameters_apple.leaf.prototype_scale = 0.12;
+    phytomer_parameters_apple.leaf.prototype_scale = 0.09;
     phytomer_parameters_apple.leaf.prototype = leaf_prototype;
 
-    phytomer_parameters_apple.peduncle.length = 0.04;
+    // The peduncle of the model is the pedicel of one apple flower, 2-3 cm long.
+    phytomer_parameters_apple.peduncle.length = 0.025;
     phytomer_parameters_apple.peduncle.radius = 0.001;
-    phytomer_parameters_apple.peduncle.pitch = 90;
+    phytomer_parameters_apple.peduncle.pitch.uniformDistribution(40, 70);
     phytomer_parameters_apple.peduncle.roll = 90;
     phytomer_parameters_apple.peduncle.length_segments = 1;
 
@@ -1821,9 +1914,10 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     phytomer_parameters_apple.inflorescence.roll = 0;
     phytomer_parameters_apple.inflorescence.flower_prototype_scale = 0.03;
     phytomer_parameters_apple.inflorescence.flower_prototype_function = AppleFlowerPrototype;
-    phytomer_parameters_apple.inflorescence.fruit_prototype_scale = 0.1;
+    // An apple about 8 cm across.
+    phytomer_parameters_apple.inflorescence.fruit_prototype_scale = 0.08;
     phytomer_parameters_apple.inflorescence.fruit_prototype_function = AppleFruitPrototype;
-    phytomer_parameters_apple.inflorescence.fruit_gravity_factor_fraction = 0.5;
+    phytomer_parameters_apple.inflorescence.fruit_gravity_factor_fraction = 0.7;
 
     // ---- Shoot Parameters ---- //
 
@@ -1834,9 +1928,11 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.01;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 20;
-    // Rescaled when the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(), to keep base diameters at
-    // max_age where they were: girth is now proportional to cumulative downstream leaf area, which runs well above the old value.
-    shoot_parameters_trunk.girth_area_factor = 1.4f;
+    // Girth is proportional to the cumulative leaf area the trunk supports; the factor scales that cross-sectional area directly. Set so
+    // that at max_age, when the crown is about 4.5 m tall and 2 m across, the trunk is about 9 cm in diameter: unpruned 'Golden
+    // Delicious' and 'Delicious' trees of that size on M.7, MM.111 and seedling rootstocks have trunks of 83-100 mm (Tworkoski and
+    // Miller, Sci. Hortic. 111:335, 2007).
+    shoot_parameters_trunk.girth_area_factor = 1.35f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
     shoot_parameters_trunk.tortuosity = 20;
@@ -1849,11 +1945,14 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_apple;
     shoot_parameters_proleptic.phytomer_parameters.internode.color = make_RGBcolor(0.3, 0.2, 0.2);
     shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = ApplePhytomerCreationFunction;
+    shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = ApplePhytomerCallbackFunction;
     shoot_parameters_proleptic.max_nodes = 40;
     shoot_parameters_proleptic.max_nodes_per_season = 20;
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.15;
-    shoot_parameters_proleptic.girth_area_factor = 4.8f;
+    // Set so that each of the four scaffolds is about 0.6 of the trunk diameter where it leaves it. The scaffolds share the trunk's
+    // leaf area, so a factor equal to the trunk's would make them half its diameter (da Vinci's rule).
+    shoot_parameters_proleptic.girth_area_factor = 2.0f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.4;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
@@ -1861,19 +1960,48 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     shoot_parameters_proleptic.tortuosity = 75;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(30, 40);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 20;
+    // A lateral that breaks far below its parent's tip reaches the 1 cm floor and grows as a short shoot (see ApplePhytomerCreationFunction()).
     shoot_parameters_proleptic.internode_length_max = 0.04;
     shoot_parameters_proleptic.internode_length_min = 0.01;
     shoot_parameters_proleptic.internode_length_decay_rate = 0.004;
-    shoot_parameters_proleptic.fruit_set_probability = 0.3;
-    shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
-    shoot_parameters_proleptic.max_terminal_floral_buds = 1;
+    // Each floral bud carries one flower, so this is the probability that a flower sets and holds a fruit through June drop.
+    shoot_parameters_proleptic.fruit_set_probability = 0.1;
+    // Applied to every flower bud of a long shoot, terminal and axillary. Which axils carry flower buds at all is decided in
+    // ApplePhytomerCreationFunction() and ApplePhytomerCallbackFunction().
+    shoot_parameters_proleptic.flower_bud_break_probability = 0.5;
+    // The terminal bud of a long shoot is a weaker flower cluster than that of a spur.
+    shoot_parameters_proleptic.max_terminal_floral_buds = 3;
     shoot_parameters_proleptic.flowers_require_dormancy = true;
     shoot_parameters_proleptic.growth_requires_dormancy = true;
     shoot_parameters_proleptic.determinate_shoot_growth = false;
     shoot_parameters_proleptic.defineChildShootTypes({"proleptic"}, {1.0});
 
+    // Spurs. Most of an apple's fruit is borne on spurs on wood two years old and older: short shoots that extend by about a centimetre a
+    // year, carrying a rosette of leaves and ending in a mixed bud that opens into a cluster of five or six flowers. Spurs are released by
+    // ApplePhytomerCallbackFunction() from lateral buds on year-old wood that did not grow a long shoot. Their axillary buds neither
+    // grow nor flower (see ApplePhytomerCreationFunction()); they flower only from the terminal buds added when the spur goes dormant.
+    ShootParameters shoot_parameters_spur = shoot_parameters_proleptic;
+    shoot_parameters_spur.phytomer_parameters.internode.radius_initial = 0.002;
+    // The pedicels of a spur cluster spread from the end of the spur, rather than standing out from the side of a long shoot.
+    shoot_parameters_spur.phytomer_parameters.peduncle.pitch.uniformDistribution(0, 30);
+    shoot_parameters_spur.max_nodes = 40;
+    shoot_parameters_spur.max_nodes_per_season = 4;
+    shoot_parameters_spur.internode_length_max = 0.0025;
+    shoot_parameters_spur.internode_length_min = 0.0025;
+    shoot_parameters_spur.internode_length_decay_rate = 0;
+    // A spur does not branch.
+    shoot_parameters_spur.vegetative_bud_break_probability_max = 0;
+    shoot_parameters_spur.vegetative_bud_break_probability_min = 0;
+    shoot_parameters_spur.vegetative_bud_break_probability_decay_rate = 0;
+    shoot_parameters_spur.gravitropic_curvature = 0;
+    // Every spur flowers each spring, with a full cluster; the alternation of flowering years on a spur is not represented.
+    shoot_parameters_spur.max_terminal_floral_buds.uniformDistribution(5, 6);
+    shoot_parameters_spur.flower_bud_break_probability = 1.0;
+    shoot_parameters_spur.defineChildShootTypes({"spur"}, {1.0});
+
     defineShootType("trunk", shoot_parameters_trunk);
     defineShootType("proleptic", shoot_parameters_proleptic);
+    defineShootType("spur", shoot_parameters_spur);
 }
 
 uint PlantArchitecture::buildAppleTree(const helios::vec3 &base_position) {
@@ -1884,9 +2012,9 @@ uint PlantArchitecture::buildAppleTree(const helios::vec3 &base_position) {
     }
 
     // Get training system parameters (with defaults matching original hard-coded values)
-    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.1f, 3.f, "total trunk height in meters");
-    auto num_scaffolds = uint(getParameterValue(current_build_parameters, "num_scaffolds", 4.f, 2.f, 8.f, "number of scaffold branches"));
-    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 40.f, 20.f, 70.f, "scaffold branch angle in degrees");
+    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.1f, 3.f, "total trunk height in meters");
+    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, "num_scaffolds", 4, 2, 8, "number of scaffold branches"));
+    auto scaffold_angle = getBuildParameterValue(current_build_parameters, "scaffold_angle", 40.f, 20.f, 70.f, "scaffold branch angle in degrees");
 
     // Calculate trunk nodes based on desired height and internode length
     float trunk_internode_length = 0.04f; // Default internode length for apple
@@ -1895,7 +2023,7 @@ uint PlantArchitecture::buildAppleTree(const helios::vec3 &base_position) {
         trunk_nodes = 1;
 
     // Fixed training parameters (not user-customizable)
-    float trunk_radius = 0.015f;
+    float trunk_radius = 0.008f;
     float scaffold_radius = 0.005f;
     float scaffold_length = 0.04f;
 
@@ -1954,7 +2082,9 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     phytomer_parameters_apple.internode.radius_initial = 0.004;
     phytomer_parameters_apple.internode.length_segments = 1;
     phytomer_parameters_apple.internode.image_texture = "AppleBark.jpg";
-    phytomer_parameters_apple.internode.max_floral_buds_per_petiole = 1;
+    // An apple flower bud is a mixed bud that opens into a cluster of flowers. Each floral bud of the model carries one flower on its
+    // own pedicel, so a cluster is several buds: up to three in the leaf axil of a long shoot, whose axillary clusters are small.
+    phytomer_parameters_apple.internode.max_floral_buds_per_petiole = 3;
 
     phytomer_parameters_apple.petiole.petioles_per_internode = 1;
     phytomer_parameters_apple.petiole.pitch.uniformDistribution(-40, -25);
@@ -1967,12 +2097,13 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     phytomer_parameters_apple.petiole.color = make_RGBcolor(0.61, 0.5, 0.24);
 
     phytomer_parameters_apple.leaf.leaves_per_petiole = 1;
-    phytomer_parameters_apple.leaf.prototype_scale = 0.12;
+    phytomer_parameters_apple.leaf.prototype_scale = 0.09;
     phytomer_parameters_apple.leaf.prototype = leaf_prototype;
 
-    phytomer_parameters_apple.peduncle.length = 0.04;
+    // The peduncle of the model is the pedicel of one apple flower, 2-3 cm long.
+    phytomer_parameters_apple.peduncle.length = 0.025;
     phytomer_parameters_apple.peduncle.radius = 0.001;
-    phytomer_parameters_apple.peduncle.pitch = 90;
+    phytomer_parameters_apple.peduncle.pitch.uniformDistribution(40, 70);
     phytomer_parameters_apple.peduncle.roll = 90;
     phytomer_parameters_apple.peduncle.length_segments = 1;
 
@@ -1981,9 +2112,10 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     phytomer_parameters_apple.inflorescence.roll = 0;
     phytomer_parameters_apple.inflorescence.flower_prototype_scale = 0.03;
     phytomer_parameters_apple.inflorescence.flower_prototype_function = AppleFlowerPrototype;
-    phytomer_parameters_apple.inflorescence.fruit_prototype_scale = 0.1;
+    // An apple about 8 cm across.
+    phytomer_parameters_apple.inflorescence.fruit_prototype_scale = 0.08;
     phytomer_parameters_apple.inflorescence.fruit_prototype_function = AppleFruitPrototype;
-    phytomer_parameters_apple.inflorescence.fruit_gravity_factor_fraction = 0.5;
+    phytomer_parameters_apple.inflorescence.fruit_gravity_factor_fraction = 0.7;
 
     // ---- Shoot Parameters ---- //
 
@@ -1991,12 +2123,13 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     ShootParameters shoot_parameters_trunk(context_ptr->getRandomGenerator());
     shoot_parameters_trunk.phytomer_parameters = phytomer_parameters_apple;
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(175, 185);
-    shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.01;
+    // A feathered nursery tree, about 1.6 cm in caliper.
+    shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.008;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 30;
-    // Rescaled when the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(), to keep base diameters at
-    // max_age where they were: girth is now proportional to cumulative downstream leaf area, which runs well above the old value.
-    shoot_parameters_trunk.girth_area_factor = 3.9f;
+    // Girth is proportional to the cumulative leaf area the trunk supports. Set for a trunk about 3 cm in diameter at max_age, a
+    // two-year-old tree on a dwarfing rootstock; the factor scales that cross-sectional area directly.
+    shoot_parameters_trunk.girth_area_factor = 0.87f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
     shoot_parameters_trunk.tortuosity = 10;
@@ -2009,11 +2142,13 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_apple;
     shoot_parameters_proleptic.phytomer_parameters.internode.color = make_RGBcolor(0.3, 0.2, 0.2);
     shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = ApplePhytomerCreationFunction;
+    shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = ApplePhytomerCallbackFunction;
     shoot_parameters_proleptic.max_nodes = 20;
     shoot_parameters_proleptic.max_nodes_per_season = 20;
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.15;
-    shoot_parameters_proleptic.girth_area_factor = 6.8f;
+    // Scaled with the trunk's (see above), which keeps the wire laterals at about 0.4 of the leader diameter.
+    shoot_parameters_proleptic.girth_area_factor = 1.5f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.4;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
@@ -2021,12 +2156,17 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     shoot_parameters_proleptic.tortuosity = 75;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(70, 110);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 20;
+    // A lateral that breaks far below its parent's tip reaches the 1 cm floor and grows as a short shoot (see ApplePhytomerCreationFunction()).
     shoot_parameters_proleptic.internode_length_max = 0.04;
     shoot_parameters_proleptic.internode_length_min = 0.01;
     shoot_parameters_proleptic.internode_length_decay_rate = 0.004;
-    shoot_parameters_proleptic.fruit_set_probability = 0.3;
-    shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
-    shoot_parameters_proleptic.max_terminal_floral_buds = 1;
+    // Each floral bud carries one flower, so this is the probability that a flower sets and holds a fruit through June drop.
+    shoot_parameters_proleptic.fruit_set_probability = 0.1;
+    // Applied to every flower bud of a long shoot, terminal and axillary. Which axils carry flower buds at all is decided in
+    // ApplePhytomerCreationFunction() and ApplePhytomerCallbackFunction().
+    shoot_parameters_proleptic.flower_bud_break_probability = 0.5;
+    // The terminal bud of a long shoot is a weaker flower cluster than that of a spur.
+    shoot_parameters_proleptic.max_terminal_floral_buds = 3;
     shoot_parameters_proleptic.flowers_require_dormancy = true;
     shoot_parameters_proleptic.growth_requires_dormancy = true;
     shoot_parameters_proleptic.determinate_shoot_growth = false;
@@ -2035,13 +2175,32 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     // lateral shoots
     ShootParameters shoot_parameters_lateral = shoot_parameters_proleptic;
     // Laterals are older wood than proleptic shoots, so they need their own factor to hold their base diameter.
-    shoot_parameters_lateral.girth_area_factor = 5.5f;
+    // Scaled with the trunk's (see above).
+    shoot_parameters_lateral.girth_area_factor = 1.2f;
     shoot_parameters_lateral.gravitropic_curvature = 0;
     shoot_parameters_lateral.phytomer_parameters.internode.phyllotactic_angle = 360;
+
+    // Spurs, as in the "apple" model (see initializeAppleTreeShoots()).
+    ShootParameters shoot_parameters_spur = shoot_parameters_proleptic;
+    shoot_parameters_spur.phytomer_parameters.internode.radius_initial = 0.002;
+    shoot_parameters_spur.phytomer_parameters.peduncle.pitch.uniformDistribution(0, 30);
+    shoot_parameters_spur.max_nodes = 40;
+    shoot_parameters_spur.max_nodes_per_season = 4;
+    shoot_parameters_spur.internode_length_max = 0.0025;
+    shoot_parameters_spur.internode_length_min = 0.0025;
+    shoot_parameters_spur.internode_length_decay_rate = 0;
+    shoot_parameters_spur.vegetative_bud_break_probability_max = 0;
+    shoot_parameters_spur.vegetative_bud_break_probability_min = 0;
+    shoot_parameters_spur.vegetative_bud_break_probability_decay_rate = 0;
+    shoot_parameters_spur.gravitropic_curvature = 0;
+    shoot_parameters_spur.max_terminal_floral_buds.uniformDistribution(5, 6);
+    shoot_parameters_spur.flower_bud_break_probability = 1.0;
+    shoot_parameters_spur.defineChildShootTypes({"spur"}, {1.0});
 
     defineShootType("trunk", shoot_parameters_trunk);
     defineShootType("proleptic", shoot_parameters_proleptic);
     defineShootType("lateral", shoot_parameters_lateral);
+    defineShootType("spur", shoot_parameters_spur);
 }
 
 uint PlantArchitecture::buildAppleFruitingWall(const helios::vec3 &base_position) {
@@ -3007,7 +3166,10 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     //    phytomer_parameters_grapevine.inflorescence.flower_prototype_function = GrapevineFlowerPrototype;
     phytomer_parameters_grapevine.inflorescence.flower_prototype_scale = 0.04;
     phytomer_parameters_grapevine.inflorescence.fruit_prototype_function = GrapevineFruitPrototype;
-    phytomer_parameters_grapevine.inflorescence.fruit_prototype_scale = 0.04;
+    // The cluster prototype is built in meters, so it is used at unit scale. Its size is set by the berry_diameter and cluster_berry_count build parameters (Cabernet Sauvignon, ~12 cm by
+    // default). Several prototypes are generated so that clusters differ in berry number, shape, and wings.
+    phytomer_parameters_grapevine.inflorescence.fruit_prototype_scale = 1;
+    phytomer_parameters_grapevine.inflorescence.unique_prototypes = 5;
     phytomer_parameters_grapevine.inflorescence.fruit_gravity_factor_fraction = 0.7;
 
     phytomer_parameters_grapevine.phytomer_creation_function = GrapevinePhytomerCreationFunction;
@@ -3171,8 +3333,8 @@ uint PlantArchitecture::buildGrapevineVSP(const helios::vec3 &base_position) {
     }
 
     // Get training system parameters
-    auto vine_spacing = getParameterValue(current_build_parameters, "vine_spacing", 2.4f, 0.5f, 5.f, "plant-to-plant spacing in meters");
-    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.05f, 1.f, "height of the fruiting wire in meters");
+    auto vine_spacing = getBuildParameterValue(current_build_parameters, "vine_spacing", 2.4f, 0.5f, 5.f, "plant-to-plant spacing in meters");
+    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.05f, 1.f, "height of the fruiting wire in meters");
 
     // Calculate cane nodes to span to neighboring plant. One node is one bud, and so one shoot position:
     // spur-pruned cordons are laid down at roughly a bud every 8-12 cm, giving the 10-16 shoots per metre
@@ -3474,7 +3636,10 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     //    phytomer_parameters_grapevine.inflorescence.flower_prototype_function = GrapevineFlowerPrototype;
     phytomer_parameters_grapevine.inflorescence.flower_prototype_scale = 0.04;
     phytomer_parameters_grapevine.inflorescence.fruit_prototype_function = GrapevineFruitPrototype;
-    phytomer_parameters_grapevine.inflorescence.fruit_prototype_scale = 0.04;
+    // The cluster prototype is built in meters, so it is used at unit scale. Its size is set by the berry_diameter and cluster_berry_count build parameters (Cabernet Sauvignon, ~12 cm by
+    // default). Several prototypes are generated so that clusters differ in berry number, shape, and wings.
+    phytomer_parameters_grapevine.inflorescence.fruit_prototype_scale = 1;
+    phytomer_parameters_grapevine.inflorescence.unique_prototypes = 5;
     phytomer_parameters_grapevine.inflorescence.fruit_gravity_factor_fraction = 0.9;
 
     phytomer_parameters_grapevine.phytomer_creation_function = GrapevinePhytomerCreationFunction;
@@ -3609,10 +3774,10 @@ uint PlantArchitecture::buildGrapevineWye(const helios::vec3 &base_position) {
     // into two arms, one to each side of the row -- the Y. Each arm reaches a cordon wire and carries two
     // cordons along it, one each way, so the vine has four. Above each cordon wire the gable wires step up
     // and outward, and the shoots are carried up over them into the two curtains of a divided canopy.
-    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 1.4f, 0.5f, 2.f, "height of the cordon wires in meters");
-    auto cordon_spacing = getParameterValue(current_build_parameters, "cordon_spacing", 0.6f, 0.2f, 2.f, "distance between the two cordon wires across the row in meters");
-    auto vine_spacing = getParameterValue(current_build_parameters, "vine_spacing", 1.8f, 0.5f, 5.f, "plant-to-plant spacing in meters");
-    auto catch_wire_height = getParameterValue(current_build_parameters, "catch_wire_height", trunk_height + 0.6f, 0.5f, 4.f, "height of the top gable wires in meters");
+    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 1.4f, 0.5f, 2.f, "height of the cordon wires in meters");
+    auto cordon_spacing = getBuildParameterValue(current_build_parameters, "cordon_spacing", 0.6f, 0.2f, 2.f, "distance between the two cordon wires across the row in meters");
+    auto vine_spacing = getBuildParameterValue(current_build_parameters, "vine_spacing", 1.8f, 0.5f, 5.f, "plant-to-plant spacing in meters");
+    auto catch_wire_height = getBuildParameterValue(current_build_parameters, "catch_wire_height", trunk_height + 0.6f, 0.5f, 4.f, "height of the top gable wires in meters");
     if (catch_wire_height <= trunk_height) {
         helios_runtime_error("ERROR (PlantArchitecture::buildGrapevineWye): build parameter 'catch_wire_height' (" + std::to_string(catch_wire_height) + " m) must be greater than 'trunk_height' (" + std::to_string(trunk_height) +
                              " m). The gable wires that carry the canopy rise from the cordon wires, whose height is 'trunk_height'.");
@@ -3984,16 +4149,12 @@ void PlantArchitecture::initializeMaizeShoots() {
     phytomer_parameters_maize.internode.max_floral_buds_per_petiole = 1;
     phytomer_parameters_maize.internode.max_vegetative_buds_per_petiole = 0;
 
+    // A grass leaf has no petiole: the blade sits on the culm, and its pitch below is its angle off the culm.
     phytomer_parameters_maize.petiole.petioles_per_internode = 1;
-    phytomer_parameters_maize.petiole.pitch.uniformDistribution(-30, -16);
-    phytomer_parameters_maize.petiole.radius = 0.0;
-    phytomer_parameters_maize.petiole.length = 0.01;
-    phytomer_parameters_maize.petiole.taper = 0;
-    phytomer_parameters_maize.petiole.curvature = 0;
-    phytomer_parameters_maize.petiole.length_segments = 1;
+    phytomer_parameters_maize.petiole.length = 0;
 
     phytomer_parameters_maize.leaf.leaves_per_petiole = 1;
-    phytomer_parameters_maize.leaf.pitch = 0;
+    phytomer_parameters_maize.leaf.pitch.uniformDistribution(-30, -16);
     phytomer_parameters_maize.leaf.yaw = 0;
     phytomer_parameters_maize.leaf.roll = 0;
     phytomer_parameters_maize.leaf.prototype_scale = 0.9;
@@ -4418,10 +4579,10 @@ uint PlantArchitecture::buildPistachioTree(const helios::vec3 &base_position) {
     }
 
     // Get training system parameters (with defaults matching original hard-coded values)
-    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 1.0f, 0.1f, 3.f, "total trunk height in meters");
-    auto num_scaffolds = uint(getParameterValue(current_build_parameters, "num_scaffolds", 4.f, 2.f, 8.f, "number of scaffold branches"));
+    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 1.0f, 0.1f, 3.f, "total trunk height in meters");
+    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, "num_scaffolds", 4, 2, 8, "number of scaffold branches"));
     // 57 deg: the measured orchard scaffolds leave the trunk at a median 56-57 deg from vertical.
-    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 57.f, 20.f, 70.f, "scaffold branch angle in degrees");
+    auto scaffold_angle = getBuildParameterValue(current_build_parameters, "scaffold_angle", 57.f, 20.f, 70.f, "scaffold branch angle in degrees");
 
     // Calculate trunk nodes based on desired height and internode length
     float trunk_internode_length = 0.05f; // Default internode length for pistachio
@@ -4773,16 +4934,12 @@ void PlantArchitecture::initializeRiceShoots() {
     phytomer_parameters_rice.internode.max_floral_buds_per_petiole = 0;
     phytomer_parameters_rice.internode.max_vegetative_buds_per_petiole = 0;
 
+    // A grass leaf has no petiole: the blade sits on the culm, and its pitch below is its angle off the culm.
     phytomer_parameters_rice.petiole.petioles_per_internode = 1;
-    phytomer_parameters_rice.petiole.pitch.uniformDistribution(-40, 0);
-    phytomer_parameters_rice.petiole.radius = 0.0;
-    phytomer_parameters_rice.petiole.length = 0.01;
-    phytomer_parameters_rice.petiole.taper = 0;
-    phytomer_parameters_rice.petiole.curvature = 0;
-    phytomer_parameters_rice.petiole.length_segments = 1;
+    phytomer_parameters_rice.petiole.length = 0;
 
     phytomer_parameters_rice.leaf.leaves_per_petiole = 1;
-    phytomer_parameters_rice.leaf.pitch = 0;
+    phytomer_parameters_rice.leaf.pitch.uniformDistribution(-40, 0);
     phytomer_parameters_rice.leaf.yaw = 0;
     phytomer_parameters_rice.leaf.roll = 0;
     phytomer_parameters_rice.leaf.prototype_scale = 0.15;
@@ -4803,7 +4960,7 @@ void PlantArchitecture::initializeRiceShoots() {
     phytomer_parameters_rice.inflorescence.flower_offset = 0.012;
     phytomer_parameters_rice.inflorescence.fruit_prototype_function = RiceSpikePrototype;
 
-    //    phytomer_parameters_rice.phytomer_creation_function = RicePhytomerCreationFunction;
+    phytomer_parameters_rice.phytomer_creation_function = RicePhytomerCreationFunction;
 
     // ---- Shoot Parameters ---- //
 
@@ -4960,18 +5117,15 @@ void PlantArchitecture::initializeSorghumShoots() {
     phytomer_parameters_sorghum.internode.length_segments = 2;
     phytomer_parameters_sorghum.internode.radial_subdivisions = 10;
     phytomer_parameters_sorghum.internode.max_floral_buds_per_petiole = 0;
-    phytomer_parameters_sorghum.internode.max_vegetative_buds_per_petiole = 0;
+    // Every leaf axil carries a bud a tiller can grow from. SorghumPhytomerCreationFunction() keeps those at the tillering positions the plant was built with and kills the rest.
+    phytomer_parameters_sorghum.internode.max_vegetative_buds_per_petiole = 1;
 
+    // A grass leaf has no petiole: the blade sits on the culm, and its pitch below is its angle off the culm.
     phytomer_parameters_sorghum.petiole.petioles_per_internode = 1;
-    phytomer_parameters_sorghum.petiole.pitch.uniformDistribution(-25, -12);
-    phytomer_parameters_sorghum.petiole.radius = 0.0;
-    phytomer_parameters_sorghum.petiole.length = 0.002;
-    phytomer_parameters_sorghum.petiole.taper = 0;
-    phytomer_parameters_sorghum.petiole.curvature = 0;
-    phytomer_parameters_sorghum.petiole.length_segments = 1;
+    phytomer_parameters_sorghum.petiole.length = 0;
 
     phytomer_parameters_sorghum.leaf.leaves_per_petiole = 1;
-    phytomer_parameters_sorghum.leaf.pitch = 0;
+    phytomer_parameters_sorghum.leaf.pitch.uniformDistribution(-25, -12);
     phytomer_parameters_sorghum.leaf.yaw = 0;
     phytomer_parameters_sorghum.leaf.roll.uniformDistribution(-12, 12);
     phytomer_parameters_sorghum.leaf.prototype_scale = 0.65;
@@ -4979,14 +5133,20 @@ void PlantArchitecture::initializeSorghumShoots() {
 
     phytomer_parameters_sorghum.peduncle.length = 0.3;
     phytomer_parameters_sorghum.peduncle.radius = 0.008;
-    phytomer_parameters_sorghum.peduncle.color = phytomer_parameters_sorghum.internode.color;
+    // The peduncle runs from the culm into the panicle's rachis. Its color is that of the rachis and is blended from the culm color at its base (Phytomer::getPeduncleNodeColors()), so it meets both
+    // without a step; the extra length segments keep the blend from showing as bands.
+    phytomer_parameters_sorghum.peduncle.color = SorghumPanicleParameters().branch_color;
+    phytomer_parameters_sorghum.peduncle.length_segments = 16;
     phytomer_parameters_sorghum.peduncle.radial_subdivisions = 10;
 
     phytomer_parameters_sorghum.inflorescence.flowers_per_peduncle = 1;
     phytomer_parameters_sorghum.inflorescence.pitch = 0;
     phytomer_parameters_sorghum.inflorescence.roll = 0;
-    phytomer_parameters_sorghum.inflorescence.fruit_prototype_scale = 0.18;
+    // The panicle prototype is built in meters, so it is used at unit scale. Its size and form are set by SorghumPanicleParameters.
+    phytomer_parameters_sorghum.inflorescence.fruit_prototype_scale = 1;
     phytomer_parameters_sorghum.inflorescence.fruit_prototype_function = SorghumPaniclePrototype;
+    // Panicles on neighbouring plants of one genotype differ in grain placement and branch layout; a few prototypes keep a plot from repeating one head.
+    phytomer_parameters_sorghum.inflorescence.unique_prototypes = 3;
 
     phytomer_parameters_sorghum.phytomer_creation_function = SorghumPhytomerCreationFunction;
 
@@ -4994,7 +5154,10 @@ void PlantArchitecture::initializeSorghumShoots() {
 
     ShootParameters shoot_parameters_mainstem(context_ptr->getRandomGenerator());
     shoot_parameters_mainstem.phytomer_parameters = phytomer_parameters_sorghum;
-    shoot_parameters_mainstem.vegetative_bud_break_probability_min = 0;
+    // Buds are not thinned at random: SorghumPhytomerCreationFunction() chooses which leaf axils tiller.
+    shoot_parameters_mainstem.vegetative_bud_break_probability_min = 1;
+    // A tiller emerges about 2.5 phyllochrons after the leaf it is subtended by: tiller 3 appears around the tip appearance of main-stem leaves 5-6 in the field (Kim et al. 2010, Annals of Botany 106:57).
+    shoot_parameters_mainstem.vegetative_bud_break_time = 9;
     shoot_parameters_mainstem.flower_bud_break_probability = 1;
     shoot_parameters_mainstem.phyllochron_min = 3.5;
     shoot_parameters_mainstem.elongation_rate_max = 0.05;
@@ -5007,11 +5170,26 @@ void PlantArchitecture::initializeSorghumShoots() {
     shoot_parameters_mainstem.determinate_shoot_growth = false;
     shoot_parameters_mainstem.flower_bud_break_probability = 1.0;
     shoot_parameters_mainstem.fruit_set_probability = 1.0;
-    shoot_parameters_mainstem.defineChildShootTypes({"mainstem"}, {1.0});
+    shoot_parameters_mainstem.defineChildShootTypes({"tiller"}, {1.0});
     shoot_parameters_mainstem.max_nodes = 16;
     shoot_parameters_mainstem.max_terminal_floral_buds = 1;
 
+    // A tiller is a culm like the main stem, ending in a panicle. Its leaf number is set from its position by SorghumPhytomerCreationFunction(). It bears no tillers of its own.
+    ShootParameters shoot_parameters_tiller = shoot_parameters_mainstem;
+    shoot_parameters_tiller.phytomer_parameters.internode.max_vegetative_buds_per_petiole = 0;
+    shoot_parameters_tiller.vegetative_bud_break_probability_min = 0;
+    shoot_parameters_tiller.defineChildShootTypes({"tiller"}, {1.0});
+    // The tiller grows from the axil of its subtending leaf, so it leans out over that leaf, within the leaf plane of the main stem. Its prophyll faces the main stem and its first leaf is opposite, so
+    // its own leaves start out in a plane parallel to that of the main stem (Choob 2022, Frontiers in Plant Science 13:855146). No measurement of the angles was found for sorghum, so the spread about
+    // that arrangement and the insertion angle are estimates.
+    shoot_parameters_tiller.insertion_angle_tip.uniformDistribution(15, 30);
+    shoot_parameters_tiller.base_yaw.uniformDistribution(-20, 20);
+    shoot_parameters_tiller.base_roll.uniformDistribution(-20, 20);
+    // Unlike the main stem, which grows straight up, a tiller starts out leaning and is turned back toward vertical as it grows, leaving it 10-20 degrees off vertical from base to tip at maturity.
+    shoot_parameters_tiller.gravitropic_curvature.uniformDistribution(200, 400);
+
     defineShootType("mainstem", shoot_parameters_mainstem);
+    defineShootType("tiller", shoot_parameters_tiller);
 }
 
 uint PlantArchitecture::buildSorghumPlant(const helios::vec3 &base_position) {
@@ -5021,7 +5199,11 @@ uint PlantArchitecture::buildSorghumPlant(const helios::vec3 &base_position) {
         initializeSorghumShoots();
     }
 
-    uint plantID = addPlantInstance(base_position - make_vec3(0, 0, 0.025), 0);
+    // Read here so that an invalid value fails when the plant is built. The tillers themselves are placed by SorghumPhytomerCreationFunction() as the main stem grows.
+    static_cast<void>(sorghumTillerCount(current_build_parameters));
+
+    // The lowest internodes form a compressed crown (see SorghumPhytomerCreationFunction()), set just below the soil surface so that the lowest leaves and the tillers emerge at ground level.
+    uint plantID = addPlantInstance(base_position - make_vec3(0, 0, 0.01), 0);
 
     // The base stem is built upright. A tilt here is not confined to leaning the plant over: the phyllotactic rotation of each successive phytomer is applied about its own internode axis, so tilting the
     // base makes those axes non-parallel and the two ranks of a distichous grass converge instead of staying opposite. The previous 0.075*pi tilt cost roughly 18 degrees of rank separation.
@@ -5766,9 +5948,9 @@ uint PlantArchitecture::buildWalnutTree(const helios::vec3 &base_position) {
     }
 
     // Get training system parameters (with defaults matching original hard-coded values)
-    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.1f, 3.f, "total trunk height in meters");
-    auto num_scaffolds = uint(getParameterValue(current_build_parameters, "num_scaffolds", 4.f, 2.f, 8.f, "number of scaffold branches"));
-    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 40.f, 25.f, 60.f, "scaffold branch angle in degrees");
+    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.1f, 3.f, "total trunk height in meters");
+    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, "num_scaffolds", 4, 2, 8, "number of scaffold branches"));
+    auto scaffold_angle = getBuildParameterValue(current_build_parameters, "scaffold_angle", 40.f, 25.f, 60.f, "scaffold branch angle in degrees");
 
     // Calculate trunk nodes based on desired height and internode length
     float trunk_internode_length = 0.04f; // Default internode length for walnut
@@ -5850,16 +6032,12 @@ void PlantArchitecture::initializeWheatShoots() {
     phytomer_parameters_wheat.internode.max_floral_buds_per_petiole = 0;
     phytomer_parameters_wheat.internode.max_vegetative_buds_per_petiole = 0;
 
+    // A grass leaf has no petiole: the blade sits on the culm, and its pitch below is its angle off the culm.
     phytomer_parameters_wheat.petiole.petioles_per_internode = 1;
-    phytomer_parameters_wheat.petiole.pitch.uniformDistribution(-40, -20);
-    phytomer_parameters_wheat.petiole.radius = 0.0;
-    phytomer_parameters_wheat.petiole.length = 0.005;
-    phytomer_parameters_wheat.petiole.taper = 0;
-    phytomer_parameters_wheat.petiole.curvature = 0;
-    phytomer_parameters_wheat.petiole.length_segments = 1;
+    phytomer_parameters_wheat.petiole.length = 0;
 
     phytomer_parameters_wheat.leaf.leaves_per_petiole = 1;
-    phytomer_parameters_wheat.leaf.pitch = 0;
+    phytomer_parameters_wheat.leaf.pitch.uniformDistribution(-40, -20);
     phytomer_parameters_wheat.leaf.yaw = 0;
     phytomer_parameters_wheat.leaf.roll = 0;
     phytomer_parameters_wheat.leaf.prototype_scale = 0.36;

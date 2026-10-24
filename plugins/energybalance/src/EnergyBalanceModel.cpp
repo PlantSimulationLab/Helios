@@ -696,36 +696,48 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
 
     // -- Resistance network geometry -- //
 
-    // Aerodynamic resistance between the canopy top and the reference height, converted from a resistance per unit ground area to a molar conductance.
     float rho_air_mol_m3 = Patm / (R * air_temperature_reference);
-    float aerodynamic_resistance_s_m = calculateAerodynamicResistance(wind_speed_reference);
-    float g_a = rho_air_mol_m3 / aerodynamic_resistance_s_m;
 
-    // Wind speed at the canopy top, obtained by extrapolating the reference wind speed down to the canopy height with the same log law used for the aerodynamic resistance.
     float exp_half_LAI = std::exp(-0.5f * canopy_airspace_LAI);
     float zo_m = canopy_height_m * exp_half_LAI * (1.f - exp_half_LAI);
     float displacement_height = canopy_height_m * (1.f - 2.f / canopy_airspace_LAI * (1.f - exp_half_LAI));
-    float wind_speed_canopy_top = wind_speed_reference * std::log((canopy_height_m - displacement_height) / zo_m) / std::log((reference_height_m - displacement_height) / zo_m);
-    wind_speed_canopy_top = std::fmax(wind_speed_canopy_top, 0.01f);
-
-    // Conductance between adjacent canopy airspace layers, from the eddy diffusivity for heat divided by the distance between layer midpoints. Turbulent mixing is strongly damped with depth into the canopy, so the diffusivity decays
-    // exponentially from its canopy-top value with the same attenuation coefficient used for the wind profile (Cionco 1972; the K/dz discretization follows standard multilayer canopy practice, e.g. Bonan et al. 2018).
-    float friction_velocity = von_Karman_constant * wind_speed_reference / std::log((reference_height_m - displacement_height) / zo_m);
-    float eddy_diffusivity_canopy_top = von_Karman_constant * friction_velocity * (canopy_height_m - displacement_height);
     float attenuation_coefficient = 0.5f * canopy_airspace_LAI;
 
+    // Turbulent conductances of the resistance network, which depend on atmospheric stability through the inverse Obukhov length. They begin at neutral stability and, if stability correction is enabled, are updated on each iteration
+    // from the fluxes leaving the canopy.
+    float inverse_obukhov_length = 0.f;
+    float aerodynamic_resistance_s_m = 0.f;
+    float friction_velocity = 0.f;
+    float g_a = 0.f;
     // Conductance between layer j and layer j+1, evaluated at the shared layer boundary. Sized Nlayers so that the last entry, which has no layer above it, is unused.
     std::vector<float> g_layer(Nlayers, 0.f);
-    for (uint j = 0; j + 1 < Nlayers; j++) {
-        float boundary_height = canopy_airspace_layer_top_m.at(j);
-        float separation = canopy_airspace_layer_midpoint_m.at(j + 1) - canopy_airspace_layer_midpoint_m.at(j);
-        if (separation <= 0.f) {
-            helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Canopy airspace layers " + std::to_string(j) + " and " + std::to_string(j + 1) +
-                                 " have coincident midpoints, so the conductance between them is undefined. This indicates that leaf area is concentrated at a single height and cannot be divided into the requested number of layers.");
+
+    auto updateTurbulentConductances = [&]() {
+        // Aerodynamic resistance between the canopy top and the reference height, converted from a resistance per unit ground area to a molar conductance.
+        aerodynamic_resistance_s_m = calculateAerodynamicResistance(wind_speed_reference, inverse_obukhov_length, friction_velocity);
+        g_a = rho_air_mol_m3 / aerodynamic_resistance_s_m;
+
+        // Conductance between adjacent canopy airspace layers, from the eddy diffusivity for heat divided by the distance between layer midpoints. Turbulent mixing is strongly damped with depth into the canopy, so the diffusivity decays
+        // exponentially from its canopy-top value with the same attenuation coefficient used for the wind profile (Cionco 1972; the K/dz discretization follows standard multilayer canopy practice, e.g. Bonan et al. 2018). The
+        // canopy-top value is the surface-layer diffusivity there, so that it is continuous with the aerodynamic resistance above the canopy.
+        float eddy_diffusivity_canopy_top = von_Karman_constant * friction_velocity * (canopy_height_m - displacement_height) / calculateStabilityFunctionHeat((canopy_height_m - displacement_height) * inverse_obukhov_length);
+        for (uint j = 0; j + 1 < Nlayers; j++) {
+            float boundary_height = canopy_airspace_layer_top_m.at(j);
+            float separation = canopy_airspace_layer_midpoint_m.at(j + 1) - canopy_airspace_layer_midpoint_m.at(j);
+            if (separation <= 0.f) {
+                helios_runtime_error("ERROR (EnergyBalanceModel::evaluateCanopyAirspace): Canopy airspace layers " + std::to_string(j) + " and " + std::to_string(j + 1) +
+                                     " have coincident midpoints, so the conductance between them is undefined. This indicates that leaf area is concentrated at a single height and cannot be divided into the requested number of layers.");
+            }
+            float eddy_diffusivity = eddy_diffusivity_canopy_top * std::exp(-attenuation_coefficient * (1.f - boundary_height / canopy_height_m));
+            g_layer.at(j) = rho_air_mol_m3 * eddy_diffusivity / separation;
         }
-        float eddy_diffusivity = eddy_diffusivity_canopy_top * std::exp(-attenuation_coefficient * (1.f - boundary_height / canopy_height_m));
-        g_layer.at(j) = rho_air_mol_m3 * eddy_diffusivity / separation;
-    }
+    };
+    updateTurbulentConductances();
+
+    // Wind speed at the canopy top, obtained by extrapolating the reference wind speed down to the canopy height with the neutral log law. The leaf boundary-layer conductances are fixed before the iteration begins, so the wind profile
+    // that sets them is not updated as the stability evolves.
+    float wind_speed_canopy_top = wind_speed_reference * std::log((canopy_height_m - displacement_height) / zo_m) / std::log((reference_height_m - displacement_height) / zo_m);
+    wind_speed_canopy_top = std::fmax(wind_speed_canopy_top, 0.01f);
 
     // Wind speed near the soil surface, which sets the soil boundary-layer conductance. The conductance itself is taken from the soil surface energy balance on each iteration, so that the heat the soil releases is exactly the heat the
     // bottom layer receives.
@@ -1005,6 +1017,23 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
             converged = true;
         }
 
+        // 8) Update the atmospheric stability from the heat and water vapor leaving the top layer for the reference air, and with it the turbulent conductances for the next iteration. The update is under-relaxed because stability
+        // and the fluxes reinforce each other: a stable canopy is more weakly coupled to the air above, which makes it cooler still. The state is converged only once the stability has also settled.
+        if (canopy_airspace_stability_correction) {
+            // Water vapor adds to the buoyancy of the air through the virtual temperature, T_v = T(1 + 0.378 x) for vapor mole fraction x.
+            float virtual_temperature_difference = T_ac.back() * (1.f + 0.378f * x_ac.back()) - air_temperature_reference * (1.f + 0.378f * moisture_reference);
+            float inverse_obukhov_length_target = calculateInverseObukhovLength(wind_speed_reference, virtual_temperature_difference, air_temperature_reference);
+            float inverse_obukhov_length_updated = inverse_obukhov_length + 0.5f * (inverse_obukhov_length_target - inverse_obukhov_length);
+            if (std::fabs(inverse_obukhov_length_updated - inverse_obukhov_length) * (reference_height_m - displacement_height) > 1e-3f) {
+                converged = false;
+            }
+            // The conductances are left unchanged after the final iteration so that the reported resistance is the one the final airspace state was solved with.
+            if (!converged && iteration + 1 < canopy_airspace_max_iterations) {
+                inverse_obukhov_length = inverse_obukhov_length_updated;
+                updateTurbulentConductances();
+            }
+        }
+
         iteration++;
     }
 
@@ -1029,6 +1058,14 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
         context->setPrimitiveData(canopy_airspace_ground_UUIDs, "wind_speed", wind_speed_soil);
     }
 
+    float stability_parameter = (reference_height_m - displacement_height) * inverse_obukhov_length;
+    if (stability_parameter >= 0.999f * canopy_airspace_stability_parameter_max) {
+        warnings.addWarning("canopy_airspace_stability_limit_stable", "Canopy airspace stability parameter reached its stable limit of " + std::to_string(canopy_airspace_stability_parameter_max) +
+                                                                          ". The canopy is effectively decoupled from the reference air, beyond the range in which Monin-Obukhov similarity theory applies, so the aerodynamic resistance is a lower bound.");
+    } else if (stability_parameter <= 0.999f * canopy_airspace_stability_parameter_min) {
+        warnings.addWarning("canopy_airspace_stability_limit_unstable", "Canopy airspace stability parameter reached its unstable limit of " + std::to_string(canopy_airspace_stability_parameter_min) + ", approaching free convection.");
+    }
+
     if (!converged) {
         warnings.addWarning("canopy_airspace_not_converged", "Canopy airspace model did not converge within " + std::to_string(canopy_airspace_max_iterations) +
                                                                      " iterations. Results may be unreliable. Consider increasing the maximum number of iterations via setCanopyAirspaceConvergence().");
@@ -1049,6 +1086,8 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
     context->setGlobalData("canopy_air_humidity", x_ac_mean * Patm / esat_Pa(T_ac_mean));
     context->setGlobalData("canopy_air_temperature_layers", T_ac);
     context->setGlobalData("aerodynamic_resistance", aerodynamic_resistance_s_m);
+    context->setGlobalData("friction_velocity", friction_velocity);
+    context->setGlobalData("canopy_stability_parameter", stability_parameter);
     context->setGlobalData("canopy_airspace_iterations", iteration);
 
     std::vector<float> humidity_layers(Nlayers);
@@ -1149,7 +1188,7 @@ void EnergyBalanceModel::assignCanopyAirspaceLayers() {
     canopy_airspace_layers_assigned = true;
 }
 
-float EnergyBalanceModel::calculateAerodynamicResistance(float wind_speed_reference_m_s) const {
+float EnergyBalanceModel::calculateAerodynamicResistance(float wind_speed_reference_m_s, float inverse_obukhov_length_per_m, float &friction_velocity_m_s) const {
 
     // Roughness length for momentum and zero-plane displacement height following Perrier (1982).
     float exp_half_LAI = std::exp(-0.5f * canopy_airspace_LAI);
@@ -1172,7 +1211,74 @@ float EnergyBalanceModel::calculateAerodynamicResistance(float wind_speed_refere
                              " m) for the aerodynamic resistance to be defined, given a leaf area index of " + std::to_string(canopy_airspace_LAI) + ". Increase the reference height so that it lies within the surface layer above the canopy.");
     }
 
-    return ln_momentum * ln_heat / (von_Karman_constant * von_Karman_constant * wind_speed_reference_m_s);
+    // Monin-Obukhov stability corrections integrated between the same lower and upper heights as the logarithms. Momentum is integrated from the roughness length and heat from the canopy top, both to the reference height.
+    float zeta_reference = (reference_height_m - displacement_height) * inverse_obukhov_length_per_m;
+    float profile_momentum = ln_momentum - calculateStabilityCorrectionMomentum(zeta_reference) + calculateStabilityCorrectionMomentum(zo_m * inverse_obukhov_length_per_m);
+    float profile_heat = ln_heat - calculateStabilityCorrectionHeat(zeta_reference) + calculateStabilityCorrectionHeat((canopy_height_m - displacement_height) * inverse_obukhov_length_per_m);
+
+    friction_velocity_m_s = von_Karman_constant * wind_speed_reference_m_s / profile_momentum;
+
+    return profile_heat / (von_Karman_constant * friction_velocity_m_s);
+}
+
+float EnergyBalanceModel::calculateInverseObukhovLength(float wind_speed_reference_m_s, float virtual_temperature_difference_K, float air_temperature_K) const {
+
+    float exp_half_LAI = std::exp(-0.5f * canopy_airspace_LAI);
+    float displacement_height = canopy_height_m * (1.f - 2.f / canopy_airspace_LAI * (1.f - exp_half_LAI));
+
+    float inverse_obukhov_length_min = canopy_airspace_stability_parameter_min / (reference_height_m - displacement_height);
+    float inverse_obukhov_length_max = canopy_airspace_stability_parameter_max / (reference_height_m - displacement_height);
+
+    // The kinematic buoyancy flux is the virtual temperature difference divided by the aerodynamic resistance, and both it and the friction velocity depend on the stability. Iterating with the temperature difference held fixed,
+    // rather than the flux, is equivalent to iterating on the bulk Richardson number and has a solution under stable conditions, where a fixed downward flux can exceed what the suppressed turbulence is able to carry.
+    float inverse_obukhov_length = 0.f;
+    for (int iteration = 0; iteration < 100; iteration++) {
+        float friction_velocity;
+        float aerodynamic_resistance = calculateAerodynamicResistance(wind_speed_reference_m_s, inverse_obukhov_length, friction_velocity);
+        float buoyancy_flux_K_m_s = virtual_temperature_difference_K / aerodynamic_resistance;
+        float updated = -von_Karman_constant * 9.81f * buoyancy_flux_K_m_s / (air_temperature_K * std::pow(friction_velocity, 3));
+        updated = std::fmin(std::fmax(updated, inverse_obukhov_length_min), inverse_obukhov_length_max);
+        bool converged = std::fabs(updated - inverse_obukhov_length) * (reference_height_m - displacement_height) < 1e-5f;
+        inverse_obukhov_length = updated;
+        if (converged) {
+            return inverse_obukhov_length;
+        }
+    }
+
+    helios_runtime_error("ERROR (EnergyBalanceModel::calculateInverseObukhovLength): The Obukhov length did not converge for a reference wind speed of " + std::to_string(wind_speed_reference_m_s) + " m/s and a canopy-to-reference virtual temperature difference of " +
+                         std::to_string(virtual_temperature_difference_K) + " K. Disable stability correction with disableCanopyAirspaceStabilityCorrection() to proceed assuming neutral stability.");
+    return 0.f;
+}
+
+float EnergyBalanceModel::calculateStabilityCorrectionMomentum(float zeta) {
+    if (zeta < 0.f) {
+        // Paulson (1970)
+        float x = std::pow(1.f - 16.f * zeta, 0.25f);
+        return 2.f * std::log(0.5f * (1.f + x)) + std::log(0.5f * (1.f + x * x)) - 2.f * std::atan(x) + 0.5f * float(M_PI);
+    }
+    // Beljaars and Holtslag (1991)
+    constexpr float a = 1.f, b = 2.f / 3.f, c = 5.f, d = 0.35f;
+    return -(a * zeta + b * (zeta - c / d) * std::exp(-d * zeta) + b * c / d);
+}
+
+float EnergyBalanceModel::calculateStabilityCorrectionHeat(float zeta) {
+    if (zeta < 0.f) {
+        // Paulson (1970)
+        return 2.f * std::log(0.5f * (1.f + std::sqrt(1.f - 16.f * zeta)));
+    }
+    // Beljaars and Holtslag (1991)
+    constexpr float a = 1.f, b = 2.f / 3.f, c = 5.f, d = 0.35f;
+    return 1.f - std::pow(1.f + 2.f * a * zeta / 3.f, 1.5f) - b * (zeta - c / d) * std::exp(-d * zeta) - b * c / d;
+}
+
+float EnergyBalanceModel::calculateStabilityFunctionHeat(float zeta) {
+    if (zeta < 0.f) {
+        // Businger-Dyer
+        return 1.f / std::sqrt(1.f - 16.f * zeta);
+    }
+    // Beljaars and Holtslag (1991), phi_h = 1 - zeta * dpsi_h/dzeta
+    constexpr float a = 1.f, b = 2.f / 3.f, c = 5.f, d = 0.35f;
+    return 1.f + zeta * (a * std::sqrt(1.f + 2.f * a * zeta / 3.f) + b * std::exp(-d * zeta) * (1.f + c - d * zeta));
 }
 
 float EnergyBalanceModel::calculateGroundBoundaryLayerConductance(float wind_speed_m_s) {
@@ -1265,6 +1371,14 @@ void EnergyBalanceModel::setCanopyAirspaceConvergence(float tolerance_K, uint ma
 
     canopy_airspace_tolerance_K = tolerance_K;
     canopy_airspace_max_iterations = max_iterations;
+}
+
+void EnergyBalanceModel::enableCanopyAirspaceStabilityCorrection() {
+    canopy_airspace_stability_correction = true;
+}
+
+void EnergyBalanceModel::disableCanopyAirspaceStabilityCorrection() {
+    canopy_airspace_stability_correction = false;
 }
 
 void EnergyBalanceModel::optionalOutputPrimitiveData(const char *label) {
@@ -1515,43 +1629,82 @@ void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint
         flux_labels.push_back(flux_label);
     }
 
-    // Determine which radiation band(s) govern the emitted thermal radiation. The RadiationModel records
-    // per-band emission-enabled state in global data 'emission_enabled_<band>'. In a properly configured
-    // run emission is enabled for exactly one band, and that band's emissivity is used. If more than one
-    // band has emission enabled we warn and use the first. When no emission-enabled information is
-    // available (e.g. radiation fluxes were set manually without running the RadiationModel), all bands
-    // added to the energy balance are treated as candidates for backward compatibility.
-    std::vector<std::string> emissivity_candidate_bands;
-    {
-        std::vector<std::string> emission_enabled_bands;
-        bool emission_info_available = false;
-        for (const auto &band: radiation_bands) {
-            std::string gdlabel = "emission_enabled_" + band;
-            if (context->doesGlobalDataExist(gdlabel.c_str()) && context->getGlobalDataType(gdlabel.c_str()) == helios::HELIOS_TYPE_UINT) {
-                emission_info_available = true;
-                uint enabled = 0;
-                context->getGlobalData(gdlabel.c_str(), enabled);
-                if (enabled == 1) {
-                    emission_enabled_bands.push_back(band);
+    // Determine which radiation band(s) govern the emitted thermal radiation. The RadiationModel records per-band emission-enabled state in global data 'emission_enabled_<band>', and the wavelength bounds of each band that
+    // has them in 'wavelength_bounds_<band>'. A band without bounds emits eps*sigma*T^4, and a band with bounds emits only its share of the blackbody spectrum, eps*sigma*T^4*F(T), so the emission of the surface is the sum over
+    // the emission-enabled bands. When no emission-enabled information is available (e.g. radiation fluxes were set manually without running the RadiationModel), all bands added to the energy balance are treated as candidates
+    // for a single broadband emissivity, for backward compatibility.
+    struct EmissionBand {
+        std::string label;
+        std::string emissivity_label;
+        bool emissivity_given = false;
+        // The RadiationModel treats surfaces as black in an emission band whose scattering depth is 0, emitting sigma*T^4 regardless of the emissivity
+        bool emits_as_blackbody = false;
+        bool has_wavelength_bounds = false;
+        helios::vec2 wavelength_bounds_nm;
+    };
+    std::vector<EmissionBand> emission_bands;
+    bool emission_info_available = false;
+    // Global data written by the RadiationModel that exists but has the wrong type was not written by it, and would otherwise silently select a different emission model
+    auto requireGlobalDataType = [&](const std::string &label, helios::HeliosDataType type, const std::string &type_name) {
+        if (context->doesGlobalDataExist(label.c_str()) && context->getGlobalDataType(label.c_str()) != type) {
+            helios_runtime_error("ERROR (EnergyBalanceModel::run): Global data '" + label + "' must be of type " + type_name + ", as written by RadiationModel::runBand(), but it has a different type. Remove it or set it with the correct type.");
+        }
+    };
+    for (const auto &band: radiation_bands) {
+        std::string gdlabel = "emission_enabled_" + band;
+        requireGlobalDataType(gdlabel, helios::HELIOS_TYPE_UINT, "uint");
+        if (context->doesGlobalDataExist(gdlabel.c_str())) {
+            emission_info_available = true;
+            uint enabled = 0;
+            context->getGlobalData(gdlabel.c_str(), enabled);
+            if (enabled == 1) {
+                EmissionBand emission_band;
+                emission_band.label = band;
+                emission_band.emissivity_label = "emissivity_" + band;
+                emission_band.emissivity_given = isPrimitiveDataLabelOfType(emission_band.emissivity_label, helios::HELIOS_TYPE_FLOAT);
+                std::string scattering_depth_label = "scattering_depth_" + band;
+                requireGlobalDataType(scattering_depth_label, helios::HELIOS_TYPE_UINT, "uint");
+                if (context->doesGlobalDataExist(scattering_depth_label.c_str())) {
+                    uint scattering_depth = 0;
+                    context->getGlobalData(scattering_depth_label.c_str(), scattering_depth);
+                    emission_band.emits_as_blackbody = scattering_depth == 0;
                 }
+                std::string bounds_label = "wavelength_bounds_" + band;
+                requireGlobalDataType(bounds_label, helios::HELIOS_TYPE_VEC2, "vec2");
+                if (context->doesGlobalDataExist(bounds_label.c_str())) {
+                    emission_band.has_wavelength_bounds = true;
+                    context->getGlobalData(bounds_label.c_str(), emission_band.wavelength_bounds_nm);
+                }
+                emission_bands.push_back(emission_band);
             }
         }
-        if (emission_info_available) {
-            if (emission_enabled_bands.size() > 1) {
-                warnings.addWarning("multiple_emission_bands", "Emission is enabled for more than one radiation band. Thermal emission uses a single emissivity; the emissivity of the first emission-enabled band will be used.");
+    }
+    // Bounded emission bands that overlap would count the emission at their shared wavelengths twice
+    for (size_t b = 0; b < emission_bands.size(); b++) {
+        for (size_t c = b + 1; c < emission_bands.size(); c++) {
+            const EmissionBand &band_b = emission_bands.at(b);
+            const EmissionBand &band_c = emission_bands.at(c);
+            if (band_b.has_wavelength_bounds && band_c.has_wavelength_bounds && band_b.wavelength_bounds_nm.x < band_c.wavelength_bounds_nm.y && band_c.wavelength_bounds_nm.x < band_b.wavelength_bounds_nm.y) {
+                helios_runtime_error("ERROR (EnergyBalanceModel::run): Emission is enabled for radiation bands '" + band_b.label + "' (" + std::to_string(band_b.wavelength_bounds_nm.x) + "-" + std::to_string(band_b.wavelength_bounds_nm.y) +
+                                     " nm) and '" + band_c.label + "' (" + std::to_string(band_c.wavelength_bounds_nm.x) + "-" + std::to_string(band_c.wavelength_bounds_nm.y) +
+                                     " nm), whose wavelength bounds overlap, so the thermal emission at the shared wavelengths would be counted twice. Either make the bands' bounds adjacent, or remove one band from the energy balance model.");
             }
-            emissivity_candidate_bands = emission_enabled_bands; // may be empty => no modeled band emits, blackbody default used
-        } else {
-            emissivity_candidate_bands = radiation_bands;
         }
     }
 
-    // Emissivity labels of the candidate bands, in candidate order, that some primitive defines as a float
+    // Range of the summed blackbody fraction of the emission bands that is accepted as accounting for the blackbody spectrum once. A small shortfall is unavoidable with bounded bands, whose bounds cannot reach zero and infinite
+    // wavelength; an excess means that some emission is counted twice.
+    constexpr float min_blackbody_fraction_sum = 0.95f;
+    constexpr float max_blackbody_fraction_sum = 1.01f;
+
+    // Without emission-enabled information: emissivity labels of all bands, in band order, that some primitive defines as a float
     std::vector<std::string> emissivity_labels;
-    for (const auto &band: emissivity_candidate_bands) {
-        std::string emissivity_label = "emissivity_" + band;
-        if (isPrimitiveDataLabelOfType(emissivity_label, helios::HELIOS_TYPE_FLOAT)) {
-            emissivity_labels.push_back(emissivity_label);
+    if (!emission_info_available) {
+        for (const auto &band: radiation_bands) {
+            std::string emissivity_label = "emissivity_" + band;
+            if (isPrimitiveDataLabelOfType(emissivity_label, helios::HELIOS_TYPE_FLOAT)) {
+                emissivity_labels.push_back(emissivity_label);
+            }
         }
     }
 
@@ -1783,22 +1936,75 @@ void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint
                     inputs.surfacehumidity[u] = surface_humidity_default;
                 }
 
-                // Emissivity for the emitted thermal radiation term. Use the first candidate band that defines
-                // an emissivity for this primitive; default to 1.0 (blackbody) if none do.
+                // Emissivity for the emitted thermal radiation term, which multiplies sigma*T^4. If no band emits, the surface is taken as a blackbody.
                 inputs.eps[u] = 1.f;
-                int emissivity_defined_count = 0;
-                for (const auto &emissivity_label: emissivity_labels) {
-                    if (context->doesPrimitiveDataExist(p, emissivity_label.c_str())) {
-                        if (emissivity_defined_count == 0) {
-                            context->getPrimitiveData(p, emissivity_label.c_str(), inputs.eps[u]);
+                if (emission_info_available) {
+                    if (!emission_bands.empty()) {
+                        // Effective emissivity summed over the emission bands, sum_b(eps_b*F_b(T)), with F_b = 1 for a band without wavelength bounds. The blackbody fractions are evaluated at the initial surface temperature,
+                        // the temperature at which the RadiationModel computed the emission that the absorbed fluxes contain.
+                        float effective_emissivity = 0.f;
+                        float blackbody_fraction_sum = 0.f;
+                        bool emissivity_missing = false;
+                        for (const auto &emission_band: emission_bands) {
+                            // A band that emits as a blackbody keeps an emissivity of 1; the RadiationModel already warns that its radiative properties are ignored without scattering
+                            float emissivity = 1.f;
+                            if (!emission_band.emits_as_blackbody) {
+                                if (emission_band.emissivity_given && context->doesPrimitiveDataExist(p, emission_band.emissivity_label.c_str())) {
+                                    context->getPrimitiveData(p, emission_band.emissivity_label.c_str(), emissivity);
+                                } else {
+                                    emissivity_missing = true;
+                                }
+                            }
+                            float blackbody_fraction = 1.f;
+                            if (emission_band.has_wavelength_bounds) {
+                                if (!std::isfinite(inputs.To[u]) || inputs.To[u] <= 0.f) {
+                                    helios_runtime_error("ERROR (EnergyBalanceModel::run): Primitive " + std::to_string(p) + " has a surface temperature of " + std::to_string(inputs.To[u]) +
+                                                         " K in primitive data 'temperature', which is not a valid absolute temperature, so the share of the blackbody spectrum emitted in radiation band '" + emission_band.label +
+                                                         "' cannot be computed. Surface temperatures must be given in Kelvin.");
+                                }
+                                blackbody_fraction = blackbodyBandFraction(emission_band.wavelength_bounds_nm.x, emission_band.wavelength_bounds_nm.y, inputs.To[u]);
+                            }
+                            effective_emissivity += emissivity * blackbody_fraction;
+                            blackbody_fraction_sum += blackbody_fraction;
                         }
-                        emissivity_defined_count++;
+                        if (blackbody_fraction_sum < min_blackbody_fraction_sum || blackbody_fraction_sum > max_blackbody_fraction_sum) {
+                            std::string band_list;
+                            for (const auto &emission_band: emission_bands) {
+                                band_list += (band_list.empty() ? "'" : ", '") + emission_band.label + "'";
+                                if (emission_band.has_wavelength_bounds) {
+                                    band_list += " (" + std::to_string(emission_band.wavelength_bounds_nm.x) + "-" + std::to_string(emission_band.wavelength_bounds_nm.y) + " nm)";
+                                } else {
+                                    band_list += " (no wavelength bounds, i.e. broadband)";
+                                }
+                            }
+                            helios_runtime_error(
+                                    "ERROR (EnergyBalanceModel::run): The radiation bands with emission enabled, " + band_list + ", together emit " + std::to_string(blackbody_fraction_sum) + " times the blackbody emission sigma*T^4 of primitive " +
+                                    std::to_string(p) + " at " + std::to_string(inputs.To[u]) + " K. The energy balance emits only what these bands emit in the RadiationModel, so they must account for the blackbody spectrum once (a sum between " +
+                                    std::to_string(min_blackbody_fraction_sum) + " and " + std::to_string(max_blackbody_fraction_sum) +
+                                    "). Use a single longwave band without wavelength bounds, or bounded bands that together span the thermal spectrum (e.g. 3-100 um). A thermal camera band such as 8-14 um should not be added to the energy balance model "
+                                    "alongside the longwave band, nor used as its only longwave band. A shortwave band added to the energy balance model should have its emission disabled with RadiationModel::disableEmission().");
+                        }
+                        inputs.eps[u] = effective_emissivity;
+                        if (emissivity_missing) {
+                            missing_emissivity_count++;
+                        }
                     }
-                }
-                if (emissivity_defined_count == 0 && !emissivity_candidate_bands.empty()) {
-                    missing_emissivity_count++;
-                } else if (emissivity_candidate_bands.size() > 1 && emissivity_defined_count > 1) {
-                    multiple_emissivity_bands_count++;
+                } else {
+                    // Without emission-enabled information, use the first band that defines an emissivity for this primitive.
+                    int emissivity_defined_count = 0;
+                    for (const auto &emissivity_label: emissivity_labels) {
+                        if (context->doesPrimitiveDataExist(p, emissivity_label.c_str())) {
+                            if (emissivity_defined_count == 0) {
+                                context->getPrimitiveData(p, emissivity_label.c_str(), inputs.eps[u]);
+                            }
+                            emissivity_defined_count++;
+                        }
+                    }
+                    if (emissivity_defined_count == 0) {
+                        missing_emissivity_count++;
+                    } else if (emissivity_defined_count > 1) {
+                        multiple_emissivity_bands_count++;
+                    }
                 }
             } catch (...) {
 #ifdef USE_OPENMP

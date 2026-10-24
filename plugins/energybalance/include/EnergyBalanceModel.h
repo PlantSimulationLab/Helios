@@ -169,6 +169,16 @@ public:
      */
     void setCanopyAirspaceConvergence(float tolerance_K, uint max_iterations);
 
+    //! Enable Monin-Obukhov stability corrections to turbulent transport in the canopy airspace model
+    /**
+     * When enabled (the default), the aerodynamic resistance between the canopy top and the reference height and the eddy diffusivity at the canopy top are corrected for atmospheric stability using the Obukhov length implied by the
+     * sensible and latent heat fluxes leaving the canopy. Unstable conditions (canopy warmer than the reference air) enhance turbulent exchange, and stable conditions suppress it.
+     */
+    void enableCanopyAirspaceStabilityCorrection();
+
+    //! Disable Monin-Obukhov stability corrections in the canopy airspace model, so that turbulent transport assumes neutral stability
+    void disableCanopyAirspaceStabilityCorrection();
+
     //! Add optional output primitive data values to the Context
     /**
      * \param[in] label Name of primitive data (e.g., vapor_pressure_deficit)
@@ -270,12 +280,49 @@ private:
      */
     void updateCanopyWindProfile(float wind_speed_canopy_top_m_s);
 
-    //! Calculate aerodynamic resistance above the canopy following Perrier (1975)
+    //! Calculate aerodynamic resistance above the canopy following Perrier (1975), with Monin-Obukhov stability corrections
     /**
      * \param[in] wind_speed_reference_m_s Wind speed at the reference height in m/s.
+     * \param[in] inverse_obukhov_length_per_m Inverse of the Obukhov length in 1/m. Zero gives neutral stability, negative values are unstable, and positive values are stable.
+     * \param[out] friction_velocity_m_s Friction velocity above the canopy in m/s.
      * \return Aerodynamic resistance between the canopy top and the reference height in s/m.
      */
-    [[nodiscard]] float calculateAerodynamicResistance(float wind_speed_reference_m_s) const;
+    [[nodiscard]] float calculateAerodynamicResistance(float wind_speed_reference_m_s, float inverse_obukhov_length_per_m, float &friction_velocity_m_s) const;
+
+    //! Calculate the inverse Obukhov length consistent with the virtual temperature difference between the canopy-top air and the reference air
+    /**
+     * The aerodynamic resistance and friction velocity themselves depend on stability, so the Obukhov length is found by fixed-point iteration with the temperature difference held fixed. The resulting stability parameter at the
+     * reference height is limited to the range over which the stability functions are applicable.
+     * \param[in] wind_speed_reference_m_s Wind speed at the reference height in m/s.
+     * \param[in] virtual_temperature_difference_K Virtual temperature of the canopy-top air minus that of the reference air in Kelvin. Positive values are unstable.
+     * \param[in] air_temperature_K Reference air temperature in Kelvin.
+     * \return Inverse of the Obukhov length in 1/m.
+     */
+    [[nodiscard]] float calculateInverseObukhovLength(float wind_speed_reference_m_s, float virtual_temperature_difference_K, float air_temperature_K) const;
+
+    //! Integrated Monin-Obukhov stability correction for momentum
+    /**
+     * Uses Paulson (1970) with the Businger-Dyer coefficients for unstable conditions and Beljaars and Holtslag (1991) for stable conditions.
+     * \param[in] zeta Stability parameter, the height above the displacement height divided by the Obukhov length.
+     * \return Stability correction for momentum.
+     */
+    [[nodiscard]] static float calculateStabilityCorrectionMomentum(float zeta);
+
+    //! Integrated Monin-Obukhov stability correction for heat and water vapor
+    /**
+     * Uses Paulson (1970) with the Businger-Dyer coefficients for unstable conditions and Beljaars and Holtslag (1991) for stable conditions.
+     * \param[in] zeta Stability parameter, the height above the displacement height divided by the Obukhov length.
+     * \return Stability correction for heat.
+     */
+    [[nodiscard]] static float calculateStabilityCorrectionHeat(float zeta);
+
+    //! Dimensionless temperature gradient of Monin-Obukhov similarity theory
+    /**
+     * This is the stability function from which \ref calculateStabilityCorrectionHeat() is integrated, so that the eddy diffusivity for heat is the neutral value divided by this function.
+     * \param[in] zeta Stability parameter, the height above the displacement height divided by the Obukhov length.
+     * \return Dimensionless temperature gradient, equal to 1 for neutral stability.
+     */
+    [[nodiscard]] static float calculateStabilityFunctionHeat(float zeta);
 
     //! Calculate the boundary-layer conductance to heat of a bare soil surface following Kustas and Norman (1999)
     /**
@@ -305,6 +352,13 @@ private:
 
     //! Maximum number of canopy airspace iterations
     uint canopy_airspace_max_iterations = 50;
+
+    //! Flag indicating whether Monin-Obukhov stability corrections are applied to turbulent transport in the canopy airspace model
+    bool canopy_airspace_stability_correction = true;
+
+    //! Limits on the stability parameter at the reference height, within which the stability functions are applied. The stable limit follows the Community Land Model (Oleson et al. 2013), beyond which the surface layer is effectively decoupled.
+    static constexpr float canopy_airspace_stability_parameter_min = -100.f;
+    static constexpr float canopy_airspace_stability_parameter_max = 2.f;
 
     //! Index of the airspace layer containing each primitive in canopy_airspace_UUIDs
     std::vector<uint> canopy_airspace_layer_index;

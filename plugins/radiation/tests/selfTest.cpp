@@ -2402,6 +2402,79 @@ GPU_TEST_CASE("RadiationModel Homogeneous Canopy of Patches") {
     DOCTEST_CHECK(fabsf(intercepted_leaf_diffuse - intercepted_theoretical_diffuse) <= 2.f * error_threshold);
 }
 
+GPU_TEST_CASE("RadiationModel Isolated Spherical Crown") {
+    // A spherical crown of small black leaves with nothing else in the scene: centres uniform in a ball of radius R, spherical
+    // leaf angle distribution (G = 0.5), leaf area density a. As a turbid sphere its beam transmission averaged over the projected
+    // disk has a closed form, T = [1 - (1 + 2kR) exp(-2kR)] / (2 k^2 R^2) with k = G a, and it intercepts (1 - T) pi R^2 per unit
+    // flux normal to any beam. Under unit horizontal flux that is (1 - T) pi R^2 / cos(theta_s) from the sun, and 2 (1 - T) pi R^2
+    // from a uniform sky over the upper hemisphere; with the sky extended below the horizon it doubles again.
+    const float R = 1.f;
+    const float leaf_area_density = 2.f;
+    const float leaf_width = 0.02f;
+    const float sun_zenith = float(M_PI) / 3.f;
+
+    Context context;
+    const size_t Nleaves = lroundf(leaf_area_density * 4.f / 3.f * float(M_PI) * powf(R, 3) / (leaf_width * leaf_width));
+    std::vector<uint> UUIDs_leaf;
+    UUIDs_leaf.reserve(Nleaves);
+    while (UUIDs_leaf.size() < Nleaves) {
+        vec3 position((2.f * context.randu() - 1.f) * R, (2.f * context.randu() - 1.f) * R, (2.f * context.randu() - 1.f) * R);
+        if (position.magnitude() > R) {
+            continue;
+        }
+        SphericalCoord rotation(1.f, acos_safe(1.f - context.randu()), 2.f * float(M_PI) * context.randu());
+        UUIDs_leaf.push_back(context.addPatch(position, make_vec2(leaf_width, leaf_width), rotation));
+    }
+    context.setPrimitiveData(UUIDs_leaf, "twosided_flag", uint(1));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    radiation.addRadiationBand("direct");
+    radiation.disableEmission("direct");
+    radiation.setDirectRayCount("direct", 64);
+    radiation.setScatteringDepth("direct", 0);
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(sinf(sun_zenith), 0.f, cosf(sun_zenith)));
+    radiation.setSourceFlux(sun, "direct", 1.f / cosf(sun_zenith));
+    radiation.setDiffuseRadiationFlux("direct", 0.f);
+
+    radiation.addRadiationBand("diffuse");
+    radiation.disableEmission("diffuse");
+    radiation.setDiffuseRayCount("diffuse", 256);
+    radiation.setScatteringDepth("diffuse", 0);
+    radiation.setSourceFlux(sun, "diffuse", 0.f);
+    radiation.setDiffuseRadiationFlux("diffuse", 1.f);
+
+    radiation.updateGeometry();
+    radiation.runBand(std::vector<std::string>{"direct", "diffuse"});
+
+    auto crownPower = [&](const char *band) {
+        float power = 0.f;
+        for (uint UUID: UUIDs_leaf) {
+            float flux;
+            context.getPrimitiveData(UUID, (std::string("radiation_flux_") + band).c_str(), flux);
+            power += flux * context.getPrimitiveArea(UUID);
+        }
+        return power;
+    };
+
+    const float kR = 0.5f * leaf_area_density * R;
+    const float transmission = (1.f - (1.f + 2.f * kR) * expf(-2.f * kR)) / (2.f * kR * kR);
+    const float intercepted_beam = (1.f - transmission) * float(M_PI) * R * R;
+
+    const float direct = crownPower("direct");
+    const float diffuse = crownPower("diffuse");
+
+    radiation.enableBelowHorizonDiffuseRadiation();
+    radiation.runBand("diffuse");
+    const float diffuse_full_sphere = crownPower("diffuse");
+
+    // Measured on all three backends (24 random crowns): within 0.6% under the sun and 0.25% under the sky
+    DOCTEST_CHECK(fabsf(direct * cosf(sun_zenith) / intercepted_beam - 1.f) < 0.015f);
+    DOCTEST_CHECK(fabsf(diffuse / (2.f * intercepted_beam) - 1.f) < 0.01f);
+    DOCTEST_CHECK(fabsf(diffuse_full_sphere / (4.f * intercepted_beam) - 1.f) < 0.01f);
+}
+
 GPU_TEST_CASE("RadiationModel Gas-filled Furnace") {
     float error_threshold = 0.005;
     float sigma = 5.6703744E-8;
@@ -2765,10 +2838,11 @@ GPU_TEST_CASE("RadiationModel Homogeneous Canopy with Periodic Boundaries") {
 
 // Horizontally homogeneous canopy for the scattering-truncation tests: LAI 2 of square leaves with a spherical leaf angle
 // distribution (reflectivity = transmissivity = 0.4) over a one-sided ground (reflectivity 0.2), periodic in x and y.
-// Leaf absorption per unit ground area from a 1-D discrete-ordinates turbid-medium solution of this canopy (spherical
-// G = 0.5, bi-Lambertian leaves, Lambertian soil, converged to 1e-6): 0.306792 under a sun at 36 degrees zenith and
-// 0.329879 under a uniform sky, both for unit incident flux on a horizontal plane.
-static std::vector<uint> buildScatteringTestCanopy(Context &context, float domain_width) {
+// Absorption per unit ground area from a 1-D discrete-ordinates turbid-medium solution of this canopy (spherical G = 0.5,
+// bi-Lambertian leaves, Lambertian soil, converged to 1e-6), for unit incident flux on a horizontal plane: leaves 0.306792
+// and ground 0.408382 under a sun at 36 degrees zenith, leaves 0.329879 and ground 0.352932 under a uniform sky. The ground
+// tiles are returned through UUIDs_ground_out when it is given.
+static std::vector<uint> buildScatteringTestCanopy(Context &context, float domain_width, std::vector<uint> *UUIDs_ground_out = nullptr) {
     const float LAI = 2.f;
     const float canopy_height = 1.5f;
     const float leaf_width = 0.05f;
@@ -2790,12 +2864,16 @@ static std::vector<uint> buildScatteringTestCanopy(Context &context, float domai
     for (const char *band: {"direct", "diffuse"}) {
         context.setPrimitiveData(UUIDs_ground, (std::string("reflectivity_") + band).c_str(), 0.2f);
     }
+    if (UUIDs_ground_out != nullptr) {
+        *UUIDs_ground_out = UUIDs_ground;
+    }
     return UUIDs_leaf;
 }
 
-static float canopyLeafAbsorption(Context &context, const std::vector<uint> &UUIDs_leaf, const std::string &band, float domain_width) {
+// Power absorbed by the given primitives in a band, per unit ground area of the canopy domain
+static float absorbedPerGroundArea(Context &context, const std::vector<uint> &UUIDs, const std::string &band, float domain_width) {
     float absorbed = 0.f;
-    for (uint UUID: UUIDs_leaf) {
+    for (uint UUID: UUIDs) {
         float flux;
         context.getPrimitiveData(UUID, ("radiation_flux_" + band).c_str(), flux);
         absorbed += flux * context.getPrimitiveArea(UUID);
@@ -2810,10 +2888,13 @@ GPU_TEST_CASE("RadiationModel scattering truncation - a few scattering iteration
     const float domain_width = 10.f;
     const float reference_direct = 0.306792f;
     const float reference_diffuse = 0.329879f;
+    const float reference_ground_direct = 0.408382f;
+    const float reference_ground_diffuse = 0.352932f;
     const float sun_zenith = 0.2f * float(M_PI);
 
     Context context;
-    std::vector<uint> UUIDs_leaf = buildScatteringTestCanopy(context, domain_width);
+    std::vector<uint> UUIDs_ground;
+    std::vector<uint> UUIDs_leaf = buildScatteringTestCanopy(context, domain_width, &UUIDs_ground);
 
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
@@ -2839,31 +2920,40 @@ GPU_TEST_CASE("RadiationModel scattering truncation - a few scattering iteration
     radiation.updateGeometry();
 
     radiation.runBand(std::vector<std::string>{"direct", "diffuse"});
-    float leaf_direct = canopyLeafAbsorption(context, UUIDs_leaf, "direct", domain_width);
-    float leaf_diffuse = canopyLeafAbsorption(context, UUIDs_leaf, "diffuse", domain_width);
-    DOCTEST_CHECK(fabsf(leaf_direct - reference_direct) / reference_direct < 0.025f);
-    DOCTEST_CHECK(fabsf(leaf_diffuse - reference_diffuse) / reference_diffuse < 0.025f);
+    float leaf_direct = absorbedPerGroundArea(context, UUIDs_leaf, "direct", domain_width);
+    float leaf_diffuse = absorbedPerGroundArea(context, UUIDs_leaf, "diffuse", domain_width);
+    float ground_direct = absorbedPerGroundArea(context, UUIDs_ground, "direct", domain_width);
+    float ground_diffuse = absorbedPerGroundArea(context, UUIDs_ground, "diffuse", domain_width);
+    // Measured on all three backends (24 random canopies): leaves within 0.5%, ground within 0.9%
+    DOCTEST_CHECK(fabsf(leaf_direct - reference_direct) / reference_direct < 0.01f);
+    DOCTEST_CHECK(fabsf(leaf_diffuse - reference_diffuse) / reference_diffuse < 0.01f);
+    DOCTEST_CHECK(fabsf(ground_direct - reference_ground_direct) / reference_ground_direct < 0.015f);
+    DOCTEST_CHECK(fabsf(ground_diffuse - reference_ground_diffuse) / reference_ground_diffuse < 0.015f);
 
     // A direct-only dispatch, where the first scattering launch starts from the scattered direct energy
     radiation.setScatteringDepth("direct", 2);
     radiation.runBand("direct");
-    float leaf_direct_depth2 = canopyLeafAbsorption(context, UUIDs_leaf, "direct", domain_width);
+    float leaf_direct_depth2 = absorbedPerGroundArea(context, UUIDs_leaf, "direct", domain_width);
     DOCTEST_CHECK(fabsf(leaf_direct_depth2 - reference_direct) / reference_direct < 0.025f);
 
     // A single scattering iteration, where the series is summed from the first measured ratio (absorbing the leftover was +70%)
     radiation.setScatteringDepth("direct", 1);
     radiation.runBand("direct");
-    float leaf_direct_depth1 = canopyLeafAbsorption(context, UUIDs_leaf, "direct", domain_width);
+    float leaf_direct_depth1 = absorbedPerGroundArea(context, UUIDs_leaf, "direct", domain_width);
     DOCTEST_CHECK(fabsf(leaf_direct_depth1 - reference_direct) / reference_direct < 0.04f);
 
     // The full diffuse ray count in every scattering iteration gives the same answer
     radiation.disableScatteringRayReduction();
     radiation.setScatteringDepth("direct", 4);
     radiation.runBand(std::vector<std::string>{"direct", "diffuse"});
-    float leaf_direct_full_rays = canopyLeafAbsorption(context, UUIDs_leaf, "direct", domain_width);
-    float leaf_diffuse_full_rays = canopyLeafAbsorption(context, UUIDs_leaf, "diffuse", domain_width);
-    DOCTEST_CHECK(fabsf(leaf_direct_full_rays - reference_direct) / reference_direct < 0.025f);
-    DOCTEST_CHECK(fabsf(leaf_diffuse_full_rays - reference_diffuse) / reference_diffuse < 0.025f);
+    float leaf_direct_full_rays = absorbedPerGroundArea(context, UUIDs_leaf, "direct", domain_width);
+    float leaf_diffuse_full_rays = absorbedPerGroundArea(context, UUIDs_leaf, "diffuse", domain_width);
+    float ground_direct_full_rays = absorbedPerGroundArea(context, UUIDs_ground, "direct", domain_width);
+    float ground_diffuse_full_rays = absorbedPerGroundArea(context, UUIDs_ground, "diffuse", domain_width);
+    DOCTEST_CHECK(fabsf(leaf_direct_full_rays - reference_direct) / reference_direct < 0.01f);
+    DOCTEST_CHECK(fabsf(leaf_diffuse_full_rays - reference_diffuse) / reference_diffuse < 0.01f);
+    DOCTEST_CHECK(fabsf(ground_direct_full_rays - reference_ground_direct) / reference_ground_direct < 0.015f);
+    DOCTEST_CHECK(fabsf(ground_diffuse_full_rays - reference_ground_diffuse) / reference_ground_diffuse < 0.015f);
 }
 
 GPU_TEST_CASE("RadiationModel scattering - a one-sided primitive scatters its direct radiation only from the face it leaves through") {
@@ -2945,7 +3035,7 @@ GPU_TEST_CASE("RadiationModel scattering truncation - setMinScatterEnergy stops 
         size_t start = output.rfind(", ", pos);
         rays_per_iteration.push_back(std::stoi(output.substr(start + 2, pos - start - 2)));
     }
-    float leaf_diffuse = canopyLeafAbsorption(context, UUIDs_leaf, "diffuse", domain_width);
+    float leaf_diffuse = absorbedPerGroundArea(context, UUIDs_leaf, "diffuse", domain_width);
 
     DOCTEST_CHECK(iterations > 2);
     DOCTEST_CHECK(iterations < max_depth);
@@ -7119,6 +7209,18 @@ GPU_TEST_CASE("RadiationModel - emission band with wavelength bounds emits only 
     DOCTEST_INFO("broadband radiance " << broadband_pixels.at(brightest_pixel) << " (expected " << expected_broadband_radiance << "), in-band fraction " << window_fraction << " (expected " << expected_fraction << ")");
     DOCTEST_CHECK(std::fabs(broadband_pixels.at(brightest_pixel) / expected_broadband_radiance - 1.f) < 0.05f);
     DOCTEST_CHECK(std::fabs(window_fraction / expected_fraction - 1.f) < 0.01f);
+
+    // The bounds are recorded in global data for the energy balance model, which emits each band's share of the blackbody spectrum; a band without bounds records none
+    DOCTEST_REQUIRE(context.doesGlobalDataExist("wavelength_bounds_TH_window"));
+    vec2 recorded_bounds;
+    context.getGlobalData("wavelength_bounds_TH_window", recorded_bounds);
+    DOCTEST_CHECK(recorded_bounds == make_vec2(8000.f, 14000.f));
+    DOCTEST_CHECK(!context.doesGlobalDataExist("wavelength_bounds_TH"));
+    // The scattering depth is recorded too, since without scattering a band emits as a blackbody regardless of the emissivity
+    DOCTEST_REQUIRE(context.doesGlobalDataExist("scattering_depth_TH"));
+    uint recorded_scattering_depth = 0;
+    context.getGlobalData("scattering_depth_TH", recorded_scattering_depth);
+    DOCTEST_CHECK(recorded_scattering_depth == 1);
 }
 
 GPU_TEST_CASE("RadiationModel - emission band starting at zero wavelength emits only its in-band Planck fraction") {

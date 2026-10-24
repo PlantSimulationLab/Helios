@@ -81,10 +81,16 @@ std::string PlantArchitecture::makeShootString(const std::string &current_string
 
         for (uint petiole = 0; petiole < phytomer->petiole_length.size(); petiole++) {
 
-            outstring += "Petiole(" + std::to_string(phytomer->petiole_length.at(petiole)) + "," + std::to_string(phytomer->petiole_radii.at(petiole).front()) + "," + std::to_string(rad2deg(phytomer->petiole_pitch.at(petiole))) + ")";
+            // A leaf without a petiole is written without a Petiole(), which is how the string says so; its angle off the stem then goes into the leaf pitch.
+            float leaf_pitch = phytomer->leaf_rotation.at(petiole).front().pitch;
+            if (phytomer->leaf_is_sessile) {
+                leaf_pitch -= std::fabs(phytomer->petiole_pitch.at(petiole));
+            } else {
+                outstring += "Petiole(" + std::to_string(phytomer->petiole_length.at(petiole)) + "," + std::to_string(phytomer->petiole_radii.at(petiole).front()) + "," + std::to_string(rad2deg(phytomer->petiole_pitch.at(petiole))) + ")";
+            }
 
             //\todo If leaf is compound, just using rotation for the first leaf for now rather than adding multiple 'Leaf()' strings for each leaflet.
-            outstring += "Leaf(" + std::to_string(phytomer->leaf_size_max.at(petiole).front() * phytomer->current_leaf_scale_factor.at(petiole)) + "," + std::to_string(rad2deg(phytomer->leaf_rotation.at(petiole).front().pitch)) + "," +
+            outstring += "Leaf(" + std::to_string(phytomer->leaf_size_max.at(petiole).front() * phytomer->current_leaf_scale_factor.at(petiole)) + "," + std::to_string(rad2deg(leaf_pitch)) + "," +
                          std::to_string(rad2deg(phytomer->leaf_rotation.at(petiole).front().yaw)) + "," + std::to_string(rad2deg(phytomer->leaf_rotation.at(petiole).front().roll)) + ")";
 
             if (shoot->childIDs.find(node_number) != shoot->childIDs.end()) {
@@ -519,6 +525,19 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
     // silently revert to the PlantInstance default of 999. Optional on read, so older files still load.
     output_xml << "\t\t<max_age> " << plant_instances.at(plantID).max_age << " </max_age>" << std::endl;
 
+    // Build parameters the plant was built with. Some are read as the plant grows -- its flower and fruit prototypes are built from them -- so a plant read back
+    // without them would grow differently, for example with default-sized fruit. They are written with enough digits to read back as the same float, so that the
+    // restored plant shares the cached prototypes of the one it was written from, and with the library model that declares them so that they can be validated on
+    // reading. Optional on read, so older files still load.
+    if (!plant_instances.at(plantID).build_parameters.empty()) {
+        output_xml << "\t\t<plant_model> " << plant_instances.at(plantID).plant_name << " </plant_model>" << std::endl;
+        const std::streamsize previous_precision = output_xml.precision(std::numeric_limits<float>::max_digits10);
+        for (const auto &[parameter_name, value]: plant_instances.at(plantID).build_parameters) {
+            output_xml << "\t\t<build_parameter name=\"" << parameter_name << "\"> " << value << " </build_parameter>" << std::endl;
+        }
+        output_xml.precision(previous_precision);
+    }
+
     // Leaf inclination distribution this plant is being steered toward, if any. Like the thresholds and
     // max_age above it is plant-scale configuration rather than geometry, and it is not recoverable from the
     // shoot structure: the plant's species is not written to the file, so a plant built from a library model
@@ -665,6 +684,9 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                         output_xml << "\t\t\t\t\t\t\t\t\t<flower_yaw>" << rad2deg(fbud.inflorescence_rotation.at(i).yaw) << "</flower_yaw>" << std::endl;
                         output_xml << "\t\t\t\t\t\t\t\t\t<flower_roll>" << rad2deg(fbud.inflorescence_rotation.at(i).roll) << "</flower_roll>" << std::endl;
                         output_xml << "\t\t\t\t\t\t\t\t\t<flower_azimuth>" << rad2deg(fbud.inflorescence_rotation.at(i).azimuth) << "</flower_azimuth>" << std::endl;
+                        if (fbud.inflorescence_rotation.at(i).gravity_fraction > 0.f) {
+                            output_xml << "\t\t\t\t\t\t\t\t\t<flower_gravity_fraction>" << fbud.inflorescence_rotation.at(i).gravity_fraction << "</flower_gravity_fraction>" << std::endl;
+                        }
                     }
                     // Save individual base scale for this flower/fruit
                     if (i < fbud.inflorescence_base_scales.size()) {
@@ -781,6 +803,10 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                 output_xml << "\t\t\t\t\t\t<petiole_radius>" << phytomer->petiole_radii.at(petiole).front() << "</petiole_radius>" << std::endl;
                 output_xml << "\t\t\t\t\t\t<petiole_pitch>" << rad2deg(phytomer->petiole_pitch.at(petiole)) << "</petiole_pitch>" << std::endl;
                 output_xml << "\t\t\t\t\t\t<petiole_curvature>" << phytomer->petiole_curvature.at(petiole) << "</petiole_curvature>" << std::endl;
+                // A leaf without a petiole is posed in its stem's frame, which its minimal petiole length alone does not reveal. Written only when set, so a file without it reads as before.
+                if (phytomer->leaf_is_sessile) {
+                    output_xml << "\t\t\t\t\t\t<leaf_is_sessile>1</leaf_is_sessile>" << std::endl;
+                }
                 // Note: petiole_base_position is no longer written to XML - it is auto-calculated from the parent internode tip during XML reading
                 output_xml << "\t\t\t\t\t\t<current_leaf_scale_factor>" << phytomer->current_leaf_scale_factor.at(petiole) << "</current_leaf_scale_factor>" << std::endl;
                 // How far the petiole itself has elongated. It is recorded separately from the leaf's fraction because the two advance on separate rates: a petiole elongates on its shoot's internode rate
@@ -1201,6 +1227,27 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
             setPlantMaxAge(plantID, parse_xml_tag_float(plant.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
         }
 
+        // Build parameters, read before any flower or fruit is rebuilt below since its prototype is built from them. Absent in files written before the tag existed, in which case the plant has none.
+        // They are validated against the library model that declares them, as they would be by buildPlantInstanceFromLibrary().
+        if (plant.child("build_parameter")) {
+            std::map<std::string, float> build_parameters;
+            for (pugi::xml_node build_parameter = plant.child("build_parameter"); build_parameter; build_parameter = build_parameter.next_sibling("build_parameter")) {
+                const std::string parameter_name = build_parameter.attribute("name").value();
+                if (parameter_name.empty()) {
+                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A <build_parameter> tag of plant " + std::to_string(plantID) + " has no name attribute.");
+                }
+                node_string = "build_parameter";
+                build_parameters[parameter_name] = parse_xml_tag_float(build_parameter, node_string, "PlantArchitecture::readPlantStructureXML");
+            }
+            const std::string plant_model = plant.child("plant_model") ? helios::deblank(plant.child_value("plant_model")) : std::string();
+            if (plant_builders.find(plant_model) == plant_builders.end()) {
+                helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): Plant " + std::to_string(plantID) + " has <build_parameter> tags but " +
+                                     (plant_model.empty() ? std::string("no <plant_model> tag") : "an unknown <plant_model> '" + plant_model + "'") + " naming the library model that declares them.");
+            }
+            plant_instances.at(plantID).organ_build_parameters = validateBuildParameters(plant_model, build_parameters, "PlantArchitecture::readPlantStructureXML");
+            plant_instances.at(plantID).build_parameters = build_parameters;
+        }
+
         // Leaf inclination distribution the plant was being steered toward when it was written. Optional
         // exactly as max_age above, so a file written before the tag existed restores a plant that simply is
         // not tracking. The steering strength is not written -- it is not part of the distribution -- so the
@@ -1417,6 +1464,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 std::vector<float> current_leaf_scale_factors; // scale factor of each petiole within internode
                 std::vector<float> current_petiole_scale_factors; // elongation fraction of each petiole within internode
                 std::vector<float> petiole_tapers; // taper value for each petiole
+                bool leaf_is_sessile = false; // whether the phytomer's leaves have no petiole (see Phytomer::leaf_is_sessile)
                 std::vector<bool> have_saved_petiole_axes_all; // whether the file recorded this petiole's axes
                 std::vector<vec3> saved_petiole_axis_initial_all; // petiole axis before curvature, as built
                 std::vector<vec3> saved_petiole_rotation_axis_all; // axis curvature is applied about, as built
@@ -1559,6 +1607,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                 rotation.azimuth = 0;
                             }
 
+                            // Absent from files written before gravity was applied as a final rotation: their saved pitch already includes it.
+                            pugi::xml_node gravity_node = flower.child("flower_gravity_fraction");
+                            if (gravity_node) {
+                                rotation.gravity_fraction = parse_xml_tag_float(gravity_node, "flower_gravity_fraction", "PlantArchitecture::readPlantStructureXML");
+                            }
+
                             fbud_data.flower_rotations.push_back(rotation);
 
                             // Read individual base scale for this flower/fruit
@@ -1593,6 +1647,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     // petiole curvature
                     node_string = "petiole_curvature";
                     petiole_curvature = parse_xml_tag_float(petiole.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML");
+
+                    // leaves without a petiole (optional; absent for a leaf on a petiole and in files written before the tag existed)
+                    if (petiole.child("leaf_is_sessile")) {
+                        node_string = "leaf_is_sessile";
+                        leaf_is_sessile = parse_xml_tag_int(petiole.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") != 0;
+                    }
 
                     // petiole base position (optional for backward compatibility)
                     vec3 petiole_base_pos = nullorigin;
@@ -2399,6 +2459,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     out_peduncle_rotation_axis = inflorescence_bending_axis_actual;
                 };
 
+                // Whether the leaves sit on the stem is taken from the file rather than from how the phytomer was just rebuilt, which for the first phytomer of a shoot follows the current shoot type.
+                if (!petiole_lengths.empty()) {
+                    phytomer_ptr->leaf_is_sessile = leaf_is_sessile;
+                }
+
                 // Restore petiole properties and reconstruct geometry from bulk parameters
                 for (size_t p = 0; p < petiole_lengths.size(); p++) {
                     if (p < phytomer_ptr->petiole_length.size()) {
@@ -3118,7 +3183,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                                         // Rebuild Context geometry with COMPUTED vertices/radii
                                         if (phytomer_ptr->build_context_geometry_peduncle) {
-                                            std::vector<RGBcolor> colors(peduncle_vertices_computed.size(), phytomer_ptr->phytomer_parameters.peduncle.color);
+                                            const std::vector<RGBcolor> colors = phytomer_ptr->getPeduncleNodeColors(peduncle_vertices_computed.size());
                                             fbud.peduncle_objIDs.push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices_computed, peduncle_radii_computed, colors));
                                             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(fbud.peduncle_objIDs.back()), "object_label", "peduncle");
                                             std::string peduncle_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_peduncle";
@@ -3130,7 +3195,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                     if (!fbud_data.flower_rotations.empty()) {
 
                                         // Ensure prototype maps are initialized before creating geometry
-                                        ensureInflorescencePrototypesInitialized(phytomer_ptr->phytomer_parameters, plant_instances.at(plantID).plant_name);
+                                        ensureInflorescencePrototypesInitialized(phytomer_ptr->phytomer_parameters, plantID);
 
                                         for (size_t i = 0; i < fbud_data.flower_rotations.size(); i++) {
                                             // Get saved base if available (for backward compatibility), otherwise will compute
@@ -3194,7 +3259,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             bool is_open_flower = (desired_state == BUD_FLOWER_OPEN);
 
                                             // Create flower geometry with computed base, saved rotations, and recalculated peduncle axis
-                                            phytomer_ptr->createInflorescenceGeometry(fbud, flower_base_computed, recalculated_peduncle_axis, saved_pitch, saved_roll, saved_azimuth, saved_yaw, scale_factor, is_open_flower);
+                                            phytomer_ptr->createInflorescenceGeometry(fbud, flower_base_computed, recalculated_peduncle_axis, saved_pitch, saved_roll, saved_azimuth, saved_yaw, scale_factor, is_open_flower, fbud_data.flower_rotations.at(i).gravity_fraction);
                                         }
                                     }
 
@@ -3306,7 +3371,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                                         // Rebuild Context geometry with COMPUTED vertices/radii
                                         if (phytomer_ptr->build_context_geometry_peduncle) {
-                                            std::vector<RGBcolor> colors(peduncle_vertices_computed.size(), phytomer_ptr->phytomer_parameters.peduncle.color);
+                                            const std::vector<RGBcolor> colors = phytomer_ptr->getPeduncleNodeColors(peduncle_vertices_computed.size());
                                             fbud.peduncle_objIDs.push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices_computed, peduncle_radii_computed, colors));
                                             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(fbud.peduncle_objIDs.back()), "object_label", "peduncle");
                                             std::string peduncle_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_peduncle";
@@ -3318,7 +3383,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                     if (!fbud_data.flower_rotations.empty()) {
 
                                         // Ensure prototype maps are initialized before creating geometry
-                                        ensureInflorescencePrototypesInitialized(phytomer_ptr->phytomer_parameters, plant_instances.at(plantID).plant_name);
+                                        ensureInflorescencePrototypesInitialized(phytomer_ptr->phytomer_parameters, plantID);
 
                                         for (size_t i = 0; i < fbud_data.flower_rotations.size(); i++) {
                                             // Get saved base if available (for backward compatibility), otherwise will compute
@@ -3389,7 +3454,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             }
 
                                             // Create fruit geometry with computed base, saved rotations, and recalculated peduncle axis
-                                            phytomer_ptr->createInflorescenceGeometry(fbud, fruit_base_computed, recalculated_peduncle_axis, saved_pitch, saved_roll, saved_azimuth, saved_yaw, base_fruit_scale, false);
+                                            phytomer_ptr->createInflorescenceGeometry(fbud, fruit_base_computed, recalculated_peduncle_axis, saved_pitch, saved_roll, saved_azimuth, saved_yaw, base_fruit_scale, false, fbud_data.flower_rotations.at(i).gravity_fraction);
                                         }
 
                                         // Now grow every fruit on this bud from its mature size down to the size it
@@ -4507,6 +4572,17 @@ void writeMeshGeometry(std::ofstream &out, const USDLink &link,
     }
 }
 
+// Checked before the output file is opened, so a failed export does not leave a truncated file behind.
+void checkUSDTextureFilesExist(const std::vector<USDMaterial> &materials, const std::string &caller) {
+    for (const auto &mat : materials) {
+        if (!mat.texture_file.empty() && !std::filesystem::exists(mat.texture_file)) {
+            helios_runtime_error("ERROR (PlantArchitecture::" + caller + "): Texture file " + mat.texture_file +
+                                 " used by the plant does not exist, so it cannot be copied beside the USD file. Make sure the texture file exists, or remove the texture from the primitives that use it, before exporting.");
+        }
+    }
+}
+
+// Texture files must exist; call checkUSDTextureFilesExist() first.
 void writeVisualMaterials(std::ofstream &out, const std::vector<USDMaterial> &materials,
                           const std::string &output_dir, const std::string &plant_prim,
                           const std::string &indent) {
@@ -4530,22 +4606,17 @@ void writeVisualMaterials(std::ofstream &out, const std::vector<USDMaterial> &ma
         std::string tex_path;
         if (!mat.texture_file.empty()) {
             std::filesystem::path src(mat.texture_file);
-            if (std::filesystem::exists(src)) {
-                if (!textures_copied) {
-                    std::filesystem::create_directories(tex_dir);
-                    textures_copied = true;
-                }
-                std::filesystem::path dst = tex_dir / src.filename();
-                // Only copy if source and destination differ
-                if (!std::filesystem::exists(dst) || !std::filesystem::equivalent(src, dst)) {
-                    std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing);
-                }
-                // USD relative path anchored to the file location
-                tex_path = "./textures/" + src.filename().string();
-            } else {
-                // Source file doesn't exist — write the path as-is and hope the user fixes it
-                tex_path = mat.texture_file;
+            if (!textures_copied) {
+                std::filesystem::create_directories(tex_dir);
+                textures_copied = true;
             }
+            std::filesystem::path dst = tex_dir / src.filename();
+            // Only copy if source and destination differ
+            if (!std::filesystem::exists(dst) || !std::filesystem::equivalent(src, dst)) {
+                std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing);
+            }
+            // USD relative path anchored to the file location
+            tex_path = "./textures/" + src.filename().string();
         }
 
         std::string mat_base = "/" + plant_prim + "/Materials/" + mat.name;
@@ -4809,15 +4880,16 @@ void PlantArchitecture::writePlantStructureUSD(uint plantID, const std::string &
         helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureUSD): The output file given was a directory. This argument should be the path to a file.");
     }
 
-    std::ofstream out(output_file);
-    if (!out.is_open()) {
-        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureUSD): Could not open file " + output_file + " for writing.");
-    }
-
     ArticulationData artic = buildArticulationData(plant, params, context_ptr);
 
     if (artic.links.empty()) {
         helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureUSD): No valid segments found in plant. All segments may be shorter than min_segment_length.");
+    }
+    checkUSDTextureFilesExist(artic.materials, "writePlantStructureUSD");
+
+    std::ofstream out(output_file);
+    if (!out.is_open()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureUSD): Could not open file " + output_file + " for writing.");
     }
 
     std::string plant_prim = sanitizePrimName("Plant_" + std::to_string(plantID));
@@ -4993,6 +5065,8 @@ void PlantArchitecture::writePlantGrowthUSD(uint plantID, const std::string &fil
             }
         }
     }
+
+    checkUSDTextureFilesExist(all_materials, "writePlantGrowthUSD");
 
     // --- Write USDA file ---
     std::ofstream out(output_file);

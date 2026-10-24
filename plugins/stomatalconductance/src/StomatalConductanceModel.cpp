@@ -281,7 +281,6 @@ void StomatalConductanceModel::setBMFCoefficientsFromLibrary(const std::string &
 
 BMFcoefficients StomatalConductanceModel::getBMFCoefficientsFromLibrary(const std::string &species) {
     BMFcoefficients coeffs;
-    bool defaultSpecies = false;
     const std::string &s = species;
     if (s == "Almond" || s == "almond") {
         coeffs.Em = 865.52;
@@ -359,22 +358,17 @@ BMFcoefficients StomatalConductanceModel::getBMFCoefficientsFromLibrary(const st
         coeffs.i0 = 0.f;
         coeffs.k = 2294.8;
         coeffs.b = 2.6058;
-    } else if (s == "EasternRedbud" || s == "easternredbud" || s == "easternredbud" || s == "EasternRedbud" || s == "EasternRedbud") {
+    } else if (s == "EasternRedbud" || s == "easternredbud") {
         coeffs.Em = 21.88;
         coeffs.i0 = 11.47;
         coeffs.k = 1.387e+05;
         coeffs.b = 1.051e-06;
     } else {
-        if (message_flag) {
-            std::cout << "WARNING (StomatalConductanceModel::getModelCoefficients): unknown species " << s << ". Returning default (Almond)." << std::endl;
-        }
-        defaultSpecies = true;
-        coeffs.Em = 865.52;
-        coeffs.i0 = 38.65;
-        coeffs.k = 780320.1;
-        coeffs.b = 2086.07;
+        helios_runtime_error("ERROR (StomatalConductanceModel::getBMFCoefficientsFromLibrary): Unknown species '" + s +
+                             "'. Valid species are: Almond, Apple, Cherry, Prune, Pear, PistachioFemale (or Pistachio), PistachioMale, Walnut, Grape, Elderberry, Toyon, Big_Leaf_Maple (or Maple), Western_Redbud (or Redbud), Baylaurel (or "
+                             "Bay_Laurel), Olive, EasternRedbud. Names are also accepted in all lower case.");
     }
-    if (!defaultSpecies && message_flag) {
+    if (message_flag) {
         std::cout << "Returning Stomatal Model Coefficients to " << s << std::endl;
     }
     return coeffs;

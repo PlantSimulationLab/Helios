@@ -727,37 +727,177 @@ DOCTEST_TEST_CASE("EnergyBalanceModel single emission-enabled band selects its e
     DOCTEST_CHECK(output.find("multiple_emission_bands") == std::string::npos);
 }
 
-DOCTEST_TEST_CASE("EnergyBalanceModel multiple emission-enabled bands warn and use the first") {
-    // With emission enabled on more than one band the choice is ambiguous: warn and use the emissivity of
-    // the first emission-enabled band (LW, added first, emissivity 0.8).
+DOCTEST_TEST_CASE("EnergyBalanceModel emission band without scattering emits as a blackbody") {
+    // With a scattering depth of 0, the RadiationModel treats surfaces as black in an emission band and emits sigma*T^4 regardless of "emissivity_<band>", so the energy balance must also use an emissivity of 1.
     Context context;
     uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
 
     float R = 500.f;
     context.setPrimitiveData(UUID, "radiation_flux_LW", R);
-    context.setPrimitiveData(UUID, "radiation_flux_LW2", 0.f);
     context.setPrimitiveData(UUID, "air_temperature", 300.f);
-    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.f);
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.f); // gH = 0 => pure radiative equilibrium
     context.setPrimitiveData(UUID, "emissivity_LW", 0.8f);
-    context.setPrimitiveData(UUID, "emissivity_LW2", 0.4f);
+    // Simulates a radiation run with emission enabled and scattering disabled in the LW band
     context.setGlobalData("emission_enabled_LW", uint(1));
-    context.setGlobalData("emission_enabled_LW2", uint(1));
+    context.setGlobalData("scattering_depth_LW", uint(0));
+
+    {
+        capture_cout capture;
+        EnergyBalanceModel model(&context);
+        model.addRadiationBand("LW");
+        model.run();
+    }
+
+    float T;
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID, "temperature", T));
+    // Pure radiative equilibrium: R = Nsides * sigma * T^4, with Nsides = 2 and eps = 1
+    float T_expected = float(pow(R / (2.f * 5.67e-8f), 0.25));
+    DOCTEST_CHECK(T == doctest::Approx(T_expected).epsilon(err_tol));
+
+    // With scattering enabled, the band's emissivity is used
+    context.setGlobalData("scattering_depth_LW", uint(1));
+    {
+        capture_cout capture;
+        EnergyBalanceModel model(&context);
+        model.addRadiationBand("LW");
+        model.run();
+    }
+    DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID, "temperature", T));
+    T_expected = float(pow(R / (2.f * 0.8f * 5.67e-8f), 0.25));
+    DOCTEST_CHECK(T == doctest::Approx(T_expected).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel emission bands with wavelength bounds emit their share of the blackbody spectrum") {
+    // The thermal spectrum is split between two emission bands with different emissivities, as for a surface whose emissivity varies with wavelength. The RadiationModel emits eps_b * sigma * T^4 times the blackbody fraction
+    // F_b(T) of each band, so the energy balance must emit sigma * T^4 * sum_b(eps_b * F_b(T)) rather than the broadband emission of a single band.
+    Context context;
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    const float T_equilibrium = 300.f;
+    const vec2 bounds_short = make_vec2(0, 8000);
+    const vec2 bounds_long = make_vec2(8000, 1e6);
+    const float emissivity_short = 0.6f;
+    const float emissivity_long = 0.95f;
+    const float effective_emissivity = emissivity_short * blackbodyBandFraction(bounds_short.x, bounds_short.y, T_equilibrium) + emissivity_long * blackbodyBandFraction(bounds_long.x, bounds_long.y, T_equilibrium);
+
+    // Absorbed radiation that balances the emission of both faces at T_equilibrium, with no sensible or latent exchange
+    const float R = 2.f * effective_emissivity * 5.67e-8f * powf(T_equilibrium, 4);
+    context.setPrimitiveData(UUID, "radiation_flux_LW_short", 0.f);
+    context.setPrimitiveData(UUID, "radiation_flux_LW_long", R);
+    context.setPrimitiveData(UUID, "temperature", T_equilibrium);
+    context.setPrimitiveData(UUID, "air_temperature", T_equilibrium);
+    context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.f);
+    context.setPrimitiveData(UUID, "emissivity_LW_short", emissivity_short);
+    context.setPrimitiveData(UUID, "emissivity_LW_long", emissivity_long);
+    // Simulates a radiation run with emission enabled in both bounded bands
+    context.setGlobalData("emission_enabled_LW_short", uint(1));
+    context.setGlobalData("emission_enabled_LW_long", uint(1));
+    context.setGlobalData("wavelength_bounds_LW_short", bounds_short);
+    context.setGlobalData("wavelength_bounds_LW_long", bounds_long);
 
     std::string output;
     {
         capture_cout capture;
         EnergyBalanceModel model(&context);
-        model.addRadiationBand("LW");
-        model.addRadiationBand("LW2");
+        model.addRadiationBand({"LW_short", "LW_long"});
         model.run();
         output = capture.get_captured_output();
     }
 
     float T;
     DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID, "temperature", T));
-    float T_expected = float(pow(R / (2.f * 0.8f * 5.67e-8f), 0.25));
-    DOCTEST_CHECK(output.find("multiple_emission_bands") != std::string::npos);
-    DOCTEST_CHECK(T == doctest::Approx(T_expected).epsilon(err_tol));
+    DOCTEST_CHECK(T == doctest::Approx(T_equilibrium).epsilon(err_tol));
+    DOCTEST_CHECK(output.find("multiple_emission") == std::string::npos);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel emission bands must account for the blackbody spectrum once") {
+    // The energy balance emits only what its emission bands emit in the RadiationModel, so those bands must together cover the blackbody spectrum, and cover it only once.
+    auto runWithEmissionBands = [](const std::vector<std::string> &bands, const std::vector<vec2> &bounds) {
+        Context context;
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveData(UUID, "air_temperature", 300.f);
+        for (size_t b = 0; b < bands.size(); b++) {
+            context.setPrimitiveData(UUID, ("radiation_flux_" + bands.at(b)).c_str(), 100.f);
+            context.setGlobalData(("emission_enabled_" + bands.at(b)).c_str(), uint(1));
+            // A zero vec2 marks a band without wavelength bounds
+            if (bounds.at(b).x != 0.f || bounds.at(b).y != 0.f) {
+                context.setGlobalData(("wavelength_bounds_" + bands.at(b)).c_str(), bounds.at(b));
+            }
+        }
+        capture_cout capture;
+        EnergyBalanceModel model(&context);
+        model.addRadiationBand(bands);
+        model.run();
+    };
+
+    // A single 8-14 um thermal camera band holds only about 38% of the emission at 300 K
+    DOCTEST_CHECK_THROWS_WITH_AS(runWithEmissionBands({"thermal"}, {make_vec2(8000, 14000)}), doctest::Contains("blackbody"), std::runtime_error);
+    // A broadband band and a thermal camera band both emitting count the 8-14 um emission twice
+    DOCTEST_CHECK_THROWS_WITH_AS(runWithEmissionBands({"LW", "thermal"}, {make_vec2(0, 0), make_vec2(8000, 14000)}), doctest::Contains("blackbody"), std::runtime_error);
+    // Two broadband bands both emitting count all emission twice
+    DOCTEST_CHECK_THROWS_WITH_AS(runWithEmissionBands({"LW", "LW2"}, {make_vec2(0, 0), make_vec2(0, 0)}), doctest::Contains("blackbody"), std::runtime_error);
+    // Bounded bands that overlap count the shared wavelengths twice
+    DOCTEST_CHECK_THROWS_WITH_AS(runWithEmissionBands({"LW_short", "LW_long"}, {make_vec2(0, 9000), make_vec2(8000, 1e6)}), doctest::Contains("overlap"), std::runtime_error);
+    // Bounded bands that together cover the spectrum, and a bounded band covering nearly all of it, are accepted
+    DOCTEST_CHECK_NOTHROW(runWithEmissionBands({"LW_short", "LW_long"}, {make_vec2(0, 8000), make_vec2(8000, 1e6)}));
+    DOCTEST_CHECK_NOTHROW(runWithEmissionBands({"LW"}, {make_vec2(3000, 100000)}));
+    // A broadband band together with a visible band that has emission enabled, which emits essentially nothing at 300 K, is accepted
+    DOCTEST_CHECK_NOTHROW(runWithEmissionBands({"LW", "PAR"}, {make_vec2(0, 0), make_vec2(400, 700)}));
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel emission band inputs that cannot be used raise an error") {
+    // Builds a primitive in a single emitting band from 3 to 100 um, which holds nearly all of the emission at 300 K
+    auto makeContext = [](Context &context, float temperature) {
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+        context.setPrimitiveData(UUID, "air_temperature", 300.f);
+        context.setPrimitiveData(UUID, "temperature", temperature);
+        context.setGlobalData("emission_enabled_LW", uint(1));
+        context.setGlobalData("wavelength_bounds_LW", make_vec2(3000, 100000));
+    };
+    auto runEnergyBalance = [](Context &context) {
+        capture_cout capture;
+        EnergyBalanceModel model(&context);
+        model.addRadiationBand("LW");
+        model.run();
+    };
+
+    // A surface temperature that is not a valid absolute temperature (e.g. given in Celsius, or a NaN) cannot be used to compute the band's share of the blackbody spectrum
+    {
+        Context context;
+        makeContext(context, -5.f);
+        DOCTEST_CHECK_THROWS_WITH_AS(runEnergyBalance(context), doctest::Contains("not a valid absolute temperature"), std::runtime_error);
+    }
+    {
+        Context context;
+        makeContext(context, std::numeric_limits<float>::quiet_NaN());
+        DOCTEST_CHECK_THROWS_WITH_AS(runEnergyBalance(context), doctest::Contains("not a valid absolute temperature"), std::runtime_error);
+    }
+    // Emission global data of the wrong type was not written by the RadiationModel and would otherwise select a different emission model
+    {
+        Context context;
+        makeContext(context, 300.f);
+        context.setGlobalData("scattering_depth_LW", int(0));
+        DOCTEST_CHECK_THROWS_WITH_AS(runEnergyBalance(context), doctest::Contains("scattering_depth_LW"), std::runtime_error);
+    }
+    {
+        Context context;
+        makeContext(context, 300.f);
+        context.setGlobalData("emission_enabled_LW", int(1));
+        DOCTEST_CHECK_THROWS_WITH_AS(runEnergyBalance(context), doctest::Contains("emission_enabled_LW"), std::runtime_error);
+    }
+    {
+        Context context;
+        makeContext(context, 300.f);
+        context.setGlobalData("wavelength_bounds_LW", make_vec3(3000, 100000, 0));
+        DOCTEST_CHECK_THROWS_WITH_AS(runEnergyBalance(context), doctest::Contains("wavelength_bounds_LW"), std::runtime_error);
+    }
+    // The same inputs with a valid temperature run
+    {
+        Context context;
+        makeContext(context, 300.f);
+        DOCTEST_CHECK_NOTHROW(runEnergyBalance(context));
+    }
 }
 
 DOCTEST_TEST_CASE("EnergyBalanceModel emissivity defined on multiple bands without emission info warns") {
@@ -941,6 +1081,11 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Equilibrium") {
     DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_air_temperature", T_canopy_air));
     DOCTEST_CHECK(T_canopy_air == doctest::Approx(Tref).epsilon(err_tol));
 
+    // With no heat leaving the canopy, the surface layer must be neutral.
+    float stability_parameter;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("canopy_stability_parameter", stability_parameter));
+    DOCTEST_CHECK(std::fabs(stability_parameter) < 1e-3f);
+
     // Every primitive must have been given the airspace temperature.
     for (uint UUID: UUIDs) {
         float Ta;
@@ -1113,8 +1258,8 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Wind Profile") {
 }
 
 DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Aerodynamic Resistance Scaling") {
-    // Aerodynamic resistance is inversely proportional to wind speed, so doubling the reference wind speed
-    // must halve the resistance, and a better-ventilated canopy must sit closer to the reference air.
+    // At neutral stability, aerodynamic resistance is inversely proportional to wind speed, so doubling the reference
+    // wind speed must halve the resistance, and a better-ventilated canopy must sit closer to the reference air.
     Context context;
     float Tref = 300.f;
     float canopy_height = 2.f;
@@ -1131,6 +1276,7 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Aerodynamic Resistance Sca
     model.addRadiationBand("SW");
     model.addRadiationBand("LW");
     DOCTEST_CHECK_NOTHROW(model.enableCanopyAirspaceModel(UUIDs, {}, canopy_height, 4.f, 2.f, 1));
+    model.disableCanopyAirspaceStabilityCorrection();
 
     context.setGlobalData("wind_speed_reference", 1.f);
     DOCTEST_CHECK_NOTHROW(model.run());
@@ -1149,6 +1295,122 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Aerodynamic Resistance Sca
     DOCTEST_CHECK(ra_slow > 0.f);
     // Better ventilation must bring the within-canopy air closer to the reference air.
     DOCTEST_CHECK(T_air_fast - Tref < T_air_slow - Tref);
+}
+
+// Solve a single-layer canopy airspace over a 2 m canopy with a 4 m reference height and LAI of 2, under a given net
+// radiation load and with closed stomata, and return the stability diagnostics.
+static void runStabilityCase(float shortwave_W_m2, float longwave_temperature_K, float wind_speed, bool stability_correction, float &aerodynamic_resistance, float &friction_velocity, float &stability_parameter, float &T_canopy_air) {
+    Context context;
+    float Tref = 300.f;
+    std::vector<uint> UUIDs = buildTestCanopy(context, 4, 3, 2.f, 0.1f);
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", shortwave_W_m2);
+    context.setPrimitiveData(UUIDs, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(longwave_temperature_K, 4)));
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.f);
+    context.setGlobalData("air_temperature_reference", Tref);
+    context.setGlobalData("air_humidity_reference", 0.5f);
+    context.setGlobalData("wind_speed_reference", wind_speed);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.addRadiationBand("LW");
+    model.enableCanopyAirspaceModel(UUIDs, {}, 2.f, 4.f, 2.f, 1);
+    if (stability_correction) {
+        model.enableCanopyAirspaceStabilityCorrection();
+    } else {
+        model.disableCanopyAirspaceStabilityCorrection();
+    }
+    model.run();
+
+    context.getGlobalData("aerodynamic_resistance", aerodynamic_resistance);
+    context.getGlobalData("friction_velocity", friction_velocity);
+    context.getGlobalData("canopy_stability_parameter", stability_parameter);
+    context.getGlobalData("canopy_air_temperature", T_canopy_air);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Stability Correction Direction") {
+    // A canopy heated above the reference air makes the surface layer unstable, which enhances turbulent exchange, so
+    // the aerodynamic resistance must fall below its neutral value. A canopy cooled below the reference air by
+    // longwave loss at night makes it stable, which suppresses exchange, so the resistance must rise above neutral.
+    float Tref = 300.f;
+
+    float ra_neutral, ustar_neutral, zeta_neutral, T_neutral;
+    float ra_unstable, ustar_unstable, zeta_unstable, T_unstable;
+    DOCTEST_CHECK_NOTHROW(runStabilityCase(600.f, Tref, 1.f, false, ra_neutral, ustar_neutral, zeta_neutral, T_neutral));
+    DOCTEST_CHECK_NOTHROW(runStabilityCase(600.f, Tref, 1.f, true, ra_unstable, ustar_unstable, zeta_unstable, T_unstable));
+
+    DOCTEST_CHECK(zeta_neutral == 0.f);
+    DOCTEST_CHECK(zeta_unstable < -0.1f);
+    DOCTEST_CHECK(ra_unstable < 0.9f * ra_neutral);
+    DOCTEST_CHECK(ustar_unstable > ustar_neutral);
+    // Stronger mixing must hold the heated canopy air closer to the reference air.
+    DOCTEST_CHECK(T_unstable > Tref);
+    DOCTEST_CHECK(T_unstable < T_neutral);
+
+    float ra_neutral_night, ustar_neutral_night, zeta_neutral_night, T_neutral_night;
+    float ra_stable, ustar_stable, zeta_stable, T_stable;
+    DOCTEST_CHECK_NOTHROW(runStabilityCase(0.f, Tref - 10.f, 2.f, false, ra_neutral_night, ustar_neutral_night, zeta_neutral_night, T_neutral_night));
+    DOCTEST_CHECK_NOTHROW(runStabilityCase(0.f, Tref - 10.f, 2.f, true, ra_stable, ustar_stable, zeta_stable, T_stable));
+
+    DOCTEST_CHECK(zeta_stable > 0.01f);
+    DOCTEST_CHECK(ra_stable > 1.05f * ra_neutral_night);
+    DOCTEST_CHECK(ustar_stable < ustar_neutral_night);
+    // Weaker mixing must let the cooling canopy air depart further from the reference air.
+    DOCTEST_CHECK(T_stable < T_neutral_night);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Stability Correction Consistency") {
+    // The converged stability must satisfy Monin-Obukhov similarity theory: the reported friction velocity and
+    // aerodynamic resistance must follow from the reported stability parameter through the published stability
+    // functions, and the stability parameter must in turn be the one implied by the sensible heat flux leaving the
+    // canopy. Both the unstable and stable branches of the stability functions are checked.
+    const float k = 0.41f;
+    const float Tref = 300.f;
+    const float h = 2.f, zr = 4.f, LAI = 2.f;
+    const float exp_half_LAI = std::exp(-0.5f * LAI);
+    const float z0 = h * exp_half_LAI * (1.f - exp_half_LAI);
+    const float d = h * (1.f - 2.f / LAI * (1.f - exp_half_LAI));
+    const float rho = 101000.f / (8.314462618f * Tref);
+    const float cp = 29.25f;
+
+    // Paulson (1970) for unstable and Beljaars and Holtslag (1991) for stable conditions.
+    auto psi_m = [](float zeta) {
+        if (zeta < 0.f) {
+            float x = std::pow(1.f - 16.f * zeta, 0.25f);
+            return 2.f * std::log((1.f + x) / 2.f) + std::log((1.f + x * x) / 2.f) - 2.f * std::atan(x) + 0.5f * float(M_PI);
+        }
+        return -zeta - (2.f / 3.f) * (zeta - 5.f / 0.35f) * std::exp(-0.35f * zeta) - (2.f / 3.f) * 5.f / 0.35f;
+    };
+    auto psi_h = [](float zeta) {
+        if (zeta < 0.f) {
+            return 2.f * std::log((1.f + std::sqrt(1.f - 16.f * zeta)) / 2.f);
+        }
+        return -std::pow(1.f + 2.f * zeta / 3.f, 1.5f) - (2.f / 3.f) * (zeta - 5.f / 0.35f) * std::exp(-0.35f * zeta) - (2.f / 3.f) * 5.f / 0.35f + 1.f;
+    };
+
+    struct StabilityCase {
+        float shortwave;
+        float longwave_temperature;
+        float wind_speed;
+    };
+    for (const StabilityCase &c: {StabilityCase{600.f, Tref, 1.f}, StabilityCase{0.f, Tref - 10.f, 2.f}}) {
+        float ra, ustar, zeta, T_air;
+        DOCTEST_CHECK_NOTHROW(runStabilityCase(c.shortwave, c.longwave_temperature, c.wind_speed, true, ra, ustar, zeta, T_air));
+        float inverse_L = zeta / (zr - d);
+
+        float ustar_expected = k * c.wind_speed / (std::log((zr - d) / z0) - psi_m(zeta) + psi_m(z0 * inverse_L));
+        DOCTEST_CHECK(ustar == doctest::Approx(ustar_expected).epsilon(err_tol));
+
+        float ra_expected = (std::log((zr - d) / (h - d)) - psi_h(zeta) + psi_h((h - d) * inverse_L)) / (k * ustar_expected);
+        DOCTEST_CHECK(ra == doctest::Approx(ra_expected).epsilon(err_tol));
+
+        // Stability parameter implied by the sensible heat flux from the canopy air to the reference air (there is no
+        // water vapor flux, since the stomata are closed). The iteration stops once the stability settles within a
+        // tolerance, so agreement is checked to within a few percent.
+        float sensible_flux = cp * rho / ra * (T_air - Tref);
+        float zeta_expected = -(zr - d) * k * 9.81f * sensible_flux / (rho * cp * Tref * std::pow(ustar, 3));
+        DOCTEST_CHECK(zeta == doctest::Approx(zeta_expected).epsilon(0.03));
+    }
 }
 
 DOCTEST_TEST_CASE("EnergyBalanceModel Canopy Airspace Soil Node") {

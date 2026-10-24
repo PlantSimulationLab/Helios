@@ -1753,10 +1753,15 @@ public:
     void runRadiationImaging(const std::vector<std::string> &cameralabels, const std::vector<std::string> &sourcelabels, const std::vector<std::string> &bandlabels, const std::vector<std::string> &cameraresponselabels, helios::vec2 wavelengthrange,
                              float fluxscale = 1, float diffusefactor = 0.0005, uint scatteringdepth = 4);
 
-    //! Apply camera image corrections including brightness, contrast, saturation, and gamma compression
+    //! Apply lens flare, brightness, contrast, and saturation corrections to an RGB camera image
     /**
-     * This only applies to RGB cameras. This pipeline applies post-processing steps including
-     * brightness/contrast adjustment, saturation adjustment, and gamma compression.
+     * This only applies to RGB cameras, and modifies the camera's linear pixel data in place. In order, it applies:
+     * 1. lens flare, if enabled for the camera;
+     * 2. brightness and contrast, applied per channel as v' = 0.5 + (v * brightness - 0.5) * contrast;
+     * 3. saturation, interpolating each pixel about its luminance L as v' = L + saturation * (v - L).
+     *
+     * It does not gamma-compress: sRGB gamma is applied to a copy of the data when the image is written by writeCameraImage().
+     * The intended order is runBand(), then optionally applyCameraColorCorrectionMatrix(), then applyCameraImageCorrections(), then writeCameraImage().
      * The parameters are saved to camera metadata if metadata export is enabled.
      *
      * \param[in] cameralabel Label of camera to be used for processing

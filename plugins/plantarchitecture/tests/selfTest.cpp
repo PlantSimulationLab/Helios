@@ -202,6 +202,246 @@ DOCTEST_TEST_CASE("Plant Library Model Building - apple") {
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
 
+DOCTEST_TEST_CASE("Plant Library - apple flowers in clusters at spur tips and below the tip of long shoots") {
+    // An apple bears most of its fruit in clusters of five or six flowers at the tips of spurs on older wood. The axillary flower buds of
+    // a long shoot lie below its few most distal nodes, and not on the latent basal nodes of its growth unit.
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // The apple model breaks dormancy 165 days after the plant is built and goes dormant again 200 days later, so day 465 is the plant's
+    // second winter: the long shoots of the second season are in their first dormancy, and spurs grown in that season hold their flower buds.
+    plantarchitecture.advanceTime(465);
+
+    uint spur_count = 0;
+    uint spur_axillary_floral_buds_alive = 0;
+    uint spur_tip_clusters = 0;
+    uint spur_tip_clusters_wrong_size = 0;
+    uint long_shoot_axillary_flower_buds = 0;
+    uint distal_axillary_flower_buds = 0;
+    uint basal_axillary_flower_buds = 0;
+    for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        if (plantarchitecture.isShootPruned(plantID, shootID)) {
+            continue;
+        }
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        const bool is_spur = shoot->shoot_type_label == "spur";
+        if (is_spur) {
+            spur_count++;
+        }
+        const int node_count = int(shoot->phytomers.size());
+        for (int node = 0; node < node_count; node++) {
+            uint terminal_buds = 0;
+            for (const auto &petiole: shoot->phytomers.at(node)->floral_buds) {
+                for (const auto &fbud: petiole) {
+                    if (fbud.isterminal) {
+                        if (fbud.state == BUD_DORMANT) {
+                            terminal_buds++;
+                        }
+                    } else if (is_spur) {
+                        if (fbud.state != BUD_DEAD) {
+                            spur_axillary_floral_buds_alive++;
+                        }
+                    } else if (fbud.state == BUD_DORMANT) {
+                        long_shoot_axillary_flower_buds++;
+                        if (node_count - node - 1 < 3) {
+                            distal_axillary_flower_buds++;
+                        }
+                        if (shoot->dormancy_cycles == 1 && node < 4) {
+                            basal_axillary_flower_buds++;
+                        }
+                    }
+                }
+            }
+            if (is_spur && terminal_buds > 0) {
+                spur_tip_clusters++;
+                if (terminal_buds < 5 || terminal_buds > 6) {
+                    spur_tip_clusters_wrong_size++;
+                }
+            }
+        }
+    }
+
+    DOCTEST_CHECK(spur_count > 0);
+    DOCTEST_CHECK(spur_tip_clusters > 0);
+    DOCTEST_CHECK(spur_tip_clusters_wrong_size == 0);
+    DOCTEST_CHECK(spur_axillary_floral_buds_alive == 0);
+    DOCTEST_CHECK(long_shoot_axillary_flower_buds > 0);
+    DOCTEST_CHECK(distal_axillary_flower_buds == 0);
+    DOCTEST_CHECK(basal_axillary_flower_buds == 0);
+
+    // The plant breaks dormancy again on day 530, and its flowers open a few days later.
+    uint spur_open_flowers_peak = 0;
+    for (int day = 0; day < 90; day++) {
+        plantarchitecture.advanceTime(1);
+        uint spur_open_flowers = 0;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            if (plantarchitecture.isShootPruned(plantID, shootID)) {
+                continue;
+            }
+            const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+            if (shoot->shoot_type_label != "spur") {
+                continue;
+            }
+            for (const auto &phytomer: shoot->phytomers) {
+                for (const auto &petiole: phytomer->floral_buds) {
+                    for (const auto &fbud: petiole) {
+                        if (fbud.isterminal && fbud.state == BUD_FLOWER_OPEN) {
+                            spur_open_flowers++;
+                        }
+                    }
+                }
+            }
+        }
+        spur_open_flowers_peak = std::max(spur_open_flowers_peak, spur_open_flowers);
+    }
+    DOCTEST_CHECK(spur_open_flowers_peak >= 5);
+}
+
+DOCTEST_TEST_CASE("Plant Library - apple spurs shaded in the past summer hold fewer flower buds") {
+    // Apple flower buds form under the light of the previous summer: a spur deep in the crown's shade holds none, and one in full light
+    // holds its whole cluster.
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // The winter before the fourth season, under the shade of the third season's canopy.
+    plantarchitecture.advanceTime(1200);
+
+    uint shaded_spurs = 0;
+    uint shaded_spurs_with_flower_buds = 0;
+    uint lit_spurs = 0;
+    uint lit_spurs_with_dead_flower_buds = 0;
+    for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        if (plantarchitecture.isShootPruned(plantID, shootID)) {
+            continue;
+        }
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        if (shoot->shoot_type_label != "spur" || shoot->phytomers.empty() || !shoot->isdormant) {
+            continue;
+        }
+        const auto &tip = shoot->phytomers.back();
+        uint alive = 0;
+        uint dead = 0;
+        for (const auto &petiole: tip->floral_buds) {
+            for (const auto &fbud: petiole) {
+                if (fbud.isterminal) {
+                    (fbud.state == BUD_DEAD ? dead : alive)++;
+                }
+            }
+        }
+        if (alive + dead == 0) {
+            continue;
+        }
+        float exposure = plantarchitecture.getSeasonPeakLightExposureAtPoint(plantID, tip->getInternodeNodePositions().back());
+        if (exposure < 0.4f) {
+            shaded_spurs++;
+            shaded_spurs_with_flower_buds += alive > 0 ? 1 : 0;
+        } else if (exposure > 0.85f) {
+            lit_spurs++;
+            lit_spurs_with_dead_flower_buds += dead > 0 ? 1 : 0;
+        }
+    }
+    DOCTEST_REQUIRE(shaded_spurs > 0);
+    DOCTEST_REQUIRE(lit_spurs > 0);
+    DOCTEST_CHECK(shaded_spurs_with_flower_buds == 0);
+    DOCTEST_CHECK(lit_spurs_with_dead_flower_buds == 0);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture terminal flower buds of a past season do not flower again") {
+    // A terminal flower cluster forms at the tip of a shoot when it goes dormant and flowers the next spring. Once the shoot has grown
+    // past it, its buds are spent and must not flower again in later springs.
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // The apple model breaks dormancy 165 days after the plant is built and every 365 days after that, and opens its flowers 3 days
+    // later. The scaffolds' first terminal clusters flower in the first spring; by the second spring the scaffolds have grown past them.
+    plantarchitecture.advanceTime(525);
+    // A shoot holds one current terminal cluster, at the node that was its tip when it went dormant; terminal flowers at any other node
+    // of the same shoot are a past season's cluster flowering again.
+    uint shoots_with_terminal_flowers = 0;
+    uint shoots_flowering_from_several_terminal_nodes = 0;
+    for (int step = 0; step < 6; step++) {
+        plantarchitecture.advanceTime(3);
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            if (plantarchitecture.isShootPruned(plantID, shootID)) {
+                continue;
+            }
+            const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+            uint nodes_with_terminal_flowers = 0;
+            for (const auto &phytomer: shoot->phytomers) {
+                bool node_has_terminal_flower = false;
+                for (const auto &petiole: phytomer->floral_buds) {
+                    for (const auto &fbud: petiole) {
+                        if (fbud.isterminal && (fbud.state == BUD_FLOWER_CLOSED || fbud.state == BUD_FLOWER_OPEN)) {
+                            node_has_terminal_flower = true;
+                        }
+                    }
+                }
+                nodes_with_terminal_flowers += node_has_terminal_flower ? 1 : 0;
+            }
+            if (nodes_with_terminal_flowers > 0) {
+                shoots_with_terminal_flowers++;
+            }
+            if (nodes_with_terminal_flowers > 1) {
+                shoots_flowering_from_several_terminal_nodes++;
+            }
+        }
+    }
+    DOCTEST_CHECK(shoots_with_terminal_flowers > 0);
+    DOCTEST_CHECK(shoots_flowering_from_several_terminal_nodes == 0);
+}
+
+DOCTEST_TEST_CASE("Plant Library - apple leaf size and trunk and scaffold diameters") {
+    // An apple leaf is about 20-40 cm^2. A young tree's trunk grows from a nursery tree under 2 cm in caliper, and each of its four
+    // scaffolds stays well below the trunk's diameter.
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // Late in the plant's second growing season (see the apple test above for the phenology), with the canopy in full leaf.
+    plantarchitecture.advanceTime(710);
+
+    std::vector<float> leaf_areas = plantarchitecture.getPlantLeafAreas(plantID);
+    DOCTEST_REQUIRE(!leaf_areas.empty());
+    float leaf_area_sum = 0;
+    for (float area: leaf_areas) {
+        leaf_area_sum += area;
+    }
+    float mean_leaf_area_cm2 = 1e4f * leaf_area_sum / float(leaf_areas.size());
+    DOCTEST_CHECK(mean_leaf_area_cm2 > 20.f);
+    DOCTEST_CHECK(mean_leaf_area_cm2 < 40.f);
+
+    float trunk_diameter = 2.f * plantarchitecture.getPlantShoot(plantID, 0)->shoot_internode_radii.front().front();
+    DOCTEST_CHECK(trunk_diameter > 0.016f);
+    DOCTEST_CHECK(trunk_diameter < 0.033f);
+
+    uint scaffold_count = 0;
+    float scaffold_diameter_sum = 0;
+    for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        if (shoot->parent_shoot_ID == 0) {
+            scaffold_count++;
+            scaffold_diameter_sum += 2.f * shoot->shoot_internode_radii.front().front();
+        }
+    }
+    DOCTEST_REQUIRE(scaffold_count > 0);
+    DOCTEST_CHECK(scaffold_diameter_sum / float(scaffold_count) < 0.75f * trunk_diameter);
+}
+
 DOCTEST_TEST_CASE("Plant Library Model Building - asparagus") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -1438,8 +1678,7 @@ namespace {
     void pruneOnCreationCallback(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
         BeanPhytomerCreationFunction(phytomer, shoot_node_index, parent_shoot_node_index, shoot_max_nodes, plant_age);
         CallbackEditState &state = callback_edit_state;
-        // shoot_index.x rather than shoot_node_index: at build time the latter is the node count of the shoot being built.
-        if (!state.armed || state.done || phytomer->plantID != state.plantID || phytomer->shoot_index.x != (int) state.node_index) {
+        if (!state.armed || state.done || phytomer->plantID != state.plantID || shoot_node_index != state.node_index) {
             return;
         }
         state.done = true;
@@ -1460,6 +1699,42 @@ namespace {
         plantarchitecture.defineShootType("trifoliate", trifoliate);
     }
 } // namespace
+
+namespace {
+    // Every (shoot_node_index, actual position) pair passed to recordNodeIndexCreationFunction()
+    std::vector<std::pair<uint, int>> recorded_creation_node_indices;
+
+    void recordNodeIndexCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
+        recorded_creation_node_indices.emplace_back(shoot_node_index, phytomer->shoot_index.x);
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("PlantArchitecture phytomer creation function receives the phytomer's own node index") {
+    // shoot_node_index is the position of the new phytomer along its shoot, counted from 0 at the base. It must be so for the phytomers built with a shoot when it is created, as well as for those added
+    // as it grows: a shoot created with three phytomers gives 0, 1 and 2, and the next phytomer it grows gives 3.
+    recorded_creation_node_indices.clear();
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    installBeanCallbacks(plantarchitecture, nullptr, recordNodeIndexCreationFunction);
+
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    const uint stemID = plantarchitecture.addBaseStemShoot(plantID, 3, make_AxisRotation(0, 0, 0), 0.002f, 0.03f, 1.f, 1.f, 0, "trifoliate");
+    static_cast<void>(plantarchitecture.addChildShoot(plantID, stemID, 1, 2, make_AxisRotation(0.5f, 0, 0), 0.001f, 0.03f, 1.f, 1.f, 0, "trifoliate"));
+    plantarchitecture.advanceTime(plantID, 10.f);
+
+    // The base stem's three phytomers, the child's two, and at least one grown afterward
+    DOCTEST_REQUIRE(recorded_creation_node_indices.size() >= 6);
+    for (const auto &[shoot_node_index, phytomer_index]: recorded_creation_node_indices) {
+        DOCTEST_CHECK(int(shoot_node_index) == phytomer_index);
+    }
+    std::vector<uint> build_time_indices;
+    for (size_t call = 0; call < 5; call++) {
+        build_time_indices.push_back(recorded_creation_node_indices.at(call).first);
+    }
+    DOCTEST_CHECK(build_time_indices == std::vector<uint>{0, 1, 2, 0, 1});
+}
 
 DOCTEST_TEST_CASE("PlantArchitecture pruneBranch from a phytomer callback cuts its own shoot at the end of the time step") {
     resetCallbackEditState();
@@ -3471,6 +3746,1010 @@ DOCTEST_TEST_CASE("Grapevine VSP - Clusters Hang Opposite The Leaf") {
     DOCTEST_REQUIRE(clusters > 0);
     // Peduncle azimuth is set in the horizontal plane, so on a strongly leaning shoot it is not exactly opposite when seen along the shoot.
     DOCTEST_CHECK(float(clusters_opposite_leaf) >= 0.9f * float(clusters));
+}
+
+DOCTEST_TEST_CASE("Grapevine Fruit Prototype - Conical Cluster Of Tightly Packed Berries") {
+    // With default build parameters the cluster prototype is ~12 cm long along +x from its attachment, holds ~90 berries of ~1/10 its length in diameter, and its berries touch
+    // their neighbors without interpenetrating. Each berry is an 8-division sphere of 2*8*7 = 112 triangles, stored consecutively. Lengths below are in units of the 12 cm reference cluster.
+    Context context;
+    constexpr size_t triangles_per_berry = 112;
+    constexpr float reference_cluster_length = 0.12f;
+
+    for (int cluster = 0; cluster < 5; cluster++) {
+        uint objID = GrapevineFruitPrototype(&context, 1, {});
+        std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(objID);
+        DOCTEST_REQUIRE(UUIDs.size() % triangles_per_berry == 0);
+        const size_t berry_count = UUIDs.size() / triangles_per_berry;
+        DOCTEST_CHECK(berry_count >= 75);
+        DOCTEST_CHECK(berry_count <= 105);
+
+        std::vector<vec3> centers(berry_count);
+        std::vector<float> radii(berry_count);
+        vec3 box_min(1e6, 1e6, 1e6);
+        vec3 box_max(-1e6, -1e6, -1e6);
+        for (size_t berry = 0; berry < berry_count; berry++) {
+            vec3 vertex_sum(0, 0, 0);
+            size_t vertex_count = 0;
+            for (size_t p = berry * triangles_per_berry; p < (berry + 1) * triangles_per_berry; p++) {
+                for (const vec3 &vertex: context.getPrimitiveVertices(UUIDs.at(p))) {
+                    vertex_sum = vertex_sum + vertex;
+                    vertex_count++;
+                    box_min = make_vec3(std::min(box_min.x, vertex.x), std::min(box_min.y, vertex.y), std::min(box_min.z, vertex.z));
+                    box_max = make_vec3(std::max(box_max.x, vertex.x), std::max(box_max.y, vertex.y), std::max(box_max.z, vertex.z));
+                }
+            }
+            centers.at(berry) = vertex_sum / float(vertex_count) / reference_cluster_length;
+            radii.at(berry) = (context.getPrimitiveVertices(UUIDs.at(berry * triangles_per_berry)).front() / reference_cluster_length - centers.at(berry)).magnitude();
+        }
+        box_min = box_min / reference_cluster_length;
+        box_max = box_max / reference_cluster_length;
+
+        // Hangs from the origin, about one reference length long, and conical rather than spherical or cylindrical. Over 5000 clusters the width/length ratio has median 0.60 and
+        // maximum 0.83 (a winged cluster), against about 1 for a sphere, so the upper bound sits above the model's whole range rather than inside its tail.
+        const float cluster_length = box_max.x - box_min.x;
+        const float cluster_width = std::max(box_max.y - box_min.y, box_max.z - box_min.z);
+        DOCTEST_CHECK(box_min.x > -0.01f);
+        DOCTEST_CHECK(cluster_length > 0.8f);
+        DOCTEST_CHECK(cluster_length < 1.15f);
+        DOCTEST_CHECK(cluster_width / cluster_length > 0.45f);
+        DOCTEST_CHECK(cluster_width / cluster_length < 0.9f);
+        for (float radius: radii) {
+            DOCTEST_CHECK(radius > 0.035f);
+            DOCTEST_CHECK(radius < 0.065f);
+        }
+
+        // Berries do not interpenetrate, and each touches several neighbors
+        float worst_penetration = 0.f;
+        size_t touching_pairs = 0;
+        for (size_t i = 0; i < berry_count; i++) {
+            for (size_t j = i + 1; j < berry_count; j++) {
+                const float contact_distance = radii.at(i) + radii.at(j);
+                const float distance = (centers.at(i) - centers.at(j)).magnitude();
+                worst_penetration = std::max(worst_penetration, (contact_distance - distance) / contact_distance);
+                if (distance < 1.05f * contact_distance) {
+                    touching_pairs++;
+                }
+            }
+        }
+        const float mean_neighbors = 2.f * float(touching_pairs) / float(berry_count);
+        DOCTEST_CHECK(worst_penetration < 0.03f);
+        DOCTEST_CHECK(mean_neighbors > 4.f);
+    }
+}
+
+// Grain centers of a sorghum panicle built by buildSorghumPanicle(). The grains are the last primitives of the panicle, each a block of 4*grain_subdivisions grain triangles followed by its glume
+// triangles, and their number is exact when length_variation is zero.
+static std::vector<vec3> sorghumGrainCenters(Context &context, uint objID, const SorghumPanicleParameters &parameters) {
+    const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(objID);
+    const size_t grain_triangles = 4 * parameters.grain_subdivisions;
+    const size_t block = grain_triangles + (parameters.glume_length_fraction > 0.f ? 4 : 0);
+    const size_t grain_count = size_t(parameters.grain_count);
+    std::vector<vec3> centers(grain_count);
+    if (UUIDs.size() < grain_count * block) {
+        return {};
+    }
+    const size_t first = UUIDs.size() - grain_count * block;
+    for (size_t grain = 0; grain < grain_count; grain++) {
+        vec3 vertex_sum(0, 0, 0);
+        size_t vertex_count = 0;
+        for (size_t triangle = 0; triangle < grain_triangles; triangle++) {
+            for (const vec3 &vertex: context.getPrimitiveVertices(UUIDs.at(first + grain * block + triangle))) {
+                vertex_sum = vertex_sum + vertex;
+                vertex_count++;
+            }
+        }
+        centers.at(grain) = vertex_sum / float(vertex_count);
+    }
+    return centers;
+}
+
+DOCTEST_TEST_CASE("Sorghum Panicle Prototype - Resolves Individual Grains Along +x") {
+    // The panicle is built in meters along +x from its attachment at the origin, and every grain is its own small mesh rather than a texture. Each grain costs 4*grain_subdivisions triangles and its
+    // glumes 4 more, so removing the glumes removes exactly 4 triangles per grain.
+    SorghumPanicleParameters parameters;
+    parameters.length_variation = 0.f;
+
+    Context context;
+    context.seedRandomGenerator(11);
+    const uint objID = buildSorghumPanicle(&context, parameters);
+    const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(objID);
+    DOCTEST_REQUIRE(UUIDs.size() > size_t(parameters.grain_count) * (4 * parameters.grain_subdivisions + 4));
+
+    Context context_no_glumes;
+    context_no_glumes.seedRandomGenerator(11);
+    SorghumPanicleParameters parameters_no_glumes = parameters;
+    parameters_no_glumes.glume_length_fraction = 0.f;
+    const uint objID_no_glumes = buildSorghumPanicle(&context_no_glumes, parameters_no_glumes);
+    DOCTEST_CHECK(UUIDs.size() - context_no_glumes.getObjectPrimitiveUUIDs(objID_no_glumes).size() == 4 * size_t(parameters.grain_count));
+
+    // Within one grain the vertices lie no farther from the grain center than half a grain length, allowing for the largest grains the size variation produces.
+    const size_t block = 4 * parameters.grain_subdivisions + 4;
+    const size_t first_grain = UUIDs.size() - size_t(parameters.grain_count) * block;
+    const std::vector<vec3> centers = sorghumGrainCenters(context, objID, parameters);
+    DOCTEST_REQUIRE(centers.size() == size_t(parameters.grain_count));
+    float largest_vertex_distance = 0.f;
+    for (size_t grain = 0; grain < centers.size(); grain++) {
+        for (size_t triangle = 0; triangle < 4 * parameters.grain_subdivisions; triangle++) {
+            for (const vec3 &vertex: context.getPrimitiveVertices(UUIDs.at(first_grain + grain * block + triangle))) {
+                largest_vertex_distance = std::max(largest_vertex_distance, (vertex - centers.at(grain)).magnitude());
+            }
+        }
+    }
+    DOCTEST_CHECK(largest_vertex_distance < 0.5f * 1.3f * parameters.grain_length * 1.2f);
+
+    vec3 box_min(1e6, 1e6, 1e6);
+    vec3 box_max(-1e6, -1e6, -1e6);
+    for (uint UUID: UUIDs) {
+        for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+            box_min = make_vec3(std::min(box_min.x, vertex.x), std::min(box_min.y, vertex.y), std::min(box_min.z, vertex.z));
+            box_max = make_vec3(std::max(box_max.x, vertex.x), std::max(box_max.y, vertex.y), std::max(box_max.z, vertex.z));
+        }
+    }
+    DOCTEST_CHECK(box_min.x > -0.01f);
+    DOCTEST_CHECK(box_max.x > 0.85f * parameters.length);
+    DOCTEST_CHECK(box_max.x < 1.15f * parameters.length);
+
+    const std::vector<uint> fruit_UUIDs = context.filterPrimitivesByData(UUIDs, "object_label", "fruit");
+    DOCTEST_CHECK(fruit_UUIDs.size() == UUIDs.size());
+}
+
+DOCTEST_TEST_CASE("Sorghum Panicle Prototype - Compactness Closes The Head Without Shrinking It") {
+    // Compactness draws grains into a layer just inside the branch envelope. The outer radius of the head is set by the branches and must survive compaction; what changes is that grains on the inner
+    // parts of the branches move out into the layer, narrowing the spread of grain distances from the axis. Grains are packed, so no two may sit closer than half a grain diameter.
+    for (uint seed: {1u, 2u, 3u}) {
+        std::vector<float> outer_radius(2), radial_spread(2);
+        for (int compact = 0; compact < 2; compact++) {
+            SorghumPanicleParameters parameters;
+            parameters.length_variation = 0.f;
+            parameters.compactness = compact == 0 ? 0.f : 1.f;
+
+            Context context;
+            context.seedRandomGenerator(seed);
+            const uint objID = buildSorghumPanicle(&context, parameters);
+            const std::vector<vec3> centers = sorghumGrainCenters(context, objID, parameters);
+            DOCTEST_REQUIRE(centers.size() == size_t(parameters.grain_count));
+
+            std::vector<float> radial(centers.size());
+            for (size_t grain = 0; grain < centers.size(); grain++) {
+                radial.at(grain) = std::sqrt(centers.at(grain).y * centers.at(grain).y + centers.at(grain).z * centers.at(grain).z);
+            }
+            std::sort(radial.begin(), radial.end());
+            outer_radius.at(compact) = radial.at(size_t(0.9f * float(radial.size())));
+            radial_spread.at(compact) = outer_radius.at(compact) - radial.at(size_t(0.1f * float(radial.size())));
+
+            const float contact_distance = 0.5f * (parameters.grain_width + parameters.grain_thickness);
+            size_t interpenetrating_pairs = 0;
+            for (size_t i = 0; i < centers.size(); i++) {
+                for (size_t j = i + 1; j < centers.size(); j++) {
+                    if ((centers.at(i) - centers.at(j)).magnitude() < 0.5f * contact_distance) {
+                        interpenetrating_pairs++;
+                    }
+                }
+            }
+            DOCTEST_CHECK(interpenetrating_pairs == 0);
+        }
+        DOCTEST_CHECK(outer_radius.at(1) > 0.85f * outer_radius.at(0));
+        DOCTEST_CHECK(outer_radius.at(1) < 1.1f * outer_radius.at(0));
+        DOCTEST_CHECK(radial_spread.at(1) < 0.85f * radial_spread.at(0));
+    }
+}
+
+DOCTEST_TEST_CASE("Sorghum Panicle Prototype - Presets Span Compact To Loose") {
+    // The loose preset's long, spreading branches make a wider head than the compact preset's short, erect ones, and the default lies between them.
+    auto head_width = [](const SorghumPanicleParameters &parameters) {
+        Context context;
+        context.seedRandomGenerator(5);
+        SorghumPanicleParameters fixed = parameters;
+        fixed.length_variation = 0.f;
+        const uint objID = buildSorghumPanicle(&context, fixed);
+        const std::vector<vec3> centers = sorghumGrainCenters(context, objID, fixed);
+        std::vector<float> radial(centers.size());
+        for (size_t grain = 0; grain < centers.size(); grain++) {
+            radial.at(grain) = std::sqrt(centers.at(grain).y * centers.at(grain).y + centers.at(grain).z * centers.at(grain).z);
+        }
+        std::sort(radial.begin(), radial.end());
+        return 2.f * radial.at(size_t(0.9f * float(radial.size())));
+    };
+    const float compact_width = head_width(SorghumPanicleParameters::compact());
+    const float default_width = head_width(SorghumPanicleParameters());
+    const float loose_width = head_width(SorghumPanicleParameters::loose());
+    DOCTEST_CHECK(compact_width < default_width);
+    DOCTEST_CHECK(default_width < loose_width);
+}
+
+DOCTEST_TEST_CASE("Sorghum Panicle Prototype - Rachis Continues The Peduncle On The Library Plant") {
+    // The panicle's rachis begins where the peduncle ends, so the two tubes should meet without a step in diameter or a jump in color. The rachis is the first tube of the panicle, so its first segment
+    // is the first 2 x rachis_radial_subdivisions triangles of the object, and the rachis_radial_subdivisions distinct vertices nearest the junction form its base ring.
+    const uint rachis_subdivisions = SorghumPanicleParameters().rachis_radial_subdivisions;
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 120);
+
+    const std::vector<uint> fruit_objIDs = plantarchitecture.getPlantFruitObjectIDs(plantID);
+    DOCTEST_REQUIRE(fruit_objIDs.size() == 1);
+    const std::vector<uint> panicle_UUIDs = context.getObjectPrimitiveUUIDs(fruit_objIDs.front());
+    DOCTEST_REQUIRE(panicle_UUIDs.size() > 2 * rachis_subdivisions);
+
+    // The base ring is the distinct vertices of the first rachis segment closest to the panicle's lowest point
+    std::vector<vec3> segment_vertices;
+    for (size_t triangle = 0; triangle < 2 * rachis_subdivisions; triangle++) {
+        for (const vec3 &vertex: context.getPrimitiveVertices(panicle_UUIDs.at(triangle))) {
+            segment_vertices.push_back(vertex);
+        }
+    }
+    std::sort(segment_vertices.begin(), segment_vertices.end(), [](const vec3 &a, const vec3 &b) { return a.z < b.z; });
+    std::vector<vec3> base_ring;
+    for (const vec3 &vertex: segment_vertices) {
+        bool duplicate = false;
+        for (const vec3 &existing: base_ring) {
+            duplicate = duplicate || (existing - vertex).magnitude() < 1e-6f;
+        }
+        if (!duplicate) {
+            base_ring.push_back(vertex);
+        }
+        if (base_ring.size() == rachis_subdivisions) {
+            break;
+        }
+    }
+    DOCTEST_REQUIRE(base_ring.size() == rachis_subdivisions);
+    vec3 junction(0, 0, 0);
+    for (const vec3 &vertex: base_ring) {
+        junction = junction + vertex / float(rachis_subdivisions);
+    }
+    const float rachis_radius = (base_ring.at(0) - junction).magnitude();
+
+    // The peduncle's top ring is the set of its vertices nearest the junction, each one peduncle radius from it
+    const std::vector<uint> peduncle_UUIDs = context.filterPrimitivesByData(context.getAllUUIDs(), "object_label", "peduncle");
+    DOCTEST_REQUIRE(!peduncle_UUIDs.empty());
+    float peduncle_radius = 1e6f;
+    for (uint UUID: peduncle_UUIDs) {
+        for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+            peduncle_radius = std::min(peduncle_radius, (vertex - junction).magnitude());
+        }
+    }
+
+    DOCTEST_CHECK(rachis_radius > 0.8f * peduncle_radius);
+    DOCTEST_CHECK(rachis_radius < 1.2f * peduncle_radius);
+
+    // The color must not step at either end of the peduncle: its top segment matches the rachis and its bottom segment matches the culm it grows from.
+    auto primitive_centroid = [&](uint UUID) {
+        const std::vector<vec3> vertices = context.getPrimitiveVertices(UUID);
+        return (vertices.at(0) + vertices.at(1) + vertices.at(2)) / 3.f;
+    };
+    uint peduncle_top_UUID = peduncle_UUIDs.front();
+    uint peduncle_bottom_UUID = peduncle_UUIDs.front();
+    for (uint UUID: peduncle_UUIDs) {
+        const float distance = (primitive_centroid(UUID) - junction).magnitude();
+        if (distance < (primitive_centroid(peduncle_top_UUID) - junction).magnitude()) {
+            peduncle_top_UUID = UUID;
+        }
+        if (distance > (primitive_centroid(peduncle_bottom_UUID) - junction).magnitude()) {
+            peduncle_bottom_UUID = UUID;
+        }
+    }
+    const std::vector<uint> culm_UUIDs = context.filterPrimitivesByData(context.getAllUUIDs(), "object_label", "shoot");
+    DOCTEST_REQUIRE(!culm_UUIDs.empty());
+
+    auto colors_match = [](const RGBcolor &a, const RGBcolor &b) { return std::fabs(a.r - b.r) < 0.01f && std::fabs(a.g - b.g) < 0.01f && std::fabs(a.b - b.b) < 0.01f; };
+    const RGBcolor rachis_color = context.getPrimitiveColor(panicle_UUIDs.front());
+    const RGBcolor peduncle_top_color = context.getPrimitiveColor(peduncle_top_UUID);
+    const RGBcolor peduncle_bottom_color = context.getPrimitiveColor(peduncle_bottom_UUID);
+    const RGBcolor culm_color = context.getPrimitiveColor(culm_UUIDs.front());
+    DOCTEST_CHECK_MESSAGE(colors_match(peduncle_top_color, rachis_color), "peduncle top " << peduncle_top_color << " vs rachis " << rachis_color);
+    DOCTEST_CHECK_MESSAGE(colors_match(peduncle_bottom_color, culm_color), "peduncle bottom " << peduncle_bottom_color << " vs culm " << culm_color);
+}
+
+DOCTEST_TEST_CASE("Sorghum Panicle Prototype - Invalid Parameters Throw") {
+    Context context;
+    auto builds = [&](const std::function<void(SorghumPanicleParameters &)> &modify) {
+        SorghumPanicleParameters parameters;
+        modify(parameters);
+        static_cast<void>(buildSorghumPanicle(&context, parameters));
+    };
+    DOCTEST_CHECK_THROWS(builds([](SorghumPanicleParameters &p) { p.length = 0.f; }));
+    DOCTEST_CHECK_THROWS(builds([](SorghumPanicleParameters &p) { p.rachis_length_fraction = 1.5f; }));
+    DOCTEST_CHECK_THROWS(builds([](SorghumPanicleParameters &p) { p.compactness = -0.1f; }));
+    DOCTEST_CHECK_THROWS(builds([](SorghumPanicleParameters &p) { p.branch_bare_fraction = 1.f; }));
+    DOCTEST_CHECK_THROWS(builds([](SorghumPanicleParameters &p) { p.grain_count = 0; }));
+    DOCTEST_CHECK_THROWS(builds([](SorghumPanicleParameters &p) { p.grain_subdivisions = 2; }));
+    DOCTEST_CHECK_THROWS(builds([](SorghumPanicleParameters &p) { p.rachis_radial_subdivisions = 2; }));
+    DOCTEST_CHECK_THROWS(builds([](SorghumPanicleParameters &p) { p.glume_length_fraction = -0.5f; }));
+}
+
+DOCTEST_TEST_CASE("Grapevine Fruit Prototype - Berry Diameter And Count Set The Cluster Size") {
+    // A cluster grows in proportion to its berry diameter and with the cube root of its berry count, so 20 mm berries in clusters of 200 make a cluster (20/12) * cbrt(200/90) = 2.17 times the default
+    // 12 cm length. Each berry is an 8-division sphere of 112 triangles.
+    Context context;
+    constexpr size_t triangles_per_berry = 112;
+    const std::map<std::string, float> build_parameters = {{"berry_diameter", 0.02f}, {"cluster_berry_count", 200.f}};
+    const float expected_cluster_length = 0.12f * (0.02f / 0.012f) * std::cbrt(200.f / 90.f);
+
+    for (int cluster = 0; cluster < 3; cluster++) {
+        const uint objID = GrapevineFruitPrototype(&context, 1, build_parameters);
+        const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(objID);
+        DOCTEST_REQUIRE(UUIDs.size() % triangles_per_berry == 0);
+        const size_t berry_count = UUIDs.size() / triangles_per_berry;
+        DOCTEST_CHECK(berry_count >= 167);
+        DOCTEST_CHECK(berry_count <= 233);
+
+        // Mean berry radius, from each berry's centroid to its first vertex
+        float radius_sum = 0.f;
+        for (size_t berry = 0; berry < berry_count; berry++) {
+            vec3 vertex_sum(0, 0, 0);
+            size_t vertex_count = 0;
+            for (size_t p = berry * triangles_per_berry; p < (berry + 1) * triangles_per_berry; p++) {
+                for (const vec3 &vertex: context.getPrimitiveVertices(UUIDs.at(p))) {
+                    vertex_sum = vertex_sum + vertex;
+                    vertex_count++;
+                }
+            }
+            const vec3 center = vertex_sum / float(vertex_count);
+            radius_sum += (context.getPrimitiveVertices(UUIDs.at(berry * triangles_per_berry)).front() - center).magnitude();
+        }
+        const float mean_radius = radius_sum / float(berry_count);
+        DOCTEST_CHECK(mean_radius > 0.009f);
+        DOCTEST_CHECK(mean_radius < 0.011f);
+
+        vec3 box_min, box_max;
+        context.getObjectBoundingBox(objID, box_min, box_max);
+        const float cluster_length = box_max.x - box_min.x;
+        DOCTEST_CHECK(cluster_length > 0.8f * expected_cluster_length);
+        DOCTEST_CHECK(cluster_length < 1.15f * expected_cluster_length);
+    }
+}
+
+DOCTEST_TEST_CASE("Sorghum Panicle Prototype - Build Parameters Set The Panicle Parameters") {
+    // panicle_type selects the compact (0), default (0.5) and loose (1) presets and blends linearly between neighbours; keys given alongside it override it.
+    const SorghumPanicleParameters compact = SorghumPanicleParameters::compact();
+    const SorghumPanicleParameters loose = SorghumPanicleParameters::loose();
+    const SorghumPanicleParameters standard;
+
+    const SorghumPanicleParameters type_compact = SorghumPanicleParameters::fromBuildParameters({{"panicle_type", 0.f}});
+    DOCTEST_CHECK(type_compact.compactness == doctest::Approx(compact.compactness));
+    DOCTEST_CHECK(type_compact.primary_branch_count == compact.primary_branch_count);
+    DOCTEST_CHECK(type_compact.length == doctest::Approx(compact.length));
+
+    const SorghumPanicleParameters type_loose = SorghumPanicleParameters::fromBuildParameters({{"panicle_type", 1.f}});
+    DOCTEST_CHECK(type_loose.compactness == doctest::Approx(loose.compactness));
+    DOCTEST_CHECK(type_loose.grain_count == loose.grain_count);
+    DOCTEST_CHECK(type_loose.branch_bare_fraction == doctest::Approx(loose.branch_bare_fraction));
+
+    // Halfway from compact to the default
+    const SorghumPanicleParameters type_quarter = SorghumPanicleParameters::fromBuildParameters({{"panicle_type", 0.25f}});
+    DOCTEST_CHECK(type_quarter.compactness == doctest::Approx(0.5f * (compact.compactness + standard.compactness)));
+    DOCTEST_CHECK(type_quarter.primary_branch_count == (compact.primary_branch_count + standard.primary_branch_count) / 2);
+
+    // Individual keys override the preset, and colors are set by channel
+    const SorghumPanicleParameters overridden = SorghumPanicleParameters::fromBuildParameters({{"panicle_type", 1.f}, {"panicle_compactness", 0.5f}, {"grain_count", 900.f}, {"grain_color_r", 0.55f}});
+    DOCTEST_CHECK(overridden.compactness == doctest::Approx(0.5f));
+    DOCTEST_CHECK(overridden.grain_count == 900);
+    DOCTEST_CHECK(overridden.grain_color.r == doctest::Approx(0.55f));
+    DOCTEST_CHECK(overridden.grain_color.g == doctest::Approx(standard.grain_color.g));
+    DOCTEST_CHECK(overridden.branch_bare_fraction == doctest::Approx(loose.branch_bare_fraction));
+
+    // No keys gives the defaults
+    const SorghumPanicleParameters none = SorghumPanicleParameters::fromBuildParameters({});
+    DOCTEST_CHECK(none.compactness == standard.compactness);
+    DOCTEST_CHECK(none.grain_count == standard.grain_count);
+
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(SorghumPanicleParameters::fromBuildParameters({{"panicle_compactness", 1.5f}})), doctest::Contains("panicle_compactness"));
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(SorghumPanicleParameters::fromBuildParameters({{"panicle_type", -0.1f}})), doctest::Contains("panicle_type"));
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Grapevines Built With Different Parameters Get Their Own Clusters") {
+    // Fruit prototypes are cached and copied, so two vines built with different cluster parameters in the same PlantArchitecture must each be given clusters built from their own parameters, rather than
+    // sharing whichever were built first. Berry count is independent of the growth scaling applied to each cluster, so it identifies the prototype a cluster was copied from.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    const uint small_cluster_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 100, {{"cluster_berry_count", 30.f}});
+    const uint large_cluster_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 3, 0), 100, {{"cluster_berry_count", 200.f}});
+
+    constexpr size_t triangles_per_berry = 112;
+    auto berry_count_range = [&](uint plantID) {
+        std::pair<size_t, size_t> range = {std::numeric_limits<size_t>::max(), 0};
+        for (uint objID: plantarchitecture.getPlantFruitObjectIDs(plantID)) {
+            const size_t berry_count = context.getObjectPrimitiveUUIDs(objID).size() / triangles_per_berry;
+            range.first = std::min(range.first, berry_count);
+            range.second = std::max(range.second, berry_count);
+        }
+        return range;
+    };
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(small_cluster_plantID).empty());
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(large_cluster_plantID).empty());
+    const std::pair<size_t, size_t> small_range = berry_count_range(small_cluster_plantID);
+    const std::pair<size_t, size_t> large_range = berry_count_range(large_cluster_plantID);
+    DOCTEST_CHECK(small_range.second <= 35);
+    DOCTEST_CHECK(large_range.first >= 167);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Sorghum Panicle Follows The Plant Build Parameters And Survives XML") {
+    // A sorghum plant built with a low grain count bears a correspondingly smaller panicle than a default plant in the same PlantArchitecture, and the parameter is written to the plant XML so the
+    // panicle rebuilt on reading has the same grain count.
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint default_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 120);
+    const uint sparse_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(1, 0, 0), 120, {{"grain_count", 500.f}});
+
+    auto panicle_primitive_count = [](Context &panicle_context, PlantArchitecture &panicle_plantarchitecture, uint plantID) {
+        const std::vector<uint> fruit_objIDs = panicle_plantarchitecture.getPlantFruitObjectIDs(plantID);
+        return fruit_objIDs.size() == 1 ? panicle_context.getObjectPrimitiveUUIDs(fruit_objIDs.front()).size() : size_t(0);
+    };
+    const size_t default_primitives = panicle_primitive_count(context, plantarchitecture, default_plantID);
+    const size_t sparse_primitives = panicle_primitive_count(context, plantarchitecture, sparse_plantID);
+    DOCTEST_REQUIRE(default_primitives > 0);
+    DOCTEST_REQUIRE(sparse_primitives > 0);
+    // 500 grains against 2000, with up to 30% panicle-length variation in each
+    DOCTEST_CHECK(float(sparse_primitives) < 0.5f * float(default_primitives));
+
+    const std::string xml_filename = "test_build_parameters_roundtrip.xml";
+    DOCTEST_REQUIRE_NOTHROW(plantarchitecture.writePlantStructureXML(sparse_plantID, xml_filename));
+
+    Context restore_context;
+    PlantArchitecture restore_plantarchitecture(&restore_context);
+    restore_plantarchitecture.disableMessages();
+    restore_plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(restored_plantIDs = restore_plantarchitecture.readPlantStructureXML(xml_filename, true));
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+    const size_t restored_primitives = panicle_primitive_count(restore_context, restore_plantarchitecture, restored_plantIDs.front());
+    DOCTEST_CHECK(restored_primitives > 0);
+    DOCTEST_CHECK(float(restored_primitives) < 0.5f * float(default_primitives));
+}
+
+DOCTEST_TEST_CASE("Sorghum Tillering - Tillers Grow From The Requested Leaf Axils") {
+    // Tillers are added in the hierarchy T3, T4, T2, T1, T5, T6, where Tn grows from the axil of main-stem leaf n. Each has one leaf fewer than the 16 of the main stem for every main-stem leaf below its
+    // own, finishes with a panicle, emerges from the crown at the soil surface, and is turned back toward vertical as it grows.
+    const std::array<uint, 6> tiller_leaf_numbers = {3, 4, 2, 1, 5, 6};
+    for (int tiller_count: {0, 3, 6}) {
+        DOCTEST_INFO("tiller_count " << tiller_count);
+        Context context;
+        context.seedRandomGenerator(5);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("sorghum");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 90, {{"tiller_count", float(tiller_count)}});
+
+        std::vector<uint> tiller_leaf_numbers_found;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+            if (shootID == 0) {
+                DOCTEST_CHECK(shoot->shoot_type_label == "mainstem");
+                DOCTEST_CHECK(shoot->phytomers.size() == 16);
+                continue;
+            }
+            DOCTEST_CHECK(shoot->shoot_type_label == "tiller");
+            DOCTEST_CHECK(shoot->parent_shoot_ID == 0);
+            const uint leaf_number = shoot->parent_node_index + 1;
+            tiller_leaf_numbers_found.push_back(leaf_number);
+            DOCTEST_CHECK(shoot->phytomers.size() == 16 - leaf_number);
+            const vec3 base = shoot->shoot_internode_vertices.front().front();
+            const vec3 tip = shoot->shoot_internode_vertices.back().back();
+            DOCTEST_CHECK(base.z < 0.05f);
+            const float zenith = rad2deg(acosf((tip - base).normalize().z));
+            DOCTEST_CHECK(zenith < 30.f);
+        }
+        std::vector<uint> expected(tiller_leaf_numbers.begin(), tiller_leaf_numbers.begin() + tiller_count);
+        std::sort(expected.begin(), expected.end());
+        std::sort(tiller_leaf_numbers_found.begin(), tiller_leaf_numbers_found.end());
+        DOCTEST_CHECK(tiller_leaf_numbers_found == expected);
+        // One panicle on the main stem and one on every tiller
+        DOCTEST_CHECK(plantarchitecture.getPlantFruitObjectIDs(plantID).size() == size_t(tiller_count + 1));
+    }
+}
+
+DOCTEST_TEST_CASE("Sorghum Tillering - Main Stem Has A Compressed Crown") {
+    // The lowest six internodes stay under 1 cm, so the lowest leaves and the tillers emerge at the soil surface, and the internodes above them elongate.
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 90);
+    const auto &main_stem = plantarchitecture.getPlantShoot(plantID, 0);
+    DOCTEST_REQUIRE(main_stem->phytomers.size() == 16);
+    for (uint node = 0; node < 9; node++) {
+        DOCTEST_INFO("node " << node);
+        // The vertices of a phytomer begin at its first segment, so its internode starts at the tip of the one below
+        const vec3 internode_base = node == 0 ? main_stem->shoot_internode_vertices.front().front() : main_stem->shoot_internode_vertices.at(node - 1).back();
+        const float internode_length = (main_stem->shoot_internode_vertices.at(node).back() - internode_base).magnitude();
+        if (node < 6) {
+            DOCTEST_CHECK(internode_length < 0.01f);
+        } else {
+            DOCTEST_CHECK(internode_length > 0.04f);
+        }
+    }
+    DOCTEST_CHECK(std::fabs(main_stem->shoot_internode_vertices.at(5).back().z) < 0.05f);
+}
+
+DOCTEST_TEST_CASE("Sorghum Tillering - A Tiller Leans Over Its Subtending Leaf With Its Leaves In A Radial Plane") {
+    // A tiller grows from the axil of its subtending leaf, so it leans out on that leaf's side of the main stem. Its prophyll faces the main stem and its first leaf is opposite, so its first leaf points
+    // away from the main stem and its second back toward it.
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 60, {{"tiller_count", 6.f}});
+    const auto &main_stem = plantarchitecture.getPlantShoot(plantID, 0);
+    const std::vector<uint> shootIDs = plantarchitecture.getAllShootIDs(plantID);
+    DOCTEST_REQUIRE(shootIDs.size() == 7);
+    for (uint shootID: shootIDs) {
+        if (shootID == 0) {
+            continue;
+        }
+        DOCTEST_INFO("tiller " << shootID);
+        const auto &tiller = plantarchitecture.getPlantShoot(plantID, shootID);
+        DOCTEST_REQUIRE(tiller->phytomers.size() >= 2);
+        vec3 subtending_leaf = main_stem->phytomers.at(tiller->parent_node_index)->getPetioleAxisVector(0.f, 0);
+        subtending_leaf.z = 0;
+        subtending_leaf.normalize();
+        vec3 lean = tiller->shoot_internode_vertices.at(1).back() - tiller->shoot_internode_vertices.front().front();
+        lean.z = 0;
+        lean.normalize();
+        DOCTEST_CHECK(lean * subtending_leaf > cosf(deg2rad(45.f)));
+
+        // Leaf directions about the tiller's own axis, relative to the direction away from the main stem
+        for (uint node = 0; node < 2; node++) {
+            vec3 tiller_axis = tiller->phytomers.at(node)->getInternodeAxisVector(1.f);
+            tiller_axis.normalize();
+            vec3 leaf_direction = tiller->phytomers.at(node)->getPetioleAxisVector(0.f, 0);
+            leaf_direction = leaf_direction - (leaf_direction * tiller_axis) * tiller_axis;
+            leaf_direction.normalize();
+            vec3 outward = subtending_leaf - (subtending_leaf * tiller_axis) * tiller_axis;
+            outward.normalize();
+            if (node == 0) {
+                DOCTEST_CHECK(leaf_direction * outward > cosf(deg2rad(60.f)));
+            } else {
+                DOCTEST_CHECK(leaf_direction * outward < -cosf(deg2rad(60.f)));
+            }
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("Sorghum Tillering - A Plant Read From XML Before Its Tillers Emerge Still Tillers") {
+    // The tiller count is read as the main stem grows, so it must survive the XML round trip of a plant written before any tiller has emerged.
+    const std::string xml_filename = "test_sorghum_tillering.xml";
+    {
+        Context context;
+        context.seedRandomGenerator(5);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("sorghum");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5, {{"tiller_count", 3.f}});
+        DOCTEST_REQUIRE(plantarchitecture.getAllShootIDs(plantID).size() == 1);
+        plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    }
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(restored_plantIDs = plantarchitecture.readPlantStructureXML(xml_filename, true));
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+    plantarchitecture.advanceTime(restored_plantIDs.front(), 40);
+    DOCTEST_CHECK(plantarchitecture.getAllShootIDs(restored_plantIDs.front()).size() == 4);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture leaves on the uphill side of a tilted stem are not turned over") {
+    // A leaf whose petiole leaves a tilted stem on its uphill side at less than the tilt still leans downhill, past vertical as seen from its own side of the stem. It must be posed from the side of the
+    // stem it grows on, arching outward away from the stem like the leaves on the downhill side and on an upright stem. Posed from the petiole's world direction it was turned over, so the blade curled
+    // back toward the stem, as on the flag leaves of tilted sorghum tillers.
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    ShootParameters stem = plantarchitecture.getCurrentShootParameters("mainstem");
+    // A short petiole, as the library grasses had before their leaves became sessile, so that the leaf is posed from its petiole
+    stem.phytomer_parameters.petiole.length = 0.002f;
+    stem.phytomer_parameters.petiole.radius = 0.f;
+    stem.phytomer_parameters.petiole.pitch = -10.f;
+    stem.phytomer_parameters.leaf.pitch = 0.f;
+    stem.phytomer_parameters.internode.phyllotactic_angle = 180.f;
+    stem.phytomer_parameters.leaf.roll = 0.f;
+    stem.phytomer_parameters.leaf.prototype.flexibility = 0.f;
+    stem.gravitropic_curvature = 0.f;
+    stem.tortuosity = 0.f;
+    plantarchitecture.updateCurrentShootParameters("mainstem", stem);
+
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    const uint stemID = plantarchitecture.addBaseStemShoot(plantID, 10, make_AxisRotation(deg2rad(20.f), 0, 0), 0.003f, 0.075f, 1.f, 1.f, 0, "mainstem");
+    const auto &shoot = plantarchitecture.getPlantShoot(plantID, stemID);
+
+    uint leaves_checked = 0;
+    for (size_t node = 0; node < shoot->phytomers.size(); node++) {
+        DOCTEST_INFO("node " << node);
+        const auto &phytomer = shoot->phytomers.at(node);
+        DOCTEST_REQUIRE(!phytomer->leaf_objIDs.empty());
+        vec3 stem_axis = phytomer->getInternodeAxisVector(1.f);
+        stem_axis.normalize();
+        DOCTEST_REQUIRE(stem_axis.z < cosf(deg2rad(15.f)));
+        vec3 leaf_side = phytomer->petiole_axis_initial.front();
+        leaf_side = leaf_side - (leaf_side * stem_axis) * stem_axis;
+        leaf_side.normalize();
+        const vec3 leaf_base = phytomer->petiole_vertices.front().front();
+        vec3 blade_centroid = make_vec3(0, 0, 0);
+        int vertex_count = 0;
+        for (uint UUID: context.getObjectPrimitiveUUIDs(phytomer->leaf_objIDs.front().front())) {
+            for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+                blade_centroid = blade_centroid + vertex;
+                vertex_count++;
+            }
+        }
+        blade_centroid = blade_centroid / float(vertex_count);
+        vec3 blade_offset = blade_centroid - leaf_base;
+        blade_offset = blade_offset - (blade_offset * stem_axis) * stem_axis;
+        blade_offset.normalize();
+        DOCTEST_CHECK(blade_offset * leaf_side > 0.5f);
+
+        // The blade's centroid lies on the stem side of the chord from its base to its tip, as it does for a blade arching outward from the stem. A turned-over blade has it on the far side.
+        vec3 blade_tip = leaf_base;
+        for (uint UUID: context.getObjectPrimitiveUUIDs(phytomer->leaf_objIDs.front().front())) {
+            for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+                if ((vertex - leaf_base).magnitude() > (blade_tip - leaf_base).magnitude()) {
+                    blade_tip = vertex;
+                }
+            }
+        }
+        vec3 chord = blade_tip - leaf_base;
+        const float blade_length = chord.magnitude();
+        chord.normalize();
+        vec3 away_from_stem = leaf_side - (leaf_side * chord) * chord;
+        away_from_stem.normalize();
+        DOCTEST_CHECK((blade_centroid - leaf_base) * away_from_stem < -0.01f * blade_length);
+        leaves_checked++;
+    }
+    DOCTEST_CHECK(leaves_checked == 10);
+}
+
+namespace {
+    //! Mean upper-face normal and mean direction of the part of a blade within 10% of its length of the base
+    void bladeNearBase(Context &context, uint objID_leaf, const vec3 &leaf_base, vec3 &mean_normal, vec3 &mean_direction) {
+        const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(objID_leaf);
+        float blade_length = 0;
+        for (uint UUID: UUIDs) {
+            for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+                blade_length = std::max(blade_length, (vertex - leaf_base).magnitude());
+            }
+        }
+        mean_normal = make_vec3(0, 0, 0);
+        mean_direction = make_vec3(0, 0, 0);
+        for (uint UUID: UUIDs) {
+            const std::vector<vec3> vertices = context.getPrimitiveVertices(UUID);
+            vec3 centroid = make_vec3(0, 0, 0);
+            for (const vec3 &vertex: vertices) {
+                centroid = centroid + vertex / float(vertices.size());
+            }
+            if ((centroid - leaf_base).magnitude() < 0.1f * blade_length) {
+                mean_normal = mean_normal + context.getPrimitiveArea(UUID) * context.getPrimitiveNormal(UUID);
+                mean_direction = mean_direction + (centroid - leaf_base);
+            }
+        }
+        mean_normal.normalize();
+        mean_direction.normalize();
+    }
+
+    //! Builds a ten-node stem of sessile sorghum leaves at a fixed 20 degree pitch, tilted by stem_tilt_degrees with the given base roll
+    uint buildSessileTestStem(PlantArchitecture &plantarchitecture, float stem_tilt_degrees, float base_roll_degrees) {
+        plantarchitecture.loadPlantModelFromLibrary("sorghum");
+        ShootParameters stem = plantarchitecture.getCurrentShootParameters("mainstem");
+        stem.phytomer_parameters.leaf.pitch = -20.f;
+        stem.phytomer_parameters.internode.phyllotactic_angle = 180.f;
+        stem.phytomer_parameters.leaf.roll = 0.f;
+        stem.phytomer_parameters.leaf.prototype.flexibility = 0.f;
+        stem.gravitropic_curvature = 0.f;
+        stem.tortuosity = 0.f;
+        plantarchitecture.updateCurrentShootParameters("mainstem", stem);
+        const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+        static_cast<void>(plantarchitecture.addBaseStemShoot(plantID, 10, make_AxisRotation(deg2rad(stem_tilt_degrees), 0, deg2rad(base_roll_degrees)), 0.003f, 0.075f, 1.f, 1.f, 0, "mainstem"));
+        return plantID;
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("PlantArchitecture a leaf without a petiole is posed in the frame of its stem") {
+    // With a petiole length of 0 the leaf sits on the stem: it leaves at the node, at its leaf pitch off the internode, with its upper face toward the stem. That holds however the stem is tilted,
+    // including when the stem leans across its leaf plane, where a leaf posed with its face to the sky is turned partway over.
+    for (float base_roll: {0.f, 90.f}) {
+        Context context;
+        context.seedRandomGenerator(5);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        const uint plantID = buildSessileTestStem(plantarchitecture, 20.f, base_roll);
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, 0);
+        DOCTEST_REQUIRE(shoot->phytomers.size() == 10);
+        for (size_t node = 0; node < shoot->phytomers.size(); node++) {
+            DOCTEST_INFO("base roll " << base_roll << ", node " << node);
+            const auto &phytomer = shoot->phytomers.at(node);
+            DOCTEST_REQUIRE(phytomer->leaf_is_sessile);
+            vec3 stem_axis = phytomer->getInternodeAxisVector(1.f);
+            stem_axis.normalize();
+            vec3 leaf_axis = phytomer->getPetioleAxisVector(0.f, 0);
+            leaf_axis.normalize();
+            DOCTEST_CHECK(rad2deg(acosf(std::clamp(leaf_axis * stem_axis, -1.f, 1.f))) == doctest::Approx(20.f).epsilon(0.01));
+            DOCTEST_CHECK((phytomer->leaf_bases.front().front() - shoot->shoot_internode_vertices.at(node).back()).magnitude() < 0.001f);
+
+            vec3 toward_stem = stem_axis - (stem_axis * leaf_axis) * leaf_axis;
+            toward_stem.normalize();
+            vec3 blade_normal, blade_direction;
+            bladeNearBase(context, phytomer->leaf_objIDs.front().front(), phytomer->leaf_bases.front().front(), blade_normal, blade_direction);
+            DOCTEST_CHECK(blade_normal * toward_stem > 0.9f);
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture a pitch added to a leaf without a petiole turns it toward the stem and survives XML") {
+    // rotateLeaf() with a positive pitch turns a blade toward its upper face, which for a leaf without a petiole is toward the stem; the grass flag leaves are set this way. The leaf keeps the pitch when it
+    // is rebuilt from the plant structure XML.
+    const std::string xml_filename = "test_sessile_leaf_pitch.xml";
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    const uint plantID = buildSessileTestStem(plantarchitecture, 0.f, 0.f);
+    const auto &phytomer = plantarchitecture.getPlantShoot(plantID, 0)->phytomers.at(4);
+    vec3 stem_axis = phytomer->getInternodeAxisVector(1.f);
+    stem_axis.normalize();
+    vec3 leaf_axis = phytomer->getPetioleAxisVector(0.f, 0);
+    leaf_axis.normalize();
+    vec3 leaf_side = leaf_axis - (leaf_axis * stem_axis) * stem_axis;
+    leaf_side.normalize();
+    // Angle of the blade base off the stem, positive on the leaf's own side, so that a turn past the stem axis reads as such
+    auto bladeBaseAngle = [&](Context &blade_context, const std::shared_ptr<Phytomer> &blade_phytomer) {
+        vec3 blade_normal, blade_direction;
+        bladeNearBase(blade_context, blade_phytomer->leaf_objIDs.front().front(), blade_phytomer->leaf_bases.front().front(), blade_normal, blade_direction);
+        return rad2deg(std::atan2(blade_direction * leaf_side, blade_direction * stem_axis));
+    };
+    const float angle_before = bladeBaseAngle(context, phytomer);
+    phytomer->rotateLeaf(0, 0, make_AxisRotation(deg2rad(10.f), 0, 0));
+    const float angle_after = bladeBaseAngle(context, phytomer);
+    DOCTEST_CHECK(angle_before - angle_after == doctest::Approx(10.f).epsilon(0.05));
+
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    Context restore_context;
+    PlantArchitecture restore_plantarchitecture(&restore_context);
+    restore_plantarchitecture.disableMessages();
+    restore_plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(restored_plantIDs = restore_plantarchitecture.readPlantStructureXML(xml_filename, true));
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+    const auto &restored_phytomer = restore_plantarchitecture.getPlantShoot(restored_plantIDs.front(), 0)->phytomers.at(4);
+    DOCTEST_CHECK(restored_phytomer->leaf_is_sessile);
+    DOCTEST_CHECK(rad2deg(restored_phytomer->leaf_rotation.front().front().pitch) == doctest::Approx(10.f));
+    DOCTEST_CHECK(std::fabs(bladeBaseAngle(restore_context, restored_phytomer) - angle_after) < 2.f);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture a leaf without a petiole rejects a positive pitch and leaflets") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    ShootParameters stem = plantarchitecture.getCurrentShootParameters("mainstem");
+    stem.phytomer_parameters.leaf.pitch = 10.f;
+    plantarchitecture.updateCurrentShootParameters("mainstem", stem);
+    uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.addBaseStemShoot(plantID, 1, make_AxisRotation(0, 0, 0), 0.003f, 0.075f, 1.f, 1.f, 0, "mainstem")), doctest::Contains("leaf pitch"));
+
+    stem.phytomer_parameters.leaf.pitch = -10.f;
+    stem.phytomer_parameters.leaf.leaves_per_petiole = 3;
+    plantarchitecture.updateCurrentShootParameters("mainstem", stem);
+    plantID = plantarchitecture.addPlantInstance(make_vec3(1, 0, 0), 0);
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.addBaseStemShoot(plantID, 1, make_AxisRotation(0, 0, 0), 0.003f, 0.075f, 1.f, 1.f, 0, "mainstem")), doctest::Contains("compound leaf"));
+}
+
+DOCTEST_TEST_CASE("Sorghum Tillering - Tiller Count Outside Its Range Throws") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"tiller_count", 7.f}})), doctest::Contains("tiller_count"));
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"tiller_count", 1.5f}})), doctest::Contains("tiller_count"));
+}
+
+DOCTEST_TEST_CASE("Build Parameters - A Failed Build Does Not Leak Its Parameters Into The Next Plant") {
+    // A build that throws partway must not leave its parameters behind for the next plant created outside a library build, here one read from XML.
+    const std::string xml_filename = "test_build_parameters_leak.xml";
+    {
+        Context context;
+        context.seedRandomGenerator(5);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("sorghum");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 120);
+        plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    }
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"grain_count", 50.f}})));
+
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_CHECK_NOTHROW(restored_plantIDs = plantarchitecture.readPlantStructureXML(xml_filename, true));
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+    // The restored plant has the default panicle of about 2000 grains (some 40,000 triangles), not one built from the failed call's parameters
+    const std::vector<uint> fruit_objIDs = plantarchitecture.getPlantFruitObjectIDs(restored_plantIDs.front());
+    DOCTEST_REQUIRE(fruit_objIDs.size() == 1);
+    DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(fruit_objIDs.front()).size() > 25000);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Non-Finite Values Throw") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"trunk_height", std::numeric_limits<float>::quiet_NaN()}})), doctest::Contains("trunk_height"));
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"berry_diameter", std::numeric_limits<float>::quiet_NaN()}})), doctest::Contains("berry_diameter"));
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Integer Parameters Reject Fractions") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"num_scaffolds", 3.9f}})), doctest::Contains("num_scaffolds"));
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"grain_count", 1500.5f}})), doctest::Contains("grain_count"));
+    DOCTEST_CHECK_NOTHROW(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"grain_count", 1500.f}})));
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Parameters That Do Not Shape The Fruit Share Its Prototypes") {
+    // Vines that differ only in their trellis bear the same clusters, so the second must reuse the cluster prototypes of the first rather than build a second set. The hidden primitives of a plant
+    // include every cached prototype.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    const uint first_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 100, {{"vine_spacing", 2.0f}});
+    const size_t prototype_primitives = plantarchitecture.getAllPlantUUIDs(first_plantID, true).size() - plantarchitecture.getAllPlantUUIDs(first_plantID, false).size();
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(first_plantID).empty());
+
+    const uint second_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 3, 0), 100, {{"vine_spacing", 2.4f}});
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(second_plantID).empty());
+    const size_t prototype_primitives_after = plantarchitecture.getAllPlantUUIDs(second_plantID, true).size() - plantarchitecture.getAllPlantUUIDs(second_plantID, false).size();
+    DOCTEST_CHECK(prototype_primitives_after == prototype_primitives);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - XML Round Trip Reproduces The Parameters Exactly") {
+    // A value that does not print exactly in six significant digits must read back as the same float, so the restored plant reuses the prototypes of the plant it was written from.
+    const std::string xml_filename = "test_build_parameters_precision.xml";
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 120, {{"panicle_length", 0.2345678f}, {"grain_count", 600.f}});
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(plantID).empty());
+    const size_t prototype_primitives = plantarchitecture.getAllPlantUUIDs(plantID, true).size() - plantarchitecture.getAllPlantUUIDs(plantID, false).size();
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(restored_plantIDs = plantarchitecture.readPlantStructureXML(xml_filename, true));
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+    const uint restored_plantID = restored_plantIDs.front();
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(restored_plantID).empty());
+    const size_t prototype_primitives_after = plantarchitecture.getAllPlantUUIDs(restored_plantID, true).size() - plantarchitecture.getAllPlantUUIDs(restored_plantID, false).size();
+    DOCTEST_CHECK(prototype_primitives_after == prototype_primitives);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - XML With A Parameter The Model Does Not Accept Throws") {
+    const std::string xml_filename = "test_build_parameters_bad_name.xml";
+    {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("sorghum");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30, {{"grain_count", 600.f}});
+        plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    }
+    // Misspell the parameter name in the file
+    std::string content;
+    {
+        std::ifstream file(xml_filename);
+        content.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    }
+    const size_t position = content.find("name=\"grain_count\"");
+    DOCTEST_REQUIRE(position != std::string::npos);
+    content.replace(position, std::string("name=\"grain_count\"").size(), "name=\"grain_cout\"");
+    {
+        std::ofstream file(xml_filename);
+        file << content;
+    }
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.readPlantStructureXML(xml_filename, true)), doctest::Contains("grain_cout"));
+    std::remove(xml_filename.c_str());
+}
+
+DOCTEST_TEST_CASE("Build Parameters - A Plant Keeps All Of Its Build Parameters Through Duplication And XML") {
+    // Structure parameters such as the sorghum tiller count are read as the plant grows, not only by the builder, so the plant keeps them alongside its organ parameters.
+    const std::string xml_filename = "test_build_parameters_kept.xml";
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const std::map<std::string, float> build_parameters = {{"tiller_count", 2.f}, {"grain_count", 600.f}};
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5, build_parameters);
+    DOCTEST_CHECK(plantarchitecture.getPlantBuildParameters(plantID) == build_parameters);
+
+    const uint duplicate_plantID = plantarchitecture.duplicatePlantInstance(plantID, make_vec3(1, 0, 0), make_AxisRotation(0, 0, 0), 5);
+    DOCTEST_CHECK(plantarchitecture.getPlantBuildParameters(duplicate_plantID) == build_parameters);
+
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    Context restore_context;
+    PlantArchitecture restore_plantarchitecture(&restore_context);
+    restore_plantarchitecture.disableMessages();
+    restore_plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(restored_plantIDs = restore_plantarchitecture.readPlantStructureXML(xml_filename, true));
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+    DOCTEST_CHECK(restore_plantarchitecture.getPlantBuildParameters(restored_plantIDs.front()) == build_parameters);
+
+    // A plant built without parameters has none, and an unknown plant is an error
+    const uint default_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(2, 0, 0), 5);
+    DOCTEST_CHECK(plantarchitecture.getPlantBuildParameters(default_plantID).empty());
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantBuildParameters(999)));
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Every Declared Parameter Is Read When The Plant Is Built") {
+    // The names a model declares must match what it reads. A declared name that nothing reads would be accepted and silently ignored. Each declared name is given a NaN, which every read rejects with
+    // an error naming the parameter, so a build that does not throw for it means the parameter was never read. Builders read structure parameters, and organ parameters are read by the model's validator
+    // before the build. A name that is read but not declared is rejected by buildPlantInstanceFromLibrary() itself, and caught by the tests of the individual models.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    size_t models_with_parameters = 0;
+    for (const std::string &model: plantarchitecture.getAvailablePlantModels()) {
+        const std::vector<std::string> names = plantarchitecture.getPlantModelBuildParameterNames(model);
+        if (names.empty()) {
+            continue;
+        }
+        models_with_parameters++;
+        plantarchitecture.loadPlantModelFromLibrary(model);
+        for (const std::string &name: names) {
+            DOCTEST_INFO("model " << model << ", parameter " << name);
+            DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{name, std::numeric_limits<float>::quiet_NaN()}})), doctest::Contains(name.c_str()));
+        }
+    }
+    DOCTEST_CHECK(models_with_parameters >= 8);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Names A Model Does Not Accept Throw") {
+    // A misspelled or foreign parameter must fail rather than leave the default silently in place.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"berry_diamter", 0.01f}})), doctest::Contains("berry_diamter"));
+    // A key of another model is rejected too
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"cordon_spacing", 0.6f}})), doctest::Contains("Accepted parameters are"));
+    // An out-of-range organ parameter is rejected when the plant is built, not later when the first cluster forms
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"berry_diameter", 0.1f}})), doctest::Contains("berry_diameter"));
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"grain_count", 50.f}})), doctest::Contains("grain_count"));
+
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"trunk_height", 0.5f}})), doctest::Contains("accepts no build parameters"));
 }
 
 DOCTEST_TEST_CASE("Grapevine VSP - Fruit Zone Leaves Are Pulled At Fruit Set") {
@@ -6240,6 +7519,71 @@ DOCTEST_TEST_CASE("USD export error handling") {
     DOCTEST_CHECK_THROWS(plantarchitecture.writePlantStructureUSD(plantID, "test.txt"));
 }
 
+DOCTEST_TEST_CASE("USD export fails when a texture file is missing") {
+    const std::string structure_filename = "test_usd_missing_texture.usda";
+    const std::string growth_filename = "test_usd_growth_missing_texture.usda";
+    const std::string missing_texture = "missing_texture_for_usd_export_test.png";
+
+    std::string structure_content;
+    bool structure_threw = false;
+    bool growth_threw = false;
+    bool structure_file_written = false;
+    bool growth_file_written = false;
+    std::string structure_error;
+    std::string growth_error;
+    {
+        capture_cerr cerr_buffer; // Context reports the setPrimitiveTextureFile API warning when it is destroyed
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+
+        // With every texture present, the export copies them beside the file and references them relatively
+        plantarchitecture.writePlantStructureUSD(plantID, structure_filename);
+        std::ifstream file(structure_filename);
+        structure_content.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        file.close();
+        std::remove(structure_filename.c_str());
+
+        std::vector<uint> leaf_objIDs = plantarchitecture.getPlantLeafObjectIDs(plantID);
+        if (!leaf_objIDs.empty()) {
+            for (uint UUID: context.getObjectPrimitiveUUIDs(leaf_objIDs.front())) {
+                context.setPrimitiveTextureFile(UUID, missing_texture);
+            }
+        }
+
+        try {
+            plantarchitecture.writePlantStructureUSD(plantID, structure_filename);
+        } catch (const std::runtime_error &error) {
+            structure_threw = true;
+            structure_error = error.what();
+        }
+        structure_file_written = std::filesystem::exists(structure_filename);
+        std::remove(structure_filename.c_str());
+
+        plantarchitecture.registerGrowthFrame(plantID);
+        try {
+            plantarchitecture.writePlantGrowthUSD(plantID, growth_filename);
+        } catch (const std::runtime_error &error) {
+            growth_threw = true;
+            growth_error = error.what();
+        }
+        growth_file_written = std::filesystem::exists(growth_filename);
+        std::remove(growth_filename.c_str());
+    }
+    std::filesystem::remove_all("textures");
+
+    DOCTEST_CHECK(structure_content.find("./textures/") != std::string::npos);
+    DOCTEST_CHECK(structure_threw);
+    DOCTEST_CHECK(structure_error.find(missing_texture) != std::string::npos);
+    DOCTEST_CHECK(growth_threw);
+    DOCTEST_CHECK(growth_error.find(missing_texture) != std::string::npos);
+    // A failed export must not leave a truncated file behind
+    DOCTEST_CHECK(!structure_file_written);
+    DOCTEST_CHECK(!growth_file_written);
+}
+
 DOCTEST_TEST_CASE("USD export organs") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -7440,6 +8784,282 @@ static ShootParameters rebuildShootParametersFromValuesOnly(const ShootParameter
     rebuilt.phytomer_parameters.inflorescence.flower_prototype_function = nullptr;
     rebuilt.phytomer_parameters.inflorescence.fruit_prototype_function = nullptr;
     return rebuilt;
+}
+
+namespace {
+    bool positionsMatch(const vec3 &a, const vec3 &b, float tolerance = 1e-5f) {
+        return (a - b).magnitude() < tolerance;
+    }
+
+    struct MovedBeanGeometry {
+        size_t primitive_count_before_move = 0;
+        std::vector<std::vector<vec3>> primitive_vertices;
+        std::vector<vec3> leaf_bases;
+    };
+
+    // Grow a library bean with per-plant attraction points anchored to its base, optionally moving it after 20 days, and return its
+    // geometry after a further 10 days. Each call uses its own identically-seeded Context, so two calls draw the same random sequence.
+    MovedBeanGeometry growBeanWithOptionalMove(const vec3 &build_base, bool move_after_20_days, const vec3 &moved_base) {
+        Context context;
+        context.seedRandomGenerator(7319);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(build_base, 0.f);
+        plantarchitecture.enableAttractionPoints(plantID, {build_base + make_vec3(0.2f, 0.f, 0.3f), build_base + make_vec3(-0.1f, 0.15f, 0.45f)}, 60.f, 0.3f, 0.8f);
+        plantarchitecture.advanceTime(plantID, 20.f);
+
+        MovedBeanGeometry geometry;
+        geometry.primitive_count_before_move = plantarchitecture.getAllPlantUUIDs(plantID).size();
+        if (move_after_20_days) {
+            plantarchitecture.setPlantBasePosition(plantID, moved_base);
+        }
+        plantarchitecture.advanceTime(plantID, 10.f);
+
+        for (uint UUID: plantarchitecture.getAllPlantUUIDs(plantID)) {
+            geometry.primitive_vertices.push_back(context.getPrimitiveVertices(UUID));
+        }
+        geometry.leaf_bases = plantarchitecture.getPlantLeafBases(plantID);
+        return geometry;
+    }
+
+    // Tries to move the plant whose shoots are being grown.
+    void movePlantCallback(std::shared_ptr<Phytomer> phytomer) {
+        CallbackEditState &state = callback_edit_state;
+        if (!state.armed || state.done || phytomer->plantID != state.plantID) {
+            return;
+        }
+        state.done = true;
+        phytomer->parent_shoot_ptr->plantarchitecture_ptr->setPlantBasePosition(phytomer->plantID, make_vec3(1, 1, 0));
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("PlantArchitecture setPlantBasePosition moves a plant that already has shoots") {
+    Context context;
+    context.seedRandomGenerator(2024);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    const vec3 base_old = make_vec3(0.5f, -0.25f, 0.f);
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(base_old, 0.f);
+    plantarchitecture.advanceTime(plantID, 20.f);
+
+    std::vector<uint> UUIDs = plantarchitecture.getAllPlantUUIDs(plantID);
+    DOCTEST_REQUIRE(!UUIDs.empty());
+    std::vector<std::vector<vec3>> vertices_before;
+    for (uint UUID: UUIDs) {
+        vertices_before.push_back(context.getPrimitiveVertices(UUID));
+    }
+    std::vector<vec3> leaf_bases_before = plantarchitecture.getPlantLeafBases(plantID);
+    DOCTEST_REQUIRE(!leaf_bases_before.empty());
+
+    // Copies of the plant's stored geometry, which later growth builds on
+    std::vector<uint> shootIDs = plantarchitecture.getAllShootIDs(plantID);
+    std::vector<vec3> shoot_bases_before;
+    std::vector<std::vector<std::vector<vec3>>> internode_vertices_before;
+    std::vector<std::vector<std::vector<vec3>>> petiole_vertices_before;
+    for (uint shootID: shootIDs) {
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        shoot_bases_before.push_back(shoot->base_position);
+        internode_vertices_before.push_back(shoot->shoot_internode_vertices);
+        for (const auto &phytomer: shoot->phytomers) {
+            petiole_vertices_before.push_back(phytomer->petiole_vertices);
+        }
+    }
+
+    // The shoot-shedding shadow grid is cached in world coordinates; probe it at the most shaded leaf
+    size_t most_shaded_leaf = 0;
+    float most_shaded_exposure = plantarchitecture.getShadowLightExposureAtPoint(plantID, leaf_bases_before.front());
+    for (size_t leaf = 1; leaf < leaf_bases_before.size(); leaf++) {
+        float exposure = plantarchitecture.getShadowLightExposureAtPoint(plantID, leaf_bases_before.at(leaf));
+        if (exposure < most_shaded_exposure) {
+            most_shaded_exposure = exposure;
+            most_shaded_leaf = leaf;
+        }
+    }
+    const float unshaded_exposure = plantarchitecture.getShadowLightExposureAtPoint(plantID, base_old + make_vec3(100.f, 100.f, 100.f));
+    DOCTEST_REQUIRE(most_shaded_exposure < unshaded_exposure);
+
+    const vec3 offset = make_vec3(3.5f, -2.f, 0.75f);
+    const vec3 base_new = base_old + offset;
+    plantarchitecture.setPlantBasePosition(plantID, base_new);
+
+    DOCTEST_CHECK(positionsMatch(plantarchitecture.getPlantBasePosition(plantID), base_new));
+
+    // Every primitive vertex shifted by the offset, and no primitives were added or removed
+    std::vector<uint> UUIDs_after = plantarchitecture.getAllPlantUUIDs(plantID);
+    DOCTEST_REQUIRE(UUIDs_after == UUIDs);
+    size_t mismatched_vertices = 0;
+    for (size_t p = 0; p < UUIDs.size(); p++) {
+        std::vector<vec3> vertices_after = context.getPrimitiveVertices(UUIDs.at(p));
+        DOCTEST_REQUIRE(vertices_after.size() == vertices_before.at(p).size());
+        for (size_t v = 0; v < vertices_after.size(); v++) {
+            if (!positionsMatch(vertices_after.at(v), vertices_before.at(p).at(v) + offset)) {
+                mismatched_vertices++;
+            }
+        }
+    }
+    DOCTEST_CHECK(mismatched_vertices == 0);
+
+    // Stored leaf bases, shoot bases, internode and petiole centerlines moved with the geometry
+    std::vector<vec3> leaf_bases_after = plantarchitecture.getPlantLeafBases(plantID);
+    DOCTEST_REQUIRE(leaf_bases_after.size() == leaf_bases_before.size());
+    size_t mismatched_leaf_bases = 0;
+    for (size_t leaf = 0; leaf < leaf_bases_after.size(); leaf++) {
+        if (!positionsMatch(leaf_bases_after.at(leaf), leaf_bases_before.at(leaf) + offset)) {
+            mismatched_leaf_bases++;
+        }
+    }
+    DOCTEST_CHECK(mismatched_leaf_bases == 0);
+
+    size_t mismatched_stored_points = 0;
+    size_t phytomer_index = 0;
+    for (size_t s = 0; s < shootIDs.size(); s++) {
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootIDs.at(s));
+        if (!positionsMatch(shoot->base_position, shoot_bases_before.at(s) + offset)) {
+            mismatched_stored_points++;
+        }
+        for (size_t i = 0; i < shoot->shoot_internode_vertices.size(); i++) {
+            for (size_t j = 0; j < shoot->shoot_internode_vertices.at(i).size(); j++) {
+                if (!positionsMatch(shoot->shoot_internode_vertices.at(i).at(j), internode_vertices_before.at(s).at(i).at(j) + offset)) {
+                    mismatched_stored_points++;
+                }
+            }
+        }
+        for (const auto &phytomer: shoot->phytomers) {
+            const auto &petiole_before = petiole_vertices_before.at(phytomer_index++);
+            for (size_t i = 0; i < phytomer->petiole_vertices.size(); i++) {
+                for (size_t j = 0; j < phytomer->petiole_vertices.at(i).size(); j++) {
+                    if (!positionsMatch(phytomer->petiole_vertices.at(i).at(j), petiole_before.at(i).at(j) + offset)) {
+                        mismatched_stored_points++;
+                    }
+                }
+            }
+        }
+    }
+    DOCTEST_CHECK(mismatched_stored_points == 0);
+
+    // The shadow grid moved with the plant
+    DOCTEST_CHECK(plantarchitecture.getShadowLightExposureAtPoint(plantID, leaf_bases_before.at(most_shaded_leaf) + offset) == doctest::Approx(most_shaded_exposure));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture getSeasonPeakLightExposureAtPoint keeps the past summer's shade through dormancy") {
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // Late in the apple's first season in leaf (dormancy breaks at day 165 and returns at day 365), find the most shaded leaf.
+    plantarchitecture.advanceTime(330);
+    std::vector<vec3> leaf_bases = plantarchitecture.getPlantLeafBases(plantID);
+    DOCTEST_REQUIRE(!leaf_bases.empty());
+    vec3 most_shaded_point = leaf_bases.front();
+    float most_shaded_exposure = plantarchitecture.getShadowLightExposureAtPoint(plantID, most_shaded_point);
+    for (const vec3 &leaf_base: leaf_bases) {
+        float exposure = plantarchitecture.getShadowLightExposureAtPoint(plantID, leaf_base);
+        if (exposure < most_shaded_exposure) {
+            most_shaded_exposure = exposure;
+            most_shaded_point = leaf_base;
+        }
+    }
+    // How shaded the most shaded leaf of a one-season tree is varies with the random stream (0.55-0.93 across seeds), so only some shade is required; the winter checks below tell 1 from that.
+    DOCTEST_REQUIRE(most_shaded_exposure < 0.95f);
+
+    // In the following winter the leaves have dropped, so the current canopy shades nothing; the peak canopy still does.
+    plantarchitecture.advanceTime(70);
+    DOCTEST_REQUIRE(plantarchitecture.getPlantLeafBases(plantID).empty());
+    DOCTEST_CHECK(plantarchitecture.getShadowLightExposureAtPoint(plantID, most_shaded_point) == doctest::Approx(1.f));
+    DOCTEST_CHECK(plantarchitecture.getSeasonPeakLightExposureAtPoint(plantID, most_shaded_point) < 0.95f);
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getSeasonPeakLightExposureAtPoint(plantID + 1, most_shaded_point)));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture growth after setPlantBasePosition continues from the moved plant") {
+    // A plant grown for 20 days, moved, and grown for 10 more must be the same plant as one grown for 30 days without moving, shifted by
+    // the offset: new organs attach to the moved shoots and the per-plant attraction points steer toward the moved trellis, not the old one.
+    // The reference is grown at the original base rather than at the new one because bean growth is not exactly invariant to where the plant
+    // is built (a plant built at the new base differs by a few primitives even without any move).
+    const vec3 base_old = make_vec3(0.f, 0.f, 0.f);
+    const vec3 offset = make_vec3(2.f, -1.5f, 0.25f);
+
+    MovedBeanGeometry moved = growBeanWithOptionalMove(base_old, true, base_old + offset);
+    MovedBeanGeometry reference = growBeanWithOptionalMove(base_old, false, base_old);
+
+    // The extra 10 days must actually have added organs, or this test would not exercise later growth
+    DOCTEST_REQUIRE(moved.primitive_vertices.size() > moved.primitive_count_before_move);
+
+    // Later growth recomputes organ positions incrementally from the moved geometry, so single-precision rounding at a 2.5 m offset
+    // accumulates to a few tenths of a millimetre. A position that was not moved would be off by the offset itself.
+    const float growth_tolerance = 2e-3f;
+
+    DOCTEST_REQUIRE(moved.primitive_vertices.size() == reference.primitive_vertices.size());
+    size_t mismatched_vertices = 0;
+    for (size_t p = 0; p < moved.primitive_vertices.size(); p++) {
+        DOCTEST_REQUIRE(moved.primitive_vertices.at(p).size() == reference.primitive_vertices.at(p).size());
+        for (size_t v = 0; v < moved.primitive_vertices.at(p).size(); v++) {
+            if (!positionsMatch(moved.primitive_vertices.at(p).at(v), reference.primitive_vertices.at(p).at(v) + offset, growth_tolerance)) {
+                mismatched_vertices++;
+            }
+        }
+    }
+    DOCTEST_CHECK(mismatched_vertices == 0);
+
+    DOCTEST_REQUIRE(moved.leaf_bases.size() == reference.leaf_bases.size());
+    size_t mismatched_leaf_bases = 0;
+    for (size_t leaf = 0; leaf < moved.leaf_bases.size(); leaf++) {
+        if (!positionsMatch(moved.leaf_bases.at(leaf), reference.leaf_bases.at(leaf) + offset, growth_tolerance)) {
+            mismatched_leaf_bases++;
+        }
+    }
+    DOCTEST_CHECK(mismatched_leaf_bases == 0);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture setPlantBasePosition from a phytomer callback throws") {
+    resetCallbackEditState();
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    installBeanCallbacks(plantarchitecture, movePlantCallback, nullptr);
+
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 5.f);
+
+    callback_edit_state.armed = true;
+    callback_edit_state.plantID = plantID;
+    DOCTEST_CHECK_THROWS_WITH(plantarchitecture.advanceTime(plantID, 1.f), doctest::Contains("phytomer callback"));
+    DOCTEST_REQUIRE(callback_edit_state.done);
+    callback_edit_state.armed = false;
+
+    DOCTEST_CHECK(positionsMatch(plantarchitecture.getPlantBasePosition(plantID), make_vec3(0, 0, 0)));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture setPlantBasePosition on a plant with no shoots places the next shoot there") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    const vec3 base_new = make_vec3(1.25f, 2.5f, 0.1f);
+    plantarchitecture.setPlantBasePosition(plantID, base_new);
+
+    // The base of a plant with no shoots is the position its first shoot will be placed at, so it can be read back
+    vec3 reported_base;
+    DOCTEST_CHECK_NOTHROW(reported_base = plantarchitecture.getPlantBasePosition(plantID));
+    DOCTEST_CHECK(positionsMatch(reported_base, base_new));
+
+    uint shootID = plantarchitecture.addBaseStemShoot(plantID, 1, make_AxisRotation(0, 0, 0), 0.0005f, 0.03f, 0.01f, 0.01f, 0, "unifoliate");
+    const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    DOCTEST_CHECK(positionsMatch(shoot->base_position, base_new));
+    DOCTEST_REQUIRE(!shoot->shoot_internode_vertices.empty());
+    DOCTEST_REQUIRE(!shoot->shoot_internode_vertices.front().empty());
+    DOCTEST_CHECK(positionsMatch(shoot->shoot_internode_vertices.front().front(), base_new));
+    DOCTEST_CHECK(positionsMatch(plantarchitecture.getPlantBasePosition(plantID), base_new));
 }
 
 DOCTEST_TEST_CASE("ShootParameters inheritCustomFunctionsFrom preserves phytomer functions across a value-only rebuild") {
@@ -9742,6 +11362,14 @@ DOCTEST_TEST_CASE("PlantArchitecture leaf blades follow the azimuth of their pet
     PlantArchitecture plantarchitecture(&context);
     plantarchitecture.disableMessages();
     plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    // The sorghum leaf as it was when this was written, on a 2 mm petiole. The library grasses now have no petiole, and a leaf without one follows the side of the stem it grows on rather than the
+    // azimuth of a petiole (see "a leaf without a petiole is posed in the frame of its stem").
+    ShootParameters mainstem = plantarchitecture.getCurrentShootParameters("mainstem");
+    mainstem.phytomer_parameters.petiole.length = 0.002f;
+    mainstem.phytomer_parameters.petiole.radius = 0.f;
+    mainstem.phytomer_parameters.petiole.pitch.uniformDistribution(-25, -12);
+    mainstem.phytomer_parameters.leaf.pitch = 0.f;
+    plantarchitecture.updateCurrentShootParameters("mainstem", mainstem);
 
     // Built through the manual API rather than buildPlantInstanceFromLibrary() so the base rotation can carry a tilt; the library sorghum is deliberately upright.
     const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
@@ -12574,6 +14202,94 @@ DOCTEST_TEST_CASE("Sorghum upper culm carries the panicle it supports") {
 
     // The stem still has to taper upward -- widening the tip must not have inverted it.
     DOCTEST_CHECK(base_diameter > tip_diameter);
+}
+
+DOCTEST_TEST_CASE("Fruit hangs by fruit_gravity_factor_fraction whatever the direction of its peduncle") {
+    // A fruit is pulled the fraction fruit_gravity_factor_fraction of the way from the direction of its peduncle to straight down, so it
+    // ends at (1 - fraction) of the peduncle's angle from down. The apple model's fruit point along the peduncle before gravity acts, and are
+    // also turned a quarter turn about it, which must not swing them back out of the hang. The fruit prototype's axis runs from its
+    // attachment point to its centre.
+    const std::string filename = "test_fruit_gravity_hang.xml";
+
+    // Number of fruit on a plant; the largest difference between a fruit's angle from straight down and the angle gravity should leave
+    // from the direction of its peduncle; and the same from the direction the fruit pointed before gravity acted, rebuilt from its stored
+    // rotations. A reloaded plant's peduncles are redrawn from its reloaded stems and can point tens of degrees away from the originals,
+    // while each fruit keeps its saved orientation, so on reload only the second measure isolates how gravity was applied.
+    auto fruitHang = [](Context &context, PlantArchitecture &plantarchitecture, uint plantID) {
+        uint fruit_count = 0;
+        float largest_angle_error = 0;
+        float largest_pre_gravity_angle_error = 0;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            if (plantarchitecture.isShootPruned(plantID, shootID)) {
+                continue;
+            }
+            for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+                const float gravity_fraction = phytomer->phytomer_parameters.inflorescence.fruit_gravity_factor_fraction.val();
+                for (const auto &petiole: phytomer->floral_buds) {
+                    for (const auto &fbud: petiole) {
+                        if (fbud.state != BUD_FRUITING || fbud.inflorescence_objIDs.empty()) {
+                            continue;
+                        }
+                        vec3 fruit_axis = context.getObjectCenter(fbud.inflorescence_objIDs.front()) - fbud.inflorescence_bases.front();
+                        fruit_axis.normalize();
+                        vec3 peduncle_axis = fbud.inflorescence_rotation.front().peduncle_axis;
+                        peduncle_axis.normalize();
+                        const float expected_angle_from_down = (1.f - gravity_fraction) * rad2deg(acos_safe(-peduncle_axis.z));
+                        largest_angle_error = std::max(largest_angle_error, std::abs(rad2deg(acos_safe(-fruit_axis.z)) - expected_angle_from_down));
+
+                        // The prototype's +x axis carried through the same roll, pitch, azimuth and compound rotation as the fruit.
+                        const AxisRotation &rotation = fbud.inflorescence_rotation.front();
+                        float rotation_matrix[16];
+                        vec3 pre_gravity_axis = make_vec3(1, 0, 0);
+                        makeRotationMatrix(rotation.roll, "x", rotation_matrix);
+                        vecmult(rotation_matrix, vec3(pre_gravity_axis), pre_gravity_axis);
+                        makeRotationMatrix(rotation.pitch, "y", rotation_matrix);
+                        vecmult(rotation_matrix, vec3(pre_gravity_axis), pre_gravity_axis);
+                        makeRotationMatrix(rotation.azimuth, "z", rotation_matrix);
+                        vecmult(rotation_matrix, vec3(pre_gravity_axis), pre_gravity_axis);
+                        makeRotationMatrix(rotation.yaw, rotation.peduncle_axis, rotation_matrix);
+                        vecmult(rotation_matrix, vec3(pre_gravity_axis), pre_gravity_axis);
+                        pre_gravity_axis.normalize();
+                        const float expected_angle_from_pre_gravity = (1.f - gravity_fraction) * rad2deg(acos_safe(-pre_gravity_axis.z));
+                        largest_pre_gravity_angle_error = std::max(largest_pre_gravity_angle_error, std::abs(rad2deg(acos_safe(-fruit_axis.z)) - expected_angle_from_pre_gravity));
+                        fruit_count++;
+                    }
+                }
+            }
+        }
+        return std::make_tuple(fruit_count, largest_angle_error, largest_pre_gravity_angle_error);
+    };
+
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // The second spring's flowers open about 3 days after dormancy breaks at day 530, and set fruit a week later.
+    plantarchitecture.advanceTime(560);
+
+    auto [fruit_count, largest_angle_error, largest_pre_gravity_angle_error] = fruitHang(context, plantarchitecture, plantID);
+    DOCTEST_REQUIRE(fruit_count > 0);
+    DOCTEST_CHECK(largest_angle_error < 5.f);
+    DOCTEST_CHECK(largest_pre_gravity_angle_error < 5.f);
+
+    // A plant read back from XML hangs its fruit the same way.
+    DOCTEST_REQUIRE_NOTHROW(plantarchitecture.writePlantStructureXML(plantID, filename));
+    Context reloaded_context;
+    PlantArchitecture reloaded_plantarchitecture(&reloaded_context);
+    reloaded_plantarchitecture.disableMessages();
+    reloaded_plantarchitecture.loadPlantModelFromLibrary("apple");
+    std::vector<uint> reloaded_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(reloaded_plantIDs = reloaded_plantarchitecture.readPlantStructureXML(filename, true));
+    std::remove(filename.c_str());
+    DOCTEST_REQUIRE(!reloaded_plantIDs.empty());
+    auto [reloaded_fruit_count, reloaded_largest_angle_error, reloaded_largest_pre_gravity_angle_error] = fruitHang(reloaded_context, reloaded_plantarchitecture, reloaded_plantIDs.front());
+    const float reloaded_peduncle_angle_error = reloaded_largest_angle_error;
+    DOCTEST_INFO("reloaded error from the redrawn peduncle direction: " << reloaded_peduncle_angle_error << " deg");
+    DOCTEST_CHECK(reloaded_fruit_count == fruit_count);
+    DOCTEST_CHECK(reloaded_largest_pre_gravity_angle_error < 5.f);
 }
 
 DOCTEST_TEST_CASE("Only a terminal inflorescence loads the stem it is borne on") {

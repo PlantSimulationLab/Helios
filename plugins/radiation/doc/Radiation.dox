@@ -526,6 +526,8 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  Any diffuse (sky) flux set for a bounded emission band with \ref RadiationModel::setDiffuseRadiationFlux() should also be the in-band value, not the broadband longwave flux.
 
+ \ref RadiationModel::runBand() records, for each band, whether emission is enabled in global data "emission_enabled_[band]", its scattering depth in "scattering_depth_[band]" (uint), and, for a band with wavelength bounds, the bounds in global data "wavelength_bounds_[band]" (vec2, nm). These record each band as it is configured at the most recent call to \ref RadiationModel::runBand(), so a band whose emission, scattering depth, or bounds are changed afterwards should be run again before the energy balance. The \ref EnergyBalanceModel uses these so that the thermal radiation it emits matches the emission of its bands here: the emitting bands added to the energy balance model must account for the blackbody spectrum once, either as a single band without bounds or as adjacent bounded bands that together span the thermal spectrum. A bounded thermal camera band should therefore not be added to the energy balance model alongside the longwave band.
+
  Emission can be disabled for the band by calling the \ref RadiationModel::disableEmission() "disableEmission()" function.  For example, for the photosynthetically active (PAR) band, terrestrial objects do not emit radiation (i.e., \f$\varepsilon\approx 0\f$) and thus rather than setting a zero emissivity for this band for all primitives, it is desirable to simply disable radiation emission for this band:
 
  ~~~~~~{.cpp}
@@ -1153,12 +1155,12 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  \paragraph RadCamMetadataStruct Camera Metadata Structure
 
- Camera metadata is stored in the \ref CameraMetadata struct, which contains three nested structures:
+ Camera metadata is stored in the \ref CameraMetadata struct, which contains the following nested structures:
 
  - <b>camera_properties</b>: Intrinsic camera parameters including image resolution, number of channels, optical focal length (mm), aperture (f-stop), and physical sensor dimensions (mm)
  - <b>location_properties</b>: Geographic coordinates (latitude/longitude in degrees)
  - <b>acquisition_properties</b>: Capture information including date (YYYY-MM-DD), time (HH:MM:SS), UTC offset, camera height above ground (meters), camera tilt angle from horizontal (degrees), and light source type ("sunlight", "artificial", "mixed", or "none")
- - <b>image_processing</b>: (optional) Any applied image corrections including saturation, brightness, contrast adjustments and gamma compression flag
+ - <b>image_processing</b>: Image processing applied to the pixel data: exposure gain, white balance factors, the saturation, brightness and contrast adjustments passed to \ref RadiationModel::applyCameraImageCorrections(), and the output color space ("sRGB" for RGB images, whose values are gamma-compressed on write, or "linear" otherwise)
 
  \paragraph RadCamMetadataAuto Auto-populating Metadata
 
@@ -1529,7 +1531,13 @@ The above example assumes that we have already added some geometry to the Contex
 
  \paragraph RadCamImageCorrections Applying Camera Image Corrections
 
- Before writing RGB camera images, you can apply post-processing corrections using the \ref RadiationModel::applyCameraImageCorrections() method. This method applies brightness/contrast adjustment, saturation adjustment, and gamma compression to produce more realistic camera-like output. The correction parameters are automatically saved to camera metadata if metadata export is enabled via \ref RadiationModel::enableCameraMetadata().
+ Before writing RGB camera images, you can apply post-processing corrections using the \ref RadiationModel::applyCameraImageCorrections() method. It modifies the camera's linear pixel data in place, applying in order:
+
+ 1. lens flare, if it has been enabled for the camera;
+ 2. brightness and contrast, applied to each channel value \f$v\f$ as \f$v' = 0.5 + (v \cdot b - 0.5)\,c\f$, where \f$b\f$ is the brightness and \f$c\f$ the contrast adjustment;
+ 3. saturation, interpolating each pixel about its luminance \f$L\f$ as \f$v' = L + s\,(v - L)\f$, where \f$s\f$ is the saturation adjustment.
+
+ This method does not apply gamma compression. The sRGB transfer curve is applied by \ref RadiationModel::writeCameraImage() to a copy of the data when an RGB image is written, so the stored pixel data remain linear. The intended order of operations is: \ref RadiationModel::runBand() &rarr; (optional) \ref RadiationModel::applyCameraColorCorrectionMatrix() &rarr; \ref RadiationModel::applyCameraImageCorrections() &rarr; \ref RadiationModel::writeCameraImage(). The correction parameters are automatically saved to camera metadata if metadata export is enabled via \ref RadiationModel::enableCameraMetadata().
 
  ~~~~~~{.cpp}
  // After running radiation simulation...

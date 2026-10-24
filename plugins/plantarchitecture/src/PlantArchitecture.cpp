@@ -1598,7 +1598,8 @@ int Shoot::appendPhytomerInternal(float internode_radius, float internode_length
 
     if (phytomer_parameters.phytomer_creation_function != nullptr) {
         PlantArchitecture::PhytomerCallbackScope callback_scope(plantarchitecture_ptr);
-        phytomer_parameters.phytomer_creation_function(phytomer, current_node_number, this->parent_node_index, shoot_parameters.max_nodes.val(), plantarchitecture_ptr->plant_instances.at(plantID).current_age);
+        // The phytomer's own position along the shoot. current_node_number is not: when a shoot is created with its phytomers already built, it holds the final node count for every one of them.
+        phytomer_parameters.phytomer_creation_function(phytomer, uint(phytomer->shoot_index.x), this->parent_node_index, shoot_parameters.max_nodes.val(), plantarchitecture_ptr->plant_instances.at(plantID).current_age);
     }
 
     if (prescribed_internode != nullptr && (phytomer->internode_length_max != measured_internode_length_max || phytomer->current_internode_scale_factor != 1.f)) {
@@ -1620,10 +1621,10 @@ void Shoot::breakDormancy() {
     for (auto &phytomer: phytomers) {
         for (auto &petiole: phytomer->floral_buds) {
             for (auto &fbud: petiole) {
+                // A dead bud stays dead, terminal or not. The terminal cluster of this spring was added dormant when the shoot went dormant,
+                // so it is woken here with the rest; a dead terminal bud is either a past season's spent cluster, left behind on the shoot as
+                // it grew on, or one that was deliberately removed, and neither may flower again.
                 if (fbud.state != BUD_DEAD) {
-                    phytomer->setFloralBudState(BUD_ACTIVE, fbud);
-                }
-                if (meristem_is_alive && fbud.isterminal) {
                     phytomer->setFloralBudState(BUD_ACTIVE, fbud);
                 }
                 fbud.time_counter = 0;
@@ -2159,6 +2160,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     std::vector<float> dr_petiole_max(phytomer_parameters.petiole.petioles_per_internode);
     // Per-petiole flag: if either radius or length is zero, suppress the petiole tube geometry but still compute vertices for leaf orientation
     std::vector<bool> suppress_petiole_geometry(phytomer_parameters.petiole.petioles_per_internode, false);
+    // A length of exactly zero means there is no petiole: the leaf sits on the stem and is posed from the leaf parameters alone.
+    leaf_is_sessile = phytomer_parameters.petiole.length.val() == 0.f;
     for (int p = 0; p < phytomer_parameters.petiole.petioles_per_internode; p++) {
         petiole_vertices.at(p).resize(Ndiv_petiole_length + 1);
         petiole_radii.at(p).resize(Ndiv_petiole_length + 1);
@@ -2202,12 +2205,17 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     // Resolved once here and held for the life of the phytomer. This also honours the retired leaf_buckle_* parameters when the flexibility itself was never set, so that code written against them still
     // produces a drooping leaf rather than a rigid one.
     leaf_flexibility = phytomer_parameters.leaf.prototype.resolveFlexibility();
-    petiole_flexibility = std::max(0.f, phytomer_parameters.petiole.flexibility.val());
+    // A leaf without a petiole has nothing to bend at its base.
+    petiole_flexibility = leaf_is_sessile ? 0.f : std::max(0.f, phytomer_parameters.petiole.flexibility.val());
     petiole_rest_offsets.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_bend_state.assign(phytomer_parameters.petiole.petioles_per_internode, make_vec3(-1, 0, 0));
     leaf_size_max.resize(phytomer_parameters.petiole.petioles_per_internode);
     leaf_rotation.resize(phytomer_parameters.petiole.petioles_per_internode);
     int leaves_per_petiole = phytomer_parameters.leaf.leaves_per_petiole.val();
+    if (leaf_is_sessile && leaves_per_petiole > 1) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer): Shoot type " + parent_shoot->shoot_type_label + " has a petiole length of 0, meaning its leaves have no petiole, but " + std::to_string(leaves_per_petiole) +
+                             " leaves per petiole. A compound leaf needs a petiole to carry its leaflets: give the petiole a positive length, or set leaves_per_petiole to 1.");
+    }
     float leaflet_offset_val = clampOffset(leaves_per_petiole, phytomer_parameters.leaf.leaflet_offset.val());
     for (uint petiole = 0; petiole < phytomer_parameters.petiole.petioles_per_internode; petiole++) {
         leaf_size_max.at(petiole).resize(leaves_per_petiole);
@@ -2627,7 +2635,16 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         vec3 petiole_axis = internode_axis;
 
         // petiole pitch rotation
-        if (shoot_index.y + 1 == shoot_index.z) {
+        if (leaf_is_sessile) {
+            // A leaf without a petiole leaves the stem at its own pitch, taken relative to the internode axis. A positive pitch would turn the blade into and across the stem.
+            const float leaf_pitch_degrees = phytomer_parameters.leaf.pitch.val();
+            phytomer_parameters.leaf.pitch.resample();
+            if (leaf_pitch_degrees > 0.f) {
+                helios_runtime_error("ERROR (PlantArchitecture::Phytomer): Shoot type " + parent_shoot->shoot_type_label + " has leaves without a petiole (petiole length of 0) and a leaf pitch of " + std::to_string(leaf_pitch_degrees) +
+                                     " degrees. The pitch of such a leaf is its angle off the internode and must be zero or negative; for example, -20 gives a blade leaving the stem at 20 degrees.");
+            }
+            petiole_pitch.at(petiole) = -deg2rad(leaf_pitch_degrees);
+        } else if (shoot_index.y + 1 == shoot_index.z) {
             // Last phytomer on shoot - apply a small near-zero pitch so the petiole
             // appears nearly parallel to the internode (e.g. the flag leaf in grasses)
             // without leaving the petiole axis fully degenerate with the internode.
@@ -2650,8 +2667,12 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         }
 
         // petiole curvature
-        petiole_curvature.at(petiole) = phytomer_parameters.petiole.curvature.val();
-        phytomer_parameters.petiole.curvature.resample();
+        if (leaf_is_sessile) {
+            petiole_curvature.at(petiole) = 0.f;
+        } else {
+            petiole_curvature.at(petiole) = phytomer_parameters.petiole.curvature.val();
+            phytomer_parameters.petiole.curvature.resample();
+        }
 
         vec3 petiole_rotation_axis_actual = petiole_rotation_axis;
         vec3 petiole_axis_actual = petiole_axis;
@@ -2859,8 +2880,12 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             // therefore every subsequent draw for the plant, is unchanged. orientLeaf() samples nothing.
             const float leaf_roll_angle = deg2rad(phytomer_parameters.leaf.roll.val());
             phytomer_parameters.leaf.roll.resample();
-            const float leaf_pitch_angle = deg2rad(phytomer_parameters.leaf.pitch.val());
-            phytomer_parameters.leaf.pitch.resample();
+            // A leaf without a petiole was given its pitch with the petiole axis it leaves the stem along, so it starts with no pitch of its own on top of that.
+            float leaf_pitch_angle = 0.f;
+            if (!leaf_is_sessile) {
+                leaf_pitch_angle = deg2rad(phytomer_parameters.leaf.pitch.val());
+                phytomer_parameters.leaf.pitch.resample();
+            }
             float leaf_yaw_angle = 0;
             if (ind_from_tip != 0) {
                 const float yaw_sign = -compound_rotation / fabs(compound_rotation);
@@ -2933,18 +2958,19 @@ float Phytomer::calculatePhytomerVolume(uint node_number) const {
     return volume;
 }
 
-void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &fruit_base, const helios::vec3 &peduncle_axis, float pitch, float roll, float azimuth, float yaw_compound, float scale_factor, bool is_open_flower) {
+void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &fruit_base, const helios::vec3 &peduncle_axis, float pitch, float roll, float azimuth, float yaw_compound, float scale_factor, bool is_open_flower, float gravity_fraction) {
 
     // Step 1: Create flower/fruit prototype based on current bud state
+    const std::map<std::string, float> &build_parameters = plantarchitecture_ptr->plant_instances.at(plantID).organ_build_parameters;
     uint objID_fruit;
     if (fbud.state == BUD_FRUITING) {
         if (phytomer_parameters.inflorescence.unique_prototypes > 0) {
             // Copy existing prototype
             int prototype = context_ptr->randu(0, int(phytomer_parameters.inflorescence.unique_prototypes - 1));
-            objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_fruit_prototype_objIDs.at(phytomer_parameters.inflorescence.fruit_prototype_function).at(prototype));
+            objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_fruit_prototype_objIDs.at({phytomer_parameters.inflorescence.fruit_prototype_function, build_parameters}).at(prototype));
         } else {
             // Load new prototype
-            objID_fruit = phytomer_parameters.inflorescence.fruit_prototype_function(context_ptr, 1);
+            objID_fruit = phytomer_parameters.inflorescence.fruit_prototype_function(context_ptr, 1, build_parameters);
             std::string fruit_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_fruit";
             renameAutoMaterial(context_ptr, objID_fruit, fruit_material_name);
         }
@@ -2954,13 +2980,13 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
             // Copy existing prototype
             int prototype = context_ptr->randu(0, int(phytomer_parameters.inflorescence.unique_prototypes - 1));
             if (is_open_flower) {
-                objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_open_flower_prototype_objIDs.at(phytomer_parameters.inflorescence.flower_prototype_function).at(prototype));
+                objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_open_flower_prototype_objIDs.at({phytomer_parameters.inflorescence.flower_prototype_function, build_parameters}).at(prototype));
             } else {
-                objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.at(phytomer_parameters.inflorescence.flower_prototype_function).at(prototype));
+                objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.at({phytomer_parameters.inflorescence.flower_prototype_function, build_parameters}).at(prototype));
             }
         } else {
             // Load new prototype
-            objID_fruit = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, is_open_flower);
+            objID_fruit = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, is_open_flower, build_parameters);
             std::string flower_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + (is_open_flower ? "_flower_open" : "_flower_closed");
             renameAutoMaterial(context_ptr, objID_fruit, flower_material_name);
         }
@@ -2984,12 +3010,42 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
     // Step 4: Translate to position on peduncle
     context_ptr->translateObject(objID_fruit, fruit_base);
 
-    // Step 5: Apply compound rotation about peduncle axis (or vertical axis for fruit with gravity)
+    // Step 5: Apply compound rotation about peduncle axis
     if (std::abs(yaw_compound) > 1e-6) {
         context_ptr->rotateObject(objID_fruit, yaw_compound, fruit_base, peduncle_axis);
     }
 
-    // Step 6: Store in floral bud data structures
+    // Step 6: Turn the fruit toward hanging, about the horizontal line through its base. This comes last so that no rotation about the
+    // peduncle can undo it: applied before the compound rotation, a quarter turn about a horizontal peduncle swung a hanging fruit back
+    // out to the horizontal. The prototype's axis is +x; follow it through the rotations above to find where the fruit points.
+    if (gravity_fraction > 0.f) {
+        float rotation_matrix[16];
+        vec3 fruit_axis = make_vec3(1, 0, 0);
+        makeRotationMatrix(roll, "x", rotation_matrix);
+        vecmult(rotation_matrix, vec3(fruit_axis), fruit_axis);
+        makeRotationMatrix(pitch, "y", rotation_matrix);
+        vecmult(rotation_matrix, vec3(fruit_axis), fruit_axis);
+        makeRotationMatrix(azimuth, "z", rotation_matrix);
+        vecmult(rotation_matrix, vec3(fruit_axis), fruit_axis);
+        if (std::abs(yaw_compound) > 1e-6) {
+            makeRotationMatrix(yaw_compound, peduncle_axis, rotation_matrix);
+            vecmult(rotation_matrix, vec3(fruit_axis), fruit_axis);
+        }
+        fruit_axis.normalize();
+        const vec3 down = make_vec3(0, 0, -1);
+        const float angle_from_down = acos_safe(fruit_axis * down);
+        vec3 hinge = cross(fruit_axis, down);
+        if (hinge.magnitude() < 1e-6f) {
+            // Pointing straight up or down: any horizontal line serves, so take the one across the peduncle's azimuth.
+            hinge = make_vec3(-std::sin(azimuth), std::cos(azimuth), 0);
+        }
+        hinge.normalize();
+        if (angle_from_down > 1e-6f) {
+            context_ptr->rotateObject(objID_fruit, gravity_fraction * angle_from_down, fruit_base, hinge);
+        }
+    }
+
+    // Step 7: Store in floral bud data structures
     fbud.inflorescence_objIDs.push_back(objID_fruit);
     fbud.inflorescence_bases.push_back(fruit_base);
 
@@ -2999,6 +3055,7 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
     flower_rotation.roll = roll;
     flower_rotation.azimuth = azimuth;
     flower_rotation.peduncle_axis = peduncle_axis;
+    flower_rotation.gravity_fraction = gravity_fraction;
     fbud.inflorescence_rotation.push_back(flower_rotation);
 
     fbud.inflorescence_base_scales.push_back(scale_factor);
@@ -3008,34 +3065,38 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
     assert(fbud.inflorescence_rotation.size() == fbud.inflorescence_base_scales.size());
 }
 
-void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerParameters &params, const std::string &plant_name) {
+void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerParameters &params, uint plantID) {
     if (params.inflorescence.unique_prototypes > 0) {
+        const std::string &plant_name = plant_instances.at(plantID).plant_name;
+        const std::map<std::string, float> &build_parameters = plant_instances.at(plantID).organ_build_parameters;
         // Initialize closed flower prototypes
-        if (params.inflorescence.flower_prototype_function != nullptr && unique_closed_flower_prototype_objIDs.find(params.inflorescence.flower_prototype_function) == unique_closed_flower_prototype_objIDs.end()) {
-            unique_closed_flower_prototype_objIDs[params.inflorescence.flower_prototype_function].resize(params.inflorescence.unique_prototypes);
-            for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
-                uint objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, false);
-                unique_closed_flower_prototype_objIDs.at(params.inflorescence.flower_prototype_function).at(prototype) = objID_flower;
+        const auto flower_key = std::make_pair(params.inflorescence.flower_prototype_function, build_parameters);
+        if (params.inflorescence.flower_prototype_function != nullptr && unique_closed_flower_prototype_objIDs.find(flower_key) == unique_closed_flower_prototype_objIDs.end()) {
+            std::vector<uint> &prototypes = unique_closed_flower_prototype_objIDs[flower_key];
+            prototypes.resize(params.inflorescence.unique_prototypes);
+            for (uint &objID_flower: prototypes) {
+                objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, false, build_parameters);
                 renameAutoMaterial(context_ptr, objID_flower, plant_name + "_flower_closed");
                 context_ptr->hideObject(objID_flower);
             }
         }
         // Initialize open flower prototypes
-        if (params.inflorescence.flower_prototype_function != nullptr && unique_open_flower_prototype_objIDs.find(params.inflorescence.flower_prototype_function) == unique_open_flower_prototype_objIDs.end()) {
-            unique_open_flower_prototype_objIDs[params.inflorescence.flower_prototype_function].resize(params.inflorescence.unique_prototypes);
-            for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
-                uint objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, true);
-                unique_open_flower_prototype_objIDs.at(params.inflorescence.flower_prototype_function).at(prototype) = objID_flower;
+        if (params.inflorescence.flower_prototype_function != nullptr && unique_open_flower_prototype_objIDs.find(flower_key) == unique_open_flower_prototype_objIDs.end()) {
+            std::vector<uint> &prototypes = unique_open_flower_prototype_objIDs[flower_key];
+            prototypes.resize(params.inflorescence.unique_prototypes);
+            for (uint &objID_flower: prototypes) {
+                objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, true, build_parameters);
                 renameAutoMaterial(context_ptr, objID_flower, plant_name + "_flower_open");
                 context_ptr->hideObject(objID_flower);
             }
         }
         // Initialize fruit prototypes
-        if (params.inflorescence.fruit_prototype_function != nullptr && unique_fruit_prototype_objIDs.find(params.inflorescence.fruit_prototype_function) == unique_fruit_prototype_objIDs.end()) {
-            unique_fruit_prototype_objIDs[params.inflorescence.fruit_prototype_function].resize(params.inflorescence.unique_prototypes);
-            for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
-                uint objID_fruit = params.inflorescence.fruit_prototype_function(context_ptr, 1);
-                unique_fruit_prototype_objIDs.at(params.inflorescence.fruit_prototype_function).at(prototype) = objID_fruit;
+        const auto fruit_key = std::make_pair(params.inflorescence.fruit_prototype_function, build_parameters);
+        if (params.inflorescence.fruit_prototype_function != nullptr && unique_fruit_prototype_objIDs.find(fruit_key) == unique_fruit_prototype_objIDs.end()) {
+            std::vector<uint> &prototypes = unique_fruit_prototype_objIDs[fruit_key];
+            prototypes.resize(params.inflorescence.unique_prototypes);
+            for (uint &objID_fruit: prototypes) {
+                objID_fruit = params.inflorescence.fruit_prototype_function(context_ptr, 1, build_parameters);
                 renameAutoMaterial(context_ptr, objID_fruit, plant_name + "_fruit");
                 context_ptr->hideObject(objID_fruit);
             }
@@ -3062,6 +3123,22 @@ float Phytomer::getReconciledPeduncleRadius() {
     // too narrow, and a one-sided bound would correct only one of them.
     constexpr float peduncle_to_culm_radius_ratio = 0.9f;
     return peduncle_to_culm_radius_ratio * culm_tip_radius;
+}
+
+std::vector<RGBcolor> Phytomer::getPeduncleNodeColors(size_t node_count) const {
+    std::vector<RGBcolor> colors(node_count, phytomer_parameters.peduncle.color);
+    if (node_count < 3 || !peduncleShouldMatchCulm()) {
+        // With a single segment there is no room for a blend, and a lateral peduncle does not continue the stem.
+        return colors;
+    }
+    const RGBcolor &culm_color = phytomer_parameters.internode.color;
+    const RGBcolor &peduncle_color = phytomer_parameters.peduncle.color;
+    for (size_t node = 0; node + 1 < node_count; node++) {
+        const float blend = float(node) / float(node_count - 2);
+        colors.at(node) = make_RGBcolor(culm_color.r + (peduncle_color.r - culm_color.r) * blend, culm_color.g + (peduncle_color.g - culm_color.g) * blend,
+                                        culm_color.b + (peduncle_color.b - culm_color.b) * blend);
+    }
+    return colors;
 }
 
 bool Phytomer::peduncleShouldMatchCulm() const {
@@ -3173,8 +3250,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     peduncle_vertices.at(0) = fbud.base_position;
     std::vector<float> peduncle_radii(phytomer_parameters.peduncle.length_segments + 1);
     peduncle_radii.at(0) = getReconciledPeduncleRadius();
-    std::vector<RGBcolor> peduncle_colors(phytomer_parameters.peduncle.length_segments + 1);
-    peduncle_colors.at(0) = phytomer_parameters.peduncle.color;
+    const std::vector<RGBcolor> peduncle_colors = getPeduncleNodeColors(phytomer_parameters.peduncle.length_segments + 1);
 
     vec3 peduncle_axis = getAxisVector(1.f, getInternodeNodePositions());
 
@@ -3324,7 +3400,6 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         peduncle_vertices.at(i) = peduncle_vertices.at(i - 1) + dr_peduncle * peduncle_axis;
 
         peduncle_radii.at(i) = peduncle_radii.at(0);
-        peduncle_colors.at(i) = phytomer_parameters.peduncle.color;
     }
 
     if (build_context_geometry_peduncle) {
@@ -3356,7 +3431,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     phytomer_parameters.peduncle.yaw.resample();
 
     // Create unique inflorescence prototypes for each shoot type so we can simply copy them for each leaf
-    plantarchitecture_ptr->ensureInflorescencePrototypesInitialized(phytomer_parameters, plantarchitecture_ptr->plant_instances.at(plantID).plant_name);
+    plantarchitecture_ptr->ensureInflorescencePrototypesInitialized(phytomer_parameters, plantID);
 
     int flowers_per_peduncle = phytomer_parameters.inflorescence.flowers_per_peduncle.val();
     float flower_offset_val = clampOffset(flowers_per_peduncle, phytomer_parameters.inflorescence.flower_offset.val());
@@ -3408,11 +3483,11 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         float applied_pitch_param = deg2rad(phytomer_parameters.inflorescence.pitch.val());
         phytomer_parameters.inflorescence.pitch.resample();
 
-        // Calculate pitch with peduncle alignment and gravity (for fruit)
+        // Calculate pitch with peduncle alignment. Gravity turns a fruit toward hanging after all other rotations (see createInflorescenceGeometry()).
         float pitch_inflorescence = -asin_safe(peduncle_axis.z) + applied_pitch_param;
+        float gravity_fraction = 0.f;
         if (fbud.state == BUD_FRUITING) {
-            // gravity effect for fruit
-            pitch_inflorescence = pitch_inflorescence + phytomer_parameters.inflorescence.fruit_gravity_factor_fraction.val() * (0.5f * PI_F - pitch_inflorescence);
+            gravity_fraction = phytomer_parameters.inflorescence.fruit_gravity_factor_fraction.val();
         }
         phytomer_parameters.inflorescence.fruit_gravity_factor_fraction.resample();
 
@@ -3427,7 +3502,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         bool is_open_flower = (fbud.state == BUD_FLOWER_OPEN);
 
         // Call unified creation function
-        createInflorescenceGeometry(fbud, fruit_base, peduncle_axis, pitch_inflorescence, applied_roll, azimuth, yaw_compound, scale_factor, is_open_flower);
+        createInflorescenceGeometry(fbud, fruit_base, peduncle_axis, pitch_inflorescence, applied_roll, azimuth, yaw_compound, scale_factor, is_open_flower, gravity_fraction);
     }
     phytomer_parameters.inflorescence.flowers_per_peduncle.resample();
     phytomer_parameters.peduncle.roll.resample();
@@ -4305,6 +4380,68 @@ void Phytomer::orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, 
         return;
     }
 
+    if (leaf_is_sessile) {
+        // A leaf without a petiole sits on the stem, so it is posed in the stem's frame rather than the sky's: it runs along the axis it leaves the stem by, with its upper face turned toward the stem,
+        // whatever the stem's tilt. Its roll and any pitch added later (rotateLeaf()) are applied about the blade's own axes first, as for a leaf on a petiole.
+        int sign = (shoot_index.x % 2 == 0) ? 1 : -1;
+        leaf_rotation.at(petiole_index).at(leaf_index).roll = leaf_roll_angle;
+        leaf_rotation.at(petiole_index).at(leaf_index).pitch = leaf_pitch_angle;
+        leaf_rotation.at(petiole_index).at(leaf_index).yaw = 0;
+        context_ptr->rotateObject(objID_leaf, -leaf_roll_angle * float(sign), "x");
+        context_ptr->rotateObject(objID_leaf, -leaf_pitch_angle, "y");
+
+        // The blade is built along +x with its upper face toward +z. Its axis is turned onto the leaf's axis, and the blade then turned about that axis until its upper face points at the stem.
+        vec3 leaf_axis = petiole_tip_axis;
+        leaf_axis.normalize();
+        vec3 stem_axis = getInternodeAxisVector(1.f);
+        stem_axis.normalize();
+        vec3 toward_stem = stem_axis - (stem_axis * leaf_axis) * leaf_axis;
+        if (toward_stem.magnitude() < 1e-4f) {
+            // The leaf runs straight along the stem, so the stem gives no direction. The side the leaf grows on still does, through the axis it was pitched off the stem about.
+            toward_stem = rotatePointAboutLine(leaf_axis, nullorigin, petiole_rotation_axis.at(petiole_index), -0.5f * PI_F);
+        }
+        toward_stem.normalize();
+
+        const vec3 blade_axis = make_vec3(1, 0, 0);
+        vec3 blade_upper_face = make_vec3(0, 0, 1);
+        vec3 alignment_axis = cross(blade_axis, leaf_axis);
+        float alignment_angle = acos_safe(blade_axis * leaf_axis);
+        if (alignment_axis.magnitude() < 1e-6f) {
+            // The leaf runs along +x or -x; a half turn about the upper-face direction takes +x to -x.
+            alignment_axis = blade_upper_face;
+        }
+        alignment_axis.normalize();
+        if (alignment_angle != 0.f) {
+            context_ptr->rotateObject(objID_leaf, alignment_angle, alignment_axis);
+            blade_upper_face = rotatePointAboutLine(blade_upper_face, nullorigin, alignment_axis, alignment_angle);
+        }
+        const float face_angle = std::atan2(cross(blade_upper_face, toward_stem) * leaf_axis, blade_upper_face * toward_stem);
+        if (face_angle != 0.f) {
+            context_ptr->rotateObject(objID_leaf, face_angle, leaf_axis);
+        }
+        return;
+    }
+
+    // The leaf is posed from the elevation and world azimuth of its petiole, with its upper face toward the sky. On a stem tilted by more than the petiole's angle off it, a leaf on the uphill side has a
+    // petiole that still leans downhill, past vertical as seen from the side of the stem the leaf grows on. Its world azimuth then points to the opposite side, and the leaf came out turned over, curling
+    // back toward the stem. On a stem within 45 degrees of vertical such a leaf is instead posed from its own side, with its elevation carried on past vertical, which is the same pose its petiole
+    // gives it just before vertical. A stem closer to horizontal is left as it is, since its upper leaves are meant to face the sky rather than the stem.
+    float petiole_elevation = asin_safe(petiole_tip_axis.z);
+    float petiole_azimuth = std::atan2(petiole_tip_axis.y, petiole_tip_axis.x);
+    bool posed_past_vertical = false;
+    vec3 stem_axis = getInternodeAxisVector(1.f);
+    stem_axis.normalize();
+    if (stem_axis.z > cosf(0.25f * PI_F)) {
+        const vec3 leaf_side = petiole_tip_axis - (petiole_tip_axis * stem_axis) * stem_axis;
+        const vec3 leaf_side_horizontal = make_vec3(leaf_side.x, leaf_side.y, 0.f);
+        const vec3 petiole_horizontal = make_vec3(petiole_tip_axis.x, petiole_tip_axis.y, 0.f);
+        if (leaf_side_horizontal.magnitude() > 1e-6f && petiole_horizontal * leaf_side_horizontal < 0.f) {
+            posed_past_vertical = true;
+            petiole_elevation = PI_F - petiole_elevation;
+            petiole_azimuth += PI_F;
+        }
+    }
+
     // leaf roll rotation
     // Roll-X here only applies the user-configured `leaf.roll` parameter; the
     // curvature-driven blade-up correction is done after the pitch+yaw chain
@@ -4320,7 +4457,7 @@ void Phytomer::orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, 
         // it was added with the same sign as the elevation instead, which left every lateral blade tilted 2e out of the
         // leaf plane and fully edge-on at 45 degrees. The user-set roll keeps its existing sign, so a species with
         // horizontal petioles (e = 0) is unchanged.
-        roll_rot = (leaf_roll_angle - asin_safe(petiole_tip_axis.z)) * compound_rotation / std::fabs(compound_rotation);
+        roll_rot = (leaf_roll_angle - petiole_elevation) * compound_rotation / std::fabs(compound_rotation);
     }
     leaf_rotation.at(petiole_index).at(leaf_index).roll = leaf_roll_angle;
     context_ptr->rotateObject(objID_leaf, roll_rot, "x");
@@ -4329,7 +4466,7 @@ void Phytomer::orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, 
     leaf_rotation.at(petiole_index).at(leaf_index).pitch = leaf_pitch_angle;
     float pitch_rot = leaf_pitch_angle;
     if (ind_from_tip == 0) {
-        pitch_rot += asin_safe(petiole_tip_axis.z);
+        pitch_rot += petiole_elevation;
     }
     context_ptr->rotateObject(objID_leaf, -pitch_rot, "y");
 
@@ -4342,7 +4479,7 @@ void Phytomer::orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, 
     }
 
     // rotate leaf to azimuth of petiole
-    context_ptr->rotateObject(objID_leaf, std::atan2(petiole_tip_axis.y, petiole_tip_axis.x) + compound_rotation, "z");
+    context_ptr->rotateObject(objID_leaf, petiole_azimuth + compound_rotation, "z");
 
     // Curvature-aware blade-up correction: after the pitch-Y / yaw-Z chain, the
     // leaf's blade normal lies in the vertical plane containing the petiole's
@@ -4361,6 +4498,9 @@ void Phytomer::orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, 
         const float r_h = sqrtf(petiole_tip_axis.x * petiole_tip_axis.x + petiole_tip_axis.y * petiole_tip_axis.y);
         if (r_h > 1e-4f) {
             float blade_correction = std::atan2(petiole_tip_axis.z * r_h, r_h * r_h);
+            if (posed_past_vertical) {
+                blade_correction = PI_F - blade_correction;
+            }
             const float petiole_len = petiole_length.at(petiole_index);
             const float leaf_size_ref = std::max(leaf_size_max.at(petiole_index).at(leaf_index), 1e-6f);
             const float length_ratio = std::min(petiole_len / leaf_size_ref, 1.f);
@@ -6178,12 +6318,80 @@ void PlantArchitecture::setPlantBasePosition(uint plantID, const helios::vec3 &b
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::setPlantBasePosition): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
-
-    plant_instances.at(plantID).base_position = base_position;
-
-    //\todo Does not work after shoots have been added to the plant.
-    if (!plant_instances.at(plantID).shoot_tree.empty()) {
+    if (isInsidePhytomerCallback()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantBasePosition): A plant cannot be moved inside a phytomer callback (PhytomerParameters::phytomer_creation_function or phytomer_callback_function), because the shoot being grown "
+                             "holds positions that would not be moved with it. Call it from outside the callback, for example between calls to advanceTime().");
     }
+
+    PlantInstance &plant_instance = plant_instances.at(plantID);
+    const vec3 shift = base_position - plant_instance.base_position;
+    plant_instance.base_position = base_position;
+
+    // A plant with no shoots has no geometry yet; its first shoot is placed at the stored base position.
+    if (plant_instance.shoot_tree.empty()) {
+        return;
+    }
+
+    // Context geometry of every organ
+    std::vector<uint> objIDs_existing;
+    for (uint objID: getAllPlantObjectIDs(plantID)) {
+        if (context_ptr->doesObjectExist(objID)) {
+            objIDs_existing.push_back(objID);
+        }
+    }
+    context_ptr->translateObject(objIDs_existing, shift);
+
+    // Positions stored by the shoots and phytomers, which later growth builds on. Directions and offsets are unaffected by a translation.
+    for (const auto &shoot: plant_instance.shoot_tree) {
+        shoot->base_position += shift;
+        for (auto &phytomer_vertices: shoot->shoot_internode_vertices) {
+            for (vec3 &vertex: phytomer_vertices) {
+                vertex += shift;
+            }
+        }
+
+        for (const auto &phytomer: shoot->phytomers) {
+            for (auto &petiole: phytomer->petiole_vertices) {
+                for (vec3 &vertex: petiole) {
+                    vertex += shift;
+                }
+            }
+            for (auto &petiole: phytomer->leaf_bases) {
+                for (vec3 &leaf_base: petiole) {
+                    leaf_base += shift;
+                }
+            }
+            for (auto &petiole_peduncles: phytomer->peduncle_vertices) {
+                for (auto &peduncle: petiole_peduncles) {
+                    for (vec3 &vertex: peduncle) {
+                        vertex += shift;
+                    }
+                }
+            }
+            for (auto &petiole_buds: phytomer->floral_buds) {
+                for (FloralBud &fbud: petiole_buds) {
+                    fbud.base_position += shift;
+                    for (vec3 &inflorescence_base: fbud.inflorescence_bases) {
+                        inflorescence_base += shift;
+                    }
+                }
+            }
+        }
+    }
+
+    // Per-plant attraction points are anchored to the plant's base (see duplicatePlantInstance()), so they move with it.
+    for (vec3 &point: plant_instance.attraction_points) {
+        point += shift;
+    }
+
+    // Cached state used by branch shedding and growth priority
+    for (vec3 &leaf_position: plant_instance.season_peak_leaf_positions) {
+        leaf_position += shift;
+    }
+    plant_instance.shadow_grid_origin += shift;
+
+    // Collision geometry cached for the current growth step no longer matches the moved plant
+    clearBVHCache();
 }
 
 void PlantArchitecture::setPlantLeafElevationAngleDistribution(uint plantID, float Beta_mu_inclination, float Beta_nu_inclination) const {
@@ -6910,9 +7118,7 @@ void PlantArchitecture::setPlantLeafAngleDistribution(const std::vector<uint> &p
 
 helios::vec3 PlantArchitecture::getPlantBasePosition(const uint plantID) const {
     if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::setPlantBasePosition): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    } else if (plant_instances.at(plantID).shoot_tree.empty()) {
-        helios_runtime_error("ERROR (PlantArchitecture::setPlantBasePosition): Plant with ID of " + std::to_string(plantID) + " has no shoots, so could not get a base position.");
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantBasePosition): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
     return plant_instances.at(plantID).base_position;
 }
@@ -7134,7 +7340,7 @@ void PlantArchitecture::updateGrowthPriority(uint plantID) {
         ranked.reserve(siblings.size());
         for (uint shootID: siblings) {
             const vec3 &tip = shoot_tree.at(shootID)->shoot_internode_vertices.back().back();
-            ranked.emplace_back(shadowGridLightExposure(grid, depth_grid, voxel_size, tip), shootID);
+            ranked.emplace_back(shadowGridLightExposure(grid, depth_grid, voxel_size, plant_instance.shadow_grid_origin, tip), shootID);
         }
         std::sort(ranked.begin(), ranked.end(), [](const std::pair<float, uint> &a, const std::pair<float, uint> &b) { return a.first > b.first; });
 
@@ -7260,7 +7466,8 @@ void PlantArchitecture::updateShadowGrid(uint plantID) {
 
     // Each leaf casts a square pyramid of shadow into the voxels below it: voxels (I+-p, J-q, K+-p) receive a*b^(-q), for
     // q in [0, q_max] and p in [0, q], so the footprint widens by one voxel per layer of descent.
-    for (const vec3 &base: leaf_bases) {
+    for (const vec3 &leaf_base: leaf_bases) {
+        const vec3 base = leaf_base - plant_instance.shadow_grid_origin;
         int leaf_i = int(std::floor(base.x / voxel_size));
         int leaf_j = int(std::floor(base.z / voxel_size)); // z is the vertical axis in Helios
         int leaf_k = int(std::floor(base.y / voxel_size));
@@ -7332,15 +7539,16 @@ void PlantArchitecture::updateShadowGrid(uint plantID) {
     }
 }
 
-float PlantArchitecture::shadowGridLightExposure(const std::unordered_map<long long, float> &grid, const std::unordered_map<long long, int> &depth_grid, float voxel_size, const helios::vec3 &position) const {
+float PlantArchitecture::shadowGridLightExposure(const std::unordered_map<long long, float> &grid, const std::unordered_map<long long, int> &depth_grid, float voxel_size, const helios::vec3 &grid_origin, const helios::vec3 &position) const {
     if (grid.empty() || voxel_size <= 0.f) {
         // No canopy to shade with -> fully exposed.
         return shadow_full_exposure_C;
     }
 
-    int i = int(std::floor(position.x / voxel_size));
-    int j = int(std::floor(position.z / voxel_size));
-    int k = int(std::floor(position.y / voxel_size));
+    const vec3 grid_position = position - grid_origin;
+    int i = int(std::floor(grid_position.x / voxel_size));
+    int j = int(std::floor(grid_position.z / voxel_size));
+    int k = int(std::floor(grid_position.y / voxel_size));
     long long key = packVoxelKey(i, j, k);
 
     // Vertical component: how much canopy sits above this point. On its own this penalizes any low branch, including one on
@@ -7373,7 +7581,15 @@ float PlantArchitecture::getShadowLightExposureAtPoint(uint plantID, const helio
         helios_runtime_error("ERROR (PlantArchitecture::getShadowLightExposureAtPoint): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
     const PlantInstance &plant_instance = plant_instances.at(plantID);
-    return shadowGridLightExposure(plant_instance.shadow_grid, plant_instance.crown_depth_grid, plant_instance.shadow_grid_voxel_size, position);
+    return shadowGridLightExposure(plant_instance.shadow_grid, plant_instance.crown_depth_grid, plant_instance.shadow_grid_voxel_size, plant_instance.shadow_grid_origin, position);
+}
+
+float PlantArchitecture::getSeasonPeakLightExposureAtPoint(uint plantID, const helios::vec3 &position) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getSeasonPeakLightExposureAtPoint): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    const PlantInstance &plant_instance = plant_instances.at(plantID);
+    return shadowGridLightExposure(plant_instance.season_peak_shadow_grid, plant_instance.season_peak_crown_depth_grid, plant_instance.season_peak_shadow_grid_voxel_size, plant_instance.shadow_grid_origin, position);
 }
 
 void PlantArchitecture::captureSeasonPeakLeaves(uint plantID) {
@@ -8061,6 +8277,13 @@ std::string PlantArchitecture::getPlantName(uint plantID) const {
         helios_runtime_error("ERROR (PlantArchitecture::getPlantName): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
     return plant_instances.at(plantID).plant_name;
+}
+
+const std::map<std::string, float> &PlantArchitecture::getPlantBuildParameters(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantBuildParameters): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    return plant_instances.at(plantID).build_parameters;
 }
 
 float PlantArchitecture::getPlantAge(uint plantID) const {
@@ -9148,6 +9371,11 @@ uint PlantArchitecture::addPlantInstance(const helios::vec3 &base_position, floa
     // Capture current shoot parameters to prevent contamination between plant types
     plant_instances.at(plant_count).shoot_types_snapshot = shoot_types;
 
+    // A plant created by a library builder keeps the build parameters it was given (empty otherwise). They are attached here rather than after the builder returns, because some builders grow the plant
+    // themselves, and both its phytomers and its flower and fruit prototypes may read these parameters as it grows.
+    plant_instances.at(plant_count).build_parameters = current_build_parameters;
+    plant_instances.at(plant_count).organ_build_parameters = current_organ_build_parameters;
+
     plant_count++;
 
     return plant_count - 1;
@@ -9176,6 +9404,8 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
         PlantInstance &copy = plant_instances.at(plantID_new);
 
         copy.plant_name = source.plant_name;
+        copy.build_parameters = source.build_parameters;
+        copy.organ_build_parameters = source.organ_build_parameters;
         copy.shoot_types_snapshot = source.shoot_types_snapshot;
         copy.epicormic_shoot_probability_perlength_per_day = source.epicormic_shoot_probability_perlength_per_day;
 

@@ -4227,10 +4227,17 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         }
     }
 
-    // Persist per-band emission-enabled state to global data so that downstream plug-ins (e.g. the
-    // energy balance model) can identify which band governs thermal emission.
+    // Persist per-band emission-enabled state, scattering depth, and wavelength bounds to global data so that downstream plug-ins (e.g. the energy balance model) can identify which bands emit thermal radiation, with what
+    // emissivity (a band without scattering emits as a blackbody), and what share of the blackbody spectrum each emits.
     for (const auto &band: radiation_bands) {
         context->setGlobalData(("emission_enabled_" + band.first).c_str(), (uint) (band.second.emissionFlag ? 1 : 0));
+        context->setGlobalData(("scattering_depth_" + band.first).c_str(), band.second.scatteringDepth);
+        const std::string bounds_label = "wavelength_bounds_" + band.first;
+        if (band.second.hasWavebandBounds()) {
+            context->setGlobalData(bounds_label.c_str(), band.second.wavebandBounds);
+        } else if (context->doesGlobalDataExist(bounds_label.c_str())) {
+            context->clearGlobalData(bounds_label.c_str());
+        }
     }
 
     // Launches that include SIF excitation bands (run directly, or piggy-backed above) also record which face of each primitive absorbed

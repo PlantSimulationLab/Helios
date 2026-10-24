@@ -180,6 +180,7 @@ public:
     //! Set the model coefficient values using one of the available species in the library
     /**
      * \param[in] species Name of species
+     * \note Throws a runtime error if the species is not in the library; see the stomatal conductance plug-in documentation for the list of valid names.
      */
     void setBMFCoefficientsFromLibrary(const std::string &species);
 
@@ -187,12 +188,14 @@ public:
     /**
      * \param[in] species Name of species
      * \param[in] UUIDs Universal unique identifiers for primitives to set
+     * \note Throws a runtime error if the species is not in the library; see the stomatal conductance plug-in documentation for the list of valid names.
      */
     void setBMFCoefficientsFromLibrary(const std::string &species, const std::vector<uint> &UUIDs);
 
     //! Get the model coefficient values using one of the available species in the library
     /**
      * \param[in] species Name of species
+     * \note Throws a runtime error if the species is not in the library; see the stomatal conductance plug-in documentation for the list of valid names.
      */
     BMFcoefficients getBMFCoefficientsFromLibrary(const std::string &species);
 
@@ -235,6 +238,7 @@ public:
     /**
      * \param[in] species Name of species
      * \param[in] material_label String identifier for the material
+     * \note Throws a runtime error if the species is not in the library; see the stomatal conductance plug-in documentation for the list of valid names.
      */
     void setBMFCoefficientsFromLibrary(const std::string &species, const std::string &material_label);
 

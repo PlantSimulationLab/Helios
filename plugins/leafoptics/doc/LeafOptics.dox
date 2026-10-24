@@ -600,8 +600,8 @@ in fluorescence is driven by the per-bin \f$C_{ab}\f$ derived from leaf nitrogen
  <tr><th colspan="4">Adaptive Binning Configuration</th></tr>
  <tr><th>Member</th><th>Units</th><th>Description</th><th>Default</th></tr>
  <tr><td>num_bins</td><td>count</td><td>Target number of spectrum bins</td><td>20</td></tr>
- <tr><td>reassignment_threshold</td><td>unitless</td><td>Relative nitrogen change threshold for reassignment</td><td>0.30</td></tr>
- <tr><td>min_reassignment_change</td><td>g&nbsp;m\f$^{-2}\f$</td><td>Minimum absolute nitrogen change for reassignment</td><td>0.3</td></tr>
+ <tr><td>reassignment_threshold</td><td>unitless</td><td>Relative nitrogen change threshold for reassignment (0 disables the relative test; see \ref LONitrogenStability)</td><td>0.0</td></tr>
+ <tr><td>min_reassignment_change</td><td>g&nbsp;m\f$^{-2}\f$</td><td>Minimum absolute nitrogen change for reassignment</td><td>0.05</td></tr>
 </table>
 
 \subsection LONitrogenUsage Using Nitrogen-Based Mode
@@ -737,7 +737,6 @@ int main() {
     N_optics.numberlayers = 1.5f;
     N_optics.drymass = 0.005f;
     N_optics.num_bins = 20;
-    N_optics.reassignment_threshold = 0.30f;
 
     // === Initial leaf optics assignment ===
     std::vector<uint> leaf_UUIDs = plantarch.getAllLeafUUIDs();

@@ -4,9 +4,10 @@
 
 For complete documentation of this software, please consult <a href="https://plantsimulationlab.github.io/Helios/">https://plantsimulationlab.github.io/Helios/.
 
-Helios is a C++ library for 3D physical simulation of plant and environmental systems. It can generate and manipulate plant and other geometric objects, which can feed into biophysical model plug-ins such as radiation transfer, photosynthesis, and evapotranspiration, among others. 
+Helios is an open-source C++ and Python framework for building virtual plants, canopies, and landscapes, then simulating the physics and physiology around them.
+Grow plants with a procedural plant model, then compute how they intercept light, photosynthesize, transpire, exchange heat, and appear to sensors, from a single leaf to a whole field. 
 
-In order to build and compile the core library, you will need to install a C/C++ compiler (recommended are the GNU C compilers version 7.0+), and CMake. In order to run many of the model plug-ins, you will need to install NVIDIA CUDA 10.2+, and a GPU with compute capability 5.0+. The software has been tested on Linux, Mac, and Windows platforms. The YouTube channel linked above has a number of tutorials for getting started.
+In order to build and compile the core library, you will need to install a C/C++ compiler (recommended are the GNU C compilers version 7.0+), and CMake. An NVIDIA GPU is not required for most plug-ins. The radiation model uses GPU ray tracing through either a Vulkan backend, which runs on macOS, Linux, and Windows with NVIDIA, AMD, Intel, or Apple GPUs, or an OptiX backend on NVIDIA GPUs with CUDA installed (faster for diffuse and scattering calculations). A few plug-ins (aerial LiDAR, voxel intersection, and wind) still require NVIDIA CUDA. See the [dependent software page](https://plantsimulationlab.github.io/Helios/_dependent_software.html) for installation details. The software has been tested on Linux, Mac, and Windows platforms. The YouTube channel linked above has a number of tutorials for getting started.
 
 **NEW** : Helios now has a Python API! Please see the [PyHelios API documentation](https://plantsimulationlab.github.io/PyHelios/) for more information.
 

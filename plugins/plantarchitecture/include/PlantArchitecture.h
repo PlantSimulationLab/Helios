@@ -33,6 +33,22 @@ class CollisionDetection;
 struct Shoot;
 struct Phytomer;
 
+//! Function that builds a fruit prototype and returns its object ID
+/**
+ * Arguments are the Context, the number of subdivisions, and the organ build parameters of the plant bearing the fruit: the entries of the map passed to
+ * \ref PlantArchitecture::buildPlantInstanceFromLibrary() that the plant model declares as shaping its flowers and fruit (see \ref PlantArchBuildParamsValidation). The map is empty for a
+ * plant not built from the library. A prototype function reads the keys it understands with \ref getBuildParameterValue() and ignores the rest.
+ * \note A custom prototype function assigned to a library model receives only that model's declared organ parameters. It cannot be given keys of its own, because
+ * \ref PlantArchitecture::buildPlantInstanceFromLibrary() rejects any name the model does not declare.
+ */
+using FruitPrototypeFunction = uint (*)(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
+
+//! Function that builds a flower prototype and returns its object ID
+/**
+ * Arguments are the Context, the number of subdivisions, whether the flower is open, and the build parameters of the plant bearing the flower. See \ref FruitPrototypeFunction.
+ */
+using FlowerPrototypeFunction = uint (*)(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters);
+
 //! Random architecture model parameter value of type float.
 struct RandomParameter_float {
 public:
@@ -283,6 +299,7 @@ public:
         roll = 0;
         azimuth = 0;
         peduncle_axis = helios::make_vec3(0, 0, 1);
+        gravity_fraction = 0;
     }
 
     AxisRotation(float a_pitch, float a_yaw, float a_roll) {
@@ -291,6 +308,7 @@ public:
         roll = a_roll;
         azimuth = 0;
         peduncle_axis = helios::make_vec3(0, 0, 1);
+        gravity_fraction = 0;
     }
 
     float pitch;
@@ -298,6 +316,7 @@ public:
     float roll;
     float azimuth; // azimuth rotation for inflorescences (aligns to peduncle orientation)
     helios::vec3 peduncle_axis; // direction vector of peduncle at attachment point (for compound yaw rotation)
+    float gravity_fraction; // fraction of its angle from straight down by which a fruit is turned to hang, after all other rotations
 
     AxisRotation operator+(const AxisRotation &a) const;
     AxisRotation operator-(const AxisRotation &a) const;
@@ -800,11 +819,16 @@ private:
 
         //! Number of petioles emerging from a single internode (e.g., 2 for an opposite pattern)
         uint petioles_per_internode;
-        //! Angle in degrees of the petiole base axis relative to its parent phytomer axis
+        //! Angle in degrees of the petiole base axis relative to its parent phytomer axis. Not used for leaves without a petiole (length of 0).
         RandomParameter_float pitch;
         //! Radius in meters of the petiole cross-section; if either radius or length is 0, no petiole geometry is created and leaves attach at the internode tip
         RandomParameter_float radius;
         //! Length in meters of the petiole tube; if either radius or length is 0, no petiole geometry is created and leaves attach at the internode tip
+        /**
+         * A length of exactly 0 means the leaf has no petiole at all and sits directly on the stem, as the leaf of a grass does. Its blade is then posed in the frame of the stem rather than of a petiole:
+         * \ref LeafParameters::pitch is its angle off the internode, and its upper face is turned toward the stem. None of the other petiole parameters are used, and the leaf must be simple (one leaf
+         * per petiole). A small positive length gives a short petiole, whose leaf is posed as on any other petiole.
+         */
         RandomParameter_float length;
         //! Curvature in degrees per meter applied along the petiole length (positive bends upward, negative downward)
         RandomParameter_float curvature;
@@ -858,6 +882,10 @@ private:
         //! Number of leaves attached to each petiole; values greater than 1 create a compound leaf
         RandomParameter_int leaves_per_petiole;
         //! Angle in degrees of the leaf axis relative to its parent petiole axis
+        /**
+         * Positive values turn the leaf toward its upper surface. For a leaf without a petiole (\ref PetioleParameters::length of 0) the pitch is relative to the internode axis, so it must be zero or
+         * negative: -20 gives a blade leaving the stem at 20 degrees.
+         */
         RandomParameter_float pitch;
         //! Rotation angle in degrees of the leaf about its base within the plane of the lamina
         RandomParameter_float yaw;
@@ -938,18 +966,18 @@ private:
         RandomParameter_float roll;
         //! Uniform scale factor applied to the flower prototype geometry
         RandomParameter_float flower_prototype_scale;
-        //! Pointer to user-supplied function that returns a flower prototype mesh ID (Context*, subdivisions, flower_is_open)
+        //! Pointer to user-supplied function that returns a flower prototype mesh ID (Context*, subdivisions, flower_is_open, build_parameters). See \ref FlowerPrototypeFunction.
         /**
          * \note This is a function pointer, so it is not carried by a ShootParameters reconstructed from values alone. See \ref ShootParameters::inheritCustomFunctionsFrom().
          */
-        uint (*flower_prototype_function)(helios::Context *, uint subdivisions, bool flower_is_open) = nullptr;
+        FlowerPrototypeFunction flower_prototype_function = nullptr;
         //! Uniform scale factor applied to the fruit prototype geometry
         RandomParameter_float fruit_prototype_scale;
-        //! Pointer to user-supplied function that returns a fruit prototype mesh ID (Context*, subdivisions)
+        //! Pointer to user-supplied function that returns a fruit prototype mesh ID (Context*, subdivisions, build_parameters). See \ref FruitPrototypeFunction.
         /**
          * \note This is a function pointer, so it is not carried by a ShootParameters reconstructed from values alone. See \ref ShootParameters::inheritCustomFunctionsFrom().
          */
-        uint (*fruit_prototype_function)(helios::Context *, uint subdivisions) = nullptr;
+        FruitPrototypeFunction fruit_prototype_function = nullptr;
         //! Fraction (0‒1) of gravitational influence used to bend peduncles under fruit load
         RandomParameter_float fruit_gravity_factor_fraction;
         //! Number of distinct prototype meshes to cache for this inflorescence; FLAG: confirm intended meaning
@@ -1963,6 +1991,12 @@ public:
      */
     std::vector<float> petiole_length_max; // index is petiole within internode
     std::vector<float> petiole_pitch; // index is petiole within internode
+    //! Whether the leaves of this phytomer have no petiole (PhytomerParameters::PetioleParameters::length of exactly 0) and sit directly on the stem
+    /**
+     * Such a leaf still has a petiole axis of minimal length, which runs along the leaf's base and gives the side of the stem it grows on, but none of the petiole parameters: ef petiole_pitch holds the
+     * blade's angle off the internode, drawn from PhytomerParameters::LeafParameters::pitch, and the blade is posed in the frame of the stem (see orientLeaf()).
+     */
+    bool leaf_is_sessile = false;
     std::vector<float> petiole_curvature; // index is petiole within internode
     std::vector<float> petiole_taper; // taper value for each petiole (tip_radius/base_radius ratio)
     std::vector<helios::vec3> petiole_axis_initial; // initial petiole axis (before curvature) for each petiole
@@ -2222,6 +2256,18 @@ protected:
      */
     [[nodiscard]] float getReconciledPeduncleRadius();
 
+    //! Colors of the peduncle tube nodes, blended from the culm color at its base where the peduncle continues the culm
+    /**
+     * A peduncle that continues the stem, as \ref getReconciledPeduncleRadius() matches in radius, also has to match it in color, or the junction shows as a band. Its color therefore runs from the
+     * internode color at its base to \ref PeduncleParameters::color at its tip, so a peduncle colored to match the inflorescence it carries meets both the culm and the inflorescence without a step. A
+     * lateral peduncle is uniformly \ref PeduncleParameters::color.
+     *
+     * Each tube segment is drawn in the color of its lower node, so the blend is spread over all but the last node: the first segment carries the culm color and the last the peduncle color.
+     * \param[in] node_count Number of nodes along the peduncle tube.
+     * \return Color of each node, from base to tip
+     */
+    [[nodiscard]] std::vector<helios::RGBcolor> getPeduncleNodeColors(size_t node_count) const;
+
     //! Whether this phytomer's peduncle should take its radius from the culm rather than from its own parameter
     /**
      * True for a terminal inflorescence on a herbaceous stem -- a grass panicle or tassel, which continues the stem's own axis and must match it across the junction. False for a lateral peduncle or one on a
@@ -2253,8 +2299,9 @@ protected:
      * \param[in] yaw_compound Compound yaw rotation angle (radians) - rotates about peduncle axis
      * \param[in] scale_factor Scale factor to apply to the flower/fruit prototype
      * \param[in] is_open_flower For flowers: true=open, false=closed. Ignored for fruit.
+     * \param[in] gravity_fraction Fraction (0-1) of its angle from straight down by which the flower/fruit is finally turned toward hanging, about the horizontal line through its base. 0 for flowers.
      */
-    void createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &fruit_base, const helios::vec3 &peduncle_axis, float pitch, float roll, float azimuth, float yaw_compound, float scale_factor, bool is_open_flower);
+    void createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &fruit_base, const helios::vec3 &peduncle_axis, float pitch, float roll, float azimuth, float yaw_compound, float scale_factor, bool is_open_flower, float gravity_fraction);
 
     /**
      * Calculate the total carbon cost (mol C) required for the construction of a phytomer's total leaf area.
@@ -2666,6 +2713,12 @@ struct PlantInstance {
     float time_since_dormancy = 0;
     helios::Context *context_ptr;
     std::string plant_name;
+    //! Build parameters the plant was built with by \ref PlantArchitecture::buildPlantInstanceFromLibrary(). Kept for the life of the plant, because some of them, such as the tiller count of sorghum, are
+    //! read as the plant grows.
+    std::map<std::string, float> build_parameters;
+    //! The entries of build_parameters that shape the plant's flowers and fruit. Its flower and fruit prototypes are built from them and cached by them, so plants that differ only in other parameters share
+    //! their prototypes.
+    std::map<std::string, float> organ_build_parameters;
     std::pair<std::string, float> epicormic_shoot_probability_perlength_per_day; //.first is the epicormic shoot label string, .second is the probability
 
     // Phenological thresholds.
@@ -2714,6 +2767,13 @@ struct PlantInstance {
      * are performed. A leaf in voxel (I,J,K) adds a*b^(-q) to every voxel (I+-p, J-q, K+-p) for q in [0,q_max], p in [0,q].
      */
     std::unordered_map<long long, float> shadow_grid;
+
+    //! World position that the voxel keys of shadow_grid, crown_depth_grid and their season-peak copies are measured from.
+    /**
+     * Zero until the plant is moved by PlantArchitecture::setPlantBasePosition(), which shifts it by the same offset as the plant, so that the
+     * cached grids keep describing the moved crown without having to be rebuilt.
+     */
+    helios::vec3 shadow_grid_origin = helios::make_vec3(0, 0, 0);
 
     //! Shadow grid captured at the seasonal peak of canopy density, for dormancy-requiring shoots.
     /**
@@ -2925,6 +2985,34 @@ struct PlantGrowthAnimationStorage {
     std::map<uint, std::vector<std::shared_ptr<GrowthFrameSnapshot>>> plant_frames;
 };
 
+//! Look up a build parameter, falling back to a default if it was not given
+/**
+ * Used by the library plant builders and by flower/fruit prototype functions to read the build parameters passed to \ref PlantArchitecture::buildPlantInstanceFromLibrary().
+ * \param[in] build_parameters Map of parameter names to values
+ * \param[in] parameter_name Name of the parameter to retrieve
+ * \param[in] default_value Default value to use if parameter not specified
+ * \param[in] min_value Minimum valid value for the parameter
+ * \param[in] max_value Maximum valid value for the parameter
+ * \param[in] parameter_description Description of the parameter for error messages
+ * \return The parameter value from the map if specified, otherwise the default value
+ * \throws helios_runtime_error if the parameter value is outside the valid range
+ */
+[[nodiscard]] float getBuildParameterValue(const std::map<std::string, float> &build_parameters, const std::string &parameter_name, float default_value, float min_value, float max_value, const std::string &parameter_description);
+
+//! Look up an integer-valued build parameter, falling back to a default if it was not given
+/**
+ * As \ref getBuildParameterValue(), and in addition the value must be a whole number.
+ * \param[in] build_parameters Map of parameter names to values
+ * \param[in] parameter_name Name of the parameter to retrieve
+ * \param[in] default_value Default value to use if parameter not specified
+ * \param[in] min_value Minimum valid value for the parameter
+ * \param[in] max_value Maximum valid value for the parameter
+ * \param[in] parameter_description Description of the parameter for error messages
+ * \return The parameter value from the map if specified, otherwise the default value
+ * \throws helios_runtime_error if the parameter value is outside the valid range or is not a whole number
+ */
+[[nodiscard]] int getBuildParameterIntegerValue(const std::map<std::string, float> &build_parameters, const std::string &parameter_name, int default_value, int min_value, int max_value, const std::string &parameter_description);
+
 class PlantArchitecture {
 public:
     //! Main architectural model class constructor
@@ -2984,6 +3072,14 @@ public:
     //! Get list of all available plant models in the library
     [[nodiscard]] std::vector<std::string> getAvailablePlantModels() const;
 
+    //! Get the names of the build parameters a library plant model accepts
+    /**
+     * These are the keys that may be given to \ref buildPlantInstanceFromLibrary() for the model. Their meanings and ranges are listed in the plant library documentation (see \ref PlantArchBuildParams).
+     * \param[in] plant_model_name Name of the plant model. See \ref getAvailablePlantModels().
+     * \return Names of the model's structure parameters followed by its organ parameters. Empty if the model accepts none.
+     */
+    [[nodiscard]] std::vector<std::string> getPlantModelBuildParameterNames(const std::string &plant_model_name) const;
+
     //! Get the empirical leaf inclination distribution a library plant model declares
     /**
      * A plant model may declare the leaf inclination distribution measured for its species. Plants built from
@@ -3017,8 +3113,8 @@ public:
     /**
      * \param[in] base_position Cartesian coordinates of the base of the plant.
      * \param[in] age Age of the plant in days.
-     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the
-     * plant library documentation.
+     * \param[in] build_parameters [optional] Map of parameter names to values overriding species-specific defaults of the model, such as trellis dimensions, trunk height and scaffold count, or the size and
+     * form of grape clusters and sorghum panicles. Parameter names are species-specific and documented in the plant library documentation (see \ref PlantArchBuildParams). A name the model does not accept throws.
      * \return ID of the plant instance.
      * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
@@ -3031,8 +3127,8 @@ public:
      * \param[in] plant_count_xy Number of plants in the canopy in the x- and y-directions.
      * \param[in] age Age of the plants in the canopy in days.
      * \param[in] germination_rate [optional] Probability that a plant in the canopy germinates and a plant is created.
-     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the
-     * plant library documentation.
+     * \param[in] build_parameters [optional] Map of parameter names to values overriding species-specific defaults of the model, such as trellis dimensions, trunk height and scaffold count, or the size and
+     * form of grape clusters and sorghum panicles. Parameter names are species-specific and documented in the plant library documentation (see \ref PlantArchBuildParams). A name the model does not accept throws.
      * \return Vector of plant instance IDs.
      * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
@@ -3045,8 +3141,8 @@ public:
      * \param[in] canopy_extent_xy Size/extent of the canopy boundaries in the x- and y-directions.
      * \param[in] plant_count Number of plants to randomly generate inside canopy bounds.
      * \param[in] age Age of the plants in the canopy in days.
-     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the
-     * plant library documentation.
+     * \param[in] build_parameters [optional] Map of parameter names to values overriding species-specific defaults of the model, such as trellis dimensions, trunk height and scaffold count, or the size and
+     * form of grape clusters and sorghum panicles. Parameter names are species-specific and documented in the plant library documentation (see \ref PlantArchBuildParams). A name the model does not accept throws.
      * \return Vector of plant instance IDs.
      * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
@@ -3730,7 +3826,15 @@ public:
     void setPetioleLeafCount(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count);
 
     /**
-     * \brief Sets the base position of a plant with the specified ID.
+     * \brief Sets the base position of a plant with the specified ID, moving the plant if it has already been built.
+     *
+     * For a plant with no shoots, this only stores the position, and the first shoot added with addBaseStemShoot() is placed there. For a plant that already has shoots,
+     * the whole plant is translated by the difference between the new and the old base position: its Context geometry, the positions stored by its shoots, phytomers,
+     * leaves, peduncles, flowers and fruit, its per-plant attraction points, and the cached shading state used by branch shedding. Later growth continues from the moved
+     * position. Attraction points set for all plants through enableAttractionPoints(const std::vector<helios::vec3>&, float, float, float) are copied into each plant,
+     * so the moved plant's copy moves with it while the shared list does not.
+     *
+     * \note Do not also translate the plant's objects in the Context, or they will be moved twice. This cannot be called from inside a phytomer callback.
      * \param[in] plantID Unique identifier of the plant
      * \param[in] base_position Coordinates representing the new base position of the plant
      */
@@ -4012,6 +4116,15 @@ public:
      */
     [[nodiscard]] std::string getPlantName(uint plantID) const;
 
+    //! Get the build parameters a plant was built with
+    /**
+     * These are the parameters given to \ref buildPlantInstanceFromLibrary() (see \ref PlantArchBuildParams). A plant keeps them for its life, and they are restored with it from XML. Parameters that were not
+     * given are absent, and take the model's default where they are read.
+     * \param[in] plantID Unique identifier of the plant.
+     * \return Map of build parameter names to values, empty for a plant not built from the library or built without parameters.
+     */
+    [[nodiscard]] const std::map<std::string, float> &getPlantBuildParameters(uint plantID) const;
+
     /**
      * \brief Retrieves the age of a specific plant.
      *
@@ -4227,6 +4340,8 @@ public:
     /**
      * \brief Retrieves the base position of the specified plant.
      *
+     * For a plant with no shoots yet, this is the position at which its first shoot will be placed.
+     *
      * \param[in] plantID Identifier of the plant whose base position is being queried.
      * \return Base position of the plant as a helios::vec3 object.
      */
@@ -4267,6 +4382,17 @@ public:
         \return Local light exposure in [0,1].
     */
     [[nodiscard]] float getShadowLightExposureAtPoint(uint plantID, const helios::vec3 &position) const;
+
+    //! Get the local light exposure at a point under the canopy of the plant's most recent seasonal peak
+    /** Like \ref getShadowLightExposureAtPoint(), but read from the shadow grid captured when the plant's leaf area last reached its
+        seasonal maximum, rather than from the current canopy. Through dormancy, when a deciduous plant has no leaves and the current
+        exposure is 1 everywhere, this still gives the light each point stood in over the past summer. Returns 1 before the plant's
+        first season in leaf, or when the carbon model is active.
+        \param[in] plantID Identifier of the plant.
+        \param[in] position Query position in world coordinates.
+        \return Local light exposure in [0,1].
+    */
+    [[nodiscard]] float getSeasonPeakLightExposureAtPoint(uint plantID, const helios::vec3 &position) const;
 
     //! Calculate the height of the last internode on the base stem/shoot
     /**
@@ -4836,18 +4962,6 @@ public:
     friend class PlantArchitectureTestHelper;
 
 private:
-    //! Get a validated parameter value from the build parameters map
-    /**
-     * \param[in] build_parameters Map of parameter names to values
-     * \param[in] parameter_name Name of the parameter to retrieve
-     * \param[in] default_value Default value to use if parameter not specified
-     * \param[in] min_value Minimum valid value for the parameter
-     * \param[in] max_value Maximum valid value for the parameter
-     * \param[in] parameter_description Description of the parameter for error messages
-     * \return The parameter value from the map if specified, otherwise the default value
-     * \throws helios_runtime_error if the parameter value is outside the valid range
-     */
-    float getParameterValue(const std::map<std::string, float> &build_parameters, const std::string &parameter_name, float default_value, float min_value, float max_value, const std::string &parameter_description) const;
 
     //! Clear BVH cache (called at start of each growth cycle)
     void clearBVHCache() const;
@@ -4874,8 +4988,9 @@ private:
      * If not, it creates and hides the prototype objects. This is necessary before calling createInflorescenceGeometry()
      * when unique_prototypes > 0, otherwise map::at() will throw an out_of_range exception.
      * \param[in] params Phytomer parameters containing inflorescence configuration
+     * \param[in] plantID ID of the plant bearing the inflorescence. Its name labels the prototype materials, and its build parameters are passed to the prototype functions and select the cached set.
      */
-    void ensureInflorescencePrototypesInitialized(const PhytomerParameters &params, const std::string &plant_name);
+    void ensureInflorescencePrototypesInitialized(const PhytomerParameters &params, uint plantID);
 
     // --- Structural edits requested from inside phytomer callbacks --- //
 
@@ -4969,13 +5084,24 @@ protected:
     //! build loop and advanceTime().
     volatile int *cancel_flag = nullptr;
 
-    // Current build parameters for plant construction (set before calling builder functions)
+    //! Build parameters declared for a library plant model, see \ref registerPlantModelBuildParameters()
+    struct PlantModelBuildParameters {
+        std::vector<std::string> structure_parameter_names;
+        std::vector<std::string> organ_parameter_names;
+        std::function<void(const std::map<std::string, float> &)> validate_organ_parameters;
+    };
+
+    // Build parameters of the plant being built by buildPlantInstanceFromLibrary(), set only for the duration of that call. The builder reads current_build_parameters, and addPlantInstance() attaches
+    // both maps to the plant the builder creates.
     std::map<std::string, float> current_build_parameters;
+    std::map<std::string, float> current_organ_build_parameters;
 
     // Function pointer maps for plant model registration
     std::map<std::string, std::function<void()>> shoot_initializers;
     std::map<std::string, std::function<uint(const helios::vec3 &)>> plant_builders;
     std::map<std::string, std::string> plant_type_map;
+    //! Build parameters declared by each library plant model, keyed by model name. Populated by \ref registerPlantModelBuildParameters().
+    std::map<std::string, PlantModelBuildParameters> plant_model_build_parameters;
     //! Empirical leaf inclination Beta distribution declared by each library plant model, keyed by model name
     /**
      * Populated by \ref registerPlantModel(). The x-component is the Beta distribution parameter mu and the
@@ -5059,12 +5185,13 @@ protected:
      */
     [[nodiscard]] uint getCachedLeafPrototypeObjID(uint prototype_identifier, uint leaves_per_petiole, uint prototype_index, uint leaf_index, const std::string &calling_function) const;
 
-    // Key is the prototype function pointer; value index is the unique flower prototype
-    std::map<uint (*)(helios::Context *context_ptr, uint subdivisions, bool flower_is_open), std::vector<uint>> unique_open_flower_prototype_objIDs;
-    // Key is the prototype function pointer; value index is the unique flower prototype
-    std::map<uint (*)(helios::Context *context_ptr, uint subdivisions, bool flower_is_open), std::vector<uint>> unique_closed_flower_prototype_objIDs;
-    // Key is the prototype function pointer; value index is the unique fruit prototype
-    std::map<uint (*)(helios::Context *context_ptr, uint subdivisions), std::vector<uint>> unique_fruit_prototype_objIDs;
+    // Key is the prototype function pointer and the build parameters of the plant it was built for, so plants built with different parameters get their own prototypes; value index is the unique flower
+    // prototype
+    std::map<std::pair<FlowerPrototypeFunction, std::map<std::string, float>>, std::vector<uint>> unique_open_flower_prototype_objIDs;
+    // Key is the prototype function pointer and the plant build parameters; value index is the unique flower prototype
+    std::map<std::pair<FlowerPrototypeFunction, std::map<std::string, float>>, std::vector<uint>> unique_closed_flower_prototype_objIDs;
+    // Key is the prototype function pointer and the plant build parameters; value index is the unique fruit prototype
+    std::map<std::pair<FruitPrototypeFunction, std::map<std::string, float>>, std::vector<uint>> unique_fruit_prototype_objIDs;
 
     //! Get object IDs for all hidden prototype objects managed by this PlantArchitecture instance
     [[nodiscard]] std::vector<uint> getAllPrototypeObjectIDs() const;
@@ -5093,6 +5220,31 @@ protected:
      */
     void registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build, const std::string &plant_type = "herbaceous",
                             const helios::vec2 &leaf_inclination_Beta = helios::make_vec2(0.f, 0.f));
+
+    //! Declare the build parameters a registered plant model accepts
+    /**
+     * \ref buildPlantInstanceFromLibrary() rejects any key not declared for the model, so a misspelled parameter fails instead of silently leaving the default in place. A model with no declaration accepts none.
+     *
+     * Every declared parameter given to \ref buildPlantInstanceFromLibrary() is kept with the plant for its life. They are declared in two groups. Structure parameters are read by the model's builder, and
+     * possibly by its phytomer creation function as the plant grows. Organ parameters shape the model's flowers and fruit: they are passed to its prototype functions and identify its cached prototypes, so
+     * plants that differ only in structure parameters share their flower and fruit prototypes.
+     * \param[in] name Plant model label, which must already be registered with \ref registerPlantModel().
+     * \param[in] structure_parameter_names Names of every build parameter read by the model's builder.
+     * \param[in] organ_parameter_names [optional] Names of every build parameter read by the model's flower and fruit prototype functions.
+     * \param[in] validate_organ_parameters [optional] Function that reads every organ parameter and throws if one is invalid. It is called before the plant is built and when organ parameters are read from
+     * XML, so an invalid value fails then rather than when the first flower or fruit forms. Required when organ parameters are declared.
+     */
+    void registerPlantModelBuildParameters(const std::string &name, const std::vector<std::string> &structure_parameter_names, const std::vector<std::string> &organ_parameter_names = {},
+                                           std::function<void(const std::map<std::string, float> &)> validate_organ_parameters = nullptr);
+
+    //! Check that every entry of a build parameter map is declared for a plant model, and that its organ parameters are valid
+    /**
+     * \param[in] plant_model_name Name of the library plant model.
+     * \param[in] build_parameters Map of build parameter names to values.
+     * \param[in] calling_function Name of the calling function, quoted in error messages.
+     * \return The organ parameters among the entries of build_parameters.
+     */
+    [[nodiscard]] std::map<std::string, float> validateBuildParameters(const std::string &plant_model_name, const std::map<std::string, float> &build_parameters, const std::string &calling_function) const;
 
     //! Initialize all plant model registrations
     void initializePlantModelRegistrations();
@@ -5187,10 +5339,11 @@ protected:
         \param[in] grid Shadow grid to query.
         \param[in] depth_grid Companion crown-depth field, giving each occupied voxel's depth beneath the crown surface.
         \param[in] voxel_size Edge length (m) of the grid voxels.
+        \param[in] grid_origin World position the grid's voxel keys are measured from (PlantInstance::shadow_grid_origin).
         \param[in] position Query position in world coordinates.
         \return Light exposure in [0, C]; the unshaded value C when the grid is empty.
     */
-    [[nodiscard]] float shadowGridLightExposure(const std::unordered_map<long long, float> &grid, const std::unordered_map<long long, int> &depth_grid, float voxel_size, const helios::vec3 &position) const;
+    [[nodiscard]] float shadowGridLightExposure(const std::unordered_map<long long, float> &grid, const std::unordered_map<long long, int> &depth_grid, float voxel_size, const helios::vec3 &grid_origin, const helios::vec3 &position) const;
 
     //! Record the position, area and bearing shoot of every leaf on a plant, as the canopy branch shedding will judge
     /** Called when the plant's leaf area reaches a new maximum for the season, so that what is kept is the season's peak canopy.

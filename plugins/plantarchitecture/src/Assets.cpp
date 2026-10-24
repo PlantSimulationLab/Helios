@@ -721,17 +721,17 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
     return objID;
 }
 
-uint GeneralSphericalFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint GeneralSphericalFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     return context_ptr->addSphereObject(5, make_vec3(0.5f, 0, 0), 0.5f, RGB::red);
 }
 
-uint AlmondFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint AlmondFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AlmondHull.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint AlmondFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint AlmondFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AlmondFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -790,30 +790,143 @@ void AlmondSpurPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
     growSpursFromUnbrokenBuds(phytomer, almond_spur_fraction);
 }
 
-uint AppleFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint AppleFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AppleFruit.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint AppleFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint AppleFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AlmondFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
+//! Fraction of the lateral vegetative buds left unbroken on an apple limb's year-old wood that grow a spur (see growSpursFromUnbrokenBuds()).
+static constexpr float apple_spur_fraction = 0.2f;
+//! Nodes at the base of each season's growth unit of a long shoot whose axillary buds never flower.
+/** The basal buds of an apple growth unit, in the axils of its small first leaves, mostly stay latent. */
+static constexpr uint apple_axillary_flowering_basal_nodes = 4;
+//! Nodes below the tip of a long shoot whose axillary buds never flower.
+/** The most distal lateral buds of a one-year-old apple shoot grow into long shoots (acrotony), and its axillary flower buds lie below
+    them. These are the nodes where the proleptic bud-break probability is still well above its minimum. */
+static constexpr uint apple_axillary_flowering_distal_nodes = 3;
+//! Probability that a node of a long shoot between the basal and distal zones carries axillary flower buds.
+static constexpr float apple_axillary_flowering_probability = 0.3f;
+//! Light exposure, under the past summer's canopy, below which an apple flower bud does not form.
+/** Flower bud formation in apple falls off steeply in the shade of the crown interior, which is why a mature tree bears its fruit in the
+    outer, well-lit shell of the canopy. Exposure is that of PlantArchitecture::getSeasonPeakLightExposureAtPoint(), from 0 (fully
+    shaded) to 1 (unshaded). */
+static constexpr float apple_flowering_light_exposure_min = 0.45f;
+//! Light exposure above which an apple flower bud holds its full cluster of flowers.
+static constexpr float apple_flowering_light_exposure_full = 0.8f;
+
+//! Remove the flowers that a node's light would not have supported
+/** Between the two exposure thresholds a cluster keeps a proportional share of its flowers. The flowers kept are always the first ones of
+    the cluster and the light is that of the past summer, so applying this on every dormant time step changes nothing after the first.
+    \param[in] phytomer Phytomer whose dormant floral buds are thinned.
+    \param[in] terminal Whether to thin the terminal cluster rather than the axillary ones.
+    \param[in] light_exposure Light exposure at the node.
+*/
+static void thinAppleFlowerClusterForLight(const std::shared_ptr<Phytomer> &phytomer, bool terminal, float light_exposure) {
+    float kept_fraction = std::clamp((light_exposure - apple_flowering_light_exposure_min) / (apple_flowering_light_exposure_full - apple_flowering_light_exposure_min), 0.f, 1.f);
+    // The terminal buds of a shoot are each stored as their own petiole group, so they are counted as one cluster across groups; the
+    // axillary buds of a petiole are a cluster of their own.
+    std::vector<std::vector<FloralBud *>> clusters;
+    if (terminal) {
+        clusters.emplace_back();
+    }
+    for (auto &petiole: phytomer->floral_buds) {
+        if (!terminal) {
+            clusters.emplace_back();
+        }
+        for (auto &fbud: petiole) {
+            if (fbud.isterminal == terminal) {
+                clusters.back().push_back(&fbud);
+            }
+        }
+    }
+    for (auto &cluster: clusters) {
+        size_t kept = size_t(std::ceil(kept_fraction * float(cluster.size())));
+        for (size_t i = kept; i < cluster.size(); i++) {
+            if (cluster.at(i)->state == BUD_DORMANT) {
+                phytomer->setFloralBudState(BUD_DEAD, *cluster.at(i));
+            }
+        }
+    }
+}
+
 void ApplePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
-    if (phytomer->internode_length_max < 0.01) { // spurs
+    const Shoot &shoot = *phytomer->parent_shoot_ptr;
+
+    // An apple spur flowers only from its terminal mixed bud, which is added when the spur goes dormant and is not touched here.
+    if (shoot.shoot_type_label == "spur") {
         phytomer->setInternodeMaxRadius(0.005);
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->scaleLeafPrototypeScale(0.8);
         phytomer->setFloralBudState(BUD_DEAD);
+        return;
+    }
+
+    // A lateral that breaks far below its parent's tip is held at the proleptic internode_length_min of 1 cm (the threshold sits between
+    // that and the next length the 4 mm/node decay gives, 1.2 cm). It grows as a short shoot: a few nodes a season, ending each season in
+    // the terminal flower cluster of a long shoot, and never branching. Its unbroken buds are marked as already considered for a spur, so
+    // that growSpursFromUnbrokenBuds() does not grow spurs out of a short shoot.
+    if (phytomer->internode_length_max < 0.011f) {
+        phytomer->setInternodeMaxRadius(0.005);
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        for (auto &petiole: phytomer->axillary_vegetative_buds) {
+            for (auto &vbud: petiole) {
+                vbud.shoot_type_label = "spur";
+            }
+        }
+        phytomer->scaleLeafPrototypeScale(0.8);
         phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap = 6;
+    }
+
+    // Axillary flower buds of a long shoot. The basal latent zone is decided here, by position within the season's growth unit; the
+    // distal zone depends on where the shoot ends the season and is applied in ApplePhytomerCallbackFunction(). nodes_this_season is
+    // only counted from the shoot's first dormancy onward, so during the shoot's first season its node index is used instead.
+    uint growth_unit_node_index = shoot.dormancy_cycles == 0 ? shoot_node_index : shoot.nodes_this_season;
+    if (growth_unit_node_index < apple_axillary_flowering_basal_nodes || shoot.context_ptr->randu() >= apple_axillary_flowering_probability) {
+        phytomer->setFloralBudState(BUD_DEAD);
     }
 }
 
 void ApplePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
+
+    growSpursFromUnbrokenBuds(phytomer, apple_spur_fraction);
+
+    const Shoot &shoot = *phytomer->parent_shoot_ptr;
+    if (!shoot.isdormant) {
+        return;
+    }
+
+    // Flower buds are thinned by the light the node stood in over the past summer, spur clusters and long shoots alike.
+    float light_exposure = shoot.plantarchitecture_ptr->getSeasonPeakLightExposureAtPoint(shoot.plantID, phytomer->getInternodeNodePositions().back());
+    thinAppleFlowerClusterForLight(phytomer, false, light_exposure);
+    if (phytomer->shoot_index.x == phytomer->shoot_index.y - 1) {
+        thinAppleFlowerClusterForLight(phytomer, true, light_exposure);
+    }
+
+    // Once a long shoot has stopped for the season its tip is known, and the axillary flower buds in the distal zone are removed. Only
+    // this season's nodes still hold dormant axillary flower buds, so the rule does not reach older wood and applying it on every
+    // dormant time step changes nothing after the first.
+    if (shoot.shoot_type_label == "spur") {
+        return;
+    }
+    int nodes_below_tip = phytomer->shoot_index.y - phytomer->shoot_index.x - 1;
+    if (nodes_below_tip >= int(apple_axillary_flowering_distal_nodes)) {
+        return;
+    }
+    for (auto &petiole: phytomer->floral_buds) {
+        for (auto &fbud: petiole) {
+            if (!fbud.isterminal && fbud.state == BUD_DORMANT) {
+                phytomer->setFloralBudState(BUD_DEAD, fbud);
+            }
+        }
+    }
 }
 
 uint AsparagusLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
@@ -884,13 +997,13 @@ uint BeanLeafPrototype_trifoliate_OBJ(helios::Context *context_ptr, LeafPrototyp
     return objID;
 }
 
-uint BeanFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint BeanFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanPod.obj").string().c_str(), true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint BeanFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint BeanFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs;
     if (flower_is_open) {
         UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BeanFlower_open_white.obj").string().c_str(), true);
@@ -920,19 +1033,19 @@ void BeanPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot
     }
 }
 
-uint BindweedFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint BindweedFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BindweedFlower.obj").string().c_str(), true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint BougainvilleaFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint BougainvilleaFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/BougainvilleaFlower.obj").string().c_str(), true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint CapsicumFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint CapsicumFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::string OBJ_file;
     if (context_ptr->randn() < 0.4) {
         OBJ_file = helios::resolvePluginAsset("plantarchitecture", "assets/obj/CapsicumFruit_green.obj").string().c_str();
@@ -994,13 +1107,13 @@ uint CowpeaLeafPrototype_trifoliate_OBJ(helios::Context *context_ptr, LeafProtot
     return objID;
 }
 
-uint CowpeaFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint CowpeaFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaPod.obj").string().c_str(), make_vec3(0., 0, 0), 0.75, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint CowpeaFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint CowpeaFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs;
     if (flower_is_open) {
         UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/CowpeaFlower_open_yellow.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
@@ -1042,91 +1155,173 @@ void CowpeaPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
     }
 }
 
-// Function to generate random float between min and max
-float random_float(float min, float max) {
-    // Uses helios::randu() rather than std::rand()/RAND_MAX: RAND_MAX is 32767 on MSVC against
-    // 2147483647 on glibc, so the raw form drew from ~65000x fewer distinct values on Windows than
-    // on Linux. See the note above globalRandomGenerator() in core/src/global.cpp.
-    return min + helios::randu() * (max - min);
+GrapeClusterParameters GrapeClusterParameters::fromBuildParameters(const std::map<std::string, float> &build_parameters) {
+    GrapeClusterParameters parameters;
+    parameters.berry_diameter = getBuildParameterValue(build_parameters, "berry_diameter", parameters.berry_diameter, 0.004f, 0.03f, "grape berry diameter in meters");
+    parameters.cluster_berry_count = getBuildParameterValue(build_parameters, "cluster_berry_count", parameters.cluster_berry_count, 10.f, 400.f, "mean number of berries in a grape cluster");
+    return parameters;
 }
 
-// Function to check if two spheres overlap
-bool spheres_overlap(const helios::vec3 &center1, float radius1, const helios::vec3 &center2, float radius2) {
-    float distance = std::sqrt(std::pow(center1.x - center2.x, 2) + std::pow(center1.y - center2.y, 2) + std::pow(center1.z - center2.z, 2));
-    return distance < (radius1 + radius2);
+std::vector<std::string> GrapeClusterParameters::buildParameterNames() {
+    return {"berry_diameter", "cluster_berry_count"};
 }
 
-uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
+    // Mature wine-grape cluster (Cabernet Sauvignon), built along +x from its attachment at the origin, in meters, so the fruit_prototype_scale that goes with it is 1. Defaults target ~90 berries of
+    // ~12 mm (about 1 g; Przic & Markovic 2014, Travanic-Fuentes et al. 2024) in a conical cluster ~12 cm long and ~7 cm wide with medium compactness and 0-2 wings (OIV 202/204/208/209). Berries are
+    // seeded on a rachis with ~15 primary branches (Dunn & Martin 2007) whose reach shrinks toward the tip, then relaxed until they pack against their neighbors.
+    //
+    // The cluster is laid out in units in which a cluster of the reference berry count is one unit long and holds berries of radius berry_radius_mean, and is scaled to meters at the end. Its size
+    // therefore follows from its berries: a cluster grows with the cube root of its berry count, and in proportion to berry diameter.
 
-    int num_grapes = 60;
-    float height = 5.0f; // Height of the cluster
-    float base_radius = 2.f; // Base radius of the cluster
-    float taper_factor = 0.6f; // Taper factor (higher means more taper)
-    float grape_radius = 0.25f; // Fixed radius for each grape
+    const GrapeClusterParameters cluster_parameters = GrapeClusterParameters::fromBuildParameters(build_parameters);
+    const float berry_diameter = cluster_parameters.berry_diameter;
+    const float cluster_berry_count = cluster_parameters.cluster_berry_count;
 
-    std::vector<std::pair<helios::vec3, float>> grapes;
-    float z_step = height / num_grapes;
+    constexpr int reference_berry_count = 90;
+    constexpr float berry_radius_mean = 0.05f; // 12 mm berries in a 12 cm cluster
+    constexpr float berry_radius_cv = 0.07f; // ~20% CV in berry mass
+    constexpr uint berry_subdivisions = 8;
+    const float meters_per_unit = 0.5f * berry_diameter / berry_radius_mean;
 
-    // Place the first grape at the bottom center
-    helios::vec3 first_center(0.0f, 0.0f, 0.0f);
-    grapes.push_back({first_center, grape_radius});
+    // Berry count varies by -17% to +17% about the mean between clusters
+    const int berry_count = context_ptr->randu(int(std::round(cluster_berry_count * 75.f / 90.f)), int(std::round(cluster_berry_count * 105.f / 90.f)));
+    const float cluster_length = std::cbrt(float(berry_count) / float(reference_berry_count));
 
-    // Attempt to place each subsequent grape close to an existing grape
-    int max_attempts = 100; // Number of retries to find a tight fit
+    // ---- Rachis skeleton ---- //
 
-    for (int i = 1; i < num_grapes; ++i) {
-        float z = i * z_step;
-        // Tapered radius based on height (denser at the top, sparser at the bottom)
-        float taper_radius = base_radius * (1.0f - taper_factor * (z / height));
+    const float shoulder_radius = 0.33f * cluster_length; // envelope radius at the shoulders
+    const int primary_branch_count = context_ptr->randu(13, 17);
+    const float first_branch_position = 0.06f * cluster_length;
+    const float last_branch_position = 0.85f * cluster_length;
 
-        bool placed = false;
-        int attempts = 0;
-        while (!placed && attempts < max_attempts) {
-            // Randomly select an existing grape as the reference point
-            int reference_idx = rand() % grapes.size();
-            const helios::vec3 &reference_center = grapes[reference_idx].first;
+    std::vector<float> branch_position(primary_branch_count);
+    std::vector<float> branch_reach(primary_branch_count);
+    std::vector<vec3> branch_direction(primary_branch_count);
+    std::vector<float> branch_length(primary_branch_count);
+    std::vector<float> branch_berry_weight(primary_branch_count);
 
-            // Pick a random offset direction from the reference grape
-            float angle = random_float(0, 2 * M_PI);
-            float distance = random_float(1.2 * grape_radius, 1.3 * grape_radius); // Keep grapes close but not overlapping
+    const bool has_wing = context_ptr->randu() < 0.5f;
+    const float azimuth_offset = context_ptr->randu(0.f, 2.f * PI_F);
+    for (int branch = 0; branch < primary_branch_count; branch++) {
+        branch_position.at(branch) = first_branch_position + (last_branch_position - first_branch_position) * (float(branch) + 0.5f * context_ptr->randu()) / float(primary_branch_count);
+        // Conical outline: basal branches reach farthest from the rachis
+        float reach = (shoulder_radius - berry_radius_mean) * (1.f - (branch_position.at(branch) - first_branch_position) / (cluster_length - first_branch_position));
+        reach *= 1.f + 0.15f * context_ptr->randn();
+        reach = std::max(reach, 0.3f * berry_radius_mean);
 
-            // Compute the new potential center for the grape
-            helios::vec3 new_center(reference_center.x + distance * cos(angle), reference_center.y + distance * sin(angle), random_float(z - 0.5f * z_step, z + 0.5f * z_step));
+        float insertion_angle = deg2rad(context_ptr->randu(45.f, 65.f)); // from the rachis axis
+        float azimuth = deg2rad(137.5f) * float(branch) + context_ptr->randu(-0.3f, 0.3f) + azimuth_offset;
+        float length = reach / sin(insertion_angle);
+        float berry_weight = reach * reach + std::pow(1.2f * berry_radius_mean, 2);
 
-            // Check that the new center is within the allowable radius (for tapering)
-            float new_center_distance = std::sqrt(new_center.x * new_center.x + new_center.y * new_center.y);
-            if (new_center_distance > taper_radius) {
-                attempts++;
-                continue; // Skip if the new position exceeds the tapered radius
-            }
+        // A wing is an enlarged basal branch that hangs alongside the main cluster
+        if (has_wing && branch == 0) {
+            insertion_angle = deg2rad(22.f);
+            length = 0.4f * cluster_length;
+            berry_weight *= 2.5f;
+        }
 
-            // Check for collisions with existing grapes
-            bool collision = false;
-            for (const auto &grape: grapes) {
-                if (spheres_overlap(new_center, grape_radius, grape.first, grape.second)) {
-                    collision = true;
-                    break;
-                }
-            }
+        branch_reach.at(branch) = reach;
+        branch_length.at(branch) = length;
+        branch_berry_weight.at(branch) = berry_weight;
+        branch_direction.at(branch) = make_vec3(cos(insertion_angle), sin(insertion_angle) * cos(azimuth), sin(insertion_angle) * sin(azimuth));
+    }
 
-            // If no collision, place the grape
-            if (!collision) {
-                grapes.push_back({new_center, grape_radius});
-                placed = true;
-            }
+    // One berry terminates the rachis; the rest are shared among branches by weight (largest remainder)
+    const int branch_berries_total = berry_count - 1;
+    float total_weight = 0.f;
+    for (float weight: branch_berry_weight) {
+        total_weight += weight;
+    }
+    std::vector<int> branch_berry_count(primary_branch_count);
+    std::vector<std::pair<float, int>> remainders(primary_branch_count);
+    int assigned = 0;
+    for (int branch = 0; branch < primary_branch_count; branch++) {
+        float share = branch_berry_weight.at(branch) / total_weight * float(branch_berries_total);
+        branch_berry_count.at(branch) = int(std::floor(share));
+        remainders.at(branch) = {share - std::floor(share), branch};
+        assigned += branch_berry_count.at(branch);
+    }
+    std::sort(remainders.rbegin(), remainders.rend()); // largest remainder first
+    for (int i = 0; i < branch_berries_total - assigned; i++) {
+        branch_berry_count.at(remainders.at(i).second)++;
+    }
 
-            attempts++;
+    // ---- Seed berries on the skeleton ---- //
+
+    // Each berry's anchor is its pedicel tip; secondary branching is represented by scatter about the primary branch
+    std::vector<vec3> anchors;
+    anchors.reserve(berry_count);
+    anchors.push_back(make_vec3(last_branch_position + berry_radius_mean, 0, 0));
+    for (int branch = 0; branch < primary_branch_count; branch++) {
+        const vec3 &direction = branch_direction.at(branch);
+        for (int berry = 0; berry < branch_berry_count.at(branch); berry++) {
+            float along = 1.f - 0.75f * std::pow(context_ptr->randu(), 1.5f); // biased toward the distal end of the branch
+            vec3 scatter = make_vec3(context_ptr->randn(), context_ptr->randn(), context_ptr->randn());
+            scatter = scatter - direction * (scatter * direction);
+            vec3 anchor = make_vec3(branch_position.at(branch), 0, 0) + direction * (branch_length.at(branch) * along) + scatter * (0.35f * branch_length.at(branch) * along);
+            anchors.push_back(anchor);
         }
     }
 
-    std::vector<uint> UUIDs;
-    for (const auto &grape: grapes) {
-        //        std::vector<uint> UUIDs_tmp = context_ptr->addSphere( 10, grape.first, grape.second, "../../../plugins/plantarchitecture/assets/textures/GrapeBerry.jpg" );
-        std::vector<uint> UUIDs_tmp = context_ptr->addSphere(10, grape.first, grape.second, make_RGBcolor(0.053, 0.076, 0.098));
-        UUIDs.insert(UUIDs.end(), UUIDs_tmp.begin(), UUIDs_tmp.end());
+    std::vector<float> berry_radii(berry_count);
+    for (float &radius: berry_radii) {
+        radius = berry_radius_mean * clamp(1.f + berry_radius_cv * context_ptr->randn(), 0.8f, 1.2f);
     }
 
-    context_ptr->rotatePrimitive(UUIDs, 0.5 * M_PI, "y");
+    // ---- Pack the berries ---- //
+
+    // Berries are drawn in toward the rachis and slightly toward the tip (hanging), held loosely to their pedicel tips, and pushed apart wherever they
+    // overlap. The final iterations only resolve overlaps so the berries end up touching but not interpenetrating.
+    constexpr int packing_iterations = 300;
+    constexpr int settling_iterations = 100;
+    constexpr float compaction_rate = 0.012f;
+    constexpr float pedicel_spring = 0.02f;
+
+    std::vector<vec3> centers = anchors;
+    for (int iteration = 0; iteration < packing_iterations + settling_iterations; iteration++) {
+        if (iteration < packing_iterations) {
+            for (int berry = 0; berry < berry_count; berry++) {
+                vec3 &center = centers.at(berry);
+                center.y *= 1.f - compaction_rate;
+                center.z *= 1.f - compaction_rate;
+                center.x += 0.3f * compaction_rate * berry_radius_mean;
+                center = center + (anchors.at(berry) - center) * pedicel_spring;
+            }
+        }
+        for (int pass = 0; pass < 2; pass++) {
+            std::vector<vec3> displacement(berry_count, make_vec3(0, 0, 0));
+            for (int i = 0; i < berry_count; i++) {
+                for (int j = i + 1; j < berry_count; j++) {
+                    vec3 separation = centers.at(i) - centers.at(j);
+                    float distance = separation.magnitude();
+                    float overlap = berry_radii.at(i) + berry_radii.at(j) - distance;
+                    if (overlap > 0.f && distance > 0.f) {
+                        vec3 push = separation * (0.5f * overlap / distance);
+                        displacement.at(i) = displacement.at(i) + push;
+                        displacement.at(j) = displacement.at(j) - push;
+                    }
+                }
+            }
+            for (int berry = 0; berry < berry_count; berry++) {
+                centers.at(berry) = centers.at(berry) + displacement.at(berry);
+            }
+        }
+        // Keep berries below the attachment point and within the cluster length
+        for (int berry = 0; berry < berry_count; berry++) {
+            centers.at(berry).x = clamp(centers.at(berry).x, berry_radii.at(berry), cluster_length - 0.5f * berry_radii.at(berry));
+        }
+    }
+
+    // ---- Geometry ---- //
+
+    std::vector<uint> UUIDs;
+    UUIDs.reserve(berry_count * 2 * berry_subdivisions * (berry_subdivisions - 1));
+    for (int berry = 0; berry < berry_count; berry++) {
+        std::vector<uint> UUIDs_berry = context_ptr->addSphere(berry_subdivisions, meters_per_unit * centers.at(berry), meters_per_unit * berry_radii.at(berry), make_RGBcolor(0.053, 0.076, 0.098));
+        UUIDs.insert(UUIDs.end(), UUIDs_berry.begin(), UUIDs_berry.end());
+    }
 
     context_ptr->setPrimitiveData(UUIDs, "object_label", "fruit");
 
@@ -1204,16 +1399,32 @@ void GrapevinePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
     }
 }
 
-uint MaizeTasselPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint MaizeTasselPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
 
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/MaizeTassel.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     return context_ptr->addPolymeshObject(UUIDs);
 }
 
-uint MaizeEarPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint MaizeEarPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
 
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/MaizeEar.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     return context_ptr->addPolymeshObject(UUIDs);
+}
+
+//! Turns the flag leaf of a library grass to a given angle off its culm
+/**
+ * A grass leaf has no petiole, so it leaves the culm at the leaf pitch it was drawn with, which Phytomer::petiole_pitch holds. The flag leaf is turned from there to the given angle with
+ * Phytomer::rotateLeaf(), whose pitch the leaf keeps when it is re-posed, as it is when it droops or is read back from XML.
+ * \param[in] phytomer Phytomer bearing the flag leaf.
+ * \param[in] angle_off_culm_degrees Angle between the culm and the base of the flag leaf blade, in degrees.
+ */
+static void setGrassFlagLeafAngle(const std::shared_ptr<Phytomer> &phytomer, float angle_off_culm_degrees) {
+    if (phytomer->leaf_objIDs.empty() || phytomer->leaf_objIDs.front().empty()) {
+        return;
+    }
+    // A positive pitch turns the blade toward its upper face, which on a leaf without a petiole is toward the culm.
+    const float drawn_angle_off_culm = std::fabs(phytomer->petiole_pitch.front());
+    phytomer->rotateLeaf(0, 0, make_AxisRotation(drawn_angle_off_culm - deg2rad(angle_off_culm_degrees), 0.f, 0.f));
 }
 
 void MaizePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
@@ -1280,20 +1491,19 @@ void MaizePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
-    // The terminal phytomer bears the flag leaf. Phytomer::createPetiole() pins the last phytomer on a shoot to a near-zero 5 degree petiole pitch, and the terminal floral bud carrying the tassel is
-    // anchored to that same node tip (Shoot::addTerminalFloralBud) with maize's peduncle.pitch of 0, so the flag leaf leaves the culm on very nearly the peduncle's own axis and the blade passes through
-    // the tassel.
+    // The terminal phytomer bears the flag leaf, and the terminal floral bud carrying the tassel is anchored to the same node tip (Shoot::addTerminalFloralBud) with maize's peduncle.pitch of 0, so a
+    // flag leaf leaving the culm nearly along it would pass through the tassel. It is set to 23 degrees off the culm.
     //
-    // The correction stays smaller than the 25 degrees sorghum uses for the same problem, because the two species hold their flag leaves differently: sorghum's is the most horizontal leaf on the plant,
+    // The angle stays smaller than the 30 degrees of sorghum, because the two species hold their flag leaves differently: sorghum's is the most horizontal leaf on the plant,
     // whereas maize is bred for an erectophile upper canopy -- 22.9 degrees from vertical for the leaves above the ear against 41.9 for those below it (Tang et al. 2021, Euphytica 217:75, measured on the
     // hybrid Pioneer 335), a gradient that does not reverse at the top.
     //
     // What has to be preserved is that the flag leaf is the most erect BLADE, which is what Tang et al. measure and not the same thing as the most erect insertion. In this model the erectophile gradient
     // comes almost entirely from the leaf_flexibility taper above rather than from insertion angle: every rank is inserted from the same U(16,30) distribution, and it is the stiffening of the upper leaves
     // that keeps their blades from arcing over. The flag leaf is the stiffest leaf on the plant, so it holds a blade inclination near 27 degrees from vertical against 38 for the leaf below it and 53 near
-    // the base -- an 11 degree margin that a rotation of this size does not close.
-    if (shoot_max_nodes > 0 && shoot_node_index + 1 == shoot_max_nodes && !phytomer->petiole_vertices.empty()) {
-        phytomer->rotatePetiole(0, make_AxisRotation(deg2rad(18.f), 0.f, 0.f));
+    // the base -- an 11 degree margin that an angle of this size does not close.
+    if (shoot_max_nodes > 0 && shoot_node_index + 1 == shoot_max_nodes) {
+        setGrassFlagLeafAngle(phytomer, 23.f);
     }
 }
 
@@ -1310,7 +1520,7 @@ uint OliveLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_p
     return objID;
 }
 
-uint OliveFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint OliveFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/OliveFruit.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     std::vector<uint> UUIDs_fruit = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(objID), "object_label", "fruit");
@@ -1318,7 +1528,7 @@ uint OliveFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
     return objID;
 }
 
-uint OliveFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint OliveFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/OliveFlower_open.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -1336,13 +1546,13 @@ void OlivePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
     }
 }
 
-uint PistachioFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint PistachioFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/PistachioNut.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint PistachioFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint PistachioFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/OliveFlower_open.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -1510,18 +1720,18 @@ void PistachioPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
     }
 }
 
-uint PuncturevineFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint PuncturevineFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/PuncturevineFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint RedbudFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint RedbudFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/RedbudFlower_open.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     return context_ptr->addPolymeshObject(UUIDs);
 }
 
-uint RedbudFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint RedbudFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/RedbudPod.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     return context_ptr->addPolymeshObject(UUIDs);
 }
@@ -1542,7 +1752,7 @@ void RedbudPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
     }
 }
 
-uint RiceSpikePrototype(helios::Context *context_ptr, uint subdivisions) {
+uint RiceSpikePrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/RiceGrain.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -1550,14 +1760,10 @@ uint RiceSpikePrototype(helios::Context *context_ptr, uint subdivisions) {
 
 void RicePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
-    // Leaf size and internode length are scaled separately along the shoot. A single ramp cannot serve both: the lowest leaves of a sorghum plant are already close to full length while the internodes
-    // carrying them are the shortest on the plant, so one factor either stunts the bottom leaves or spreads the base of the stem out too far.
-    const float leaf_scale = fmin(1.f, 0.82f + 0.18f * float(shoot_node_index) / 3.f);
-    phytomer->scaleLeafPrototypeScale(leaf_scale);
-
-    // Internodes lengthen with height rather than shortening, so the upper leaves are not bunched together at the apex.
-    const float internode_scale = fmin(1.f, 0.60f + 0.40f * float(shoot_node_index) / 5.f);
-    phytomer->scaleInternodeMaxLength(internode_scale);
+    // The flag leaf stands nearly along the culm.
+    if (shoot_max_nodes > 0 && shoot_node_index + 1 == shoot_max_nodes) {
+        setGrassFlagLeafAngle(phytomer, 5.f);
+    }
 }
 
 void ButterLettucePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
@@ -1572,97 +1778,670 @@ void ButterLettucePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, u
     phytomer->rotateLeaf(0, 0, make_AxisRotation(-deg2rad(60) * fact, 0, 0));
 }
 
-uint SorghumPaniclePrototype(helios::Context *context_ptr, uint subdivisions) {
+SorghumPanicleParameters SorghumPanicleParameters::compact() {
+    SorghumPanicleParameters parameters;
+    parameters.length = 0.22f;
+    parameters.compactness = 0.9f;
+    parameters.primary_branch_count = 80;
+    parameters.branch_length_base = 0.15f;
+    parameters.branch_length_middle = 0.16f;
+    parameters.branch_length_tip = 0.1f;
+    parameters.branch_angle_base = 40.f;
+    parameters.branch_angle_tip = 20.f;
+    parameters.branch_upcurve = 10.f;
+    parameters.branch_bare_fraction = 0.05f;
+    parameters.splayed_branch_fraction = 0.02f;
+    parameters.raceme_length_fraction = 0.25f;
+    parameters.grain_count = 2000;
+    return parameters;
+}
 
-    if (subdivisions <= 1) {
-        subdivisions = 3;
+SorghumPanicleParameters SorghumPanicleParameters::loose() {
+    SorghumPanicleParameters parameters;
+    parameters.length = 0.30f;
+    parameters.compactness = 0.f;
+    parameters.rachis_length_fraction = 0.8f;
+    parameters.primary_branch_count = 50;
+    parameters.branch_length_base = 0.35f;
+    parameters.branch_length_middle = 0.25f;
+    parameters.branch_length_tip = 0.12f;
+    parameters.branch_length_variation = 0.25f;
+    parameters.branch_angle_base = 50.f;
+    parameters.branch_angle_tip = 25.f;
+    parameters.branch_upcurve = 30.f;
+    parameters.branch_bare_fraction = 0.35f;
+    parameters.splayed_branch_fraction = 0.f;
+    parameters.raceme_length_fraction = 0.15f;
+    parameters.grains_per_raceme = 4;
+    parameters.grain_count = 1100;
+    return parameters;
+}
+
+// ---- Sorghum panicle build parameters ---- //
+//
+// Each build parameter of the library sorghum maps onto one field of SorghumPanicleParameters. The tables below are the single list of those keys: they are read by
+// SorghumPanicleParameters::fromBuildParameters(), blended by the panicle_type preset, and declared to the plant library by SorghumPanicleParameters::buildParameterNames(). The rachis radius, branch
+// color and tube subdivisions are left out, since they are matched to the library peduncle, which is not built from the panicle parameters.
+
+struct SorghumPanicleFloatKey {
+    const char *name;
+    float SorghumPanicleParameters::*field;
+    float min_value;
+    float max_value;
+    const char *description;
+};
+
+struct SorghumPanicleIntegerKey {
+    const char *name;
+    int SorghumPanicleParameters::*field;
+    int min_value;
+    int max_value;
+    const char *description;
+};
+
+struct SorghumPanicleColorKey {
+    const char *name;
+    helios::RGBcolor SorghumPanicleParameters::*field;
+    float helios::RGBcolor::*channel;
+    const char *description;
+};
+
+static const std::vector<SorghumPanicleFloatKey> sorghum_panicle_float_keys = {
+        {"panicle_length", &SorghumPanicleParameters::length, 0.05f, 0.6f, "sorghum panicle length in meters"},
+        {"panicle_length_variation", &SorghumPanicleParameters::length_variation, 0.f, 0.3f, "coefficient of variation of sorghum panicle length"},
+        {"panicle_rachis_length_fraction", &SorghumPanicleParameters::rachis_length_fraction, 0.3f, 1.f, "fraction of the sorghum panicle length spanned by the rachis"},
+        {"panicle_rachis_curvature", &SorghumPanicleParameters::rachis_curvature, 0.f, 180.f, "total bend of the sorghum rachis in degrees"},
+        {"panicle_compactness", &SorghumPanicleParameters::compactness, 0.f, 1.f, "compactness of the sorghum panicle"},
+        {"panicle_branch_length_base", &SorghumPanicleParameters::branch_length_base, 0.02f, 0.6f, "length of the basal sorghum primary branches as a fraction of panicle length"},
+        {"panicle_branch_length_middle", &SorghumPanicleParameters::branch_length_middle, 0.02f, 0.6f, "length of the middle sorghum primary branches as a fraction of panicle length"},
+        {"panicle_branch_length_tip", &SorghumPanicleParameters::branch_length_tip, 0.02f, 0.6f, "length of the apical sorghum primary branches as a fraction of panicle length"},
+        {"panicle_branch_length_variation", &SorghumPanicleParameters::branch_length_variation, 0.f, 0.5f, "coefficient of variation of sorghum primary branch length"},
+        {"panicle_branch_angle_base", &SorghumPanicleParameters::branch_angle_base, 0.f, 90.f, "insertion angle of the basal sorghum primary branches in degrees"},
+        {"panicle_branch_angle_tip", &SorghumPanicleParameters::branch_angle_tip, 0.f, 90.f, "insertion angle of the apical sorghum primary branches in degrees"},
+        {"panicle_branch_upcurve", &SorghumPanicleParameters::branch_upcurve, 0.f, 90.f, "upward turn of the sorghum primary branches in degrees"},
+        {"panicle_branch_bare_fraction", &SorghumPanicleParameters::branch_bare_fraction, 0.f, 0.9f, "fraction of each sorghum primary branch that bears no racemes"},
+        {"panicle_splayed_branch_fraction", &SorghumPanicleParameters::splayed_branch_fraction, 0.f, 1.f, "fraction of sorghum primary branches that splay out from the head"},
+        {"panicle_splayed_branch_angle", &SorghumPanicleParameters::splayed_branch_angle, 0.f, 120.f, "insertion angle of a splayed sorghum primary branch in degrees"},
+        {"panicle_branch_radius", &SorghumPanicleParameters::branch_radius, 0.0002f, 0.003f, "radius of a sorghum primary branch in meters"},
+        {"panicle_raceme_length_fraction", &SorghumPanicleParameters::raceme_length_fraction, 0.02f, 1.f, "sorghum raceme length as a fraction of its primary branch"},
+        {"panicle_raceme_angle", &SorghumPanicleParameters::raceme_angle, 0.f, 90.f, "angle of a sorghum raceme from its primary branch in degrees"},
+        {"grain_length", &SorghumPanicleParameters::grain_length, 0.001f, 0.01f, "sorghum grain length in meters"},
+        {"grain_width", &SorghumPanicleParameters::grain_width, 0.001f, 0.01f, "sorghum grain width in meters"},
+        {"grain_thickness", &SorghumPanicleParameters::grain_thickness, 0.001f, 0.01f, "sorghum grain thickness in meters"},
+        {"grain_size_variation", &SorghumPanicleParameters::grain_size_variation, 0.f, 0.3f, "coefficient of variation of sorghum grain size"},
+        {"grain_color_variation", &SorghumPanicleParameters::grain_color_variation, 0.f, 0.5f, "coefficient of variation of sorghum grain brightness"},
+        {"glume_length_fraction", &SorghumPanicleParameters::glume_length_fraction, 0.f, 1.2f, "sorghum glume length as a fraction of grain length"},
+        {"glume_spread", &SorghumPanicleParameters::glume_spread, 0.f, 90.f, "gape of the sorghum glumes in degrees"},
+};
+
+static const std::vector<SorghumPanicleIntegerKey> sorghum_panicle_integer_keys = {
+        {"panicle_branch_count", &SorghumPanicleParameters::primary_branch_count, 5, 200, "number of sorghum primary branches"},
+        {"panicle_grains_per_raceme", &SorghumPanicleParameters::grains_per_raceme, 1, 20, "mean number of grains on a sorghum raceme"},
+        {"grain_count", &SorghumPanicleParameters::grain_count, 100, 10000, "mean number of grains on a sorghum panicle"},
+};
+
+static const std::vector<SorghumPanicleColorKey> sorghum_panicle_color_keys = {
+        {"grain_color_r", &SorghumPanicleParameters::grain_color, &helios::RGBcolor::r, "red component of the sorghum grain color"},
+        {"grain_color_g", &SorghumPanicleParameters::grain_color, &helios::RGBcolor::g, "green component of the sorghum grain color"},
+        {"grain_color_b", &SorghumPanicleParameters::grain_color, &helios::RGBcolor::b, "blue component of the sorghum grain color"},
+        {"glume_color_r", &SorghumPanicleParameters::glume_color, &helios::RGBcolor::r, "red component of the sorghum glume color"},
+        {"glume_color_g", &SorghumPanicleParameters::glume_color, &helios::RGBcolor::g, "green component of the sorghum glume color"},
+        {"glume_color_b", &SorghumPanicleParameters::glume_color, &helios::RGBcolor::b, "blue component of the sorghum glume color"},
+};
+
+// Blend of two panicle parameter sets, weighted by fraction toward the second. Only the fields in the key tables are blended; the presets differ in no other field.
+static SorghumPanicleParameters blendSorghumPanicleParameters(const SorghumPanicleParameters &from, const SorghumPanicleParameters &to, float fraction) {
+    SorghumPanicleParameters blended = from;
+    for (const SorghumPanicleFloatKey &key: sorghum_panicle_float_keys) {
+        blended.*key.field = (1.f - fraction) * from.*key.field + fraction * to.*key.field;
+    }
+    for (const SorghumPanicleIntegerKey &key: sorghum_panicle_integer_keys) {
+        blended.*key.field = int(std::round((1.f - fraction) * float(from.*key.field) + fraction * float(to.*key.field)));
+    }
+    for (const SorghumPanicleColorKey &key: sorghum_panicle_color_keys) {
+        blended.*key.field.*key.channel = (1.f - fraction) * from.*key.field.*key.channel + fraction * to.*key.field.*key.channel;
+    }
+    return blended;
+}
+
+SorghumPanicleParameters SorghumPanicleParameters::fromBuildParameters(const std::map<std::string, float> &build_parameters) {
+
+    // The preset is applied first, so that individual parameters given alongside it override it
+    SorghumPanicleParameters parameters;
+    if (build_parameters.find("panicle_type") != build_parameters.end()) {
+        const float panicle_type = getBuildParameterValue(build_parameters, "panicle_type", 0.5f, 0.f, 1.f, "sorghum panicle type from 0 (compact) through 0.5 (semi-compact) to 1 (loose)");
+        if (panicle_type <= 0.5f) {
+            parameters = blendSorghumPanicleParameters(compact(), SorghumPanicleParameters(), 2.f * panicle_type);
+        } else {
+            parameters = blendSorghumPanicleParameters(SorghumPanicleParameters(), loose(), 2.f * panicle_type - 1.f);
+        }
     }
 
-    float panicle_height = 1;
-    float panicle_width = 0.08;
-    float width_seed = 0.08;
-    float height_seed = 0.25;
-    float seed_tilt = 50;
-    subdivisions = 6;
+    for (const SorghumPanicleFloatKey &key: sorghum_panicle_float_keys) {
+        parameters.*key.field = getBuildParameterValue(build_parameters, key.name, parameters.*key.field, key.min_value, key.max_value, key.description);
+    }
+    for (const SorghumPanicleIntegerKey &key: sorghum_panicle_integer_keys) {
+        parameters.*key.field = getBuildParameterIntegerValue(build_parameters, key.name, parameters.*key.field, key.min_value, key.max_value, key.description);
+    }
+    for (const SorghumPanicleColorKey &key: sorghum_panicle_color_keys) {
+        parameters.*key.field.*key.channel = getBuildParameterValue(build_parameters, key.name, parameters.*key.field.*key.channel, 0.f, 1.f, key.description);
+    }
+    parameters.grain_subdivisions = uint(getBuildParameterIntegerValue(build_parameters, "grain_subdivisions", int(parameters.grain_subdivisions), 3, 12, "number of facets around a sorghum grain"));
 
-    std::string seed_texture_file = helios::resolvePluginAsset("plantarchitecture", "assets/textures/SorghumSeed.jpeg").string().c_str();
-    RGBcolor stem_color(0.45, 0.55, 0.42);
+    return parameters;
+}
 
+std::vector<std::string> SorghumPanicleParameters::buildParameterNames() {
+    std::vector<std::string> names = {"panicle_type", "grain_subdivisions"};
+    for (const SorghumPanicleFloatKey &key: sorghum_panicle_float_keys) {
+        names.emplace_back(key.name);
+    }
+    for (const SorghumPanicleIntegerKey &key: sorghum_panicle_integer_keys) {
+        names.emplace_back(key.name);
+    }
+    for (const SorghumPanicleColorKey &key: sorghum_panicle_color_keys) {
+        names.emplace_back(key.name);
+    }
+    return names;
+}
+
+// Quadratic through the base, middle and tip values of a profile along the rachis, evaluated at a normalized position from 0 at the base to 1 at the tip.
+static float interpolateRachisProfile(float base_value, float middle_value, float tip_value, float position) {
+    return base_value * (1.f - position) * (1.f - 2.f * position) + middle_value * 4.f * position * (1.f - position) + tip_value * position * (2.f * position - 1.f);
+}
+
+// Any unit vector perpendicular to the given unit vector.
+static vec3 perpendicularTo(const vec3 &direction) {
+    vec3 reference = std::fabs(direction.x) < 0.9f ? make_vec3(1, 0, 0) : make_vec3(0, 1, 0);
+    return normalize(cross(direction, reference));
+}
+
+// Mesh of one grain: an obovoid with a pole at each end and two staggered rings of vertices, broader toward its apex than its base. The long axis is grain_axis; width and thickness lie along
+// width_axis and the third, perpendicular axis.
+static void addSorghumGrain(helios::Context *context_ptr, const vec3 &center, const vec3 &grain_axis, const vec3 &width_axis, float length, float width, float thickness, uint facets,
+                            const RGBcolor &color, std::vector<uint> &UUIDs) {
+    const vec3 thickness_axis = cross(grain_axis, width_axis);
+    const float half_length = 0.5f * length;
+    const float ring_height[2] = {-0.4f * half_length, 0.25f * half_length};
+
+    const vec3 base_pole = center - grain_axis * half_length;
+    const vec3 apex_pole = center + grain_axis * half_length;
+    std::vector<vec3> rings[2];
+    for (int ring = 0; ring < 2; ring++) {
+        const float profile = std::sqrt(1.f - ring_height[ring] * ring_height[ring] / (half_length * half_length));
+        rings[ring].resize(facets);
+        for (uint facet = 0; facet < facets; facet++) {
+            const float angle = 2.f * PI_F * (float(facet) + 0.5f * float(ring)) / float(facets);
+            rings[ring].at(facet) = center + grain_axis * ring_height[ring] + width_axis * (0.5f * width * profile * cosf(angle)) + thickness_axis * (0.5f * thickness * profile * sinf(angle));
+        }
+    }
+
+    for (uint facet = 0; facet < facets; facet++) {
+        const uint next = (facet + 1) % facets;
+        UUIDs.push_back(context_ptr->addTriangle(base_pole, rings[0].at(next), rings[0].at(facet), color));
+        UUIDs.push_back(context_ptr->addTriangle(rings[0].at(facet), rings[0].at(next), rings[1].at(facet), color));
+        UUIDs.push_back(context_ptr->addTriangle(rings[1].at(facet), rings[0].at(next), rings[1].at(next), color));
+        UUIDs.push_back(context_ptr->addTriangle(apex_pole, rings[1].at(facet), rings[1].at(next), color));
+    }
+}
+
+// The two glumes clasping the base of a grain, one over each flattened face. Each is a pointed scale of two triangles folded along its midline, which follows the grain surface outward.
+static void addSorghumGlumes(helios::Context *context_ptr, const vec3 &center, const vec3 &grain_axis, const vec3 &width_axis, float length, float width, float thickness, float glume_length_fraction,
+                             float glume_spread, const RGBcolor &color, std::vector<uint> &UUIDs) {
+    const vec3 thickness_axis = cross(grain_axis, width_axis);
+    const float half_length = 0.5f * length;
+    const float glume_length = glume_length_fraction * length;
+
+    // Half-width of the grain cross-section at a height above its center, as a fraction of the equatorial half-width.
+    auto grain_profile = [&](float height) { return std::sqrt(std::max(0.f, 1.f - height * height / (half_length * half_length))); };
+
+    const float tip_height = std::min(-half_length + glume_length, 1.05f * half_length);
+    const float side_height = -half_length + 0.55f * glume_length;
+    const vec3 base = center - grain_axis * (1.05f * half_length);
+    for (float face: {-1.f, 1.f}) {
+        const float tip_offset = 0.5f * thickness * (1.05f * grain_profile(tip_height) + 0.1f) + 0.5f * std::sin(deg2rad(glume_spread)) * glume_length;
+        const vec3 tip = center + grain_axis * tip_height + thickness_axis * (face * tip_offset);
+        const vec3 side_offset = thickness_axis * (face * 0.3f * thickness * grain_profile(side_height));
+        const vec3 side_center = center + grain_axis * side_height + side_offset;
+        const vec3 side_extent = width_axis * (0.48f * width * grain_profile(side_height) + 0.05f * width);
+        UUIDs.push_back(context_ptr->addTriangle(base, side_center + side_extent, tip, color));
+        UUIDs.push_back(context_ptr->addTriangle(base, tip, side_center - side_extent, color));
+    }
+}
+
+uint buildSorghumPanicle(helios::Context *context_ptr, const SorghumPanicleParameters &parameters) {
+
+    const SorghumPanicleParameters &p = parameters;
+    if (p.length <= 0.f || p.grain_length <= 0.f || p.grain_width <= 0.f || p.grain_thickness <= 0.f || p.rachis_radius <= 0.f || p.branch_radius <= 0.f) {
+        helios_runtime_error("ERROR (buildSorghumPanicle): Panicle length, rachis and branch radii, and grain dimensions must all be positive.");
+    } else if (p.rachis_length_fraction <= 0.f || p.rachis_length_fraction > 1.f) {
+        helios_runtime_error("ERROR (buildSorghumPanicle): rachis_length_fraction must be greater than 0 and at most 1, but " + std::to_string(p.rachis_length_fraction) + " was given.");
+    } else if (p.primary_branch_count < 1 || p.grain_count < 1 || p.grains_per_raceme < 1) {
+        helios_runtime_error("ERROR (buildSorghumPanicle): primary_branch_count, grain_count and grains_per_raceme must each be at least 1.");
+    } else if (p.branch_bare_fraction < 0.f || p.branch_bare_fraction >= 1.f) {
+        helios_runtime_error("ERROR (buildSorghumPanicle): branch_bare_fraction must be in the range [0,1), but " + std::to_string(p.branch_bare_fraction) + " was given.");
+    } else if (p.compactness < 0.f || p.compactness > 1.f) {
+        helios_runtime_error("ERROR (buildSorghumPanicle): compactness must be in the range [0,1], but " + std::to_string(p.compactness) + " was given.");
+    } else if (p.glume_length_fraction < 0.f) {
+        helios_runtime_error("ERROR (buildSorghumPanicle): glume_length_fraction cannot be negative.");
+    } else if (p.grain_subdivisions < 3 || p.branch_radial_subdivisions < 3 || p.rachis_radial_subdivisions < 3) {
+        helios_runtime_error("ERROR (buildSorghumPanicle): grain_subdivisions, branch_radial_subdivisions and rachis_radial_subdivisions must each be at least 3.");
+    }
+
+    const float size_factor = clamp(1.f + p.length_variation * context_ptr->randn(), 0.7f, 1.3f);
+    const float panicle_length = p.length * size_factor;
+    const int grain_count = std::max(1, int(std::round(float(p.grain_count) * size_factor)));
+
+    // ---- Rachis ---- //
+
+    // The rachis bends at constant curvature in a plane of random orientation through the x-axis. Each point along it carries a frame: the tangent and two normals spanning the plane in which the
+    // primary branches radiate.
+    const float rachis_length = p.rachis_length_fraction * panicle_length;
+    const float total_bend = deg2rad(p.rachis_curvature);
+    const float bend_azimuth = context_ptr->randu(0.f, 2.f * PI_F);
+    const vec3 axis = make_vec3(1, 0, 0);
+    const vec3 bend_direction = make_vec3(0, cosf(bend_azimuth), sinf(bend_azimuth));
+    const vec3 binormal = cross(axis, bend_direction);
+
+    auto rachis_position = [&](float arc_length) {
+        if (std::fabs(total_bend) < 1e-4f) {
+            return axis * arc_length;
+        }
+        const float bend_radius = rachis_length / total_bend;
+        const float angle = arc_length / bend_radius;
+        return axis * (bend_radius * sinf(angle)) + bend_direction * (bend_radius * (1.f - cosf(angle)));
+    };
+    auto rachis_tangent = [&](float arc_length) {
+        const float angle = total_bend * arc_length / rachis_length;
+        return axis * cosf(angle) + bend_direction * sinf(angle);
+    };
+    auto rachis_normal = [&](float arc_length) {
+        const float angle = total_bend * arc_length / rachis_length;
+        return bend_direction * cosf(angle) - axis * sinf(angle);
+    };
+
+    // Component of a point's offset from the panicle axis that is perpendicular to the axis. The axis is the rachis, continued straight past its tip. arc_length_hint is the arc length of a nearby
+    // rachis point, from which the nearest one is found by a single projection.
+    auto offset_from_axis = [&](const vec3 &point, float arc_length_hint) {
+        float arc_length = arc_length_hint + (point - rachis_position(arc_length_hint)) * rachis_tangent(arc_length_hint);
+        arc_length = std::max(0.f, arc_length);
+        vec3 axis_point, tangent;
+        if (arc_length <= rachis_length) {
+            axis_point = rachis_position(arc_length);
+            tangent = rachis_tangent(arc_length);
+        } else {
+            tangent = rachis_tangent(rachis_length);
+            axis_point = rachis_position(rachis_length) + tangent * (arc_length - rachis_length);
+        }
+        const vec3 offset = point - axis_point;
+        return offset - tangent * (offset * tangent);
+    };
+
+    // ---- Primary branches ---- //
+
+    // Each primary branch leaves the rachis at its insertion angle and turns progressively back toward the rachis direction, so the branch tips point up the head as they do in the field. Branches are
+    // spaced up the rachis with a divergence near the golden angle, which spreads them evenly around it without visible ranks.
+    constexpr int branch_segments = 5;
+    struct PrimaryBranch {
+        std::vector<vec3> nodes;
+        float length;
+        float arc_length; // insertion point on the rachis
+        vec3 outward; // radial direction from the rachis at the insertion point
+    };
+    std::vector<PrimaryBranch> branches(p.primary_branch_count);
+    const float azimuth_offset = context_ptr->randu(0.f, 2.f * PI_F);
+    for (int b = 0; b < p.primary_branch_count; b++) {
+        PrimaryBranch &branch = branches.at(b);
+        const float position = clamp((float(b) + 0.5f + context_ptr->randu(-0.3f, 0.3f)) / float(p.primary_branch_count), 0.f, 1.f);
+        branch.arc_length = position * rachis_length;
+
+        const float length_fraction = std::max(0.02f, interpolateRachisProfile(p.branch_length_base, p.branch_length_middle, p.branch_length_tip, position));
+        branch.length = length_fraction * panicle_length * clamp(1.f + p.branch_length_variation * context_ptr->randn(), 0.4f, 1.6f);
+
+        float insertion_angle = p.branch_angle_base + (p.branch_angle_tip - p.branch_angle_base) * position + context_ptr->randu(-5.f, 5.f);
+        float upcurve = p.branch_upcurve;
+        if (context_ptr->randu() < p.splayed_branch_fraction) {
+            insertion_angle = p.splayed_branch_angle;
+            upcurve *= 0.5f;
+        }
+        insertion_angle = deg2rad(clamp(insertion_angle, 0.f, 90.f));
+        upcurve = deg2rad(upcurve);
+
+        const float azimuth = azimuth_offset + deg2rad(137.5f) * float(b) + context_ptr->randu(-0.3f, 0.3f);
+        const vec3 tangent = rachis_tangent(branch.arc_length);
+        branch.outward = rachis_normal(branch.arc_length) * cosf(azimuth) + binormal * sinf(azimuth);
+
+        branch.nodes.resize(branch_segments + 1);
+        branch.nodes.at(0) = rachis_position(branch.arc_length);
+        const float segment_length = branch.length / float(branch_segments);
+        for (int segment = 0; segment < branch_segments; segment++) {
+            const float angle = std::max(0.f, insertion_angle - upcurve * (float(segment) + 0.5f) / float(branch_segments));
+            const vec3 direction = tangent * cosf(angle) + branch.outward * sinf(angle);
+            branch.nodes.at(segment + 1) = branch.nodes.at(segment) + direction * segment_length;
+        }
+    }
+
+    // Point and direction at a fraction of the way along a primary branch
+    auto branch_point = [&](const PrimaryBranch &branch, float fraction, vec3 &point, vec3 &direction) {
+        const float scaled = clamp(fraction, 0.f, 1.f) * float(branch_segments);
+        const int segment = std::min(int(scaled), branch_segments - 1);
+        const float local = scaled - float(segment);
+        direction = normalize(branch.nodes.at(segment + 1) - branch.nodes.at(segment));
+        point = branch.nodes.at(segment) + (branch.nodes.at(segment + 1) - branch.nodes.at(segment)) * local;
+    };
+
+    // ---- Racemes and grain placement ---- //
+
+    // Racemes are shared among the primary branches in proportion to the fertile length of each (largest remainder), and grains among the racemes as evenly as the total allows.
+    const int raceme_count = std::max(1, int(std::round(float(grain_count) / float(p.grains_per_raceme))));
+    std::vector<float> fertile_length(p.primary_branch_count);
+    float total_fertile_length = 0.f;
+    for (int b = 0; b < p.primary_branch_count; b++) {
+        fertile_length.at(b) = (1.f - p.branch_bare_fraction) * branches.at(b).length;
+        total_fertile_length += fertile_length.at(b);
+    }
+    std::vector<int> branch_raceme_count(p.primary_branch_count);
+    std::vector<std::pair<float, int>> remainders(p.primary_branch_count);
+    int assigned = 0;
+    for (int b = 0; b < p.primary_branch_count; b++) {
+        const float share = fertile_length.at(b) / total_fertile_length * float(raceme_count);
+        branch_raceme_count.at(b) = int(std::floor(share));
+        remainders.at(b) = {share - std::floor(share), b};
+        assigned += branch_raceme_count.at(b);
+    }
+    std::sort(remainders.rbegin(), remainders.rend());
+    for (int i = 0; i < raceme_count - assigned; i++) {
+        branch_raceme_count.at(remainders.at(i).second)++;
+    }
+
+    struct Raceme {
+        int branch;
+        float fraction; // position along the primary branch
+        int first_grain;
+        int grain_count;
+    };
+    struct Grain {
+        vec3 anchor;
+        vec3 center;
+        vec3 axis;
+        vec3 width_axis;
+        float scale;
+        float arc_length; // insertion of the bearing primary branch on the rachis
+    };
+    std::vector<Raceme> racemes;
+    racemes.reserve(raceme_count);
+    std::vector<Grain> grains;
+    grains.reserve(grain_count);
+
+    for (int b = 0; b < p.primary_branch_count; b++) {
+        const PrimaryBranch &branch = branches.at(b);
+        for (int r = 0; r < branch_raceme_count.at(b); r++) {
+            // Grains are dealt out so that the first (grain_count mod raceme_count) racemes carry one extra.
+            const int raceme_index = int(racemes.size());
+            const int raceme_grains = grain_count / raceme_count + (raceme_index < grain_count % raceme_count ? 1 : 0);
+
+            Raceme raceme;
+            raceme.branch = b;
+            raceme.fraction = p.branch_bare_fraction + (1.f - p.branch_bare_fraction) * (float(r) + context_ptr->randu(0.2f, 0.8f)) / float(branch_raceme_count.at(b));
+            raceme.first_grain = int(grains.size());
+            raceme.grain_count = raceme_grains;
+            racemes.push_back(raceme);
+
+            vec3 base, branch_direction;
+            branch_point(branch, raceme.fraction, base, branch_direction);
+
+            // Racemes leave the branch on all sides, but those facing back into the head are turned outward.
+            const vec3 side_reference = perpendicularTo(branch_direction);
+            const float side_angle = context_ptr->randu(0.f, 2.f * PI_F);
+            vec3 side = side_reference * cosf(side_angle) + cross(branch_direction, side_reference) * sinf(side_angle);
+            if (side * branch.outward < 0.f) {
+                side = side - branch.outward * (1.5f * (side * branch.outward));
+                side = normalize(side - branch_direction * (side * branch_direction));
+            }
+            const float raceme_angle = deg2rad(p.raceme_angle);
+            const vec3 raceme_direction = branch_direction * cosf(raceme_angle) + side * sinf(raceme_angle);
+            const float raceme_length = std::max(p.raceme_length_fraction * branch.length, 0.6f * float(raceme_grains) * p.grain_length);
+
+            // Spikelets alternate from one side of the raceme to the other, each grain tilted outward from it.
+            const vec3 alternation_axis = normalize(cross(raceme_direction, side));
+            for (int g = 0; g < raceme_grains; g++) {
+                const float along = (float(g) + 0.75f) / float(raceme_grains);
+                const float alternation = (g % 2 == 0) ? 1.f : -1.f;
+                const vec3 lateral = normalize(side + alternation_axis * (0.8f * alternation));
+
+                Grain grain;
+                grain.scale = clamp(1.f + p.grain_size_variation * context_ptr->randn(), 0.7f, 1.3f);
+                grain.anchor = base + raceme_direction * (raceme_length * along) + lateral * (0.5f * p.grain_width * grain.scale);
+                grain.center = grain.anchor;
+                grain.axis = normalize(raceme_direction * 0.8f + lateral * 0.6f);
+                grain.width_axis = normalize(cross(grain.axis, lateral));
+                grain.arc_length = branch.arc_length;
+                grains.push_back(grain);
+            }
+        }
+    }
+
+    // ---- Pack the grains ---- //
+
+    // Grains placed on neighbouring racemes overlap freely. Overlapping grains are pushed apart while each is held to its place on its raceme by a weak spring, which leaves them touching.
+    //
+    // A real head is not solid grain: a compact head 7 cm across would need several times the grain it carries to fill, and instead holds its grain in a layer a few grains deep over the branches, with
+    // the rachis and branches inside. Compactness draws the grains into that layer, the depth of which is set by the branch envelope at each height, from both sides: grains standing out beyond the
+    // envelope are pulled in, and grains on the inner, hidden parts of the branches are moved out to where they can be seen. Within the layer the overlap resolution spreads them into a continuous
+    // surface of grain. The spring holding grains to their racemes weakens in proportion so it does not undo the compaction. The final iterations only resolve overlaps. A uniform grid with cells about
+    // one grain wide limits the overlap search to neighbouring cells.
+    constexpr int packing_iterations = 24;
+    constexpr int settling_iterations = 10;
+    constexpr float compaction_rate = 0.25f;
+    const float anchor_spring = 0.1f * (1.f - p.compactness);
+    const float contact_radius = 0.25f * (p.grain_width + p.grain_thickness);
+    const float layer_depth = 3.f * contact_radius;
+    const float cell_size = 2.f * 1.3f * contact_radius;
+    auto cell_index = [&](const vec3 &position) { return make_int3(int(std::floor(position.x / cell_size)), int(std::floor(position.y / cell_size)), int(std::floor(position.z / cell_size))); };
+    auto cell_key = [](int ix, int iy, int iz) { return (int64_t(ix + (1 << 20)) << 42) | (int64_t(iy + (1 << 20)) << 21) | int64_t(iz + (1 << 20)); };
+
+    // Envelope radius of the head along its length: a high percentile of the grain radial distances in each height band, smoothed between bands so the outline has no steps.
+    constexpr int envelope_bands = 24;
+    std::vector<int> grain_band(grains.size());
+    std::vector<std::vector<float>> band_radii(envelope_bands);
+    for (int i = 0; i < int(grains.size()); i++) {
+        const Grain &grain = grains.at(i);
+        const float axial = grain.arc_length + (grain.anchor - rachis_position(grain.arc_length)) * rachis_tangent(grain.arc_length);
+        grain_band.at(i) = clamp(int(float(envelope_bands) * axial / panicle_length), 0, envelope_bands - 1);
+        band_radii.at(grain_band.at(i)).push_back(offset_from_axis(grain.anchor, grain.arc_length).magnitude());
+    }
+    std::vector<float> band_envelope(envelope_bands, 0.f);
+    for (int band = 0; band < envelope_bands; band++) {
+        std::vector<float> &radii = band_radii.at(band);
+        if (!radii.empty()) {
+            std::sort(radii.begin(), radii.end());
+            band_envelope.at(band) = radii.at(std::min(radii.size() - 1, size_t(0.85f * float(radii.size()))));
+        }
+    }
+    std::vector<float> envelope = band_envelope;
+    for (int band = 0; band < envelope_bands; band++) {
+        float sum = 0.f;
+        int count = 0;
+        for (int neighbour = std::max(0, band - 1); neighbour <= std::min(envelope_bands - 1, band + 1); neighbour++) {
+            if (!band_radii.at(neighbour).empty()) {
+                sum += band_envelope.at(neighbour);
+                count++;
+            }
+        }
+        envelope.at(band) = count > 0 ? sum / float(count) : 0.f;
+    }
+
+    std::unordered_map<int64_t, std::vector<int>> grid;
+    std::vector<vec3> displacement(grains.size());
+    for (int iteration = 0; iteration < packing_iterations + settling_iterations; iteration++) {
+        if (iteration < packing_iterations) {
+            for (int i = 0; i < int(grains.size()); i++) {
+                Grain &grain = grains.at(i);
+                const vec3 radial = offset_from_axis(grain.center, grain.arc_length);
+                const float radial_distance = radial.magnitude();
+                const float outer_radius = envelope.at(grain_band.at(i));
+                const float inner_radius = std::max(p.rachis_radius + contact_radius * grain.scale, outer_radius - layer_depth);
+                float target_distance = radial_distance;
+                if (radial_distance > outer_radius) {
+                    target_distance = outer_radius;
+                } else if (radial_distance < inner_radius) {
+                    target_distance = inner_radius;
+                }
+                if (radial_distance > 1e-6f) {
+                    grain.center = grain.center + radial * (p.compactness * compaction_rate * (target_distance / radial_distance - 1.f));
+                }
+                grain.center = grain.center + (grain.anchor - grain.center) * anchor_spring;
+            }
+        }
+        for (int pass = 0; pass < 3; pass++) {
+            grid.clear();
+            for (int i = 0; i < int(grains.size()); i++) {
+                const int3 cell = cell_index(grains.at(i).center);
+                grid[cell_key(cell.x, cell.y, cell.z)].push_back(i);
+            }
+            std::fill(displacement.begin(), displacement.end(), make_vec3(0, 0, 0));
+            for (int i = 0; i < int(grains.size()); i++) {
+                const int3 home = cell_index(grains.at(i).center);
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dz = -1; dz <= 1; dz++) {
+                            auto cell = grid.find(cell_key(home.x + dx, home.y + dy, home.z + dz));
+                            if (cell == grid.end()) {
+                                continue;
+                            }
+                            for (int j: cell->second) {
+                                if (j <= i) {
+                                    continue;
+                                }
+                                const vec3 separation = grains.at(i).center - grains.at(j).center;
+                                const float distance = separation.magnitude();
+                                const float overlap = contact_radius * (grains.at(i).scale + grains.at(j).scale) - distance;
+                                if (overlap > 0.f && distance > 1e-9f) {
+                                    const vec3 push = separation * (0.5f * overlap / distance);
+                                    displacement.at(i) = displacement.at(i) + push;
+                                    displacement.at(j) = displacement.at(j) - push;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            for (int i = 0; i < int(grains.size()); i++) {
+                grains.at(i).center = grains.at(i).center + displacement.at(i);
+            }
+        }
+    }
+
+    // ---- Branch geometry ---- //
+
+    // Compaction moved the grains but not the branches that bear them, which would leave bare branch tips standing out of the head. Each primary branch is drawn in toward the axis by the mean factor
+    // by which its own grains were, and its racemes are then run from the branch to the grains they carry.
     std::vector<uint> UUIDs;
 
-    panicle_height -= 0.8 * height_seed;
-
-    std::vector<vec3> nodes_panicle;
-    std::vector<float> radius_panicle;
-
-    for (int n = 0; n < subdivisions; n++) {
-        float x = 0;
-        float y = 0;
-        float z;
-        if (n == 0) {
-            z = 0.5f * height_seed / float(subdivisions - 1);
-        } else if (n == subdivisions - 1) {
-            z = (subdivisions - 1.5f) * height_seed / float(subdivisions - 1);
-        } else {
-            z = n * height_seed / float(subdivisions - 1);
-        }
-
-        float angle = float(n) * M_PI / float(subdivisions - 1);
-        float dr = std::fmax(0.f, 0.5f * width_seed * sin(angle));
-
-        nodes_panicle.push_back(make_vec3(x, y, z));
-        radius_panicle.push_back(dr);
+    constexpr int rachis_segments = 10;
+    std::vector<vec3> rachis_nodes(rachis_segments + 1);
+    std::vector<float> rachis_radii(rachis_segments + 1);
+    for (int node = 0; node <= rachis_segments; node++) {
+        const float fraction = float(node) / float(rachis_segments);
+        rachis_nodes.at(node) = rachis_position(fraction * rachis_length);
+        rachis_radii.at(node) = p.rachis_radius * (1.f - 0.67f * fraction);
     }
+    std::vector<uint> UUIDs_rachis = context_ptr->addTube(p.rachis_radial_subdivisions, rachis_nodes, rachis_radii, std::vector<RGBcolor>(rachis_nodes.size(), p.branch_color));
+    UUIDs.insert(UUIDs.end(), UUIDs_rachis.begin(), UUIDs_rachis.end());
 
-    std::vector<uint> UUIDs_seed_ptype = context_ptr->addTube(subdivisions, nodes_panicle, radius_panicle, seed_texture_file.c_str());
-
-    int Ntheta = ceil(6.f * panicle_height / height_seed);
-    int Nphi = ceil(2.f * M_PI * panicle_width / width_seed);
-
-    for (int j = 0; j < Nphi; j++) {
-        for (int i = 0; i < Ntheta; i++) {
-
-            if (i == 0 && j == 0) {
-                continue;
+    std::vector<float> anchor_radial_sum(p.primary_branch_count, 0.f);
+    std::vector<float> final_radial_sum(p.primary_branch_count, 0.f);
+    for (const Raceme &raceme: racemes) {
+        for (int g = raceme.first_grain; g < raceme.first_grain + raceme.grain_count; g++) {
+            anchor_radial_sum.at(raceme.branch) += offset_from_axis(grains.at(g).anchor, grains.at(g).arc_length).magnitude();
+            final_radial_sum.at(raceme.branch) += offset_from_axis(grains.at(g).center, grains.at(g).arc_length).magnitude();
+        }
+    }
+    for (int b = 0; b < p.primary_branch_count; b++) {
+        PrimaryBranch &branch = branches.at(b);
+        if (anchor_radial_sum.at(b) > 0.f) {
+            const float radial_ratio = std::min(1.f, final_radial_sum.at(b) / anchor_radial_sum.at(b));
+            for (int node = 1; node <= branch_segments; node++) {
+                const vec3 radial = offset_from_axis(branch.nodes.at(node), branch.arc_length);
+                branch.nodes.at(node) = branch.nodes.at(node) - radial * (1.f - radial_ratio);
             }
+        }
+        std::vector<float> radii(branch_segments + 1);
+        for (int node = 0; node <= branch_segments; node++) {
+            radii.at(node) = p.branch_radius * (1.f - 0.5f * float(node) / float(branch_segments));
+        }
+        std::vector<uint> UUIDs_branch = context_ptr->addTube(p.branch_radial_subdivisions, branch.nodes, radii, std::vector<RGBcolor>(branch.nodes.size(), p.branch_color));
+        UUIDs.insert(UUIDs.end(), UUIDs_branch.begin(), UUIDs_branch.end());
+    }
 
-            std::vector<uint> UUIDs_copy = context_ptr->copyPrimitive(UUIDs_seed_ptype);
-            context_ptr->scalePrimitive(UUIDs_copy, make_vec3(1, 1, 1) * context_ptr->randu(0.9f, 1.1f));
+    for (const Raceme &raceme: racemes) {
+        if (raceme.grain_count == 0) {
+            continue;
+        }
+        vec3 base, branch_direction;
+        branch_point(branches.at(raceme.branch), raceme.fraction, base, branch_direction);
+        const vec3 tip = grains.at(raceme.first_grain + raceme.grain_count - 1).center;
+        if ((tip - base).magnitude() < 1e-5f) {
+            continue;
+        }
+        std::vector<vec3> raceme_nodes = {base, tip};
+        std::vector<float> raceme_radii = {0.6f * p.branch_radius, 0.4f * p.branch_radius};
+        std::vector<uint> UUIDs_raceme = context_ptr->addTube(p.branch_radial_subdivisions, raceme_nodes, raceme_radii, std::vector<RGBcolor>(2, p.branch_color));
+        UUIDs.insert(UUIDs.end(), UUIDs_raceme.begin(), UUIDs_raceme.end());
+    }
 
-            float phi = 2.f * M_PI * float(j + 0.5f * float(i % 2)) / float(Nphi);
-            float theta = acos(1 - 2 * float(i + float(j) / float(Nphi)) / float(Ntheta));
-            float x = sin(theta) * cos(phi);
-            float y = sin(theta) * sin(phi);
-            float z = 0.5f + 0.5f * cos(theta);
+    // ---- Grain geometry ---- //
 
-            x *= 0.5f * panicle_width;
-            y *= 0.5f * panicle_width;
-            z *= panicle_height;
-
-            float tilt = -deg2rad(seed_tilt) * sqrtf(1.f - z / panicle_height);
-
-            context_ptr->rotatePrimitive(UUIDs_copy, tilt, "x");
-            context_ptr->rotatePrimitive(UUIDs_copy, phi - 0.5f * M_PI, "z");
-
-            context_ptr->translatePrimitive(UUIDs_copy, make_vec3(x, y, z));
-            UUIDs.insert(UUIDs.end(), UUIDs_copy.begin(), UUIDs_copy.end());
+    for (const Grain &grain: grains) {
+        const float brightness = clamp(1.f + p.grain_color_variation * context_ptr->randn(), 0.6f, 1.4f);
+        RGBcolor grain_color = p.grain_color;
+        grain_color.scale(brightness);
+        const float length = p.grain_length * grain.scale;
+        const float width = p.grain_width * grain.scale;
+        const float thickness = p.grain_thickness * grain.scale;
+        addSorghumGrain(context_ptr, grain.center, grain.axis, grain.width_axis, length, width, thickness, p.grain_subdivisions, grain_color, UUIDs);
+        if (p.glume_length_fraction > 0.f) {
+            RGBcolor glume_color = p.glume_color;
+            glume_color.scale(clamp(1.f + 0.5f * p.grain_color_variation * context_ptr->randn(), 0.6f, 1.4f));
+            addSorghumGlumes(context_ptr, grain.center, grain.axis, grain.width_axis, length, width, thickness, p.glume_length_fraction, p.glume_spread, glume_color, UUIDs);
         }
     }
 
-    context_ptr->deletePrimitive(UUIDs_seed_ptype);
+    context_ptr->setPrimitiveData(UUIDs, "object_label", "fruit");
 
-    std::vector<uint> UUIDs_sphere = context_ptr->addSphere(10, make_vec3(0, 0, 0.5 * panicle_height), 0.5f, seed_texture_file.c_str());
-    context_ptr->scalePrimitiveAboutPoint(UUIDs_sphere, make_vec3(1.9 * panicle_width, 1.9 * panicle_width, 0.8 * panicle_height), make_vec3(0, 0, 0.5 * panicle_height));
-    UUIDs.insert(UUIDs.end(), UUIDs_sphere.begin(), UUIDs_sphere.end());
+    return context_ptr->addPolymeshObject(UUIDs);
+}
 
-    context_ptr->rotatePrimitive(UUIDs, 0.5f * M_PI, "y");
-    context_ptr->translatePrimitive(UUIDs, make_vec3(-0.2, 0, 0));
+uint SorghumPaniclePrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
+    return buildSorghumPanicle(context_ptr, SorghumPanicleParameters::fromBuildParameters(build_parameters));
+}
 
-    uint objID = context_ptr->addPolymeshObject(UUIDs);
-    return objID;
+int sorghumTillerCount(const std::map<std::string, float> &build_parameters) {
+    return getBuildParameterIntegerValue(build_parameters, "tiller_count", 0, 0, 6, "number of tillers of a sorghum plant");
 }
 
 void SorghumPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
+
+    Shoot *shoot = phytomer->parent_shoot_ptr;
+    const PlantArchitecture *plantarchitecture = shoot->plantarchitecture_ptr;
+    if (phytomer->rank == 0) {
+        // Tillers grow from the axils of the lowest main-stem leaves, and are added in the order of the hierarchy of tiller emergence, fertility and grain number T3 > T4 > T2 > T1 > T5 > T6 (Lafarge,
+        // Broad & Hammer 2002, Annals of Botany 90:87). Fertile tillers of field hybrids are likewise mostly T2-T4 (Kim et al. 2010, Annals of Botany 106:57). The bud in every other axil is killed.
+        constexpr std::array<uint, 6> tiller_leaf_numbers = {3, 4, 2, 1, 5, 6};
+        const int tiller_count = sorghumTillerCount(plantarchitecture->getPlantBuildParameters(phytomer->plantID));
+        const auto tillering_end = tiller_leaf_numbers.begin() + tiller_count;
+        if (std::find(tiller_leaf_numbers.begin(), tillering_end, shoot_node_index + 1) == tillering_end) {
+            phytomer->setVegetativeBudState(BUD_DEAD);
+        }
+    } else if (shoot_node_index == 0) {
+        // The final leaf number of a tiller falls by one for each main-stem leaf below its own, from about 15 on tiller 1 to 10 on tiller 6 of a main stem of about 16 leaves, which brings the final
+        // leaves of every tiller out together (Lafarge et al. 2002). Set on the tiller's own shoot parameters, so that its panicle forms at that node.
+        const std::shared_ptr<Shoot> &main_stem = plantarchitecture->getPlantShoot(phytomer->plantID, shoot->parent_shoot_ID);
+        const int tiller_max_nodes = std::max(1, main_stem->shoot_parameters.max_nodes.val() - int(parent_shoot_node_index + 1));
+        shoot->shoot_parameters.max_nodes = tiller_max_nodes;
+        phytomer->shoot_index.z = tiller_max_nodes;
+        shoot_max_nodes = uint(tiller_max_nodes);
+    }
 
     // Leaf size and internode length are scaled separately along the shoot. A single ramp cannot serve both: the lowest leaves of a sorghum plant are already close to full length while the internodes
     // carrying them are the shortest on the plant, so one factor either stunts the bottom leaves or spreads the base of the stem out too far.
@@ -1692,18 +2471,22 @@ void SorghumPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sh
         }
     }
 
-    // Internodes lengthen with height rather than shortening, so the upper leaves are not bunched together at the apex.
-    const float internode_scale = fmin(1.f, 0.60f + 0.40f * float(shoot_node_index) / 5.f);
-    phytomer->scaleInternodeMaxLength(internode_scale);
+    // The lowest internodes do not elongate. They form a crown at the soil surface from which the lowest leaves and the tillers emerge. In sweet sorghum, internodes 3-6 lack an intercalary meristem and
+    // stay shorter than 1 cm, internodes 7-8 may or may not elongate, and those from 9 upward elongate (Nakamura & Goto 1996, Japanese Journal of Crop Science 65:324). The shorter-season grain types
+    // modelled here elongate few internodes before floral initiation, so the crown is taken as the first six, which also bear all six tiller positions, with the next two transitional.
+    constexpr uint crown_internodes = 6;
+    if (shoot_node_index < crown_internodes) {
+        phytomer->setInternodeMaxLength(0.008f);
+    } else {
+        // Above the crown, internodes lengthen with height rather than shortening, so the upper leaves are not bunched together at the apex.
+        const float internode_scale = fmin(1.f, 0.60f + 0.20f * float(shoot_node_index - crown_internodes));
+        phytomer->scaleInternodeMaxLength(internode_scale);
+    }
 
-    // The terminal phytomer carries the panicle; its leaf is the flag leaf. The global
-    // rule sets the last-phytomer petiole to a small near-zero pitch (5°), which keeps
-    // the petiole axis well-defined but leaves the leaf almost parallel to the panicle.
-    // Add the rest of the tilt as a solid-body petiole rotation so the leaf comes along
-    // and clears the panicle.
+    // The terminal phytomer carries the panicle; its leaf is the flag leaf, which is set 30 degrees off the culm so that it clears the panicle.
     const bool is_flag_leaf = (shoot_max_nodes > 0 && shoot_node_index + 1 == shoot_max_nodes);
     if (is_flag_leaf) {
-        phytomer->rotatePetiole(0, make_AxisRotation(deg2rad(25.f), 0.f, 0.f));
+        setGrassFlagLeafAngle(phytomer, 30.f);
 
         // Sorghum bears a conspicuously long internode between the last normal leaf and the flag leaf, so the flag leaf stands clear of the canopy below it rather than sitting among the upper leaves. The
         // internode ramp above saturates at 1.0 by node 5, which left this internode the same length as the eleven below it and removed the segment entirely.
@@ -1715,13 +2498,13 @@ void SorghumPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sh
     }
 }
 
-uint SoybeanFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint SoybeanFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/SoybeanPod.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint SoybeanFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint SoybeanFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs;
     if (flower_is_open) {
         UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/SoybeanFlower_open_white.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
@@ -1749,25 +2532,25 @@ void SoybeanPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sh
     phytomer->scaleInternodeMaxLength(inode_scale);
 }
 
-uint StrawberryFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint StrawberryFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/StrawberryFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint StrawberryFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint StrawberryFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/StrawberryFruit.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint TomatoFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint TomatoFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/TomatoFruit.obj").string().c_str(), make_vec3(0., 0, 0), 0.75, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint TomatoFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint TomatoFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/TomatoFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0.75, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -1823,13 +2606,13 @@ void CherryTomatoPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
     }
 }
 
-uint WalnutFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
+uint WalnutFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/WalnutHull.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
 }
 
-uint WalnutFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+uint WalnutFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AlmondFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -1847,7 +2630,7 @@ void WalnutPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
 void WalnutPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 }
 
-uint WheatSpikePrototype(helios::Context *context_ptr, uint subdivisions) {
+uint WheatSpikePrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/WheatSpike.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -1872,10 +2655,9 @@ void WheatPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
     const float internode_scale = std::fmin(1.f, 0.25f + 0.75f * float(shoot_node_index) / 5.f);
     phytomer->scaleInternodeMaxLength(internode_scale);
 
-    // The terminal phytomer carries the ear, and its leaf is the flag leaf. The global rule gives the last phytomer on a shoot a near-zero petiole pitch, which keeps the petiole axis well defined but
-    // leaves the flag leaf lying along the culm and passing straight through the spike. The rest of the tilt is added here as a solid-body rotation so the leaf swings clear of the ear, as it does on a real
-    // plant, where the flag leaf is the most horizontal leaf of the canopy rather than the most upright.
+    // The terminal phytomer carries the ear, and its leaf is the flag leaf. It is set 33 degrees off the culm, so that it swings clear of the ear rather than lying along the culm through the spike, as on a
+    // real plant, where the flag leaf is the most horizontal leaf of the canopy rather than the most upright.
     if (shoot_max_nodes > 0 && shoot_node_index + 1 == shoot_max_nodes) {
-        phytomer->rotatePetiole(0, make_AxisRotation(deg2rad(28.f), 0.f, 0.f));
+        setGrassFlagLeafAngle(phytomer, 33.f);
     }
 }

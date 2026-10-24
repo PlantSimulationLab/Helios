@@ -365,9 +365,70 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Unknown Species") {
     StomatalConductanceModel gsm(&context);
     gsm.disableMessages();
 
-    BMFcoefficients coeffs;
-    DOCTEST_CHECK_NOTHROW(coeffs = gsm.getBMFCoefficientsFromLibrary("UnknownSpecies"));
-    DOCTEST_CHECK(coeffs.Em == doctest::Approx(865.52f).epsilon(0.01));
+    // A misspelled species must be an error, not a silent substitution of another species' physiology
+    std::string error_message;
+    try {
+        BMFcoefficients coeffs = gsm.getBMFCoefficientsFromLibrary("Almnod");
+        (void) coeffs;
+    } catch (const std::runtime_error &e) {
+        error_message = e.what();
+    }
+    DOCTEST_CHECK(error_message.find("Almnod") != std::string::npos);
+    DOCTEST_CHECK(error_message.find("Almond") != std::string::npos);
+    DOCTEST_CHECK(error_message.find("Walnut") != std::string::npos);
+    DOCTEST_CHECK(error_message.find("EasternRedbud") != std::string::npos);
+
+    uint UUID = context.addPatch();
+    context.addMaterial("leaf_material");
+
+    DOCTEST_CHECK_THROWS_AS(gsm.setBMFCoefficientsFromLibrary("UnknownSpecies"), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(gsm.setBMFCoefficientsFromLibrary("UnknownSpecies", std::vector<uint>{UUID}), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(gsm.setBMFCoefficientsFromLibrary("UnknownSpecies", "leaf_material"), std::runtime_error);
+
+    // The failed material-label call must not have written coefficients to the material
+    DOCTEST_CHECK(!context.doesMaterialDataExist("leaf_material", "gs_bmf_Em"));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Every library species returns its coefficients") {
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    struct LibraryEntry {
+        std::vector<std::string> names;
+        float Em, i0, k, b;
+    };
+    const std::vector<LibraryEntry> library = {
+            {{"Almond", "almond"}, 865.52f, 38.65f, 780320.1f, 2086.07f},
+            {{"Apple", "apple"}, 24.82f, 182.86f, 109688.7f, 21.30f},
+            {{"Cherry", "cherry"}, 138.03f, 154.24f, 262462.7f, 545.59f},
+            {{"Prune", "prune"}, 5.47f, 115.73f, 12280.2f, 6.10f},
+            {{"Pear", "pear"}, 13.06f, 167.89f, 25926.4f, 9.81f},
+            {{"PistachioFemale", "pistachiofemale", "pistachio_female", "Pistachio_Female", "Pistachio_female", "pistachio", "Pistachio"}, 24865.61f, 171.52f, 63444078.5f, 22428.01f},
+            {{"PistachioMale", "pistachiomale", "pistachio_male", "Pistachio_Male", "Pistachio_male"}, 236.89f, 272.74f, 1224393.7f, 257.26f},
+            {{"Walnut", "walnut"}, 29.12f, 68.03f, 19778.8f, 75.26f},
+            {{"Grape", "grape"}, 13.69f, 201.f, 43510.f, 15.0f},
+            {{"Elderberry", "elderberry", "blue_elderberry"}, 41.28f, 305.3f, 102490.f, 0.f},
+            {{"Toyon", "toyon"}, 35.11f, 395.f, 373530.f, 2.6058f},
+            {{"Big_Leaf_Maple", "big_leaf_maple", "Maple", "maple"}, 1.441f, 292.5f, 11639.f, 4.744f},
+            {{"Western_Redbud", "western_redbud", "Redbud", "redbud"}, 8.814f, 150.7f, 25540.f, 0.f},
+            {{"Baylaurel", "baylaurel", "Bay_Laurel", "bay_laurel", "bay", "Bay"}, 1.6f, 1.359f, 849.4f, 6.485f},
+            {{"Olive", "olive"}, 3.9210f, 0.f, 2294.8f, 2.6058f},
+            {{"EasternRedbud", "easternredbud"}, 21.88f, 11.47f, 1.387e+05f, 1.051e-06f},
+    };
+
+    for (const auto &entry: library) {
+        for (const auto &name: entry.names) {
+            DOCTEST_CAPTURE(name);
+            BMFcoefficients coeffs;
+            DOCTEST_REQUIRE_NOTHROW(coeffs = gsm.getBMFCoefficientsFromLibrary(name));
+            DOCTEST_CHECK(coeffs.Em == doctest::Approx(entry.Em));
+            DOCTEST_CHECK(coeffs.i0 == doctest::Approx(entry.i0));
+            DOCTEST_CHECK(coeffs.k == doctest::Approx(entry.k));
+            DOCTEST_CHECK(coeffs.b == doctest::Approx(entry.b));
+            DOCTEST_CHECK_NOTHROW(gsm.setBMFCoefficientsFromLibrary(name));
+        }
+    }
 }
 
 DOCTEST_TEST_CASE("StomatalConductanceModel - Dynamic Model Error Conditions") {

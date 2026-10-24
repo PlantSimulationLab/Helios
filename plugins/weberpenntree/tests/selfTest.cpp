@@ -555,6 +555,77 @@ DOCTEST_TEST_CASE("WeberPennTree Leaf Angle Distribution Normalization Error") {
     DOCTEST_CHECK_THROWS(std::ignore = weberpenntree.getTreeParameters("LeafAngleBadNorm"));
 }
 
+DOCTEST_TEST_CASE("WeberPennTree LeafShape is read from XML") {
+
+    // Two trees in one library file, identical except that one sets <LeafShape> and the other omits it.
+    const auto write_tree = [](std::ofstream &xml_file, const std::string &label, const std::string &leafshape_tag) {
+        xml_file << "<WeberPennTree label=\"" << label << "\">\n";
+        xml_file << "  <Shape> 1 </Shape>\n";
+        xml_file << "  <BaseSize> 0.4 </BaseSize>\n";
+        xml_file << "  <BaseSplits> 3 </BaseSplits>\n";
+        xml_file << "  <BaseSplitSize> 0.1 </BaseSplitSize>\n";
+        xml_file << "  <Scale> 6 </Scale>\n";
+        xml_file << "  <ScaleV> 0 </ScaleV>\n";
+        xml_file << "  <ZScale> 1 </ZScale>\n";
+        xml_file << "  <ZScaleV> 0 </ZScaleV>\n";
+        xml_file << "  <Ratio> 0.02 </Ratio>\n";
+        xml_file << "  <RatioPower> 0.5 </RatioPower>\n";
+        xml_file << "  <Lobes> 7 </Lobes>\n";
+        xml_file << "  <LobeDepth> 0.1 </LobeDepth>\n";
+        xml_file << "  <Flare> 0.8 </Flare>\n";
+        xml_file << "  <Levels> 3 </Levels>\n";
+        xml_file << "  <nSegSplits> 1 0 0 0 </nSegSplits>\n";
+        xml_file << "  <nSplitAngle> 10 30 0 0 </nSplitAngle>\n";
+        xml_file << "  <nSplitAngleV> 0 0 0 0 </nSplitAngleV>\n";
+        xml_file << "  <nCurveRes> 5 5 5 0 </nCurveRes>\n";
+        xml_file << "  <nCurve> 30 40 -40 0 </nCurve>\n";
+        xml_file << "  <nCurveV> 10 10 10 0 </nCurveV>\n";
+        xml_file << "  <nCurveBack> 0 0 0 0 </nCurveBack>\n";
+        xml_file << "  <nLength> 1 0.4 0.3 0 </nLength>\n";
+        xml_file << "  <nLengthV> 0 0.05 0.05 0 </nLengthV>\n";
+        xml_file << "  <nTaper> 1 1 1 0 </nTaper>\n";
+        xml_file << "  <nDownAngle> 60 60 60 100 </nDownAngle>\n";
+        xml_file << "  <nDownAngleV> 0 0 0 0 </nDownAngleV>\n";
+        xml_file << "  <nRotate> 140 140 180 140 </nRotate>\n";
+        xml_file << "  <nRotateV> 5 5 40 20 </nRotateV>\n";
+        xml_file << "  <nBranches> 0 40 30 0 </nBranches>\n";
+        xml_file << "  <Leaves> 10 </Leaves>\n";
+        xml_file << leafshape_tag;
+        xml_file << "  <LeafFile> plugins/weberpenntree/leaves/AvocadoLeaf.png </LeafFile>\n";
+        xml_file << "  <LeafScale> 0.2 </LeafScale>\n";
+        xml_file << "  <LeafScaleX> 0.2 </LeafScaleX>\n";
+        xml_file << "</WeberPennTree>\n";
+    };
+
+    std::string xml_path = "plugins/weberpenntree/xml/.tmp_leafshape_test.xml";
+    {
+        std::ofstream xml_file(xml_path);
+        DOCTEST_REQUIRE(xml_file.good());
+        xml_file << "<helios>\n";
+        write_tree(xml_file, "LeafShapeGiven", "  <LeafShape> 4 </LeafShape>\n");
+        write_tree(xml_file, "LeafShapeOmitted", "");
+        xml_file << "</helios>\n";
+    }
+
+    Context context;
+    WeberPennTree weberpenntree(&context);
+    weberpenntree.disableMessages();
+
+    DOCTEST_CHECK_NOTHROW(weberpenntree.loadXML(xml_path.c_str(), true));
+    std::remove(xml_path.c_str());
+
+    WeberPennTreeParameters given_parameters = weberpenntree.getTreeParameters("LeafShapeGiven");
+    DOCTEST_CHECK(given_parameters.LeafShape == 4);
+
+    // Omitting the tag gives the documented default of 0
+    WeberPennTreeParameters omitted_parameters = weberpenntree.getTreeParameters("LeafShapeOmitted");
+    DOCTEST_CHECK(omitted_parameters.LeafShape == 0);
+
+    // None of the built-in library trees sets the tag, so they all carry the default
+    WeberPennTreeParameters builtin_parameters = weberpenntree.getTreeParameters("Lemon");
+    DOCTEST_CHECK(builtin_parameters.LeafShape == 0);
+}
+
 int WeberPennTree::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

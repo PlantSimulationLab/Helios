@@ -102,7 +102,14 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
  <tr><td>\f$C_p\f$ (J/m<sup>2</sup>/<sup>o</sup>C)</td><td>Heat capacity of object.</td></tr>
  <tr><td>\f$Q_{other}\f$ (W/m<sup>2</sup>)</td><td>Any surface fluxes other than radiation, convection, latent, or storage.</td></tr>
  <tr><td>\f$n_s\f$</td><td>Number of primitive faces with heat transfer, set by the primitive "twosided_flag": \f$n_s=1\f$ for a single-sided primitive (twosided_flag=0, e.g., the ground), and \f$n_s=2\f$ for a two-sided primitive (twosided_flag=1, e.g., leaves).</td></tr>
+ <tr><td>\f$\varepsilon\f$</td><td>Surface emissivity for thermal radiation (see below).</td></tr>
  </table>
+
+ The emitted radiation is the same as the emission computed by the \ref RadiationModel in the bands added to the energy balance model, so that the energy a surface emits matches what other surfaces and the sky exchange with it. In the usual case, emission is enabled for a single longwave band without wavelength bounds, which emits \f$\varepsilon\sigma T_s^4\f$, and \f$\varepsilon\f$ is the "emissivity_[band]" of that band. The thermal spectrum may instead be divided among several emitting bands with wavelength bounds, for example to represent an emissivity that varies with wavelength. Each such band emits only its share of the blackbody spectrum, \f$F_b(T)\f$ (see \ref helios::blackbodyBandFraction()), so the emissivity is the sum over the emitting bands
+
+ \f[ \varepsilon = \sum_b \varepsilon_b F_b(T_s), \f]
+
+ with \f$F_b=1\f$ for a band without wavelength bounds. If the scattering depth of an emitting band is 0, the \ref RadiationModel treats surfaces as black in that band and emits \f$\sigma T^4\f$ regardless of the emissivity, so \f$\varepsilon_b=1\f$ is used for it here as well. The blackbody fractions are evaluated at the initial surface temperature, at which the \ref RadiationModel computed the emission. The emitting bands must account for the blackbody spectrum once: an error is raised if bounded emitting bands overlap, or if \f$\sum_b F_b\f$ is less than 0.95 or greater than 1.01. A thermal camera band such as 8-14 \f$\mu\f$m therefore cannot be the only longwave band of the energy balance, and should not be added to the energy balance model alongside a broadband longwave band.
 
  Constants are given by:
 
@@ -128,7 +135,7 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
  <table>
  <tr><th>Primitive Data <th>Units <th>Data Type <th>Description <th>Available Plug-ins <th>Default Value
  <tr><td>radiation\_flux\_[*] <td>W/m<sup>2</sup> <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Net absorbed radiation flux for band [*] (e.g., radiation_flux_PAR). <td>Can be computed by \ref RadiationModel plug-in. <td>N/A (must add at least one band)
- <tr><td>emissivity\_[*] <td>unitless <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Surface emissivity for band [*], used for the emitted thermal radiation term. Thermal emission uses a single emissivity: that of the band for which emission is enabled in the \ref RadiationModel. If emission is enabled for more than one band, the first emission-enabled band's emissivity is used and a warning is issued. When no emission information is available (radiation fluxes set manually without running the \ref RadiationModel), the first band that defines an emissivity is used. <td>Can be set by \ref RadiationModel plug-in. <td>1.0
+ <tr><td>emissivity\_[*] <td>unitless <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Surface emissivity for band [*], used for the emitted thermal radiation term. The emissivity of each band for which emission is enabled in the \ref RadiationModel is weighted by the share of the blackbody spectrum that band emits (see \ref EBIntro). When no emission information is available (radiation fluxes set manually without running the \ref RadiationModel), the first band that defines an emissivity is used. <td>Can be set by \ref RadiationModel plug-in. <td>1.0
  <tr><td>wind\_speed <td>m/s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
  <tr><td>object\_length <td>m <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
  <tr><td>boundarylayer\_conductance<td>mol air/m<sup>2</sup>-s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Leaf boundary-layer conductance to heat, summed over both faces of a two-sided primitive. <td>\ref BLConductanceModel plug-in <td>Try calculating from model \f$0.135\sqrt{\frac{U}{L}}\f$
@@ -400,17 +407,31 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
 
  \f[ z_{oM} = h_c e^{-\mathrm{LAI}/2}\left(1-e^{-\mathrm{LAI}/2}\right), \qquad d = h_c\left[1-\frac{2}{\mathrm{LAI}}\left(1-e^{-\mathrm{LAI}/2}\right)\right]. \f]
 
+ This expression holds for neutral stability. When the canopy is warmer than the air above it, buoyancy enhances turbulent mixing (unstable conditions), and when it is cooler, as on a clear night, buoyancy suppresses it (stable conditions). By default the model corrects for this using Monin-Obukhov similarity theory, so that
+
+ \f[ u_* = \frac{\kappa u}{\ln\left[\frac{z_m-d}{z_{oM}}\right] - \psi_m\left(\frac{z_m-d}{L}\right) + \psi_m\left(\frac{z_{oM}}{L}\right)}, \qquad r_a = \frac{\ln\left[\frac{z_H-d}{h_c-d}\right] - \psi_h\left(\frac{z_H-d}{L}\right) + \psi_h\left(\frac{h_c-d}{L}\right)}{\kappa u_*}, \f]
+
+ which reduces to the expression above when \f$L\rightarrow\infty\f$. The integrated stability functions \f$\psi_m\f$ and \f$\psi_h\f$ are those of Paulson (1970) with the Businger-Dyer coefficients for unstable conditions and of Beljaars and Holtslag (1991) for stable conditions. The Obukhov length is
+
+ \f[ L = -\frac{u_*^3\,T}{\kappa g\,\Delta T_v/r_a}, \f]
+
+ where \f$T\f$ is the reference air temperature and \f$\Delta T_v\f$ is the virtual temperature of the uppermost canopy airspace layer minus that of the reference air, which includes the buoyancy of water vapor through \f$T_v=T(1+0.378x)\f$. Because \f$u_*\f$ and \f$r_a\f$ themselves depend on \f$L\f$, it is found by iteration with \f$\Delta T_v\f$ held fixed. This is updated on each iteration of the coupled leaf and airspace solution, with under-relaxation because stability and the canopy temperature reinforce each other, and the solution is converged only once the stability has also settled. The stability parameter \f$\zeta=(z_H-d)/L\f$ is limited to \f$-100\le\zeta\le2\f$, following the Community Land Model; a warning is issued if either limit is reached. In practice the stable limit is reached under strong radiative cooling at low wind speed, when the canopy is effectively decoupled from the air above it and similarity theory no longer applies.
+
+ The eddy diffusivity at the canopy top used for the within-canopy layer conductances (see \ref EBCanopyAirspaceTheory) is likewise corrected, \f$K(h_c)=\kappa u_*(h_c-d)/\phi_h\left(\frac{h_c-d}{L}\right)\f$, where \f$\phi_h\f$ is the dimensionless temperature gradient from which \f$\psi_h\f$ is integrated, so that it is continuous with the resistance above the canopy.
+
+ The stability correction may be turned off with \ref EnergyBalanceModel::disableCanopyAirspaceStabilityCorrection(), in which case neutral stability is assumed throughout, and turned back on with \ref EnergyBalanceModel::enableCanopyAirspaceStabilityCorrection().
+
  Wind speed decreases with depth into the canopy, and neglecting this attenuation overestimates the mean wind speed experienced by leaves and hence overestimates transpiration. The model therefore writes primitive data "wind_speed" for every canopy primitive using the exponential within-canopy profile of Cionco (1972):
 
  \f[ U(z) = U(h_c)\exp\left[-a\left(1-z/h_c\right)\right], \f]
 
- where \f$z\f$ is the height of the primitive above the base of the canopy. The attenuation coefficient \f$a\f$ is taken as one half of the leaf area index, following Frehner et al.; note that this relation is an empirical choice rather than part of Cionco's original formulation, and that reported values of \f$a\f$ for orchards can be considerably smaller. The resulting wind speed is used in the boundary-layer conductance calculation for each primitive (see \ref EBblc).
+ where \f$z\f$ is the height of the primitive above the base of the canopy. The attenuation coefficient \f$a\f$ is taken as one half of the leaf area index, following Frehner et al.; note that this relation is an empirical choice rather than part of Cionco's original formulation, and that reported values of \f$a\f$ for orchards can be considerably smaller. The resulting wind speed is used in the boundary-layer conductance calculation for each primitive (see \ref EBblc). The canopy-top wind speed \f$U(h_c)\f$ is extrapolated from the reference wind speed with the neutral logarithmic profile, even when stability correction is enabled, because the leaf boundary-layer conductances it determines are fixed before the coupled solution begins.
 
  \subsection EBCanopyAirspaceUse Using the Canopy Airspace Model
 
  The model requires the canopy primitives, the ground primitives forming the soil node, the canopy height, the reference height at which above-canopy conditions are measured, the leaf area index, and the number of layers. The ground primitive set may be empty, in which case there is no exchange with the soil surface.
 
- The leaf area index must be at least 0.5, below which the Perrier roughness relations are not valid, and the reference height must lie far enough above the canopy for the aerodynamic resistance to be defined. The number of layers is limited by the geometry: a layer that ends up containing no leaf area is an error, so a canopy resolved by few primitives cannot support many layers. Both the aerodynamic resistance and the roughness relations assume neutral stability.
+ The leaf area index must be at least 0.5, below which the Perrier roughness relations are not valid, and the reference height must lie far enough above the canopy for the aerodynamic resistance to be defined. The number of layers is limited by the geometry: a layer that ends up containing no leaf area is an error, so a canopy resolved by few primitives cannot support many layers.
 
  The above-canopy boundary condition is read from global data "air_temperature_reference", "air_humidity_reference", and "wind_speed_reference".
 
@@ -422,6 +443,8 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
  <tr><td>canopy_air_temperature_layers<td>vector&lt;float&gt;<td>Air temperature of each layer (Kelvin), ordered from the bottom layer to the top layer.
  <tr><td>canopy_air_humidity_layers<td>vector&lt;float&gt;<td>Relative humidity of each layer, ordered from the bottom layer to the top layer.
  <tr><td>aerodynamic_resistance<td>float<td>Aerodynamic resistance between the canopy top and the reference height (s/m).
+ <tr><td>friction_velocity<td>float<td>Friction velocity above the canopy (m/s).
+ <tr><td>canopy_stability_parameter<td>float<td>Monin-Obukhov stability parameter \f$\zeta=(z_H-d)/L\f$ at the reference height; negative is unstable, positive is stable, and zero is neutral (always zero when stability correction is disabled).
  <tr><td>canopy_airspace_iterations<td>uint<td>Number of iterations performed.
  </table>
 

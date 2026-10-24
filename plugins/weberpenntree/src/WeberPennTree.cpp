@@ -1367,6 +1367,16 @@ void WeberPennTree::loadXML(const char *filename, bool silent) {
             params.Leaves = atoi(leaves_str);
         }
 
+        // * LeafShape * //
+        pugi::xml_node leafshape_node = p.child("LeafShape");
+
+        const char *leafshape_str = leafshape_node.child_value();
+        if (strlen(leafshape_str) == 0) {
+            params.LeafShape = 0;
+        } else {
+            params.LeafShape = atoi(leafshape_str);
+        }
+
         // * LeafFile * //
         pugi::xml_node leaffile_node = p.child("LeafFile");
 

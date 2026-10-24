@@ -196,6 +196,8 @@
  \subsection WPTreeLeaves Leaves
 
  \image html "images/Sketch_Leaves.jpeg"
+
+ Leaves are defined in the tree library by the tags <tt>\<Leaves\></tt> (number of leaves per parent branch), <tt>\<LeafFile\></tt> (PNG leaf mask, see below), <tt>\<LeafScale\></tt> (leaf length) and <tt>\<LeafScaleX\></tt> (leaf width relative to length), all of which are required. An optional integer tag <tt>\<LeafShape\></tt> may also be given; if omitted it defaults to 0. Its value is stored in \ref WeberPennTreeParameters and returned by \ref WeberPennTree::getTreeParameters(), but it does not affect the tree geometry: the shape of each leaf is taken from the leaf mask given by <tt>\<LeafFile\></tt>.
 	
  \subsubsection WPTreeMask Leaf mask
 

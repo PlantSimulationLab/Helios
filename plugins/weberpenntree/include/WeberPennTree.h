@@ -78,8 +78,11 @@ struct WeberPennTreeParameters {
     // PNG image file for leaf mask
     std::string LeafFile;
 
-    // Number of leaves per parent, shape ID
-    int Leaves, LeafShape;
+    // Number of leaves per parent
+    int Leaves;
+
+    // Leaf shape ID (optional <LeafShape> tag, default 0). Stored for completeness only; leaf geometry is taken from LeafFile.
+    int LeafShape = 0;
 
     // Leaf length, relative x-scale
     float LeafScale, LeafScaleX;
