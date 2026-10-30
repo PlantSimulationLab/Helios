@@ -3657,6 +3657,8 @@ struct USDLink {
     int parent_link_index;   // -1 for root
     USDLinkType link_type = USD_LINK_CAPSULE;
     int material_index = -1; // Index into ArticulationData::materials (-1 = default physics material)
+    PlantArticulationLinkType organ_type = ARTICULATION_LINK_INTERNODE;
+    uint source_objID = 0;   // Context object the link was built from (0 = none)
 
     // Mesh data (only used when link_type == USD_LINK_MESH)
     std::vector<vec3> mesh_vertices;   // In local space (centroid at origin)
@@ -4111,6 +4113,8 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
 
                 USDLink link;
                 link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Seg" + std::to_string(seg);
+                link.organ_type = ARTICULATION_LINK_INTERNODE;
+                link.source_objID = shoot->internode_tube_objID;
                 link.position = midpoint;
                 axisToQuaternion(axis_normalized, link.qw, link.qx, link.qy, link.qz);
                 link.radius = seg_radius;
@@ -4221,6 +4225,10 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
 
                     USDLink link;
                     link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Pet" + std::to_string(petiole_idx) + "_Seg" + std::to_string(seg);
+                    link.organ_type = ARTICULATION_LINK_PETIOLE;
+                    if (petiole_idx < phytomer->petiole_objIDs.size()) {
+                        link.source_objID = phytomer->petiole_objIDs[petiole_idx];
+                    }
                     link.position = midpoint;
                     axisToQuaternion(axis_normalized, link.qw, link.qx, link.qy, link.qz);
                     link.radius = seg_radius;
@@ -4300,6 +4308,8 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
 
                         USDLink link;
                         link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Pet" + std::to_string(petiole_idx) + "_Leaf" + std::to_string(leaf_idx);
+                        link.organ_type = ARTICULATION_LINK_LEAF;
+                        link.source_objID = leaf_objID;
                         link.link_type = USD_LINK_MESH;
                         link.qw = 1; link.qx = 0; link.qy = 0; link.qz = 0;
                         link.radius = 0;
@@ -4374,6 +4384,10 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
 
                             USDLink link;
                             link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Ped" + std::to_string(petiole_idx) + "_B" + std::to_string(bud_idx) + "_Seg" + std::to_string(seg);
+                            link.organ_type = ARTICULATION_LINK_PEDUNCLE;
+                            if (seg < static_cast<int>(fbud.peduncle_objIDs.size())) {
+                                link.source_objID = fbud.peduncle_objIDs[seg];
+                            }
                             link.position = midpoint;
                             axisToQuaternion(axis_normalized, link.qw, link.qx, link.qy, link.qz);
                             link.radius = seg_radius;
@@ -4456,7 +4470,9 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                         uint organ_objID = fbud.inflorescence_objIDs[inf_idx];
 
                         USDLink link;
-                        link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_" + organ_label + std::to_string(inf_idx);
+                        link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Ped" + std::to_string(petiole_idx) + "_B" + std::to_string(bud_idx) + "_" + organ_label + std::to_string(inf_idx);
+                        link.organ_type = (fbud.state == BUD_FRUITING) ? ARTICULATION_LINK_FRUIT : ARTICULATION_LINK_FLOWER;
+                        link.source_objID = organ_objID;
                         link.link_type = USD_LINK_MESH;
                         link.qw = 1; link.qx = 0; link.qy = 0; link.qz = 0;
                         link.radius = 0;
@@ -5073,6 +5089,66 @@ void PlantArchitecture::writePlantStructureUSD(uint plantID, const std::string &
     if (printmessages) {
         std::cout << "Wrote USD articulated plant to " << output_file << " (" << artic.links.size() << " links, " << artic.joints.size() << " joints)" << std::endl;
     }
+}
+
+PlantArticulation PlantArchitecture::getPlantArticulation(uint plantID, const USDExportParameters &params) const {
+
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantArticulation): Plant ID " + std::to_string(plantID) + " does not exist.");
+    }
+
+    const auto &plant = plant_instances.at(plantID);
+
+    if (plant.shoot_tree.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantArticulation): Plant " + std::to_string(plantID) + " has no shoots.");
+    }
+
+    ArticulationData artic = buildArticulationData(plant, params, context_ptr);
+
+    if (artic.links.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantArticulation): No valid segments found in plant " + std::to_string(plantID) + ". All segments may be shorter than min_segment_length.");
+    }
+
+    PlantArticulation articulation;
+    articulation.links.reserve(artic.links.size());
+    for (size_t i = 0; i < artic.links.size(); i++) {
+        const USDLink &usd_link = artic.links[i];
+        if (usd_link.parent_link_index >= static_cast<int>(i)) {
+            helios_runtime_error("ERROR (PlantArchitecture::getPlantArticulation): Link " + usd_link.name + " precedes its parent link, which the articulation ordering does not allow.");
+        }
+        PlantArticulationLink link;
+        link.name = usd_link.name;
+        link.type = usd_link.organ_type;
+        link.parent_index = usd_link.parent_link_index;
+        link.position = usd_link.position;
+        link.qw = usd_link.qw;
+        link.qx = usd_link.qx;
+        link.qy = usd_link.qy;
+        link.qz = usd_link.qz;
+        link.radius = usd_link.radius;
+        link.half_length = usd_link.half_length;
+        link.mass = usd_link.mass;
+        link.inertia_diagonal = usd_link.inertia_diagonal;
+        link.source_objID = usd_link.source_objID;
+        articulation.links.push_back(link);
+    }
+
+    for (const USDJoint &usd_joint: artic.joints) {
+        if (usd_joint.is_fixed) {
+            continue; // the root link is fixed to the world, which needs no joint
+        }
+        PlantArticulationJoint joint;
+        joint.parent_index = usd_joint.parent_link_index;
+        joint.child_index = usd_joint.child_link_index;
+        joint.anchor_in_parent = usd_joint.local_pos_parent;
+        joint.anchor_in_child = usd_joint.local_pos_child;
+        joint.stiffness = usd_joint.stiffness;
+        joint.damping = usd_joint.damping;
+        joint.armature = usd_joint.armature;
+        articulation.joints.push_back(joint);
+    }
+
+    return articulation;
 }
 
 // ============================================================================

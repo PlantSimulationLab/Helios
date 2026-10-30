@@ -157,6 +157,7 @@
   - \subpage LiDARDoc "LiDAR: Processing and visualizing terrestrial LiDAR data"
   - \subpage ParameterOptimizationDoc "Parameter Optimization: Utility for optimization of model parameters."
   - \subpage PhotosynthesisDoc "Photosynthesis Model: Photosynthetic assimilation model"
+  - \subpage PhysicsEngineDoc "Physics Engine: Rigid-body dynamics with MuJoCo, for articulated plants and the bodies that contact them."
   - \subpage PlantArchitectureDoc "Plant Architecture: Flexible procedural plant generation with dynamic growth and phenology."
   - \subpage PlantHydraulicsDoc "Plant Hydraulics: Models the water potentials, water contents, hydraulic conductances, and hydraulic capacitances."
   - \subpage ProjectBuilderDoc "GUI and XML interface for creating and running Helios projects."

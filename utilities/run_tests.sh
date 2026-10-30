@@ -59,7 +59,7 @@ run_command() {
 }
 
 # Test plugins to include in unified build
-TEST_PLUGINS="energybalance lidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization collisiondetection"
+TEST_PLUGINS="energybalance lidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization collisiondetection physicsengine"
 
 BUILD_TYPE="Release"
 

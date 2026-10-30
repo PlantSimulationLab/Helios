@@ -3126,6 +3126,72 @@ struct USDExportParameters {
     float min_segment_length = 0.001f;
 };
 
+//! Kind of plant organ represented by a PlantArticulationLink
+enum PlantArticulationLinkType {
+    //! Capsule segment of a shoot internode
+    ARTICULATION_LINK_INTERNODE,
+    //! Capsule segment of a leaf petiole
+    ARTICULATION_LINK_PETIOLE,
+    //! Capsule segment of a flower or fruit peduncle
+    ARTICULATION_LINK_PEDUNCLE,
+    //! Leaf blade mass body
+    ARTICULATION_LINK_LEAF,
+    //! Fruit mass body
+    ARTICULATION_LINK_FRUIT,
+    //! Flower mass body
+    ARTICULATION_LINK_FLOWER
+};
+
+//! One rigid link of a plant articulation (see PlantArchitecture::getPlantArticulation())
+struct PlantArticulationLink {
+    //! Unique name of the link within the plant
+    std::string name;
+    //! Organ the link represents
+    PlantArticulationLinkType type = ARTICULATION_LINK_INTERNODE;
+    //! Index of the parent link, or -1 if the link is the root and is fixed to the world
+    int parent_index = -1;
+    //! World-space position of the link frame origin in the rest pose: the capsule midpoint, or the organ mesh centroid
+    helios::vec3 position;
+    //! World-space orientation of the link frame in the rest pose as a unit quaternion (w,x,y,z). The local +z axis is the capsule axis.
+    float qw = 1, qx = 0, qy = 0, qz = 0;
+    //! Capsule radius in meters (zero for leaf, fruit, and flower links)
+    float radius = 0;
+    //! Half-length of the capsule shaft in meters (zero for leaf, fruit, and flower links)
+    float half_length = 0;
+    //! Mass in kg
+    float mass = 0;
+    //! Principal moments of inertia about the link frame axes in kg*m^2
+    helios::vec3 inertia_diagonal;
+    //! Context object the link was built from: the tube object for internode and petiole segments, or the organ object. Zero if none.
+    uint source_objID = 0;
+};
+
+//! Elastic joint connecting a plant articulation link to its parent
+struct PlantArticulationJoint {
+    //! Index of the parent link
+    int parent_index = -1;
+    //! Index of the child link
+    int child_index = -1;
+    //! Joint anchor in the parent link frame
+    helios::vec3 anchor_in_parent;
+    //! Joint anchor in the child link frame
+    helios::vec3 anchor_in_child;
+    //! Rotational spring stiffness in N*m/rad
+    float stiffness = 0;
+    //! Rotational damping in N*m*s/rad
+    float damping = 0;
+    //! Artificial joint inertia in kg*m^2 that caps the joint's own natural frequency
+    float armature = 0;
+};
+
+//! Physics-ready articulated rigid-body description of a plant
+struct PlantArticulation {
+    //! Links ordered so that every parent precedes its children
+    std::vector<PlantArticulationLink> links;
+    //! One joint per non-root link
+    std::vector<PlantArticulationJoint> joints;
+};
+
 //! Opaque storage for a single growth animation frame snapshot (defined in InputOutput.cpp)
 struct GrowthFrameSnapshot;
 
@@ -5201,6 +5267,19 @@ public:
      * \param[in] params Export parameters controlling physics properties and scope.
      */
     void writePlantStructureUSD(uint plantID, const std::string &filename, const USDExportParameters &params = USDExportParameters()) const;
+
+    //! Get the articulated rigid-body description of a plant used for physics simulation
+    /**
+     * Builds the same links and joints that writePlantStructureUSD() exports, without writing a file, so that a physics
+     * engine can be driven from them directly. Each internode, petiole, and peduncle segment becomes a capsule link, and
+     * each leaf, fruit, and flower becomes a mass link, connected to its parent by an elastic joint whose stiffness,
+     * damping, and armature are computed from the export parameters.
+     *
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] params Parameters controlling the physical properties of links and joints.
+     * \return Links and joints of the plant articulation, with every parent link preceding its children.
+     */
+    [[nodiscard]] PlantArticulation getPlantArticulation(uint plantID, const USDExportParameters &params = USDExportParameters()) const;
 
     //! Register the current plant state as a growth animation frame.
     /**

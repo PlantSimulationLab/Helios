@@ -8198,6 +8198,85 @@ DOCTEST_TEST_CASE("deletePlantInstance preserves prototypes when plants remain")
     DOCTEST_CHECK(uuids_after.size() > plantarchitecture.getAllPlantUUIDs(plantID2, false).size());
 }
 
+DOCTEST_TEST_CASE("getPlantArticulation links, joints, and source objects") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+    DOCTEST_REQUIRE(!articulation.links.empty());
+
+    // Every parent precedes its children, and exactly the non-root links have a joint
+    uint root_count = 0;
+    std::vector<int> joints_per_child(articulation.links.size(), 0);
+    for (size_t i = 0; i < articulation.links.size(); i++) {
+        DOCTEST_CHECK(articulation.links[i].parent_index < static_cast<int>(i));
+        if (articulation.links[i].parent_index < 0) {
+            root_count++;
+        }
+    }
+    for (const auto &joint: articulation.joints) {
+        DOCTEST_REQUIRE(joint.child_index >= 0);
+        DOCTEST_REQUIRE(joint.child_index < static_cast<int>(articulation.links.size()));
+        DOCTEST_CHECK(joint.parent_index == articulation.links[joint.child_index].parent_index);
+        DOCTEST_CHECK(joint.stiffness > 0.f);
+        joints_per_child[joint.child_index]++;
+    }
+    DOCTEST_CHECK(root_count == 1);
+    DOCTEST_CHECK(articulation.joints.size() == articulation.links.size() - root_count);
+    for (size_t i = 0; i < articulation.links.size(); i++) {
+        DOCTEST_CHECK(joints_per_child[i] == (articulation.links[i].parent_index < 0 ? 0 : 1));
+    }
+
+    // Links point back to the Context objects they were built from
+    std::vector<uint> plant_objIDs = plantarchitecture.getAllPlantObjectIDs(plantID);
+    std::set<uint> plant_objects(plant_objIDs.begin(), plant_objIDs.end());
+    uint internode_links = 0;
+    uint leaf_links = 0;
+    for (const auto &link: articulation.links) {
+        DOCTEST_CHECK(link.mass > 0.f);
+        if (link.type == ARTICULATION_LINK_INTERNODE) {
+            internode_links++;
+            DOCTEST_CHECK(context.getObjectType(link.source_objID) == OBJECT_TYPE_TUBE);
+            DOCTEST_CHECK(link.radius > 0.f);
+        } else if (link.type == ARTICULATION_LINK_LEAF) {
+            leaf_links++;
+            DOCTEST_CHECK(link.half_length == 0.f);
+        }
+        DOCTEST_CHECK(plant_objects.count(link.source_objID) == 1);
+    }
+    DOCTEST_CHECK(internode_links > 0);
+    DOCTEST_CHECK(leaf_links > 0);
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantArticulation(plantID + 1)));
+}
+
+DOCTEST_TEST_CASE("getPlantArticulation link names are unique when a phytomer bears several flowers") {
+    // Flowering apple phytomers carry more than one floral bud, and the flowers of different buds must not share a link name
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 165);
+
+    uint flower_and_fruit_links = 0;
+    for (int step = 0; step < 8; step++) {
+        plantarchitecture.advanceTime(plantID, 5);
+        PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+        std::set<std::string> names;
+        for (const PlantArticulationLink &link: articulation.links) {
+            DOCTEST_CHECK_MESSAGE(names.insert(link.name).second, "duplicate link name " << link.name);
+            if (link.type == ARTICULATION_LINK_FLOWER || link.type == ARTICULATION_LINK_FRUIT) {
+                flower_and_fruit_links++;
+            }
+        }
+    }
+    DOCTEST_CHECK(flower_and_fruit_links > 0);
+}
+
 DOCTEST_TEST_CASE("USD export basic structure") {
     Context context;
     PlantArchitecture plantarchitecture(&context);

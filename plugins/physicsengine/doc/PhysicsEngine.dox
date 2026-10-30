@@ -1,0 +1,209 @@
+/*! \page "PhysicsEngineDoc" Physics Engine Plugin Documentation
+
+ \tableofcontents
+
+ <p> <br><br> </p>
+
+ <table>
+   <tr>
+      <th>Dependencies</th>
+      <td>MuJoCo 3.16.0 (downloaded and built automatically if not installed). The Plant Architecture plug-in is optional, and enables \ref addPlantToPhysicsEngine().</td>
+   </tr>
+   <tr>
+     <th>CMakeLists.txt</th>
+     <td>set( PLUGINS "physicsengine" ), or set( PLUGINS "plantarchitecture;physicsengine" ) to simulate plants</td>
+   </tr>
+   <tr>
+     <th>Header File</th>
+     <td>#include "PhysicsEngine.h", or #include "PlantPhysics.h" to simulate plants</td>
+   </tr>
+   <tr>
+     <th>Class</th>
+     <td>\ref PhysicsEngine</td>
+   </tr>
+ </table>
+
+\section PhysicsEngineIntro Introduction
+
+This plug-in simulates rigid-body dynamics with the <a href="https://mujoco.org">MuJoCo</a> physics engine. The engine
+itself knows nothing about plants: it simulates articulations, which are trees of rigid links connected by joints,
+and kinematic bodies that follow prescribed motion. A separate adapter converts plants built by the plant architecture
+plug-in to articulations, so that their mechanical response to whatever pushes through them can be simulated.
+
+The plug-in is deliberately specific to MuJoCo rather than a generic interface over physics engines.
+PhysicsEngine::getMuJoCoModel() and PhysicsEngine::getMuJoCoData() give direct access to the compiled model and the
+state, for anything the class does not wrap. Include <tt><mujoco/mujoco.h></tt> to use them.
+
+The MuJoCo state is the source of truth. The Context is only a copy of it for rendering and other plug-ins, updated
+when PhysicsEngine::updateContextGeometry() is called, so a simulation that does not render never pays for it.
+
+\section PhysicsEngineDepends Installing MuJoCo
+
+MuJoCo is distributed under the Apache 2.0 license. The plug-in is written against MuJoCo 3.16.0, whose C API changes
+between releases, so that exact version is required.
+
+<ul>
+  <li>If an installed MuJoCo is found (pass <tt>-Dmujoco_DIR=&lt;prefix&gt;/lib/cmake/mujoco</tt> to CMake), it is used.</li>
+  <li>Otherwise MuJoCo is downloaded from GitHub and built along with the project. This adds about a minute to the first
+  build. Configure with <tt>-DHELIOS_MUJOCO_FETCH=OFF</tt> to require an installed MuJoCo instead.</li>
+</ul>
+
+\section PhysicsEngineArticulations Articulations
+
+An articulation (\ref PhysicsArticulation) is a list of links (\ref PhysicsLink), each with a mass, an inertia, collision
+shapes (\ref PhysicsCollisionShape), and a joint to its parent. Link poses are given in world coordinates in the rest pose, and a
+link with no parent is fixed to the world. Context geometry follows the links once it is bound to them with
+PhysicsEngine::bindObjectToLink() or PhysicsEngine::bindTubeNodesToLinks().
+
+\code{.cpp}
+    Context context;
+
+    PhysicsArticulation pendulum;
+    pendulum.name = "pendulum";
+
+    PhysicsLink pivot;
+    pivot.name = "pivot";
+    pivot.position = make_vec3(0, 0, 1);
+    pivot.mass = 1;
+    pivot.inertia_diagonal = make_vec3(1e-3, 1e-3, 1e-3);
+    pendulum.links.push_back(pivot);
+
+    PhysicsLink bob;
+    bob.name = "bob";
+    bob.parent_index = 0;
+    bob.position = make_vec3(0.1, 0, 0.5);
+    bob.mass = 1;
+    bob.inertia_diagonal = make_vec3(1e-6, 1e-6, 1e-6);
+    bob.joint_type = PHYSICS_JOINT_BALL;
+    pendulum.links.push_back(bob);
+
+    PhysicsEngine engine(&context);
+    uint pendulumID = engine.addArticulation(pendulum);
+    uint sphere = context.addSphereObject(16, bob.position, 0.05f);
+    engine.bindObjectToLink(sphere, pendulumID, 1);
+    engine.initialize();
+
+    engine.step(1000);
+    engine.updateContextGeometry(); // moves the sphere in the Context to the simulated pose of the bob
+\endcode
+
+\section PhysicsEngineKinematic Kinematic boxes
+
+Kinematic boxes follow the positions and velocities they are given and push what they touch, but are not pushed back.
+Always pass the box's true velocity to PhysicsEngine::setKinematicBoxPosition(): MuJoCo resolves contacts against the
+velocity of the bodies, and a box that is only repositioned lets what it pushes sink into it.
+
+\section PhysicsEngineInstances Running many instances
+
+One compiled model can have many simulation instances, each with entirely separate state. PhysicsEngine::createInstance()
+adds one, PhysicsEngine::resetInstance() returns one to its initial state, and PhysicsEngine::stepInstances() steps
+them all in parallel. Most methods take an optional instance ID, which defaults to the first instance. All instances share the model, so they
+have the same bodies and joints, and PhysicsEngine::updateContextGeometry() copies the state of whichever instance is requested to the Context.
+
+\code{.cpp}
+    engine.initialize();
+    while (engine.getInstanceCount() < 16) {
+        engine.createInstance();
+    }
+    engine.stepInstances(100);
+    engine.updateContextGeometry(3); // render instance 3
+\endcode
+
+\section PhysicsEnginePlants Simulating plants
+
+With the plant architecture plug-in in the project's list of plug-ins, \ref addPlantToPhysicsEngine() adds a plant.
+Each internode, petiole, and peduncle segment of the plant becomes a capsule link, and each leaf, fruit, and flower
+becomes a mass link. Links are connected to their parents by elastic ball joints whose stiffness comes from beam
+bending theory (\f$K = EI/L\f$). The links and joints are the same ones written by
+PlantArchitecture::writePlantStructureUSD() for IsaacSim, and are available directly from
+PlantArchitecture::getPlantArticulation(), whose link indices match those of the articulation in the engine.
+
+\code{.cpp}
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 175);
+
+    PhysicsEngine engine(&context);
+    addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID);
+    uint boxID = engine.addKinematicBox(make_vec3(-0.4, 0, 1), make_vec3(0.1, 0.1, 0.1));
+    engine.initialize();
+
+    for (int s = 0; s < 1000; s++) {
+        // the box moves 1 mm per 2 ms step, i.e. at 0.5 m/s along x
+        engine.setKinematicBoxPosition(boxID, make_vec3(-0.4f + 0.001f * s, 0, 1), make_vec3(0.5f, 0, 0));
+        engine.step();
+    }
+    engine.updateContextGeometry(); // moves the plant and box geometry in the Context to their simulated poses
+\endcode
+
+PhysicsEngine::updateContextGeometry() moves the plant's Context geometry rigidly with the link it belongs to, and moves
+the nodes of internode and petiole tubes, so the deflected plant can be rendered with the Visualizer or used by other
+plug-ins. The PlantArchitecture model itself is not updated.
+
+\section PhysicsEngineIntegrator Integrator and time step
+
+By default the simulation uses MuJoCo's <tt>discrete</tt> integrator, which treats joint stiffness implicitly. The beam
+stiffness of short, thin segments is far higher than an explicit spring can be integrated at a practical time step;
+with the <tt>implicitfast</tt> integrator a plant diverges unless PlantPhysicsParameters::apply_joint_armature
+adds the artificial joint inertia that the USD export uses for the same reason. If the simulation diverges,
+PhysicsEngine::step() throws an error rather than letting MuJoCo silently reset the state.
+
+\section PhysicsEngineContact Contact penetration
+
+MuJoCo contacts are soft: a penetrating contact is pushed apart over a time constant
+(PhysicsEngineParameters::contact_time_constant) rather than instantly, so some overlap between a link and a
+moving body is inherent to the method. With the defaults (a 4 ms time constant, the box's velocity given, and a 2 ms
+time step), stems and petioles pushed by a box moving at 0.5 m/s overlap it by about 0.5 mm on average and 2-3 mm at
+most. The time constant cannot be smaller than twice the time step, so for less overlap reduce both; halving them
+roughly halves the overlap and doubles the run time. PhysicsEngine::getMaxKinematicBoxPenetration() reports
+the overlap. Leaves are thin plates and can still overlap a box by up to about a centimeter.
+
+The \c PGS solver (PhysicsEngineParameters::solver) is used by default because it is several times faster than
+\c Newton for articulations with thousands of links; with the discrete integrator both treat joint stiffness implicitly.
+
+\section PhysicsEngineCollisions Collisions between links
+
+By default links collide only with kinematic boxes. With PhysicsEngineParameters::articulation_collisions enabled, they
+also collide with each other, within and across articulations. PhysicsArticulation::contact_exclusions lists the pairs
+that never collide. For plants, \ref addPlantToPhysicsEngine() excludes segments that meet at or near the same node,
+which overlap by construction; leaves and fruit are excluded only from the link they hang from.
+Stepping the simulation then pushes apart organs that were built overlapping, such as a leaf blade grown through the
+stem above it. PhysicsEngine::getLinkOverlapCount() and PhysicsEngine::getMaxLinkOverlapDepth() report the
+overlaps that remain, measured between the collision shapes rather than the Context geometry.
+
+\code{.cpp}
+    PlantPhysicsParameters plant_params;
+    plant_params.leaf_collision_shape = "ellipsoid"; // the corners of box-shaped leaves overlap their neighbors
+    plant_params.rigid_internodes = true;            // only petioles, leaves, and fruit move
+
+    PhysicsEngineParameters params;
+    params.articulation_collisions = true;
+    params.gravity = false;                          // the plant as built has already sagged under its weight
+
+    PhysicsEngine engine(&context);
+    addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID, USDExportParameters(), plant_params);
+    engine.initialize(params);
+    while (engine.getSimulationTime() < 2.f) {
+        engine.step(10);
+        if (engine.getMaxLinkSpeed() < 0.002f) {
+            break;
+        }
+    }
+    engine.updateContextGeometry();
+\endcode
+
+A single box or ellipsoid cannot follow a folded or curved leaf blade: the blade of an apple leaf is folded along its
+midrib, so a stem can clear its ellipsoid and still pass through the blade. Setting
+PlantPhysicsParameters::leaf_collision_shape to \c "triangles" gives each triangle of the blade its own thin
+collision prism, which follows the blade but makes each step several times more expensive. It is only practical for
+leaves with few triangles: the finely triangulated leaves of a bean produce thousands of contacts, whose dense
+constraint matrices exhaust the solver's memory, and PhysicsEngine::step() then reports an error.
+
+Resolving the overlaps of a large plant this way takes far longer than growing it. A 700-link apple tree takes about
+1 s to relax with rigid internodes (about 3 ms per step), compared with about 0.01 s for PlantArchitecture to grow
+it by 5 days. With flexible internodes each step costs several times more, and young shoots bend by up to 20 cm to
+clear the leaves along them. A leaf whose blade is pierced by a rigid stem may not be able to move clear of it.
+The relaxed pose is not written back to the PlantArchitecture model, so overlaps return if the plant grows further.
+
+*/

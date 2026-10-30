@@ -6,6 +6,12 @@
 - Added the `TPE` algorithm (`ParameterOptimization::setAlgorithm(const TPE &)`), a C++ port of the Tree-structured Parzen Estimator sampler from Optuna 5.0.0. It supports FLOAT, INTEGER and CATEGORICAL parameters. For a given seed it evaluates the same parameter values as Optuna up to single-precision rounding, except for INTEGER parameters on x86 CPUs with AVX2 or AVX-512, where NumPy orders tied values differently.
 - `ParameterOptimization::run()` now defaults to `TPE` instead of `GeneticAlgorithm` when no algorithm is selected and there are INTEGER or CATEGORICAL parameters, unless there are more than 50 parameters. Existing discrete optimizations relying on the default will give different results and run far fewer evaluations (100, instead of up to 2000), an objective returning NaN now raises an error, and so does setting `read_input_from_file`. Call `setAlgorithm(GeneticAlgorithm{})` to keep the previous behavior.
 - `ParameterOptimization::run()` now raises an error if a FLOAT or INTEGER parameter has an infinite `min` or `max`. The bounds were accepted, and the objective could then receive NaN parameter values.
+## Physics Engine
+- Added the physics engine plug-in (`physicsengine`), which simulates rigid-body dynamics with MuJoCo 3.16.0. `PhysicsEngine` simulates articulations and kinematic boxes, makes Context geometry follow them, runs many instances of one compiled model in parallel, and gives direct access to the MuJoCo model and state.
+- Added `addPlantToPhysicsEngine()`, available when `plantarchitecture` is also in the project's plug-ins, which simulates plants built by the plant architecture plug-in so they deflect under gravity and contact.
+
+## Plant Architecture
+- Added `PlantArchitecture::getPlantArticulation()`, which returns a plant as rigid links and elastic joints: the same description written by `writePlantStructureUSD()`.
 
 # [1.3.94] 2026-10-30
 
