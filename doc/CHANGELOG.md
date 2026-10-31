@@ -1,5 +1,12 @@
 # Changelog
 
+# [1.3.95] 2026-XX-XX
+
+## Parameter Optimization
+- Added the `TPE` algorithm (`ParameterOptimization::setAlgorithm(const TPE &)`), a C++ port of the Tree-structured Parzen Estimator sampler from Optuna 5.0.0. It supports FLOAT, INTEGER and CATEGORICAL parameters. For a given seed it evaluates the same parameter values as Optuna up to single-precision rounding, except for INTEGER parameters on x86 CPUs with AVX2 or AVX-512, where NumPy orders tied values differently.
+- `ParameterOptimization::run()` now defaults to `TPE` instead of `GeneticAlgorithm` when no algorithm is selected and there are INTEGER or CATEGORICAL parameters, unless there are more than 50 parameters. Existing discrete optimizations relying on the default will give different results and run far fewer evaluations (100, instead of up to 2000), an objective returning NaN now raises an error, and so does setting `read_input_from_file`. Call `setAlgorithm(GeneticAlgorithm{})` to keep the previous behavior.
+- `ParameterOptimization::run()` now raises an error if a FLOAT or INTEGER parameter has an infinite `min` or `max`. The bounds were accepted, and the objective could then receive NaN parameter values.
+
 # [1.3.94] 2026-10-30
 
 ## Core

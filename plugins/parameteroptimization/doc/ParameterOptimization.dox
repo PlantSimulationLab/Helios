@@ -18,7 +18,7 @@
 
 \section PO_Intro Introduction
 
-The Parameter Optimization plugin provides seven optimization algorithms for tuning parameters in Helios simulations. It covers the full spectrum from global derivative-free search to constrained gradient-based optimization.
+The Parameter Optimization plugin provides eight optimization algorithms for tuning parameters in Helios simulations. It covers the full spectrum from global derivative-free search to constrained gradient-based optimization.
 
 The plugin takes a user-defined simulation function, a set of named parameters with bounds, and (optionally) gradient and constraint functions. It solves the general problem:
 
@@ -57,9 +57,11 @@ Use \ref ParameterOptimization::setAlgorithm() to select the algorithm most appr
 
 | \c run() overload | Has Discrete Params | # Params > 50 | Otherwise |
 |---|---|---|---|
-| \c run(objective, params) | GA | GA | CMA-ES |
-| \c run(objective, params, gradient) | GA | Adam | Adam |
+| \c run(objective, params) | TPE | GA | CMA-ES |
+| \c run(objective, params, gradient) | TPE | Adam | Adam |
 | \c run(objective, params, gradient, constraints) | \ref PO_PenaltyConstraints "See Below" | SLSQP | SLSQP |
+
+Discrete problems with more than 50 parameters default to GA for both of the first two overloads.
 
 \section PO_WhichAlgorithm Choosing an Algorithm
 
@@ -67,7 +69,8 @@ Use this decision guide to select the right algorithm for your Helios problem:
 
 \verbatim
 Has discrete params (INTEGER/CATEGORICAL)?
-  → GA (only option for discrete params)
+  → TPE (limited evaluation budget)
+  → GA (large budget, or highly multimodal)
 
 Has accurate, smooth gradients?
   → L-BFGS (fastest convergence)
@@ -79,8 +82,11 @@ Has noisy gradients (e.g., finite differences on stochastic ray tracing)?
 No gradients, need to polish a known good solution?
   → BOBYQA (derivative-free local optimizer)
 
-No gradients, expensive evaluations, ≤15 params?
-  → Bayesian Optimization (most sample-efficient)
+No gradients, expensive evaluations, 1-3 params?
+  → Bayesian Optimization (most sample-efficient at very low dimension)
+
+No gradients, expensive evaluations, roughly 5-10 params?
+  → TPE (most sample-efficient on a budget of tens to hundreds of evaluations)
 
 No gradients, 5-50 params, non-separable?
   → CMA-ES (self-tuning, learns landscape correlations)
@@ -94,7 +100,8 @@ No gradients, 50+ params?
 | Algorithm | Type | Gradients | Constraints | Discrete Params | NLopt (bundled) | Best For |
 |-----------|------|-----------|-------------|-----------------|----------------|----------|
 | GA | Global, derivative-free | No | Box only | Yes (INTEGER, CATEGORICAL) | No | Multimodal, discrete/mixed params |
-| BO | Global, derivative-free | No | Box only | No | No | Expensive, low-dim (d < 15) |
+| BO | Global, derivative-free | No | Box only | No | No | Expensive, very low-dim (d ≤ 3) |
+| TPE | Global, derivative-free | No | Box only | Yes (INTEGER, CATEGORICAL) | No | Limited budget, medium-dim or mixed params |
 | CMA-ES | Global, derivative-free | No | Box only | No | No | Non-separable, medium-dim (5-50) |
 | L-BFGS | Local, gradient-based | Required (clean) | Box only | No | Yes (LGPL, optional) | Smooth unimodal with AD gradients |
 | Adam | Local, gradient-based | Required (noise-OK) | Box only | No | No | Noisy gradients (FD on ray tracing) |
@@ -109,13 +116,13 @@ No gradients, 50+ params?
 - <b>Leaf angle optimization with ray tracing</b> (2 params per leaf, noisy FD gradients): Use Adam for the noisy case, or L-BFGS if ray count is high enough for clean gradients.
 - <b>Canopy-level optimization</b> (50+ params, multimodal from shading): Use CMA-ES or GA for global search, then L-BFGS or BOBYQA for local refinement.
 - <b>Water-use efficiency optimization</b> (maximize A subject to E < budget): Use SLSQP with the \ref PO_ConstrainedSim API.
-- <b>Canopy structure calibration</b> (LAI, leaf angle distribution — integer leaf count, categorical species): Use GA (only algorithm supporting discrete params).
+- <b>Canopy structure calibration</b> (LAI, leaf angle distribution — integer leaf count, categorical species): Use TPE when evaluations are expensive, or GA when a large budget is affordable.
 
 \section PO_Algorithms Optimization Algorithms
 
 \subsection PO_GA Genetic Algorithm (GA)
 
-The Genetic Algorithm is a robust evolutionary optimization method. It is the only algorithm that supports INTEGER and CATEGORICAL parameter types.
+The Genetic Algorithm is a robust evolutionary optimization method. Along with TPE, it supports INTEGER and CATEGORICAL parameter types.
 
 <b>When to use GA:</b>
 - When parameters are discrete (INTEGER or CATEGORICAL) or mixed continuous/discrete
@@ -125,14 +132,27 @@ The Genetic Algorithm is a robust evolutionary optimization method. It is the on
 
 \subsection PO_BO Bayesian Optimization (BO)
 
-Bayesian Optimization builds a Gaussian Process surrogate model and uses it to intelligently select the next evaluation point. It is the most sample-efficient algorithm for low-dimensional problems.
+Bayesian Optimization builds a Gaussian Process surrogate model and uses it to intelligently select the next evaluation point. It is the most sample-efficient algorithm for problems with only a few parameters.
 
 <b>When to use BO:</b>
 - When each simulation evaluation is very expensive (minutes to hours)
 - When you have a limited evaluation budget (tens to hundreds of evaluations)
-- When the number of parameters is small (d < 15-20)
+- When the number of parameters is very small (around 3 or fewer); with more, TPE typically makes better use of the same budget
 
 \note BO degrades in high dimensions because the GP surrogate becomes uninformative. Above ~20 parameters, prefer CMA-ES.
+
+\subsection PO_TPE Tree-structured Parzen Estimator (TPE)
+
+TPE is a C++ port of the default sampler of <a href="https://optuna.org">Optuna</a> (version 5.0.0). After an initial set of random evaluations, it divides all evaluations so far into a small group of the best and a group of the rest, and fits a kernel density estimate to each. Each new evaluation is the candidate, out of those drawn from the density of the best group, with the highest ratio of the two densities.
+
+<b>When to use TPE:</b>
+- When each simulation evaluation is expensive and the budget is tens to hundreds of evaluations
+- When there are INTEGER or CATEGORICAL parameters and evaluations are too expensive for GA
+- When there are around 5 to 10 parameters, where it makes good use of a limited budget
+
+\note The initial \c value of each parameter is not used as a starting point, and \c read_input_from_file raises an error. TPE models the range of each parameter as continuous, while the simulation receives single-precision values, so a FLOAT range spanning few representable values, such as 1000.0 to 1000.001, will be searched inefficiently. Repeated values in \c categories count as separate categories, which makes that value more likely to be sampled. TPE locates a good region more readily than it converges precisely within it. To converge precisely, refine the TPE result with a local optimizer (see \ref PO_TwoStage).
+
+For a given \c random_seed, TPE evaluates the same parameter values as Optuna's \c TPESampler with that seed, up to single-precision rounding. There are two exceptions. With INTEGER parameters on x86 CPUs with AVX2 or AVX-512, NumPy's sort orders tied values differently from the port, so Optuna's values will differ. TPE also handles numerical limits that would give NaN in Optuna, which can arise from about one random draw in \f$10^{15}\f$. Optuna's log-scale parameters, multi-objective optimization, constraints and pruning are not included. The benchmarks behind this port and its recommendations can be run from \c benchmarks/parameter_optimization.
 
 \subsection PO_CMAES CMA-ES (Covariance Matrix Adaptation Evolution Strategy)
 
@@ -233,6 +253,15 @@ Each optimization algorithm has its own settings struct. To select an algorithm,
 | sigma | Initial step-size controlling search radius | 0.3 |
 | random_seed | RNG seed for reproducibility. 0 = nondeterministic seed from std::random_device | 0 |
 
+\subsection PO_Settings_TPE TPE
+
+| Parameter | Description | Default Value |
+| --------- | ----------- | ------------- |
+| max_evaluations | Total number of function evaluations | 100 |
+| n_startup_trials | Number of initial evaluations sampled uniformly at random. Must be at least 1 | 10 |
+| n_ei_candidates | Candidates scored per evaluation. Higher values favor exploitation | 24 |
+| random_seed | RNG seed for reproducibility. 0 = nondeterministic seed from std::random_device | 0 |
+
 \subsection PO_Settings_LBFGS LBFGS
 
 | Parameter | Description | Default Value |
@@ -282,7 +311,7 @@ I/O configuration is set directly on the \ref ParameterOptimization object, not 
 | print_progress | Enable/disable progress output to console during optimization | false |
 | write_progress_to_file | Filename to write iteration-by-iteration progress (CSV format). Empty string disables | "" |
 | write_result_to_file | Filename to write final optimized parameters. Empty string disables | "" |
-| read_input_from_file | Filename to read initial parameter guess from (for warm-starting). Empty string starts from random | "" |
+| read_input_from_file | Filename to read initial parameter guess from (for warm-starting; GA only, and an error with TPE). Empty string starts from random | "" |
 
 \section PO_GradientAPI Gradient-Based Optimization
 
@@ -475,7 +504,7 @@ A multi-strategy hybrid mutation combining PCA-Gaussian, PCA-Cauchy (heavy tails
 
 The stochastic, population-based algorithms provide static \c explore() and \c exploit() factory methods for common configurations. These presets control the exploration-exploitation tradeoff (population diversity, mutation rates, acquisition parameters, step sizes).
 
-Deterministic local optimizers (L-BFGS, Adam, BOBYQA, SLSQP) do not have presets because they follow a single deterministic trajectory from the starting point — there is no exploration-exploitation tradeoff. Configure them directly by setting the struct fields.
+Deterministic local optimizers (L-BFGS, Adam, BOBYQA, SLSQP) do not have presets because they follow a single deterministic trajectory from the starting point — there is no exploration-exploitation tradeoff. Configure them directly by setting the struct fields. TPE has no presets either, matching Optuna; set its fields directly.
 
 | Algorithm | explore() | exploit() |
 |-----------|-----------|-----------|
@@ -491,11 +520,13 @@ auto result = opt.run(simulation, params);
 
 \section PO_Defaults Default Algorithm Selection
 
-The default algorithm selection table is shown in the \ref PO_QuickStart "Quick Start" section above. When discrete parameters are passed with a gradient function, the gradient is ignored and GA is used — it is the only algorithm that supports INTEGER and CATEGORICAL types. The constrained + discrete case is not directly supported; see \ref PO_PenaltyConstraints for a workaround.
+The default algorithm selection table is shown in the \ref PO_QuickStart "Quick Start" section above. When discrete parameters are passed with a gradient function, the gradient is ignored and TPE is used, or GA above 50 parameters.
+
+\note The default TPE settings spend 100 evaluations, while the default GA settings can spend up to 2000. To change the budget of a discrete problem, select the algorithm explicitly with \ref ParameterOptimization::setAlgorithm() and set TPE::max_evaluations. The constrained + discrete case is not directly supported; see \ref PO_PenaltyConstraints for a workaround.
 
 \section PO_PenaltyConstraints Penalty-Based Constraint Handling (Discrete + Constrained)
 
-No algorithm in the plugin supports both discrete (INTEGER/CATEGORICAL) parameters **and** nonlinear constraints simultaneously. SLSQP handles constraints but requires continuous (FLOAT) parameters. GA handles discrete parameters but has no built-in constraint mechanism.
+No algorithm in the plugin supports both discrete (INTEGER/CATEGORICAL) parameters **and** nonlinear constraints simultaneously. SLSQP handles constraints but requires continuous (FLOAT) parameters. GA and TPE handle discrete parameters but have no built-in constraint mechanism.
 
 The recommended workaround is to fold the constraints into the objective function as **penalty terms**. Instead of stating the constraint \f$c(x) \leq 0\f$ directly, add a large penalty when the constraint is violated:
 
@@ -540,10 +571,10 @@ auto result = opt.run(penalized_objective, params);
 | Type | Supported By | Description |
 |------|-------------|-------------|
 | FLOAT (default) | All algorithms | Continuous float parameter |
-| INTEGER | GA only | Rounded to nearest integer at every stage |
-| CATEGORICAL | GA only | Restricted to a fixed set of allowed values |
+| INTEGER | GA, TPE | Rounded to nearest integer at every stage |
+| CATEGORICAL | GA, TPE | Restricted to a fixed set of allowed values |
 
-\note Every algorithm other than GA requires all parameters to be FLOAT. Passing INTEGER or CATEGORICAL parameters to L-BFGS, Adam, BOBYQA, SLSQP, CMA-ES, or Bayesian Optimization will throw a runtime error.
+\note Every algorithm other than GA and TPE requires all parameters to be FLOAT. Passing INTEGER or CATEGORICAL parameters to L-BFGS, Adam, BOBYQA, SLSQP, CMA-ES, or Bayesian Optimization will throw a runtime error.
 
 \section PO_TwoStage Two-Stage Optimization (Global + Local Refinement)
 
@@ -581,7 +612,7 @@ auto result = phase2.run(objective, coarse.parameters);
 L-BFGS, BOBYQA, and SLSQP use the NLopt optimization library (v2.10.1). NLopt is **bundled** with the plugin in `plugins/parameteroptimization/lib/nlopt-2.10.1/` and built automatically from source — no user installation is required. If the bundled source is absent, the build falls back to a system-installed NLopt.
 
 If NLopt is unavailable for any reason:
-- GA, Bayesian Optimization, CMA-ES, and Adam remain fully functional (no NLopt dependency)
+- GA, Bayesian Optimization, CMA-ES, TPE, and Adam remain fully functional (no NLopt dependency)
 - L-BFGS, BOBYQA, and SLSQP raise a runtime error naming an available alternative
 - The compile-time flag `HELIOS_HAVE_NLOPT` indicates NLopt availability
 
@@ -600,7 +631,7 @@ cmake .. -DHELIOS_NLOPT_LUKSAN=OFF
 With the option `OFF`:
 - The Luksan sources are never compiled and no Luksan objects are linked, so the resulting NLopt is MIT-licensed
 - **L-BFGS becomes unavailable.** Selecting it raises a runtime error naming this option and suggesting Adam (gradient-based, noise-tolerant, no external dependency) or BOBYQA (derivative-free, MIT)
-- BOBYQA, SLSQP, GA, Bayesian Optimization, CMA-ES, and Adam are all unaffected
+- BOBYQA, SLSQP, GA, Bayesian Optimization, CMA-ES, TPE, and Adam are all unaffected
 - The compile-time flag `HELIOS_HAVE_LBFGS` is not defined
 
 Use `HELIOS_HAVE_LBFGS` rather than `HELIOS_HAVE_NLOPT` to test for L-BFGS specifically — since this option exists, NLopt being available no longer implies L-BFGS is.
