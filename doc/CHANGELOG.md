@@ -10,10 +10,13 @@
 - Added the physics engine plug-in (`physicsengine`), which simulates rigid-body dynamics with MuJoCo 3.16.0. `PhysicsEngine` simulates articulations and kinematic boxes, makes Context geometry follow them, runs many instances of one compiled model in parallel, and gives direct access to the MuJoCo model and state.
 - `PhysicsEngine` can load MJCF and URDF models with `addModelFile()`, drive their joints with `addPositionServo()`, and attach Context geometry to their bodies with `bindObjectToBody()`.
 - Links with the joint type `PHYSICS_JOINT_DETACHABLE` can be released mid-simulation with `PhysicsEngine::detachLink()` for cutting a branch or picking a fruit, separately in each simulation instance. `splitTubesAtLink()` keeps the Context geometry from stretching across the break.
+- Added `PhysicsEngine::getDetachableLinkLoad()`, which gives the force holding a detachable link, for modeling connections that fail under load.
+- Added `PlantPhysicsParameters::flexible_links`, which keeps chosen internodes flexible while `rigid_internodes` makes the rest rigid.
 - Added `addPlantToPhysicsEngine()`, available when `plantarchitecture` is also in the project's plug-ins, which simulates plants built by the plant architecture plug-in so they deflect under gravity and contact.
 
 ## Robotics
-- Added the robotics plug-in (`robotics`). `Robot` loads a robot from a URDF or MJCF file into a `PhysicsEngine` simulation, with servo-driven joints, inverse kinematics of its tool, the contact force on its tool, and a home pose, for each parallel simulation instance.
+- Added the robotics plug-in (`robotics`). `Robot` loads a robot from a URDF or MJCF file into a `PhysicsEngine` simulation, with servo-driven joints, inverse kinematics of its tool, the contact force on its tool, and a home pose, for each parallel simulation instance. Instances can be simulated and solved from separate threads.
+- Added `samples/robotics_apple_harvest`, a reinforcement learning environment for picking apples, with a Python interface for Stable-Baselines3.
 
 ## Plant Architecture
 - Added `PlantArchitecture::getPlantArticulation()`, which returns a plant as rigid links and elastic joints: the same description written by `writePlantStructureUSD()`.

@@ -83,6 +83,32 @@ What this changes or leaves open:
 - **Nothing in the sample plans around obstacles.** It fails with an error if the arm hits the vine while driving. During the push, it can touch neighboring shoots.
 - **The PlantArchitecture model is not updated by a cut.** Only the physics and the Context change.
 
+**Phase 3 complete (2026-10-30). Decision: stay on CPU MuJoCo for state-based training.** `samples/robotics_apple_harvest` trains a
+policy to pick apples on `apple_fruitingwall` trees at day 650, without leaves. Chosen first crop and task: apple, reach and detach. The robot is the
+same arm with a vacuum cup, as no specific robot was chosen.
+
+Results on 12 trees never used for training or for setting up the task, 240 episodes each, with 95% intervals:
+
+| Controller | Success | Collision (protective stop) | Timeout | Median peak force on tree |
+|---|---|---|---|---|
+| Trained, seed 0 | 86.2% (81.3-90.0) | 12.9% | 0.8% | 0 N |
+| Trained, seed 1 | 87.5% (82.7-91.1) | 12.1% | 0.0% | 11 N |
+| Scripted (straight at the fruit, straight back) | 75-76% | 20-21% | 3-4% | 14-16 N |
+| Random actions | 0.0% | 0-0.4% | 99.6-100% | 0 N |
+
+- **Speed:** about 300 control steps/s on 6 threads of one Apple Silicon Mac, including network updates: 28 minutes for 500,000 steps.
+  Success on the training trees passed 85% by 200,000 steps (about 12 minutes). This is 0.04 s of simulated time per step.
+- **It pulls for real:** at detachment, the grip force is 0.96-0.97x the force needed, and the stem load 1.01x.
+- **The first version looked better and was not.** Without joint force limits and a protective stop it scored 89.6%, with contact forces of 272 N at
+  the 90th percentile. Check how a policy succeeds, not just that it does.
+- **The scripted controller is a high bar:** learning added about 11 points and cut collisions by about 40%. With exact state, this task is not hard. Vision will be.
+- **Evaluate on many trees:** scores on the 4 trees watched during training ranged from 62.5% to 87.5% from one report to the next.
+
+What this does not show: see "What is idealized" in the sample's README. The policy has exact positions, there are no leaves, only easy front-facing fruit are targeted, the grip is ideal, and detachment ignores
+pull direction. Peak contact can reach about 1000 N for a moment when the arm strikes rigid wood at speed, before the stop acts. Neither a rendered episode nor real hardware has checked any of this. No plant stiffness has been validated.
+
+**For phase 4:** rendering is the obstacle. A control step costs about 20 ms per thread, while a Visualizer frame costs about 270 ms, so vision in the training loop is not usable until Visualizer updates are far faster.
+
 ## Plug-in structure
 
 Two plug-ins, static libraries in one process, so the boundary itself costs nothing at run time.
@@ -128,8 +154,7 @@ Each phase has a gate to pass before moving on.
 
 ## Known risks
 
-- **Throughput.** See the measurements above. Mitigation: simulate only the branches near the arm. Scaling beyond the
-  scene measured here is unknown.
+- **Throughput.** See the measurements above. Flexible wood near the fruit only, as in phase 3, is what makes training practical. Larger trees are unmeasured.
 - **Every plant has a different structure.** Batched simulators prefer identical models. `mujoco.rollout` expects
   homogeneous models, MJX shares structural fields across worlds, and MuJoCo Warp needs an NVIDIA GPU for fast simulation.
 - **Contact accuracy.** Penetration of 2-3 mm at 0.5 m/s, up to about 1 cm for leaves, is about the size of a thin shoot
@@ -139,7 +164,7 @@ Each phase has a gate to pass before moving on.
 
 ## Open decisions
 
-- First crop, task and robot for phase 3. Pick one where real measurements and hardware are available.
+- Which robot to model, and what real measurements to validate against. Phase 3 used apple with a generic arm.
 - Whether NVIDIA/Linux is acceptable for large-scale training (assumed yes, keeping development working on macOS).
 
 ## Related work

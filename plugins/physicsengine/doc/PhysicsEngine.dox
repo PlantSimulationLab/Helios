@@ -107,6 +107,8 @@ Set PhysicsEngineParameters::ground_collisions so that a detached link comes to 
 The links that may be detached have to be chosen before PhysicsEngine::initialize(), and each adds six degrees of freedom and a constraint to the model. In return, detaching needs no change to the model, so each simulation instance can detach different links, and PhysicsEngine::resetInstance() restores them.
 A held link is rigid at that joint, rather than bending as a ball joint would. PlantPhysicsParameters::detachable_links chooses them for a plant.
 
+PhysicsEngine::getDetachableLinkLoad() gives the force in the constraint holding a link. To model a connection that fails under load, such as a fruit's stem, compare it with a limit and call PhysicsEngine::detachLink().
+
 \section PhysicsEngineInstances Running many instances
 
 One compiled model can have many simulation instances, each with entirely separate state. PhysicsEngine::createInstance()
@@ -154,6 +156,11 @@ PlantArchitecture::getPlantArticulation(), whose link indices match those of the
 PhysicsEngine::updateContextGeometry() moves the plant's Context geometry rigidly with the link it belongs to, and moves
 the nodes of internode and petiole tubes, so the deflected plant can be rendered with the Visualizer or used by other
 plug-ins. The PlantArchitecture model itself is not updated.
+
+\section PhysicsEngineSpeed Simulation speed of plants
+
+Flexible wood is by far the largest cost of simulating a plant. A fruiting-wall apple tree without leaves, with 2381 links, took 26 ms per step with flexible internodes and 0.7 ms with PlantPhysicsParameters::rigid_internodes, measured on one Apple Silicon Mac.
+PlantPhysicsParameters::flexible_links keeps chosen internodes flexible while the rest are rigid, which gives the wood near where the plant is touched its compliance at little cost.
 
 \section PhysicsEngineIntegrator Integrator and time step
 

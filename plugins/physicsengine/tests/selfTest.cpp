@@ -390,6 +390,36 @@ DOCTEST_TEST_CASE("PhysicsEngine - detachable link is held until released, then 
     DOCTEST_CHECK_THROWS(static_cast<void>(engine.isLinkDetached(branchID, 0)));
 }
 
+DOCTEST_TEST_CASE("PhysicsEngine - the load on a detachable link is what holds it") {
+    Context context;
+    PhysicsArticulation branch = makePendulum("branch", 1.f, 0.5f, 0.f);
+    branch.links[1].joint_type = PHYSICS_JOINT_DETACHABLE;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint branchID = engine.addArticulation(branch);
+    engine.initialize();
+    engine.step(500);
+
+    // Holding up a 1 kg link
+    DOCTEST_CHECK(engine.getDetachableLinkLoad(branchID, 1) == doctest::Approx(9.81f).epsilon(0.02));
+
+    // Pulling down on it with another 20 N adds to the load
+    mjData *data = engine.getMuJoCoData();
+    const int body = mj_name2id(engine.getMuJoCoModel(), mjOBJ_BODY, "branch_bob");
+    DOCTEST_REQUIRE(body >= 0);
+    data->xfrc_applied[6 * body + 2] = -20.;
+    engine.step(500);
+    DOCTEST_CHECK(engine.getDetachableLinkLoad(branchID, 1) == doctest::Approx(29.81f).epsilon(0.02));
+
+    // Nothing holds it once released
+    data->xfrc_applied[6 * body + 2] = 0.;
+    engine.detachLink(branchID, 1);
+    engine.step();
+    DOCTEST_CHECK(engine.getDetachableLinkLoad(branchID, 1) == doctest::Approx(0.f));
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(engine.getDetachableLinkLoad(branchID, 0)));
+}
+
 DOCTEST_TEST_CASE("PhysicsEngine - a detached link comes to rest on the ground when ground collisions are enabled") {
     auto finalHeight = [](bool ground_collisions) {
         Context context;
@@ -554,6 +584,41 @@ DOCTEST_TEST_CASE("PhysicsEngine - a URDF model loads, is placed, is driven by a
     DOCTEST_CHECK(reloaded->nu == model->nu);
     mj_deleteModel(reloaded);
     std::filesystem::remove("physicsengine_test_written.xml");
+    std::filesystem::remove(arm_file);
+}
+
+DOCTEST_TEST_CASE("PhysicsEngine - a model with thousands of colliding shapes has the memory to step") {
+    // MuJoCo's collision search needs memory that grows with the square of the number of shapes, and it ends the program when it runs out
+    std::string arm_file = writeHingedArmFile();
+    Context context;
+    PhysicsArticulation forest;
+    forest.name = "forest";
+    PhysicsLink root;
+    root.name = "root";
+    root.position = make_vec3(0, 0, 5);
+    root.mass = 1.f;
+    root.inertia_diagonal = make_vec3(1e-3f, 1e-3f, 1e-3f);
+    forest.links.push_back(root);
+    const int shape_count = 3000;
+    for (int i = 0; i < shape_count; i++) {
+        PhysicsLink link;
+        link.name = "s" + std::to_string(i);
+        link.parent_index = 0;
+        link.position = make_vec3(float(i % 60), float(i / 60), 5);
+        link.mass = 0.01f;
+        link.inertia_diagonal = make_vec3(1e-5f, 1e-5f, 1e-5f);
+        PhysicsCollisionShape sphere;
+        sphere.type = PHYSICS_SHAPE_SPHERE;
+        sphere.size.x = 0.05f;
+        link.shapes.push_back(sphere);
+        forest.links.push_back(link);
+    }
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    engine.addArticulation(forest);
+    engine.addModelFile(arm_file, "a/");
+    engine.initialize();
+    DOCTEST_CHECK_NOTHROW(engine.step(5));
     std::filesystem::remove(arm_file);
 }
 
@@ -990,6 +1055,51 @@ DOCTEST_TEST_CASE("PlantPhysics - rigid internodes hold the stems still") {
     INFO("internode sag: flexible " << 1000.f * flexible_sag << " mm, rigid " << 1000.f * rigid_sag << " mm");
     DOCTEST_CHECK(flexible_sag > 2e-4f);
     DOCTEST_CHECK(rigid_sag < 1e-5f);
+}
+
+DOCTEST_TEST_CASE("PlantPhysics - listed internodes stay flexible when the others are rigid") {
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    uint plantID = buildTestPlant(context, plantarchitecture);
+    const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+
+    // The top internode segment, and its parent, which is a stem joint with something to bend
+    uint top_link = 0;
+    float top = -1.f;
+    for (uint i = 0; i < articulation.links.size(); i++) {
+        const PlantArticulationLink &link = articulation.links[i];
+        if (link.type == ARTICULATION_LINK_INTERNODE && link.parent_index >= 0 && link.position.z > top) {
+            top = link.position.z;
+            top_link = i;
+        }
+    }
+
+    auto modelSize = [&](const std::vector<uint> &flexible_links) {
+        PlantPhysicsParameters params;
+        params.rigid_internodes = true;
+        params.leaf_collisions = false;
+        params.flexible_links = flexible_links;
+        PhysicsEngine engine(&context);
+        engine.disableMessages();
+        uint articulationID = addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID, USDExportParameters(), params);
+        engine.initialize();
+        engine.step(250);
+        return std::make_pair(static_cast<int>(engine.getMuJoCoModel()->nv), (engine.getLinkPosition(articulationID, top_link) - articulation.links[top_link].position).magnitude());
+    };
+
+    const auto [rigid_dof, rigid_sag] = modelSize({});
+    const auto [flexible_dof, flexible_sag] = modelSize({top_link});
+
+    // One ball joint more, and that link now moves when it did not before
+    DOCTEST_CHECK(flexible_dof == rigid_dof + 3);
+    DOCTEST_CHECK(flexible_sag > rigid_sag);
+
+    PlantPhysicsParameters params;
+    params.flexible_links = {static_cast<uint>(articulation.links.size())};
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    DOCTEST_CHECK_THROWS(addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID, USDExportParameters(), params));
 }
 
 DOCTEST_TEST_CASE("PlantPhysics - misuse is reported") {

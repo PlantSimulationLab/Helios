@@ -33,8 +33,8 @@ Robot::Robot(PhysicsEngine *engine, const std::string &model_file, const std::st
 }
 
 Robot::~Robot() {
-    if (kinematics_data != nullptr) {
-        mj_deleteData(kinematics_data);
+    for (mjData *data: kinematics_data) {
+        mj_deleteData(data);
     }
 }
 
@@ -112,11 +112,20 @@ void Robot::initialize() {
         }
     }
 
-    kinematics_data = mj_makeData(model);
-    if (kinematics_data == nullptr) {
-        helios_runtime_error("ERROR (Robot::initialize): MuJoCo could not allocate the data used for inverse kinematics.");
-    }
     initialized = true;
+    prepareInstances();
+}
+
+void Robot::prepareInstances() {
+    requireInitialized("prepareInstances");
+    const mjModel *model = engine->getMuJoCoModel();
+    while (kinematics_data.size() < engine->getInstanceCount()) {
+        mjData *data = mj_makeData(model);
+        if (data == nullptr) {
+            helios_runtime_error("ERROR (Robot::prepareInstances): MuJoCo could not allocate the data used for inverse kinematics.");
+        }
+        kinematics_data.push_back(data);
+    }
 }
 
 void Robot::setHomePose(const std::vector<float> &positions) {
@@ -187,6 +196,20 @@ void Robot::setJointTarget(const std::string &joint_name, float target, uint ins
     requireInitialized("setJointTarget");
     const JointRecord &joint = joints[findJoint(joint_name, "setJointTarget")];
     engine->getMuJoCoData(instance)->ctrl[joint.actuator_ID] = toModelUnits(joint, target);
+}
+
+void Robot::setJointPositions(const std::vector<float> &positions, uint instance) {
+    requireInitialized("setJointPositions");
+    if (positions.size() != joints.size()) {
+        helios_runtime_error("ERROR (Robot::setJointPositions): " + std::to_string(positions.size()) + " positions were given for " + std::to_string(joints.size()) + " joints.");
+    }
+    mjData *data = engine->getMuJoCoData(instance);
+    for (size_t j = 0; j < joints.size(); j++) {
+        data->qpos[joints[j].qpos_address] = toModelUnits(joints[j], positions[j]);
+        data->qvel[joints[j].dof_address] = 0;
+    }
+    setJointTargets(positions, instance);
+    mj_forward(engine->getMuJoCoModel(), data);
 }
 
 std::vector<float> Robot::getJointPositions(uint instance) const {
@@ -272,7 +295,10 @@ RobotInverseKinematicsResult Robot::solveInverseKinematics(const vec3 &target_po
 
     const mjModel *model = engine->getMuJoCoModel();
     const mjData *simulation_data = engine->getMuJoCoData(instance);
-    mjData *data = kinematics_data;
+    if (instance >= kinematics_data.size()) {
+        helios_runtime_error("ERROR (Robot::solveInverseKinematics): Instance " + std::to_string(instance) + " has no inverse kinematics state. Call prepareInstances() after creating instances.");
+    }
+    mjData *data = kinematics_data[instance];
     mju_copy(data->qpos, simulation_data->qpos, model->nq);
 
     constexpr int max_iterations = 200;

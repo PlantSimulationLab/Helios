@@ -457,6 +457,16 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
     attachModelFiles(params);
     addServosAndSensors();
 
+    // MuJoCo ends the program when its memory arena overflows, and its collision search needs memory that grows with the square of the number of shapes.
+    // Articulation collisions already have a large arena (see buildMJCF), which is allocated but not touched until it is used.
+    if (!params.articulation_collisions) {
+        mjtSize shape_count = 0;
+        for (mjsElement *element = mjs_firstElement(spec, mjOBJ_GEOM); element != nullptr; element = mjs_nextElement(spec, element)) {
+            shape_count++;
+        }
+        spec->memory = 16 * 1024 * 1024 + 8 * shape_count * shape_count;
+    }
+
     model = mj_compile(spec, nullptr);
     if (model == nullptr) {
         helios_runtime_error("ERROR (PhysicsEngine::initialize): MuJoCo could not compile the model: " + std::string(mjs_getError(spec)));
@@ -707,6 +717,22 @@ bool PhysicsEngine::isLinkDetached(uint articulationID, uint link_index, uint in
         helios_runtime_error("ERROR (PhysicsEngine::isLinkDetached): Link " + std::to_string(link_index) + " of articulation " + std::to_string(articulationID) + " does not have a detachable joint.");
     }
     return data->eq_active[equality_ID] == 0;
+}
+
+float PhysicsEngine::getDetachableLinkLoad(uint articulationID, uint link_index, uint instance) const {
+    const mjData *data = getInstance(instance, "getDetachableLinkLoad").data;
+    requireLink(articulationID, link_index, "getDetachableLinkLoad");
+    const int equality_ID = articulations[articulationID].link_detach_equality_IDs[link_index];
+    if (equality_ID < 0) {
+        helios_runtime_error("ERROR (PhysicsEngine::getDetachableLinkLoad): Link " + std::to_string(link_index) + " of articulation " + std::to_string(articulationID) + " does not have a detachable joint.");
+    }
+    // The first three constraint rows of a weld are its force, and the other three its torque
+    for (int row = 0; row < data->nefc; row++) {
+        if (data->efc_type[row] == mjCNSTR_EQUALITY && data->efc_id[row] == equality_ID) {
+            return float(mju_norm3(data->efc_force + row));
+        }
+    }
+    return 0.f;
 }
 
 void PhysicsEngine::splitTubesAtLink(uint articulationID, uint link_index) {

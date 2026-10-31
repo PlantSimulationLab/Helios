@@ -233,6 +233,14 @@ uint addPlantToPhysicsEngine(PhysicsEngine &engine, const Context &context, cons
         joint_of_child.at(plant.joints[j].child_index) = static_cast<int>(j);
     }
 
+    std::vector<char> is_flexible(links.size(), 0);
+    for (uint link_index: params.flexible_links) {
+        if (link_index >= links.size() || links[link_index].type != ARTICULATION_LINK_INTERNODE) {
+            helios_runtime_error("ERROR (addPlantToPhysicsEngine): Flexible link " + std::to_string(link_index) + " of plant " + std::to_string(plantID) + " does not exist or is not an internode.");
+        }
+        is_flexible[link_index] = 1;
+    }
+
     PhysicsArticulation articulation;
     articulation.name = "p" + std::to_string(plantID);
     articulation.links.resize(links.size());
@@ -257,7 +265,7 @@ uint addPlantToPhysicsEngine(PhysicsEngine &engine, const Context &context, cons
         }
 
         // A link without a joint is welded to its parent
-        bool welded = params.rigid_internodes && link.type == ARTICULATION_LINK_INTERNODE;
+        bool welded = params.rigid_internodes && link.type == ARTICULATION_LINK_INTERNODE && !is_flexible[i];
         if (link.parent_index >= 0 && !welded) {
             const PlantArticulationJoint &joint = plant.joints.at(joint_of_child[i]);
             physics_link.joint_type = PHYSICS_JOINT_BALL;

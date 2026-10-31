@@ -265,6 +265,16 @@ public:
      */
     [[nodiscard]] bool isLinkDetached(uint articulationID, uint link_index, uint instance = 0) const;
 
+    //! Get the force in the constraint holding a link with a detachable joint to its parent, in the last step
+    /**
+     * This is what breaks the connection in reality, such as the pull on a fruit's stem. Compare it with a limit and call detachLink() to model a connection that fails under load.
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     * \param[in] link_index Index of the link within the articulation. Its joint type must be \ref PHYSICS_JOINT_DETACHABLE.
+     * \param[in] instance ID of the simulation instance.
+     * \return Force in N, or zero if the link has been released.
+     */
+    [[nodiscard]] float getDetachableLinkLoad(uint articulationID, uint link_index, uint instance = 0) const;
+
     //! Split any Context tube object that spans a link and its parent, so that the part following the link separates cleanly when the link is detached
     /**
      * Without this, the tube segment between the link and its parent would stretch as they part. The split changes the Context, so it applies to every instance rendered from then on, and is not undone by resetInstance().

@@ -411,6 +411,52 @@ DOCTEST_TEST_CASE("Robot - arm deflects a plant stem, senses the force, and the 
 
 #endif // HELIOS_ROBOTICS_PLANT_TESTS
 
+DOCTEST_TEST_CASE("Robot - instances solve inverse kinematics at the same time, and joints can be placed directly") {
+    std::string arm_file = writeArmFile();
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    Robot robot(&engine, arm_file, "arm");
+    addArmServos(robot);
+    engine.initialize();
+    robot.initialize();
+    const uint instance_count = 4;
+    while (engine.getInstanceCount() < instance_count) {
+        engine.createInstance();
+    }
+    robot.prepareInstances();
+
+    // Placed directly: really there, and held there
+    robot.setJointPositions({0.1f, 30.f, -60.f, 30.f}, 2);
+    const vec3 expected_tool = make_vec3(0.7f * cosf(deg2rad(30.f)) + 0.1f, 0.1f, 0.1f * sinf(deg2rad(30.f)));
+    DOCTEST_CHECK((robot.getToolPosition(2) - expected_tool).magnitude() < 1e-4f);
+    engine.step(200, 2);
+    DOCTEST_CHECK((robot.getToolPosition(2) - expected_tool).magnitude() < 2e-3f);
+
+    // Each instance reaches its own target from its own thread, many times over, as one thread alone does
+    const uint iterations = 200;
+    std::vector<RobotInverseKinematicsResult> threaded(instance_count);
+    std::vector<std::thread> threads;
+    for (uint i = 0; i < instance_count; i++) {
+        threads.emplace_back([&, i]() {
+            for (uint n = 0; n < iterations; n++) {
+                threaded[i] = robot.solveInverseKinematics(make_vec3(0.5f + 0.02f * float(i), 0.05f * float(i), 0.2f), make_vec3(1, 0, 0), {}, i);
+            }
+        });
+    }
+    for (std::thread &thread: threads) {
+        thread.join();
+    }
+    for (uint i = 0; i < instance_count; i++) {
+        const RobotInverseKinematicsResult alone = robot.solveInverseKinematics(make_vec3(0.5f + 0.02f * float(i), 0.05f * float(i), 0.2f), make_vec3(1, 0, 0), {}, i);
+        DOCTEST_CHECK(threaded[i].converged);
+        for (size_t j = 0; j < alone.joint_positions.size(); j++) {
+            DOCTEST_CHECK(threaded[i].joint_positions[j] == alone.joint_positions[j]);
+        }
+    }
+    std::filesystem::remove(arm_file);
+}
+
 DOCTEST_TEST_CASE("Robot - misuse is reported") {
     std::string arm_file = writeArmFile();
     Context context;

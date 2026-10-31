@@ -84,6 +84,9 @@ public:
     //! Connect to the compiled model. Must be called after PhysicsEngine::initialize(), and before any of the methods below.
     void initialize();
 
+    //! Allocate what inverse kinematics needs for every simulation instance that exists now. solveInverseKinematics() does this itself as needed, but that is not safe while other threads are solving.
+    void prepareInstances();
+
     //! Set the pose the robot starts from and returns to with resetInstance(), which is also where the servos hold it. Resets every instance that exists now. An instance created later starts at the zero pose until it is reset.
     /**
      * \param[in] positions Position of each joint in the order of getJointNames(): degrees for hinges, meters for slides.
@@ -115,6 +118,13 @@ public:
      */
     void setJointTarget(const std::string &joint_name, float target, uint instance = 0);
 
+    //! Place every servo-driven joint directly, with the servos holding it there, without simulating the motion
+    /**
+     * \param[in] positions Position of each joint in the order of getJointNames(): degrees for hinges, meters for slides.
+     * \param[in] instance ID of the simulation instance.
+     */
+    void setJointPositions(const std::vector<float> &positions, uint instance = 0);
+
     //! Get the current position of every servo-driven joint: degrees for hinges, meters for slides
     /**
      * \param[in] instance ID of the simulation instance.
@@ -143,6 +153,7 @@ public:
 
     //! Find the joint positions that place the tool on a target, starting from the current joint positions
     /**
+     * Different instances can solve at the same time from different threads, after a call to prepareInstances().
      * Uses damped least squares on MuJoCo's Jacobians, respecting joint limits, and nudges the joints when it stalls at a singular pose such as a fully straight arm. Rotation about the tool axis is left free. This does not move the robot or check for collisions: pass the result to setJointTargets().
      * \param[in] target_position World position for the tool point.
      * \param[in] target_axis World direction for the tool axis.
@@ -180,7 +191,7 @@ private:
     int tool_body_ID = -1;
     std::vector<char> body_is_on_tool; // indexed by MuJoCo body ID: the tool body and its descendants
 
-    struct mjData_ *kinematics_data = nullptr; // separate state for inverse kinematics, so that solving never disturbs the simulation
+    std::vector<struct mjData_ *> kinematics_data; // separate state for inverse kinematics per instance, so that solving never disturbs the simulation and instances can solve at the same time
     bool initialized = false;
 };
 
