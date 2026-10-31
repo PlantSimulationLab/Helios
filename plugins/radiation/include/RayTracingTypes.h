@@ -185,9 +185,7 @@ namespace helios {
          * accumulate the white reference that a camera's "auto" white balance is computed from.
          */
         std::vector<float> white_reference_cam;
-        std::vector<float> specular_exponent; //!< Specular reflection exponent per primitive
-        std::vector<float> specular_scale; //!< Specular reflection scale coefficient per primitive
-        //! Whether any primitive has a specular exponent. The incident radiation that camera specular reflection reads (radiation_specular) is allocated only when it does.
+        //! Whether any primitive has a surface layer, whose reflection lobe of the direct radiation needs the direct flux reaching each primitive (radiation_specular, allocated only then)
         bool specular_reflection_enabled = false;
 
         // Translucent cover (glass/plastic) material. When is_glass != 0 for a [slot][primitive][band]
@@ -196,6 +194,22 @@ namespace helios {
         std::vector<float> glass_n; //!< Refractive index per [slot][primitive][band] (0 = not glass)
         std::vector<float> glass_KL; //!< Absorption product K*L per [slot][primitive][band] (0 = lossless)
         std::vector<char> is_glass; //!< Glass-material flag per [slot][primitive][band] (0 = off, 1 = on)
+
+        // Specular surface layer (primitive or material data "specular_roughness" and "specular_n"). A primitive with a surface
+        // layer reflects a(mu) of the radiation reaching it at its surface, where a(mu) is the directional albedo of a Fresnel +
+        // GGX microfacet layer, and its body reflects, transmits and emits the rest diffusely. Its reflectivity and
+        // transmissivity above (and the camera-weighted ones) then hold those of the body, rho_b and tau_b, so that the total
+        // reflectance is R(mu) = a(mu) + rho_b (1 - a(mu)), the transmittance T(mu) = tau_b (1 - a(mu)) and the emissivity
+        // eps(mu) = (1 - rho_b - tau_b)(1 - a(mu)). Each face sends out two components: one with angular shape 1 - a(mu)
+        // (body reflection, transmission and emission) and one with shape a(mu) (the surface layer's reflection).
+        std::vector<uint32_t> surface_model; //!< Surface model per primitive: 0 = Lambertian (no surface layer), m > 0 = model m - 1
+        //! Albedo table of surface model m in global band b, [m * num_bands + b], or UINT32_MAX where that model has no layer in the band
+        std::vector<uint32_t> surface_model_band_table;
+        //! Directional albedo tables: each holds surface_layer_table_size values of a(mu) at mu = i / (surface_layer_table_size - 1), followed by its hemispherical mean abar = 2 int a(mu) mu dmu, the layer's refractive index and its roughness
+        std::vector<float> surface_layer_tables;
+        uint32_t surface_layer_table_size = 65; //!< Number of mu values in each albedo table
+        //! Whether any primitive has a surface layer in some band. The outgoing and scattered radiation buffers then hold a second component (see RayTracingResults).
+        bool surface_layer_enabled = false;
 
         size_t num_bands = 0; //!< Number of spectral bands
         size_t num_sources = 0; //!< Number of radiation sources (the material arrays have one more slot than this)
@@ -250,7 +264,12 @@ namespace helios {
         helios::int2 camera_resolution_full; //!< Full resolution for tiled rendering (global coordinates)
 
         // Diffuse radiation parameters (for diffuse ray launches)
-        std::vector<float> diffuse_flux; //!< Diffuse flux per band
+        //! Diffuse sky flux per launched band, followed by the flux of each launched band's reference blackbody field (2 x Nbands_launch values)
+        /**
+         * A diffuse ray that leaves the scene receives the sky flux less the reference flux: emission is gathered as its
+         * departure from a uniform blackbody field (see RadiationModel::runBand()). A band without one has a reference flux of 0.
+         */
+        std::vector<float> diffuse_flux;
         std::vector<float> diffuse_extinction; //!< Diffuse extinction coefficient per band
         std::vector<helios::vec3> diffuse_peak_dir; //!< Peak direction for diffuse distribution per band
         std::vector<float> diffuse_dist_norm; //!< Diffuse distribution normalization per band
@@ -265,7 +284,8 @@ namespace helios {
         std::vector<float> vertex_radiation_out_bottom; //!< Area-weighted mean outgoing radiation (bottom face) per [vertex][band]
 
         // Flags
-        uint specular_reflection_enabled = 0; //!< Specular reflection: 0 = disabled, 1 = enabled (each primitive scaled by its specular_scale material value)
+        uint specular_reflection_enabled =
+                0; //!< 1 = this launch evaluates the surface layers' reflection lobe of the direct radiation (the launch reading its first scattering, and camera launches); for a direct launch, that surface layers are present
         uint below_horizon_diffuse_enabled = 0; //!< 1 = diffuse sky radiation also reaches rays that leave the domain below the horizon (diffuse and camera rays)
     };
 
@@ -283,13 +303,25 @@ namespace helios {
         std::vector<float> scatter_buff_bottom; //!< Scattered radiation buffer (bottom) for multi-bounce
         std::vector<float> scatter_buff_top_cam; //!< Camera-weighted scattered radiation buffer (top) per [camera][primitive][band]
         std::vector<float> scatter_buff_bottom_cam; //!< Camera-weighted scattered radiation buffer (bottom) per [camera][primitive][band]
-        std::vector<float> radiation_specular; //!< Specular reflection per [source][camera][primitive][band]
+        std::vector<float> radiation_specular; //!< Direct flux reaching primitives with a surface layer, per [source][primitive][band]
 
         size_t num_primitives = 0; //!< Number of primitives
         size_t num_bands = 0; //!< Number of bands
         size_t num_sources = 0; //!< Number of sources
         size_t num_cameras = 0; //!< Number of cameras
     };
+
+    //! Directional albedo of a specular surface layer: a dielectric interface of refractive index n with GGX microfacet roughness alpha
+    /**
+     * a(mu) is the fraction of the radiation arriving at the angle whose cosine is mu that the layer reflects (Fresnel
+     * reflectance of the microfacets with the height-correlated Smith masking-shadowing term), integrated over the reflected
+     * hemisphere.
+     * \param[in] refractive_index Refractive index of the layer (>= 1)
+     * \param[in] roughness GGX roughness alpha (> 0)
+     * \param[in] table_size Number of mu values, equally spaced from 0 to 1 (>= 2)
+     * \return table_size values of a(mu), followed by the hemispherical mean abar = 2 int_0^1 a(mu) mu dmu
+     */
+    std::vector<float> computeSurfaceLayerAlbedoTable(float refractive_index, float roughness, uint32_t table_size);
 
 } // namespace helios
 

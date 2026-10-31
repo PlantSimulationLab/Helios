@@ -2373,6 +2373,57 @@ DOCTEST_TEST_CASE("PhotosynthesisModel CO2 supply conductance uses the per-face 
     DOCTEST_CHECK(std::fabs(gC_onesided - series(gbc_face, gsc)) < 0.02f * series(gbc_face, gsc));
 }
 
+DOCTEST_TEST_CASE("PhotosynthesisModel uses per-face boundary-layer conductances to CO2") {
+    // The boundary-layer conductance plug-in writes the conductance to CO2 of each face, which can differ between the faces. CO2 entering a face crosses that face's boundary layer, and "stomatal_sidedness" is the
+    // fraction of the stomata on the front face. The total CO2 conductance is recovered from the supply equation A = gC*(Ca - Ci).
+    const float gS = 0.3f;
+    const float gbc_front = 1.f;
+    const float gbc_back = 0.1f;
+    const float Ca = 400.f;
+
+    auto totalCO2Conductance = [&](uint twosided_flag, float stomatal_sidedness) {
+        Context context_test;
+        uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context_test.setPrimitiveData(UUID, "twosided_flag", twosided_flag);
+        context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 300.f);
+        context_test.setPrimitiveData(UUID, "temperature", 298.f);
+        context_test.setPrimitiveData(UUID, "air_CO2", Ca);
+        context_test.setPrimitiveData(UUID, "moisture_conductance", gS);
+        context_test.setPrimitiveData(UUID, "boundarylayer_conductance", 1.37f * (gbc_front + gbc_back) / 1.08f);
+        context_test.setPrimitiveData(UUID, "boundarylayer_conductance_CO2_front", gbc_front);
+        context_test.setPrimitiveData(UUID, "boundarylayer_conductance_CO2_back", twosided_flag == 0 ? 0.f : gbc_back);
+        context_test.setPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
+
+        PhotosynthesisModel photomodel(&context_test);
+        photomodel.disableMessages();
+        photomodel.setModelType_Farquhar();
+        photomodel.optionalOutputPrimitiveData("Ci");
+        photomodel.run();
+
+        float A, Ci;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+        context_test.getPrimitiveData(UUID, "Ci", Ci);
+        return A / (Ca - Ci);
+    };
+
+    auto series = [](float g1, float g2) { return g1 * g2 / (g1 + g2); };
+    const float gsc = gS / 1.6f;
+
+    // all stomata on the front face, and all on the back face
+    const float gC_front = totalCO2Conductance(1, 1.f);
+    DOCTEST_CHECK(gC_front == doctest::Approx(series(gbc_front, gsc)).epsilon(0.02).scale(0));
+    const float gC_back = totalCO2Conductance(1, 0.f);
+    DOCTEST_CHECK(gC_back == doctest::Approx(series(gbc_back, gsc)).epsilon(0.02).scale(0));
+
+    // amphistomatous leaf: half the stomatal conductance on each face, each in series with its own boundary layer
+    const float gC_amphi = totalCO2Conductance(1, 0.5f);
+    DOCTEST_CHECK(gC_amphi == doctest::Approx(series(gbc_front, 0.5f * gsc) + series(gbc_back, 0.5f * gsc)).epsilon(0.02).scale(0));
+
+    // a one-sided primitive takes up CO2 through its front face only
+    const float gC_onesided = totalCO2Conductance(0, 0.f);
+    DOCTEST_CHECK(gC_onesided == doctest::Approx(series(gbc_front, gsc)).epsilon(0.02).scale(0));
+}
+
 DOCTEST_TEST_CASE("PhotosynthesisModel evaporating_faces sets the stomatal sidedness when stomatal_sidedness is not set") {
     // The energy balance and stomatal conductance models take "evaporating_faces" = 2 to mean stomata split equally between
     // both faces (stomatal sidedness 0.5) when "stomatal_sidedness" is not set. The photosynthesis model must use the same

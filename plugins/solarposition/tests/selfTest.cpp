@@ -412,6 +412,29 @@ TEST_CASE("SolarPosition cloud calibration rejects negative measured flux") {
     }
 }
 
+TEST_CASE("SolarPosition cloud calibration accepts a measured flux of zero at a sample time") {
+    // A measured flux stored as exactly 0 (e.g. at sunset) must not be rejected as negative when the
+    // simulation clock is on that sample and the timeseries is queried by time. Interpolation rounding
+    // returned -1.42e-14 for this input.
+    Context context_s;
+
+    const Date date = make_Date(21, 6, 2020);
+
+    SolarPosition sp(-8, 38.55f, -121.76f, &context_s);
+    sp.setAtmosphericConditions(101000.f, 300.f, 0.5f, 0.05f);
+
+    context_s.addTimeseriesData("R_meas_Wm2", 96.4f, date, make_Time(16, 0, 0));
+    context_s.addTimeseriesData("R_meas_Wm2", 0.f, date, make_Time(18, 0, 0));
+    context_s.setCurrentTimeseriesPoint("R_meas_Wm2", 1);
+    sp.enableCloudCalibration("R_meas_Wm2");
+
+    DOCTEST_CHECK(context_s.queryTimeseriesData("R_meas_Wm2") == 0.f);
+
+    float flux_PAR = -1.f;
+    DOCTEST_CHECK_NOTHROW(flux_PAR = sp.getSolarFluxPAR());
+    DOCTEST_CHECK(flux_PAR == 0.f);
+}
+
 TEST_CASE("SolarPosition spectral cloud calibration") {
     // The spectral (SSolar-GOA) path must honor enableCloudCalibration(). The calibration normalizes
     // the modeled clear-sky spectrum to the measured broadband flux and then applies the Bird,

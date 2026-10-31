@@ -535,3 +535,7 @@ v. FindGLFW.cmake
 w. Camera spectral response data
 
 Some camera spectral response curves in plugins/radiation/camera_library/camera_library.xml and plugins/radiation/spectral_data/camera_spectral_library.xml are taken from the camera spectral sensitivity database of Jiang et al. (http://www.gujinwei.org/research/camspec/db.html), Copyright Rochester Institute of Technology. These curves are marked individually in the XML files and are licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode), which does not permit commercial use. This data is not covered by the Helios license.
+
+x. leaf-boundary-layer (leaf-conductance)
+
+The "Graefe" model of the boundary-layer conductance plug-in (plugins/boundarylayerconductance/src/GraefeConvection.h and GraefeConvection.cpp) is a C++ port of the Python/MATLAB package leaf-boundary-layer, version 1.1.0 (https://github.com/Code4Plants/Leaf-Boundary-Layer), Copyright (C) 2026 Jan Graefe, Leibniz Institute of Vegetable and Ornamental Crops (IGZ). The package is distributed under the GNU Lesser General Public License, version 2.1 or later (https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html), the same license as Helios. Its author asks that users cite both the package and the paper: Graefe, J., Grosch, R., Bitterlich, M. (2022). The boundary layer conductance of inclined elliptical leaves under free convection. Agricultural and Forest Meteorology 317, 108884. https://doi.org/10.1016/j.agrformet.2022.108884

@@ -64,6 +64,7 @@ struct PerRayData {
     float  cover_transmittance[HELIOS_MAX_RADIATION_BANDS];
     bool   hit_cover;          //!< Diffuse/camera/pixel-label ray hit a translucent cover and continues past it from cover_exit
     float3 cover_exit;         //!< World-space point just beyond the cover where the ray continues
+    float  origin_cos;         //!< |cosine| of the angle between a direct or diffuse ray and the normal of the primitive it left
 };
 
 // ---------------------------------------------------------------------------
@@ -120,13 +121,16 @@ struct OptiX8LaunchParams {
     float*    rho_cam;    //!< Camera-weighted reflectivity
     float*    tau_cam;    //!< Camera-weighted transmissivity
     float*    white_reference_cam; //!< Camera-weighted reflectivity of a white surface [source * Nbands_global * Ncameras + band_global * Ncameras + camera]
-    float*    specular_exponent;
-    float*    specular_scale;
 
     // ---- Translucent cover (glass/plastic) material buffers (same layout as rho/tau) ----
     float*    glass_n;    //!< Refractive index [source * Nprims * Nbands_global + prim * Nbands_global + band]
     float*    glass_KL;   //!< Bouguer absorption product K*L (same layout)
     int8_t*   is_glass;   //!< 1 if this [source][prim][band] uses the glass model, else 0 (same layout)
+
+    // ---- Specular surface layer (see RayTracingMaterial::surface_model); null when no primitive has one ----
+    uint32_t* surface_model;            //!< [prim]: 0 = Lambertian, m > 0 = surface model m - 1
+    uint32_t* surface_model_band_table; //!< [(m - 1) * Nbands_global + band]: albedo table, or UINT32_MAX for no layer in the band
+    float*    surface_layer_tables;     //!< [table * (surface_layer_table_size + 3) + i]: a(mu) at mu = i / (size - 1), then abar, n and alpha
 
     // ---- Radiation energy buffers ----
     float*    radiation_in;           //!< [prim * Nbands_global + band]
@@ -143,7 +147,7 @@ struct OptiX8LaunchParams {
     float*    scatter_buff_bottom_cam; //!< same layout as scatter_buff_top_cam
     float*    white_reference_top_cam;    //!< Each camera's white reference, accumulated over all the launches of a runBand(); same layout as scatter_buff_top_cam
     float*    white_reference_bottom_cam; //!< same layout as white_reference_top_cam
-    float*    radiation_specular;     //!< [src*Ncams*Nprims*Nbands + cam*Nprims*Nbands + prim*Nbands + band]
+    float*    radiation_specular;     //!< Direct flux reaching primitives with a surface layer [src*Nprims*Nbands + prim*Nbands + band]
 
     // ---- Camera output buffers ----
     uint32_t* camera_pixel_label;
@@ -194,7 +198,8 @@ struct OptiX8LaunchParams {
     uint32_t  random_seed;
     uint32_t  launch_face;           //!< 1=top face, 0=bottom face (diffuse)
     uint32_t  scattering_iteration;
-    uint32_t  specular_reflection_enabled;
+    uint32_t  specular_reflection_enabled; //!< 1 = this launch reads the surface layers' reflection lobe of the direct radiation
+    uint32_t  surface_layer_table_size; //!< Number of mu values in each surface-layer albedo table
     uint32_t  below_horizon_diffuse_enabled; //!< 1 = the diffuse sky also reaches rays leaving below the horizon
     uint32_t  camera_ID;
     uint32_t  bbox_UUID_base;        //!< Starting UUID for bboxes

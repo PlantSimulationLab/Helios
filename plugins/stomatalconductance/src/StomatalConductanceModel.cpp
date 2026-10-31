@@ -50,24 +50,28 @@ namespace {
 
     //! Boundary-layer conductance that, in series with the total stomatal conductance, carries the same flux as the stomata of each leaf face in series with the boundary layer of that face
     /**
-     * The stomatal conductance is split between the upper and lower faces in the proportions \f$\zeta\f$ and \f$1-\zeta\f$, and each face exchanges gas only through its own boundary layer. The surface
-     * concentration seen through this effective conductance is the stomata-weighted mean of the two face surface concentrations. It equals the face conductance for stomata on one face only, and
-     * twice the face conductance for stomata split equally between both faces.
+     * The stomatal conductance is split between the front and back faces in the proportions \f$\zeta\f$ and \f$1-\zeta\f$, and each face exchanges gas only through its own boundary layer. The surface
+     * concentration seen through this effective conductance is the stomata-weighted mean of the two face surface concentrations. It equals the face conductance for stomata on one face only, and for
+     * equal face conductances it is twice the face conductance for stomata split equally between both faces. It increases with the stomatal conductance toward the sum of the two face conductances.
      * \param[in] g_stomatal Total stomatal conductance of the leaf (mol/m^2/s).
-     * \param[in] g_boundarylayer_face Boundary-layer conductance of a single leaf face (mol/m^2/s).
-     * \param[in] stomatal_sidedness Fraction of the stomata on the upper leaf face.
+     * \param[in] g_boundarylayer_front Boundary-layer conductance of the front leaf face (mol/m^2/s).
+     * \param[in] g_boundarylayer_back Boundary-layer conductance of the back leaf face (mol/m^2/s).
+     * \param[in] stomatal_sidedness Fraction of the stomata on the front leaf face.
      * \return Effective boundary-layer conductance (mol/m^2/s).
      */
-    float effectiveBoundaryLayerConductance(float g_stomatal, float g_boundarylayer_face, float stomatal_sidedness) {
+    float effectiveBoundaryLayerConductance(float g_stomatal, float g_boundarylayer_front, float g_boundarylayer_back, float stomatal_sidedness) {
         g_stomatal = std::max(0.f, g_stomatal);
         float numerator = 0.f;
         float denominator = 0.f;
-        for (float face_fraction: {stomatal_sidedness, 1.f - stomatal_sidedness}) {
+        for (auto [face_fraction, g_boundarylayer_face]: {std::pair<float, float>{stomatal_sidedness, g_boundarylayer_front}, std::pair<float, float>{1.f - stomatal_sidedness, g_boundarylayer_back}}) {
+            if (face_fraction == 0.f) { // a face without stomata exchanges nothing
+                continue;
+            }
             float face_term = face_fraction / (g_boundarylayer_face + face_fraction * g_stomatal);
-            numerator += face_term;
+            numerator += g_boundarylayer_face * face_term;
             denominator += face_fraction * face_term;
         }
-        return g_boundarylayer_face * numerator / denominator;
+        return numerator / denominator;
     }
 
     //! Solve the leaf-surface water vapor balance gs(esurf)*(es-esurf) = gbw*(esurf-ea) for the surface vapor pressure esurf
@@ -682,7 +686,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         }
 
         // The boundary-layer conductance is summed over both faces of a two-sided primitive, but the stomata on a face only exchange gas through that face's boundary layer. The stomatal sidedness is the
-        // fraction of the stomata on the upper face, and is 0 for a one-sided primitive (as in the energy balance and photosynthesis models).
+        // fraction of the stomata on the front face (the face the primitive normal points out of), and is 0 for a one-sided primitive (as in the energy balance and photosynthesis models).
         uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
         uint Nsides = (twosided_flag == 0) ? 1 : 2;
         float stomatal_sidedness = 0.f;
@@ -697,7 +701,39 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
             helios_runtime_error("ERROR (StomatalConductanceModel::run): The stomatal sidedness for primitive " + std::to_string(UUID) + " is " + std::to_string(stomatal_sidedness) +
                                  ", but it must be between 0 and 1. Check the primitive data \"stomatal_sidedness\".");
         }
-        const float gbw_face = gbw / float(Nsides);
+
+        // Boundary-layer conductances to water vapor and CO2 of each face. The per-face conductances written by the boundary-layer conductance plug-in can differ between the faces. Otherwise the summed
+        // conductance is split equally between the faces, and the conductance to CO2 is that to water vapor divided by 1.37. A one-sided primitive exchanges gas through its front face only.
+        float gbw_front = gbw / float(Nsides);
+        float gbw_back = gbw_front;
+        if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_vapor_front") && context->getPrimitiveDataType("boundarylayer_conductance_vapor_front") == HELIOS_TYPE_FLOAT &&
+            context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_vapor_back") && context->getPrimitiveDataType("boundarylayer_conductance_vapor_back") == HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(UUID, "boundarylayer_conductance_vapor_front", gbw_front);
+            context->getPrimitiveData(UUID, "boundarylayer_conductance_vapor_back", gbw_back);
+            if (Nsides == 1) {
+                gbw_back = gbw_front;
+            }
+        }
+        float gbc_front = gbw_front / 1.37f;
+        float gbc_back = gbw_back / 1.37f;
+        if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_CO2_front") && context->getPrimitiveDataType("boundarylayer_conductance_CO2_front") == HELIOS_TYPE_FLOAT &&
+            context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_CO2_back") && context->getPrimitiveDataType("boundarylayer_conductance_CO2_back") == HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(UUID, "boundarylayer_conductance_CO2_front", gbc_front);
+            context->getPrimitiveData(UUID, "boundarylayer_conductance_CO2_back", gbc_back);
+            if (Nsides == 1) {
+                gbc_back = gbc_front;
+            }
+        }
+        if (!no_boundarylayer_exchange) {
+            // a face with stomata but no boundary-layer conductance would have an undefined surface concentration
+            const bool front_blocked = stomatal_sidedness > 0.f && (!(gbw_front > 0.f) || !(gbc_front > 0.f));
+            const bool back_blocked = stomatal_sidedness < 1.f && (!(gbw_back > 0.f) || !(gbc_back > 0.f));
+            if (front_blocked || back_blocked) {
+                helios_runtime_error("ERROR (StomatalConductanceModel::run): The boundary-layer conductance of the " + std::string(front_blocked ? "front" : "back") + " face of primitive " + std::to_string(UUID) +
+                                     " is not positive, but that face has stomata. Check the primitive data \"boundarylayer_conductance_vapor_front\", \"boundarylayer_conductance_vapor_back\", "
+                                     "\"boundarylayer_conductance_CO2_front\" and \"boundarylayer_conductance_CO2_back\", and \"stomatal_sidedness\".");
+            }
+        }
 
         // beta soil moisture factor
         float beta = beta_default;
@@ -897,8 +933,8 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         // Effective boundary-layer conductances to water vapor and CO2 with the leaf faces weighted by the stomatal conductance gs_weighting. The stomatal and boundary-layer conductances to CO2 are
         // those to water vapor divided by 1.6 and 1.37, respectively.
         auto effectiveConductances = [&](float gs_weighting, float &gbw_effective, float &gbc_effective) {
-            gbw_effective = effectiveBoundaryLayerConductance(gs_weighting, gbw_face, stomatal_sidedness);
-            gbc_effective = effectiveBoundaryLayerConductance(gs_weighting / 1.6f, gbw_face / 1.37f, stomatal_sidedness);
+            gbw_effective = effectiveBoundaryLayerConductance(gs_weighting, gbw_front, gbw_back, stomatal_sidedness);
+            gbc_effective = effectiveBoundaryLayerConductance(gs_weighting / 1.6f, gbc_front, gbc_back, stomatal_sidedness);
         };
 
         float gs = 0.f;
@@ -906,18 +942,19 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
             float gbw_effective, gbc_effective;
 
-            // The effective conductances do not depend on gs when the stomata are all on one face or split equally between both faces, and the solution is then direct. Otherwise they increase with gs,
+            // The effective conductances do not depend on gs when the stomata are all on one face, or split equally between two faces of equal conductance, and the solution is then direct. Otherwise they increase with gs,
             // and the self-consistent solution is the root of G(w) = gs(w) - w, where gs(w) is the conductance obtained with the faces weighted by w. Increasing w raises the effective conductances
             // and lowers gs(w), and a leaf-surface CO2 concentration rejected at w means the effective conductance to CO2 is too small, so the root lies at larger w. The root is bracketed and found
             // by bisection, which never evaluates the validity of Cs at a trial weighting other than as a direction to search.
             float gs_weighting = 0.f;
-            const bool weighting_depends_on_gs = stomatal_sidedness > 0.f && stomatal_sidedness < 1.f && stomatal_sidedness != 0.5f;
+            const bool equal_faces = gbw_front == gbw_back && gbc_front == gbc_back;
+            const bool weighting_depends_on_gs = stomatal_sidedness > 0.f && stomatal_sidedness < 1.f && !(stomatal_sidedness == 0.5f && equal_faces);
             if (weighting_depends_on_gs) {
 
                 float gs_trial;
 
-                // As w -> infinity the effective conductances reach their largest possible value, twice the conductance of one face. If Cs is rejected even then, no solution exists.
-                if (!solveConductance(2.f * gbw_face, 2.f * gbw_face / 1.37f, false, gs_trial)) {
+                // As w -> infinity the effective conductances reach their largest possible value, the sum of the conductances of the two faces. If Cs is rejected even then, no solution exists.
+                if (!solveConductance(gbw_front + gbw_back, gbc_front + gbc_back, false, gs_trial)) {
                     throwInvalidSurfaceCO2();
                 }
                 const float gs_minimum = gs_trial;

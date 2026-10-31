@@ -3056,6 +3056,338 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
     return false;
 }
 
+// -------- CAPSULE PROXIMITY QUERIES --------
+
+namespace {
+
+    //! Closest points between segments p1-q1 and p2-q2, returning their squared distance
+    /**
+     * Minimizes |(p1 + s d1) - (p2 + t d2)|^2 over s, t in [0,1]: the unconstrained minimum in s is clamped, t follows from it, and if t has to be clamped s is recomputed for that t.
+     * Zero-length segments are treated as points.
+     */
+    float closestPointsOnSegments(const vec3 &p1, const vec3 &q1, const vec3 &p2, const vec3 &q2, vec3 &closest1, vec3 &closest2) {
+        const vec3 d1 = q1 - p1;
+        const vec3 d2 = q2 - p2;
+        const vec3 r = p1 - p2;
+        const float length1_squared = d1 * d1;
+        const float length2_squared = d2 * d2;
+        const float degenerate_length_squared = 1e-20f;
+        float s = 0;
+        float t = 0;
+        if (length1_squared <= degenerate_length_squared && length2_squared > degenerate_length_squared) {
+            t = clamp((d2 * r) / length2_squared, 0.f, 1.f);
+        } else if (length1_squared > degenerate_length_squared && length2_squared <= degenerate_length_squared) {
+            s = clamp(-(d1 * r) / length1_squared, 0.f, 1.f);
+        } else if (length1_squared > degenerate_length_squared) {
+            const float d1_dot_d2 = d1 * d2;
+            const float d1_dot_r = d1 * r;
+            const float d2_dot_r = d2 * r;
+            const float denominator = length1_squared * length2_squared - d1_dot_d2 * d1_dot_d2;
+            // For (nearly) parallel segments any s gives the line distance; s = 0 is used and t clamped below
+            if (denominator > 1e-6f * length1_squared * length2_squared) {
+                s = clamp((d1_dot_d2 * d2_dot_r - d1_dot_r * length2_squared) / denominator, 0.f, 1.f);
+            }
+            t = (d1_dot_d2 * s + d2_dot_r) / length2_squared;
+            if (t < 0.f) {
+                t = 0.f;
+                s = clamp(-d1_dot_r / length1_squared, 0.f, 1.f);
+            } else if (t > 1.f) {
+                t = 1.f;
+                s = clamp((d1_dot_d2 - d1_dot_r) / length1_squared, 0.f, 1.f);
+            }
+        }
+        closest1 = p1 + s * d1;
+        closest2 = p2 + t * d2;
+        const vec3 separation = closest1 - closest2;
+        return separation * separation;
+    }
+
+    //! Closest point of triangle abc to point p, found from the Voronoi region of the triangle (vertex, edge or face) that p projects into
+    vec3 closestPointOnTriangle(const vec3 &p, const vec3 &a, const vec3 &b, const vec3 &c) {
+        const vec3 ab = b - a;
+        const vec3 ac = c - a;
+        const vec3 ap = p - a;
+        const float ab_ap = ab * ap;
+        const float ac_ap = ac * ap;
+        if (ab_ap <= 0.f && ac_ap <= 0.f) {
+            return a;
+        }
+        const vec3 bp = p - b;
+        const float ab_bp = ab * bp;
+        const float ac_bp = ac * bp;
+        if (ab_bp >= 0.f && ac_bp <= ab_bp) {
+            return b;
+        }
+        const float area_c = ab_ap * ac_bp - ab_bp * ac_ap;
+        if (area_c <= 0.f && ab_ap >= 0.f && ab_bp <= 0.f) {
+            return a + (ab_ap / (ab_ap - ab_bp)) * ab;
+        }
+        const vec3 cp = p - c;
+        const float ab_cp = ab * cp;
+        const float ac_cp = ac * cp;
+        if (ac_cp >= 0.f && ab_cp <= ac_cp) {
+            return c;
+        }
+        const float area_b = ab_cp * ac_ap - ab_ap * ac_cp;
+        if (area_b <= 0.f && ac_ap >= 0.f && ac_cp <= 0.f) {
+            return a + (ac_ap / (ac_ap - ac_cp)) * ac;
+        }
+        const float area_a = ab_bp * ac_cp - ab_cp * ac_bp;
+        if (area_a <= 0.f && (ac_bp - ab_bp) >= 0.f && (ab_cp - ac_cp) >= 0.f) {
+            return b + ((ac_bp - ab_bp) / ((ac_bp - ab_bp) + (ab_cp - ac_cp))) * (c - b);
+        }
+        const float area_total = area_a + area_b + area_c;
+        if (area_total <= 0.f) {
+            // Zero-area triangle not caught by the vertex and edge regions: its nearest point lies on one of its edges
+            vec3 nearest = a;
+            float nearest_distance_squared = std::numeric_limits<float>::max();
+            const vec3 corners[3] = {a, b, c};
+            for (int edge = 0; edge < 3; edge++) {
+                vec3 on_point, on_edge;
+                const float distance_squared = closestPointsOnSegments(p, p, corners[edge], corners[(edge + 1) % 3], on_point, on_edge);
+                if (distance_squared < nearest_distance_squared) {
+                    nearest_distance_squared = distance_squared;
+                    nearest = on_edge;
+                }
+            }
+            return nearest;
+        }
+        return a + (area_b / area_total) * ab + (area_c / area_total) * ac;
+    }
+
+    //! Closest points between segment p-q and triangle abc, returning their squared distance
+    /**
+     * If the segment crosses the triangle the distance is zero. Otherwise the closest pair joins a segment endpoint to the triangle, or the segment to one of the triangle's edges.
+     */
+    float closestPointsSegmentTriangle(const vec3 &p, const vec3 &q, const vec3 &a, const vec3 &b, const vec3 &c, vec3 &on_segment, vec3 &on_triangle) {
+        const vec3 normal = cross(b - a, c - a);
+        const float p_height = (p - a) * normal;
+        const float q_height = (q - a) * normal;
+        if (p_height != q_height && ((p_height <= 0.f && q_height >= 0.f) || (p_height >= 0.f && q_height <= 0.f))) {
+            const vec3 crossing = p + (p_height / (p_height - q_height)) * (q - p);
+            if (cross(b - a, crossing - a) * normal >= 0.f && cross(c - b, crossing - b) * normal >= 0.f && cross(a - c, crossing - c) * normal >= 0.f) {
+                on_segment = crossing;
+                on_triangle = crossing;
+                return 0.f;
+            }
+        }
+
+        float nearest_distance_squared = std::numeric_limits<float>::max();
+        for (const vec3 &endpoint: {p, q}) {
+            const vec3 nearest = closestPointOnTriangle(endpoint, a, b, c);
+            const vec3 separation = endpoint - nearest;
+            if (separation * separation < nearest_distance_squared) {
+                nearest_distance_squared = separation * separation;
+                on_segment = endpoint;
+                on_triangle = nearest;
+            }
+        }
+        const vec3 corners[3] = {a, b, c};
+        for (int edge = 0; edge < 3; edge++) {
+            vec3 segment_point, edge_point;
+            const float distance_squared = closestPointsOnSegments(p, q, corners[edge], corners[(edge + 1) % 3], segment_point, edge_point);
+            if (distance_squared < nearest_distance_squared) {
+                nearest_distance_squared = distance_squared;
+                on_segment = segment_point;
+                on_triangle = edge_point;
+            }
+        }
+        return nearest_distance_squared;
+    }
+
+    //! Euclidean distance between two axis-aligned boxes (zero if they overlap)
+    float aabbSeparation(const vec3 &min1, const vec3 &max1, const vec3 &min2, const vec3 &max2) {
+        const float dx = std::max({0.f, min2.x - max1.x, min1.x - max2.x});
+        const float dy = std::max({0.f, min2.y - max1.y, min1.y - max2.y});
+        const float dz = std::max({0.f, min2.z - max1.z, min1.z - max2.z});
+        return std::sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    //! Closest points between a segment and a cached triangle or patch (split into two triangles), returning their squared distance. Returns false if the primitive is of another type.
+    bool closestPointsSegmentPrimitive(const vec3 &p, const vec3 &q, PrimitiveType type, const std::vector<vec3> &vertices, float &distance_squared, vec3 &on_segment, vec3 &on_primitive) {
+        if (vertices.empty()) {
+            // A BVH leaf whose primitive was deleted from the Context (see rebuildDensePrimitiveCache())
+            distance_squared = std::numeric_limits<float>::max();
+            return true;
+        }
+        if (type == PRIMITIVE_TYPE_TRIANGLE) {
+            distance_squared = closestPointsSegmentTriangle(p, q, vertices.at(0), vertices.at(1), vertices.at(2), on_segment, on_primitive);
+            return true;
+        } else if (type == PRIMITIVE_TYPE_PATCH) {
+            distance_squared = closestPointsSegmentTriangle(p, q, vertices.at(0), vertices.at(1), vertices.at(2), on_segment, on_primitive);
+            vec3 second_on_segment, second_on_primitive;
+            const float second_distance_squared = closestPointsSegmentTriangle(p, q, vertices.at(0), vertices.at(2), vertices.at(3), second_on_segment, second_on_primitive);
+            if (second_distance_squared < distance_squared) {
+                distance_squared = second_distance_squared;
+                on_segment = second_on_segment;
+                on_primitive = second_on_primitive;
+            }
+            return true;
+        }
+        return false;
+    }
+
+} // namespace
+
+void CollisionDetection::prepareCapsuleQuery(const std::vector<Capsule> &capsules, float distance, const char *caller) {
+    if (!std::isfinite(distance) || distance < 0.f) {
+        helios_runtime_error("ERROR (CollisionDetection::" + std::string(caller) + "): The search distance must be finite and non-negative, but was " + std::to_string(distance) + ".");
+    }
+    for (size_t i = 0; i < capsules.size(); i++) {
+        const Capsule &capsule = capsules.at(i);
+        if (!std::isfinite(capsule.radius) || capsule.radius < 0.f) {
+            helios_runtime_error("ERROR (CollisionDetection::" + std::string(caller) + "): Capsule " + std::to_string(i) + " has radius " + std::to_string(capsule.radius) + "; a capsule radius must be finite and non-negative.");
+        }
+        if (!std::isfinite(capsule.start.x) || !std::isfinite(capsule.start.y) || !std::isfinite(capsule.start.z) || !std::isfinite(capsule.end.x) || !std::isfinite(capsule.end.y) || !std::isfinite(capsule.end.z)) {
+            helios_runtime_error("ERROR (CollisionDetection::" + std::string(caller) + "): Capsule " + std::to_string(i) + " has a non-finite axis endpoint.");
+        }
+    }
+    ensureBVHCurrent();
+    if (!bvh_nodes.empty()) {
+        ensurePrimitiveCacheCurrent();
+    }
+}
+
+
+CollisionDetection::CapsuleDistanceResult CollisionDetection::findMinimumCapsuleDistance(const std::vector<Capsule> &capsules, float max_distance, float early_exit_distance) {
+    prepareCapsuleQuery(capsules, max_distance, "findMinimumCapsuleDistance");
+
+    CapsuleDistanceResult result;
+    if (bvh_nodes.empty()) {
+        return result;
+    }
+    // Branch and bound: a node is skipped once its box is farther from the capsule's axis than the best gap found so far allows
+    float best_gap = max_distance;
+    std::vector<uint> node_stack;
+    for (uint capsule_index = 0; capsule_index < capsules.size(); capsule_index++) {
+        const Capsule &capsule = capsules.at(capsule_index);
+        const vec3 axis_min = make_vec3(std::min(capsule.start.x, capsule.end.x), std::min(capsule.start.y, capsule.end.y), std::min(capsule.start.z, capsule.end.z));
+        const vec3 axis_max = make_vec3(std::max(capsule.start.x, capsule.end.x), std::max(capsule.start.y, capsule.end.y), std::max(capsule.start.z, capsule.end.z));
+
+        node_stack.assign(1, 0);
+        while (!node_stack.empty()) {
+            const BVHNode &node = bvh_nodes[node_stack.back()];
+            node_stack.pop_back();
+            if (aabbSeparation(axis_min, axis_max, node.aabb_min, node.aabb_max) - capsule.radius > best_gap) {
+                continue;
+            }
+            if (!node.is_leaf) {
+                if (node.left_child == 0xFFFFFFFF || node.right_child == 0xFFFFFFFF) {
+                    for (uint child: {node.left_child, node.right_child}) {
+                        if (child != 0xFFFFFFFF) {
+                            node_stack.push_back(child);
+                        }
+                    }
+                    continue;
+                }
+                // Visit the nearer child first so that it can tighten the bound before the farther one is tested
+                const float left_separation = aabbSeparation(axis_min, axis_max, bvh_nodes[node.left_child].aabb_min, bvh_nodes[node.left_child].aabb_max);
+                const float right_separation = aabbSeparation(axis_min, axis_max, bvh_nodes[node.right_child].aabb_min, bvh_nodes[node.right_child].aabb_max);
+                if (left_separation < right_separation) {
+                    node_stack.push_back(node.right_child);
+                    node_stack.push_back(node.left_child);
+                } else {
+                    node_stack.push_back(node.left_child);
+                    node_stack.push_back(node.right_child);
+                }
+                continue;
+            }
+            for (uint i = node.primitive_start; i < node.primitive_start + node.primitive_count; i++) {
+                const CachedPrimitive &primitive = primitive_cache_dense[i];
+                float distance_squared;
+                vec3 on_axis, on_primitive;
+                if (!closestPointsSegmentPrimitive(capsule.start, capsule.end, primitive.type, primitive.vertices, distance_squared, on_axis, on_primitive)) {
+                    helios_runtime_error("ERROR (CollisionDetection::findMinimumCapsuleDistance): Primitive " + std::to_string(primitive_indices[i]) + " in the BVH is neither a triangle nor a patch. Capsule distance queries support triangles and patches only.");
+                }
+                if (distance_squared == std::numeric_limits<float>::max()) {
+                    continue;
+                }
+                const float gap = std::sqrt(distance_squared) - capsule.radius;
+                if (gap < best_gap || (!result.found && gap <= best_gap)) {
+                    best_gap = gap;
+                    result.found = true;
+                    result.distance = gap;
+                    result.capsule_index = capsule_index;
+                    result.primitive_UUID = primitive_indices[i];
+                    result.closest_point_on_axis = on_axis;
+                    result.closest_point_on_primitive = on_primitive;
+                    if (gap <= early_exit_distance) {
+                        return result;
+                    }
+                }
+            }
+        }
+    }
+    return result;
+}
+
+std::vector<uint> CollisionDetection::collectPrimitivesNearCapsule(const Capsule &capsule, float distance, bool &found_unsupported_primitive) const {
+    std::vector<uint> UUIDs;
+    if (bvh_nodes.empty()) {
+        return UUIDs;
+    }
+    const float reach = distance + capsule.radius;
+    const vec3 axis_min = make_vec3(std::min(capsule.start.x, capsule.end.x), std::min(capsule.start.y, capsule.end.y), std::min(capsule.start.z, capsule.end.z));
+    const vec3 axis_max = make_vec3(std::max(capsule.start.x, capsule.end.x), std::max(capsule.start.y, capsule.end.y), std::max(capsule.start.z, capsule.end.z));
+
+    std::vector<uint> node_stack(1, 0);
+    while (!node_stack.empty()) {
+        const BVHNode &node = bvh_nodes[node_stack.back()];
+        node_stack.pop_back();
+        if (aabbSeparation(axis_min, axis_max, node.aabb_min, node.aabb_max) > reach) {
+            continue;
+        }
+        if (!node.is_leaf) {
+            for (uint child: {node.left_child, node.right_child}) {
+                if (child != 0xFFFFFFFF) {
+                    node_stack.push_back(child);
+                }
+            }
+            continue;
+        }
+        for (uint i = node.primitive_start; i < node.primitive_start + node.primitive_count; i++) {
+            const CachedPrimitive &primitive = primitive_cache_dense[i];
+            float distance_squared;
+            vec3 on_axis, on_primitive;
+            if (!closestPointsSegmentPrimitive(capsule.start, capsule.end, primitive.type, primitive.vertices, distance_squared, on_axis, on_primitive)) {
+                found_unsupported_primitive = true;
+                continue;
+            }
+            if (distance_squared <= reach * reach) {
+                UUIDs.push_back(primitive_indices[i]);
+            }
+        }
+    }
+    std::sort(UUIDs.begin(), UUIDs.end());
+    return UUIDs;
+}
+
+std::vector<uint> CollisionDetection::findPrimitivesNearCapsule(const Capsule &capsule, float distance) {
+    prepareCapsuleQuery({capsule}, distance, "findPrimitivesNearCapsule");
+    bool found_unsupported_primitive = false;
+    std::vector<uint> UUIDs = collectPrimitivesNearCapsule(capsule, distance, found_unsupported_primitive);
+    if (found_unsupported_primitive) {
+        helios_runtime_error("ERROR (CollisionDetection::findPrimitivesNearCapsule): The BVH holds a primitive near the capsule that is neither a triangle nor a patch. Capsule distance queries support triangles and patches only.");
+    }
+    return UUIDs;
+}
+
+std::vector<std::vector<uint>> CollisionDetection::findPrimitivesNearCapsules(const std::vector<Capsule> &capsules, float distance) {
+    prepareCapsuleQuery(capsules, distance, "findPrimitivesNearCapsules");
+    std::vector<std::vector<uint>> UUIDs(capsules.size());
+    std::vector<char> found_unsupported_primitive(capsules.size(), 0);
+#pragma omp parallel for schedule(dynamic)
+    for (int i = 0; i < int(capsules.size()); i++) {
+        bool unsupported = false;
+        UUIDs[i] = collectPrimitivesNearCapsule(capsules[i], distance, unsupported);
+        found_unsupported_primitive[i] = unsupported ? 1 : 0;
+    }
+    if (std::find(found_unsupported_primitive.begin(), found_unsupported_primitive.end(), 1) != found_unsupported_primitive.end()) {
+        helios_runtime_error("ERROR (CollisionDetection::findPrimitivesNearCapsules): The BVH holds a primitive near a capsule that is neither a triangle nor a patch. Capsule distance queries support triangles and patches only.");
+    }
+    return UUIDs;
+}
+
 
 std::vector<helios::vec3> CollisionDetection::sampleDirectionsInCone(const vec3 &apex, const vec3 &central_axis, float half_angle, int num_samples) {
 

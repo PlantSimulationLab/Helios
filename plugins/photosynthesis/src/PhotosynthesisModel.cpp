@@ -992,15 +992,32 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             warnings.addWarning("negative_boundarylayer_conductance_clipped", "Boundary-layer conductance value provided was negative. Clipping to zero.");
         }
 
-        // Total conductance to CO2 between the intercellular air spaces and the air outside the boundary layer. The stomatal and boundary-layer conductances to CO2 are those to water vapor divided by 1.6 and
-        // 1.37, respectively. gH is summed over all faces, but CO2 entering through the stomata of a face only crosses that face's boundary layer, so the two act in series on each face.
-        float gC;
-        if (gH == 0 || gS == 0) { // conductances in series: if either is zero there is no CO2 supply (and the expression below is 0/0)
-            gC = 0;
+        // Boundary-layer conductance to CO2 of each face. The per-face conductances written by the boundary-layer conductance plug-in can differ between the faces. Otherwise gH, which is summed over all faces, is split equally between
+        // them, and the conductance to CO2 is that to heat times 1.08 (water vapor to heat) divided by 1.37 (water vapor to CO2).
+        float gbc_front, gbc_back;
+        if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_CO2_front") && context->getPrimitiveDataType("boundarylayer_conductance_CO2_front") == HELIOS_TYPE_FLOAT &&
+            context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_CO2_back") && context->getPrimitiveDataType("boundarylayer_conductance_CO2_back") == HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(UUID, "boundarylayer_conductance_CO2_front", gbc_front);
+            context->getPrimitiveData(UUID, "boundarylayer_conductance_CO2_back", gbc_back);
+            if (Nsides == 1) { // only the front face exchanges CO2
+                gbc_back = gbc_front;
+            }
         } else {
-            float gbc = 1.08f * gH / float(Nsides) / 1.37f; // boundary-layer conductance to CO2 of one face
-            float gsc = gS / 1.6f; // stomatal conductance to CO2
-            gC = gbc * gsc * (stomatal_sidedness / (gbc + gsc * stomatal_sidedness) + (1.f - stomatal_sidedness) / (gbc + gsc * (1.f - stomatal_sidedness)));
+            gbc_front = 1.08f * gH / float(Nsides) / 1.37f;
+            gbc_back = gbc_front;
+        }
+
+        // Total conductance to CO2 between the intercellular air spaces and the air outside the boundary layer. The stomatal conductance to CO2 is that to water vapor divided by 1.6. CO2 entering through the stomata of a face only crosses that
+        // face's boundary layer, so the two act in series on each face, and "stomatal_sidedness" is the fraction of the stomata on the front face. A face with no stomata or no boundary-layer conductance supplies no CO2 (and its series
+        // expression would be 0/0).
+        float gC = 0;
+        const float gsc_front = gS / 1.6f * stomatal_sidedness;
+        const float gsc_back = gS / 1.6f * (1.f - stomatal_sidedness);
+        if (gbc_front != 0 && gsc_front != 0) {
+            gC += gbc_front * gsc_front / (gbc_front + gsc_front);
+        }
+        if (gbc_back != 0 && gsc_back != 0) {
+            gC += gbc_back * gsc_back / (gbc_back + gsc_back);
         }
 
         float A, Ci, Gamma, electron_transport_ratio = 0.f;

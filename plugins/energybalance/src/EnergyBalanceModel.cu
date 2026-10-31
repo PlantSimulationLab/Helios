@@ -35,7 +35,23 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
     }
 }
 
-__device__ float evaluateEnergyBalance(float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, float stomatal_sidedness, float heatcapacity, float surfacehumidity, float dt, float Tprev) {
+// Total conductance to water vapor of a surface: the stomata of each face and that face's boundary layer act in series, and the two faces act in parallel. A face with no stomata or no boundary-layer conductance has no vapor pathway,
+// which also avoids a 0/0 in the series expression. Same expression as moistureConductance() in EnergyBalanceModel.cpp.
+__device__ float moistureConductance(float gbv_front, float gbv_back, float gS, float stomatal_sidedness) {
+    float gM = 0.f;
+    float gS_front = gS * stomatal_sidedness;
+    float gS_back = gS * (1.f - stomatal_sidedness);
+    if (gbv_front != 0.f && gS_front != 0.f) {
+        gM += gbv_front * gS_front / (gbv_front + gS_front);
+    }
+    if (gbv_back != 0.f && gS_back != 0.f) {
+        gM += gbv_back * gS_back / (gbv_back + gS_back);
+    }
+    return gM;
+}
+
+__device__ float evaluateEnergyBalance(float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gbv_front, float gbv_back, float gS, uint Nsides, float stomatal_sidedness, float heatcapacity,
+                                       float surfacehumidity, float dt, float Tprev) {
 
     // Outgoing emission flux
     float Rout = float(Nsides) * eps * 5.67e-8F * T * T * T * T;
@@ -46,15 +62,7 @@ __device__ float evaluateEnergyBalance(float T, float R, float Qother, float eps
     // Latent heat flux
     // Same expression as esat_Pa(), which is host-only. The latent flux reported after the solve uses esat_Pa(), so the two must agree for the reported fluxes to close the energy balance.
     float es = 611.0f * expf(17.502f * (T - 273.15f) / (T - 273.15f + 240.97f));
-    // A zero boundary-layer conductance (gH) or zero stomatal conductance (gS) means there is no vapor
-    // pathway, so gM is zero. Guarding both cases also avoids a 0/0 in the series-conductance expression
-    // when gH == 0 and the stomatal sidedness makes one of the denominators vanish.
-    float gM = 0.f;
-    if (gH != 0.f && gS != 0.f) {
-        // gH is summed over all faces, but vapor leaving a face only crosses that face's boundary layer
-        float gbv = 1.08f * gH / float(Nsides);
-        gM = gbv * gS * (stomatal_sidedness / (gbv + gS * stomatal_sidedness) + (1.f - stomatal_sidedness) / (gbv + gS * (1.f - stomatal_sidedness)));
-    }
+    float gM = moistureConductance(gbv_front, gbv_back, gS, stomatal_sidedness);
 
     float QL = gM * lambda_mol * (es * surfacehumidity - ea) / pressure;
 
@@ -68,8 +76,8 @@ __device__ float evaluateEnergyBalance(float T, float R, float Qother, float eps
     return R - Rout - QH - QL - Qother - storage;
 }
 
-__global__ void solveEnergyBalance(uint Nprimitives, float *To, float *R, float *Qother, float *eps, float *Ta, float *ea, float *pressure, float *gH, float *gS, uint *Nsides, float *stomatal_sidedness, float *TL, float *heatcapacity,
-                                   float *surfacehumidity, float dt) {
+__global__ void solveEnergyBalance(uint Nprimitives, float *To, float *R, float *Qother, float *eps, float *Ta, float *ea, float *pressure, float *gH, float *gbv_front, float *gbv_back, float *gS, uint *Nsides, float *stomatal_sidedness, float *TL,
+                                   float *heatcapacity, float *surfacehumidity, float dt) {
 
     uint p = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -93,8 +101,8 @@ __global__ void solveEnergyBalance(uint Nprimitives, float *To, float *R, float 
     // residuals) never leaves the surface temperature uninitialized.
     float T = T_old;
 
-    float resid_old = evaluateEnergyBalance(T_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-    float resid_old_old = evaluateEnergyBalance(T_old_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
+    float resid_old = evaluateEnergyBalance(T_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
+    float resid_old_old = evaluateEnergyBalance(T_old_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
 
     float resid = 100;
     float err = resid;
@@ -108,7 +116,7 @@ __global__ void solveEnergyBalance(uint Nprimitives, float *To, float *R, float 
 
         T = fabs((T_old_old * resid_old - T_old * resid_old_old) / (resid_old - resid_old_old));
 
-        resid = evaluateEnergyBalance(T, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
+        resid = evaluateEnergyBalance(T, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
 
         // Relative change of the newest secant step (measures the latest iterate, not the previous one)
         err = fabs(T - T_old) / fabs(T_old);
@@ -151,6 +159,8 @@ void EnergyBalanceModel::solveSurfaceTemperatures_GPU(const SurfaceEnergyBalance
     float *d_ea = copyToDevice(inputs.ea);
     float *d_pressure = copyToDevice(inputs.pressure);
     float *d_gH = copyToDevice(inputs.gH);
+    float *d_gbv_front = copyToDevice(inputs.gbv_front);
+    float *d_gbv_back = copyToDevice(inputs.gbv_back);
     float *d_gS = copyToDevice(inputs.gS);
     uint *d_Nsides = copyToDevice(inputs.Nsides);
     float *d_stomatal_sidedness = copyToDevice(inputs.stomatal_sidedness);
@@ -164,7 +174,7 @@ void EnergyBalanceModel::solveSurfaceTemperatures_GPU(const SurfaceEnergyBalance
     dim3 dimBlock(64, 1);
     dim3 dimGrid(ceil(Nprimitives / 64.f));
 
-    solveEnergyBalance<<<dimGrid, dimBlock>>>(Nprimitives, d_To, d_R, d_Qother, d_eps, d_Ta, d_ea, d_pressure, d_gH, d_gS, d_Nsides, d_stomatal_sidedness, d_T, d_heatcapacity, d_surfacehumidity, dt);
+    solveEnergyBalance<<<dimGrid, dimBlock>>>(Nprimitives, d_To, d_R, d_Qother, d_eps, d_Ta, d_ea, d_pressure, d_gH, d_gbv_front, d_gbv_back, d_gS, d_Nsides, d_stomatal_sidedness, d_T, d_heatcapacity, d_surfacehumidity, dt);
 
     CUDA_CHECK_ERROR(cudaPeekAtLastError());
     CUDA_CHECK_ERROR(cudaDeviceSynchronize());
@@ -180,6 +190,8 @@ void EnergyBalanceModel::solveSurfaceTemperatures_GPU(const SurfaceEnergyBalance
     CUDA_CHECK_ERROR(cudaFree(d_ea));
     CUDA_CHECK_ERROR(cudaFree(d_pressure));
     CUDA_CHECK_ERROR(cudaFree(d_gH));
+    CUDA_CHECK_ERROR(cudaFree(d_gbv_front));
+    CUDA_CHECK_ERROR(cudaFree(d_gbv_back));
     CUDA_CHECK_ERROR(cudaFree(d_gS));
     CUDA_CHECK_ERROR(cudaFree(d_Nsides));
     CUDA_CHECK_ERROR(cudaFree(d_stomatal_sidedness));

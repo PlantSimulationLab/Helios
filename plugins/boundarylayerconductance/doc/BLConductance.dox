@@ -17,7 +17,9 @@
 
  \section BLCIntro Introduction
 
- The boundary-layer conductance to heat describes the rate of energy transfer across the primitive boundary-layer for a given driving temperature difference. Currently, four different boundary-layer conductance models are available as part of this plug-in.
+ The boundary-layer conductance to heat describes the rate of energy transfer across the primitive boundary-layer for a given driving temperature difference. Currently, five different boundary-layer conductance models are available as part of this plug-in.
+
+ The plug-in also gives the boundary-layer conductances to heat, water vapor and CO2 of each face of a primitive. The front face is the one the primitive normal points out of, and the back face is the other one. The faces of a leaf can exchange heat and mass at quite different rates: buoyancy makes the boundary layer on one face of a leaf warmer or cooler than the air stable and that on the other unstable, and in wind the windward face has a thinner boundary layer than the leeward face. The "Graefe" model (\ref BLC5) resolves these differences, and the "InclinedPlate" model (\ref BLC2) resolves the effect of buoyancy on the faces of a nearly horizontal plate; the other models split their conductance equally between the faces. The \ref EnergyBalanceModel, \ref PhotosynthesisModel and \ref StomatalConductanceModel plug-ins use the per-face conductances when they are present, so that the stomata on each face (set by primitive data "stomatal_sidedness", the fraction of the stomata on the front face) exchange gas through their own face's boundary layer. This matters most for leaves with their stomata on one face.
 
 
 
@@ -37,16 +39,24 @@
  <table>
  <tr><th>Primitive Data <th>Units <th>Data Type <th>Description <th>Available Plug-ins <th>Default Value
   <tr><td>wind\_speed <td>m/s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Air wind speed just outside of primitive boundary-layer. <td>N/A <td>1 m/s
-  <tr><td>object\_length <td>m <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Characteristic dimension of object formed by primitive. <td>N/A <td>Square root of primitive surface area
+  <tr><td>object\_length <td>m <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Characteristic dimension of object formed by primitive. Not used by the "Graefe" model. <td>N/A <td>Square root of the surface area of the primitive's parent object, or of the primitive if it has no parent object
   <tr><td>air\_temperature <td>Kelvin <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Ambient air temperature outside of surface boundary layer. <td>N/A <td>293 K
  <tr><td>temperature <td>Kelvin <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Object surface temperature. <td>\ref EnergyBalanceModel <td>303 K
- <tr><td>twosided\_flag <td>N/A <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly <td>Flag indicating the number of primitive faces with energy transfer (twosided\_flag = 0 for one-sided; twosided\_flag = 1 for two-sided). <td>N/A <td>1  </table>
+ <tr><td>twosided\_flag <td>N/A <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly <td>Flag indicating the number of primitive faces with energy transfer (twosided\_flag = 0 for one-sided; twosided\_flag = 1 for two-sided). <td>N/A <td>1
+ <tr><td>wind\_direction <td>N/A <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">vec3</span>\endhtmlonly <td>Direction the wind blows toward; only its horizontal component is used. "Graefe" and "InclinedPlate" models. If it is not given, the "Graefe" model uses the orientation-averaged streamline length and does not distinguish a windward and a leeward face, and the "InclinedPlate" model takes buoyancy to assist the flow along an inclined plate. <td>N/A <td>Unknown direction
+ <tr><td>turbulence\_intensity <td>% <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Turbulence intensity of the air outside the boundary layer, which sets the onset of the laminar-turbulent transition. "Graefe" model only. <td>N/A <td>20%
+ <tr><td>air\_pressure <td>Pa <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Air pressure. "Graefe" model only. <td>N/A <td>101325 Pa
+ <tr><td>leaf\_length, leaf\_width <td>m <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Length and width of the elliptical leaf. "Graefe" model only; both or neither must be given. <td>N/A <td>Equivalent ellipse of the parent object (see \ref BLC5)
+ </table>
 
  \subsection BLOutputData Default Output Primitive Data
  
  <table>
  <tr><th>Primitive Data <th>Units <th>Data Type <th>Description
- <tr><td>boundarylayer\_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Primitive boundary-layer conductance calculated by this plug-in.
+ <tr><td>boundarylayer\_conductance <td>mol air/m<sup>2</sup>-s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Boundary-layer conductance to heat summed over the faces of the primitive.
+ <tr><td>boundarylayer\_conductance\_front, boundarylayer\_conductance\_back <td>mol air/m<sup>2</sup>-s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Boundary-layer conductance to heat of the front and back face. The back value is 0 for a one-sided primitive.
+ <tr><td>boundarylayer\_conductance\_vapor\_front, boundarylayer\_conductance\_vapor\_back <td>mol air/m<sup>2</sup>-s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Boundary-layer conductance to water vapor of the front and back face. For models other than "Graefe", 1.08 times the conductance to heat.
+ <tr><td>boundarylayer\_conductance\_CO2\_front, boundarylayer\_conductance\_CO2\_back <td>mol air/m<sup>2</sup>-s <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Boundary-layer conductance to CO2 of the front and back face. For models other than "Graefe", the conductance to water vapor divided by 1.37.
  </table>
 
  \section BLUse Using the Boundary Layer Conductance Model Plug-in
@@ -57,11 +67,11 @@
 
  \subsection BLCModels Boundary-layer Conductance Models
 
- There are four different built-in models for the boundary-layer conductance.  The boundary-layer conductance model is set using the \ref BLConductanceModel::setBoundaryLayerModel "setBoundaryLayerModel()" function, which takes as arguments the UUID(s) of primitives for which the model is to be set, and a string referencing the chosen model. Possible models are summarized in the table below and described in further detail below. If the \ref BLConductanceModel::setBoundaryLayerModel "setBoundaryLayerModel()" is called for some UUIDs but not others, the plug-in will assume the default model (Pohlhausen) for any primitives for which no model was explicitly set.
+ There are five different built-in models for the boundary-layer conductance.  The boundary-layer conductance model is set using the \ref BLConductanceModel::setBoundaryLayerModel "setBoundaryLayerModel()" function, which takes as arguments the UUID(s) of primitives for which the model is to be set, and a string referencing the chosen model. Possible models are summarized in the table below and described in further detail below. If the \ref BLConductanceModel::setBoundaryLayerModel "setBoundaryLayerModel()" is called for some UUIDs but not others, the plug-in will assume the default model (Pohlhausen) for any primitives for which no model was explicitly set.
 
- It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the primitive surface area. If the size of the object is different from the size of the primitive, then it is important to manually set the length scale to be the size of the object, as this is the relevant scale for boundary-layer development. This is usually necesary when using the boundary-layer conductance model for a sphere, for example.
+ It is also important to note that, by default, the length scale used to calculate the boundary-layer conductance is taken to be the square root of the surface area of the compound object the primitive belongs to (for example, the tile object forming a leaf), or of the primitive itself if it does not belong to an object. If this is not the relevant scale for boundary-layer development, set it with primitive data "object_length". This is usually necessary when using the boundary-layer conductance model for a sphere, whose length scale is its diameter, and for elongated leaves, whose relevant length is their dimension along the wind. The "Graefe" model does not use this length scale (see \ref BLC5).
 
- The four available models are described in detail below:
+ The five available models are described in detail below:
 
  <table>
  <tr><th>Model<th>string argument
@@ -69,45 +79,58 @@
  <tr><td>2. Inclined Plate<td>"InclinedPlate"
  <tr><td>3. Laminar Sphere<td>"Sphere"
  <tr><td>4. Ground Surface<td>"Ground"
+ <tr><td>5. Inclined Elliptical Leaf, Mixed Free-Forced Convection, Per Face<td>"Graefe"
  </table>
+
+ An unknown model string is an error.
 
  \subsubsection BLC1 1. The Pohlhausen Equation (Laminar Flat Plate, Forced Convection)
 
- The Pohlhausen equation is a classical similarity solution describing the boundary-layer conductance to heat for a flat plate parallel with the flow direction that is infinitely wide in the spanwise direction, and has finite length of \f$L\f$ in the streamwise direction. This model also assumes that the plate/primitive boundary-layer is laminar, and that convection is entirely forced (i.e., momentum forces dominate buoyancy forces). The boundary-layer conductance is calculated as
+ Pohlhausen (1921) solved the laminar thermal boundary layer on an isothermal flat plate parallel with the flow direction, infinitely wide in the spanwise direction and of length \f$L\f$ in the streamwise direction. The resulting average Nusselt number of one face of the plate is \f$Nu=0.664Re^{1/2}Pr^{1/3}\f$. Converted to a molar conductance with the properties of air near 20 \f$^\circ\f$C and standard pressure, this is the leaf boundary-layer conductance to heat given by <a href="https://doi.org/10.1007/978-1-4612-1626-1">Campbell and Norman (1998)</a>, \f$0.135\sqrt{U/L}\f$ mol/m<sup>2</sup>-s for each face. The model sums it over the faces of the primitive:
 
  \f$g_H = 0.135 n_s\sqrt{\frac{U}{L}}\f$,
 
- where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, and \f$L\f$ is the characteristic length/dimension in the streamwise direction of the object that the primitive belongs to. For a leaf consisting of a single primitive, \f$L\f$ could be assumed to be the length of the primitive. If the primitive belongs to a Tile Compound Object, the plug-in will automatically use the dimension of the entire tile object and not that of a single patch/tile. Note that \f$g_H\f$ describes transfer from both sides of the plate/primitive, but transfer from each side of the plate/primitive is asymmetric because of buoyancy forces. \f$n_s\f$ is the number of primitive faces, which is determined by the value of primitive data "twosided_flag" (twosided\_flag=0 is single-sided and \f$n_s=1\f$, twosided\_flag=1 is two-sided and \f$n_s=2\f$).
+ where \f$U\f$ is the wind speed just outside of the primitive boundary-layer, \f$L\f$ is the characteristic length (see above), and \f$n_s\f$ is the number of primitive faces, which is determined by the value of primitive data "twosided_flag" (twosided\_flag=0 is single-sided and \f$n_s=1\f$, twosided\_flag=1 is two-sided and \f$n_s=2\f$). The two faces get equal conductances.
+
+ The model has the following limitations:
+ - The air properties are fixed, so the conductance does not change with air temperature or pressure.
+ - \f$L\f$ should be the dimension of the object along the wind, but by default it is the square root of the object's area and does not depend on the wind direction.
+ - The flow is laminar and forced only. Buoyancy is neglected, so the conductance is zero in still air and both faces are the same.
+ - Pohlhausen's solution is for a smooth, isolated plate in a steady, non-turbulent stream. Leaves outdoors typically exchange heat faster than this, because of free-stream turbulence, leaf edges and leaf motion. The "Graefe" model (\ref BLC5) accounts for leaf edges, turbulence intensity and buoyancy.
 
  \subsubsection BLC2 2. Laminar Inclined Plate, Mixed Free-Forced Convection
 
- <a href="https://doi.org/10.1115/1.3247020">Chen et al. (1986)</a> provide a correlation for the boundary-layer conductance of a flat plate that is inclined with respect to the mean ambient flow direction. The correlation assumes that the plate is infinite in the spanwise direction, and has length \f$L\f$ in the other direction.
+ <a href="https://doi.org/10.1115/1.3247020">Chen et al. (1986)</a> provide correlations for laminar mixed free-forced convection in the boundary layer on an isothermal flat plate inclined at an angle \f$\gamma\f$ from the vertical (\f$\gamma=0^\circ\f$ for a vertical plate and \f$90^\circ\f$ for a horizontal one; \f$\gamma\f$ is also the angle of the primitive normal from the horizontal). The correlations give the heat transfer of the boundary layer on one face of the plate. <a href="https://doi.org/10.1115/1.3248035">Ramachandran et al. (1987)</a> measured the flows above and below an inclined plate and found them essentially the same, so the model applies the correlation to each face of the primitive and the summed conductance of a two-sided primitive is twice it. For nearly horizontal plates the faces differ, as described below. The model writes the conductance of each face (see \ref BLOutputData).
 
- The boundary-layer conductance for a plate inclined at \f$\theta_L\leq 75^\circ\f$ is given by
+ The conductance of a face is \f$g_H=\rho_a\frac{\nu}{Pr\,L}Nu\f$, and for a plate inclined at \f$\gamma<75^\circ\f$ its average Nusselt number is
 
- \f$g_H(\theta_L)=\frac{\rho_a \nu}{Pr\,D_L}2F_1Re^{1/2}\left\{1\pm\left[\frac{2F_2\left(Gr\,\mathrm{cos}\,\theta_L/Re^2\right)^{1/4}}{3F_1}\right]^3\right\}^{1/3},\f$
+ \f$Nu=2F_1Re^{1/2}\left\{1\pm\left[\frac{2F_2\left(Gr\,\mathrm{cos}\,\gamma/Re^2\right)^{1/4}}{3F_1}\right]^3\right\}^{1/3},\f$
 
-and for \f$\theta_L>75^\circ\f$ as
+and for \f$\gamma\geq 75^\circ\f$
 
-\f$g_H(\theta_L)=\frac{\rho_a \nu}{Pr\,D_L}2F_1Re^{1/2}\left\{1\pm\left[\frac{F_3\left(Gr/Re^{5/2}\right)^{1/5}Gr^{C(\theta_L)}}{6\left[0.2+C(\theta_L)\right]F_1}\right]^3\right\}^{1/3},\f$
+\f$Nu=2F_1Re^{1/2}\left\{1\pm\left[\frac{F_4\left(Gr/Re^{5/2}\right)^{1/5}Gr^{C(\gamma)}}{6\left[0.2+C(\gamma)\right]F_1}\right]^3\right\}^{1/3},\f$
 
-where \f$\rho_a\f$, \f$\nu\f$, and \f$Pr\f$ are respectively the molar density, kinematic viscosity, and Prandtl number of air, \f$L\f$ is the effective leaf dimension (<a href="https://doi.org/10.1115/1.3597463">Parkhurst 1968</a>), \f$Re\f$ is the Reynolds number based on \f$L\f$ and the local free-stream air velocity, and \f$Gr\f$ is the Grashof number which is defined here as
+where \f$\rho_a\f$, \f$\nu\f$, and \f$Pr\f$ are respectively the molar density, kinematic viscosity, and Prandtl number of air, \f$L\f$ is the characteristic length of the plate (<a href="https://doi.org/10.1115/1.3597463">Parkhurst 1968</a>), \f$Re\f$ is the Reynolds number based on \f$L\f$ and the local free-stream air velocity, and \f$Gr\f$ is the Grashof number which is defined here as
 
-\f$Gr=\frac{g\beta\left(T_L-T_a\right)D_L^3}{\nu^2},\f$
+\f$Gr=\frac{g\beta\left|T_L-T_a\right|L^3}{\nu^2},\f$
 
-where \f$g\f$ is the acceleration due to gravity, and \f$\beta\f$ is the volumetric thermal expansion coefficient which we approximate as the inverse of absolute ambient air temperature \f$1/T_a\f$ with \f$T_a\f$ in units of Kelvin. The plus and minus signs corresponds to buoyancy assisting flow and opposing flow cases, respectively. In the present model, the mean wind vector is always orthogonal to the gravity vector (transverse flow), and thus we always take the positive or buoyancy assisting flow case. The constants in the correlations are defined as
+where \f$g\f$ is the acceleration due to gravity, and \f$\beta\f$ is the volumetric thermal expansion coefficient which we approximate as the inverse of absolute ambient air temperature \f$1/T_a\f$ with \f$T_a\f$ in units of Kelvin. The constants in the correlations are defined as
 
-\f$F_1=0.399Pr^{1/3}\left[1+\left(0.0468/Pr\right)^{2/3}\right]^{-1/4},\f$
+\f$F_1=0.339Pr^{1/3}\left[1+\left(0.0468/Pr\right)^{2/3}\right]^{-1/4},\f$
 
 \f$F_2=0.75Pr^{1/2}\left[2.5\left(1+2Pr^{1/2}+2Pr\right)\right]^{-1/4},\f$
 
-\f$F_3=Pr^{1/2}\left[0.25+1.6Pr^{1/2}\right]^{-1}\left(Pr/5\right)^{0.2+C(\theta_L)},\f$
+\f$F_4=Pr^{1/2}\left[0.25+1.6Pr^{1/2}\right]^{-1}\left(Pr/5\right)^{0.2+C(\gamma)},\f$
 
-\f$C(\theta_L)=0.070\left(\mathrm{cos}\,\theta_L\right)^{1/2}.\f$
+\f$C(\gamma)=0.070\left(\mathrm{cos}\,\gamma\right)^{1/2}.\f$
 
-When the wind speed is zero (\f$Re=0\f$) the mixed-convection correlations above cannot be evaluated, so the model instead uses pure free convection, \f$g_H=\rho_a\frac{\nu}{Pr\,L}Nu\f$, with the laminar natural-convection Nusselt number of <a href="https://doi.org/10.1002/cite.330260716">McAdams (1954)</a>: \f$Nu=0.54\left(Gr\,\mathrm{cos}\,\theta_L\right)^{1/4}\f$ for nearly horizontal plates (\f$\theta_L<75^\circ\f$ or \f$\theta_L>105^\circ\f$) and \f$Nu=0.59\,Gr^{1/4}\f$ for nearly vertical plates. This free-convection correlation is not the limit of the mixed-convection correlations as the wind speed tends to zero, so the conductance jumps when the wind speed reaches zero. As \f$Re\rightarrow 0\f$ the correlation for nearly horizontal plates tends to \f$Nu=\frac{4}{3}F_2\left(Gr\,\mathrm{cos}\,\theta_L\right)^{1/4}\approx 0.47\left(Gr\,\mathrm{cos}\,\theta_L\right)^{1/4}\f$, so the zero-wind conductance is about 15% larger than at a vanishingly small wind speed. The correlation for nearly vertical plates tends to \f$Nu=F_3\,Gr^{0.2+C(\theta_L)}/\left\{3\left[0.2+C(\theta_L)\right]\right\}\f$, which grows more slowly with \f$Gr\f$ than the free-convection value, so the jump increases with \f$Gr\f$: the zero-wind conductance is about 1.2 times the low-wind value for a 1 cm leaf 0.5 K warmer than the air, and about 2 times for a 10 cm leaf 5 K warmer.
+Chen et al. (1986) print the coefficient of \f$F_1\f$ as 0.399, but the correlation of Churchill and Ozoe (1973, J. Heat Transfer 95:416) that they cite has 0.339, which reproduces the classical laminar flat-plate value (0.332 in Ramachandran et al. 1987); 0.339 is used here.
 
-Chen et al. (1986) mention that the equation for \f$\theta_L\leq 75^\circ\f$ is valid for \f$10^3\leq Re \leq 10^5\f$, and the equation for \f$\theta_L>75^\circ\f$ is valid for \f$10^3\leq GrPr \leq 10^9\f$.  We expect leaf Reynolds numbers somewhere between \f$5\times 10^3\f$ and \f$5\times 10^4\f$. Average \f$Gr Pr\f$ values are usually on the order of \f$10^6\f$. When \f$T_L \approx T_a\f$, it is possible for \f$Gr Pr\f$ to drop below \f$10^3\f$, however in these cases the net radiation is usually nearly zero and convective heat fluxes are low anyway.
+The plus and minus signs correspond to buoyancy assisting and opposing the forced flow, respectively. For \f$\gamma<75^\circ\f$ buoyancy drives the flow up the slope along a heated plate and down it along a cooled one, on both faces. If primitive data "wind_direction" is given, the buoyancy assists when the wind has a component up the slope of a heated plate (or down the slope of a cooled one) and opposes otherwise; if the wind direction is unknown or across the slope, it is taken to assist. For \f$\gamma\geq 75^\circ\f$ the buoyancy acts across the plate, and it assists the flow on the face it rises from (the upper face of a heated plate, the lower face of a cooled one) and opposes it on the other face. With opposing buoyancy the correlation holds only while the term in square brackets, the ratio of the free to the forced convection Nusselt number, is less than 1; beyond that the boundary layer separates and free convection dominates. The model then uses the larger of the opposing mixed-convection value and the pure free-convection value of that face, which is the term in square brackets times \f$2F_1Re^{1/2}\f$ (half of it for the lower face of a heated, nearly horizontal plate).
+
+When the wind speed is zero (\f$Re=0\f$) the mixed-convection correlations above cannot be evaluated, so the model instead uses pure free convection with the laminar natural-convection correlations of <a href="https://doi.org/10.1002/cite.330260716">McAdams (1954)</a>: \f$Nu=0.54\left(Gr\,\mathrm{sin}\,\gamma\right)^{1/4}\f$ for the face of a nearly horizontal plate (\f$\gamma\geq 75^\circ\f$) that buoyancy rises from and \f$Nu=0.27\left(Gr\,\mathrm{sin}\,\gamma\right)^{1/4}\f$ for the other face, and \f$Nu=0.59\left(Gr\,\mathrm{cos}\,\gamma\right)^{1/4}\f$ for both faces of a plate inclined at \f$\gamma<75^\circ\f$. These free-convection correlations are not the limit of the mixed-convection correlations as the wind speed tends to zero, so the conductance jumps when the wind speed reaches zero: for a 10 cm plate 5 K warmer than 300 K air, the summed zero-wind conductance is about 1.8 times the low-wind value for a horizontal plate and about 1.3 times for a vertical plate.
+
+Chen et al. (1986) mention that the equation for \f$\gamma< 75^\circ\f$ is valid for \f$10^3\leq Re \leq 10^5\f$, and the equation for \f$\gamma\geq 75^\circ\f$ is valid for \f$10^3\leq GrPr \leq 10^9\f$.  We expect leaf Reynolds numbers somewhere between \f$5\times 10^3\f$ and \f$5\times 10^4\f$. Average \f$Gr Pr\f$ values are usually on the order of \f$10^6\f$. When \f$T_L \approx T_a\f$, it is possible for \f$Gr Pr\f$ to drop below \f$10^3\f$, however in these cases the net radiation is usually nearly zero and convective heat fluxes are low anyway.
 
  \subsubsection BLC3 3. Laminar flow around a sphere
 
@@ -124,6 +147,24 @@ Chen et al. (1986) mention that the equation for \f$\theta_L\leq 75^\circ\f$ is 
  \f$g_H = 0.166+0.5U,\f$
 
  where \f$U\f$ is the wind speed at a height above the soil surface where the effect of the soil surface roughness is minimal; typically 0.05 to 0.2 m.
+
+ \subsubsection BLC5 5. Inclined elliptical leaf, mixed free-forced convection, per face
+
+ This model is a C++ port of the general model of the <a href="https://github.com/Code4Plants/Leaf-Boundary-Layer">leaf-boundary-layer</a> package by Jan Graefe (Leibniz Institute of Vegetable and Ornamental Crops, v1.1.0, LGPL-2.1-or-later). Its free-convection core is the model of <a href="https://doi.org/10.1016/j.agrformet.2022.108884">Graefe, Grosch and Bitterlich (2022)</a> for inclined elliptical leaves, and the forced and mixed convection, laminar-turbulent transition, angle-of-attack and scalar-conductance extensions are those of the package. As its author requests, please cite both the paper and the package (Graefe, J., 2026, leaf-conductance: boundary-layer conductance of leaves under free, forced and mixed convection, version 1.1.0) when using this model. It gives the conductances of the upper and lower faces of a flat elliptical leaf of length \f$L\f$ and width \f$W\f$ (\f$L\geq W\f$) separately, for heat, water vapor and CO2. The upper face is the one facing up, which is the front face if the primitive normal points up.
+
+ <b>Free convection.</b> The flux-proportional Nusselt numbers (m<sup>-1</sup>) of the upper (U) and lower (L) face of a leaf warmer than the air are (Eq. 3 of Graefe et al. 2022)
+
+ \f$Nu_{i,U}=p_3L_i^{-1/4}\sin^{p_4}\theta\,Ra^{1/4},\quad Nu_{i,L}=p_3L_i^{-1/4}\sin^{1/4}\theta\,Ra^{1/4},\quad Nu_{h,U}=p_5L_h^{-1/4}\cos^{1/4}\theta\,Ra^{1/4},\quad Nu_{h,L}=p_6L_h^{-0.4}\cos^{0.2}\theta\,Ra^{0.2},\f$
+
+ \f$Nu_c=5.3\sin(0.0338\,L/W+0.607)/\sqrt{S},\qquad Nu_F=\left\{\left[Nu_i^{p_1}+Nu_h^{p_1}\right]^{p_2/p_1}+Nu_c^{p_2}\right\}^{1/p_2},\f$
+
+ where \f$\theta\f$ is the angle of the leaf normal from vertical, \f$S=\pi LW/4\f$ is the leaf area, \f$L_h=S/P\f$ is the characteristic length of a horizontal leaf with the perimeter \f$P\f$ implied by the dissection index of the ellipse, \f$L_i\f$ is the characteristic length of an inclined leaf, from the mean chord length along the direction of steepest ascent, \f$Ra=g|\Delta T|Pr/(T_a\nu^2)\f$ is a Rayleigh number without length scale, and \f$p_1\ldots p_6\f$ = 6, 1.42, 0.513, 0.4, 0.202, 0.492. For a leaf cooler than the air the upper and lower faces exchange expressions. Note that for a nearly horizontal leaf the fitted parameters give the stably stratified face (the lower face of a warm leaf) a larger conductance than the unstable face, unlike the classical correlations for large heated plates. The conduction limit \f$Nu_c\f$ makes small leaves exchange heat even in still air. On the unstable face, a turbulent free-convection contribution \f$0.14Ra^{1/3}\f$ is blended in as \f$(Nu_F^6+Nu_{turb}^6)^{1/6}\f$, which matters only for leaves of decimeter size and large temperature differences.
+
+ <b>Forced convection.</b> The forced convection of each face is the flat-plate average Nusselt number of <a href="https://doi.org/10.1115/1.4046795">Lienhard (2020)</a>, laminar \f$0.664Re^{1/2}Pr^{1/3}\f$ up to a transition onset \f$Re_l=3.63\times 10^5\,TI^{-1.25}\f$ (bounded to \f$[2\times10^3, 5\times10^5]\f$, with the turbulence intensity \f$TI\f$ in %), then transitional and turbulent. The Reynolds number is based on the streamline length: the horizontal wind is projected onto the leaf plane, and the length of the leaf along that direction is weighted as in Eq. 4 of Graefe et al. (2022). If the wind direction is not given, or the wind is normal to the leaf, the orientation-averaged chord length is used. A finite-plate enhancement (1.161) and factors for the windward face, \f$1+0.226\sin\beta\f$, and the leeward face, \f$w(1+0.574\sin 2\beta)+0.833(1-w)\f$ with \f$w=\exp[-(\beta/31.2^\circ)^2]\f$, account for the angle of attack \f$\beta\f$ of the wind on the leaf; these were fitted by the package author to 815 thin-plate and leaf measurements.
+
+ <b>Mixed convection and scalars.</b> Free and forced convection are combined on each face as \f$Nu=(Nu_{F,free}^3+Nu_{F,forced}^3)^{1/3}\f$, and the conductance to heat is \f$\kappa Nu\f$ with the thermal diffusivity \f$\kappa\f$ of air at the film temperature, converted to mol/m<sup>2</sup>-s with the molar density of air. The conductances to water vapor and CO2 are \f$g_s=g_H(D_s/\kappa)^k\f$, where \f$D_s\f$ is the molecular diffusivity and the exponent \f$k\f$ is weighted between the transport regimes (1 for conduction, 0.75 for laminar and 2/3 for turbulent free convection, 2/3 for laminar and 0.4 for turbulent forced convection).
+
+ <b>Leaf shape.</b> The length, width and long axis of the leaf are those of an equivalent ellipse of the primitive's parent object, which is taken to be the whole leaf: the ellipse has the aspect ratio of the object's principal second moments of area and the object's area. For a primitive without a parent object the primitive itself is used. The primitive data "leaf_length" and "leaf_width" override the size. The inclination and the angle of attack are those of the primitive's own normal, and the long axis is projected onto the primitive's plane. A primitive whose plane contains no part of the leaf's long axis, as can occur for strongly folded or rolled leaves, is an error, as are voxels.
 
  \subsection BLCSet Setting the Boundary-layer Conductance Model To Be Used
 
@@ -142,7 +183,7 @@ Chen et al. (1986) mention that the equation for \f$\theta_L\leq 75^\circ\f$ is 
   boundarylayerconductance.setBoundaryLayerModel( "InclinedPlate" );
 
   // This changes the boundary-layer conductance model for the second primitive (while the first will keep the model set above)
-  boundarylayerconductance.setBoundaryLayerModel( UUID1, "ground" );
+  boundarylayerconductance.setBoundaryLayerModel( UUID1, "Ground" );
  ~~~~~~
 
  \subsection BLCRun Running the Model

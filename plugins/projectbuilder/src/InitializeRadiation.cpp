@@ -87,7 +87,8 @@ void InitializeRadiation(const std::string &xml_input_file, SolarPosition *solar
 
         int scattering_depth = 0;
         node = radiation_block.child("scattering_depth");
-        if (!node.empty()) {
+        const bool scattering_depth_given = !node.empty();
+        if (scattering_depth_given) {
 
             const char *scattering_depth_str = node.child_value();
             if (!parse_int(scattering_depth_str, scattering_depth)) {
@@ -212,11 +213,9 @@ void InitializeRadiation(const std::string &xml_input_file, SolarPosition *solar
             radiation_ptr->setDiffuseRayCount("LW", diffuse_ray_count);
         }
 
-        if (scattering_depth > 0) {
+        if (scattering_depth_given) {
             radiation_ptr->setScatteringDepth("PAR", scattering_depth);
             radiation_ptr->setScatteringDepth("NIR", scattering_depth);
-        } else {
-            std::cout << "WARNING: No value given for 'scattering_depth'. All objects will be assumed to be black." << std::endl;
         }
 
         if (air_turbidity > 0) {
@@ -286,11 +285,7 @@ void InitializeRadiation(const std::string &xml_input_file, SolarPosition *solar
 
         if (!ground_UUIDs.empty()) {
             if (!ground_reflectivity_spectrum.empty()) {
-                if (context_ptr->doesGlobalDataExist(ground_reflectivity_spectrum.c_str())) {
-                    context_ptr->setPrimitiveData(ground_UUIDs, "reflectivity_spectrum", ground_reflectivity_spectrum);
-                } else {
-                    std::cout << "WARNING: The specified ground reflectivity spectrum '" + ground_reflectivity_spectrum + "' could not be found in existing global data. Assuming the ground is black across all shortwave bands." << std::endl;
-                }
+                context_ptr->setPrimitiveData(ground_UUIDs, "reflectivity_spectrum", ground_reflectivity_spectrum);
             } else {
                 std::cout << "WARNING: No value given for 'ground_reflectivity_spectrum'. Assuming the ground is black across all shortwave bands." << std::endl;
             }

@@ -148,7 +148,7 @@ void Visualizer::printWindow(const char *outfile, const std::string &image_forma
 
         // Set up shader and render
         primaryShader.useShader();
-        updatePerspectiveTransformation(false);
+        updatePerspectiveTransformation();
         primaryShader.setTransformationMatrix(perspectiveTransformationMatrix);
         primaryShader.setViewMatrix(cameraViewMatrix);
         primaryShader.setProjectionMatrix(cameraProjectionMatrix);
@@ -661,8 +661,6 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         createShadowFramebuffer();
     }
 
-    glm::mat4 depthMVP;
-
     assert(checkerrors());
 
     std::vector<vec3> camera_output;
@@ -681,34 +679,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
         if (shadow_flag) {
             assert(checkerrors());
-            // Depth buffer for shadows
-            glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
-            glViewport(0, 0, shadow_buffer_size.x, shadow_buffer_size.y); // Render on the whole framebuffer, complete from the lower left corner to the upper right
-
-            // Clear the screen
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-            depthShader.useShader();
-
-            updatePerspectiveTransformation(true);
-
-            // Compute the MVP matrix from the light's point of view
-            depthMVP = computeShadowDepthMVP();
-            depthShader.setTransformationMatrix(depthMVP);
-
-            // bind depth texture
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, depthTexture);
-            glActiveTexture(GL_TEXTURE0);
-
-            depthShader.enableTextureMaps();
-            depthShader.enableTextureMasks();
-
-            assert(checkerrors());
-
-            render(true);
-        } else {
-            depthMVP = glm::mat4(1.0);
+            renderShadowCascades();
         }
 
         // Render to the screen
@@ -725,11 +696,9 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
         primaryShader.useShader();
 
-        glm::mat4 DepthBiasMVP = biasMatrix * depthMVP;
+        updatePerspectiveTransformation();
 
-        primaryShader.setDepthBiasMatrix(DepthBiasMVP);
-
-        updatePerspectiveTransformation(false);
+        setShadowCascadeUniforms(primaryShader);
 
         primaryShader.setTransformationMatrix(perspectiveTransformationMatrix);
         primaryShader.setViewMatrix(cameraViewMatrix);
@@ -815,35 +784,8 @@ void Visualizer::plotOnce(bool getKeystrokes) {
         createShadowFramebuffer();
     }
 
-    glm::mat4 depthMVP;
-
     if (shadow_flag) {
-        // Depth buffer for shadows
-        glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
-        glViewport(0, 0, shadow_buffer_size.x, shadow_buffer_size.y); // Render on the whole framebuffer, complete from the lower left corner to the upper right
-
-        // Clear the screen
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        depthShader.useShader();
-
-        updatePerspectiveTransformation(true);
-
-        // Compute the MVP matrix from the light's point of view
-        depthMVP = computeShadowDepthMVP();
-        depthShader.setTransformationMatrix(depthMVP);
-
-        // bind depth texture
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, depthTexture);
-        glActiveTexture(GL_TEXTURE0);
-
-        depthShader.enableTextureMaps();
-        depthShader.enableTextureMasks();
-
-        render(true);
-    } else {
-        depthMVP = glm::mat4(1.0);
+        renderShadowCascades();
     }
 
     assert(checkerrors());
@@ -871,11 +813,9 @@ void Visualizer::plotOnce(bool getKeystrokes) {
 
     primaryShader.useShader();
 
-    glm::mat4 DepthBiasMVP = biasMatrix * depthMVP;
+    updatePerspectiveTransformation();
 
-    primaryShader.setDepthBiasMatrix(DepthBiasMVP);
-
-    updatePerspectiveTransformation(false);
+    setShadowCascadeUniforms(primaryShader);
 
     primaryShader.setTransformationMatrix(perspectiveTransformationMatrix);
     primaryShader.setViewMatrix(cameraViewMatrix);
@@ -942,6 +882,9 @@ void Visualizer::transferBufferData() {
         }
         return;
     }
+
+    // Geometry changed, so the extent of the shadow casters may have too
+    shadow_caster_bounds_dirty = true;
 
     // Whether a buffer needs reallocating is decided against the size recorded when it was last
     // uploaded, rather than by asking the driver with glGetBufferParameteriv. That query is a
@@ -1226,9 +1169,42 @@ void Visualizer::transferTextureData() {
 
 void Visualizer::bindShadowMap() const {
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, depthTexture != 0 ? depthTexture : shadow_map_placeholder_texture);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, depthTexture != 0 ? depthTexture : shadow_map_placeholder_texture);
     glUniform1i(primaryShader.shadowmapUniform, 1);
     glActiveTexture(GL_TEXTURE0);
+}
+
+void Visualizer::renderShadowCascades() {
+    computeShadowCascades();
+
+    glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
+    glViewport(0, 0, shadow_buffer_size.x, shadow_buffer_size.y);
+
+    // The shadow map must not stay bound for sampling while it is being rendered into
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, shadow_map_placeholder_texture);
+    glActiveTexture(GL_TEXTURE0);
+
+    depthShader.useShader();
+    depthShader.enableTextureMaps();
+    depthShader.enableTextureMasks();
+
+    for (int cascade = 0; cascade < shadow_cascade_count; cascade++) {
+        glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0, cascade);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        // A zero far depth means the cascade is unused (no shadow-casting geometry); the shader never samples it.
+        if (shadow_cascade_far_depths[cascade] > 0.f) {
+            depthShader.setTransformationMatrix(shadow_cascade_light_matrices[cascade]);
+            render(true);
+        }
+    }
+
+    assert(checkerrors());
+}
+
+void Visualizer::setShadowCascadeUniforms(const Shader &shader) const {
+    const glm::vec3 camera_forward = glm::normalize(glm_vec3(camera_lookat_center) - glm_vec3(camera_eye_location));
+    shader.setShadowCascades(shadow_cascade_lookup_matrices.data(), shadow_cascade_far_depths.data(), shadow_cascade_texel_sizes.data(), shadow_cascade_count, camera_forward);
 }
 
 void Visualizer::render(bool shadow) const {
@@ -1462,7 +1438,7 @@ void Visualizer::render(bool shadow) const {
             // Switch to line shader which uses geometry shader for wide lines
             lineShader.useShader();
             lineShader.setTransformationMatrix(perspectiveTransformationMatrix);
-            lineShader.setDepthBiasMatrix(computeShadowDepthMVP());
+            setShadowCascadeUniforms(lineShader);
             lineShader.setLightDirection(light_direction);
             lineShader.setLightingModel(primaryLightingModel);
             lineShader.setLightIntensity(lightintensity);
@@ -1561,7 +1537,7 @@ void Visualizer::render(bool shadow) const {
             // Switch back to primary shader for subsequent rendering
             primaryShader.useShader();
             primaryShader.setTransformationMatrix(perspectiveTransformationMatrix);
-            primaryShader.setDepthBiasMatrix(computeShadowDepthMVP());
+            setShadowCascadeUniforms(primaryShader);
             primaryShader.setLightDirection(light_direction);
             primaryShader.setLightIntensity(lightintensity);
             primaryShader.setColorBoost(colorboost);
@@ -1738,35 +1714,8 @@ void Visualizer::plotUpdate(bool hide_window) {
         createShadowFramebuffer();
     }
 
-    glm::mat4 depthMVP;
-
     if (shadow_flag) {
-        // Depth buffer for shadows
-        glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
-        glViewport(0, 0, shadow_buffer_size.x, shadow_buffer_size.y); // Render on the whole framebuffer, complete from the lower left corner to the upper right
-
-        // Clear the screen
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        depthShader.useShader();
-
-        updatePerspectiveTransformation(true);
-
-        // Compute the MVP matrix from the light's point of view
-        depthMVP = computeShadowDepthMVP();
-        depthShader.setTransformationMatrix(depthMVP);
-
-        // bind depth texture
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, depthTexture);
-        glActiveTexture(GL_TEXTURE0);
-
-        depthShader.enableTextureMaps();
-        depthShader.enableTextureMasks();
-
-        render(true);
-    } else {
-        depthMVP = glm::mat4(1.0);
+        renderShadowCascades();
     }
 
     assert(checkerrors());
@@ -1794,11 +1743,9 @@ void Visualizer::plotUpdate(bool hide_window) {
 
     primaryShader.useShader();
 
-    glm::mat4 DepthBiasMVP = biasMatrix * depthMVP;
+    updatePerspectiveTransformation();
 
-    primaryShader.setDepthBiasMatrix(DepthBiasMVP);
-
-    updatePerspectiveTransformation(false);
+    setShadowCascadeUniforms(primaryShader);
 
     primaryShader.setTransformationMatrix(perspectiveTransformationMatrix);
     primaryShader.setViewMatrix(cameraViewMatrix);
@@ -1898,7 +1845,7 @@ void Visualizer::updateDepthBuffer() {
 
     depthShader.useShader();
 
-    updatePerspectiveTransformation(false);
+    updatePerspectiveTransformation();
     depthShader.setTransformationMatrix(perspectiveTransformationMatrix);
 
     depthShader.enableTextureMaps();
@@ -2038,7 +1985,7 @@ void Visualizer::renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::ve
 
     annotationShader.useShader();
 
-    updatePerspectiveTransformation(false);
+    updatePerspectiveTransformation();
     annotationShader.setTransformationMatrix(perspectiveTransformationMatrix);
 
     annotationShader.enableTextureMaps();
@@ -2449,8 +2396,11 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
     viewMatrixUniform = glGetUniformLocation(shaderID, "view");
     projectionMatrixUniform = glGetUniformLocation(shaderID, "projection");
 
-    // Depth Bias Matrix (for shadows)
-    depthBiasUniform = glGetUniformLocation(shaderID, "DepthBiasMVP");
+    // Cascaded shadow map parameters
+    shadowCascadeMatricesUniform = glGetUniformLocation(shaderID, "shadowCascadeMatrices");
+    shadowCascadeFarDepthsUniform = glGetUniformLocation(shaderID, "shadowCascadeFarDepths");
+    shadowCascadeTexelSizesUniform = glGetUniformLocation(shaderID, "shadowCascadeTexelSizes");
+    cameraForwardUniform = glGetUniformLocation(shaderID, "cameraForward");
 
     // Texture Sampler
     textureUniform = glGetUniformLocation(shaderID, "textureSampler");
@@ -2602,8 +2552,11 @@ void Shader::setProjectionMatrix(const glm::mat4 &matrix) const {
     glUniformMatrix4fv(projectionMatrixUniform, 1, GL_FALSE, &matrix[0][0]);
 }
 
-void Shader::setDepthBiasMatrix(const glm::mat4 &matrix) const {
-    glUniformMatrix4fv(depthBiasUniform, 1, GL_FALSE, &matrix[0][0]);
+void Shader::setShadowCascades(const glm::mat4 *lookup_matrices, const float *far_depths, const float *texel_sizes, int cascade_count, const glm::vec3 &camera_forward) const {
+    glUniformMatrix4fv(shadowCascadeMatricesUniform, cascade_count, GL_FALSE, &lookup_matrices[0][0][0]);
+    glUniform1fv(shadowCascadeFarDepthsUniform, cascade_count, far_depths);
+    glUniform1fv(shadowCascadeTexelSizesUniform, cascade_count, texel_sizes);
+    glUniform3f(cameraForwardUniform, camera_forward.x, camera_forward.y, camera_forward.z);
 }
 
 void Shader::setLightDirection(const helios::vec3 &direction) const {

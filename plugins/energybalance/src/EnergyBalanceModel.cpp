@@ -31,6 +31,21 @@
 
 using namespace helios;
 
+// Total conductance to water vapor of a surface: the stomata of each face and that face's boundary layer act in series, and the two faces act in parallel. A face with no stomata or no boundary-layer conductance has no vapor pathway,
+// which also avoids a 0/0 in the series expression.
+static inline float moistureConductance(float gbv_front, float gbv_back, float gS, float stomatal_sidedness) {
+    float gM = 0.f;
+    float gS_front = gS * stomatal_sidedness;
+    float gS_back = gS * (1.f - stomatal_sidedness);
+    if (gbv_front != 0.f && gS_front != 0.f) {
+        gM += gbv_front * gS_front / (gbv_front + gS_front);
+    }
+    if (gbv_back != 0.f && gS_back != 0.f) {
+        gM += gbv_back * gS_back / (gbv_back + gS_back);
+    }
+    return gM;
+}
+
 EnergyBalanceModel::EnergyBalanceModel(helios::Context *__context) {
 
     // All default values set here
@@ -754,9 +769,6 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
         }
     }
 
-    // Water vapor diffuses more readily than heat, so conductances to moisture are larger by the ratio of diffusivities.
-    constexpr float moisture_conductance_ratio = 1.08f;
-
     updateCanopyWindProfile(wind_speed_canopy_top);
 
     // -- Initialize the airspace state to the above-canopy boundary condition -- //
@@ -846,19 +858,10 @@ void EnergyBalanceModel::evaluateCanopyAirspace(const std::vector<uint> &UUIDs) 
     // Tridiagonal system coefficients: sub-diagonal, diagonal, super-diagonal, and right-hand side.
     std::vector<float> sub(Nlayers), diag(Nlayers), super(Nlayers), rhs(Nlayers);
 
-    // Total conductance to water vapor of a surface, and the vapor mole fraction at its evaporating surface. Water vapor leaves through the stomata (or soil pores) and the boundary layer in series, and the boundary-layer conductance is the
-    // conductance summed over both faces of a two-sided primitive whereas vapor leaving a face only crosses that face's boundary layer. These are the same expressions the surface energy balance uses to compute the latent flux, so that the water
-    // weighted into the airspace matches the water the surface actually released.
+    // Total conductance to water vapor of a surface, and the vapor mole fraction at its evaporating surface. Water vapor leaves each face through the stomata (or soil pores) and that face's boundary layer in series. These are the same
+    // expressions the surface energy balance uses to compute the latent flux, so that the water weighted into the airspace matches the water the surface actually released.
     auto evaluateMoistureSource = [&](size_t s, float T_surface, float &g_M, float &x_surface) {
-        float g_bl = inputs.gH.at(s);
-        float gS = inputs.gS.at(s);
-        float stomatal_sidedness = inputs.stomatal_sidedness.at(s);
-
-        g_M = 0.f;
-        if (g_bl != 0.f && gS != 0.f) {
-            float g_bv = moisture_conductance_ratio * g_bl / float(inputs.Nsides.at(s));
-            g_M = g_bv * gS * (stomatal_sidedness / (g_bv + gS * stomatal_sidedness) + (1.f - stomatal_sidedness) / (g_bv + gS * (1.f - stomatal_sidedness)));
-        }
+        g_M = moistureConductance(inputs.gbv_front.at(s), inputs.gbv_back.at(s), inputs.gS.at(s), inputs.stomatal_sidedness.at(s));
 
         // The evaporating surface is at the relative humidity 'surface_humidity' (saturated by default) at the surface temperature.
         x_surface = inputs.surfacehumidity.at(s) * esat_Pa(T_surface) / Patm;
@@ -1566,8 +1569,8 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
 }
 
 // Helper function: CPU version of energy balance evaluation
-static inline float evaluateEnergyBalance_CPU(float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gS, uint Nsides, float stomatal_sidedness, float heatcapacity, float surfacehumidity, float dt,
-                                              float Tprev) {
+static inline float evaluateEnergyBalance_CPU(float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gbv_front, float gbv_back, float gS, uint Nsides, float stomatal_sidedness, float heatcapacity,
+                                              float surfacehumidity, float dt, float Tprev) {
 
     // Outgoing emission flux
     float Rout = float(Nsides) * eps * 5.67e-8F * T * T * T * T;
@@ -1577,15 +1580,7 @@ static inline float evaluateEnergyBalance_CPU(float T, float R, float Qother, fl
 
     // Latent heat flux
     float es = esat_Pa(T);
-    // A zero boundary-layer conductance (gH) or zero stomatal conductance (gS) means there is no vapor
-    // pathway, so gM is zero. Guarding both cases also avoids a 0/0 in the series-conductance expression
-    // when gH == 0 and the stomatal sidedness makes one of the denominators vanish.
-    float gM = 0.f;
-    if (gH != 0.f && gS != 0.f) {
-        // gH is summed over all faces, but vapor leaving a face only crosses that face's boundary layer
-        float gbv = 1.08f * gH / float(Nsides);
-        gM = gbv * gS * (stomatal_sidedness / (gbv + gS * stomatal_sidedness) + (1.f - stomatal_sidedness) / (gbv + gS * (1.f - stomatal_sidedness)));
-    }
+    float gM = moistureConductance(gbv_front, gbv_back, gS, stomatal_sidedness);
 
     float QL = gM * lambda_mol * (es * surfacehumidity - ea) / pressure;
 
@@ -1715,6 +1710,7 @@ void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint
     const bool stomatal_sidedness_given = isPrimitiveDataLabelOfType("stomatal_sidedness", helios::HELIOS_TYPE_FLOAT);
     const bool evaporating_faces_given = isPrimitiveDataLabelOfType("evaporating_faces", helios::HELIOS_TYPE_UINT);
     const bool boundarylayer_conductance_given = isPrimitiveDataLabelOfType("boundarylayer_conductance", helios::HELIOS_TYPE_FLOAT);
+    const bool face_vapor_conductance_given = isPrimitiveDataLabelOfType("boundarylayer_conductance_vapor_front", helios::HELIOS_TYPE_FLOAT) && isPrimitiveDataLabelOfType("boundarylayer_conductance_vapor_back", helios::HELIOS_TYPE_FLOAT);
     const bool wind_speed_given = isPrimitiveDataLabelOfType("wind_speed", helios::HELIOS_TYPE_FLOAT);
     const bool object_length_given = isPrimitiveDataLabelOfType("object_length", helios::HELIOS_TYPE_FLOAT);
     const bool moisture_conductance_given = isPrimitiveDataLabelOfType("moisture_conductance", helios::HELIOS_TYPE_FLOAT);
@@ -1732,6 +1728,8 @@ void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint
     inputs.ea.resize(Nprimitives);
     inputs.pressure.resize(Nprimitives);
     inputs.gH.resize(Nprimitives);
+    inputs.gbv_front.resize(Nprimitives);
+    inputs.gbv_back.resize(Nprimitives);
     inputs.gS.resize(Nprimitives);
     inputs.Nsides.resize(Nprimitives);
     inputs.stomatal_sidedness.resize(Nprimitives);
@@ -1908,6 +1906,19 @@ void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint
                     calculated_blconductance_used = true;
                 }
 
+                // Boundary-layer conductance to water vapor of each face. The per-face conductances written by the boundary-layer conductance plug-in can differ between the faces; otherwise the conductance to heat is split equally
+                // between the faces.
+                if (face_vapor_conductance_given && context->doesPrimitiveDataExist(p, "boundarylayer_conductance_vapor_front") && context->doesPrimitiveDataExist(p, "boundarylayer_conductance_vapor_back")) {
+                    context->getPrimitiveData(p, "boundarylayer_conductance_vapor_front", inputs.gbv_front[u]);
+                    context->getPrimitiveData(p, "boundarylayer_conductance_vapor_back", inputs.gbv_back[u]);
+                    if (inputs.Nsides[u] == 1) { // only the front face exchanges water vapor
+                        inputs.gbv_back[u] = inputs.gbv_front[u];
+                    }
+                } else {
+                    inputs.gbv_front[u] = moisture_conductance_ratio * inputs.gH[u] / float(inputs.Nsides[u]);
+                    inputs.gbv_back[u] = inputs.gbv_front[u];
+                }
+
                 // Moisture conductance
                 if (moisture_conductance_given && context->doesPrimitiveDataExist(p, "moisture_conductance")) {
                     context->getPrimitiveData(p, "moisture_conductance", inputs.gS[u]);
@@ -2068,6 +2079,8 @@ void EnergyBalanceModel::solveSurfaceTemperatures_CPU(const SurfaceEnergyBalance
     const std::vector<float> &ea = inputs.ea;
     const std::vector<float> &pressure = inputs.pressure;
     const std::vector<float> &gH = inputs.gH;
+    const std::vector<float> &gbv_front = inputs.gbv_front;
+    const std::vector<float> &gbv_back = inputs.gbv_back;
     const std::vector<float> &gS = inputs.gS;
     const std::vector<uint> &Nsides = inputs.Nsides;
     const std::vector<float> &stomatal_sidedness = inputs.stomatal_sidedness;
@@ -2115,8 +2128,8 @@ void EnergyBalanceModel::solveSurfaceTemperatures_CPU(const SurfaceEnergyBalance
         }
 
         // Evaluate residual at initial guesses
-        float resid_old = evaluateEnergyBalance_CPU(T_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-        float resid_old_old = evaluateEnergyBalance_CPU(T_old_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
+        float resid_old = evaluateEnergyBalance_CPU(T_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
+        float resid_old_old = evaluateEnergyBalance_CPU(T_old_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
 
         // Secant method iteration. Initialize the result to the current best guess so that a degenerate
         // early exit (identical residuals) never leaves the surface temperature uninitialized.
@@ -2133,7 +2146,7 @@ void EnergyBalanceModel::solveSurfaceTemperatures_CPU(const SurfaceEnergyBalance
 
             T_new = fabs((T_old_old * resid_old - T_old * resid_old_old) / (resid_old - resid_old_old));
 
-            resid = evaluateEnergyBalance_CPU(T_new, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
+            resid = evaluateEnergyBalance_CPU(T_new, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
 
             // Relative change of the newest secant step (measures the latest iterate, not the previous one)
             err = fabs(T_new - T_old) / fabs(T_old);
@@ -2189,11 +2202,7 @@ void EnergyBalanceModel::writeSurfaceEnergyBalanceOutputs(const std::vector<uint
         sensible_flux[u] = cp_air_mol * inputs.gH[u] * (T[u] - inputs.Ta[u]);
 
         surface_esat[u] = esat_Pa(T[u]);
-        float gM = 0.f;
-        if (inputs.gH[u] != 0.f && inputs.gS[u] != 0.f) {
-            float gbv = 1.08f * inputs.gH[u] / float(inputs.Nsides[u]); // per-face boundary-layer conductance to vapor
-            gM = gbv * inputs.gS[u] * (inputs.stomatal_sidedness[u] / (gbv + inputs.gS[u] * inputs.stomatal_sidedness[u]) + (1.f - inputs.stomatal_sidedness[u]) / (gbv + inputs.gS[u] * (1.f - inputs.stomatal_sidedness[u])));
-        }
+        float gM = moistureConductance(inputs.gbv_front[u], inputs.gbv_back[u], inputs.gS[u], inputs.stomatal_sidedness[u]);
         latent_flux[u] = lambda_mol * gM * (surface_esat[u] * inputs.surfacehumidity[u] - inputs.ea[u]) / inputs.pressure[u];
     }
 

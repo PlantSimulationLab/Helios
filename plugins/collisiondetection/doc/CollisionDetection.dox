@@ -265,6 +265,35 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  helios::vec3 new_tip = shoot_tip + path_result.direction * segment_length;
  ~~~~~~
 
+ \subsection CDCapsuleQueries Exact Distances from Capsules
+
+ \ref CollisionDetection::findCollisions() and \ref CollisionDetection::findCollisionsWithinDistance() compare primitive bounding boxes (and centroids), which is fast but greatly over-reports contacts for long, thin geometry such as branches, whose bounding boxes are mostly empty space. When the actual gap matters -- for example the clearance between a robot arm and the plant it is working in -- model the moving object as capsules, line segments with a radius, and measure their exact distance to the primitives' triangle and patch geometry.
+
+ The queries search the primitives the BVH was built over, as ray casting does. \ref CollisionDetection::findMinimumCapsuleDistance() returns the smallest gap between any of a set of capsules and the primitives, with the capsule and primitive involved and the closest points on each. The gap is the distance from the capsule's surface, so it is negative when the capsule overlaps a primitive. Primitives farther than the search distance are not considered, which keeps the query local, and an optional early-exit distance stops the search at the first gap that small, for a fast yes/no clearance test. \ref CollisionDetection::findPrimitivesNearCapsule() and its batch form \ref CollisionDetection::findPrimitivesNearCapsules() return every primitive within a given gap of a capsule.
+
+ ~~~~~~{.cpp}
+ collision.buildBVH(branch_UUIDs); // the obstacles
+
+ std::vector<CollisionDetection::Capsule> arm = {
+     {shoulder, elbow, 0.05f},  // upper arm: axis start, axis end, radius (m)
+     {elbow, wrist, 0.04f},     // forearm
+ };
+
+ // Smallest gap within 10 cm of the arm
+ CollisionDetection::CapsuleDistanceResult clearance = collision.findMinimumCapsuleDistance(arm, 0.1f);
+ if (clearance.found) {
+     std::cout << "Capsule " << clearance.capsule_index << " is " << clearance.distance << " m from primitive " << clearance.primitive_UUID << std::endl;
+ }
+
+ // Is anything closer than 2 cm? Stops at the first such primitive.
+ bool too_close = collision.findMinimumCapsuleDistance(arm, 0.02f, 0.02f).found;
+
+ // Every primitive within 1 cm of each link
+ std::vector<std::vector<uint>> touching = collision.findPrimitivesNearCapsules(arm, 0.01f);
+ ~~~~~~
+
+ The BVH prunes everything out of reach, so a query costs little more than the primitives near the capsules: on a canopy of four 1000-day apple trees (520,000 primitives), the smallest gap from 50 capsules takes a few hundredths of a millisecond, and with the BVH built, finding everything within 2 cm of them about 0.1 ms. Only triangles and patches are supported, and texture transparency is ignored: a primitive counts as its full polygon, so a leaf with a transparency-masked texture is treated as its whole rectangle.
+
  \section CDExamples Example Applications
 
  \subsection CDPlantGrowth Plant Growth Simulation

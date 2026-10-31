@@ -658,6 +658,115 @@ static __forceinline__ __device__ void accumulateWhiteReference(const PerRayData
     }
 }
 
+// ---------------------------------------------------------------------------
+// Specular surface layer (see RayTracingMaterial::surface_model). A primitive with a layer reflects a(mu) of the radiation
+// arriving at its surface into the second component of its outgoing radiation, with angular shape a(mu), and its body
+// absorbs, reflects and transmits the rest (rho and tau are those of the body), sending it out in the first component with
+// shape 1 - a(mu). Both components are stored in the outgoing and scattered buffers, the second after the first.
+// ---------------------------------------------------------------------------
+
+//! Albedo table of the surface layer of the primitive at position pos in global band b_global, or nullptr if it has none there
+static __forceinline__ __device__ const float *surfaceLayerTable(uint32_t pos, uint32_t b_global) {
+    if (params.surface_model == nullptr) return nullptr;
+    const uint32_t model = params.surface_model[pos];
+    if (model == 0u) return nullptr;
+    const uint32_t table = params.surface_model_band_table[(model - 1u) * params.Nbands_global + b_global];
+    if (table == 0xFFFFFFFFu) return nullptr;
+    return params.surface_layer_tables + (size_t)table * (params.surface_layer_table_size + 3u);
+}
+
+//! Directional albedo a(mu) of a surface layer, interpolated linearly in its table
+static __forceinline__ __device__ float surfaceLayerAlbedo(const float *table, float mu) {
+    const uint32_t size = params.surface_layer_table_size;
+    const float x = fminf(fmaxf(mu, 0.f), 1.f) * float(size - 1u);
+    const uint32_t i = min(uint32_t(x), size - 2u);
+    return table[i] + (x - float(i)) * (table[i + 1u] - table[i]);
+}
+
+//! Flux a face sends out at the angle whose cosine is mu_out, from its two outgoing components [component][prim][band]
+static __forceinline__ __device__ float outgoingLayerFlux(const float *outgoing, uint32_t ind, const float *table, float mu_out) {
+    const uint32_t layer_offset = params.Nprimitives * params.Nbands_launch;
+    const float a = surfaceLayerAlbedo(table, mu_out);
+    const float abar = table[params.surface_layer_table_size];
+    return outgoing[ind] * (1.f - a) / (1.f - abar) + outgoing[layer_offset + ind] * a / abar;
+}
+
+//! Fresnel + GGX reflection of a surface layer from direction to_source to direction to_viewer (unit vectors), in 1/sr, for the face whose unit normal is face_normal; 0 unless both are on that face's side
+static __forceinline__ __device__ float surfaceLayerLobe(const float *table, const float3 &face_normal, const float3 &to_source, const float3 &to_viewer) {
+    const float mu_s = dot(face_normal, to_source);
+    const float mu_o = dot(face_normal, to_viewer);
+    if (mu_s <= 0.f || mu_o <= 0.f) return 0.f;
+    const uint32_t size = params.surface_layer_table_size;
+    const float n = table[size + 1u];
+    const float alpha2 = table[size + 2u] * table[size + 2u];
+    const float3 half_vector = normalize(make_float3(to_source.x + to_viewer.x, to_source.y + to_viewer.y, to_source.z + to_viewer.z));
+    const float mu_h = dot(face_normal, half_vector);
+    const float D_denominator = mu_h * mu_h * (alpha2 - 1.f) + 1.f;
+    const float D = alpha2 / (float(M_PI) * D_denominator * D_denominator);
+    const float lambda_s = 0.5f * (-1.f + sqrtf(1.f + alpha2 * (1.f - mu_s * mu_s) / (mu_s * mu_s)));
+    const float lambda_o = 0.5f * (-1.f + sqrtf(1.f + alpha2 * (1.f - mu_o * mu_o) / (mu_o * mu_o)));
+    const float G2 = 1.f / (1.f + lambda_s + lambda_o);
+    // Unpolarized Fresnel reflectance of the microfacet
+    const float c = fminf(fmaxf(dot(half_vector, to_source), 0.f), 1.f);
+    const float cos_t = sqrtf(fmaxf(0.f, 1.f - (1.f - c * c) / (n * n)));
+    const float rs = (c - n * cos_t) / (c + n * cos_t);
+    const float rp = (n * c - cos_t) / (n * c + cos_t);
+    const float F = 0.5f * (rs * rs + rp * rp);
+    return F * D * G2 / (4.f * mu_s * mu_o);
+}
+
+//! Flux, in the units of the outgoing buffers, that the surface layer of the primitive at position pos reflects toward to_viewer from the direct radiation of every source reaching point (see RadiationModel::runBand(): radiation_specular holds the incident direct flux). camera >= 0 weights each source by that camera's response.
+static __forceinline__ __device__ float directLayerReflection(uint32_t pos, uint32_t b_launch, const float *table, const float3 &face_normal, const float3 &to_viewer, const float3 &point, int camera) {
+    float reflected = 0.f;
+    for (uint32_t s = 0; s < params.Nsources; s++) {
+        float incident = params.radiation_specular[(s * params.Nprimitives + pos) * params.Nbands_launch + b_launch];
+        if (incident <= 0.f) continue;
+        if (camera >= 0) {
+            incident *= params.source_fluxes_cam[(s * params.Nbands_launch + b_launch) * params.Ncameras + uint32_t(camera)];
+        }
+        // A collimated source or the sun sphere lies in one direction; a finite source is seen in the direction of its centre
+        const float3 to_source = (params.source_types[s] == 0 || params.source_types[s] == 2)
+                                     ? normalize(params.source_positions[s])
+                                     : normalize(make_float3(params.source_positions[s].x - point.x, params.source_positions[s].y - point.y, params.source_positions[s].z - point.z));
+        reflected += incident * surfaceLayerLobe(table, face_normal, to_source, to_viewer);
+    }
+    return float(M_PI) * reflected; // radiance to flux units
+}
+
+//! Global index of the launched band with launch index b_launch
+static __forceinline__ __device__ uint32_t globalBandIndex(uint32_t b_launch) {
+    uint32_t b = 0;
+    for (uint32_t b_global = 0; b_global < params.Nbands_global; b_global++) {
+        if (!params.band_launch_flag[b_global]) continue;
+        if (b == b_launch) return b_global;
+        b++;
+    }
+    return 0u; // unreachable: b_launch is always below the number of launched bands
+}
+
+//! |cosine| of the angle between a direction and the normal of the primitive at position pos
+static __forceinline__ __device__ float primitiveNormalCos(uint32_t pos, const float3 &direction) {
+    float T[16];
+    loadTransformMatrix(pos, T);
+    // The normal of patches and triangles is along the cross product of the first two columns of the transform
+    const float3 normal = normalize(cross(make_float3(T[0], T[4], T[8]), make_float3(T[1], T[5], T[9])));
+    return fabsf(dot(normal, direction));
+}
+
+//! Adds what the surface layer of the primitive at origin_position reflects, of a ray's arrival on face prd->face, to that face's second outgoing component, and to every camera's (weighted by its white reference, since the layer reflects all wavelengths alike)
+static __forceinline__ __device__ void depositLayerReflection(const PerRayData *prd, uint32_t ind_origin, uint32_t b_global, float reflected) {
+    const uint32_t layer_offset = params.Nprimitives * params.Nbands_launch;
+    atomicFloatAdd(&(prd->face ? params.scatter_buff_top : params.scatter_buff_bottom)[layer_offset + ind_origin], reflected);
+    if (params.Ncameras > 0 && params.scatter_buff_top_cam && params.white_reference_cam) {
+        const uint32_t Ncameras = params.Ncameras;
+        float *camera_buff = prd->face ? params.scatter_buff_top_cam : params.scatter_buff_bottom_cam;
+        for (uint32_t cam = 0; cam < Ncameras; cam++) {
+            const float white = params.white_reference_cam[(prd->source_ID * params.Nbands_global + b_global) * Ncameras + cam];
+            atomicFloatAdd(&camera_buff[(Ncameras + cam) * layer_offset + ind_origin], reflected * white);
+        }
+    }
+}
+
 extern "C" __global__ void __miss__direct() {
     PerRayData *prd = getPayloadPRD();
 
@@ -697,7 +806,23 @@ extern "C" __global__ void __miss__direct() {
         if (origin_is_cover) {
             depositOnCoverOrigin(prd, origin_position, ind_origin, b_global, origin_cos, (float)strength);
         } else {
-            const float absorption = (float)(strength * (1.0 - t_rho - t_tau));
+            // A surface layer reflects layer_albedo of what arrives; the body absorbs and scatters the rest. The layer reflects a
+            // source's direct radiation into its microfacet lobe around the mirror direction, which the rays reading the first
+            // scattering of the direct radiation evaluate from the incident flux stored here (see directLayerReflection()).
+            const float *layer = surfaceLayerTable(origin_position, b_global);
+            const float layer_albedo = layer ? surfaceLayerAlbedo(layer, prd->origin_cos) : 0.f;
+            const double body_strength = layer ? strength * (1.0 - layer_albedo) : strength;
+            if (layer && params.radiation_specular) {
+                atomicFloatAdd(&params.radiation_specular[(prd->source_ID * Nprims + origin_position) * Nbands_launch + (uint32_t)b], (float)strength);
+            }
+            // The reflected energy is also kept in the face's second outgoing component, so that the host counts it in the energy
+            // the launch delivering the lobe scatters, or absorbs it in place if that launch never comes; the host clears it
+            // before that launch reads the outgoing buffers (cameras use the lobe alone).
+            if (layer_albedo > 0.f) {
+                atomicFloatAdd(&(prd->face ? params.scatter_buff_top : params.scatter_buff_bottom)[Nprims * Nbands_launch + ind_origin], (float)(strength * layer_albedo));
+            }
+
+            const float absorption = (float)(body_strength * (1.0 - t_rho - t_tau));
 
             atomicFloatAdd(&params.radiation_in[ind_origin], absorption);
             if (params.radiation_in_top && prd->face) {
@@ -706,11 +831,11 @@ extern "C" __global__ void __miss__direct() {
 
             if (t_rho > 0.f || t_tau > 0.f) {
                 if (prd->face) {
-                    atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(strength * t_rho));
-                    atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], (float)(strength * t_tau));
+                    atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(body_strength * t_rho));
+                    atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], (float)(body_strength * t_tau));
                 } else {
-                    atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], (float)(strength * t_rho));
-                    atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(strength * t_tau));
+                    atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], (float)(body_strength * t_rho));
+                    atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(body_strength * t_tau));
                 }
             }
 
@@ -728,36 +853,19 @@ extern "C" __global__ void __miss__direct() {
                     const float t_rho_cam = params.rho_cam[rc_idx];
                     const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
                     const uint32_t ind_cam = cam * cam_stride + ind_origin;
-                    if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.0) {
+                    if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && body_strength > 0.0) {
                         if (prd->face) {
-                            atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(strength * t_rho_cam));
-                            atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(strength * t_tau_cam));
+                            atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(body_strength * t_rho_cam));
+                            atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(body_strength * t_tau_cam));
                         } else {
-                            atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(strength * t_rho_cam));
-                            atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(strength * t_tau_cam));
+                            atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(body_strength * t_rho_cam));
+                            atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(body_strength * t_tau_cam));
                         }
                     }
                 }
             }
         }
         accumulateWhiteReference(prd, ind_origin, b_global, (float)strength);
-
-        // Accumulate incident radiation for specular for ALL cameras (per source, camera-weighted).
-        // Direct rays are launched once (not per camera), so we must populate every camera's
-        // slot in radiation_specular here so each camera's closest-hit can read its own data.
-        if (params.specular_reflection_enabled > 0 && params.radiation_specular && params.source_fluxes_cam && strength > 0.0) {
-            for (uint32_t cam = 0; cam < params.Ncameras; cam++) {
-                // source_fluxes_cam layout: [source][band][camera] (full 3D buffer uploaded in updateSources)
-                const uint32_t weight_idx = prd->source_ID * Nbands_launch * params.Ncameras
-                                          + (uint32_t)b * params.Ncameras + cam;
-                const float camera_weight = params.source_fluxes_cam[weight_idx];
-                // radiation_specular layout: [source][camera][primitive][band]
-                const uint32_t ind_specular = prd->source_ID * params.Ncameras * Nprims * Nbands_launch
-                                            + cam * Nprims * Nbands_launch
-                                            + origin_position * Nbands_launch + (uint32_t)b;
-                atomicFloatAdd(&params.radiation_specular[ind_specular], (float)(strength * camera_weight));
-            }
-        }
     }
 }
 
@@ -780,7 +888,7 @@ extern "C" __global__ void __miss__diffuse() {
     const float3 ray_dir = optixGetWorldRayDirection();
 
     // The diffuse sky fills only the upper hemisphere unless enabled below the horizon.
-    if (ray_dir.z < 0.f && params.below_horizon_diffuse_enabled == 0) return;
+    const bool sees_sky = ray_dir.z >= 0.f || params.below_horizon_diffuse_enabled != 0;
 
     // A translucent cover books what reaches it with its angular glass properties, not rho/tau.
     const bool  origin_is_cover = coverInAllLaunchedBands(origin_position);
@@ -791,17 +899,22 @@ extern "C" __global__ void __miss__diffuse() {
         if (!params.band_launch_flag[b_global]) continue;
         b++;
 
-        if (params.diffuse_flux[b] <= 0.f) continue;
+        // The ray brings the sky's flux less that of the band's reference blackbody field, which follows the sky fluxes in
+        // diffuse_flux: emission is gathered as its departure from that field (see RadiationModel::runBand()).
+        const float sky_flux       = sees_sky ? params.diffuse_flux[b] : 0.f;
+        const float reference_flux = params.diffuse_flux[Nbands_launch + b];
+        if (sky_flux <= 0.f && reference_flux == 0.f) continue;
 
         const float4 sky_p   = params.sky_radiance_params  ? params.sky_radiance_params[b]                : make_float4(0.f, 0.f, 0.f, 0.f);
         const float3 peak_d  = params.diffuse_peak_dir     ? params.diffuse_peak_dir[b]                   : make_float3(0.f, 0.f, 1.f);
         const float  power_K = params.diffuse_extinction   ? params.diffuse_extinction[b]                 : 0.f;
         const float  power_N = params.diffuse_dist_norm    ? params.diffuse_dist_norm[b]                  : 1.f;
 
-        const float fd       = evaluateDiffuseAngularDistribution(ray_dir, peak_d, power_K, power_N, sky_p);
+        const float fd       = sky_flux > 0.f ? evaluateDiffuseAngularDistribution(ray_dir, peak_d, power_K, power_N, sky_p) : 0.f;
         // Attenuation from any translucent covers (glass/plastic) the sky ray passed through, per band.
-        const float cover_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? prd->cover_transmittance[b] : 1.f;
-        const float strength = fd * params.diffuse_flux[b] * (float)prd->strength * cover_tau;
+        const float cover_tau    = (b < HELIOS_MAX_RADIATION_BANDS) ? prd->cover_transmittance[b] : 1.f;
+        const float sky_strength = fd * sky_flux * (float)prd->strength * cover_tau;
+        const float strength     = sky_strength - reference_flux * (float)prd->strength * cover_tau;
 
         const uint32_t ind_origin   = origin_position * Nbands_launch + (uint32_t)b;
         const uint32_t radprop_ind  = prd->source_ID * Nprims * Nbands_global
@@ -812,18 +925,26 @@ extern "C" __global__ void __miss__diffuse() {
         if (origin_is_cover) {
             depositOnCoverOrigin(prd, origin_position, ind_origin, b_global, origin_cos, strength);
         } else {
-            atomicFloatAdd(&params.radiation_in[ind_origin], strength * (1.f - t_rho - t_tau));
+            // A surface layer reflects layer_albedo of what arrives; the body absorbs and scatters the rest
+            const float *layer = surfaceLayerTable(origin_position, b_global);
+            const float layer_albedo = layer ? surfaceLayerAlbedo(layer, prd->origin_cos) : 0.f;
+            const float body_strength = layer ? strength * (1.f - layer_albedo) : strength;
+            if (layer_albedo > 0.f) {
+                depositLayerReflection(prd, ind_origin, b_global, strength * layer_albedo);
+            }
+
+            atomicFloatAdd(&params.radiation_in[ind_origin], body_strength * (1.f - t_rho - t_tau));
             if (params.radiation_in_top && prd->face) {
-                atomicFloatAdd(&params.radiation_in_top[ind_origin], strength * (1.f - t_rho - t_tau));
+                atomicFloatAdd(&params.radiation_in_top[ind_origin], body_strength * (1.f - t_rho - t_tau));
             }
 
             if (t_rho > 0.f || t_tau > 0.f) {
                 if (prd->face) { // top-face origin
-                    atomicFloatAdd(&params.scatter_buff_top[ind_origin],    strength * t_rho);
-                    atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], strength * t_tau);
+                    atomicFloatAdd(&params.scatter_buff_top[ind_origin],    body_strength * t_rho);
+                    atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], body_strength * t_tau);
                 } else {         // bottom-face origin
-                    atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], strength * t_rho);
-                    atomicFloatAdd(&params.scatter_buff_top[ind_origin],    strength * t_tau);
+                    atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], body_strength * t_rho);
+                    atomicFloatAdd(&params.scatter_buff_top[ind_origin],    body_strength * t_tau);
                 }
             }
 
@@ -841,19 +962,19 @@ extern "C" __global__ void __miss__diffuse() {
                     const float t_rho_cam = params.rho_cam[rc_idx];
                     const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
                     const uint32_t ind_cam = cam * cam_stride + ind_origin;
-                    if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.f) {
+                    if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && body_strength != 0.f) {
                         if (prd->face) {
-                            atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    strength * t_rho_cam);
-                            atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], strength * t_tau_cam);
+                            atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    body_strength * t_rho_cam);
+                            atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], body_strength * t_tau_cam);
                         } else {
-                            atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], strength * t_rho_cam);
-                            atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    strength * t_tau_cam);
+                            atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], body_strength * t_rho_cam);
+                            atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    body_strength * t_tau_cam);
                         }
                     }
                 }
             }
         }
-        accumulateWhiteReference(prd, ind_origin, b_global, strength);
+        accumulateWhiteReference(prd, ind_origin, b_global, sky_strength);
     }
 }
 
@@ -912,8 +1033,18 @@ extern "C" __global__ void __miss__camera() {
         if (sees_sky && radiance <= 0.0f && params.camera_sky_radiance && params.camera_sky_radiance[b] > 0.0f) {
             const float4 sky_p = params.sky_radiance_params ? params.sky_radiance_params[b]
                                                              : make_float4(0.f, 0.f, 0.f, 0.f);
+            // Prague parameters (normalization w > 0) give the sky's own pattern. Without them the camera sees the diffuse sky that
+            // lights the scene, so it takes the band's angular distribution from the diffuse launches: its power law, or isotropic.
+            float  power_K = 0.f;
+            float  power_N = 1.f;
+            float3 peak_d  = params.sun_direction;
+            if (sky_p.w <= 0.f && params.diffuse_extinction) {
+                power_K = params.diffuse_extinction[b];
+                power_N = params.diffuse_dist_norm ? params.diffuse_dist_norm[b] : 1.f;
+                peak_d  = params.diffuse_peak_dir ? params.diffuse_peak_dir[b] : peak_d;
+            }
             radiance = params.camera_sky_radiance[b] *
-                       evaluateDiffuseAngularDistribution(ray_dir, params.sun_direction, 0.0f, 1.0f, sky_p);
+                       evaluateDiffuseAngularDistribution(ray_dir, peak_d, power_K, power_N, sky_p);
         }
 
         // Isotropic sky emission/longwave: when band has emission enabled, the user-set diffuse_flux
@@ -1146,7 +1277,23 @@ extern "C" __global__ void __closesthit__diffuse() {
 
         // Attenuated by any translucent covers the ray passed on its way to the surface.
         const double cover_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? (double)prd->cover_transmittance[b] : 1.0;
-        const double strength  = (face_top ? params.radiation_out_top[ind_hit] : params.radiation_out_bottom[ind_hit]) * prd->strength * cover_tau;
+        // A hit primitive with a surface layer sends out its two components, in proportions that depend on the angle
+        const float *hit_layer = surfaceLayerTable(hit_position, b_global);
+        const float *hit_outgoing = face_top ? params.radiation_out_top : params.radiation_out_bottom;
+        float outgoing = hit_layer ? outgoingLayerFlux(hit_outgoing, ind_hit, hit_layer, primitiveNormalCos(hit_position, optixGetWorldRayDirection())) : hit_outgoing[ind_hit];
+        if (hit_layer && params.specular_reflection_enabled != 0u && params.radiation_specular) {
+            const float3 ray_direction = optixGetWorldRayDirection();
+            const float3 to_viewer = make_float3(-ray_direction.x, -ray_direction.y, -ray_direction.z);
+            float T_hit[16];
+            loadTransformMatrix(hit_position, T_hit);
+            float3 face_normal = normalize(cross(make_float3(T_hit[0], T_hit[4], T_hit[8]), make_float3(T_hit[1], T_hit[5], T_hit[9])));
+            if (dot(face_normal, to_viewer) < 0.f) face_normal = make_float3(-face_normal.x, -face_normal.y, -face_normal.z);
+            const float3 ray_origin = optixGetWorldRayOrigin();
+            const float  t_hit = optixGetRayTmax();
+            const float3 point = make_float3(ray_origin.x + t_hit * ray_direction.x, ray_origin.y + t_hit * ray_direction.y, ray_origin.z + t_hit * ray_direction.z);
+            outgoing += directLayerReflection(hit_position, (uint32_t)b, hit_layer, face_normal, to_viewer, point, -1);
+        }
+        const double strength  = outgoing * prd->strength * cover_tau;
         if (strength == 0.0) continue;
 
         const uint32_t radprop_ind = prd->source_ID * Nprims * Nbands_global
@@ -1159,18 +1306,26 @@ extern "C" __global__ void __closesthit__diffuse() {
             continue;
         }
 
-        atomicFloatAdd(&params.radiation_in[ind_origin], (float)(strength * (1.0 - t_rho - t_tau)));
+        // A surface layer reflects layer_albedo of what arrives; the body absorbs and scatters the rest
+        const float *layer = surfaceLayerTable(origin_position, b_global);
+        const float layer_albedo = layer ? surfaceLayerAlbedo(layer, prd->origin_cos) : 0.f;
+        const double body_strength = layer ? strength * (1.0 - layer_albedo) : strength;
+        if (layer_albedo > 0.f) {
+            depositLayerReflection(prd, ind_origin, b_global, (float)(strength * layer_albedo));
+        }
+
+        atomicFloatAdd(&params.radiation_in[ind_origin], (float)(body_strength * (1.0 - t_rho - t_tau)));
         if (params.radiation_in_top && prd->face) {
-            atomicFloatAdd(&params.radiation_in_top[ind_origin], (float)(strength * (1.0 - t_rho - t_tau)));
+            atomicFloatAdd(&params.radiation_in_top[ind_origin], (float)(body_strength * (1.0 - t_rho - t_tau)));
         }
 
         if (t_rho > 0.f || t_tau > 0.f) {
             if (prd->face) { // top-face origin
-                atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(strength * t_rho));
-                atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], (float)(strength * t_tau));
+                atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(body_strength * t_rho));
+                atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], (float)(body_strength * t_tau));
             } else {         // bottom-face origin
-                atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], (float)(strength * t_rho));
-                atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(strength * t_tau));
+                atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], (float)(body_strength * t_rho));
+                atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(body_strength * t_tau));
             }
         }
 
@@ -1188,13 +1343,14 @@ extern "C" __global__ void __closesthit__diffuse() {
                 const float t_rho_cam = params.rho_cam[rc_idx];
                 const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
                 const uint32_t ind_cam = cam * cam_stride + ind_origin;
-                if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.0) {
+                // The gathered flux is negative where a surface radiates less than the reference field (see RadiationModel::runBand())
+                if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && body_strength != 0.0) {
                     if (prd->face) {
-                        atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(strength * t_rho_cam));
-                        atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(strength * t_tau_cam));
+                        atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(body_strength * t_rho_cam));
+                        atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(body_strength * t_tau_cam));
                     } else {
-                        atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(strength * t_rho_cam));
-                        atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(strength * t_tau_cam));
+                        atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_cam], (float)(body_strength * t_rho_cam));
+                        atomicFloatAdd(&params.scatter_buff_top_cam[ind_cam],    (float)(body_strength * t_tau_cam));
                     }
                 }
             }
@@ -1237,7 +1393,7 @@ extern "C" __global__ void __closesthit__camera() {
     // Use face attribute from intersection program (correct for both patches and triangles)
     const bool   face_top  = (optixGetAttribute_1() == 1u);
 
-    // Compute surface normal for specular reflection (needed for Blinn-Phong half-vector)
+    // Surface normal of the face the camera sees, for the surface layer's angle-dependent reflection
     float T[16];
     loadTransformMatrix(hit_position, T);
     float3 n0 = make_float3(0.f, 0.f, 0.f); d_transformPoint(T, n0);
@@ -1291,6 +1447,15 @@ extern "C" __global__ void __closesthit__camera() {
             }
         } else {
             outgoing_flux = face_top ? params.radiation_out_top[ind_hit] : params.radiation_out_bottom[ind_hit];
+        }
+        // A surface with a layer sends out its two components, in proportions that depend on the viewing angle. Smoothing
+        // applies to the first; the second, the layer's reflection, is that of the facet.
+        if (const float *layer = surfaceLayerTable(hit_position, globalBandIndex(b))) {
+            const uint32_t layer_offset = Nprims * Nbands_l;
+            const float a = surfaceLayerAlbedo(layer, fabsf(dot(normal, ray_direction)));
+            const float abar = layer[params.surface_layer_table_size];
+            const float layer_flux = (face_top ? params.radiation_out_top : params.radiation_out_bottom)[layer_offset + ind_hit];
+            outgoing_flux = outgoing_flux * (1.f - a) / (1.f - abar) + layer_flux * a / abar;
         }
         float strength = (float) prd->strength * outgoing_flux;
 
@@ -1376,42 +1541,13 @@ extern "C" __global__ void __closesthit__camera() {
             }
         }
 
-        // Specular contribution (only if enabled and on iteration 0)
+        // Direct radiation reflected into the camera by a surface layer's microfacet lobe
         float strength_spec = 0.0f;
-        if (params.specular_reflection_enabled > 0 &&
-            params.specular_exponent && params.specular_exponent[hit_position] > 0.f &&
-            params.scattering_iteration == 0 &&
-            params.radiation_specular) {
-            for (uint32_t rr = 0; rr < params.Nsources; rr++) {
-                const uint32_t ind_spec = rr * params.Ncameras * Nprims * Nbands_l
-                                        + params.camera_ID * Nprims * Nbands_l
-                                        + hit_position * Nbands_l + b;
-                const float spec = params.radiation_specular[ind_spec] * 0.25f;
-                if (spec > 0.0f) {
-                    float3 light_dir;
-                    if (params.source_types[rr] == 0 || params.source_types[rr] == 2) {
-                        light_dir = normalize(params.source_positions[rr]);
-                    } else {
-                        const float3 hp = make_float3(ray_origin.x + t_hit * ray_direction.x,
-                                                       ray_origin.y + t_hit * ray_direction.y,
-                                                       ray_origin.z + t_hit * ray_direction.z);
-                        light_dir = normalize(make_float3(params.source_positions[rr].x - hp.x,
-                                                           params.source_positions[rr].y - hp.y,
-                                                           params.source_positions[rr].z - hp.z));
-                    }
-                    // A source on the other side of the surface lights the face the camera does not see
-                    if (dot(light_dir, normal) <= 0.f) continue;
-                    const float3 half_vector = light_dir - ray_direction;
-                    const float  half_length = d_magnitude(half_vector);
-                    if (half_length < 1e-6f) continue;
-                    const float3 spec_dir = half_vector / half_length;
-                    const float exponent  = params.specular_exponent[hit_position];
-                    const float scale_coeff = params.specular_scale[hit_position]; // 1 for a primitive without "specular_scale" data
-                    const float cos_spec = fmaxf(0.f, dot(spec_dir, normal));
-                    strength_spec += spec * scale_coeff
-                                   * powf(cos_spec, exponent) * (exponent + 2.f)
-                                   / ((float)params.launch_dim_x * 2.f * M_PI);
-                }
+        if (params.specular_reflection_enabled != 0u && params.radiation_specular) {
+            if (const float *layer = surfaceLayerTable(hit_position, globalBandIndex(b))) {
+                const float3 point = make_float3(ray_origin.x + t_hit * ray_direction.x, ray_origin.y + t_hit * ray_direction.y, ray_origin.z + t_hit * ray_direction.z);
+                const float3 to_viewer = make_float3(-ray_direction.x, -ray_direction.y, -ray_direction.z);
+                strength_spec = directLayerReflection(hit_position, b, layer, normal, to_viewer, point, int(params.camera_ID)) * (float)prd->strength;
             }
         }
 
@@ -1695,6 +1831,7 @@ extern "C" __global__ void __raygen__direct() {
                 prd.skip_origin          = true;
                 prd.hit_periodic_boundary = false;
                 prd.face                 = (dot(ray_direction, normal) > 0.f);
+                prd.origin_cos           = fabsf(dot(ray_direction, normal));
                 initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
 
                 // Strength set above per source type
@@ -1710,10 +1847,12 @@ extern "C" __global__ void __raygen__direct() {
                 float3 current_origin = ray_origin;
 
                 // A ray that reaches the wrap limit deposits nothing (treated as blocked). After a wrap, a ray toward a finite
-                // source only has the rest of the distance to the point it sampled on the source left to travel. A wrapped ray
-                // continues with no minimum distance, so that it hits geometry right at the boundary it was wrapped to.
+                // source only has the rest of the distance to the point it sampled on the source left to travel. Every segment
+                // starts with no minimum distance: the primitive the ray was launched from is skipped (skip_origin), and a
+                // minimum distance let a ray launched that close to an adjacent surface pass through it where the two meet. A
+                // wrapped ray must likewise hit geometry right at the boundary it was wrapped to.
                 bool wrap_limit_reached = true;
-                float segment_t_min = 1e-4f;
+                float segment_t_min = 0.f;
                 for (int wrap = 0; wrap < MAX_PERIODIC_WRAPS; ++wrap) {
                     packPointer(&prd, u0, u1);
                     optixTrace(
@@ -1897,6 +2036,7 @@ extern "C" __global__ void __raygen__diffuse() {
             prd.skip_origin           = true;
             prd.hit_periodic_boundary = false;
             prd.strength              = 1.0 / double(dimxy);
+            prd.origin_cos            = fabsf(dot(ray_dir, normal));
             initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
 
             uint32_t u0, u1;
@@ -1905,11 +2045,12 @@ extern "C" __global__ void __raygen__diffuse() {
                 prd.face = true;
                 float3 cur_origin = ray_origin;
                 // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
-                // translucent cover. A wrapped ray continues with no minimum distance, so that it hits geometry right at the
-                // boundary it was wrapped to.
+                // translucent cover. The first segment starts with no minimum distance, since the primitive the ray was
+                // launched from is skipped (skip_origin) and a minimum distance let a ray launched that close to an adjacent
+                // surface pass through it where the two meet; a wrapped ray must likewise hit geometry right at the boundary.
                 prd.hit_cover = false;
                 int wraps = 0;
-                float segment_t_min = 1e-4f;
+                float segment_t_min = 0.f;
                 for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
                     packPointer(&prd, u0, u1);
                     optixTrace(
@@ -1942,11 +2083,10 @@ extern "C" __global__ void __raygen__diffuse() {
                 float3 neg_dir = make_float3(-ray_dir.x, -ray_dir.y, -ray_dir.z);
                 float3 cur_origin = ray_origin;
                 // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
-                // translucent cover. A wrapped ray continues with no minimum distance, so that it hits geometry right at the
-                // boundary it was wrapped to.
+                // translucent cover. The first segment starts with no minimum distance (see the top-face launch above).
                 prd.hit_cover = false;
                 int wraps = 0;
-                float segment_t_min = 1e-4f;
+                float segment_t_min = 0.f;
                 for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
                     packPointer(&prd, u0, u1);
                     optixTrace(

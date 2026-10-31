@@ -3581,6 +3581,26 @@ namespace helios {
         //! Create a copy of a material for a specific primitive (copy-on-write)
         uint copyMaterialForPrimitive(uint primitiveUUID);
 
+        //! Recompute a primitive's solid fraction from the texture of its current material and its (u,v) coordinates
+        /**
+         * \param[in] primitive Primitive to update. Its shape revision advances, since the solid fraction and the transparency mask have changed.
+         */
+        void updatePrimitiveSolidFraction(Primitive *primitive);
+
+        //! Change the material a primitive uses, keeping the reference counts, the primitive's solid fraction, and its dirty flag up to date
+        /**
+         * \param[in] primitive Primitive to update
+         * \param[in] materialID ID of the material to use. Nothing happens if the primitive already uses it.
+         */
+        void setPrimitiveMaterial(Primitive *primitive, uint materialID);
+
+        //! Mark every primitive using a material as dirty after the material has changed
+        /**
+         * \param[in] materialID ID of the material that changed
+         * \param[in] texture_changed True if the material's texture changed, in which case the primitives' solid fractions are also recomputed and the shape revision advances
+         */
+        void markMaterialPrimitivesModified(uint materialID, bool texture_changed);
+
         //----------- GLOBAL DATA -------------//
 
         std::map<std::string, GlobalData> globaldata;
@@ -5078,9 +5098,10 @@ namespace helios {
         //! Set the texture map file for a primitive
         /**
          * \param[in] UUID Unique universal identifier of primitive to be queried.
-         * \param[in] texturefile Path to texture image file.
+         * \param[in] texturefile Path to texture image file. An empty string removes the primitive's texture.
+         * \note The texture is loaded if the Context has not already loaded it, and an error is raised if the file cannot be used. The primitive's solid fraction, and therefore its area, is recomputed from the new texture's transparency channel. Facets of a leaf or other object that were discarded at creation because they were fully transparent in the previous texture are not restored.
          */
-        void setPrimitiveTextureFile(uint UUID, const std::string &texturefile) const;
+        void setPrimitiveTextureFile(uint UUID, const std::string &texturefile);
 
         //! Get the size (number of pixels) of primitive texture map image.
         /**
@@ -5209,15 +5230,15 @@ namespace helios {
         /**
          * \param[in] material_label String identifier for the material
          * \param[in] color New RGBA color for the material
-         * \note This will affect all primitives that reference this material
+         * \note This will affect all primitives that reference this material, which are marked dirty. Finding them requires a scan of all primitives if the material is in use, so changing many materials on a large scene is best done before they are assigned.
          */
         void setMaterialColor(const std::string &material_label, const RGBAcolor &color);
 
         //! Set the texture of a material
         /**
          * \param[in] material_label String identifier for the material
-         * \param[in] texture_file Path to texture image file
-         * \note This will affect all primitives that reference this material
+         * \param[in] texture_file Path to texture image file. An empty string removes the material's texture.
+         * \note This will affect all primitives that reference this material: they are marked dirty, and their solid fractions, and therefore their areas, are recomputed from the new texture's transparency channel.
          */
         void setMaterialTexture(const std::string &material_label, const std::string &texture_file);
 
@@ -5259,6 +5280,7 @@ namespace helios {
          * \param[in] UUID Unique universal identifier of primitive
          * \param[in] material_label String identifier for the material to assign
          * \note Throws helios_runtime_error if material label does not exist
+         * \note A primitive's texture comes from its material, so assigning a material with a different texture, or with none, replaces the primitive's texture and recomputes its solid fraction and area. A textured leaf assigned a material without a texture loses its shape and becomes a solid surface.
          */
         void assignMaterialToPrimitive(uint UUID, const std::string &material_label);
 
@@ -7000,6 +7022,17 @@ namespace helios {
          */
         void pruneTubeNodes(uint ObjID, uint node_index);
 
+        //! Split a tube object into two tube objects at a specified node
+        /**
+         * The original object keeps nodes 0 through node_index-1, and a new tube object is created holding nodes node_index-1 through the last node, so the node at node_index-1 ends the first piece
+         * and begins the second. The primitives of the upper segments are moved to the new object rather than re-created, so their geometry, colors, texture coordinates and primitive data are
+         * unchanged. The new object receives a copy of the original's object data and transformation matrix.
+         * \param[in] ObjID object ID of the Tube object to split
+         * \param[in] node_index Index of the node at which to split. Must be at least 2 and less than the node count, so that each piece keeps at least one segment.
+         * \return Object ID of the new tube object holding the upper segments.
+         */
+        uint splitTubeObject(uint ObjID, uint node_index);
+
         //! Set tube vertex coordinates at each segment node
         /**
          * \param[in] ObjID object ID of the Tube object
@@ -7512,6 +7545,9 @@ namespace helios {
          * \param[in] radius Radius of the tube at each node position.
          * \return Object ID of new tube object.
          * \note Ndivs must be greater than 2.
+         * \note Each tube segment (between node i and node i+1) has 2*radial_subdivisions triangles. In the object's primitive UUID list (getObjectPrimitiveUUIDs()) the radial position varies
+         * slowest and the segment fastest, so with S segments the triangle at index k belongs to segment (k/2) % S. appendTubeSegment(), pruneTubeNodes(), splitTubeObject() and copyObject()
+         * preserve this ordering. The texture-mapped overloads omit any triangle of zero area, in which case the list is shorter and the rule does not apply.
          * \ingroup compoundobjects
          */
         uint addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius);

@@ -23,8 +23,20 @@ in vec2 uv_scale;
 
 uniform sampler2DArray textureSampler;
 
-uniform sampler2D shadowMap;
-in vec4 ShadowCoord;
+//Cascaded shadow maps. The view is split in depth into cascades, each with its own layer of the
+//shadow map fitted to that depth range, so that surfaces near the camera get fine shadow texels.
+//The cascade count must match Visualizer::shadow_cascade_count.
+const int SHADOW_CASCADE_COUNT = 4;
+uniform sampler2DArrayShadow shadowMap;
+//World coordinates to shadow-map texture coordinates (xy) and depth (z), per cascade.
+uniform mat4 shadowCascadeMatrices[SHADOW_CASCADE_COUNT];
+//Far boundary of each cascade, as distance along the camera's viewing direction. Zero when no
+//geometry casts shadows, so that no cascade is selected.
+uniform float shadowCascadeFarDepths[SHADOW_CASCADE_COUNT];
+//World-space width of one shadow-map texel in each cascade.
+uniform float shadowCascadeTexelSizes[SHADOW_CASCADE_COUNT];
+//Unit vector along the camera's viewing direction.
+uniform vec3 cameraForward;
 
 uniform vec3 lightDirection;
 
@@ -126,6 +138,55 @@ vec3 tonemapACES(vec3 x){
     return clamp((x*(a*x+b))/(x*(c*x+d)+e), 0.0, 1.0);
 }
 
+//Percentage-closer filtering taps on a spiral filling the unit disk, scaled to SHADOW_PCF_RADIUS
+//texels. Each tap is itself a bilinear 2x2 depth comparison done by the hardware.
+const int SHADOW_PCF_TAP_COUNT = 8;
+const vec2 shadowPcfOffsets[SHADOW_PCF_TAP_COUNT] = vec2[](
+vec2(-0.7071, 0.7071), vec2(-0.0000, -0.8750), vec2(0.5303, 0.5303), vec2(-0.6250, -0.0000),
+vec2(0.3536, -0.3536), vec2(-0.0000, 0.3750), vec2(-0.1768, -0.1768), vec2(0.1250, 0.0000)
+);
+const float SHADOW_PCF_RADIUS = 1.5;
+
+//Fraction of light reaching a world position, from one cascade. Positions outside the cascade's
+//box are treated as lit.
+float sampleShadowCascade(int cascade, vec3 position){
+    vec3 projected = (shadowCascadeMatrices[cascade]*vec4(position,1.0)).xyz; // orthographic, so w == 1
+    if( any(lessThan(projected, vec3(0.0))) || any(greaterThan(projected, vec3(1.0))) ){
+        return 1.0;
+    }
+    vec2 texelUV = 1.0/vec2(textureSize(shadowMap, 0).xy);
+    float lit = 0.0;
+    for( int i=0; i<SHADOW_PCF_TAP_COUNT; i++ ){
+        lit += texture(shadowMap, vec4(projected.xy + shadowPcfOffsets[i]*SHADOW_PCF_RADIUS*texelUV, float(cascade), projected.z));
+    }
+    return lit/float(SHADOW_PCF_TAP_COUNT);
+}
+
+//Fraction of light reaching a surface point. The lookup point is pushed off the surface along its
+//normal by a distance proportional to the cascade's texel size (normal-offset biasing), which keeps
+//a lit surface from shadowing itself across the PCF footprint without a fixed depth bias that
+//would be wrong at some scale. Near a cascade's far boundary the result is blended with the next
+//cascade so the change in resolution does not show as a seam.
+float shadowVisibility(vec3 position, vec3 normal){
+    float viewDepth = dot(position - cameraPosition, cameraForward);
+    for( int cascade=0; cascade<SHADOW_CASCADE_COUNT; cascade++ ){
+        if( viewDepth > shadowCascadeFarDepths[cascade] ){
+            continue;
+        }
+        float offsetTexels = SHADOW_PCF_RADIUS + 1.0;
+        float visibility = sampleShadowCascade(cascade, position + normal*offsetTexels*shadowCascadeTexelSizes[cascade]);
+        float cascadeStart = cascade==0 ? 0.0 : shadowCascadeFarDepths[cascade-1];
+        float blendWidth = 0.1*(shadowCascadeFarDepths[cascade] - cascadeStart);
+        float weight = (shadowCascadeFarDepths[cascade] - viewDepth)/blendWidth;
+        if( cascade+1<SHADOW_CASCADE_COUNT && weight<1.0 ){
+            float nextVisibility = sampleShadowCascade(cascade+1, position + normal*offsetTexels*shadowCascadeTexelSizes[cascade+1]);
+            visibility = mix(nextVisibility, visibility, weight);
+        }
+        return visibility;
+    }
+    return 1.0; // beyond the last cascade, where no geometry casts a shadow
+}
+
 uniform samplerBuffer color_texture_object;
 uniform samplerBuffer normal_texture_object;
 uniform isamplerBuffer texture_flag_texture_object;
@@ -190,38 +251,7 @@ void main(){
 
     float visibility = 1.0;
     if(lightingModel==2 && coordinateFlag==1 && dot(geometricNormal,ld)>0 ){ //Blinn-Phong lighting model + shadows
-
-        vec3 proj = ShadowCoord.xyz / ShadowCoord.w;   // 0…1 in valid area
-
-        bool inside =
-        proj.x >= 0.0 && proj.x <= 1.0 &&
-        proj.y >= 0.0 && proj.y <= 1.0 &&
-        proj.z >= 0.0 && proj.z <= 1.0;
-
-        if( inside ){
-
-            vec2 poissonDisk[4] = vec2[](
-            vec2(-0.94201624, -0.39906216),
-            vec2(0.94558609, -0.76890725),
-            vec2(-0.094184101, -0.92938870),
-            vec2(0.34495938, 0.29387760)
-            );
-
-            for (int i=0;i<4;i++){
-                if (texture(shadowMap, (ShadowCoord.xy/ShadowCoord.w+poissonDisk[i]/140000.0)).x  <  (ShadowCoord.z/ShadowCoord.w)){
-                    visibility-=0.35;
-                }
-            }
-
-            // Four occluded taps subtract 1.4 from a starting value of 1.0, so a fully-shadowed fragment
-            // lands at -0.4. Since visibility multiplies (diffuse + specular) below, a negative value
-            // SUBTRACTS light instead of removing it -- and it does so per channel, against an albedo and an
-            // ambient colour that differ per channel, so the channels cross zero at different points and
-            // deep shadow picks up a colour cast rather than going neutrally dark. Clamp so that full
-            // occlusion means "no direct light" and never "negative light".
-            visibility = clamp(visibility, 0.0, 1.0);
-
-        }
+        visibility = shadowVisibility(worldPosition, geometricNormal);
     }
 
     vec2 wrapped = fract(texcoord) * uv_scale;

@@ -78,7 +78,7 @@ rtBuffer<uint, 1> primitive_positions;
 // Radiation sources buffers
 rtDeclareVariable(unsigned int, Nsources, , );
 rtBuffer<float, 1> source_fluxes;
-rtBuffer<float, 1> source_fluxes_cam; // Camera-weighted source fluxes for specular [source * Nbands * Ncameras]
+rtBuffer<float, 1> source_fluxes_cam; // Camera weights of the source fluxes, for the surface layers' reflection of direct radiation [source * Nbands * Ncameras]
 rtBuffer<float3, 1> source_positions;
 rtBuffer<float3, 1> source_rotations;
 rtBuffer<float2, 1> source_widths;
@@ -140,9 +140,15 @@ rtBuffer<float, 1> white_reference_cam;
 rtBuffer<float, 1> glass_n, glass_KL, is_glass;
 rtDeclareVariable(unsigned int, glass_enabled, , );
 
-rtBuffer<float, 1> specular_exponent;
-rtBuffer<float, 1> specular_scale;
-rtDeclareVariable(unsigned int, specular_reflection_enabled, , );
+// Specular surface layer (see RayTracingMaterial::surface_model). surface_layer_enabled is 0 when no primitive has one; the
+// buffers are then one-element placeholders and the outgoing and scattered buffers hold a single component.
+rtBuffer<unsigned int, 1> surface_model; // [primitive]: 0 = Lambertian, m > 0 = surface model m - 1
+rtBuffer<unsigned int, 1> surface_model_band_table; // [(m - 1) * Nbands_global + band]: albedo table, or UINT_MAX for no layer in the band
+rtBuffer<float, 1> surface_layer_tables; // [table * (surface_layer_table_size + 3) + i]: a(mu) at mu = i / (size - 1), then abar, n and alpha
+rtDeclareVariable(unsigned int, surface_layer_enabled, , );
+rtDeclareVariable(unsigned int, surface_layer_table_size, , );
+
+rtDeclareVariable(unsigned int, specular_reflection_enabled, , ); // 1 = this launch evaluates the surface layers' reflection lobe of the direct radiation
 rtDeclareVariable(unsigned int, scattering_iteration, , ); // Current scattering iteration (0-based)
 rtDeclareVariable(unsigned int, below_horizon_diffuse_enabled, , ); // 1 = the diffuse sky also reaches rays leaving below the horizon
 
@@ -164,7 +170,7 @@ rtBuffer<float, 1> scatter_buff_bottom_cam;
 // Each camera's white reference [camera * Nprimitives * Nbands_launch + primitive * Nbands_launch + band], accumulated over all the launches of a runBand()
 rtBuffer<float, 1> white_reference_top_cam;
 rtBuffer<float, 1> white_reference_bottom_cam;
-rtBuffer<float, 1> radiation_specular; // Incident radiation for specular (per source, camera-weighted) [source * Ncameras * Nprimitives * Nbands + camera * Nprimitives * Nbands + primitive * Nbands + band]
+rtBuffer<float, 1> radiation_specular; // Direct flux reaching primitives with a surface layer [source * Nprimitives * Nbands_launch + primitive * Nbands_launch + band]
 
 // Camera variables
 rtBuffer<unsigned int, 1> camera_pixel_label;
@@ -213,6 +219,8 @@ struct PerRayData {
     //! tau(theta) in the any-hit program (direct) or the closest-hit programs (diffuse, camera);
     //! applied to what the ray delivers past the covers. Indexed by launch-band b.
     float cover_transmittance[HELIOS_MAX_RADIATION_BANDS];
+    //! |cosine| of the angle between a direct or diffuse ray and the normal of the primitive it left
+    float origin_cos;
     //! Flag set when a diffuse/camera/pixel-label ray hit a translucent cover and continues past it from cover_exit
     bool hit_cover;
     //! World-space point just beyond the cover where the ray continues

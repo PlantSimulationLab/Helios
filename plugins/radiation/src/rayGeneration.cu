@@ -220,7 +220,9 @@ RT_PROGRAM void direct_raygen() {
                     prd.strength = 1. / double(launch_dim.x * launch_dim.y) * fabs(dot(normal, ray_direction)) * fabs(dot(light_direction, ray_direction)) / (ray_magnitude * ray_magnitude) * source_widths[rr].x * source_widths[rr].x;
                 }
 
-                optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, direct_ray_type, 1e-4, ray_magnitude);
+                // No minimum distance: the primitive the ray was launched from is skipped (isRayOrigin()), and a minimum distance
+                // let a ray launched that close to an adjacent surface pass through it where the two meet
+                optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, direct_ray_type, 0.f, ray_magnitude);
 
                 prd.origin_UUID = UUID;
                 prd.source_ID = rr;
@@ -232,6 +234,7 @@ RT_PROGRAM void direct_raygen() {
                 } else {
                     prd.face = 0;
                 }
+                prd.origin_cos = fabs(dot(ray_direction, normal));
 
                 if ((prd.face == 1 || twosided_flag[objID] == 1) && twosided_flag[objID] != 3) {
 
@@ -423,6 +426,7 @@ RT_PROGRAM void diffuse_raygen() {
             ray_direction = d_rotatePoint(ray_direction, acos_safe(normal.z), atan2(normal.y, normal.x));
 
             prd.strength = 1.f / float(dimx);
+            prd.origin_cos = fabs(dot(ray_direction, normal));
 
             prd.origin_UUID = UUID;
             prd.source_ID = Nsources; // diffuse/scatter material slot, weighted by the band's combined incident spectrum
@@ -435,7 +439,9 @@ RT_PROGRAM void diffuse_raygen() {
 
             if (launch_face == 1 && twosided_flag[objID] != 3) {
 
-                ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
+                // No minimum distance: the primitive the ray was launched from is skipped (isRayOrigin()), and a minimum distance
+                // let a ray launched that close to an adjacent surface pass through it where the two meet
+                ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 0.f, RT_DEFAULT_MAX);
 
                 prd.face = 1;
 
@@ -467,7 +473,7 @@ RT_PROGRAM void diffuse_raygen() {
             } else if (launch_face == 0 && twosided_flag[objID] == 1) {
 
                 ray_direction = -ray_direction;
-                ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
+                ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 0.f, RT_DEFAULT_MAX);
 
                 prd.face = 0;
 

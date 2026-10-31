@@ -234,10 +234,6 @@ namespace helios {
         RTvariable tau_cam_RTvariable;
         RTbuffer white_reference_cam_RTbuffer;
         RTvariable white_reference_cam_RTvariable;
-        RTbuffer specular_exponent_RTbuffer;
-        RTvariable specular_exponent_RTvariable;
-        RTbuffer specular_scale_RTbuffer;
-        RTvariable specular_scale_RTvariable;
         RTbuffer transform_matrix_RTbuffer;
         RTvariable transform_matrix_RTvariable;
         // Translucent cover (glass/plastic) material buffers (same layout as rho/tau)
@@ -248,6 +244,14 @@ namespace helios {
         RTbuffer is_glass_RTbuffer;
         RTvariable is_glass_RTvariable;
         RTvariable glass_enabled_RTvariable;
+        RTbuffer surface_model_RTbuffer; //!< Surface model per primitive (see RayTracingMaterial::surface_model)
+        RTvariable surface_model_RTvariable;
+        RTbuffer surface_model_band_table_RTbuffer; //!< Albedo table of each surface model in each band
+        RTvariable surface_model_band_table_RTvariable;
+        RTbuffer surface_layer_tables_RTbuffer; //!< Surface-layer directional albedo tables
+        RTvariable surface_layer_tables_RTvariable;
+        RTvariable surface_layer_enabled_RTvariable;
+        RTvariable surface_layer_table_size_RTvariable;
 
         // Buffers: Radiation Energy (10 buffers)
         RTbuffer radiation_in_RTbuffer;
@@ -407,8 +411,8 @@ namespace helios {
 
         //! Raise an error if a launch with specular reflection enabled would index radiation_specular past its end
         /**
-         * zeroRadiationBuffers() sizes radiation_specular for every source, camera, primitive and band only when the last updateMaterials() call enabled specular reflection, and leaves a
-         * one-element placeholder otherwise.
+         * zeroRadiationBuffers() sizes radiation_specular, the direct flux reaching primitives with a surface layer, for every source, primitive and band only when the last
+         * updateMaterials() call reported surface layers, and leaves a one-element placeholder otherwise.
          * \param[in] caller Name of the calling method, for the error message
          * \param[in] params Parameters of the launch about to be made
          */
@@ -428,6 +432,7 @@ namespace helios {
         size_t current_source_count = 0;
         size_t current_band_count = 0;
         size_t current_camera_count = 0;
+        size_t outgoing_components = 1; //!< Components of outgoing radiation per face: 2 when any primitive has a surface layer (see RayTracingMaterial::surface_model)
         bool specular_reflection_enabled = false; //!< Set by updateMaterials(); radiation_specular is sized only when true
         uint32_t current_camera_launch_id = UINT32_MAX;
         size_t current_launch_band_count = 0;

@@ -824,18 +824,20 @@ void Visualizer::createShadowMapPlaceholderTexture() {
 
     glActiveTexture(GL_TEXTURE1);
     glGenTextures(1, &shadow_map_placeholder_texture);
-    glBindTexture(GL_TEXTURE_2D, shadow_map_placeholder_texture);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, shadow_map_placeholder_texture);
 
-    // A depth of 1 is the far plane, so the shader's "occluder is nearer than this fragment"
-    // test can never succeed against the placeholder and no fragment is ever darkened by it.
+    // A depth of 1 is the far plane, so the shader's "fragment is no farther than the occluder"
+    // comparison always passes against the placeholder and no fragment is ever darkened by it.
     const GLfloat far_plane_depth = 1.f;
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &far_plane_depth);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT32F, 1, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &far_plane_depth);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // The shader samples it through a shadow sampler, which requires depth comparison to be enabled.
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
     glActiveTexture(GL_TEXTURE0);
 
@@ -850,8 +852,8 @@ void Visualizer::createShadowFramebuffer() {
         return; // already created
     }
 
-    // The shadow map is large (8192x8192 by default, i.e. 256 MB at 32-bit depth), so it is
-    // created here on first use rather than in initialize(). Clamp it to what the driver
+    // The shadow map is large (four 4096x4096 cascades by default, i.e. 256 MB at 32-bit depth), so
+    // it is created here on first use rather than in initialize(). Clamp it to what the driver
     // actually supports: nothing else validates shadow_buffer_size against this limit, and
     // software rasterizers in CI environments can report a small maximum texture size.
     GLint max_texture_size_supported = 0;
@@ -864,23 +866,24 @@ void Visualizer::createShadowFramebuffer() {
     glGenFramebuffers(1, &framebufferID);
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
 
-    // Depth texture. Slower than a depth buffer, but you can sample it later in your shader
+    // Depth texture array, one layer per cascade
     glActiveTexture(GL_TEXTURE1);
     glGenTextures(1, &depthTexture);
-    glBindTexture(GL_TEXTURE_2D, depthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, shadow_buffer_size.x, shadow_buffer_size.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, depthTexture);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT32F, shadow_buffer_size.x, shadow_buffer_size.y, shadow_cascade_count, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    // Hardware depth comparison with linear filtering: each lookup returns the lit fraction of the
+    // 2x2 texels around it, which the shader's PCF taps then average into a soft edge.
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
-    // clamp to border so any lookup outside [0,1] returns 1.0 (no shadow)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    // clamp to border so any lookup outside [0,1] compares against 1.0 (no shadow)
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     GLfloat borderColor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-
-    // enable hardware depth comparison
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+    glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor);
 
     if (!checkerrors()) {
         helios_runtime_error("ERROR (Visualizer::createShadowFramebuffer): OpenGL setup failed during texture configuration. "
@@ -890,7 +893,8 @@ void Visualizer::createShadowFramebuffer() {
     // restore default active texture for subsequent texture setup
     glActiveTexture(GL_TEXTURE0);
 
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0);
+    // Attach the first cascade for the completeness check; renderShadowCascades() attaches each layer in turn.
+    glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthTexture, 0, 0);
 
     glDrawBuffer(GL_NONE); // No color buffer is drawn to.
 
@@ -1404,7 +1408,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     // Final headless determination: explicit parameter OR environment-forced
     headless = headless_mode || should_force_headless;
 
-    shadow_buffer_size = make_uint2(8192, 8192);
+    shadow_buffer_size = make_uint2(4096, 4096);
 
     maximum_texture_size = make_uint2(2048, 2048);
 
@@ -2691,15 +2695,13 @@ static glm::vec3 cameraUpVector(const helios::vec3 &eye, const helios::vec3 &loo
     return vertical_component > 0.999f ? glm::vec3(0, 1, 0) : glm::vec3(0, 0, 1);
 }
 
-void Visualizer::updatePerspectiveTransformation(bool shadow) {
+float Visualizer::cameraNearPlane() const {
     float dist = glm::distance(glm_vec3(camera_lookat_center), glm_vec3(camera_eye_location));
-    float nearPlane = std::max(0.1f, 0.05f * dist); // avoid 0
-    if (shadow) {
-        float farPlane = std::max(5.f * camera_eye_location.z, 2.0f * dist);
-        cameraProjectionMatrix = glm::perspective(glm::radians(camera_FOV), float(Wframebuffer) / float(Hframebuffer), nearPlane, farPlane);
-    } else {
-        cameraProjectionMatrix = glm::infinitePerspective(glm::radians(camera_FOV), float(Wframebuffer) / float(Hframebuffer), nearPlane);
-    }
+    return std::max(0.1f, 0.05f * dist); // avoid 0
+}
+
+void Visualizer::updatePerspectiveTransformation() {
+    cameraProjectionMatrix = glm::infinitePerspective(glm::radians(camera_FOV), float(Wframebuffer) / float(Hframebuffer), cameraNearPlane());
     cameraViewMatrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), cameraUpVector(camera_eye_location, camera_lookat_center));
 
     perspectiveTransformationMatrix = cameraProjectionMatrix * cameraViewMatrix;
@@ -3158,66 +3160,206 @@ Colormap Visualizer::getCurrentColormap() const {
     return colormap_current;
 }
 
-glm::mat4 Visualizer::computeShadowDepthMVP() const {
-    glm::vec3 lightDir = -glm::normalize(glm_vec3(light_direction));
+//! Depth, along the camera's viewing direction, of the farthest point of a box that lies inside the camera's view
+/**
+ * The view is the infinite pyramid of the camera's field of view, cut off at the near plane. The box and the view are both
+ * convex, so the farthest point of their intersection is one of its vertices, each of which is a box corner inside the view,
+ * a box edge crossing a side plane of the view, or an edge ray of the view crossing a face of the box.
+ *
+ * \return False if no part of the box lies inside the view, in which case far_depth is not set.
+ */
+static bool farthestDepthInView(const glm::vec3 &eye, const glm::vec3 &forward, const glm::vec3 &right, const glm::vec3 &up, float tan_half_fov_horizontal, float tan_half_fov_vertical, float near_depth,
+                                const glm::vec3 &box_min, const glm::vec3 &box_max, float &far_depth) {
+    const float tolerance = 1e-5f * std::max(1.f, glm::length(box_max - box_min) + glm::length(box_min - eye));
 
-    const float margin = 0.01;
+    auto isInView = [&](const glm::vec3 &point) {
+        const glm::vec3 offset = point - eye;
+        const float depth = glm::dot(offset, forward);
+        return depth >= near_depth - tolerance && std::abs(glm::dot(offset, right)) <= depth * tan_half_fov_horizontal + tolerance &&
+               std::abs(glm::dot(offset, up)) <= depth * tan_half_fov_vertical + tolerance;
+    };
+    auto isInBox = [&](const glm::vec3 &point) {
+        for (int axis = 0; axis < 3; axis++) {
+            if (point[axis] < box_min[axis] - tolerance || point[axis] > box_max[axis] + tolerance) {
+                return false;
+            }
+        }
+        return true;
+    };
 
-    // Get the eight corners of the camera frustum in world space (NDC cube corners → clip → view → world)
+    bool found = false;
+    far_depth = -std::numeric_limits<float>::infinity();
+    auto consider = [&](const glm::vec3 &point) {
+        if (isInView(point) && isInBox(point)) {
+            far_depth = std::max(far_depth, glm::dot(point - eye, forward));
+            found = true;
+        }
+    };
 
-    // NDC cube
-    static const std::array<glm::vec4, 8> ndcCorners = {glm::vec4(-1, -1, -1, 1), glm::vec4(+1, -1, -1, 1), glm::vec4(+1, +1, -1, 1), glm::vec4(-1, +1, -1, 1),
-                                                        glm::vec4(-1, -1, +1, 1), glm::vec4(+1, -1, +1, 1), glm::vec4(+1, +1, +1, 1), glm::vec4(-1, +1, +1, 1)};
-
-    glm::mat4 invCam = glm::inverse(this->perspectiveTransformationMatrix);
-
-    std::array<glm::vec3, 8> frustumWs;
-    for (std::size_t i = 0; i < 8; i++) {
-        glm::vec4 ws = invCam * ndcCorners[i];
-        frustumWs[i] = glm::vec3(ws) / ws.w;
+    std::array<glm::vec3, 8> corners;
+    for (int c = 0; c < 8; c++) {
+        corners[c] = glm::vec3((c & 1) ? box_max.x : box_min.x, (c & 2) ? box_max.y : box_min.y, (c & 4) ? box_max.z : box_min.z);
+        consider(corners[c]);
     }
 
-    // Build a light-view matrix (orthographic, directional light) We choose an arbitrary but stable "up" vector.
-    glm::vec3 lightUp(0.0f, 1.0f, 0.0f);
-    if (glm::abs(glm::dot(lightUp, lightDir)) > 0.9f) // almost collinear
-        lightUp = glm::vec3(1, 0, 0);
-
-    // Position the "camera" that generates the shadow map so that every
-    // frustum corner is in front of it.  We place it on the negative light
-    // direction, centered on the frustum’s centroid.
-    glm::vec3 centroid(0);
-    for (auto &c: frustumWs)
-        centroid += c;
-    centroid /= 8.0f;
-
-    glm::vec3 lightPos = centroid - lightDir * 100.0f; // 100 is arbitrary,
-    // we will tighten z
-    glm::mat4 lightView = glm::lookAt(lightPos, centroid, lightUp);
-
-    // Transform frustum corners to light space and find min/max extents
-    glm::vec3 minL(std::numeric_limits<float>::infinity());
-    glm::vec3 maxL(-std::numeric_limits<float>::infinity());
-
-    for (auto &c: frustumWs) {
-        glm::vec3 p = glm::vec3(lightView * glm::vec4(c, 1));
-        minL = glm::min(minL, p);
-        maxL = glm::max(maxL, p);
+    // Box edges join corners differing in exactly one coordinate bit. Each side plane of the view is where a signed function vanishes.
+    const std::array<std::pair<glm::vec3, float>, 4> side_planes = {std::make_pair(right, tan_half_fov_horizontal), std::make_pair(-right, tan_half_fov_horizontal), std::make_pair(up, tan_half_fov_vertical),
+                                                                   std::make_pair(-up, tan_half_fov_vertical)};
+    for (int c = 0; c < 8; c++) {
+        for (int bit: {1, 2, 4}) {
+            if (c & bit) {
+                continue;
+            }
+            const glm::vec3 &a = corners[c];
+            const glm::vec3 &b = corners[c | bit];
+            for (const auto &[side, tan_half_fov]: side_planes) {
+                const float value_a = glm::dot(a - eye, side) - tan_half_fov * glm::dot(a - eye, forward);
+                const float value_b = glm::dot(b - eye, side) - tan_half_fov * glm::dot(b - eye, forward);
+                if ((value_a < 0.f) != (value_b < 0.f)) {
+                    consider(a + (b - a) * (value_a / (value_a - value_b)));
+                }
+            }
+        }
     }
 
-    // Build orthographic projection that exactly fits the camera frustum and enlarge slightly to avoid clipping due to kernel offsets.
-    glm::vec3 extent = maxL - minL;
-    minL -= extent * margin;
-    maxL += extent * margin;
+    // Edge rays of the view, each of depth 1 per unit of its parameter, against the six face planes of the box
+    for (float sx: {-1.f, 1.f}) {
+        for (float sy: {-1.f, 1.f}) {
+            const glm::vec3 direction = forward + right * (sx * tan_half_fov_horizontal) + up * (sy * tan_half_fov_vertical);
+            for (int axis = 0; axis < 3; axis++) {
+                if (direction[axis] == 0.f) {
+                    continue;
+                }
+                for (float face: {box_min[axis], box_max[axis]}) {
+                    const float t = (face - eye[axis]) / direction[axis];
+                    if (t > 0.f) {
+                        consider(eye + direction * t);
+                    }
+                }
+            }
+        }
+    }
+    return found;
+}
 
-    float zNear = -maxL.z; // light space points toward -z
-    float zFar = -minL.z;
+void Visualizer::computeShadowCascades() {
 
-    glm::mat4 lightProj = glm::ortho(minL.x, maxL.x, minL.y, maxL.y, zNear, zFar);
+    if (shadow_caster_bounds_dirty) {
+        shadow_caster_bounds_valid = geometry_handler.getShadowCasterBoundingBox(shadow_caster_bounds_min, shadow_caster_bounds_max);
+        shadow_caster_bounds_dirty = false;
+    }
 
-    // Transform into [0,1] texture space (bias matrix)
-    const glm::mat4 bias(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f);
+    shadow_cascade_far_depths.fill(0.f);
+    if (!shadow_caster_bounds_valid) {
+        return; // nothing can cast a shadow
+    }
 
-    return bias * lightProj * lightView;
+    const std::array<glm::vec3, 8> caster_corners = {
+            glm::vec3(shadow_caster_bounds_min.x, shadow_caster_bounds_min.y, shadow_caster_bounds_min.z), glm::vec3(shadow_caster_bounds_max.x, shadow_caster_bounds_min.y, shadow_caster_bounds_min.z),
+            glm::vec3(shadow_caster_bounds_min.x, shadow_caster_bounds_max.y, shadow_caster_bounds_min.z), glm::vec3(shadow_caster_bounds_max.x, shadow_caster_bounds_max.y, shadow_caster_bounds_min.z),
+            glm::vec3(shadow_caster_bounds_min.x, shadow_caster_bounds_min.y, shadow_caster_bounds_max.z), glm::vec3(shadow_caster_bounds_max.x, shadow_caster_bounds_min.y, shadow_caster_bounds_max.z),
+            glm::vec3(shadow_caster_bounds_min.x, shadow_caster_bounds_max.y, shadow_caster_bounds_max.z), glm::vec3(shadow_caster_bounds_max.x, shadow_caster_bounds_max.y, shadow_caster_bounds_max.z)};
+
+    // Camera basis, matching the view matrix built in updatePerspectiveTransformation()
+    const glm::vec3 eye = glm_vec3(camera_eye_location);
+    const glm::vec3 forward = glm::normalize(glm_vec3(camera_lookat_center) - eye);
+    const glm::vec3 right = glm::normalize(glm::cross(forward, cameraUpVector(camera_eye_location, camera_lookat_center)));
+    const glm::vec3 up = glm::cross(right, forward);
+    const float tan_half_fov_vertical = std::tan(glm::radians(camera_FOV) * 0.5f);
+    const float tan_half_fov_horizontal = tan_half_fov_vertical * float(Wframebuffer) / float(Hframebuffer);
+
+    // The cascades span from the near plane to the farthest point of the shadow casters' bounds that is
+    // in view. Nothing beyond that is visible to receive a shadow, so no fixed distance limits shadowing,
+    // and bounds outside the field of view (e.g. a large ground plane's far corners) do not stretch the
+    // cascades.
+    const float near_depth = cameraNearPlane();
+    float far_depth;
+    if (!farthestDepthInView(eye, forward, right, up, tan_half_fov_horizontal, tan_half_fov_vertical, near_depth, glm_vec3(shadow_caster_bounds_min), glm_vec3(shadow_caster_bounds_max), far_depth) ||
+        far_depth <= near_depth) {
+        return; // no shadow-casting geometry is in view
+    }
+
+    // "Practical" split scheme (Zhang et al. 2006): a blend of logarithmic splits, which give each
+    // cascade the same texel-to-pixel ratio, and uniform splits, which stop the far cascades from
+    // becoming very long and thin. The weight leans strongly logarithmic: when the view reaches far
+    // (e.g. to a distant edge of a ground plane), even a modest uniform share pushes the first split
+    // out by a fixed fraction of that distance and coarsens the shadows on nearby surfaces.
+    constexpr float logarithmic_split_weight = 0.9f;
+    std::array<float, shadow_cascade_count + 1> split_depths{};
+    split_depths[0] = near_depth;
+    for (int i = 1; i <= shadow_cascade_count; i++) {
+        const float fraction = float(i) / float(shadow_cascade_count);
+        const float logarithmic_split = near_depth * std::pow(far_depth / near_depth, fraction);
+        const float uniform_split = near_depth + (far_depth - near_depth) * fraction;
+        split_depths[i] = logarithmic_split_weight * logarithmic_split + (1.f - logarithmic_split_weight) * uniform_split;
+    }
+
+    // Light view, rotation only, looking along the direction the light travels
+    const glm::vec3 toward_light = glm::normalize(glm_vec3(light_direction));
+    glm::vec3 light_up(0.0f, 1.0f, 0.0f);
+    if (std::abs(glm::dot(light_up, toward_light)) > 0.9f) {
+        light_up = glm::vec3(1, 0, 0);
+    }
+    const glm::mat4 light_view = glm::lookAt(glm::vec3(0.f), -toward_light, light_up);
+
+    // Light-space depth of the shadow caster nearest the light. Light space looks down -z, so
+    // larger z is nearer the light.
+    float caster_z_nearest_light = -std::numeric_limits<float>::infinity();
+    for (const glm::vec3 &corner: caster_corners) {
+        caster_z_nearest_light = std::max(caster_z_nearest_light, (light_view * glm::vec4(corner, 1.f)).z);
+    }
+
+    const float resolution = float(shadow_buffer_size.x);
+    const glm::mat4 texture_space_bias(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f);
+
+    for (int i = 0; i < shadow_cascade_count; i++) {
+
+        // Corners of this cascade's slice of the view, and the sphere around them
+        std::array<glm::vec3, 8> slice_corners;
+        int corner_index = 0;
+        for (float depth: {split_depths[i], split_depths[i + 1]}) {
+            const glm::vec3 slice_center = eye + forward * depth;
+            for (float sx: {-1.f, 1.f}) {
+                for (float sy: {-1.f, 1.f}) {
+                    slice_corners[corner_index++] = slice_center + right * (sx * depth * tan_half_fov_horizontal) + up * (sy * depth * tan_half_fov_vertical);
+                }
+            }
+        }
+        glm::vec3 sphere_center(0.f);
+        for (const glm::vec3 &corner: slice_corners) {
+            sphere_center += corner;
+        }
+        sphere_center /= 8.f;
+        float sphere_radius = 0.f;
+        for (const glm::vec3 &corner: slice_corners) {
+            sphere_radius = std::max(sphere_radius, glm::distance(corner, sphere_center));
+        }
+
+        // Quantize the radius upward to one of 16 steps per power of two, so that the box size - and
+        // therefore the texel size - stays fixed while the camera moves and the far depth drifts.
+        const float radius_step = std::exp2(std::floor(std::log2(sphere_radius))) / 16.f;
+        sphere_radius = std::ceil(sphere_radius / radius_step) * radius_step;
+
+        // Snap the box center to whole texels in light space, so the texel grid is fixed in the world
+        // and shadow edges do not shimmer as the camera translates.
+        const float texel_size = 2.f * sphere_radius / resolution;
+        glm::vec3 center_light = glm::vec3(light_view * glm::vec4(sphere_center, 1.f));
+        center_light.x = std::floor(center_light.x / texel_size) * texel_size;
+        center_light.y = std::floor(center_light.y / texel_size) * texel_size;
+
+        // The depth range runs from the far side of the slice's sphere toward the light far enough to
+        // include every caster, so geometry outside the view can still shadow what is inside it.
+        const float depth_margin = 2.f * texel_size;
+        const float z_nearest_light = std::max(caster_z_nearest_light, center_light.z + sphere_radius) + depth_margin;
+        const float z_farthest_from_light = center_light.z - sphere_radius - depth_margin;
+
+        const glm::mat4 light_projection = glm::ortho(center_light.x - sphere_radius, center_light.x + sphere_radius, center_light.y - sphere_radius, center_light.y + sphere_radius, -z_nearest_light, -z_farthest_from_light);
+
+        shadow_cascade_light_matrices[i] = light_projection * light_view;
+        shadow_cascade_lookup_matrices[i] = texture_space_bias * shadow_cascade_light_matrices[i];
+        shadow_cascade_far_depths[i] = split_depths[i + 1];
+        shadow_cascade_texel_sizes[i] = texel_size;
+    }
 }
 
 //! Digest of a texture's pixel bytes, used to recognize a texture that is already registered

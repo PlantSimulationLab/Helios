@@ -992,6 +992,8 @@
    }
   ~~~~~~
 
+  Shadows are rendered with cascaded shadow maps. The camera's view is divided in depth into four ranges, each with its own 4096 x 4096 shadow map, so surfaces close to the camera receive finely resolved shadows in close-ups while distant surfaces are still covered in wide shots. The depth ranges are fitted to the geometry actually in view, out to its farthest visible point, so geometry outside the field of view (for example the far corners of a large ground plane) does not coarsen the shadows near the camera. Geometry outside the camera's view still casts shadows into it. Shadow edges are softened over roughly one and a half shadow-map texels, and the shadow maps are aligned to a fixed texel grid so that shadow edges do not shimmer as the camera moves through an animation.
+
   \subsubsection PhongMaterial Material properties and ambient light
 
   The shading model combines three terms: a hemispheric ambient term, a Lambertian diffuse term,

@@ -516,6 +516,17 @@ public:
      */
     void getDomainBoundingSphere(helios::vec3 &center, helios::vec3 &radius) const;
 
+    //! Computes the axis-aligned bounding box of all geometry that can cast a shadow
+    /**
+     * Includes visible primitives in Cartesian coordinates, and excludes window-normalized overlays,
+     * sky geometry, and hidden or deleted primitives, none of which are drawn in the shadow pass.
+     *
+     * \param[out] bounds_min Minimum corner of the bounding box.
+     * \param[out] bounds_max Maximum corner of the bounding box.
+     * \return False if no primitive can cast a shadow, in which case the bounds are not meaningful.
+     */
+    [[nodiscard]] bool getShadowCasterBoundingBox(helios::vec3 &bounds_min, helios::vec3 &bounds_max) const;
+
     /**
      * \brief Generates and returns a random unique identifier value as a size_t.
      *

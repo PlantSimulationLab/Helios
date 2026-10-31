@@ -223,11 +223,12 @@ namespace helios {
         CUdeviceptr d_rho_cam                = 0;
         CUdeviceptr d_tau_cam                = 0;
         CUdeviceptr d_white_reference_cam    = 0; //!< Camera-weighted reflectivity of a white surface [source][band][camera]
-        CUdeviceptr d_specular_exponent      = 0;
-        CUdeviceptr d_specular_scale         = 0;
         CUdeviceptr d_glass_n                = 0; //!< Translucent-cover refractive index
         CUdeviceptr d_glass_KL               = 0; //!< Translucent-cover Bouguer absorption K*L
         CUdeviceptr d_is_glass               = 0; //!< Translucent-cover material flag
+        CUdeviceptr d_surface_model            = 0; //!< Surface model per primitive (see RayTracingMaterial::surface_model)
+        CUdeviceptr d_surface_model_band_table = 0; //!< Albedo table of each surface model in each band
+        CUdeviceptr d_surface_layer_tables     = 0; //!< Surface-layer directional albedo tables
 
         // ---- Radiation energy device buffers ----
         CUdeviceptr d_radiation_in           = 0;
@@ -296,10 +297,11 @@ namespace helios {
         size_t   current_camera_count    = 0;
         size_t   current_launch_band_count = 0;   //!< Nbands_launch used for camera buffers
         size_t   camera_scatter_buffer_bytes = 0; //!< Bytes allocated to each of d_scatter_buff_top_cam/d_scatter_buff_bottom_cam by zeroCameraScatterBuffers()
+        size_t   outgoing_components     = 1;   //!< Components of outgoing radiation per face: 2 when any primitive has a surface layer (see RayTracingMaterial::surface_model)
         size_t   white_reference_buffer_bytes = 0; //!< Bytes allocated to each of d_white_reference_top_cam/d_white_reference_bottom_cam by zeroRadiationBuffers()
         size_t   radiation_specular_buffer_bytes = 0; //!< Bytes allocated to d_radiation_specular by zeroRadiationBuffers()
         size_t   radiation_in_top_count = 0; //!< Elements allocated to d_radiation_in_top by zeroRadiationBuffers()
-        bool     specular_reflection_enabled = false; //!< Set by updateMaterials(); d_radiation_specular is allocated only when true
+        bool     specular_reflection_enabled = false; //!< Set by updateMaterials(): some primitive has a surface layer, so d_radiation_specular is allocated
         uint32_t current_camera_launch_id  = 0xFFFFFFFFu; //!< Camera ID from last launchCameraRays
 
         // ---- Private helper methods ----

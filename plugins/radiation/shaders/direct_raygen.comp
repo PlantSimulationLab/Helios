@@ -252,6 +252,7 @@ layout(set = 4, binding = 0) buffer RayCountersBuffer {
 #include "common/bvh_traversal.glsl"
 #include "common/periodic_boundary.glsl"
 #include "common/texture_mask.glsl"
+#include "common/surface_layer.glsl"
 
 const float PI = 3.14159265359;
 
@@ -667,7 +668,9 @@ void main() {
                 // behind the source and does not block.
                 float distance_to_source = length(source_target - ray_origin);
 
-                float segment_t_min = 1e-4;
+                // No minimum distance: the primitive the ray was launched from is skipped (prim_idx), and a minimum distance let
+                // a ray launched that close to an adjacent surface pass through it where the two meet
+                float segment_t_min = 0.0;
                 for (int step = 0; step < MAX_RAY_SEGMENTS; ++step) {
                     occluder = traverse_cwbvh(trace_origin, ray_dir, segment_t_min, prim_idx, occlusion_t);
 
@@ -763,6 +766,18 @@ void main() {
                         tau = 0.0;
                         absorption_factor = cover_tra.z;
                     }
+
+                    // A surface layer reflects layer_albedo of what arrives; the body absorbs and scatters the rest
+                    float layer_albedo = 0.0;
+                    float body_fraction = 1.0;
+                    int layer = origin_is_cover ? -1 : surface_layer_table(prim_idx, global_b);
+                    if (layer >= 0) {
+                        layer_albedo = surface_layer_albedo(layer, abs(dot(ray_dir, normalize(normal))));
+                        body_fraction = 1.0 - layer_albedo;
+                        absorption_factor *= body_fraction;
+                        rho *= body_fraction;
+                        tau *= body_fraction;
+                    }
                     float energy = flux * strength * absorption_factor;
 
                     // Accumulate to radiation_in buffer with subgroup reduction
@@ -808,6 +823,10 @@ void main() {
                         uint cam_mat_idx = ((src_idx * pc.primitive_count + prim_idx) * pc.material_band_count + global_b) * pc.camera_count + cam;
                         float rho_cam = reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
                         float tau_cam = transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
+                        if (layer >= 0) {
+                            rho_cam *= body_fraction;
+                            tau_cam *= body_fraction;
+                        }
                         if (origin_is_cover) {
                             // A cover's reflectance is spectrally flat within a band: each camera weights it by its white reference.
                             rho_cam = rho * white_reference_cam_buf.white_reference_cam[(src_idx * pc.material_band_count + global_b) * pc.camera_count + cam];
@@ -842,10 +861,25 @@ void main() {
                         }
                     }
 
-                    // Accumulate incident radiation for specular reflection
-                    // radiation_specular stores per-source incident energy for camera specular shading
+                    // The reflected energy is also kept in the face's second outgoing component, so that the host counts it in the energy
+                    // the launch delivering the lobe scatters, or absorbs it in place if that launch never comes; the host clears it
+                    // before that launch reads the outgoing buffers (cameras use the lobe alone)
+                    if (surface_layers_enabled()) {
+                        uint layer_offset = pc.primitive_count * pc.band_count;
+                        float layer_sum = subgroupAdd(flux * strength * layer_albedo);
+                        if (subgroupElect() && layer_sum != 0.0) {
+                            if (is_top_face) {
+                                atomicAdd(scatter_top_buf.scatter_top[layer_offset + rad_idx], layer_sum);
+                            } else {
+                                atomicAdd(scatter_bottom_buf.scatter_bottom[layer_offset + rad_idx], layer_sum);
+                            }
+                        }
+                    }
+
+                    // A surface layer reflects a source's direct radiation into its microfacet lobe around the mirror direction, which
+                    // the rays reading the first scattering of the direct radiation evaluate from the incident flux stored here
                     if (pc.specular_reflection_enabled > 0) {
-                        float spec_energy = flux * strength;
+                        float spec_energy = layer >= 0 ? flux * strength : 0.0;
                         float spec_sum = subgroupAdd(spec_energy);
                         if (subgroupElect()) {
                             uint spec_idx = src_idx * pc.primitive_count * pc.band_count + prim_idx * pc.band_count + band;

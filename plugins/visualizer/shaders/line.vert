@@ -22,12 +22,10 @@ layout(location = 2) in int face_index;
 layout(location = 3) in vec3 vertexNormal;
 
 uniform mat4 MVP;
-uniform mat4 DepthBiasMVP;
 
 // Outputs to geometry shader (prefixed with vs_)
 out vec2 vs_texcoord;
 out vec2 vs_uv_scale;
-out vec4 vs_ShadowCoord;
 out vec3 vs_worldPosition;
 out vec3 vs_interpolatedNormal;
 flat out int vs_faceID;
@@ -57,6 +55,4 @@ void main() {
 
     vs_worldPosition = vertexPosition_modelspace;
     vs_interpolatedNormal = vertexNormal;
-
-    vs_ShadowCoord = DepthBiasMVP * v;
 }

@@ -1043,6 +1043,43 @@ TEST_CASE("Data Management") {
             DOCTEST_CHECK_THROWS(ctx.updateTimeseriesData("ts", date, time_missing, 0.f));
         }
     }
+    SUBCASE("timeseries query at an exact sample time returns the stored value") {
+        // Interpolating as (xplus - xminus) * dt / (tplus - tminus) rounds in the multiplication, so
+        // the division does not recover xplus - xminus. A stored 0 came back as a tiny non-zero value,
+        // which could be negative. Only some sampling intervals round: 1 hour never does, but 2 and 4
+        // hours do for a few percent of values.
+        Context ctx;
+        Date date = make_Date(21, 6, 2020);
+        Time time_end = make_Time(18, 0, 0);
+        const std::vector<Time> interval_starts = {make_Time(16, 0, 0), make_Time(14, 0, 0)}; // 2 and 4 hours before time_end
+
+        for (size_t interval = 0; interval < interval_starts.size(); interval++) {
+            const std::string label = "ghi_" + std::to_string(interval);
+            const Time &time_start = interval_starts.at(interval);
+            ctx.addTimeseriesData(label.c_str(), 1.f, date, time_start);
+            ctx.addTimeseriesData(label.c_str(), 0.f, date, time_end);
+
+            int zero_sample_mismatches = 0;
+            int start_sample_mismatches = 0;
+            for (int step = 1; step <= 10000; step++) {
+                const float value_start = 0.1f * float(step);
+                ctx.updateTimeseriesData(label.c_str(), date, time_start, value_start);
+                if (ctx.queryTimeseriesData(label.c_str(), date, time_end) != 0.f) {
+                    zero_sample_mismatches++;
+                }
+                if (ctx.queryTimeseriesData(label.c_str(), date, time_start) != value_start) {
+                    start_sample_mismatches++;
+                }
+            }
+            DOCTEST_CHECK(zero_sample_mismatches == 0);
+            DOCTEST_CHECK(start_sample_mismatches == 0);
+
+            // A query between the samples must still interpolate
+            ctx.updateTimeseriesData(label.c_str(), date, time_start, 100.f);
+            const Time time_midpoint = make_Time((time_start.hour + time_end.hour) / 2, 0, 0);
+            DOCTEST_CHECK(ctx.queryTimeseriesData(label.c_str(), date, time_midpoint) == doctest::Approx(50.f));
+        }
+    }
 
     SUBCASE("Primitive data") {
         capture_cerr cerr_buffer;
@@ -1602,6 +1639,224 @@ TEST_CASE("Texture Management") {
         // creating its own.
         for (uint UUID: UUIDs) {
             DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == ctx.getPrimitiveMaterialLabel(UUIDs.front()));
+        }
+    }
+}
+
+TEST_CASE("Texture and material changes reach the primitives using them") {
+    const char *disk_texture = "lib/images/disk_texture.png"; // about 78.5% opaque
+    const char *diamond_texture = "lib/images/diamond_texture.png"; // about 50% opaque
+    const char *solid_texture = "lib/images/solid.jpg";
+    const std::string missing_texture = "lib/images/missing.png";
+
+    SUBCASE("setPrimitiveTextureFile registers a texture the Context has not loaded") {
+        bool has_transparency = false;
+        int2 texture_size;
+        float area = 0.f;
+        {
+            capture_cerr cerr_buffer; // Context reports the setPrimitiveTextureFile API warning when it is destroyed
+            Context ctx;
+            uint patch = ctx.addPatch();
+            ctx.setPrimitiveTextureFile(patch, disk_texture);
+            has_transparency = ctx.primitiveTextureHasTransparencyChannel(patch);
+            texture_size = ctx.getPrimitiveTextureSize(patch);
+            area = ctx.getPrimitiveArea(patch);
+        }
+        DOCTEST_CHECK(has_transparency);
+        DOCTEST_CHECK(texture_size.x == 800);
+        DOCTEST_CHECK(texture_size.y == 800);
+        DOCTEST_CHECK(std::fabs(area - 0.785f) < 0.01f);
+    }
+
+    SUBCASE("setPrimitiveTextureFile recomputes the solid fraction over the primitive's own (u,v)") {
+        float patch_area = 0.f, patch_reference_area = 0.f, triangle_area = 0.f, triangle_reference_area = 0.f;
+        uint64_t revision_before = 0, revision_after = 0;
+        {
+            capture_cerr cerr_buffer;
+            Context ctx;
+            const vec2 uv_center = make_vec2(0.25f, 0.5f);
+            const vec2 uv_size = make_vec2(0.5f, 1.f);
+            uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, solid_texture, uv_center, uv_size);
+            patch_reference_area = ctx.getPrimitiveArea(ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, diamond_texture, uv_center, uv_size));
+
+            const vec3 v0 = make_vec3(0, 0, 0), v1 = make_vec3(1, 0, 0), v2 = make_vec3(1, 1, 0);
+            const vec2 uv0 = make_vec2(0, 0), uv1 = make_vec2(1, 0), uv2 = make_vec2(1, 1);
+            uint triangle = ctx.addTriangle(v0, v1, v2, solid_texture, uv0, uv1, uv2);
+            triangle_reference_area = ctx.getPrimitiveArea(ctx.addTriangle(v0, v1, v2, diamond_texture, uv0, uv1, uv2));
+
+            revision_before = ctx.getShapeRevision();
+            ctx.setPrimitiveTextureFile(patch, diamond_texture);
+            ctx.setPrimitiveTextureFile(triangle, diamond_texture);
+            revision_after = ctx.getShapeRevision();
+            patch_area = ctx.getPrimitiveArea(patch);
+            triangle_area = ctx.getPrimitiveArea(triangle);
+        }
+        DOCTEST_CHECK(patch_reference_area < 0.75f);
+        DOCTEST_CHECK(triangle_reference_area < 0.4f);
+        DOCTEST_CHECK(std::fabs(patch_area - patch_reference_area) < 1e-5f);
+        DOCTEST_CHECK(std::fabs(triangle_area - triangle_reference_area) < 1e-5f);
+        DOCTEST_CHECK(revision_after > revision_before);
+    }
+
+    SUBCASE("setPrimitiveTextureFile rejects a missing file and can remove a texture") {
+        bool threw = false;
+        std::string file_after_rejection, file_after_removal;
+        float area_after_rejection = 0.f, area_after_removal = 0.f;
+        {
+            capture_cerr cerr_buffer;
+            Context ctx;
+            uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, disk_texture);
+            try {
+                ctx.setPrimitiveTextureFile(patch, missing_texture);
+            } catch (const std::runtime_error &) {
+                threw = true;
+            }
+            file_after_rejection = ctx.getPrimitiveTextureFile(patch);
+            area_after_rejection = ctx.getPrimitiveArea(patch);
+
+            ctx.setPrimitiveTextureFile(patch, "");
+            file_after_removal = ctx.getPrimitiveTextureFile(patch);
+            area_after_removal = ctx.getPrimitiveArea(patch);
+        }
+        DOCTEST_CHECK(threw);
+        DOCTEST_CHECK(file_after_rejection == disk_texture);
+        DOCTEST_CHECK(std::fabs(area_after_rejection - 0.785f) < 0.01f);
+        DOCTEST_CHECK(file_after_removal.empty());
+        DOCTEST_CHECK(area_after_removal == doctest::Approx(1.f));
+    }
+
+    SUBCASE("Assigning a material marks the primitive dirty and updates its texture state") {
+        Context ctx;
+        ctx.addMaterial("red");
+        ctx.setMaterialColor("red", make_RGBAcolor(1, 0, 0, 1));
+        ctx.addMaterial("green");
+        ctx.setMaterialColor("green", make_RGBAcolor(0, 1, 0, 1));
+        ctx.addMaterial("disk");
+        ctx.setMaterialTexture("disk", disk_texture);
+        ctx.addMaterial("disk_copy");
+        ctx.setMaterialTexture("disk_copy", disk_texture);
+
+        uint patch = ctx.addPatch();
+        uint bystander = ctx.addPatch();
+
+        // A color-only change is not a change of shape, so it must not make the radiation model rebuild its geometry
+        ctx.assignMaterialToPrimitive(patch, "red");
+        ctx.markGeometryClean();
+        uint64_t shape_revision = ctx.getShapeRevision();
+        ctx.assignMaterialToPrimitive(patch, "green");
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(patch));
+        DOCTEST_CHECK(!ctx.isPrimitiveDirty(bystander));
+        DOCTEST_CHECK(ctx.getShapeRevision() == shape_revision);
+
+        // Reassigning the material it already has changes nothing
+        ctx.markGeometryClean();
+        ctx.assignMaterialToPrimitive(patch, "green");
+        DOCTEST_CHECK(!ctx.isPrimitiveDirty(patch));
+
+        // A different texture changes the opaque area and the mask
+        ctx.assignMaterialToPrimitive(patch, "disk");
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(patch));
+        DOCTEST_CHECK(ctx.getShapeRevision() > shape_revision);
+        DOCTEST_CHECK(std::fabs(ctx.getPrimitiveArea(patch) - 0.785f) < 0.01f);
+
+        // A different material with the same texture does not
+        ctx.markGeometryClean();
+        shape_revision = ctx.getShapeRevision();
+        ctx.assignMaterialToPrimitive(std::vector<uint>{patch}, "disk_copy");
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(patch));
+        DOCTEST_CHECK(ctx.getShapeRevision() == shape_revision);
+
+        // A material without a texture removes it, and the primitive is solid again
+        ctx.assignMaterialToPrimitive(std::vector<uint>{patch}, "red");
+        DOCTEST_CHECK(ctx.getShapeRevision() > shape_revision);
+        DOCTEST_CHECK(ctx.getPrimitiveArea(patch) == doctest::Approx(1.f));
+    }
+
+    SUBCASE("Changing a material marks only the primitives using it") {
+        Context ctx;
+        ctx.addMaterial("shared");
+        ctx.setMaterialColor("shared", make_RGBAcolor(1, 0, 0, 1));
+        uint user = ctx.addPatch();
+        uint bystander = ctx.addPatch();
+        ctx.assignMaterialToPrimitive(user, "shared");
+
+        ctx.markGeometryClean();
+        uint64_t shape_revision = ctx.getShapeRevision();
+
+        ctx.setMaterialColor("shared", make_RGBAcolor(1, 0, 0, 1)); // the color it already has
+        DOCTEST_CHECK(!ctx.isPrimitiveDirty(user));
+
+        ctx.setMaterialColor("shared", make_RGBAcolor(0, 1, 0, 1));
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(user));
+        DOCTEST_CHECK(!ctx.isPrimitiveDirty(bystander));
+        DOCTEST_CHECK(ctx.getShapeRevision() == shape_revision);
+
+        ctx.markGeometryClean();
+        ctx.setMaterialTextureColorOverride("shared", true);
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(user));
+        DOCTEST_CHECK(!ctx.isPrimitiveDirty(bystander));
+        DOCTEST_CHECK(ctx.getShapeRevision() == shape_revision);
+
+        ctx.markGeometryClean();
+        ctx.setMaterialTexture("shared", disk_texture);
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(user));
+        DOCTEST_CHECK(!ctx.isPrimitiveDirty(bystander));
+        DOCTEST_CHECK(ctx.getShapeRevision() > shape_revision);
+        DOCTEST_CHECK(std::fabs(ctx.getPrimitiveArea(user) - 0.785f) < 0.01f);
+        DOCTEST_CHECK(ctx.getPrimitiveArea(bystander) == doctest::Approx(1.f));
+
+        // A rejected texture leaves the material as it was
+        DOCTEST_CHECK_THROWS(ctx.setMaterialTexture("shared", missing_texture));
+        DOCTEST_CHECK(ctx.getMaterialTexture("shared") == disk_texture);
+        DOCTEST_CHECK(std::fabs(ctx.getPrimitiveArea(user) - 0.785f) < 0.01f);
+
+        ctx.setMaterialTexture("shared", "");
+        DOCTEST_CHECK(ctx.getPrimitiveArea(user) == doctest::Approx(1.f));
+    }
+
+    SUBCASE("Overwriting or deleting a material updates the primitives using it") {
+        Context ctx;
+        ctx.addMaterial("overwritten");
+        ctx.setMaterialTexture("overwritten", disk_texture);
+        ctx.addMaterial("deleted");
+        ctx.setMaterialTexture("deleted", disk_texture);
+        uint overwritten_user = ctx.addPatch();
+        uint deleted_user = ctx.addPatch();
+        ctx.assignMaterialToPrimitive(overwritten_user, "overwritten");
+        ctx.assignMaterialToPrimitive(deleted_user, "deleted");
+
+        ctx.markGeometryClean();
+        {
+            capture_cerr cerr_buffer; // both report a warning when the material is in use
+            ctx.addMaterial("overwritten");
+            ctx.deleteMaterial("deleted");
+        }
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(overwritten_user));
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(deleted_user));
+        DOCTEST_CHECK(ctx.getPrimitiveArea(overwritten_user) == doctest::Approx(1.f));
+        DOCTEST_CHECK(ctx.getPrimitiveArea(deleted_user) == doctest::Approx(1.f));
+    }
+
+    SUBCASE("A textured primitive keeps its opaque area through writeXML and loadXML") {
+        const std::string filename = (std::filesystem::temp_directory_path() / "helios_test_textured_material_area.xml").string();
+
+        Context ctx;
+        ctx.addMaterial("disk");
+        ctx.setMaterialTexture("disk", disk_texture);
+        uint named_material_patch = ctx.addPatch();
+        ctx.assignMaterialToPrimitive(named_material_patch, "disk");
+        uint auto_material_patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, diamond_texture);
+        uint triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), diamond_texture, make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+        const std::vector<uint> UUIDs = {named_material_patch, auto_material_patch, triangle};
+        ctx.writeXML(filename.c_str(), UUIDs, true);
+
+        Context ctx2;
+        const std::vector<uint> loaded_UUIDs = ctx2.loadXML(filename.c_str(), true);
+        std::filesystem::remove(filename);
+
+        DOCTEST_REQUIRE(loaded_UUIDs.size() == UUIDs.size());
+        for (size_t i = 0; i < UUIDs.size(); i++) {
+            DOCTEST_CHECK(std::fabs(ctx2.getPrimitiveArea(loaded_UUIDs.at(i)) - ctx.getPrimitiveArea(UUIDs.at(i))) < 1e-4f);
         }
     }
 }
@@ -2951,6 +3206,146 @@ TEST_CASE("Tube Object Management") {
         // Pruning to 1 node should delete the object entirely
         ctx.pruneTubeNodes(tube, 1);
         DOCTEST_CHECK_FALSE(ctx.doesObjectExist(tube));
+    }
+
+    SUBCASE("splitTubeObject moves the upper segments to a new tube") {
+        Context ctx;
+        // 4 nodes -> 3 segments. Splitting at index 2 keeps segment 0 and moves segments 1 and 2.
+        std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2), make_vec3(0, 0, 3)};
+        std::vector<float> radii = {0.4f, 0.3f, 0.2f, 0.1f};
+        std::vector<RGBcolor> colors = {RGB::red, RGB::yellow, RGB::green, RGB::blue};
+        uint subdiv = 8;
+        uint tube = ctx.addTubeObject(subdiv, nodes, radii, colors);
+        ctx.setObjectData(tube, "label", 7);
+        std::vector<uint> original_UUIDs = ctx.getObjectPrimitiveUUIDs(tube);
+        ctx.setPrimitiveData(original_UUIDs, "object_label", "shoot");
+        size_t primitive_count_before = ctx.getPrimitiveCount();
+
+        uint upper = ctx.splitTubeObject(tube, 2);
+
+        DOCTEST_CHECK(upper != tube);
+        DOCTEST_CHECK(ctx.getPrimitiveCount() == primitive_count_before);
+
+        std::vector<vec3> lower_nodes = ctx.getTubeObjectNodes(tube);
+        std::vector<vec3> upper_nodes = ctx.getTubeObjectNodes(upper);
+        DOCTEST_REQUIRE(lower_nodes.size() == 2);
+        DOCTEST_REQUIRE(upper_nodes.size() == 3);
+        DOCTEST_CHECK(lower_nodes.back() == nodes.at(1));
+        DOCTEST_CHECK(upper_nodes.front() == nodes.at(1));
+        DOCTEST_CHECK(upper_nodes.back() == nodes.at(3));
+        std::vector<float> upper_radii = ctx.getTubeObjectNodeRadii(upper);
+        DOCTEST_CHECK(upper_radii.front() == doctest::Approx(0.3f));
+
+        std::vector<uint> lower_UUIDs = ctx.getObjectPrimitiveUUIDs(tube);
+        std::vector<uint> upper_UUIDs = ctx.getObjectPrimitiveUUIDs(upper);
+        DOCTEST_CHECK(lower_UUIDs.size() == 1 * subdiv * 2);
+        DOCTEST_CHECK(upper_UUIDs.size() == 2 * subdiv * 2);
+
+        // The moved primitives are the originals, not copies, and keep their colors and primitive data
+        std::set<uint> original_set(original_UUIDs.begin(), original_UUIDs.end());
+        int bad_upper = 0;
+        for (uint UUID: upper_UUIDs) {
+            RGBcolor c = ctx.getPrimitiveColorRGB(UUID);
+            bool is_upper_color = (c == RGB::yellow) || (c == RGB::green);
+            std::string label;
+            ctx.getPrimitiveData(UUID, "object_label", label);
+            if (original_set.count(UUID) == 0 || !is_upper_color || label != "shoot" || ctx.getPrimitiveParentObjectID(UUID) != upper) {
+                bad_upper++;
+            }
+        }
+        DOCTEST_CHECK(bad_upper == 0);
+        int bad_lower = 0;
+        for (uint UUID: lower_UUIDs) {
+            if (!(ctx.getPrimitiveColorRGB(UUID) == RGB::red)) {
+                bad_lower++;
+            }
+        }
+        DOCTEST_CHECK(bad_lower == 0);
+
+        int label = 0;
+        DOCTEST_REQUIRE(ctx.doesObjectDataExist(upper, "label"));
+        ctx.getObjectData(upper, "label", label);
+        DOCTEST_CHECK(label == 7);
+
+        // Each piece must keep at least one segment
+        DOCTEST_CHECK_THROWS(static_cast<void>(ctx.splitTubeObject(tube, 1)));
+        DOCTEST_CHECK_THROWS(static_cast<void>(ctx.splitTubeObject(upper, 3)));
+        DOCTEST_CHECK_THROWS(static_cast<void>(ctx.splitTubeObject(upper, 1)));
+        uint tile = ctx.addTileObject(nullorigin, make_vec2(1, 1), nullrotation, make_int2(1, 1));
+        DOCTEST_CHECK_THROWS(static_cast<void>(ctx.splitTubeObject(tile, 2)));
+    }
+
+    SUBCASE("splitTubeObject on a transformed tube keeps the world position") {
+        Context ctx;
+        std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2)};
+        std::vector<float> radii = {0.2f, 0.2f, 0.2f};
+        uint tube = ctx.addTubeObject(6, nodes, radii);
+        ctx.translateObject(tube, make_vec3(5, 0, 0));
+        ctx.rotateObject(tube, 0.5f * PI_F, "y");
+        std::vector<vec3> world_nodes = ctx.getTubeObjectNodes(tube);
+
+        uint upper = ctx.splitTubeObject(tube, 2);
+
+        std::vector<vec3> lower_nodes = ctx.getTubeObjectNodes(tube);
+        std::vector<vec3> upper_nodes = ctx.getTubeObjectNodes(upper);
+        DOCTEST_REQUIRE(lower_nodes.size() == 2);
+        DOCTEST_REQUIRE(upper_nodes.size() == 2);
+        DOCTEST_CHECK((lower_nodes.at(1) - world_nodes.at(1)).magnitude() < 1e-5f);
+        DOCTEST_CHECK((upper_nodes.at(0) - world_nodes.at(1)).magnitude() < 1e-5f);
+        DOCTEST_CHECK((upper_nodes.at(1) - world_nodes.at(2)).magnitude() < 1e-5f);
+    }
+
+    SUBCASE("Tube triangle k lies on segment (k/2) % segment_count after every tube edit") {
+        // Callers such as the PlantArchitecture organ index map a tube triangle to its segment from the triangle's index in the object's UUID list.
+        // A straight tube along z with node j at z = j makes segment i span exactly z = i to z = i + 1.
+        auto countTrianglesOffTheirSegment = [](Context &ctx, uint tube) {
+            std::vector<uint> UUIDs = ctx.getObjectPrimitiveUUIDs(tube);
+            std::vector<vec3> tube_nodes = ctx.getTubeObjectNodes(tube);
+            size_t segment_count = tube_nodes.size() - 1;
+            if (UUIDs.size() != 2 * segment_count * ctx.getTubeObjectSubdivisionCount(tube)) {
+                return int(UUIDs.size()) + 1;
+            }
+            int misplaced = 0;
+            for (size_t k = 0; k < UUIDs.size(); k++) {
+                size_t segment = (k / 2) % segment_count;
+                float z_min = std::numeric_limits<float>::max();
+                float z_max = -std::numeric_limits<float>::max();
+                for (const vec3 &vertex: ctx.getPrimitiveVertices(UUIDs.at(k))) {
+                    z_min = std::min(z_min, vertex.z);
+                    z_max = std::max(z_max, vertex.z);
+                }
+                if (std::fabs(z_min - tube_nodes.at(segment).z) > 1e-5f || std::fabs(z_max - tube_nodes.at(segment + 1).z) > 1e-5f) {
+                    misplaced++;
+                }
+            }
+            return misplaced;
+        };
+
+        Context ctx;
+        std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2), make_vec3(0, 0, 3), make_vec3(0, 0, 4)};
+        std::vector<float> radii = {0.3f, 0.25f, 0.2f, 0.15f, 0.1f};
+        std::vector<RGBcolor> colors(nodes.size(), RGB::green);
+
+        uint colored_tube = ctx.addTubeObject(7, nodes, radii, colors);
+        DOCTEST_CHECK(countTrianglesOffTheirSegment(ctx, colored_tube) == 0);
+        uint textured_tube = ctx.addTubeObject(7, nodes, radii, "lib/images/solid.jpg");
+        DOCTEST_CHECK(countTrianglesOffTheirSegment(ctx, textured_tube) == 0);
+
+        ctx.appendTubeSegment(colored_tube, make_vec3(0, 0, 5), 0.05f, RGB::green);
+        ctx.appendTubeSegment(colored_tube, make_vec3(0, 0, 6), 0.05f, RGB::green);
+        DOCTEST_CHECK(countTrianglesOffTheirSegment(ctx, colored_tube) == 0);
+        ctx.appendTubeSegment(textured_tube, make_vec3(0, 0, 5), 0.05f, "lib/images/solid.jpg", make_vec2(0.8f, 1.f));
+        DOCTEST_CHECK(countTrianglesOffTheirSegment(ctx, textured_tube) == 0);
+
+        uint copied_tube = ctx.copyObject(colored_tube);
+        DOCTEST_CHECK(countTrianglesOffTheirSegment(ctx, copied_tube) == 0);
+
+        ctx.pruneTubeNodes(colored_tube, 5);
+        DOCTEST_CHECK(countTrianglesOffTheirSegment(ctx, colored_tube) == 0);
+
+        uint upper_tube = ctx.splitTubeObject(textured_tube, 3);
+        DOCTEST_CHECK(countTrianglesOffTheirSegment(ctx, textured_tube) == 0);
+        DOCTEST_CHECK(countTrianglesOffTheirSegment(ctx, upper_tube) == 0);
     }
 
     SUBCASE("setTubeNodes maintains circular cross-sections after bending") {

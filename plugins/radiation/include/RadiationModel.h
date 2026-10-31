@@ -601,6 +601,9 @@ struct RadiationBand {
     //! Flag that determines if emission calculations are performed for wave band
     bool emissionFlag;
 
+    //! Whether emission is computed relative to a uniform reference blackbody field (see RadiationModel::enableEmissionReferenceField())
+    bool emissionReferenceFieldFlag = false;
+
     //! Waveband range of band, (0,0) if the band was added without wavelength bounds
     helios::vec2 wavebandBounds;
 
@@ -908,6 +911,29 @@ public:
      * \param[in] label Label used to reference the band
      */
     void enableEmission(const std::string &label);
+
+    //! Compute emission in this band relative to a uniform reference blackbody field
+    /**
+     * If every surface and the sky radiated at one temperature, the radiation field would be uniform and each face would absorb
+     * exactly (1 - rho - tau) times the blackbody emissive power, whatever the geometry. With this option, each face's
+     * absorption from such a field, at the area-weighted mean blackbody emissive power of the scene, is added exactly, and rays
+     * only sample the departure of each surface's emission and of the sky's radiance from it. Absorbed fluxes are unchanged on
+     * average. An isothermal scene under a sky at the same temperature is then in exact radiative equilibrium at any ray count,
+     * and the ray-sampling noise scales with the temperature differences in the scene. This helps most in enclosed or
+     * near-isothermal scenes with surfaces of different emissivities (e.g., greenhouse interiors or growth chambers). In open
+     * scenes under a sky much colder than the surfaces it can increase the noise somewhat, which is why it is off by default.
+     * \param[in] label Label used to reference the band
+     * \note The band must have emission enabled, a scattering depth of at least 1 and a diffuse ray count of at least 1, and must not
+     * contain translucent covers or be a SIF emission band; \ref RadiationModel::runBand() raises an error otherwise.
+     */
+    void enableEmissionReferenceField(const std::string &label);
+
+    //! Compute emission in this band without a reference blackbody field (the default)
+    /**
+     * \param[in] label Label used to reference the band
+     * \sa enableEmissionReferenceField()
+     */
+    void disableEmissionReferenceField(const std::string &label);
 
     //! Add an external source of collimated radiation (i.e., source at infinite distance with parallel rays) assuming the default direction of (0,0,1)
     /**
@@ -1231,7 +1257,7 @@ public:
     //! Set the maximum number of scattering iterations for a certain band
     /**
      * \param[in] label Label used to reference the band
-     * \param[in] depth Maximum number of scattering iterations (depth=0 turns scattering off)
+     * \param[in] depth Maximum number of scattering iterations (default is 3; depth=0 turns scattering off)
      * \note The energy that would still be scattered after the last iteration is not dropped: the later iterations are summed as a geometric series, each primitive receiving its absorption in the last iteration times q/(1-q), where q is the ratio of
      * the energy launched in the last two iterations. A depth of 3 to 5 is therefore usually enough for absorbed fluxes, even for strongly scattering bands.
      * \note Radiation camera images are not extrapolated: they include only the scattering iterations that were traced, so images of strongly scattering bands need a higher depth.
@@ -2145,7 +2171,7 @@ protected:
     //! Reduce the diffuse rays per primitive in later scattering iterations (see enableScatteringRayReduction())
     bool scattering_ray_reduction = true;
 
-    //! Specular reflection: 0 = disabled (no primitive has a specular exponent), 1 = enabled, each primitive scaled by its own specular_scale (1 if unset)
+    //! 1 when some primitive has a surface layer, whose reflection lobe of the direct radiation is evaluated from the direct flux reaching it (see RayTracingMaterial::specular_reflection_enabled)
     uint specular_reflection_mode = 0;
 
     //! Diffuse sky radiation is applied to rays leaving the domain below the horizon (see enableBelowHorizonDiffuseRadiation())
@@ -2397,24 +2423,36 @@ protected:
     */
     void updateRadiativeProperties();
 
-    //! Update atmospheric sky radiance model for camera radiation calculations
-    /** This function computes spectral sky radiance based on atmospheric conditions from SolarPosition plugin.
-     *  Integrates atmospheric sky spectrum weighted by camera spectral response for each band.
-     *  Uses analytical atmospheric physics model (independent implementation based on Rayleigh/Mie scattering).
-     *
-     *  Reads atmospheric parameters from Context global data:
-     *  - atmosphere_pressure_Pa: Atmospheric pressure in Pascals
-     *  - atmosphere_temperature_K: Air temperature in Kelvin
-     *  - atmosphere_humidity_rel: Relative humidity (0-1)
-     *  - atmosphere_turbidity: Ångström's aerosol turbidity coefficient (AOD at 500nm)
+    //! Sets up the specular surface layers ("specular_roughness", "specular_n" and "specular_n_<band>" material or primitive data)
+    /**
+     * Builds the surface models and their albedo tables in material_data, and converts the reflectivity and transmissivity of
+     * each primitive with a surface layer, its totals at normal incidence, to those of its body. Called at the end of
+     * updateRadiativeProperties().
+     * \param[in,out] warnings Aggregator for warnings about parameters set on both a primitive and its material
+     */
+    void updateSurfaceLayers(helios::WarningAggregator &warnings);
+
+    //! Albedo table of the surface layer of the primitive at position u in global band b, or nullptr if it has none there (see helios::computeSurfaceLayerAlbedoTable())
+    [[nodiscard]] const float *surfaceLayerTable(size_t u, size_t b_global) const;
+
+    //! Compute the sky a camera sees in each launched band
+    /**
+     * With the Prague sky model (SolarPosition::updatePragueSkyModel(), which sets the "prague_sky_valid" and "prague_sky_spectral_params" global data),
+     * the sky is the Prague spectral sky radiance integrated over the camera's spectral response. Otherwise it is the diffuse sky that lights the scene:
+     * the band's diffuse flux (setDiffuseRadiationFlux()) spread over the band's angular distribution, weighted as the camera weights diffuse light
+     * reflected by a white surface, so that a white surface under the sky looks as bright as the sky. Emission bands are not handled here.
      *
      * \param[in] band_labels Labels for all bands to be launched
-     * \param[in] camera Reference to the camera being traced
-     * \note Turbidity uses the same convention as SolarPosition plugin (AOD at 500nm, NOT Linke turbidity)
-     * \note If camera spectral response is "uniform", wavelength bounds from the band must be set
-     * \return Vector of base sky radiance values (W/m²/sr) for each band, to be used for camera rendering
+     * \param[in] camera Camera being traced; the sky is weighted by this camera's own spectral responses
+     * \param[in] camera_index Index of the camera in the cameras map, for its white references
+     * \param[in] diffuse_rays_launched Whether diffuse rays were traced in this run. If not, no diffuse light reached the scene and, without the Prague model, the sky is black.
+     * \param[out] camera_sky_radiance Base sky radiance for each band, defined so that the camera miss programs' product camera_sky_radiance * evaluateDiffuseAngularDistribution(..., sky_pattern_params)
+     * is the sky radiance (W/m²/sr). Zero for bands the camera does not render.
+     * \param[out] sky_pattern_params Prague angular sky parameters for each band (circumsolar strength, circumsolar width, horizon brightness, normalization), averaged over this camera's response; zero
+     * for the diffuse sky, whose angular distribution the miss programs take from the band's diffuse parameters. They must be uploaded together with camera_sky_radiance.
+     * \note With the Prague model, a band with a uniform camera response must have wavelength bounds
      */
-    std::vector<float> updateAtmosphericSkyModel(const std::vector<std::string> &band_labels, const RadiationCamera &camera);
+    void computeCameraSky(const std::vector<std::string> &band_labels, const RadiationCamera &camera, uint camera_index, bool diffuse_rays_launched, std::vector<float> &camera_sky_radiance, std::vector<helios::vec4> &sky_pattern_params) const;
 
     //! Apply the sensor atmosphere enabled with enableCameraAtmosphere() to the pixel data of the bands just traced for a camera
     /**

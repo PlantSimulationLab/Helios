@@ -28,9 +28,6 @@ uniform mat4 MVP;
 uniform mat4 view;
 uniform mat4 projection;
 
-uniform mat4 DepthBiasMVP;
-out vec4 ShadowCoord;
-
 out vec2 texcoord;
 out vec2 uv_scale;
 
@@ -81,7 +78,5 @@ void main(){
   worldPosition = vertexPosition_modelspace;
 
   interpolatedNormal = vertexNormal;
-
-  ShadowCoord = DepthBiasMVP*v;
 
 }

@@ -60,6 +60,70 @@ static float clampOffset(int count_per_axis, float offset) {
     return offset;
 }
 
+// Name of a build parameter distribution type in the "distribution" attribute of a <build_parameter> tag
+static std::string buildParameterDistributionTypeName(BuildParameterDistribution::Type type) {
+    switch (type) {
+        case BuildParameterDistribution::Type::CONSTANT:
+            return "constant";
+        case BuildParameterDistribution::Type::UNIFORM:
+            return "uniform";
+        case BuildParameterDistribution::Type::NORMAL:
+            return "normal";
+        case BuildParameterDistribution::Type::DISCRETE:
+            return "discrete";
+    }
+    helios_runtime_error("ERROR (buildParameterDistributionTypeName): Unknown build parameter distribution type.");
+    return "";
+}
+
+// Whitespace-separated floats of an XML tag or attribute value
+static std::vector<float> parseFloatList(const std::string &text, const std::string &what, const std::string &calling_function) {
+    std::vector<float> values;
+    std::istringstream stream(text);
+    std::string token;
+    while (stream >> token) {
+        float value;
+        if (!parse_float(token, value)) {
+            helios_runtime_error("ERROR (" + calling_function + "): Could not parse '" + token + "' in " + what + " as a number.");
+        }
+        values.push_back(value);
+    }
+    return values;
+}
+
+// Distribution written by writePlantStructureXML() as a <build_parameter> tag with a "distribution" attribute: the parameters in the tag value, as returned by BuildParameterDistribution::getParameters(),
+// and for a discrete distribution an optional "weights" attribute
+static BuildParameterDistribution parseBuildParameterDistribution(const pugi::xml_node &build_parameter, const std::string &calling_function) {
+    const std::string parameter_name = build_parameter.attribute("name").value();
+    const std::string type_name = build_parameter.attribute("distribution").value();
+    const std::string what = "the <build_parameter> tag '" + parameter_name + "'";
+    const std::vector<float> parameters = parseFloatList(build_parameter.child_value(), what, calling_function);
+    const std::vector<float> weights = parseFloatList(build_parameter.attribute("weights").value(), "the weights of " + what, calling_function);
+
+    auto require_parameter_count = [&](size_t count) {
+        if (parameters.size() != count) {
+            helios_runtime_error("ERROR (" + calling_function + "): A " + type_name + " distribution in " + what + " needs " + std::to_string(count) + " values, but " + std::to_string(parameters.size()) + " were given.");
+        }
+    };
+    if (!weights.empty() && type_name != "discrete") {
+        helios_runtime_error("ERROR (" + calling_function + "): " + what + " has weights, which only a discrete distribution takes.");
+    }
+    if (type_name == "constant") {
+        require_parameter_count(1);
+        return BuildParameterDistribution::constant(parameters.at(0));
+    } else if (type_name == "uniform") {
+        require_parameter_count(2);
+        return BuildParameterDistribution::uniform(parameters.at(0), parameters.at(1));
+    } else if (type_name == "normal") {
+        require_parameter_count(4);
+        return BuildParameterDistribution::normal(parameters.at(0), parameters.at(1), parameters.at(2), parameters.at(3));
+    } else if (type_name == "discrete") {
+        return BuildParameterDistribution::discrete(parameters, weights);
+    }
+    helios_runtime_error("ERROR (" + calling_function + "): " + what + " has an unknown distribution '" + type_name + "'. It must be constant, uniform, normal or discrete.");
+    return BuildParameterDistribution::constant(0.f);
+}
+
 std::string PlantArchitecture::makeShootString(const std::string &current_string, const std::shared_ptr<Shoot> &shoot, const std::vector<std::shared_ptr<Shoot>> &shoot_tree) const {
 
     std::string outstring = current_string;
@@ -528,12 +592,32 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
     // Build parameters the plant was built with. Some are read as the plant grows -- its flower and fruit prototypes are built from them -- so a plant read back
     // without them would grow differently, for example with default-sized fruit. They are written with enough digits to read back as the same float, so that the
     // restored plant shares the cached prototypes of the one it was written from, and with the library model that declares them so that they can be validated on
-    // reading. Optional on read, so older files still load.
-    if (!plant_instances.at(plantID).build_parameters.empty()) {
-        output_xml << "\t\t<plant_model> " << plant_instances.at(plantID).plant_name << " </plant_model>" << std::endl;
+    // reading. Optional on read, so older files still load. A structure parameter given as a distribution is written as the value sampled for this plant, and an organ parameter given as one is written as
+    // the distribution, with a "distribution" attribute, since the plant's flower and fruit prototypes are sampled from it.
+    const PlantInstance &written_plant = plant_instances.at(plantID);
+    if (!written_plant.build_parameters.empty() || !written_plant.organ_build_parameters.empty()) {
+        output_xml << "\t\t<plant_model> " << written_plant.plant_name << " </plant_model>" << std::endl;
         const std::streamsize previous_precision = output_xml.precision(std::numeric_limits<float>::max_digits10);
-        for (const auto &[parameter_name, value]: plant_instances.at(plantID).build_parameters) {
+        for (const auto &[parameter_name, value]: written_plant.build_parameters) {
             output_xml << "\t\t<build_parameter name=\"" << parameter_name << "\"> " << value << " </build_parameter>" << std::endl;
+        }
+        for (const auto &[parameter_name, distribution]: written_plant.organ_build_parameters) {
+            if (distribution.getType() == BuildParameterDistribution::Type::CONSTANT) {
+                continue;
+            }
+            output_xml << "\t\t<build_parameter name=\"" << parameter_name << "\" distribution=\"" << buildParameterDistributionTypeName(distribution.getType()) << "\"";
+            if (!distribution.getWeights().empty()) {
+                output_xml << " weights=\"";
+                for (size_t i = 0; i < distribution.getWeights().size(); i++) {
+                    output_xml << (i == 0 ? "" : " ") << distribution.getWeights().at(i);
+                }
+                output_xml << "\"";
+            }
+            output_xml << ">";
+            for (float value: distribution.getParameters()) {
+                output_xml << " " << value;
+            }
+            output_xml << " </build_parameter>" << std::endl;
         }
         output_xml.precision(previous_precision);
     }
@@ -770,6 +854,17 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                         output_xml << ";";
                 }
                 output_xml << "</azimuthal_restoring_angles>" << std::endl;
+            }
+
+            // Save the gravitropic angles (semicolon-delimited)
+            if (!phytomer->internode_gravitropic_angles.empty()) {
+                output_xml << "\t\t\t\t\t<gravitropic_angles>";
+                for (size_t i = 0; i < phytomer->internode_gravitropic_angles.size(); i++) {
+                    output_xml << phytomer->internode_gravitropic_angles[i];
+                    if (i < phytomer->internode_gravitropic_angles.size() - 1)
+                        output_xml << ";";
+                }
+                output_xml << "</gravitropic_angles>" << std::endl;
             }
 
             // Note: internode_vertices and internode_radii are no longer written to XML
@@ -1230,22 +1325,36 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
         // Build parameters, read before any flower or fruit is rebuilt below since its prototype is built from them. Absent in files written before the tag existed, in which case the plant has none.
         // They are validated against the library model that declares them, as they would be by buildPlantInstanceFromLibrary().
         if (plant.child("build_parameter")) {
-            std::map<std::string, float> build_parameters;
+            std::map<std::string, BuildParameterDistribution> build_parameters;
             for (pugi::xml_node build_parameter = plant.child("build_parameter"); build_parameter; build_parameter = build_parameter.next_sibling("build_parameter")) {
                 const std::string parameter_name = build_parameter.attribute("name").value();
                 if (parameter_name.empty()) {
                     helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A <build_parameter> tag of plant " + std::to_string(plantID) + " has no name attribute.");
                 }
                 node_string = "build_parameter";
-                build_parameters[parameter_name] = parse_xml_tag_float(build_parameter, node_string, "PlantArchitecture::readPlantStructureXML");
+                if (!build_parameter.attribute("distribution")) {
+                    build_parameters.emplace(parameter_name, BuildParameterDistribution::constant(parse_xml_tag_float(build_parameter, node_string, "PlantArchitecture::readPlantStructureXML")));
+                } else {
+                    build_parameters.emplace(parameter_name, parseBuildParameterDistribution(build_parameter, "PlantArchitecture::readPlantStructureXML"));
+                }
             }
             const std::string plant_model = plant.child("plant_model") ? helios::deblank(plant.child_value("plant_model")) : std::string();
             if (plant_builders.find(plant_model) == plant_builders.end()) {
                 helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): Plant " + std::to_string(plantID) + " has <build_parameter> tags but " +
                                      (plant_model.empty() ? std::string("no <plant_model> tag") : "an unknown <plant_model> '" + plant_model + "'") + " naming the library model that declares them.");
             }
-            plant_instances.at(plantID).organ_build_parameters = validateBuildParameters(plant_model, build_parameters, "PlantArchitecture::readPlantStructureXML");
-            plant_instances.at(plantID).build_parameters = build_parameters;
+            PlantInstance &read_plant = plant_instances.at(plantID);
+            read_plant.organ_build_parameters = validateBuildParameters(plant_model, build_parameters, "PlantArchitecture::readPlantStructureXML");
+            read_plant.build_parameters.clear();
+            for (const auto &[parameter_name, distribution]: build_parameters) {
+                if (distribution.getType() == BuildParameterDistribution::Type::CONSTANT) {
+                    read_plant.build_parameters.emplace(parameter_name, distribution.getParameters().front());
+                } else if (read_plant.organ_build_parameters.find(parameter_name) == read_plant.organ_build_parameters.end()) {
+                    // A structure parameter was sampled once for the plant when it was built, and is written as that value
+                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): Build parameter '" + parameter_name + "' of plant " + std::to_string(plantID) +
+                                         " is given a distribution, but it shapes the plant rather than its flowers and fruit, so it must be written as the single value the plant was built with.");
+                }
+            }
         }
 
         // Leaf inclination distribution the plant was being steered toward when it was written. Optional
@@ -1442,11 +1551,25 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     }
                 }
 
+                // gravitropic_angles (semicolon-delimited). Absent from files written before they were saved; the angles
+                // are then recomputed further below.
+                std::vector<float> gravitropic_angles;
+                node_string = "gravitropic_angles";
+                const bool gravitropic_angles_saved = internode.child(node_string.c_str());
+                if (gravitropic_angles_saved) {
+                    std::string gravitropic_str = internode.child_value(node_string.c_str());
+                    std::istringstream gravitropic_stream(gravitropic_str);
+                    std::string angle_str;
+                    while (std::getline(gravitropic_stream, angle_str, ';')) {
+                        gravitropic_angles.push_back(std::stof(angle_str));
+                    }
+                }
+
                 // Note: <internode_vertices> and <internode_radii> are neither written nor read. Internode
                 // geometry is reconstructed from the saved parameters (length, radius, pitch,
                 // phyllotactic_angle, length_max, length_segments) plus the saved stochastic state
-                // (curvature_perturbations, yaw_perturbations, azimuthal_restoring_angles) and the arc length the
-                // curvature was applied over (internode_curvature_step) further below.
+                // (curvature_perturbations, yaw_perturbations, azimuthal_restoring_angles) and gravitropic turn
+                // (gravitropic_angles), and the arc length the curvature was applied over (internode_curvature_step) further below.
 
                 float petiole_length;
                 float petiole_radius;
@@ -2182,9 +2305,14 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A phytomer on shoot " + std::to_string(shootID) + " in '" + filename + "' has " + std::to_string(internode_length_segments) +
                                          " internode segments but " + std::to_string(azimuthal_restoring_angles.size()) + " values in <azimuthal_restoring_angles>. A curved internode needs one value for each segment.");
                 }
+                if (curvature_step > 0.f && gravitropic_angles_saved && gravitropic_angles.size() < internode_length_segments) {
+                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A phytomer on shoot " + std::to_string(shootID) + " in '" + filename + "' has " + std::to_string(internode_length_segments) +
+                                         " internode segments but " + std::to_string(gravitropic_angles.size()) + " values in <gravitropic_angles>. A curved internode needs one value for each segment.");
+                }
                 phytomer_ptr->internode_curvature_arc_length_step = curvature_step;
                 // The angles applied to each segment are collected in the reconstruction loop below
                 phytomer_ptr->internode_azimuthal_restoring_angles.assign(internode_length_segments, 0.f);
+                phytomer_ptr->internode_gravitropic_angles.assign(internode_length_segments, 0.f);
 
                 // Re-derive the horizontal heading the shoot set out on, which the azimuthal restoring force below pulls back
                 // toward. As in the Phytomer constructor, it is the heading of the first phytomer of the shoot whose axis is not
@@ -2205,13 +2333,21 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 for (int i = 1; i <= internode_length_segments; i++) {
                     // Apply gravitropic curvature + SAVED perturbations
                     if (curvature_step > 0.f) {
-                        // This must stay in lockstep with the equivalent block in the Phytomer constructor in
-                        // PlantArchitecture.cpp, including the asymmetry of the inclination factor about horizontal.
-                        float current_curvature_fact = 0.5f - internode_axis.z / 2.0f;
-                        if (internode_axis.z < 0) {
-                            current_curvature_fact *= 2.0f;
+                        // The saved angle is replayed. A file written before it was saved has it recomputed, which must stay in
+                        // lockstep with the equivalent block in the Phytomer constructor in PlantArchitecture.cpp, including the
+                        // asymmetry of the inclination factor about horizontal. That is exact unless the axis lies nearly
+                        // horizontal, where rounding decides which side of the jump in the factor it falls on.
+                        float gravitropic_angle;
+                        if (gravitropic_angles_saved) {
+                            gravitropic_angle = gravitropic_angles[i - 1];
+                        } else {
+                            float current_curvature_fact = 0.5f - internode_axis.z / 2.0f;
+                            if (internode_axis.z < 0) {
+                                current_curvature_fact *= 2.0f;
+                            }
+                            gravitropic_angle = shoot_ptr->gravitropic_curvature * current_curvature_fact * curvature_step;
                         }
-                        float gravitropic_angle = shoot_ptr->gravitropic_curvature * current_curvature_fact * curvature_step;
+                        phytomer_ptr->internode_gravitropic_angles[i - 1] = gravitropic_angle;
 
                         // Azimuthal restoring force. The saved angle is replayed. A file written before it was saved has it
                         // recomputed from the heading before this segment is bent, as the Phytomer constructor does; that is

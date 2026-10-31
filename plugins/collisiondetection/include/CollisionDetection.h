@@ -49,6 +49,27 @@ public:
     };
 
     /**
+     * \brief A capsule: the set of points within a radius of a line segment (the capsule's axis), e.g. a model of a robot link or a branch
+     */
+    struct Capsule {
+        helios::vec3 start; //!< Start of the axis
+        helios::vec3 end; //!< End of the axis (may equal start, giving a sphere)
+        float radius; //!< Radius about the axis (may be zero, giving a line segment)
+    };
+
+    /**
+     * \brief Result of \ref CollisionDetection::findMinimumCapsuleDistance()
+     */
+    struct CapsuleDistanceResult {
+        bool found = false; //!< False if no primitive lies within the search distance; the other fields are then not set
+        float distance = 0; //!< Gap between the capsule's surface and the primitive: the axis-to-primitive distance minus the radius. Negative when they overlap, and equal to minus the radius when the axis touches the primitive.
+        uint capsule_index = 0; //!< Index of the capsule in the query vector
+        uint primitive_UUID = 0; //!< UUID of the nearest primitive
+        helios::vec3 closest_point_on_axis; //!< Point on the capsule's axis nearest the primitive
+        helios::vec3 closest_point_on_primitive; //!< Point on the primitive nearest the capsule's axis
+    };
+
+    /**
      * \brief Angular bin structure for rasterization-based collision detection
      */
     struct AngularBins {
@@ -795,6 +816,45 @@ public:
      */
     bool findNearestSolidObstacleInCone(const helios::vec3 &apex, const helios::vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, const std::vector<uint> &plant_primitives, float &distance,
                                         helios::vec3 &obstacle_direction, int num_rays = 64);
+
+    // -------- CAPSULE PROXIMITY QUERIES --------
+
+    /**
+     * \brief Find the smallest gap between a set of capsules and the primitives in the BVH
+     *
+     * The gap is measured exactly, between the capsule's surface and the primitive's triangle or patch geometry, unlike \ref findCollisions() and \ref findCollisionsWithinDistance(), which compare bounding
+     * boxes or centroids. The search targets are the primitives the BVH was built over (see \ref buildBVH()), as for \ref castRays(). Texture transparency is ignored: a primitive counts as its full
+     * polygon.
+     *
+     * \param[in] capsules Capsules to measure from.
+     * \param[in] max_distance Largest gap to search for (meters). Primitives farther than this from every capsule are not found.
+     * \param[in] early_exit_distance [optional] Stop as soon as a gap no larger than this is found, returning that gap rather than the smallest. By default the true minimum is returned. Useful for a boolean
+     * clearance test, e.g. "is anything within 2 cm".
+     * \return The smallest gap found and where it occurs; \ref CapsuleDistanceResult::found is false if no primitive lies within \a max_distance of any capsule.
+     * \note Throws an error if a capsule radius or \a max_distance is negative or not finite, or if the BVH holds a primitive that is not a triangle or patch.
+     */
+    [[nodiscard]] CapsuleDistanceResult findMinimumCapsuleDistance(const std::vector<Capsule> &capsules, float max_distance, float early_exit_distance = -std::numeric_limits<float>::max());
+
+    /**
+     * \brief Find every primitive in the BVH whose gap to a capsule's surface is at most a given distance
+     *
+     * The gap is measured exactly; see \ref findMinimumCapsuleDistance().
+     * \param[in] capsule Capsule to measure from.
+     * \param[in] distance Largest gap (meters). Zero finds the primitives that touch or overlap the capsule.
+     * \return UUIDs of the primitives within \a distance of the capsule, in ascending order.
+     * \note Throws an error if the capsule radius or \a distance is negative or not finite, or if the BVH holds a primitive that is not a triangle or patch.
+     */
+    [[nodiscard]] std::vector<uint> findPrimitivesNearCapsule(const Capsule &capsule, float distance);
+
+    /**
+     * \brief Find, for each of several capsules, every primitive in the BVH whose gap to the capsule's surface is at most a given distance
+     *
+     * As \ref findPrimitivesNearCapsule(), for many capsules at once; the capsules are processed in parallel when OpenMP is available.
+     * \param[in] capsules Capsules to measure from.
+     * \param[in] distance Largest gap (meters).
+     * \return For each capsule, in order, the UUIDs of the primitives within \a distance of it, in ascending order.
+     */
+    [[nodiscard]] std::vector<std::vector<uint>> findPrimitivesNearCapsules(const std::vector<Capsule> &capsules, float distance);
 
 
     // -------- BVH MANAGEMENT --------
@@ -1662,6 +1722,23 @@ private:
      * \return Vector of intersecting primitive UUIDs
      */
     std::vector<uint> traverseBVH_CPU(const helios::vec3 &query_aabb_min, const helios::vec3 &query_aabb_max);
+
+    /**
+     * \brief Check the arguments of a capsule query and bring the BVH and its primitive cache up to date
+     * \param[in] capsules Capsules of the query
+     * \param[in] distance Search distance of the query
+     * \param[in] caller Name of the public method, for error messages
+     */
+    void prepareCapsuleQuery(const std::vector<Capsule> &capsules, float distance, const char *caller);
+
+    /**
+     * \brief Collect, in ascending order, the BVH primitives within a gap of \a distance of a capsule. Requires prepareCapsuleQuery() first; reads only, so it may run in parallel.
+     * \param[in] capsule Capsule to measure from
+     * \param[in] distance Largest gap
+     * \param[out] found_unsupported_primitive Set to true if a primitive near the capsule is neither a triangle nor a patch (left unchanged otherwise)
+     * \return UUIDs of the primitives found
+     */
+    [[nodiscard]] std::vector<uint> collectPrimitivesNearCapsule(const Capsule &capsule, float distance, bool &found_unsupported_primitive) const;
 
 #ifdef HELIOS_CUDA_AVAILABLE
     /**

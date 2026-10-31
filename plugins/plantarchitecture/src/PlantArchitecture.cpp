@@ -18,6 +18,7 @@
 
 #include "PlantArchitecture.h"
 #include "CollisionDetection.h"
+#include "PlantArchitectureInternal.h"
 
 #include <unordered_set>
 #include <utility>
@@ -576,6 +577,11 @@ void ShootParameters::inheritCustomFunctionsFrom(const ShootParameters &source) 
 
 std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, const float age, const float germination_rate,
                                                                  const std::map<std::string, float> &build_parameters) {
+    return buildPlantCanopyFromLibrary(canopy_center_position, plant_spacing_xy, plant_count_xy, age, germination_rate, constantBuildParameterDistributions(build_parameters));
+}
+
+std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, const float age, const float germination_rate,
+                                                                 const std::map<std::string, BuildParameterDistribution> &build_parameters) {
     rejectStructuralOperationInCallback("buildPlantCanopyFromLibrary");
     StructuralOperationScope structural_operation_scope(this);
     if (plant_count_xy.x <= 0 || plant_count_xy.y <= 0) {
@@ -607,6 +613,11 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
 }
 
 std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, const uint plant_count, const float age, const std::map<std::string, float> &build_parameters) {
+    return buildPlantCanopyFromLibrary(canopy_center_position, canopy_extent_xy, plant_count, age, constantBuildParameterDistributions(build_parameters));
+}
+
+std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, const uint plant_count, const float age,
+                                                                 const std::map<std::string, BuildParameterDistribution> &build_parameters) {
     rejectStructuralOperationInCallback("buildPlantCanopyFromLibrary");
     StructuralOperationScope structural_operation_scope(this);
     std::vector<uint> plantIDs;
@@ -891,6 +902,7 @@ void Phytomer::setFloralBudState(BudState state, uint petiole_index, uint bud_in
 }
 
 void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
+    plantarchitecture_ptr->invalidateOrganIndex();
     // If state is already at the desired state, do nothing
     if (fbud.state == state) {
         return;
@@ -2042,6 +2054,7 @@ float Shoot::sumChildVolume(uint start_node_index) const {
 Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
                    const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, PlantArchitecture *plantarchitecture_ptr,
                    helios::Context *context_ptr, const PrescribedInternode *prescribed_internode) : rank(rank), context_ptr(context_ptr), plantarchitecture_ptr(plantarchitecture_ptr) {
+    plantarchitecture_ptr->invalidateOrganIndex();
     this->phytomer_parameters = params;
     // Assignment copies without resampling, so the per-phytomer draw of every distributed parameter happens explicitly here.
     this->phytomer_parameters.resample();
@@ -2338,6 +2351,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     internode_curvature_perturbations.resize(Ndiv_internode_length);
     internode_yaw_perturbations.resize(Ndiv_internode_length);
     internode_azimuthal_restoring_angles.resize(Ndiv_internode_length);
+    internode_gravitropic_angles.resize(Ndiv_internode_length);
 
     // A prescribed internode has both of its endpoints given, so there is nothing to integrate forward:
     // the axis is read from the endpoints and the segment nodes are placed by interpolating between them.
@@ -2464,6 +2478,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             internode_curvature_perturbations[inode_segment - 1] = curvature_perturbation_angle;
             internode_yaw_perturbations[inode_segment - 1] = yaw_perturbation_angle;
             internode_azimuthal_restoring_angles[inode_segment - 1] = azimuthal_restoring_angle;
+            internode_gravitropic_angles[inode_segment - 1] = gravitropic_angle;
 
             // Rotate the shoot axis by the gravitropic deflection plus the in-plane noise component, about the bending axis.
             // The bending axis is the cross product of the shoot axis with the vertical, so its length falls to zero as the shoot
@@ -2959,9 +2974,10 @@ float Phytomer::calculatePhytomerVolume(uint node_number) const {
 }
 
 void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &fruit_base, const helios::vec3 &peduncle_axis, float pitch, float roll, float azimuth, float yaw_compound, float scale_factor, bool is_open_flower, float gravity_fraction) {
+    plantarchitecture_ptr->invalidateOrganIndex();
 
     // Step 1: Create flower/fruit prototype based on current bud state
-    const std::map<std::string, float> &build_parameters = plantarchitecture_ptr->plant_instances.at(plantID).organ_build_parameters;
+    const std::map<std::string, BuildParameterDistribution> &build_parameters = plantarchitecture_ptr->plant_instances.at(plantID).organ_build_parameters;
     uint objID_fruit;
     if (fbud.state == BUD_FRUITING) {
         if (phytomer_parameters.inflorescence.unique_prototypes > 0) {
@@ -2970,7 +2986,7 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
             objID_fruit = context_ptr->copyObject(plantarchitecture_ptr->unique_fruit_prototype_objIDs.at({phytomer_parameters.inflorescence.fruit_prototype_function, build_parameters}).at(prototype));
         } else {
             // Load new prototype
-            objID_fruit = phytomer_parameters.inflorescence.fruit_prototype_function(context_ptr, 1, build_parameters);
+            objID_fruit = phytomer_parameters.inflorescence.fruit_prototype_function(context_ptr, 1, plantarchitecture_ptr->sampleOrganBuildParameters(build_parameters));
             std::string fruit_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_fruit";
             renameAutoMaterial(context_ptr, objID_fruit, fruit_material_name);
         }
@@ -2986,7 +3002,7 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
             }
         } else {
             // Load new prototype
-            objID_fruit = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, is_open_flower, build_parameters);
+            objID_fruit = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, is_open_flower, plantarchitecture_ptr->sampleOrganBuildParameters(build_parameters));
             std::string flower_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + (is_open_flower ? "_flower_open" : "_flower_closed");
             renameAutoMaterial(context_ptr, objID_fruit, flower_material_name);
         }
@@ -3068,14 +3084,15 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
 void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerParameters &params, uint plantID) {
     if (params.inflorescence.unique_prototypes > 0) {
         const std::string &plant_name = plant_instances.at(plantID).plant_name;
-        const std::map<std::string, float> &build_parameters = plant_instances.at(plantID).organ_build_parameters;
+        // Each prototype of a set is built from its own sample of the plant's organ parameters, so that a set shared by every plant with the same distributions spans them
+        const std::map<std::string, BuildParameterDistribution> &build_parameters = plant_instances.at(plantID).organ_build_parameters;
         // Initialize closed flower prototypes
         const auto flower_key = std::make_pair(params.inflorescence.flower_prototype_function, build_parameters);
         if (params.inflorescence.flower_prototype_function != nullptr && unique_closed_flower_prototype_objIDs.find(flower_key) == unique_closed_flower_prototype_objIDs.end()) {
             std::vector<uint> &prototypes = unique_closed_flower_prototype_objIDs[flower_key];
             prototypes.resize(params.inflorescence.unique_prototypes);
             for (uint &objID_flower: prototypes) {
-                objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, false, build_parameters);
+                objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, false, sampleOrganBuildParameters(build_parameters));
                 renameAutoMaterial(context_ptr, objID_flower, plant_name + "_flower_closed");
                 context_ptr->hideObject(objID_flower);
             }
@@ -3085,7 +3102,7 @@ void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerP
             std::vector<uint> &prototypes = unique_open_flower_prototype_objIDs[flower_key];
             prototypes.resize(params.inflorescence.unique_prototypes);
             for (uint &objID_flower: prototypes) {
-                objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, true, build_parameters);
+                objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, true, sampleOrganBuildParameters(build_parameters));
                 renameAutoMaterial(context_ptr, objID_flower, plant_name + "_flower_open");
                 context_ptr->hideObject(objID_flower);
             }
@@ -3096,12 +3113,20 @@ void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerP
             std::vector<uint> &prototypes = unique_fruit_prototype_objIDs[fruit_key];
             prototypes.resize(params.inflorescence.unique_prototypes);
             for (uint &objID_fruit: prototypes) {
-                objID_fruit = params.inflorescence.fruit_prototype_function(context_ptr, 1, build_parameters);
+                objID_fruit = params.inflorescence.fruit_prototype_function(context_ptr, 1, sampleOrganBuildParameters(build_parameters));
                 renameAutoMaterial(context_ptr, objID_fruit, plant_name + "_fruit");
                 context_ptr->hideObject(objID_fruit);
             }
         }
     }
+}
+
+std::map<std::string, float> PlantArchitecture::sampleOrganBuildParameters(const std::map<std::string, BuildParameterDistribution> &organ_build_parameters) const {
+    std::map<std::string, float> sampled_parameters;
+    for (const auto &[parameter_name, distribution]: organ_build_parameters) {
+        sampled_parameters.emplace(parameter_name, distribution.sample(*generator));
+    }
+    return sampled_parameters;
 }
 
 float Phytomer::getReconciledPeduncleRadius() {
@@ -3232,6 +3257,7 @@ void Phytomer::updatePeduncleRadii() {
 }
 
 void Phytomer::updateInflorescence(FloralBud &fbud) {
+    plantarchitecture_ptr->invalidateOrganIndex();
     // Assign the member rather than a local of the same name, so that whether peduncle geometry was
     // actually built here is the same flag consulted later when that geometry is deleted.
     this->build_context_geometry_peduncle = plantarchitecture_ptr->build_context_geometry_peduncle;
@@ -3825,6 +3851,7 @@ void Phytomer::setPetioleScaleFraction(uint petiole_index, float petiole_scale_f
 }
 
 void Phytomer::setPetioleAndLeafScaleFraction(uint petiole_index, float petiole_scale_factor_fraction, float leaf_scale_factor_fraction) {
+    plantarchitecture_ptr->invalidateOrganIndex();
     assert(leaf_scale_factor_fraction >= 0 && leaf_scale_factor_fraction <= 1);
     assert(petiole_scale_factor_fraction >= 0 && petiole_scale_factor_fraction <= 1);
 
@@ -4611,7 +4638,24 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
     //
     // Dividing by the size the mechanics applied, rather than deflecting a unit lattice directly, keeps the amount of bend and the size of the leaf independent: the shape is the one belonging to a blade of
     // this physical length, expressed at unit length for the transform to scale.
-    std::vector<vec3> deformed_prototype_frame = deformLeafLattice(rest.vertices, rest.subdivisions_x, rest.subdivisions_y, current_scale, mature_scale, flexibility, phytomer_parameters.leaf.prototype.flexibility_taper.val());
+    float transform[16];
+    context_ptr->getObjectTransformationMatrix(objID_leaf, transform);
+
+    // The blade bends under the world's gravity, not under the prototype frame's -z. The two agree only for a blade whose base leaves the stem horizontally; one pitched upward - a grass leaf emerging from
+    // the whorl - was otherwise bent as if gravity pulled across it, and could droop at most to perpendicular from where it started, never arching over to hang. Gravity is carried into the prototype frame
+    // through the inverse of the transform's linear part, whose rows are the cross products of its columns over its determinant.
+    const vec3 column_x = make_vec3(transform[0], transform[4], transform[8]);
+    const vec3 column_y = make_vec3(transform[1], transform[5], transform[9]);
+    const vec3 column_z = make_vec3(transform[2], transform[6], transform[10]);
+    const float determinant = column_x * cross(column_y, column_z);
+    if (!(std::fabs(determinant) > 0.f)) {
+        helios_runtime_error("ERROR (Phytomer::deformLeafUnderSelfWeight): The transformation of leaf object " + std::to_string(objID_leaf) + " is singular, so gravity cannot be expressed in its frame.");
+    }
+    const vec3 world_gravity = make_vec3(0.f, 0.f, -1.f);
+    const vec3 prototype_gravity = make_vec3(cross(column_y, column_z) * world_gravity, cross(column_z, column_x) * world_gravity, cross(column_x, column_y) * world_gravity) / determinant;
+
+    std::vector<vec3> deformed_prototype_frame =
+            deformLeafLattice(rest.vertices, rest.subdivisions_x, rest.subdivisions_y, current_scale, mature_scale, flexibility, phytomer_parameters.leaf.prototype.flexibility_taper.val(), prototype_gravity);
     for (vec3 &vertex: deformed_prototype_frame) {
         vertex = vertex / current_scale;
     }
@@ -4638,9 +4682,6 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
             deformed_prototype_frame.push_back(rest_vertex + displacement);
         }
     }
-
-    float transform[16];
-    context_ptr->getObjectTransformationMatrix(objID_leaf, transform);
 
     std::vector<vec3> deformed_global(deformed_prototype_frame.size());
     for (size_t v = 0; v < deformed_prototype_frame.size(); v++) {
@@ -4869,6 +4910,7 @@ void Phytomer::setLeafScaleFraction(float leaf_scale_factor_fraction) {
 }
 
 void Phytomer::setPetioleLeafGeometry(uint petiole_index, const std::vector<helios::vec3> &leaf_bases_new, const std::vector<AxisRotation> &leaf_rotations_new, const std::vector<float> &leaf_sizes_new) {
+    plantarchitecture_ptr->invalidateOrganIndex();
     if (petiole_index >= leaf_objIDs.size()) {
         helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafGeometry): Petiole index of " + std::to_string(petiole_index) + " was given, but this phytomer has " + std::to_string(leaf_objIDs.size()) +
                              " petioles.");
@@ -5149,6 +5191,7 @@ void Phytomer::scalePetioleGeometry(uint petiole_index, float target_length, flo
 }
 
 void Phytomer::setPetioleLeafCount(uint petiole_index, uint leaf_count) {
+    plantarchitecture_ptr->invalidateOrganIndex();
     if (petiole_index >= leaf_objIDs.size()) {
         helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafCount): Petiole index of " + std::to_string(petiole_index) + " was given, but this phytomer has " + std::to_string(leaf_objIDs.size()) + " petioles.");
     }
@@ -5254,6 +5297,7 @@ void Phytomer::lockPetioleScale(uint petiole_index) {
 }
 
 void Phytomer::setPetioleNodePositions(uint petiole_index, const std::vector<helios::vec3> &petiole_node_positions, const std::vector<float> &petiole_node_radii) {
+    plantarchitecture_ptr->invalidateOrganIndex();
     if (petiole_index >= petiole_vertices.size()) {
         helios_runtime_error("ERROR (PlantArchitecture::setPetioleNodePositions): Petiole index of " + std::to_string(petiole_index) + " was given, but this phytomer has " + std::to_string(petiole_vertices.size()) +
                              " petioles.");
@@ -5359,6 +5403,11 @@ void Phytomer::setInflorescenceScaleFraction(FloralBud &fbud, float inflorescenc
 }
 
 void Phytomer::removeLeaf() {
+    removeLeaf(nullptr);
+}
+
+void Phytomer::removeLeaf(std::vector<uint> *detached_objIDs) {
+    plantarchitecture_ptr->invalidateOrganIndex();
     // parent_shoot_ptr->propagateDownstreamLeafArea( parent_shoot_ptr, this->shoot_index.x, -1.f*getLeafArea());
 
     this->petiole_radii.resize(0);
@@ -5370,7 +5419,13 @@ void Phytomer::removeLeaf() {
     this->leaf_rotation.resize(0);
     this->leaf_bases.resize(0);
 
-    context_ptr->deleteObject(flatten(leaf_objIDs));
+    if (detached_objIDs != nullptr) {
+        for (const auto &petiole_leaf_objIDs: leaf_objIDs) {
+            detached_objIDs->insert(detached_objIDs->end(), petiole_leaf_objIDs.begin(), petiole_leaf_objIDs.end());
+        }
+    } else {
+        context_ptr->deleteObject(flatten(leaf_objIDs));
+    }
     leaf_objIDs.clear();
     leaf_bases.clear();
     // These are indexed in lockstep with leaf_objIDs, so they have to be cleared with it or a later leaf would be deflected against a stale prototype.
@@ -5381,12 +5436,22 @@ void Phytomer::removeLeaf() {
     petiole_path_prescribed.clear();
 
     if (build_context_geometry_petiole) {
-        context_ptr->deleteObject(getExistingPetioleObjIDs());
+        const std::vector<uint> existing_petiole_objIDs = getExistingPetioleObjIDs();
+        if (detached_objIDs != nullptr) {
+            detached_objIDs->insert(detached_objIDs->end(), existing_petiole_objIDs.begin(), existing_petiole_objIDs.end());
+        } else {
+            context_ptr->deleteObject(existing_petiole_objIDs);
+        }
         petiole_objIDs.clear();
     }
 }
 
 void Phytomer::deletePhytomer() {
+    deletePhytomer(nullptr);
+}
+
+void Phytomer::deletePhytomer(std::vector<uint> *detached_objIDs) {
+    plantarchitecture_ptr->invalidateOrganIndex();
     if (parent_shoot_ptr->plantarchitecture_ptr->skipStructuralOperationInCallback("Phytomer::deletePhytomer")) {
         return;
     }
@@ -5408,7 +5473,16 @@ void Phytomer::deletePhytomer() {
         } else {
             tube_prune_index = first_deleted_node * tube_segments + 1; // note that first segment has an extra vertex
         }
-        if (tube_prune_index < tube_nodes) {
+        if (detached_objIDs != nullptr) {
+            // Hand the removed part of the tube over instead of deleting it. Splitting moves the existing primitives into a
+            // new object, so the detached piece is exactly the geometry that was drawn, and the shoot keeps the lower part.
+            if (tube_prune_index == 0) {
+                detached_objIDs->push_back(shoot->internode_tube_objID);
+                shoot->internode_tube_objID = Shoot::no_internode_tube_objID;
+            } else if (tube_prune_index < tube_nodes) {
+                detached_objIDs->push_back(context_ptr->splitTubeObject(shoot->internode_tube_objID, tube_prune_index));
+            }
+        } else if (tube_prune_index < tube_nodes) {
             context_ptr->pruneTubeNodes(shoot->internode_tube_objID, tube_prune_index);
         }
         shoot->terminateApicalBud();
@@ -5418,11 +5492,19 @@ void Phytomer::deletePhytomer() {
         auto &phytomer = shoot->phytomers.at(node);
 
         // leaves
-        phytomer->removeLeaf();
+        phytomer->removeLeaf(detached_objIDs);
 
         // inflorescence
         for (auto &petiole: phytomer->floral_buds) {
             for (auto &fbud: petiole) {
+                if (detached_objIDs != nullptr) {
+                    detached_objIDs->insert(detached_objIDs->end(), fbud.peduncle_objIDs.begin(), fbud.peduncle_objIDs.end());
+                    detached_objIDs->insert(detached_objIDs->end(), fbud.inflorescence_objIDs.begin(), fbud.inflorescence_objIDs.end());
+                    fbud.peduncle_objIDs.clear();
+                    fbud.inflorescence_objIDs.clear();
+                    fbud.inflorescence_bases.clear();
+                    continue;
+                }
                 for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
                     uint objID = fbud.inflorescence_objIDs.at(p);
                     context_ptr->deleteObject(objID);
@@ -5445,7 +5527,7 @@ void Phytomer::deletePhytomer() {
             for (auto childID: shoot->childIDs.at(node)) {
                 auto child_shoot = plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree.at(childID);
                 if (!child_shoot->isPruned()) {
-                    child_shoot->phytomers.front()->deletePhytomer();
+                    child_shoot->phytomers.front()->deletePhytomer(detached_objIDs);
                 }
             }
         }
@@ -6180,6 +6262,7 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
 }
 
 void PlantArchitecture::pruneGroundCollisions(uint plantID) {
+    invalidateOrganIndex();
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::pruneGroundCollisions): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
@@ -8286,6 +8369,13 @@ const std::map<std::string, float> &PlantArchitecture::getPlantBuildParameters(u
     return plant_instances.at(plantID).build_parameters;
 }
 
+const std::map<std::string, BuildParameterDistribution> &PlantArchitecture::getPlantOrganBuildParameters(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantOrganBuildParameters): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    return plant_instances.at(plantID).organ_build_parameters;
+}
+
 float PlantArchitecture::getPlantAge(uint plantID) const {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::getPlantAge): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -8437,6 +8527,7 @@ PlantArchitecture::StructuralOperationScope::StructuralOperationScope(PlantArchi
 }
 
 PlantArchitecture::StructuralOperationScope::~StructuralOperationScope() noexcept(false) {
+    plantarchitecture_ptr->invalidateOrganIndex();
     plantarchitecture_ptr->structural_operation_depth--;
     if (plantarchitecture_ptr->structural_operation_depth > 0) {
         return;
@@ -8499,7 +8590,7 @@ void PlantArchitecture::flushDeferredPrunes() {
     }
 }
 
-void PlantArchitecture::pruneBranch(uint plantID, uint shootID, uint node_index) {
+std::vector<uint> PlantArchitecture::pruneBranch(uint plantID, uint shootID, uint node_index, bool keep_trimmed_material) {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::pruneBranch): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     } else if (shootID >= plant_instances.at(plantID).shoot_tree.size()) {
@@ -8513,7 +8604,7 @@ void PlantArchitecture::pruneBranch(uint plantID, uint shootID, uint node_index)
     // loop over shoot IDs then arrives at those descendants a second time. Rejecting them aborted
     // the loop partway through and left the plant half-pruned.
     if (shoot->isPruned()) {
-        return;
+        return {};
     }
 
     // Called from inside a phytomer callback, the cut cannot be made now: the callback runs while the shoot's phytomers are being
@@ -8522,24 +8613,42 @@ void PlantArchitecture::pruneBranch(uint plantID, uint shootID, uint node_index)
     // structure -- at the end of the current time step during growth, or before the build call returns. The bound is the phytomer
     // count rather than current_node_number, which a creation callback sees before it has been advanced to include the new node.
     if (isInsidePhytomerCallback()) {
+        if (keep_trimmed_material) {
+            helios_runtime_error("ERROR (PlantArchitecture::pruneBranch): The trimmed material cannot be kept when pruneBranch() is called from inside a phytomer callback, because the cut is deferred to the end of the time step and its material does not exist yet when the call returns. Call pruneBranch() with keep_trimmed_material from outside the callback, for example between calls to advanceTime().");
+        }
         if (node_index >= shoot->phytomers.size()) {
             helios_runtime_error("ERROR (PlantArchitecture::pruneBranch): Node index " + std::to_string(node_index) + " is out of range for shoot " + std::to_string(shootID) + ".");
         }
         deferred_prunes.push_back({plantID, shootID, node_index});
-        return;
+        return {};
     }
 
     if (node_index >= shoot->current_node_number) {
         helios_runtime_error("ERROR (PlantArchitecture::pruneBranch): Node index " + std::to_string(node_index) + " is out of range for shoot " + std::to_string(shootID) + ".");
     }
 
-    applyPruneBranch(plantID, shootID, node_index);
+    std::vector<uint> detached_objIDs;
+    applyPruneBranch(plantID, shootID, node_index, keep_trimmed_material ? &detached_objIDs : nullptr);
+    return detached_objIDs;
 }
 
-void PlantArchitecture::applyPruneBranch(uint plantID, uint shootID, uint node_index) {
+std::vector<uint> PlantArchitecture::pruneBranchAtPrimitive(uint UUID, bool keep_trimmed_material) {
+    ensureOrganIndexCurrent();
+    uint node_index;
+    const PlantOrganLocation *organ = findPrimitiveOrganLocation(UUID, node_index);
+    if (organ == nullptr) {
+        helios_runtime_error("ERROR (PlantArchitecture::pruneBranchAtPrimitive): Primitive " + std::to_string(UUID) + " is not part of a plant. Use isPlantPrimitive() to check a primitive before pruning at it.");
+    } else if (organ->organ_type != PlantOrganType::INTERNODE) {
+        helios_runtime_error("ERROR (PlantArchitecture::pruneBranchAtPrimitive): Primitive " + std::to_string(UUID) + " is not part of an internode, so it does not identify a node to prune the branch at. Use getPrimitiveOrganLocation() to find the organ of a primitive.");
+    }
+    return pruneBranch(organ->plantID, organ->shootID, node_index, keep_trimmed_material);
+}
+
+void PlantArchitecture::applyPruneBranch(uint plantID, uint shootID, uint node_index, std::vector<uint> *detached_objIDs) {
     const std::shared_ptr<Shoot> &shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
 
-    shoot->phytomers.at(node_index)->deletePhytomer();
+    invalidateOrganIndex();
+    shoot->phytomers.at(node_index)->deletePhytomer(detached_objIDs);
 
     // A shoot pruned at its base is gone entirely, so unlink it from its parent's child list. It
     // keeps its slot in the shoot_tree (and therefore its ID stays a valid index, so IDs held by
@@ -8560,6 +8669,379 @@ void PlantArchitecture::applyPruneBranch(uint plantID, uint shootID, uint node_i
     if (printmessages && shoot->parent_shoot_ID < 0 && shoot->isPruned()) {
         std::cout << "WARNING (PlantArchitecture::pruneBranch): Plant " << plantID << " base shoot was pruned." << std::endl;
     }
+}
+
+std::vector<std::vector<uint>> PlantArchitecture::prunePlantsByPlane(uint plantID, const vec3 &plane_point, const vec3 &plane_normal, bool keep_trimmed_material) {
+    return prunePlantsByPlane(std::vector<uint>{plantID}, plane_point, plane_normal, keep_trimmed_material);
+}
+
+std::vector<std::vector<uint>> PlantArchitecture::prunePlantsByPlane(const std::vector<uint> &plantIDs, const vec3 &plane_point, const vec3 &plane_normal, bool keep_trimmed_material) {
+    if (isInsidePhytomerCallback()) {
+        helios_runtime_error("ERROR (PlantArchitecture::prunePlantsByPlane): This operation cannot be used inside a phytomer callback (PhytomerParameters::phytomer_creation_function or phytomer_callback_function), because it removes plant structure while the plant is being grown. Call it from outside the callback, for example between calls to advanceTime().");
+    }
+    const float normal_magnitude = plane_normal.magnitude();
+    if (!(normal_magnitude > 0.f) || std::isinf(normal_magnitude)) {
+        helios_runtime_error("ERROR (PlantArchitecture::prunePlantsByPlane): The plane normal must be a finite, non-zero vector.");
+    }
+    // Validate every plant before cutting any, so an invalid ID does not leave the canopy partly cut.
+    for (uint plantID: plantIDs) {
+        if (plant_instances.find(plantID) == plant_instances.end()) {
+            helios_runtime_error("ERROR (PlantArchitecture::prunePlantsByPlane): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+        }
+    }
+
+    const vec3 unit_normal = plane_normal / normal_magnitude;
+    const float plane_offset = unit_normal * plane_point;
+
+    // Every test below is made against centerlines the plant already holds (internode and petiole vertices) or the few nodes of a peduncle tube, never
+    // against primitive geometry, so the cost of the cut is proportional to the number of centerline vertices.
+    auto crossesPlane = [&](const std::vector<vec3> &centerline) {
+        for (const vec3 &vertex: centerline) {
+            if (unit_normal * vertex > plane_offset) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    std::vector<std::vector<uint>> fragments;
+
+    for (uint plantID: plantIDs) {
+        std::vector<std::shared_ptr<Shoot>> &shoot_tree = plant_instances.at(plantID).shoot_tree;
+
+        // A child shoot always has a larger ID than its parent, so a shoot removed by a cut lower down the plant is already pruned by the time it is reached.
+        for (uint shootID = 0; shootID < shoot_tree.size(); shootID++) {
+            const std::shared_ptr<Shoot> &shoot = shoot_tree.at(shootID);
+            if (shoot->isPruned()) {
+                continue;
+            }
+
+            // internodes
+            for (uint node = 0; node < shoot->phytomers.size(); node++) {
+                if (crossesPlane(shoot->shoot_internode_vertices.at(node))) {
+                    std::vector<uint> fragment;
+                    applyPruneBranch(plantID, shootID, node, keep_trimmed_material ? &fragment : nullptr);
+                    if (!fragment.empty()) {
+                        fragments.push_back(std::move(fragment));
+                    }
+                    break;
+                }
+            }
+
+            for (const std::shared_ptr<Phytomer> &phytomer: shoot->phytomers) {
+                // petioles
+                const std::vector<uint> existing_petiole_objIDs = phytomer->getExistingPetioleObjIDs();
+                if (!phytomer->leaf_objIDs.empty() || !existing_petiole_objIDs.empty()) {
+                    bool petiole_cut = false;
+                    for (const std::vector<vec3> &petiole_centerline: phytomer->petiole_vertices) {
+                        if (crossesPlane(petiole_centerline)) {
+                            petiole_cut = true;
+                            break;
+                        }
+                    }
+                    if (petiole_cut) {
+                        if (keep_trimmed_material) {
+                            // removeLeaf() takes every petiole on the phytomer, but each petiole with its leaves is a separate piece, so they are returned as separate fragments.
+                            size_t grouped_object_count = 0;
+                            const size_t petiole_count = std::max(phytomer->petiole_objIDs.size(), phytomer->leaf_objIDs.size());
+                            for (size_t petiole = 0; petiole < petiole_count; petiole++) {
+                                std::vector<uint> fragment;
+                                if (petiole < phytomer->petiole_objIDs.size() && context_ptr->doesObjectExist(phytomer->petiole_objIDs.at(petiole))) {
+                                    fragment.push_back(phytomer->petiole_objIDs.at(petiole));
+                                }
+                                if (petiole < phytomer->leaf_objIDs.size()) {
+                                    fragment.insert(fragment.end(), phytomer->leaf_objIDs.at(petiole).begin(), phytomer->leaf_objIDs.at(petiole).end());
+                                }
+                                grouped_object_count += fragment.size();
+                                if (!fragment.empty()) {
+                                    fragments.push_back(std::move(fragment));
+                                }
+                            }
+                            std::vector<uint> detached_objIDs;
+                            phytomer->removeLeaf(&detached_objIDs);
+                            if (detached_objIDs.size() != grouped_object_count) {
+                                helios_runtime_error("ERROR (PlantArchitecture::prunePlantsByPlane): Detached " + std::to_string(detached_objIDs.size()) + " leaf and petiole objects but grouped " + std::to_string(grouped_object_count) +
+                                                     " into fragments. This is an internal error in the PlantArchitecture plug-in.");
+                            }
+                        } else {
+                            phytomer->removeLeaf();
+                        }
+                    }
+                }
+
+                // peduncles
+                for (auto &petiole_floral_buds: phytomer->floral_buds) {
+                    for (FloralBud &fbud: petiole_floral_buds) {
+                        bool peduncle_cut = false;
+                        for (uint peduncle_objID: fbud.peduncle_objIDs) {
+                            if (crossesPlane(context_ptr->getTubeObjectNodes(peduncle_objID))) {
+                                peduncle_cut = true;
+                                break;
+                            }
+                        }
+                        if (!peduncle_cut) {
+                            continue;
+                        }
+                        if (keep_trimmed_material) {
+                            std::vector<uint> fragment = fbud.peduncle_objIDs;
+                            fragment.insert(fragment.end(), fbud.inflorescence_objIDs.begin(), fbud.inflorescence_objIDs.end());
+                            fragments.push_back(std::move(fragment));
+                            // Clear the bud's object lists so that setting it dead below has nothing left to delete.
+                            fbud.peduncle_objIDs.clear();
+                            fbud.inflorescence_objIDs.clear();
+                        }
+                        phytomer->setFloralBudState(BUD_DEAD, fbud);
+                    }
+                }
+            }
+        }
+    }
+
+    invalidateOrganIndex();
+    return fragments;
+}
+
+void PlantArchitecture::invalidateOrganIndex() const {
+    organ_index_current = false;
+}
+
+void PlantArchitecture::ensureOrganIndexCurrent() const {
+    if (organ_index_current) {
+        return;
+    }
+    organ_index_by_objID.clear();
+    internode_node_by_UUID.clear();
+    const uint none = PlantOrganLocation::not_applicable;
+
+    for (const auto &[plantID, plant]: plant_instances) {
+        for (uint shootID = 0; shootID < plant.shoot_tree.size(); shootID++) {
+            const std::shared_ptr<Shoot> &shoot = plant.shoot_tree.at(shootID);
+            if (shoot->isPruned()) {
+                continue;
+            }
+
+            // internode tube: one object spanning every phytomer of the shoot
+            const uint tube_objID = shoot->internode_tube_objID;
+            if (context_ptr->doesObjectExist(tube_objID)) {
+                organ_index_by_objID[tube_objID] = {plantID, shootID, none, PlantOrganType::INTERNODE, none, none, none, tube_objID};
+
+                std::vector<uint> node_of_segment;
+                for (uint node = 0; node < shoot->phytomers.size(); node++) {
+                    node_of_segment.insert(node_of_segment.end(), shoot->phytomers.at(node)->getInternodeNodePositions().size() - 1, node);
+                }
+                const std::vector<uint> tube_UUIDs = context_ptr->getObjectPrimitiveUUIDs(tube_objID);
+                const size_t segment_count = context_ptr->getTubeObjectNodeCount(tube_objID) - 1;
+                const size_t radial_subdivisions = context_ptr->getTubeObjectSubdivisionCount(tube_objID);
+                if (node_of_segment.size() == segment_count && tube_UUIDs.size() == 2 * segment_count * radial_subdivisions) {
+                    // Triangle k of a tube belongs to segment (k/2) % segment_count (see Context::addTubeObject())
+                    for (size_t k = 0; k < tube_UUIDs.size(); k++) {
+                        internode_node_by_UUID[tube_UUIDs.at(k)] = node_of_segment.at((k / 2) % segment_count);
+                    }
+                } else {
+                    // The tube's triangles do not follow the index layout, e.g. because a texture-mapped tube omitted zero-area triangles. Assign each triangle
+                    // to the internode centerline segment nearest its centroid, searching only this shoot.
+                    for (uint UUID: tube_UUIDs) {
+                        const std::vector<vec3> vertices = context_ptr->getPrimitiveVertices(UUID);
+                        vec3 centroid = make_vec3(0, 0, 0);
+                        for (const vec3 &vertex: vertices) {
+                            centroid = centroid + vertex;
+                        }
+                        centroid = centroid / float(vertices.size());
+                        uint nearest_node = 0;
+                        float nearest_distance_squared = std::numeric_limits<float>::max();
+                        for (uint node = 0; node < shoot->phytomers.size(); node++) {
+                            const std::vector<vec3> centerline = shoot->phytomers.at(node)->getInternodeNodePositions();
+                            for (size_t s = 0; s + 1 < centerline.size(); s++) {
+                                const vec3 segment = centerline.at(s + 1) - centerline.at(s);
+                                const float length_squared = segment * segment;
+                                const float t = length_squared > 0.f ? clamp(((centroid - centerline.at(s)) * segment) / length_squared, 0.f, 1.f) : 0.f;
+                                const vec3 offset = centroid - (centerline.at(s) + t * segment);
+                                if (offset * offset < nearest_distance_squared) {
+                                    nearest_distance_squared = offset * offset;
+                                    nearest_node = node;
+                                }
+                            }
+                        }
+                        internode_node_by_UUID[UUID] = nearest_node;
+                    }
+                }
+            }
+
+            for (uint node = 0; node < shoot->phytomers.size(); node++) {
+                const std::shared_ptr<Phytomer> &phytomer = shoot->phytomers.at(node);
+                for (uint petiole = 0; petiole < phytomer->petiole_objIDs.size(); petiole++) {
+                    const uint objID = phytomer->petiole_objIDs.at(petiole);
+                    if (objID != Phytomer::no_petiole_objID && context_ptr->doesObjectExist(objID)) {
+                        organ_index_by_objID[objID] = {plantID, shootID, node, PlantOrganType::PETIOLE, petiole, none, none, objID};
+                    }
+                }
+                for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
+                    for (uint leaf = 0; leaf < phytomer->leaf_objIDs.at(petiole).size(); leaf++) {
+                        const uint objID = phytomer->leaf_objIDs.at(petiole).at(leaf);
+                        organ_index_by_objID[objID] = {plantID, shootID, node, PlantOrganType::LEAF, petiole, leaf, none, objID};
+                    }
+                }
+                for (uint petiole = 0; petiole < phytomer->floral_buds.size(); petiole++) {
+                    for (uint bud = 0; bud < phytomer->floral_buds.at(petiole).size(); bud++) {
+                        const FloralBud &fbud = phytomer->floral_buds.at(petiole).at(bud);
+                        for (uint objID: fbud.peduncle_objIDs) {
+                            organ_index_by_objID[objID] = {plantID, shootID, node, PlantOrganType::PEDUNCLE, petiole, none, bud, objID};
+                        }
+                        if (fbud.inflorescence_objIDs.empty()) {
+                            continue;
+                        }
+                        PlantOrganType inflorescence_type;
+                        if (fbud.state == BUD_FLOWER_OPEN || fbud.state == BUD_FLOWER_CLOSED) {
+                            inflorescence_type = PlantOrganType::FLOWER;
+                        } else if (fbud.state == BUD_FRUITING) {
+                            inflorescence_type = PlantOrganType::FRUIT;
+                        } else {
+                            helios_runtime_error("ERROR (PlantArchitecture::getPrimitiveOrganLocation): A floral bud on plant " + std::to_string(plantID) + ", shoot " + std::to_string(shootID) + ", node " + std::to_string(node) +
+                                                 " has flower or fruit objects but is in neither a flower nor a fruiting state (state " + std::to_string(int(fbud.state)) + "). This is an internal error in the PlantArchitecture plug-in.");
+                        }
+                        for (uint objID: fbud.inflorescence_objIDs) {
+                            organ_index_by_objID[objID] = {plantID, shootID, node, inflorescence_type, petiole, none, bud, objID};
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    organ_index_current = true;
+}
+
+const PlantOrganLocation *PlantArchitecture::findPrimitiveOrganLocation(uint UUID, uint &node_index) const {
+    if (!context_ptr->doesPrimitiveExist(UUID)) {
+        return nullptr;
+    }
+    const auto organ_entry = organ_index_by_objID.find(context_ptr->getPrimitiveParentObjectID(UUID));
+    if (organ_entry == organ_index_by_objID.end()) {
+        return nullptr;
+    }
+    if (organ_entry->second.organ_type == PlantOrganType::INTERNODE) {
+        const auto node_entry = internode_node_by_UUID.find(UUID);
+        if (node_entry == internode_node_by_UUID.end()) {
+            helios_runtime_error("ERROR (PlantArchitecture::getPrimitiveOrganLocation): Primitive " + std::to_string(UUID) + " belongs to the internode tube of shoot " + std::to_string(organ_entry->second.shootID) + " of plant " +
+                                 std::to_string(organ_entry->second.plantID) + " but is missing from the organ index, which is out of date. This is an internal error in the PlantArchitecture plug-in.");
+        }
+        node_index = node_entry->second;
+    } else {
+        node_index = organ_entry->second.node_index;
+    }
+    return &organ_entry->second;
+}
+
+PlantOrganLocation PlantArchitecture::getPrimitiveOrganLocation(uint UUID) const {
+    ensureOrganIndexCurrent();
+    uint node_index;
+    const PlantOrganLocation *organ = findPrimitiveOrganLocation(UUID, node_index);
+    if (organ == nullptr) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPrimitiveOrganLocation): Primitive " + std::to_string(UUID) +
+                             " is not part of a plant: it does not exist, or it is not part of an organ of a plant of this PlantArchitecture instance (material detached by pruning is not). Use isPlantPrimitive() to filter primitives first.");
+    }
+    PlantOrganLocation location = *organ;
+    location.node_index = node_index;
+    return location;
+}
+
+std::vector<PlantOrganLocation> PlantArchitecture::getPrimitiveOrganLocations(const std::vector<uint> &UUIDs) const {
+    ensureOrganIndexCurrent();
+    std::vector<PlantOrganLocation> locations;
+    locations.reserve(UUIDs.size());
+    for (uint UUID: UUIDs) {
+        uint node_index;
+        const PlantOrganLocation *organ = findPrimitiveOrganLocation(UUID, node_index);
+        if (organ == nullptr) {
+            helios_runtime_error("ERROR (PlantArchitecture::getPrimitiveOrganLocations): Primitive " + std::to_string(UUID) +
+                                 " is not part of a plant: it does not exist, or it is not part of an organ of a plant of this PlantArchitecture instance (material detached by pruning is not). Use isPlantPrimitive() to filter primitives first.");
+        }
+        locations.push_back(*organ);
+        locations.back().node_index = node_index;
+    }
+    return locations;
+}
+
+PlantOrganLocation PlantArchitecture::getObjectOrganLocation(uint objID) const {
+    ensureOrganIndexCurrent();
+    const auto organ_entry = organ_index_by_objID.find(objID);
+    if (organ_entry == organ_index_by_objID.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getObjectOrganLocation): Object " + std::to_string(objID) +
+                             " is not an organ of a plant: it does not exist, or it is not an organ of a plant of this PlantArchitecture instance (material detached by pruning is not).");
+    }
+    return organ_entry->second;
+}
+
+bool PlantArchitecture::isPlantPrimitive(uint UUID) const {
+    ensureOrganIndexCurrent();
+    uint node_index;
+    return findPrimitiveOrganLocation(UUID, node_index) != nullptr;
+}
+
+std::vector<PlantSkeletonSegment> PlantArchitecture::getPlantSkeletonSegments(uint plantID, const std::vector<PlantOrganType> &organ_types) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantSkeletonSegments): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    bool include_internodes = false;
+    bool include_petioles = false;
+    bool include_peduncles = false;
+    for (PlantOrganType organ_type: organ_types) {
+        if (organ_type == PlantOrganType::INTERNODE) {
+            include_internodes = true;
+        } else if (organ_type == PlantOrganType::PETIOLE) {
+            include_petioles = true;
+        } else if (organ_type == PlantOrganType::PEDUNCLE) {
+            include_peduncles = true;
+        } else {
+            helios_runtime_error("ERROR (PlantArchitecture::getPlantSkeletonSegments): Only internodes, petioles and peduncles have centerline segments. Leaves, flowers and fruit cannot be requested.");
+        }
+    }
+    const uint none = PlantOrganLocation::not_applicable;
+
+    // Petioles and peduncles are taken from their tube objects, i.e. the geometry that is drawn
+    auto appendTubeSegments = [&](std::vector<PlantSkeletonSegment> &segments, const PlantOrganLocation &organ) {
+        const std::vector<vec3> nodes = context_ptr->getTubeObjectNodes(organ.objID);
+        const std::vector<float> radii = context_ptr->getTubeObjectNodeRadii(organ.objID);
+        for (size_t s = 0; s + 1 < nodes.size(); s++) {
+            segments.push_back({nodes.at(s), nodes.at(s + 1), radii.at(s), radii.at(s + 1), organ});
+        }
+    };
+
+    std::vector<PlantSkeletonSegment> segments;
+    const std::vector<std::shared_ptr<Shoot>> &shoot_tree = plant_instances.at(plantID).shoot_tree;
+    for (uint shootID = 0; shootID < shoot_tree.size(); shootID++) {
+        const std::shared_ptr<Shoot> &shoot = shoot_tree.at(shootID);
+        for (uint node = 0; node < shoot->phytomers.size(); node++) {
+            const std::shared_ptr<Phytomer> &phytomer = shoot->phytomers.at(node);
+            if (include_internodes) {
+                const uint tube_objID = context_ptr->doesObjectExist(shoot->internode_tube_objID) ? shoot->internode_tube_objID : none;
+                const PlantOrganLocation organ = {plantID, shootID, node, PlantOrganType::INTERNODE, none, none, none, tube_objID};
+                const std::vector<vec3> centerline = phytomer->getInternodeNodePositions();
+                const std::vector<float> radii = phytomer->getInternodeNodeRadii();
+                for (size_t s = 0; s + 1 < centerline.size(); s++) {
+                    segments.push_back({centerline.at(s), centerline.at(s + 1), radii.at(s), radii.at(s + 1), organ});
+                }
+            }
+            if (include_petioles) {
+                for (uint petiole = 0; petiole < phytomer->petiole_objIDs.size(); petiole++) {
+                    const uint objID = phytomer->petiole_objIDs.at(petiole);
+                    if (objID != Phytomer::no_petiole_objID && context_ptr->doesObjectExist(objID)) {
+                        appendTubeSegments(segments, {plantID, shootID, node, PlantOrganType::PETIOLE, petiole, none, none, objID});
+                    }
+                }
+            }
+            if (include_peduncles) {
+                for (uint petiole = 0; petiole < phytomer->floral_buds.size(); petiole++) {
+                    for (uint bud = 0; bud < phytomer->floral_buds.at(petiole).size(); bud++) {
+                        for (uint objID: phytomer->floral_buds.at(petiole).at(bud).peduncle_objIDs) {
+                            appendTubeSegments(segments, {plantID, shootID, node, PlantOrganType::PEDUNCLE, petiole, none, bud, objID});
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return segments;
 }
 
 void PlantArchitecture::setPlantLeafAngleDistribution_private(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity_azimuth, float ellipse_rotation_azimuth_degrees, bool set_elevation,
@@ -9571,6 +10053,7 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
 }
 
 void PlantArchitecture::deletePlantInstance(uint plantID) {
+    invalidateOrganIndex();
     if (skipStructuralOperationInCallback("deletePlantInstance")) {
         return;
     }
@@ -10363,6 +10846,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 }
 
 void PlantArchitecture::adjustFruitForObstacleCollision() {
+    invalidateOrganIndex();
     if (!solid_obstacle_avoidance_enabled || solid_obstacle_UUIDs.empty() || !solid_obstacle_fruit_adjustment_enabled) {
         return; // No obstacles to check or fruit adjustment disabled
     }
@@ -10627,6 +11111,7 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
 }
 
 void PlantArchitecture::pruneSolidBoundaryCollisions() {
+    invalidateOrganIndex();
     if (!solid_obstacle_avoidance_enabled || solid_obstacle_UUIDs.empty()) {
         return; // No solid boundaries defined
     }

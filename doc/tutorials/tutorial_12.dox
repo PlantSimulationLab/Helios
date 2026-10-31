@@ -66,13 +66,13 @@ Next, we assign realistic colors and material properties to our objects using th
     context.setPrimitiveData(UUIDs_dragon, "reflectivity_spectrum", "ColorReference_Calibrite_10"); //purple
     context.setPrimitiveData( UUIDs_tile, "reflectivity_spectrum", "ColorReference_Calibrite_13"); //dark blue
 
-    // Set specular properties for realistic shading
-    context.setPrimitiveData( UUIDs_bunny_1, "specular_exponent", 10.f);
-    context.setPrimitiveData( UUIDs_bunny_2, "specular_exponent", 10.f);
-    context.setPrimitiveData( UUIDs_dragon, "specular_exponent", 10.f);
+    // Give the objects a glossy surface layer so that they appear slightly shiny
+    context.setPrimitiveData( UUIDs_bunny_1, "specular_roughness", 0.4f);
+    context.setPrimitiveData( UUIDs_bunny_2, "specular_roughness", 0.4f);
+    context.setPrimitiveData( UUIDs_dragon, "specular_roughness", 0.4f);
 ~~~~~~
 
-The Calibrite color board provides spectrally accurate color references that ensure realistic material appearance. The specular exponent controls how shiny the surfaces appear.
+The Calibrite color board provides spectrally accurate color references that ensure realistic material appearance. The surface layer's roughness (specular_roughness) controls how shiny the surfaces appear: smaller values give sharper, brighter highlights.
 
 \section tutorial12_labels 3. Adding Object Labels for Segmentation
 

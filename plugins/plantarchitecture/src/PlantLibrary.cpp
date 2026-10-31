@@ -17,7 +17,7 @@
 */
 
 #include "CollisionDetection.h"
-#include "PlantArchitecture.h"
+#include "PlantArchitectureInternal.h"
 
 using namespace helios;
 
@@ -230,6 +230,174 @@ int getBuildParameterIntegerValue(const std::map<std::string, float> &build_para
     return int(value);
 }
 
+float getBuildParameterValue(const std::map<std::string, float> &build_parameters, const BuildParameterDeclaration &declaration, float default_value) {
+    if (declaration.is_integer) {
+        helios_runtime_error("ERROR (getBuildParameterValue): build parameter '" + std::string(declaration.name) + "' is declared as a whole number. Read it with getBuildParameterIntegerValue().");
+    }
+    return getBuildParameterValue(build_parameters, declaration.name, default_value, declaration.min_value, declaration.max_value, declaration.description);
+}
+
+int getBuildParameterIntegerValue(const std::map<std::string, float> &build_parameters, const BuildParameterDeclaration &declaration, int default_value) {
+    if (!declaration.is_integer) {
+        helios_runtime_error("ERROR (getBuildParameterIntegerValue): build parameter '" + std::string(declaration.name) + "' is not declared as a whole number. Read it with getBuildParameterValue().");
+    }
+    return getBuildParameterIntegerValue(build_parameters, declaration.name, default_value, int(declaration.min_value), int(declaration.max_value), declaration.description);
+}
+
+// ---- BuildParameterDistribution ---- //
+
+BuildParameterDistribution BuildParameterDistribution::constant(float value) {
+    // Not checked here: a fixed value is checked, like any value passed without a distribution, by the code that reads its parameter, which knows the valid range and names the parameter in its error
+    return {Type::CONSTANT, {value}, {}};
+}
+
+BuildParameterDistribution BuildParameterDistribution::uniform(float min_value, float max_value) {
+    if (!std::isfinite(min_value) || !std::isfinite(max_value)) {
+        helios_runtime_error("ERROR (BuildParameterDistribution::uniform): The interval bounds must be finite.");
+    }
+    if (min_value > max_value) {
+        helios_runtime_error("ERROR (BuildParameterDistribution::uniform): min_value (" + std::to_string(min_value) + ") must not be greater than max_value (" + std::to_string(max_value) + ").");
+    }
+    return {Type::UNIFORM, {min_value, max_value}, {}};
+}
+
+BuildParameterDistribution BuildParameterDistribution::normal(float mean, float standard_deviation, float min_value, float max_value) {
+    if (!std::isfinite(mean) || !std::isfinite(standard_deviation) || !std::isfinite(min_value) || !std::isfinite(max_value)) {
+        helios_runtime_error("ERROR (BuildParameterDistribution::normal): The mean, standard deviation and interval bounds must be finite.");
+    }
+    if (standard_deviation <= 0.f) {
+        helios_runtime_error("ERROR (BuildParameterDistribution::normal): The standard deviation must be positive. Use BuildParameterDistribution::constant() for a fixed value.");
+    }
+    if (min_value >= max_value) {
+        helios_runtime_error("ERROR (BuildParameterDistribution::normal): min_value (" + std::to_string(min_value) + ") must be less than max_value (" + std::to_string(max_value) + ").");
+    }
+    // Values outside the interval are redrawn, which needs the interval to hold a usable share of the distribution
+    const double erf_scale = double(standard_deviation) * std::sqrt(2.0);
+    const double probability_in_interval = 0.5 * (std::erf((double(max_value) - mean) / erf_scale) - std::erf((double(min_value) - mean) / erf_scale));
+    if (probability_in_interval < 1e-3) {
+        helios_runtime_error("ERROR (BuildParameterDistribution::normal): The interval [" + std::to_string(min_value) + ", " + std::to_string(max_value) + "] holds less than 0.1% of a normal distribution with mean " +
+                             std::to_string(mean) + " and standard deviation " + std::to_string(standard_deviation) + ". Move the mean inside the interval or widen it.");
+    }
+    return {Type::NORMAL, {mean, standard_deviation, min_value, max_value}, {}};
+}
+
+BuildParameterDistribution BuildParameterDistribution::discrete(const std::vector<float> &values, const std::vector<float> &weights) {
+    if (values.empty()) {
+        helios_runtime_error("ERROR (BuildParameterDistribution::discrete): At least one value must be given.");
+    }
+    for (float value: values) {
+        if (!std::isfinite(value)) {
+            helios_runtime_error("ERROR (BuildParameterDistribution::discrete): Every value must be finite.");
+        }
+    }
+    if (!weights.empty()) {
+        if (weights.size() != values.size()) {
+            helios_runtime_error("ERROR (BuildParameterDistribution::discrete): " + std::to_string(weights.size()) + " weights were given for " + std::to_string(values.size()) + " values. Give one weight per value, or none for equally likely values.");
+        }
+        float weight_sum = 0.f;
+        for (float weight: weights) {
+            if (!std::isfinite(weight) || weight < 0.f) {
+                helios_runtime_error("ERROR (BuildParameterDistribution::discrete): Every weight must be finite and non-negative.");
+            }
+            weight_sum += weight;
+        }
+        if (weight_sum <= 0.f) {
+            helios_runtime_error("ERROR (BuildParameterDistribution::discrete): The weights must not all be zero.");
+        }
+    }
+    return {Type::DISCRETE, values, weights};
+}
+
+float BuildParameterDistribution::getMinimum() const {
+    switch (type) {
+        case Type::CONSTANT:
+            return parameters.at(0);
+        case Type::UNIFORM:
+            return parameters.at(0);
+        case Type::NORMAL:
+            return parameters.at(2);
+        case Type::DISCRETE:
+            return *std::min_element(parameters.begin(), parameters.end());
+    }
+    helios_runtime_error("ERROR (BuildParameterDistribution::getMinimum): Unknown distribution type.");
+    return 0.f;
+}
+
+float BuildParameterDistribution::getMaximum() const {
+    switch (type) {
+        case Type::CONSTANT:
+            return parameters.at(0);
+        case Type::UNIFORM:
+            return parameters.at(1);
+        case Type::NORMAL:
+            return parameters.at(3);
+        case Type::DISCRETE:
+            return *std::max_element(parameters.begin(), parameters.end());
+    }
+    helios_runtime_error("ERROR (BuildParameterDistribution::getMaximum): Unknown distribution type.");
+    return 0.f;
+}
+
+float BuildParameterDistribution::sample(std::minstd_rand0 &generator) const {
+    switch (type) {
+        case Type::CONSTANT:
+            return parameters.at(0);
+        case Type::UNIFORM: {
+            std::uniform_real_distribution<float> unit_distribution(0.f, 1.f);
+            return parameters.at(0) + unit_distribution(generator) * (parameters.at(1) - parameters.at(0));
+        }
+        case Type::NORMAL: {
+            // The interval holds at least 0.1% of the distribution (checked by normal()), so this many draws all falling outside it has a probability below 1e-43
+            constexpr int max_draws = 100000;
+            std::normal_distribution<float> normal_distribution(parameters.at(0), parameters.at(1));
+            for (int draw = 0; draw < max_draws; draw++) {
+                const float value = normal_distribution(generator);
+                if (value >= parameters.at(2) && value <= parameters.at(3)) {
+                    return value;
+                }
+            }
+            helios_runtime_error("ERROR (BuildParameterDistribution::sample): No value of the truncated normal distribution fell inside its interval in " + std::to_string(max_draws) + " draws.");
+            return 0.f;
+        }
+        case Type::DISCRETE: {
+            if (parameters.size() == 1) {
+                return parameters.front();
+            }
+            if (weights.empty()) {
+                std::uniform_int_distribution<size_t> index_distribution(0, parameters.size() - 1);
+                return parameters.at(index_distribution(generator));
+            }
+            std::discrete_distribution<size_t> index_distribution(weights.begin(), weights.end());
+            return parameters.at(index_distribution(generator));
+        }
+    }
+    helios_runtime_error("ERROR (BuildParameterDistribution::sample): Unknown distribution type.");
+    return 0.f;
+}
+
+// ---- Build parameters of the library models ---- //
+//
+// Each build parameter a builder reads is declared once here. The builder reads it through the declaration, and registerPlantModelBuildParameters() is given the same declaration, so that the range a
+// distribution is checked against before a plant is built is the range the builder enforces on each sample. The tiller counts and the organ parameters are declared beside their readers in Assets.cpp.
+
+static constexpr BuildParameterDeclaration tree_trunk_height{"trunk_height", 0.1f, 3.f, false, "total trunk height in meters"};
+static constexpr BuildParameterDeclaration tree_num_scaffolds{"num_scaffolds", 2.f, 8.f, true, "number of scaffold branches"};
+static constexpr BuildParameterDeclaration tree_scaffold_angle{"scaffold_angle", 20.f, 70.f, false, "scaffold branch angle in degrees"};
+static constexpr BuildParameterDeclaration walnut_scaffold_angle{"scaffold_angle", 25.f, 60.f, false, "scaffold branch angle in degrees"};
+static constexpr BuildParameterDeclaration grapevine_vine_spacing{"vine_spacing", 0.5f, 5.f, false, "plant-to-plant spacing in meters"};
+static constexpr BuildParameterDeclaration grapevine_VSP_trunk_height{"trunk_height", 0.05f, 1.f, false, "height of the fruiting wire in meters"};
+static constexpr BuildParameterDeclaration grapevine_Wye_trunk_height{"trunk_height", 0.5f, 2.f, false, "height of the cordon wires in meters"};
+static constexpr BuildParameterDeclaration grapevine_Wye_cordon_spacing{"cordon_spacing", 0.2f, 2.f, false, "distance between the two cordon wires across the row in meters"};
+static constexpr BuildParameterDeclaration grapevine_Wye_catch_wire_height{"catch_wire_height", 0.5f, 4.f, false, "height of the top gable wires in meters"};
+
+std::map<std::string, BuildParameterDistribution> constantBuildParameterDistributions(const std::map<std::string, float> &build_parameters) {
+    std::map<std::string, BuildParameterDistribution> distributions;
+    for (const auto &[parameter_name, value]: build_parameters) {
+        distributions.emplace(parameter_name, BuildParameterDistribution::constant(value));
+    }
+    return distributions;
+}
+
 void PlantArchitecture::initializePlantModelRegistrations() {
     // Register all available plant models
     registerPlantModel("almond", [this]() { initializeAlmondTreeShoots(); }, [this](const helios::vec3 &pos) { return buildAlmondTree(pos); }, "tree");
@@ -295,30 +463,33 @@ void PlantArchitecture::initializePlantModelRegistrations() {
     registerPlantModel("wheat", [this]() { initializeWheatShoots(); }, [this](const helios::vec3 &pos) { return buildWheatPlant(pos); });
 
     // Build parameters read by each model's builder (structure) and by its flower and fruit prototype functions (organs). Any other key passed to buildPlantInstanceFromLibrary() is rejected.
-    const std::vector<std::string> tree_training_parameters = {"trunk_height", "num_scaffolds", "scaffold_angle"};
+    const std::vector<BuildParameterDeclaration> tree_training_parameters = {tree_trunk_height, tree_num_scaffolds, tree_scaffold_angle};
     registerPlantModelBuildParameters("almond", tree_training_parameters);
     registerPlantModelBuildParameters("almond_independence", tree_training_parameters);
     registerPlantModelBuildParameters("apple", tree_training_parameters);
     registerPlantModelBuildParameters("pistachio", tree_training_parameters);
-    registerPlantModelBuildParameters("walnut", tree_training_parameters);
+    registerPlantModelBuildParameters("walnut", {tree_trunk_height, tree_num_scaffolds, walnut_scaffold_angle});
 
     auto validate_grape_cluster_parameters = [](const std::map<std::string, float> &parameters) { static_cast<void>(GrapeClusterParameters::fromBuildParameters(parameters)); };
-    registerPlantModelBuildParameters("grapevine_VSP", {"vine_spacing", "trunk_height"}, GrapeClusterParameters::buildParameterNames(), validate_grape_cluster_parameters);
-    registerPlantModelBuildParameters("grapevine_Wye", {"trunk_height", "cordon_spacing", "vine_spacing", "catch_wire_height"}, GrapeClusterParameters::buildParameterNames(), validate_grape_cluster_parameters);
+    registerPlantModelBuildParameters("grapevine_VSP", {grapevine_vine_spacing, grapevine_VSP_trunk_height}, GrapeClusterParameters::buildParameterDeclarations(), validate_grape_cluster_parameters);
+    registerPlantModelBuildParameters("grapevine_Wye", {grapevine_Wye_trunk_height, grapevine_Wye_cordon_spacing, grapevine_vine_spacing, grapevine_Wye_catch_wire_height}, GrapeClusterParameters::buildParameterDeclarations(),
+                                      validate_grape_cluster_parameters);
 
-    registerPlantModelBuildParameters("sorghum", {"tiller_count"}, SorghumPanicleParameters::buildParameterNames(),
+    registerPlantModelBuildParameters("sorghum", {sorghum_tiller_count}, SorghumPanicleParameters::buildParameterDeclarations(),
                                       [](const std::map<std::string, float> &parameters) { static_cast<void>(SorghumPanicleParameters::fromBuildParameters(parameters)); });
+
+    registerPlantModelBuildParameters("wheat", {wheat_tiller_count});
 }
 
-void PlantArchitecture::registerPlantModelBuildParameters(const std::string &name, const std::vector<std::string> &structure_parameter_names, const std::vector<std::string> &organ_parameter_names,
+void PlantArchitecture::registerPlantModelBuildParameters(const std::string &name, const std::vector<BuildParameterDeclaration> &structure_parameters, const std::vector<BuildParameterDeclaration> &organ_parameters,
                                                           std::function<void(const std::map<std::string, float> &)> validate_organ_parameters) {
     if (plant_builders.find(name) == plant_builders.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::registerPlantModelBuildParameters): Plant model '" + name + "' has not been registered. Call registerPlantModel() first.");
     }
-    if (!organ_parameter_names.empty() && !validate_organ_parameters) {
+    if (!organ_parameters.empty() && !validate_organ_parameters) {
         helios_runtime_error("ERROR (PlantArchitecture::registerPlantModelBuildParameters): Plant model '" + name + "' declares organ parameters but no function to validate them.");
     }
-    plant_model_build_parameters[name] = {structure_parameter_names, organ_parameter_names, validate_organ_parameters};
+    plant_model_build_parameters[name] = {structure_parameters, organ_parameters, validate_organ_parameters};
 }
 
 std::vector<std::string> PlantArchitecture::getPlantModelBuildParameterNames(const std::string &plant_model_name) const {
@@ -329,39 +500,76 @@ std::vector<std::string> PlantArchitecture::getPlantModelBuildParameterNames(con
     if (declaration_it == plant_model_build_parameters.end()) {
         return {};
     }
-    std::vector<std::string> names = declaration_it->second.structure_parameter_names;
-    names.insert(names.end(), declaration_it->second.organ_parameter_names.begin(), declaration_it->second.organ_parameter_names.end());
+    std::vector<std::string> names;
+    for (const BuildParameterDeclaration &declaration: declaration_it->second.structure_parameters) {
+        names.emplace_back(declaration.name);
+    }
+    for (const BuildParameterDeclaration &declaration: declaration_it->second.organ_parameters) {
+        names.emplace_back(declaration.name);
+    }
     return names;
 }
 
-std::map<std::string, float> PlantArchitecture::validateBuildParameters(const std::string &plant_model_name, const std::map<std::string, float> &build_parameters, const std::string &calling_function) const {
-    std::map<std::string, float> organ_parameters;
+std::map<std::string, BuildParameterDistribution> PlantArchitecture::validateBuildParameters(const std::string &plant_model_name, const std::map<std::string, BuildParameterDistribution> &build_parameters,
+                                                                                         const std::string &calling_function) const {
+    std::map<std::string, BuildParameterDistribution> organ_parameters;
     if (build_parameters.empty()) {
         return organ_parameters;
     }
 
     auto declaration_it = plant_model_build_parameters.find(plant_model_name);
-    const std::vector<std::string> no_names;
-    const std::vector<std::string> &structure_names = declaration_it == plant_model_build_parameters.end() ? no_names : declaration_it->second.structure_parameter_names;
-    const std::vector<std::string> &organ_names = declaration_it == plant_model_build_parameters.end() ? no_names : declaration_it->second.organ_parameter_names;
+    const std::vector<BuildParameterDeclaration> no_declarations;
+    const std::vector<BuildParameterDeclaration> &structure_declarations = declaration_it == plant_model_build_parameters.end() ? no_declarations : declaration_it->second.structure_parameters;
+    const std::vector<BuildParameterDeclaration> &organ_declarations = declaration_it == plant_model_build_parameters.end() ? no_declarations : declaration_it->second.organ_parameters;
+    auto find_declaration = [](const std::vector<BuildParameterDeclaration> &declarations, const std::string &parameter_name) {
+        return std::find_if(declarations.begin(), declarations.end(), [&](const BuildParameterDeclaration &declaration) { return parameter_name == declaration.name; });
+    };
 
     std::string accepted_names;
     for (const std::string &name: getPlantModelBuildParameterNames(plant_model_name)) {
         accepted_names += (accepted_names.empty() ? "" : ", ") + name;
     }
 
-    for (const auto &[parameter_name, value]: build_parameters) {
-        if (std::find(organ_names.begin(), organ_names.end(), parameter_name) != organ_names.end()) {
-            organ_parameters[parameter_name] = value;
-        } else if (std::find(structure_names.begin(), structure_names.end(), parameter_name) == structure_names.end()) {
+    std::map<std::string, float> fixed_organ_parameters;
+    for (const auto &[parameter_name, distribution]: build_parameters) {
+        const BuildParameterDeclaration *declaration = nullptr;
+        if (auto organ_it = find_declaration(organ_declarations, parameter_name); organ_it != organ_declarations.end()) {
+            declaration = &*organ_it;
+            organ_parameters.emplace(parameter_name, distribution);
+            if (distribution.getType() == BuildParameterDistribution::Type::CONSTANT) {
+                fixed_organ_parameters.emplace(parameter_name, distribution.getParameters().front());
+            }
+        } else if (auto structure_it = find_declaration(structure_declarations, parameter_name); structure_it != structure_declarations.end()) {
+            declaration = &*structure_it;
+        } else {
             helios_runtime_error("ERROR (" + calling_function + "): Build parameter '" + parameter_name + "' is not accepted by plant model '" + plant_model_name + "'. " +
                                  (accepted_names.empty() ? std::string("This model accepts no build parameters.") : "Accepted parameters are: " + accepted_names + "."));
+        }
+
+        // A fixed value is checked by the code that reads it, as one passed without a distribution is. A distribution is checked here over its whole range, since that code sees only one sample at a time.
+        if (distribution.getType() == BuildParameterDistribution::Type::CONSTANT) {
+            continue;
+        }
+        const std::string parameter_label = "Build parameter '" + parameter_name + "' (" + declaration->description + ")";
+        if (declaration->is_integer) {
+            if (distribution.getType() != BuildParameterDistribution::Type::DISCRETE) {
+                helios_runtime_error("ERROR (" + calling_function + "): " + parameter_label + " must be a whole number, so its distribution must be BuildParameterDistribution::discrete() with whole-number values.");
+            }
+            for (float value: distribution.getParameters()) {
+                if (value != std::round(value)) {
+                    helios_runtime_error("ERROR (" + calling_function + "): " + parameter_label + " must be a whole number, but its discrete distribution includes the value " + std::to_string(value) + ".");
+                }
+            }
+        }
+        if (distribution.getMinimum() < declaration->min_value || distribution.getMaximum() > declaration->max_value) {
+            helios_runtime_error("ERROR (" + calling_function + "): " + parameter_label + " is given a distribution spanning [" + std::to_string(distribution.getMinimum()) + ", " + std::to_string(distribution.getMaximum()) +
+                                 "], which reaches outside the valid range [" + std::to_string(declaration->min_value) + ", " + std::to_string(declaration->max_value) + "].");
         }
     }
 
     // Organ parameters are otherwise read only when the first flower or fruit forms, so checking them here makes an invalid value fail now rather than partway through the plant's growth
     if (!organ_parameters.empty()) {
-        declaration_it->second.validate_organ_parameters(organ_parameters);
+        declaration_it->second.validate_organ_parameters(fixed_organ_parameters);
     }
     return organ_parameters;
 }
@@ -385,6 +593,10 @@ std::vector<std::string> PlantArchitecture::getAvailablePlantModels() const {
 }
 
 uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_position, float age, const std::map<std::string, float> &build_parameters) {
+    return buildPlantInstanceFromLibrary(base_position, age, constantBuildParameterDistributions(build_parameters));
+}
+
+uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_position, float age, const std::map<std::string, BuildParameterDistribution> &build_parameters) {
     rejectStructuralOperationInCallback("buildPlantInstanceFromLibrary");
     StructuralOperationScope structural_operation_scope(this);
 
@@ -399,19 +611,30 @@ uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_p
     }
 
     // Reject any parameter the model does not read, so that a misspelled name fails instead of leaving the default silently in place
-    const std::map<std::string, float> organ_build_parameters = validateBuildParameters(current_plant_model, build_parameters, "PlantArchitecture::buildPlantInstanceFromLibrary");
+    const std::map<std::string, BuildParameterDistribution> organ_build_parameters = validateBuildParameters(current_plant_model, build_parameters, "PlantArchitecture::buildPlantInstanceFromLibrary");
+
+    // Each structure parameter is sampled once for this plant. Organ parameters are instead sampled for each flower and fruit prototype, so that plants given the same distributions share one set of
+    // prototypes, and only those given as fixed values are kept here. A constant is taken without drawing from the random generator, so a build with fixed values draws the same random numbers as before.
+    std::map<std::string, float> plant_build_parameters;
+    for (const auto &[parameter_name, distribution]: build_parameters) {
+        if (organ_build_parameters.find(parameter_name) == organ_build_parameters.end()) {
+            plant_build_parameters.emplace(parameter_name, distribution.sample(*generator));
+        } else if (distribution.getType() == BuildParameterDistribution::Type::CONSTANT) {
+            plant_build_parameters.emplace(parameter_name, distribution.getParameters().front());
+        }
+    }
 
     // The builder reads the build parameters, and addPlantInstance() attaches them to the plant it creates. They are cleared on every exit, including when the builder throws, so that
     // they cannot reach a plant created later outside a library build.
     struct BuildParameterScope {
         std::map<std::string, float> &build_parameters;
-        std::map<std::string, float> &organ_build_parameters;
+        std::map<std::string, BuildParameterDistribution> &organ_build_parameters;
         ~BuildParameterScope() {
             build_parameters.clear();
             organ_build_parameters.clear();
         }
     } build_parameter_scope{current_build_parameters, current_organ_build_parameters};
-    current_build_parameters = build_parameters;
+    current_build_parameters = plant_build_parameters;
     current_organ_build_parameters = organ_build_parameters;
 
     // Call the builder function
@@ -906,9 +1129,9 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position) {
     // scaffolds emerge at 40 degrees and curve upward, so they need vertical distance to spread. Raising the
     // trunk simply empties the lower crown. Reproducing the real architecture needs the scaffold geometry
     // changed, not the trunk raised. See projects/QSMCalibration.
-    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 0.78f, 0.1f, 3.f, "total trunk height in meters");
-    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, "num_scaffolds", 4, 2, 8, "number of scaffold branches"));
-    auto scaffold_angle = getBuildParameterValue(current_build_parameters, "scaffold_angle", 52.f, 20.f, 70.f, "scaffold branch angle in degrees");
+    auto trunk_height = getBuildParameterValue(current_build_parameters, tree_trunk_height, 0.78f);
+    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, tree_num_scaffolds, 4));
+    auto scaffold_angle = getBuildParameterValue(current_build_parameters, tree_scaffold_angle, 52.f);
 
     // Calculate trunk nodes based on desired height and internode length
     float trunk_internode_length = 0.03f; // Default internode length for almond
@@ -1620,9 +1843,9 @@ uint PlantArchitecture::buildAlmondTreeIndependence(const helios::vec3 &base_pos
     // scaffolds emerge at 40 degrees and curve upward, so they need vertical distance to spread. Raising the
     // trunk simply empties the lower crown. Reproducing the real architecture needs the scaffold geometry
     // changed, not the trunk raised. See projects/QSMCalibration.
-    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 0.78f, 0.1f, 3.f, "total trunk height in meters");
-    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, "num_scaffolds", 4, 2, 8, "number of scaffold branches"));
-    auto scaffold_angle = getBuildParameterValue(current_build_parameters, "scaffold_angle", 52.f, 20.f, 70.f, "scaffold branch angle in degrees");
+    auto trunk_height = getBuildParameterValue(current_build_parameters, tree_trunk_height, 0.78f);
+    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, tree_num_scaffolds, 4));
+    auto scaffold_angle = getBuildParameterValue(current_build_parameters, tree_scaffold_angle, 52.f);
 
     // Calculate trunk nodes based on desired height and internode length
     float trunk_internode_length = 0.03f; // Default internode length for almond
@@ -2012,9 +2235,9 @@ uint PlantArchitecture::buildAppleTree(const helios::vec3 &base_position) {
     }
 
     // Get training system parameters (with defaults matching original hard-coded values)
-    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.1f, 3.f, "total trunk height in meters");
-    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, "num_scaffolds", 4, 2, 8, "number of scaffold branches"));
-    auto scaffold_angle = getBuildParameterValue(current_build_parameters, "scaffold_angle", 40.f, 20.f, 70.f, "scaffold branch angle in degrees");
+    auto trunk_height = getBuildParameterValue(current_build_parameters, tree_trunk_height, 0.8f);
+    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, tree_num_scaffolds, 4));
+    auto scaffold_angle = getBuildParameterValue(current_build_parameters, tree_scaffold_angle, 40.f);
 
     // Calculate trunk nodes based on desired height and internode length
     float trunk_internode_length = 0.04f; // Default internode length for apple
@@ -3333,8 +3556,8 @@ uint PlantArchitecture::buildGrapevineVSP(const helios::vec3 &base_position) {
     }
 
     // Get training system parameters
-    auto vine_spacing = getBuildParameterValue(current_build_parameters, "vine_spacing", 2.4f, 0.5f, 5.f, "plant-to-plant spacing in meters");
-    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.05f, 1.f, "height of the fruiting wire in meters");
+    auto vine_spacing = getBuildParameterValue(current_build_parameters, grapevine_vine_spacing, 2.4f);
+    auto trunk_height = getBuildParameterValue(current_build_parameters, grapevine_VSP_trunk_height, 0.8f);
 
     // Calculate cane nodes to span to neighboring plant. One node is one bud, and so one shoot position:
     // spur-pruned cordons are laid down at roughly a bud every 8-12 cm, giving the 10-16 shoots per metre
@@ -3774,10 +3997,10 @@ uint PlantArchitecture::buildGrapevineWye(const helios::vec3 &base_position) {
     // into two arms, one to each side of the row -- the Y. Each arm reaches a cordon wire and carries two
     // cordons along it, one each way, so the vine has four. Above each cordon wire the gable wires step up
     // and outward, and the shoots are carried up over them into the two curtains of a divided canopy.
-    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 1.4f, 0.5f, 2.f, "height of the cordon wires in meters");
-    auto cordon_spacing = getBuildParameterValue(current_build_parameters, "cordon_spacing", 0.6f, 0.2f, 2.f, "distance between the two cordon wires across the row in meters");
-    auto vine_spacing = getBuildParameterValue(current_build_parameters, "vine_spacing", 1.8f, 0.5f, 5.f, "plant-to-plant spacing in meters");
-    auto catch_wire_height = getBuildParameterValue(current_build_parameters, "catch_wire_height", trunk_height + 0.6f, 0.5f, 4.f, "height of the top gable wires in meters");
+    auto trunk_height = getBuildParameterValue(current_build_parameters, grapevine_Wye_trunk_height, 1.4f);
+    auto cordon_spacing = getBuildParameterValue(current_build_parameters, grapevine_Wye_cordon_spacing, 0.6f);
+    auto vine_spacing = getBuildParameterValue(current_build_parameters, grapevine_vine_spacing, 1.8f);
+    auto catch_wire_height = getBuildParameterValue(current_build_parameters, grapevine_Wye_catch_wire_height, trunk_height + 0.6f);
     if (catch_wire_height <= trunk_height) {
         helios_runtime_error("ERROR (PlantArchitecture::buildGrapevineWye): build parameter 'catch_wire_height' (" + std::to_string(catch_wire_height) + " m) must be greater than 'trunk_height' (" + std::to_string(trunk_height) +
                              " m). The gable wires that carry the canopy rise from the cordon wires, whose height is 'trunk_height'.");
@@ -4579,10 +4802,10 @@ uint PlantArchitecture::buildPistachioTree(const helios::vec3 &base_position) {
     }
 
     // Get training system parameters (with defaults matching original hard-coded values)
-    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 1.0f, 0.1f, 3.f, "total trunk height in meters");
-    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, "num_scaffolds", 4, 2, 8, "number of scaffold branches"));
+    auto trunk_height = getBuildParameterValue(current_build_parameters, tree_trunk_height, 1.0f);
+    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, tree_num_scaffolds, 4));
     // 57 deg: the measured orchard scaffolds leave the trunk at a median 56-57 deg from vertical.
-    auto scaffold_angle = getBuildParameterValue(current_build_parameters, "scaffold_angle", 57.f, 20.f, 70.f, "scaffold branch angle in degrees");
+    auto scaffold_angle = getBuildParameterValue(current_build_parameters, tree_scaffold_angle, 57.f);
 
     // Calculate trunk nodes based on desired height and internode length
     float trunk_internode_length = 0.05f; // Default internode length for pistachio
@@ -5948,9 +6171,9 @@ uint PlantArchitecture::buildWalnutTree(const helios::vec3 &base_position) {
     }
 
     // Get training system parameters (with defaults matching original hard-coded values)
-    auto trunk_height = getBuildParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.1f, 3.f, "total trunk height in meters");
-    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, "num_scaffolds", 4, 2, 8, "number of scaffold branches"));
-    auto scaffold_angle = getBuildParameterValue(current_build_parameters, "scaffold_angle", 40.f, 25.f, 60.f, "scaffold branch angle in degrees");
+    auto trunk_height = getBuildParameterValue(current_build_parameters, tree_trunk_height, 0.8f);
+    auto num_scaffolds = uint(getBuildParameterIntegerValue(current_build_parameters, tree_num_scaffolds, 4));
+    auto scaffold_angle = getBuildParameterValue(current_build_parameters, walnut_scaffold_angle, 40.f);
 
     // Calculate trunk nodes based on desired height and internode length
     float trunk_internode_length = 0.04f; // Default internode length for walnut
@@ -6003,7 +6226,9 @@ void PlantArchitecture::initializeWheatShoots() {
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
     leaf_prototype.leaf_texture_file[0] = "SorghumLeaf.png";
-    leaf_prototype.leaf_aspect_ratio = 0.1f;
+    // Blade width relative to length. Wheat flag leaves average 20.0 cm by 1.3 cm (Kumar et al. 2024, Theoretical and Applied Genetics 137:205), and the midrib fold narrows the projected blade a little below
+    // its nominal width.
+    leaf_prototype.leaf_aspect_ratio = 0.065f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.07, -0.04);
     leaf_prototype.longitudinal_curvature_exponent = 3.f;
@@ -6030,7 +6255,8 @@ void PlantArchitecture::initializeWheatShoots() {
     phytomer_parameters_wheat.internode.length_segments = 1;
     phytomer_parameters_wheat.internode.radial_subdivisions = 6;
     phytomer_parameters_wheat.internode.max_floral_buds_per_petiole = 0;
-    phytomer_parameters_wheat.internode.max_vegetative_buds_per_petiole = 0;
+    // Every leaf axil carries a bud a tiller can grow from. WheatPhytomerCreationFunction() keeps those at the tillering positions the plant was built with and kills the rest.
+    phytomer_parameters_wheat.internode.max_vegetative_buds_per_petiole = 1;
 
     // A grass leaf has no petiole: the blade sits on the culm, and its pitch below is its angle off the culm.
     phytomer_parameters_wheat.petiole.petioles_per_internode = 1;
@@ -6040,10 +6266,14 @@ void PlantArchitecture::initializeWheatShoots() {
     phytomer_parameters_wheat.leaf.pitch.uniformDistribution(-40, -20);
     phytomer_parameters_wheat.leaf.yaw = 0;
     phytomer_parameters_wheat.leaf.roll = 0;
-    phytomer_parameters_wheat.leaf.prototype_scale = 0.36;
+    // Length of the longest blade, which is the one below the flag leaf. The flag leaf is built about 12% shorter (WheatPhytomerCreationFunction()), placing it at the 20 cm mean of 272 US winter wheat
+    // accessions, whose flag leaves ranged 15.9-28.9 cm (Kumar et al. 2024).
+    phytomer_parameters_wheat.leaf.prototype_scale = 0.24;
     phytomer_parameters_wheat.leaf.prototype = leaf_prototype;
 
-    phytomer_parameters_wheat.peduncle.length = 0.1;
+    // The peduncle is the longest internode of the culm, about 40% of plant stature, and 40-50% in semi-dwarf cultivars (Scheeren et al. 1981, Pesquisa Agropecuaria Brasileira). This is its whole length;
+    // the part hidden inside the flag-leaf sheath is not built (WheatPhytomerCreationFunction()).
+    phytomer_parameters_wheat.peduncle.length = 0.32;
     phytomer_parameters_wheat.peduncle.radius = 0.002;
     phytomer_parameters_wheat.peduncle.color = phytomer_parameters_wheat.internode.color;
     phytomer_parameters_wheat.peduncle.curvature = 0;
@@ -6054,6 +6284,9 @@ void PlantArchitecture::initializeWheatShoots() {
     phytomer_parameters_wheat.inflorescence.roll = 0;
     phytomer_parameters_wheat.inflorescence.fruit_prototype_scale = 0.1;
     phytomer_parameters_wheat.inflorescence.fruit_prototype_function = WheatSpikePrototype;
+    // The ear is formed with the flag leaf, and grows to full size as it emerges from the flag-leaf sheath at heading, about two phyllochrons later. Without a period of its own it would inherit the
+    // 39-day grain fill and still be expanding at maturity, whereas the ear is at full length by anthesis.
+    phytomer_parameters_wheat.inflorescence.inflorescence_maturity_period = 12;
 
     phytomer_parameters_wheat.phytomer_creation_function = WheatPhytomerCreationFunction;
 
@@ -6061,22 +6294,46 @@ void PlantArchitecture::initializeWheatShoots() {
 
     ShootParameters shoot_parameters_mainstem(context_ptr->getRandomGenerator());
     shoot_parameters_mainstem.phytomer_parameters = phytomer_parameters_wheat;
-    shoot_parameters_mainstem.vegetative_bud_break_probability_min = 0;
+    // Buds are not thinned at random: WheatPhytomerCreationFunction() chooses which leaf axils tiller.
+    shoot_parameters_mainstem.vegetative_bud_break_probability_min = 1;
+    // The first tiller appears as the second to fourth main-stem leaf emerges, and the rest follow at one per phyllochron (Alzueta et al. 2012, European Journal of Agronomy 41:92), placing T1 at Haun
+    // stage 2.5. A tiller therefore emerges about 2.5 phyllochrons after the leaf that subtends it.
+    shoot_parameters_mainstem.vegetative_bud_break_time = 15;
     shoot_parameters_mainstem.flower_bud_break_probability = 1;
-    shoot_parameters_mainstem.phyllochron_min = 2;
-    shoot_parameters_mainstem.elongation_rate_max = 0.1;
+    // The main-stem phyllochron of spring wheat is 87.7 degree-days, 6.2 days at a 14 C mean (Kang et al. 2008, Annals of Botany 101:1099). Its eight leaves appeared over 45-65 days in the field
+    // (McMaster et al. 2003, Annals of Botany 91:697).
+    shoot_parameters_mainstem.phyllochron_min = 6;
+    // An internode elongates over four to five phyllochrons (Kang et al. 2008), so about 25 days.
+    shoot_parameters_mainstem.elongation_rate_max = 0.04;
+    // A blade expands from tip appearance to ligule appearance in 126 degree-days, about 1.4 phyllochrons or 9 days (Kang et al. 2008). It is decoupled from the internode, which takes much longer.
+    shoot_parameters_mainstem.leaf_expansion_rate_max = 0.11;
     shoot_parameters_mainstem.girth_area_factor = 6.f;
-    shoot_parameters_mainstem.internode_length_max = 0.11;
+    // Length of the culm internode below the flag leaf, the longest below the peduncle. The internodes under it shorten down the culm to a crown that does not elongate, and the leaf sheaths are added to
+    // them (WheatPhytomerCreationFunction()).
+    shoot_parameters_mainstem.internode_length_max = 0.15;
     shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-500, -200);
     shoot_parameters_mainstem.flowers_require_dormancy = false;
     shoot_parameters_mainstem.growth_requires_dormancy = false;
     shoot_parameters_mainstem.determinate_shoot_growth = false;
     shoot_parameters_mainstem.fruit_set_probability = 1.0;
-    shoot_parameters_mainstem.defineChildShootTypes({"mainstem"}, {1.0});
+    shoot_parameters_mainstem.defineChildShootTypes({"tiller"}, {1.0});
     shoot_parameters_mainstem.max_nodes = 8;
     shoot_parameters_mainstem.max_terminal_floral_buds = 1;
 
+    // A tiller is a culm like the main stem, ending in an ear. Its leaf number is set from its position by WheatPhytomerCreationFunction(). It bears no tillers of its own.
+    ShootParameters shoot_parameters_tiller = shoot_parameters_mainstem;
+    shoot_parameters_tiller.phytomer_parameters.internode.max_vegetative_buds_per_petiole = 0;
+    shoot_parameters_tiller.vegetative_bud_break_probability_min = 0;
+    shoot_parameters_tiller.defineChildShootTypes({"tiller"}, {1.0});
+    // The tiller grows from the axil of its subtending leaf, so it leans out over that leaf, within the leaf plane of the main stem, and is turned back toward vertical as it grows. No measurement of
+    // these angles was found for wheat, so they are taken from the library sorghum tiller.
+    shoot_parameters_tiller.insertion_angle_tip.uniformDistribution(15, 30);
+    shoot_parameters_tiller.base_yaw.uniformDistribution(-20, 20);
+    shoot_parameters_tiller.base_roll.uniformDistribution(-20, 20);
+    shoot_parameters_tiller.gravitropic_curvature.uniformDistribution(200, 400);
+
     defineShootType("mainstem", shoot_parameters_mainstem);
+    defineShootType("tiller", shoot_parameters_tiller);
 }
 
 uint PlantArchitecture::buildWheatPlant(const helios::vec3 &base_position) {
@@ -6086,6 +6343,9 @@ uint PlantArchitecture::buildWheatPlant(const helios::vec3 &base_position) {
         initializeWheatShoots();
     }
 
+    // Read here so that an invalid value fails when the plant is built. The tillers themselves are placed by WheatPhytomerCreationFunction() as the main stem grows.
+    static_cast<void>(wheatTillerCount(current_build_parameters));
+
     uint plantID = addPlantInstance(base_position - make_vec3(0, 0, 0.025), 0);
 
     // The internode length is taken from the shoot type rather than fixed here, so the eight-node culm reaches the height of a real wheat plant; passing a literal overrode it and left the plant knee-high.
@@ -6094,7 +6354,12 @@ uint PlantArchitecture::buildWheatPlant(const helios::vec3 &base_position) {
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 4, 10, 1000);
+    // Grain fill from anthesis to physiological maturity takes 39 days (Aude et al. 1994, Pesquisa Agropecuaria Brasileira 29:1533). The ear itself reaches full size on its own, shorter schedule
+    // (InflorescenceParameters::inflorescence_maturity_period).
+    //
+    // No leaf lifespan is set. Main-stem leaves stop functioning after eight to eleven phyllochrons, 50-70 days (Kang et al. 2008), but a senesced wheat leaf stays attached to the culm, and the only
+    // senescence the model has is to delete the leaf, which strips the lower culm bare by grain fill.
+    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 4, 39, 1000);
 
     plant_instances.at(plantID).max_age = 365;
 

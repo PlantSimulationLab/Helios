@@ -693,6 +693,60 @@ DOCTEST_TEST_CASE("EnergyBalanceModel moisture conductance uses the per-face bou
     DOCTEST_CHECK(std::fabs(gM_onesided - series(gbv_face, gS)) < 0.01f * series(gbv_face, gS));
 }
 
+DOCTEST_TEST_CASE("EnergyBalanceModel uses per-face boundary-layer conductances to water vapor") {
+    // The boundary-layer conductance plug-in writes the conductance to water vapor of each face, which can differ between the faces (e.g. the windward and leeward face of a leaf). Vapor leaving a face crosses that
+    // face's boundary layer, and "stomatal_sidedness" is the fraction of the stomata on the front face. The effective gM is recovered from the reported latent flux and solved surface temperature.
+    const float gS = 0.3f;
+    const float gbv_front = 2.f;
+    const float gbv_back = 0.2f;
+    const float Ta = 300.f;
+    const float air_humidity = 0.5f;
+    const float pressure = 101000.f;
+
+    auto effectiveMoistureConductance = [&](uint twosided_flag, float stomatal_sidedness) {
+        Context context;
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveData(UUID, "twosided_flag", twosided_flag);
+        context.setPrimitiveData(UUID, "radiation_flux_SW", 400.f);
+        context.setPrimitiveData(UUID, "radiation_flux_LW", float(2.f * 5.67e-8 * pow(Ta, 4)));
+        context.setPrimitiveData(UUID, "air_temperature", Ta);
+        context.setPrimitiveData(UUID, "air_humidity", air_humidity);
+        context.setPrimitiveData(UUID, "air_pressure", pressure);
+        context.setPrimitiveData(UUID, "boundarylayer_conductance", (gbv_front + gbv_back) / 1.08f);
+        context.setPrimitiveData(UUID, "boundarylayer_conductance_vapor_front", gbv_front);
+        context.setPrimitiveData(UUID, "boundarylayer_conductance_vapor_back", twosided_flag == 0 ? 0.f : gbv_back);
+        context.setPrimitiveData(UUID, "moisture_conductance", gS);
+        context.setPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
+
+        EnergyBalanceModel model(&context);
+        model.disableMessages();
+        model.addRadiationBand("SW");
+        model.addRadiationBand("LW");
+        model.run();
+
+        float latent_flux, T;
+        context.getPrimitiveData(UUID, "latent_flux", latent_flux);
+        context.getPrimitiveData(UUID, "temperature", T);
+        return latent_flux * pressure / (lambda_mol * (esat_Pa(T) - air_humidity * esat_Pa(Ta)));
+    };
+
+    auto series = [](float gbv, float gs) { return gbv * gs / (gbv + gs); };
+
+    // all stomata on the front face, and all on the back face
+    const float gM_front = effectiveMoistureConductance(1, 1.f);
+    DOCTEST_CHECK(gM_front == doctest::Approx(series(gbv_front, gS)).epsilon(0.01).scale(0));
+    const float gM_back = effectiveMoistureConductance(1, 0.f);
+    DOCTEST_CHECK(gM_back == doctest::Approx(series(gbv_back, gS)).epsilon(0.01).scale(0));
+
+    // amphistomatous leaf: half the stomatal conductance on each face, each in series with its own boundary layer
+    const float gM_amphi = effectiveMoistureConductance(1, 0.5f);
+    DOCTEST_CHECK(gM_amphi == doctest::Approx(series(gbv_front, 0.5f * gS) + series(gbv_back, 0.5f * gS)).epsilon(0.01).scale(0));
+
+    // a one-sided primitive exchanges vapor through its front face only
+    const float gM_onesided = effectiveMoistureConductance(0, 0.f);
+    DOCTEST_CHECK(gM_onesided == doctest::Approx(series(gbv_front, gS)).epsilon(0.01).scale(0));
+}
+
 DOCTEST_TEST_CASE("EnergyBalanceModel single emission-enabled band selects its emissivity") {
     // When the RadiationModel records emission-enabled state, thermal emission must use the emissivity of
     // the single emission-enabled band (here LW, emissivity 0.8) and ignore other bands' emissivities.

@@ -185,4 +185,96 @@ namespace helios {
 #endif // NDEBUG
     }
 
+    std::vector<float> computeSurfaceLayerAlbedoTable(float refractive_index, float roughness, uint32_t table_size) {
+        if (refractive_index < 1.f || roughness <= 0.f || table_size < 2) {
+            helios_runtime_error("ERROR (computeSurfaceLayerAlbedoTable): The refractive index must be at least 1, the roughness positive and the table at least 2 long (got n = " + std::to_string(refractive_index) +
+                                 ", alpha = " + std::to_string(roughness) + ", " + std::to_string(table_size) + " values).");
+        }
+        const double n = refractive_index;
+        const double alpha2 = double(roughness) * double(roughness);
+
+        // Unpolarized Fresnel reflectance of the interface for the cosine c of the angle to the microfacet normal
+        auto fresnel = [n](double c) {
+            c = std::clamp(c, 0.0, 1.0);
+            const double sin_t2 = (1.0 - c * c) / (n * n);
+            const double cos_t = std::sqrt(std::max(0.0, 1.0 - sin_t2));
+            const double rs = (c - n * cos_t) / (c + n * cos_t);
+            const double rp = (n * c - cos_t) / (n * c + cos_t);
+            return 0.5 * (rs * rs + rp * rp);
+        };
+        // Smith Lambda of the GGX distribution
+        auto lambda = [alpha2](double mu) {
+            const double tan2 = (1.0 - mu * mu) / std::max(mu * mu, 1e-12);
+            return 0.5 * (-1.0 + std::sqrt(1.0 + alpha2 * tan2));
+        };
+
+        // The integral is taken over the microfacet normals h rather than the incident directions, since the lobe is only about
+        // 2 alpha wide: with the incident direction l = 2 (v.h) h - v, d(omega_l) = 4 (v.h) d(omega_h), and with
+        // tan^2(theta_h) = alpha^2 xi / (1 - xi), D(h) cos(theta_h) d(omega_h) = d(xi) d(phi) / (2 pi), so that
+        //   a(mu_o) = 1/(2 pi) int int F(v.h) G2(l, v) (v.h) / (mu_o cos(theta_h)) d(xi) d(phi)   over the h with l above the surface.
+        // Gauss-Legendre nodes in xi and equally spaced azimuths resolve the lobe at every roughness and viewing angle.
+        constexpr int n_xi = 256;
+        constexpr int n_phi = 256;
+        std::vector<double> xi_node(n_xi), xi_weight(n_xi);
+        for (int i = 0; i < n_xi; i++) {
+            // Newton iteration on the Legendre polynomial P_n for the i-th root on [-1, 1]
+            double x = std::cos(M_PI * (i + 0.75) / (n_xi + 0.5));
+            double dp = 0.0;
+            for (int iteration = 0; iteration < 100; iteration++) {
+                double p0 = 1.0, p1 = x;
+                for (int k = 2; k <= n_xi; k++) {
+                    const double p2 = ((2.0 * k - 1.0) * x * p1 - (k - 1.0) * p0) / k;
+                    p0 = p1;
+                    p1 = p2;
+                }
+                dp = n_xi * (x * p1 - p0) / (x * x - 1.0);
+                const double dx = p1 / dp;
+                x -= dx;
+                if (std::fabs(dx) < 1e-15) {
+                    break;
+                }
+            }
+            xi_node.at(i) = 0.5 * (x + 1.0);
+            xi_weight.at(i) = 1.0 / ((1.0 - x * x) * dp * dp); // half the weight on [-1, 1], for the interval [0, 1]
+        }
+
+        std::vector<float> table(table_size + 1);
+        for (uint32_t m = 0; m < table_size; m++) {
+            // The integrand vanishes as mu_out -> 0 only in the limit, so the first entry is evaluated just above grazing
+            const double mu_out = std::max(double(m) / double(table_size - 1), 1e-3);
+            const double sin_out = std::sqrt(1.0 - mu_out * mu_out);
+            const double lambda_out = lambda(mu_out);
+            double albedo = 0.0;
+            for (int i = 0; i < n_xi; i++) {
+                const double tan2_h = alpha2 * xi_node.at(i) / (1.0 - xi_node.at(i));
+                const double mu_h = 1.0 / std::sqrt(1.0 + tan2_h);
+                const double sin_h = std::sqrt(1.0 - mu_h * mu_h);
+                double azimuth_sum = 0.0;
+                for (int j = 0; j < n_phi; j++) {
+                    const double phi = 2.0 * M_PI * (j + 0.5) / n_phi;
+                    // Viewing direction v = (sin_out, 0, mu_out), microfacet normal h = (sin_h cos phi, sin_h sin phi, mu_h)
+                    const double v_dot_h = sin_out * sin_h * std::cos(phi) + mu_out * mu_h;
+                    const double mu_in = 2.0 * v_dot_h * mu_h - mu_out; // z of the incident direction l = 2 (v.h) h - v
+                    if (v_dot_h <= 0.0 || mu_in <= 0.0) {
+                        continue;
+                    }
+                    const double G2 = 1.0 / (1.0 + lambda(mu_in) + lambda_out);
+                    azimuth_sum += fresnel(v_dot_h) * G2 * v_dot_h / (mu_out * mu_h);
+                }
+                albedo += xi_weight.at(i) * azimuth_sum / n_phi;
+            }
+            table.at(m) = float(std::min(albedo, 1.0));
+        }
+
+        // Hemispherical mean by the trapezoidal rule on the table
+        double mean = 0.0;
+        for (uint32_t m = 0; m + 1 < table_size; m++) {
+            const double mu0 = double(m) / double(table_size - 1);
+            const double mu1 = double(m + 1) / double(table_size - 1);
+            mean += (table.at(m) * mu0 + table.at(m + 1) * mu1) * (mu1 - mu0);
+        }
+        table.at(table_size) = float(mean);
+        return table;
+    }
+
 } // namespace helios

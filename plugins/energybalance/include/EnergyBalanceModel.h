@@ -31,6 +31,8 @@ constexpr float lambda_mol = 44000.f;
 constexpr float von_Karman_constant = 0.41f;
 //! Gas constant, J mol⁻¹ K⁻¹
 constexpr float R = 8.314462618f;
+//! Ratio of the boundary-layer conductance to water vapor to that to heat, used when only the conductance to heat is known. Water vapor diffuses more readily than heat, so the conductance to it is larger.
+constexpr float moisture_conductance_ratio = 1.08f;
 
 inline float esat_Pa(float T_K) {
     float Tc = T_K - 273.15f;
@@ -227,9 +229,11 @@ private:
         std::vector<float> ea; //!< Air vapor pressure (Pa)
         std::vector<float> pressure; //!< Atmospheric pressure (Pa)
         std::vector<float> gH; //!< Boundary-layer conductance to heat summed over all faces (mol/m^2-s)
+        std::vector<float> gbv_front; //!< Boundary-layer conductance to water vapor of the front face, the face the primitive normal points out of (mol/m^2-s). For a one-sided primitive, that of its only face.
+        std::vector<float> gbv_back; //!< Boundary-layer conductance to water vapor of the back face (mol/m^2-s). For a one-sided primitive, that of its only face.
         std::vector<float> gS; //!< Moisture (stomatal) conductance (mol/m^2-s)
         std::vector<uint> Nsides; //!< Number of faces exchanging heat
-        std::vector<float> stomatal_sidedness; //!< Fraction of stomata on the lower face
+        std::vector<float> stomatal_sidedness; //!< Fraction of stomata on the front face
         std::vector<float> heatcapacity; //!< Heat capacity (J/m^2-K)
         std::vector<float> surfacehumidity; //!< Relative humidity at the evaporating surface
     };

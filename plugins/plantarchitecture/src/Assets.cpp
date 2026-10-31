@@ -16,7 +16,7 @@
 
 */
 
-#include "PlantArchitecture.h"
+#include "PlantArchitectureInternal.h"
 #include "global.h"
 
 using namespace helios;
@@ -30,7 +30,7 @@ uint petioluleVertexCount() {
     return uint((2 + petiolule_join_rings - 1) * petiolule_radial_subdivisions + 1);
 }
 
-std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float scale, float mature_scale, float flexibility, float taper) {
+std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float scale, float mature_scale, float flexibility, float taper, const helios::vec3 &gravity) {
 
     const size_t vertex_count = (size_t(Nx) + 1) * (size_t(Ny) + 1);
     if (rest_vertices.size() != vertex_count) {
@@ -43,6 +43,9 @@ std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &res
     } else if (mature_scale <= 0.f && flexibility > 0.f) {
         helios_runtime_error("ERROR (deformLeafLattice): Mature leaf scale must be positive when the leaf is flexible, but " + std::to_string(mature_scale) +
                              " was given. The mature size sets the length that the dimensionless flexibility is measured against.");
+    } else if (!std::isfinite(gravity.x) || !std::isfinite(gravity.y) || !std::isfinite(gravity.z) || gravity.magnitude() == 0.f) {
+        helios_runtime_error("ERROR (deformLeafLattice): The gravity direction must be finite and non-zero, but (" + std::to_string(gravity.x) + ", " + std::to_string(gravity.y) + ", " +
+                             std::to_string(gravity.z) + ") was given.");
     }
 
     // A rigid leaf keeps its rest shape exactly. This is the path every non-drooping species takes, so it must cost nothing beyond the copy.
@@ -95,37 +98,93 @@ std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &res
     }
     theta_rest.at(0) = theta_rest.at(1);
 
+    // ---- 2b. Gravity in each station's bending plane ----
+
+    // Each station bends in the vertical plane of its own rest heading: tangent cos(theta)*heading + sin(theta)*z, rotating about the horizontal axis perpendicular to the heading. Gravity only bends the
+    // blade through its component in that plane. Its direction there gives the angle at which a station hangs straight along gravity - the frame's -z gives -90 degrees, which is where the bend has always
+    // stopped - and the side of it the rest shape starts on fixes which way the station may turn up to that point.
+    const vec3 gravity_direction = gravity / gravity.magnitude();
+    std::vector<vec3> station_heading(Nx + 1);
+    std::vector<vec3> station_axis(Nx + 1);
+    std::vector<float> turn_floor(Nx + 1, -0.5f * PI_F + 1e-3f);
+    std::vector<float> turn_ceiling(Nx + 1, 0.5f * PI_F);
+    for (uint i = 0; i <= Nx; i++) {
+        const vec3 rest_segment = (i > 0) ? (midrib.at(i) - midrib.at(i - 1)) : (midrib.at(1) - midrib.at(0));
+        const float rest_horizontal = sqrtf(rest_segment.x * rest_segment.x + rest_segment.y * rest_segment.y);
+        station_heading.at(i) = (rest_horizontal > 1e-9f) ? make_vec3(rest_segment.x / rest_horizontal, rest_segment.y / rest_horizontal, 0.f) : make_vec3(1.f, 0.f, 0.f);
+        station_axis.at(i) = make_vec3(-station_heading.at(i).y, station_heading.at(i).x, 0.f);
+
+        const float gravity_along = gravity_direction * station_heading.at(i);
+        const float gravity_vertical = gravity_direction.z;
+        if (std::hypot(gravity_along, gravity_vertical) < 1e-6f) {
+            // Gravity lies across this station's bending plane, so it exerts no bending moment here and there is no hanging direction to stop at.
+            turn_floor.at(i) = -std::numeric_limits<float>::max();
+            turn_ceiling.at(i) = std::numeric_limits<float>::max();
+            continue;
+        }
+        const float hanging_angle = std::atan2(gravity_vertical, gravity_along);
+        const float rest_from_hanging = std::remainder(theta_rest.at(i) - hanging_angle, 2.f * PI_F);
+        const float hanging_branch = theta_rest.at(i) - rest_from_hanging;
+        if (rest_from_hanging >= 0.f) {
+            turn_floor.at(i) = hanging_branch + 1e-3f;
+            turn_ceiling.at(i) = hanging_branch + PI_F;
+        } else {
+            turn_floor.at(i) = hanging_branch - PI_F;
+            turn_ceiling.at(i) = hanging_branch - 1e-3f;
+        }
+    }
+
     // ---- 3. Iterate the moment balance ----
 
-    // The bending moment at a station is the weight of everything distal to it acting through its horizontal lever arm. That lever arm depends on the DEFLECTED shape, not the rest shape, so the balance is
-    // solved by iteration: deflect using the current lever arms, recompute them, repeat. Deflection shortens the lever arms, so the iteration is a contraction and converges in a handful of passes; a fixed
-    // small iteration count is used rather than a convergence test to keep the cost per leaf bounded and predictable.
+    // The bending moment at a station is the weight of everything distal to it acting through its lever arm. That lever arm depends on the DEFLECTED shape, not the rest shape, so the balance is solved by
+    // iteration: deflect using the current lever arms, recompute them, repeat.
+    //
+    // Each pass moves the angles only part of the way to the ones the current lever arms call for. Taking the full step a fixed four times was enough for a blade that only sags a little, but a very flexible
+    // one, or one that leaves its base steeply and arches over, overshoots the equilibrium and swings about it: four full passes left such a blade as much as a third of its length from where it settles,
+    // and even a half step cycles indefinitely once the blade is floppy enough. How far a pass can safely go falls with how strongly the bend feeds back on itself, measured here by the blade's load: the
+    // bend, in radians, its own weight would put into it if it were held straight and horizontal. The step is the reciprocal of that load, capped at a half. Across flexibilities up to a thousand, tapers up
+    // to 150 and blades pitched up to 80 degrees from horizontal this reached equilibrium to within a thousandth of a radian in a median of nineteen passes; steps three times as large failed to settle.
     //
     // Everything is computed in units of the SCALED leaf. Scale enters twice - once through the lever arm and once through the distal mass - so the moment grows with the cube of leaf length at fixed shape,
     // which is what makes a leaf that doubles in length droop roughly eight times as much with no age term anywhere in the model.
-    constexpr int moment_iterations = 4;
+    float load = 0.f;
+    {
+        float straight_moment = 0.f;
+        float distal_mass = 0.f;
+        for (int i = int(Nx) - 1; i >= 1; i--) {
+            const uint i_outer = uint(i) + 1;
+            const float segment_mass = width.at(i_outer) * ds.at(i_outer) * scale * scale;
+            const float lever_arm = ds.at(i_outer) * scale;
+            straight_moment += distal_mass * lever_arm + segment_mass * 0.5f * lever_arm;
+            distal_mass += segment_mass;
+            load += compliance * powf(std::max(taper, 1e-3f), float(i) / float(Nx)) * straight_moment * ds.at(uint(i)) * scale;
+        }
+    }
+    const float step = std::min(0.5f, 1.f / std::max(load, 1e-12f));
+    constexpr int maximum_moment_iterations = 5000;
+    // Stop once no station is more than this fraction of the blade's largest bend away from balance.
+    constexpr float converged_fraction = 1e-4f;
+    // A blade still further than this from balance when the passes run out is reported rather than returned.
+    constexpr float unconverged_limit = 0.01f;
 
     std::vector<float> theta(theta_rest);
     std::vector<vec3> deflected_midrib(Nx + 1);
     std::vector<float> moment(Nx + 1, 0.f);
+    std::vector<float> theta_balanced(theta_rest);
+    float unbalanced = 0.f;
 
-    for (int iteration = 0; iteration < moment_iterations; iteration++) {
-
-        // Integrate the current tangent angles into a centreline. The base station is clamped: it stays where the rest shape put it, which is what makes this a cantilever rather than a free body.
+    // Integrate the current tangent angles into a centreline. The base station is clamped: it stays where the rest shape put it, which is what makes this a cantilever rather than a free body. The heading
+    // of each rest segment is preserved and only its inclination changes, so the leaf bends in its own vertical plane instead of swinging sideways.
+    auto integrateMidrib = [&]() {
         deflected_midrib.at(0) = midrib.at(0) * scale;
         for (uint i = 1; i <= Nx; i++) {
-            const vec3 rest_segment = midrib.at(i) - midrib.at(i - 1);
-            // The horizontal heading of each rest segment is preserved and only its inclination changes, so the leaf droops in its own vertical plane instead of swinging sideways.
-            const float rest_horizontal = sqrtf(rest_segment.x * rest_segment.x + rest_segment.y * rest_segment.y);
-            const float segment_length = ds.at(i) * scale;
-            vec3 heading;
-            if (rest_horizontal > 1e-9f) {
-                heading = make_vec3(rest_segment.x / rest_horizontal, rest_segment.y / rest_horizontal, 0.f);
-            } else {
-                heading = make_vec3(1.f, 0.f, 0.f);
-            }
-            deflected_midrib.at(i) = deflected_midrib.at(i - 1) + segment_length * (cosf(theta.at(i)) * heading + make_vec3(0.f, 0.f, sinf(theta.at(i))));
+            deflected_midrib.at(i) = deflected_midrib.at(i - 1) + ds.at(i) * scale * (cosf(theta.at(i)) * station_heading.at(i) + make_vec3(0.f, 0.f, sinf(theta.at(i))));
         }
+    };
+
+    for (int iteration = 0; iteration < maximum_moment_iterations; iteration++) {
+
+        integrateMidrib();
 
         // Accumulate the moment from the tip inward in a single pass. Stepping inward by one segment adds that segment's own weight (acting through half its length) and swings all the mass already counted
         // further out through the extra lever arm, so the running distal mass is carried along rather than re-summed at each station - the difference between an O(Nx) sweep and an O(Nx^2) one.
@@ -135,7 +194,8 @@ std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &res
             const uint i_outer = uint(i) + 1;
             const float segment_mass = width.at(i_outer) * ds.at(i_outer) * scale * scale;
             const vec3 lever = deflected_midrib.at(i_outer) - deflected_midrib.at(uint(i));
-            const float lever_arm = sqrtf(lever.x * lever.x + lever.y * lever.y);
+            // The weight's moment about the station's bending axis, signed so that a positive arm bends the blade toward gravity. Under the frame's -z this is the horizontal lever arm along the heading.
+            const float lever_arm = cross(lever, gravity_direction) * station_axis.at(uint(i));
 
             // Everything already counted acts through this segment's full lever arm; this segment's own weight acts through half of it, being distributed along the segment rather than concentrated at its end.
             moment.at(uint(i)) = moment.at(i_outer) + distal_mass * lever_arm + segment_mass * 0.5f * lever_arm;
@@ -149,6 +209,8 @@ std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &res
         // longitudinal curvature, and the arc a grass leaf holds even when rigid - in theta_rest, and building the tangent angle purely from the bending would discard all of it and straighten the leaf out
         // into a flat board. A leaf that is curved at rest must stay curved and simply droop further.
         float accumulated_bend = 0.f;
+        float residual = 0.f;
+        float largest_bend = 0.f;
         for (uint i = 1; i <= Nx; i++) {
             // Compliance rises along the blade rather than being constant, because the midrib that carries the bending thins out toward the tip. Without this the blade hinges at its base and runs straight
             // from there, since that is where the moment is greatest; with it, the stiffness falls off faster than the moment does and the blade curves hardest where a real leaf does, near the tip.
@@ -156,17 +218,33 @@ std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &res
             const float local_compliance = compliance * powf(std::max(taper, 1e-3f), station);
             const float curvature = -local_compliance * moment.at(i);
             accumulated_bend += curvature * ds.at(i) * scale;
-            // Clamp to just short of straight down. A leaf hanging vertically carries no further lever arm, so this is a physical limit rather than an arbitrary cutoff, and it stops a very flexible leaf from
-            // curling back underneath itself.
+            // Clamp to just short of hanging straight along gravity. A station hanging along gravity carries no further lever arm, so this is a physical limit rather than an arbitrary cutoff, and it stops a
+            // very flexible leaf from curling back underneath itself. Under the frame's -z the limits are -90 and +90 degrees.
             //
             // The accumulator is clamped along with the angle, not just the angle it produces. Letting it run past vertical while only the angle was limited pinned every station beyond that point at the
             // clamp, which drew the blade as a sharp hinge near the base followed by a dead-straight remainder - and no amount of stiffness taper could relieve it, because the excess bend had already been
             // banked into the accumulator further in.
-            theta.at(i) = std::clamp(theta_rest.at(i) + accumulated_bend, -0.5f * PI_F + 1e-3f, 0.5f * PI_F);
-            accumulated_bend = theta.at(i) - theta_rest.at(i);
+            const float balanced = std::clamp(theta_rest.at(i) + accumulated_bend, turn_floor.at(i), turn_ceiling.at(i));
+            accumulated_bend = balanced - theta_rest.at(i);
+            residual = std::max(residual, std::fabs(balanced - theta.at(i)));
+            largest_bend = std::max(largest_bend, std::fabs(accumulated_bend));
+            theta_balanced.at(i) = balanced;
+        }
+        unbalanced = residual;
+        if (residual <= converged_fraction * largest_bend) {
+            break;
+        }
+        for (uint i = 1; i <= Nx; i++) {
+            theta.at(i) += step * (theta_balanced.at(i) - theta.at(i));
         }
         theta.at(0) = theta_rest.at(0);
     }
+    if (unbalanced > unconverged_limit) {
+        helios_runtime_error("ERROR (deformLeafLattice): The blade did not settle under its own weight within " + std::to_string(maximum_moment_iterations) + " passes; it was still " +
+                             std::to_string(unbalanced) + " rad from balance at flexibility " + std::to_string(flexibility) + " and taper " + std::to_string(taper) + ". This is far outside the flexibility a real leaf has.");
+    }
+    // The lattice is carried along the centreline of the final angles, not the one the last moments were computed from.
+    integrateMidrib();
 
     // ---- 4. Carry the lattice with the deflected midrib ----
 
@@ -179,9 +257,7 @@ std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &res
         const float sin_turn = sinf(turn);
 
         // The rotation is about the local lateral axis - horizontally perpendicular to the midrib heading - so the blade tips forward and down rather than twisting about its own length.
-        const vec3 rest_segment = (i > 0) ? (midrib.at(i) - midrib.at(i - 1)) : (midrib.at(1) - midrib.at(0));
-        const float rest_horizontal = sqrtf(rest_segment.x * rest_segment.x + rest_segment.y * rest_segment.y);
-        vec3 heading = (rest_horizontal > 1e-9f) ? make_vec3(rest_segment.x / rest_horizontal, rest_segment.y / rest_horizontal, 0.f) : make_vec3(1.f, 0.f, 0.f);
+        const vec3 &heading = station_heading.at(i);
 
         for (uint j = 0; j <= Ny; j++) {
             const size_t index = latticeVertexIndex(i, j);
@@ -1155,15 +1231,18 @@ void CowpeaPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
     }
 }
 
+static constexpr BuildParameterDeclaration grape_berry_diameter{"berry_diameter", 0.004f, 0.03f, false, "grape berry diameter in meters"};
+static constexpr BuildParameterDeclaration grape_cluster_berry_count{"cluster_berry_count", 10.f, 400.f, false, "mean number of berries in a grape cluster"};
+
 GrapeClusterParameters GrapeClusterParameters::fromBuildParameters(const std::map<std::string, float> &build_parameters) {
     GrapeClusterParameters parameters;
-    parameters.berry_diameter = getBuildParameterValue(build_parameters, "berry_diameter", parameters.berry_diameter, 0.004f, 0.03f, "grape berry diameter in meters");
-    parameters.cluster_berry_count = getBuildParameterValue(build_parameters, "cluster_berry_count", parameters.cluster_berry_count, 10.f, 400.f, "mean number of berries in a grape cluster");
+    parameters.berry_diameter = getBuildParameterValue(build_parameters, grape_berry_diameter, parameters.berry_diameter);
+    parameters.cluster_berry_count = getBuildParameterValue(build_parameters, grape_cluster_berry_count, parameters.cluster_berry_count);
     return parameters;
 }
 
-std::vector<std::string> GrapeClusterParameters::buildParameterNames() {
-    return {"berry_diameter", "cluster_berry_count"};
+std::vector<BuildParameterDeclaration> GrapeClusterParameters::buildParameterDeclarations() {
+    return {grape_berry_diameter, grape_cluster_berry_count};
 }
 
 uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
@@ -1820,7 +1899,7 @@ SorghumPanicleParameters SorghumPanicleParameters::loose() {
 // ---- Sorghum panicle build parameters ---- //
 //
 // Each build parameter of the library sorghum maps onto one field of SorghumPanicleParameters. The tables below are the single list of those keys: they are read by
-// SorghumPanicleParameters::fromBuildParameters(), blended by the panicle_type preset, and declared to the plant library by SorghumPanicleParameters::buildParameterNames(). The rachis radius, branch
+// SorghumPanicleParameters::fromBuildParameters(), blended by the panicle_type preset, and declared to the plant library by SorghumPanicleParameters::buildParameterDeclarations(). The rachis radius, branch
 // color and tube subdivisions are left out, since they are matched to the library peduncle, which is not built from the panicle parameters.
 
 struct SorghumPanicleFloatKey {
@@ -1889,6 +1968,10 @@ static const std::vector<SorghumPanicleColorKey> sorghum_panicle_color_keys = {
         {"glume_color_b", &SorghumPanicleParameters::glume_color, &helios::RGBcolor::b, "blue component of the sorghum glume color"},
 };
 
+// The two keys that do not map onto a single field
+static constexpr BuildParameterDeclaration sorghum_panicle_type{"panicle_type", 0.f, 1.f, false, "sorghum panicle type from 0 (compact) through 0.5 (semi-compact) to 1 (loose)"};
+static constexpr BuildParameterDeclaration sorghum_grain_subdivisions{"grain_subdivisions", 3.f, 12.f, true, "number of facets around a sorghum grain"};
+
 // Blend of two panicle parameter sets, weighted by fraction toward the second. Only the fields in the key tables are blended; the presets differ in no other field.
 static SorghumPanicleParameters blendSorghumPanicleParameters(const SorghumPanicleParameters &from, const SorghumPanicleParameters &to, float fraction) {
     SorghumPanicleParameters blended = from;
@@ -1909,7 +1992,7 @@ SorghumPanicleParameters SorghumPanicleParameters::fromBuildParameters(const std
     // The preset is applied first, so that individual parameters given alongside it override it
     SorghumPanicleParameters parameters;
     if (build_parameters.find("panicle_type") != build_parameters.end()) {
-        const float panicle_type = getBuildParameterValue(build_parameters, "panicle_type", 0.5f, 0.f, 1.f, "sorghum panicle type from 0 (compact) through 0.5 (semi-compact) to 1 (loose)");
+        const float panicle_type = getBuildParameterValue(build_parameters, sorghum_panicle_type, 0.5f);
         if (panicle_type <= 0.5f) {
             parameters = blendSorghumPanicleParameters(compact(), SorghumPanicleParameters(), 2.f * panicle_type);
         } else {
@@ -1926,23 +2009,23 @@ SorghumPanicleParameters SorghumPanicleParameters::fromBuildParameters(const std
     for (const SorghumPanicleColorKey &key: sorghum_panicle_color_keys) {
         parameters.*key.field.*key.channel = getBuildParameterValue(build_parameters, key.name, parameters.*key.field.*key.channel, 0.f, 1.f, key.description);
     }
-    parameters.grain_subdivisions = uint(getBuildParameterIntegerValue(build_parameters, "grain_subdivisions", int(parameters.grain_subdivisions), 3, 12, "number of facets around a sorghum grain"));
+    parameters.grain_subdivisions = uint(getBuildParameterIntegerValue(build_parameters, sorghum_grain_subdivisions, int(parameters.grain_subdivisions)));
 
     return parameters;
 }
 
-std::vector<std::string> SorghumPanicleParameters::buildParameterNames() {
-    std::vector<std::string> names = {"panicle_type", "grain_subdivisions"};
+std::vector<BuildParameterDeclaration> SorghumPanicleParameters::buildParameterDeclarations() {
+    std::vector<BuildParameterDeclaration> declarations = {sorghum_panicle_type, sorghum_grain_subdivisions};
     for (const SorghumPanicleFloatKey &key: sorghum_panicle_float_keys) {
-        names.emplace_back(key.name);
+        declarations.push_back({key.name, key.min_value, key.max_value, false, key.description});
     }
     for (const SorghumPanicleIntegerKey &key: sorghum_panicle_integer_keys) {
-        names.emplace_back(key.name);
+        declarations.push_back({key.name, float(key.min_value), float(key.max_value), true, key.description});
     }
     for (const SorghumPanicleColorKey &key: sorghum_panicle_color_keys) {
-        names.emplace_back(key.name);
+        declarations.push_back({key.name, 0.f, 1.f, false, key.description});
     }
-    return names;
+    return declarations;
 }
 
 // Quadratic through the base, middle and tip values of a profile along the rachis, evaluated at a normalized position from 0 at the base to 1 at the tip.
@@ -2417,7 +2500,7 @@ uint SorghumPaniclePrototype(helios::Context *context_ptr, uint subdivisions, co
 }
 
 int sorghumTillerCount(const std::map<std::string, float> &build_parameters) {
-    return getBuildParameterIntegerValue(build_parameters, "tiller_count", 0, 0, 6, "number of tillers of a sorghum plant");
+    return getBuildParameterIntegerValue(build_parameters, sorghum_tiller_count, 0);
 }
 
 void SorghumPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
@@ -2636,28 +2719,92 @@ uint WheatSpikePrototype(helios::Context *context_ptr, uint subdivisions, const 
     return objID;
 }
 
+//! Length of a wheat blade as a fraction of the longest blade on the plant
+/**
+ * Blade length rises steadily up the culm to the penultimate leaf (Weightman et al. 1997, Journal of Agricultural Science 129:385) and falls away again at the flag leaf, which is 88% of it. The lowest blade
+ * is built at 40% of the longest, about 10 cm. No measured rank-by-rank table was available to calibrate the ramp below that, so its slope is an estimate.
+ * \param[in] node_index Index of the phytomer along its shoot, counted from the base.
+ * \param[in] shoot_max_nodes Number of phytomers the shoot will carry.
+ */
+static float wheatBladeLengthFraction(uint node_index, uint shoot_max_nodes) {
+    float fraction = std::fmin(1.f, 0.4f + 0.6f * float(node_index) / 5.f);
+    if (shoot_max_nodes > 1) {
+        const float ranks_from_top = float(int(shoot_max_nodes) - 1 - int(node_index));
+        fraction = std::fmin(fraction, 0.88f + 0.12f * std::fmin(1.f, ranks_from_top));
+    }
+    return fraction;
+}
+
+//! Length of the sheath of a wheat leaf, from the node it is inserted on to its ligule
+/**
+ * The sheath is longest relative to its blade at the top of the culm. The ratios are those measured on the main stem of winter wheat 'Soissons', whose flag-leaf sheath was 0.78 of its blade and whose
+ * lowest sheaths were about a third (Ljutovac 2002, as tabulated in the elong-wheat model of OpenAlea). They are matched to the leaves of the model by rank counted down from the flag leaf, since that
+ * plant carried 11 leaves to the model's 8.
+ * \param[in] node_index Index of the phytomer along its shoot, counted from the base.
+ * \param[in] shoot_max_nodes Number of phytomers the shoot will carry.
+ * \param[in] blade_length_max Length of the longest blade on the plant (m).
+ */
+static float wheatSheathLength(uint node_index, uint shoot_max_nodes, float blade_length_max) {
+    constexpr std::array<float, 8> sheath_to_blade_ratio = {0.78f, 0.60f, 0.56f, 0.62f, 0.55f, 0.46f, 0.36f, 0.33f};
+    const int ranks_from_top = std::max(0, int(shoot_max_nodes) - 1 - int(node_index));
+    const float ratio = sheath_to_blade_ratio.at(std::min(ranks_from_top, int(sheath_to_blade_ratio.size()) - 1));
+    return ratio * blade_length_max * wheatBladeLengthFraction(node_index, shoot_max_nodes);
+}
+
+int wheatTillerCount(const std::map<std::string, float> &build_parameters) {
+    return getBuildParameterIntegerValue(build_parameters, wheat_tiller_count, 0);
+}
+
 void WheatPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
-    // Leaf size and internode length are scaled separately along the shoot, because they run in opposite directions: the lowest internodes of a wheat culm are the shortest on the plant while the leaves
-    // they carry are already well grown, so a single ramp either stunts the bottom leaves or spreads the base of the stem out too far.
-    //
-    // Leaf length peaks in the middle of the canopy and falls away again toward the flag leaf, which is shorter than the leaves below it.
-    float leaf_scale = std::fmin(1.f, 0.62f + 0.38f * float(shoot_node_index) / 2.f);
-    if (phytomer->shoot_index.z > 1) {
-        // The flag leaf is shorter than the leaves below it, but only modestly so - roughly three quarters of the longest leaf on the plant rather than a stub. Only the topmost leaf is trimmed, since the
-        // leaf immediately below it is already close to full length in a real plant.
-        const float ranks_from_top = float(phytomer->shoot_index.z - 1 - int(shoot_node_index));
-        leaf_scale = std::fmin(leaf_scale, 0.88f + 0.12f * std::fmin(1.f, ranks_from_top));
+    Shoot *shoot = phytomer->parent_shoot_ptr;
+    const PlantArchitecture *plantarchitecture = shoot->plantarchitecture_ptr;
+    if (phytomer->rank == 0) {
+        // Tillers grow from the axils of the lowest main-stem leaves. They are added in the order in which they emerge, T1 to T4, since the last-formed tillers are the first to die
+        // (AHDB Wheat Growth Guide): the ears of a winter wheat crop came 56% from the main stem, 26% from T1 and 16% from T2 (Journal of Agricultural Science, "Contributions of shoot categories to growth
+        // and yield of winter wheat"). The bud in every other axil is killed.
+        const int tiller_count = wheatTillerCount(plantarchitecture->getPlantBuildParameters(phytomer->plantID));
+        if (int(shoot_node_index) >= tiller_count) {
+            phytomer->setVegetativeBudState(BUD_DEAD);
+        }
+    } else if (shoot_node_index == 0) {
+        // Tillers carry fewer leaves than the main stem, which brings their ears out close to those of the main stem (Stern & Kirby 1979, Journal of Agricultural Science). No count by tiller position
+        // was found, so the final leaf number of a tiller is taken to fall by one for each main-stem leaf below its own, as for sorghum. Set on the tiller's own shoot parameters, so that its ear forms at
+        // that node.
+        const std::shared_ptr<Shoot> &main_stem = plantarchitecture->getPlantShoot(phytomer->plantID, shoot->parent_shoot_ID);
+        const int tiller_max_nodes = std::max(1, main_stem->shoot_parameters.max_nodes.val() - int(parent_shoot_node_index + 1));
+        shoot->shoot_parameters.max_nodes = tiller_max_nodes;
+        phytomer->shoot_index.z = tiller_max_nodes;
+        shoot_max_nodes = uint(tiller_max_nodes);
     }
-    phytomer->scaleLeafPrototypeScale(leaf_scale);
 
-    // Internodes are very short at the base and lengthen up the culm, which is what puts the lower leaves close together above the crown and carries the ear clear of them.
-    const float internode_scale = std::fmin(1.f, 0.25f + 0.75f * float(shoot_node_index) / 5.f);
-    phytomer->scaleInternodeMaxLength(internode_scale);
+    // The blade is built at its fraction of the longest blade on the plant, applied relative to the size it is currently built at (see wheatBladeLengthFraction()).
+    phytomer->scaleLeafPrototypeScale(wheatBladeLengthFraction(shoot_node_index, shoot_max_nodes));
+
+    // A wheat blade does not begin at the node its leaf is inserted on. The sheath wraps the culm upward from that node to the ligule, where the blade begins, and on the upper leaves it encloses the
+    // whole of the internode above: on winter wheat 'Soissons' the ligule of each of the top leaves stood within 3 cm of the next node up (Ljutovac 2002, as tabulated in the elong-wheat model of
+    // OpenAlea). The model has no separate sheath, so its internodes run from ligule to ligule instead of from node to node. Each is the culm internode, plus the sheath of the leaf it carries, less the
+    // sheath of the leaf below, whose ligule it starts from.
+    //
+    // Only the upper four culm internodes elongate. The lowest are crowded into a crown at the soil surface (Kang et al. 2008, Annals of Botany 101:1099), so the lowest blades stand on their sheaths
+    // alone, a few centimetres above the soil. The elongated internodes lengthen up the culm to the one below the flag leaf, which is internode_length_max. Counted from the top of the shoot, so that the
+    // crown absorbs any change to the number of leaves rather than the elongated part of the culm.
+    constexpr int elongated_internodes = 4;
+    const int internode_ranks_from_top = int(shoot_max_nodes) - 1 - int(shoot_node_index);
+    const float culm_internode_length = internode_ranks_from_top >= elongated_internodes ? 0.008f : phytomer->internode_length_max * (1.f - 0.25f * float(internode_ranks_from_top));
+    const float blade_length_max = phytomer->phytomer_parameters.leaf.prototype_scale.val();
+    const float sheath_length = wheatSheathLength(shoot_node_index, shoot_max_nodes, blade_length_max);
+    const float sheath_length_below = shoot_node_index > 0 ? wheatSheathLength(shoot_node_index - 1, shoot_max_nodes, blade_length_max) : 0.f;
+    phytomer->setInternodeMaxLength(culm_internode_length + sheath_length - sheath_length_below);
 
     // The terminal phytomer carries the ear, and its leaf is the flag leaf. It is set 33 degrees off the culm, so that it swings clear of the ear rather than lying along the culm through the spike, as on a
     // real plant, where the flag leaf is the most horizontal leaf of the canopy rather than the most upright.
     if (shoot_max_nodes > 0 && shoot_node_index + 1 == shoot_max_nodes) {
         setGrassFlagLeafAngle(phytomer, 33.f);
+
+        // The lower part of the peduncle is hidden inside the flag-leaf sheath, so only the part above the flag ligule, where the model's culm ends, is built. Taken from the shoot type's peduncle length,
+        // which is the whole peduncle, rather than from this phytomer's own copy, so that it is only shortened once.
+        const float peduncle_length = shoot->shoot_parameters.phytomer_parameters.peduncle.length.val();
+        phytomer->phytomer_parameters.peduncle.length = std::max(0.01f, peduncle_length - sheath_length);
     }
 }

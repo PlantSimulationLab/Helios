@@ -93,8 +93,15 @@ struct Shader {
     //! Set the projection matrix for camera perspective
     void setProjectionMatrix(const glm::mat4 &matrix) const;
 
-    //! Set the depth bias matrix for shadows
-    void setDepthBiasMatrix(const glm::mat4 &matrix) const;
+    //! Set the cascaded shadow map parameters used to look up shadows
+    /**
+     * \param[in] lookup_matrices Per-cascade matrices taking world coordinates to shadow-map texture coordinates and depth in [0,1].
+     * \param[in] far_depths Per-cascade far boundary, measured as distance along the camera's viewing direction.
+     * \param[in] texel_sizes Per-cascade world-space width of one shadow-map texel.
+     * \param[in] cascade_count Number of entries in each of the arrays above.
+     * \param[in] camera_forward Unit vector along the camera's viewing direction.
+     */
+    void setShadowCascades(const glm::mat4 *lookup_matrices, const float *far_depths, const float *texel_sizes, int cascade_count, const glm::vec3 &camera_forward) const;
 
     //! Set the direction of the light (sun)
     void setLightDirection(const helios::vec3 &direction) const;
@@ -165,7 +172,10 @@ struct Shader {
     GLint transformMatrixUniform;
     GLint viewMatrixUniform;
     GLint projectionMatrixUniform;
-    GLint depthBiasUniform;
+    GLint shadowCascadeMatricesUniform;
+    GLint shadowCascadeFarDepthsUniform;
+    GLint shadowCascadeTexelSizesUniform;
+    GLint cameraForwardUniform;
     GLint lightDirectionUniform;
     GLint lightingModelUniform;
     GLint RboundUniform;
@@ -1853,16 +1863,29 @@ private:
     //! Release the EGL context and display created by createEGLContext(), if any
     void destroyEGLContext();
 
-    //! Create the shadow-map framebuffer and depth texture
+    //! Create the shadow-map framebuffer and the depth texture array holding the shadow cascades
     /**
      * Called lazily the first time shadowed lighting is actually rendered, in both windowed
-     * and headless modes. The shadow map is large (see shadow_buffer_size), so deferring it
-     * avoids allocating it for the many Visualizer instances that never enable shadows.
+     * and headless modes. The cascades are large (see shadow_buffer_size), so deferring them
+     * avoids allocating them for the many Visualizer instances that never enable shadows.
      * Does nothing if the framebuffer has already been created.
      */
     void createShadowFramebuffer();
 
-    //! Create the 1x1 placeholder depth texture used until a real shadow map exists
+    //! Compute the cascades and render the scene's depth into each layer of the shadow map
+    /**
+     * Leaves the shadow framebuffer bound; the caller binds its own target framebuffer afterwards.
+     * \sa computeShadowCascades()
+     */
+    void renderShadowCascades();
+
+    //! Upload the current cascade parameters to a shader that performs the shadow lookup
+    /**
+     * \param[in] shader Primary or line shader, which must be the shader currently in use.
+     */
+    void setShadowCascadeUniforms(const Shader &shader) const;
+
+    //! Create the 1x1x1 placeholder depth texture array used until a real shadow map exists
     /** \sa shadow_map_placeholder_texture */
     void createShadowMapPlaceholderTexture();
 
@@ -2060,7 +2083,35 @@ private:
      */
     [[nodiscard]] float getDPIScale() const;
 
+    //! Resolution of each shadow cascade
     helios::uint2 shadow_buffer_size;
+
+    //! Number of shadow cascades, each covering a successively more distant depth range of the view
+    /** Must match SHADOW_CASCADE_COUNT in shaders/primaryShader.frag. */
+    static constexpr int shadow_cascade_count = 4;
+
+    //! Per-cascade light view-projection matrices used to render the shadow pass
+    std::array<glm::mat4, shadow_cascade_count> shadow_cascade_light_matrices{};
+
+    //! Per-cascade matrices taking world coordinates to shadow-map texture coordinates and depth
+    std::array<glm::mat4, shadow_cascade_count> shadow_cascade_lookup_matrices{};
+
+    //! Per-cascade far boundary, as distance along the camera's viewing direction
+    /** All zero when no shadow-casting geometry exists, which makes every fragment unshadowed. */
+    std::array<float, shadow_cascade_count> shadow_cascade_far_depths{};
+
+    //! Per-cascade world-space width of one shadow-map texel
+    std::array<float, shadow_cascade_count> shadow_cascade_texel_sizes{};
+
+    //! Set when geometry changes, so the bounds of shadow-casting geometry are recomputed on the next shadow pass
+    bool shadow_caster_bounds_dirty = true;
+
+    //! Bounds of geometry that can cast shadows (Cartesian, non-sky), cached between geometry changes
+    helios::vec3 shadow_caster_bounds_min;
+    helios::vec3 shadow_caster_bounds_max;
+
+    //! False when no geometry can cast shadows, in which case the cascades are left empty
+    bool shadow_caster_bounds_valid = false;
 
     uint frame_counter;
 
@@ -2108,8 +2159,8 @@ private:
     uint framebufferID = 0;
     uint depthTexture = 0;
 
-    //! 1x1 depth texture bound to the shadow-map sampler while no shadow map exists
-    /** The primary and line shaders always declare `shadowMap` as a sampler2D, and a sampler
+    //! 1x1x1 depth texture array bound to the shadow-map sampler while no shadow map exists
+    /** The primary and line shaders always declare `shadowMap` as a sampler2DArrayShadow, and a sampler
         must have a complete texture bound on every draw call even when the shader never reads
         it. Shadowed lighting is off by default and the real shadow map is allocated lazily by
         \ref createShadowFramebuffer(), so binding \ref depthTexture unconditionally would
@@ -2402,14 +2453,20 @@ private:
     std::vector<GLint> rectangle_vertex_group_firsts;
     std::vector<GLint> rectangle_vertex_group_counts;
 
+    //! Fit the shadow cascades to the current camera, light direction, and shadow-casting geometry
     /**
-     * \brief Computes the Model-View-Projection matrix for shadow depth rendering.
-     *
-     * \return The computed Model-View-Projection (MVP) matrix for shadow depth rendering.
+     * The view is split in depth between the camera's near plane and the farthest point of the
+     * shadow-casting geometry's bounds that lies in view, using a blend of logarithmic and uniform splits. Each cascade's orthographic box
+     * encloses the bounding sphere of its slice of the view, snapped to the shadow texel grid so that
+     * shadows do not shimmer as the camera moves, and its depth range extends toward the light to
+     * take in every shadow caster, including those outside the view.
      */
-    [[nodiscard]] glm::mat4 computeShadowDepthMVP() const;
+    void computeShadowCascades();
 
-    void updatePerspectiveTransformation(bool shadow);
+    //! Distance from the camera to its near clipping plane
+    [[nodiscard]] float cameraNearPlane() const;
+
+    void updatePerspectiveTransformation();
 
     //! Point cloud culling methods for performance optimization
     void cullPointsByFrustum();
@@ -2593,8 +2650,6 @@ private:
     GLuint image_sampler = 0;
 
     helios::uint2 maximum_texture_size;
-
-    const glm::mat4 biasMatrix = {0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 0.5, 1.0};
 
     struct Texture {
 

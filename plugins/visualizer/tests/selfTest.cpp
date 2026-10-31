@@ -2559,6 +2559,266 @@ DOCTEST_TEST_CASE("Visualizer shadows survive an intervening depth-map render") 
     }
 }
 
+// Straightness of a shadow edge that should be a straight line in the image
+struct ShadowEdgeStraightness {
+    size_t rows_with_edge = 0; //!< Number of image rows in which the edge was found
+    double max_deviation_pixels = 0; //!< Largest distance of the per-row edge from a straight-line fit
+    double rms_deviation_pixels = 0; //!< RMS distance of the per-row edge from a straight-line fit
+    std::map<int, double> deviation_by_row; //!< Distance of the edge from the straight-line fit, keyed by image row
+    double mean_penumbra_width_pixels = 0; //!< Mean width, along image rows, of the transition from 10% to 90% of the way from shadow to lit
+};
+
+// Close-up of a straight shadow edge inside a large scene. A 40x40 m ground plane keeps the
+// scene big while a table at z=1 receives the shadow of a straight occluder edge tilted 20
+// degrees, cast by an overhead light, viewed from 0.32 m away. For each image row the sub-pixel
+// position where the luminance crosses halfway between the shadow and lit levels is located,
+// and those positions are compared against a least-squares straight line. The width of the
+// transition across the edge (10% to 90% of the way from the shadow to the lit level) is also
+// measured in each row; with texel-spaced PCF it is proportional to the near cascade's texel size.
+//
+// camera_offset_x translates the camera and its look-at point together along x, which is parallel
+// to the receiving table and to the image rows. Such a move shifts the edge's image by an amount
+// that varies linearly with the row, which the straight-line fit absorbs, so the per-row deviations
+// must be unchanged by it unless the shadow texels themselves move relative to the scene.
+//
+// light_zenith_degrees tilts the light toward -x. The occluder is moved so that its shadow edge
+// stays in the same place on the table, while each shadow-map texel is stretched across the table
+// by 1/cos(zenith), as under a low sun.
+static ShadowEdgeStraightness measureCloseUpShadowEdge(const std::string &filename, float camera_offset_x = 0.f, float light_zenith_degrees = 0.f) {
+
+    Visualizer visualizer(800, 800, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.disableColorbar();
+    visualizer.setBackgroundColor(make_RGBcolor(0.f, 0.f, 1.f));
+
+    RGBcolor gray = make_RGBcolor(0.25f, 0.25f, 0.25f);
+    visualizer.addRectangleByVertices({make_vec3(-20, -20, 0), make_vec3(20, -20, 0), make_vec3(20, 20, 0), make_vec3(-20, 20, 0)}, gray, Visualizer::COORDINATES_CARTESIAN);
+    visualizer.addRectangleByVertices({make_vec3(-1, -1, 1), make_vec3(1, -1, 1), make_vec3(1, 1, 1), make_vec3(-1, 1, 1)}, gray, Visualizer::COORDINATES_CARTESIAN);
+
+    // Occluder above the camera, with one straight edge 0.6 m above the table running 20 degrees off +y; it extends toward -x.
+    // The edge is offset against the light's tilt so that its shadow on the table passes through (0,0,1).
+    const float edge_angle = 20.f * float(M_PI) / 180.f;
+    const float light_zenith = light_zenith_degrees * float(M_PI) / 180.f;
+    const vec3 along_edge = make_vec3(std::sin(edge_angle), std::cos(edge_angle), 0);
+    const vec3 across_edge = make_vec3(-std::cos(edge_angle), std::sin(edge_angle), 0);
+    const vec3 edge_center = make_vec3(-0.6f * std::tan(light_zenith), 0, 1.6f);
+    visualizer.addRectangleByVertices({edge_center - along_edge * 3.f, edge_center + along_edge * 3.f, edge_center + along_edge * 3.f + across_edge * 3.f, edge_center - along_edge * 3.f + across_edge * 3.f}, gray,
+                                      Visualizer::COORDINATES_CARTESIAN);
+
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+    Visualizer::PhongMaterial shadow_material;
+    shadow_material.ambient = 0.25f;
+    visualizer.setPhongMaterial(shadow_material);
+    visualizer.setLightDirection(make_vec3(-std::sin(light_zenith), 0, std::cos(light_zenith)));
+    visualizer.setCameraPosition(make_vec3(camera_offset_x, -0.2f, 1.25f), make_vec3(camera_offset_x, 0.f, 1.f));
+
+    visualizer.plotUpdate(true);
+    visualizer.printWindow(filename.c_str(), "png");
+    std::vector<RGBAcolor> pixel_data;
+    uint width, height;
+    helios::readPNG(filename, width, height, pixel_data);
+    if (std::filesystem::exists(filename)) {
+        std::filesystem::remove(filename);
+    }
+
+    std::vector<float> luminance(pixel_data.size());
+    for (size_t p = 0; p < pixel_data.size(); p++) {
+        luminance[p] = (pixel_data[p].r + pixel_data[p].g + pixel_data[p].b) / 3.f;
+    }
+    std::vector<float> sorted_luminance = luminance;
+    std::sort(sorted_luminance.begin(), sorted_luminance.end());
+    const float shadow_level = sorted_luminance.at(size_t(0.1 * double(sorted_luminance.size())));
+    const float lit_level = sorted_luminance.at(size_t(0.9 * double(sorted_luminance.size())));
+    const float edge_threshold = 0.5f * (shadow_level + lit_level);
+
+    // Sub-pixel column at which a row's luminance first rises through a level, searching rightward from first_column
+    auto risingCrossing = [&](uint row, uint first_column, float level, double &column) {
+        for (uint i = first_column; i + 1 < uint(0.95 * width); i++) {
+            const float left = luminance[row * width + i];
+            const float right = luminance[row * width + i + 1];
+            if (left < level && right >= level) {
+                column = double(i) + double((level - left) / (right - left));
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // The shadow lies on the left of the edge, so take each row's first shadow-to-lit crossing.
+    const float penumbra_low_level = shadow_level + 0.1f * (lit_level - shadow_level);
+    const float penumbra_high_level = shadow_level + 0.9f * (lit_level - shadow_level);
+    std::vector<double> edge_rows, edge_columns;
+    double penumbra_width_sum = 0;
+    size_t penumbra_rows = 0;
+    for (uint j = uint(0.2 * height); j < uint(0.8 * height); j++) {
+        double edge_column;
+        if (!risingCrossing(j, uint(0.05 * width), edge_threshold, edge_column)) {
+            continue;
+        }
+        edge_rows.push_back(double(j));
+        edge_columns.push_back(edge_column);
+
+        const uint search_start = uint(std::max(0.05 * width, edge_column - 0.05 * width));
+        double low_column, high_column;
+        if (risingCrossing(j, search_start, penumbra_low_level, low_column) && risingCrossing(j, uint(low_column), penumbra_high_level, high_column)) {
+            penumbra_width_sum += high_column - low_column;
+            penumbra_rows++;
+        }
+    }
+
+    ShadowEdgeStraightness result;
+    result.rows_with_edge = edge_rows.size();
+    result.mean_penumbra_width_pixels = penumbra_rows > 0 ? penumbra_width_sum / double(penumbra_rows) : 0;
+    if (edge_rows.size() < 2) {
+        return result;
+    }
+
+    double sum_rows = 0, sum_columns = 0, sum_rows_squared = 0, sum_rows_columns = 0;
+    const double count = double(edge_rows.size());
+    for (size_t k = 0; k < edge_rows.size(); k++) {
+        sum_rows += edge_rows[k];
+        sum_columns += edge_columns[k];
+        sum_rows_squared += edge_rows[k] * edge_rows[k];
+        sum_rows_columns += edge_rows[k] * edge_columns[k];
+    }
+    const double slope = (count * sum_rows_columns - sum_rows * sum_columns) / (count * sum_rows_squared - sum_rows * sum_rows);
+    const double intercept = (sum_columns - slope * sum_rows) / count;
+
+    double sum_squared_deviation = 0;
+    for (size_t k = 0; k < edge_rows.size(); k++) {
+        const double deviation = edge_columns[k] - (slope * edge_rows[k] + intercept);
+        result.max_deviation_pixels = std::max(result.max_deviation_pixels, std::abs(deviation));
+        result.deviation_by_row[int(edge_rows[k])] = deviation;
+        sum_squared_deviation += deviation * deviation;
+    }
+    result.rms_deviation_pixels = std::sqrt(sum_squared_deviation / count);
+    return result;
+}
+
+DOCTEST_TEST_CASE("Visualizer close-up shadow edges are not stair-stepped") {
+    // REGRESSION TEST: a single shadow map was fitted to the whole camera frustum, whose far plane
+    // followed 5x the camera height rather than the scene, and its PCF taps were spaced 1/140000 in
+    // UV, i.e. well inside one texel. In a close-up the shadow texels therefore covered several
+    // screen pixels and edges rendered as hard staircases. Cascaded shadow maps with texel-spaced
+    // PCF give the near cascade fine texels and soften the remaining texel boundaries.
+    //
+    // Measured on the single-map code: max deviation 3.2 px, RMS 1.24 px.
+
+    ShadowEdgeStraightness edge = measureCloseUpShadowEdge("test_shadow_closeup_edge.png");
+
+    DOCTEST_REQUIRE_MESSAGE(edge.rows_with_edge > 400, "The shadow edge was found in only " << edge.rows_with_edge << " of 480 image rows; the scene no longer frames the edge");
+
+    DOCTEST_CHECK_MESSAGE(edge.max_deviation_pixels < 1.0, "The close-up shadow edge is stair-stepped: it strays up to " << edge.max_deviation_pixels << " px (RMS " << edge.rms_deviation_pixels
+                                                                                                                      << " px) from a straight line. The shadow texels near the camera are too coarse or PCF is not smoothing across them.");
+}
+
+DOCTEST_TEST_CASE("Visualizer close-up shadow edges are sharp in a large scene") {
+    // REGRESSION TEST: the cascades were split between the near plane and the farthest corner of the
+    // shadow casters' bounding box in front of the camera, whether or not that corner was in view, and
+    // the split leaned 25% toward uniform spacing. With a 40x40 m ground plane the nearest cascade then
+    // reached about 1 m into the view, so a surface 0.32 m away got coarse texels and the PCF filter,
+    // which spans a fixed number of texels, blurred its shadow edges over many pixels. Fitting the
+    // cascades to the geometry actually in view, and leaning the split toward the near range, keeps
+    // the near cascade small.
+    //
+    // Measured: 10-90% edge width 4.8 px before the change, 3.1 px after. The remaining width is
+    // mostly the PCF footprint (about four texels) once a texel is smaller than a screen pixel.
+
+    ShadowEdgeStraightness edge = measureCloseUpShadowEdge("test_shadow_closeup_sharpness.png");
+
+    DOCTEST_REQUIRE_MESSAGE(edge.rows_with_edge > 400, "The shadow edge was found in only " << edge.rows_with_edge << " of 480 image rows; the scene no longer frames the edge");
+
+    DOCTEST_CHECK_MESSAGE(edge.mean_penumbra_width_pixels < 4.0, "The close-up shadow edge is blurred over " << edge.mean_penumbra_width_pixels
+                                                                                                                 << " px. The near shadow cascade covers far more of the scene than the close-up needs, so its texels are coarse.");
+}
+
+DOCTEST_TEST_CASE("Visualizer close-up shadow edges stay fixed under sub-texel camera motion") {
+    // The cascade boxes follow the camera, so unless each box is snapped to whole shadow texels the
+    // texel grid slides across the scene as the camera moves and shadow edges crawl ("shimmer") in an
+    // animation. A 0.1 mm sideways camera move - a fraction of a near-cascade texel - must leave the
+    // edge's per-row deviation from a straight line unchanged. The light is 70 degrees from the
+    // zenith, as under a low sun, which stretches the texels across the table and makes any crawl
+    // several times larger than under an overhead light, where it would be lost in pixel noise.
+    //
+    // Measured: mean change 0.033 px with texel snapping, 0.34 px with the snapping removed.
+
+    const float light_zenith_degrees = 70.f;
+    ShadowEdgeStraightness reference = measureCloseUpShadowEdge("test_shadow_stability_reference.png", 0.f, light_zenith_degrees);
+    ShadowEdgeStraightness moved = measureCloseUpShadowEdge("test_shadow_stability_moved.png", 0.0001f, light_zenith_degrees);
+
+    double total_change = 0;
+    int compared_rows = 0;
+    for (const auto &[row, deviation]: reference.deviation_by_row) {
+        auto moved_row = moved.deviation_by_row.find(row);
+        if (moved_row != moved.deviation_by_row.end()) {
+            total_change += std::abs(moved_row->second - deviation);
+            compared_rows++;
+        }
+    }
+
+    DOCTEST_REQUIRE_MESSAGE(compared_rows > 400, "The shadow edge was found in only " << compared_rows << " image rows of both renders; the scene no longer frames the edge");
+
+    const double mean_change = total_change / double(compared_rows);
+    DOCTEST_CHECK_MESSAGE(mean_change < 0.1, "The shadow edge changed shape by " << mean_change << " px on average after a sub-texel camera move (expected ~0.03). The shadow cascades are likely not snapped to the texel grid, so shadows will shimmer in animations.");
+}
+
+DOCTEST_TEST_CASE("Visualizer shadow casters outside the view still cast shadows into it") {
+    // REGRESSION TEST: the shadow map's orthographic depth range was taken from the camera frustum
+    // alone, so a caster between the light and the visible region but beyond that depth range was
+    // clipped out of the shadow pass and its shadow vanished. Here the camera sits 0.3 m above the
+    // ground, and an occluder 5 m overhead - far above the top of the view - shades the look-at
+    // point under an overhead light.
+    //
+    // Measured on the single-map code: ratio exactly 1.00 for occluders at z >= 3 (no shadow), 6.0 at z <= 2.
+
+    auto render_ground_brightness = [](bool include_occluder) {
+        Visualizer visualizer(400, 400, 0, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.disableColorbar();
+        visualizer.setBackgroundColor(make_RGBcolor(0.f, 0.f, 1.f));
+
+        RGBcolor gray = make_RGBcolor(0.25f, 0.25f, 0.25f);
+        visualizer.addRectangleByVertices({make_vec3(-4, -4, 0), make_vec3(4, -4, 0), make_vec3(4, 4, 0), make_vec3(-4, 4, 0)}, gray, Visualizer::COORDINATES_CARTESIAN);
+        if (include_occluder) {
+            visualizer.addRectangleByVertices({make_vec3(-1, -1, 5), make_vec3(1, -1, 5), make_vec3(1, 1, 5), make_vec3(-1, 1, 5)}, gray, Visualizer::COORDINATES_CARTESIAN);
+        }
+
+        visualizer.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+        Visualizer::PhongMaterial shadow_material;
+        shadow_material.ambient = 0.25f;
+        visualizer.setPhongMaterial(shadow_material);
+        visualizer.setLightDirection(make_vec3(0, 0, 1));
+        visualizer.setCameraPosition(make_vec3(0.f, -1.f, 0.3f), make_vec3(0.f, 0.f, 0.f));
+
+        visualizer.plotUpdate(true);
+        const std::string filename = "test_shadow_offview_caster.png";
+        visualizer.printWindow(filename.c_str(), "png");
+        std::vector<RGBAcolor> pixel_data;
+        uint width, height;
+        helios::readPNG(filename, width, height, pixel_data);
+        if (std::filesystem::exists(filename)) {
+            std::filesystem::remove(filename);
+        }
+
+        int pixel_count;
+        float mean_brightness = shadowRegionMeanBrightness(pixel_data, width, height, 0.4f, 0.6f, 0.4f, 0.6f, pixel_count);
+        DOCTEST_REQUIRE(pixel_count > 1000);
+        return mean_brightness;
+    };
+
+    const float clear_brightness = render_ground_brightness(false);
+    const float occluded_brightness = render_ground_brightness(true);
+
+    DOCTEST_REQUIRE(occluded_brightness > 0.01f);
+    const float shadow_ratio = clear_brightness / occluded_brightness;
+
+    DOCTEST_CHECK_MESSAGE(shadow_ratio > 2.f, "An occluder above the view cast no shadow into it (contrast ratio " << shadow_ratio << ", expected ~6). The shadow pass depth range is clipping casters outside the view.");
+}
+
 TEST_CASE("Visualizer::plotOnce on a freshly constructed visualizer (headless)") {
     // Regression test: plotOnce() was the only render entry point that never uploaded the CPU-side
     // geometry to the GPU before drawing. initialize() ends by queueing a gradient background
@@ -4586,6 +4846,42 @@ DOCTEST_TEST_CASE("Visualizer re-uploads a displayed primitive whose texture was
     const int texture_after = VisualizerTestHelper::getGeometryTextureID(visualizer, UUID);
     DOCTEST_CHECK(texture_after >= 0);
     DOCTEST_CHECK(texture_after != texture_before);
+}
+
+DOCTEST_TEST_CASE("Visualizer re-uploads displayed primitives whose material was changed") {
+    // Only primitives the Context reports as dirty are examined, so a change to which material a primitive uses, or to the
+    // material itself, has to mark the primitives. Clearing the flags first stands in for any plug-in that has already
+    // processed the geometry; primitives that have never been cleared would be re-examined regardless.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Context context;
+    context.addMaterial("grape");
+    context.setMaterialTexture("grape", "plugins/visualizer/textures/GrapeLeaf.png");
+    context.addMaterial("colored");
+    context.setMaterialColor("colored", make_RGBAcolor(1, 0, 0, 1));
+    const uint textured_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "plugins/visualizer/textures/AlmondLeaf.png");
+    const uint colored_UUID = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+    context.assignMaterialToPrimitive(colored_UUID, "colored");
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    const int texture_before = VisualizerTestHelper::getGeometryTextureID(visualizer, textured_UUID);
+    DOCTEST_REQUIRE(texture_before >= 0);
+
+    context.markGeometryClean();
+    context.assignMaterialToPrimitive(textured_UUID, "grape");
+    context.setMaterialColor("colored", make_RGBAcolor(0, 1, 0, 1));
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+
+    const int texture_after = VisualizerTestHelper::getGeometryTextureID(visualizer, textured_UUID);
+    DOCTEST_CHECK(texture_after >= 0);
+    DOCTEST_CHECK(texture_after != texture_before);
+    DOCTEST_CHECK(VisualizerTestHelper::getGeometryColor(visualizer, colored_UUID).g == doctest::Approx(1.f));
 }
 
 DOCTEST_TEST_CASE("Visualizer recoloring keeps a Context texture color override") {

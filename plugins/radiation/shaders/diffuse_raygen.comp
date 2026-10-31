@@ -54,6 +54,7 @@ layout(push_constant) uniform PushConstants {
     uint camera_id;        // Camera whose weighting the camera-scatter buffers accumulate
     uint face_absorption_enabled; // 1 = also accumulate the absorption that arrived on the top face into radiation_in_top
     uint below_horizon_diffuse_enabled; // 1 = the diffuse sky also reaches rays leaving below the horizon
+    uint specular_reflection_enabled; // 1 = this launch evaluates the surface layers' reflection lobe of the direct radiation
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -263,6 +264,12 @@ layout(set = 3, binding = 4) readonly buffer SkyRadianceParamsBuffer {
 #include "common/periodic_boundary.glsl"
 #include "common/sky_distribution.glsl"
 #include "common/texture_mask.glsl"
+#include "common/surface_layer.glsl"
+
+// Direct flux reaching primitives with a surface layer [source * primitive * band], for their reflection lobe of it
+layout(set = 2, binding = 10) readonly buffer RadiationSpecularBuffer {
+    float radiation_specular[];
+} radiation_specular_buf;
 
 // ========== Helper Functions ==========
 
@@ -555,7 +562,9 @@ void main() {
             bool ray_terminated = false;
             int boundary_hits = 0;
 
-            float segment_t_min = 1e-5; // avoids self-intersection
+            // No minimum distance: the primitive the ray was launched from is skipped (prim_idx), and a minimum distance let a
+            // ray launched that close to an adjacent surface pass through it where the two meet
+            float segment_t_min = 0.0;
             for (int step = 0; step < MAX_RAY_SEGMENTS; ++step) {
                 hit_prim_idx = traverse_cwbvh(
                     trace_origin,
@@ -617,8 +626,9 @@ void main() {
 
             // Process hit or miss — loop over all bands (BVH traversal is band-independent)
             bool hit_found = ray_terminated && (hit_prim_idx != 0xFFFFFFFF);
+            bool miss_found = ray_terminated && (hit_prim_idx == 0xFFFFFFFF);
             // The diffuse sky fills only the upper hemisphere unless enabled below the horizon.
-            bool sky_found = ray_terminated && (hit_prim_idx == 0xFFFFFFFF) && (ray_direction.z >= 0.0 || pc.below_horizon_diffuse_enabled != 0u);
+            bool sees_sky = ray_direction.z >= 0.0 || pc.below_horizon_diffuse_enabled != 0u;
 
             // Read hit surface normal once (shared across bands)
             vec3 hit_normal;
@@ -647,6 +657,18 @@ void main() {
                     absorption_factor = cover_tra.z;
                 }
 
+                // A surface layer reflects layer_albedo of what arrives; the body absorbs and scatters the rest
+                float layer_albedo = 0.0;
+                float body_fraction = 1.0;
+                int layer = origin_is_cover ? -1 : surface_layer_table(prim_idx, global_b);
+                if (layer >= 0) {
+                    layer_albedo = surface_layer_albedo(layer, abs(dot(ray_direction, normalize(normal))));
+                    body_fraction = 1.0 - layer_albedo;
+                    absorption_factor *= body_fraction;
+                    rho *= body_fraction;
+                    tau *= body_fraction;
+                }
+
                 // Compute energy contributions unconditionally (zero for inactive path).
                 // subgroupAdd must be called by all active threads in the subgroup at the same
                 // point — calling it inside divergent if/else branches is undefined per spec.
@@ -670,6 +692,35 @@ void main() {
                     } else {
                         incoming = rad_out_bottom_buf.radiation_out_bottom[hit_rad_idx];
                     }
+                    // A hit primitive with a surface layer sends out its two components, in proportions that depend on the angle
+                    int hit_layer = surface_layer_table(hit_prim_idx, global_b);
+                    if (hit_layer >= 0) {
+                        uint layer_offset = pc.primitive_count * pc.band_count;
+                        float second = hit_top_face ? rad_out_top_buf.radiation_out_top[layer_offset + hit_rad_idx] : rad_out_bottom_buf.radiation_out_bottom[layer_offset + hit_rad_idx];
+                        incoming = surface_layer_outgoing(incoming, second, hit_layer, abs(dot(normalize(hit_normal), ray_direction)));
+                        // In the launch that reads the first scattering of the direct radiation, add the layer's reflection lobe of it
+                        if (pc.specular_reflection_enabled != 0u) {
+                            vec3 to_viewer = -ray_direction;
+                            vec3 face_normal = normalize(hit_normal);
+                            if (dot(face_normal, to_viewer) < 0.0) {
+                                face_normal = -face_normal;
+                            }
+                            vec3 hit_point = trace_origin + closest_t * ray_direction;
+                            float reflected = 0.0;
+                            for (uint s = 0u; s < pc.source_count; s++) {
+                                float incident = radiation_specular_buf.radiation_specular[(s * pc.primitive_count + hit_prim_idx) * pc.band_count + band];
+                                if (incident <= 0.0) {
+                                    continue;
+                                }
+                                vec3 source_position = vec3(source_positions_buf.positions[s * 3u], source_positions_buf.positions[s * 3u + 1u], source_positions_buf.positions[s * 3u + 2u]);
+                                uint source_type = source_types_buf.types[s];
+                                // A collimated source or the sun sphere lies in one direction; a finite source is seen in the direction of its centre
+                                vec3 to_source = (source_type == 0u || source_type == 2u) ? normalize(source_position) : normalize(source_position - hit_point);
+                                reflected += incident * surface_layer_lobe(hit_layer, face_normal, to_source, to_viewer);
+                            }
+                            incoming += 3.14159265359 * reflected;
+                        }
+                    }
 
                     // Attenuated by any translucent covers the ray passed on its way to the surface.
                     float hit_cover_tau = (band < uint(GLASS_MAX_BANDS)) ? cover_tau[band] : 1.0;
@@ -687,26 +738,32 @@ void main() {
                         scatter_top_val    = transmit_energy;
                     }
 
-                } else if (sky_found) {
+                } else if (miss_found) {
                     // ========== MISS: Ray hit sky ==========
-                    float diffuse_flux = diffuse_flux_buf.diffuse_flux[band];
+                    // The ray brings the sky's flux less that of the band's reference blackbody field, which follows the sky
+                    // fluxes in diffuse_flux: emission is gathered as its departure from that field (see RadiationModel::runBand()).
+                    float sky_flux = sees_sky ? diffuse_flux_buf.diffuse_flux[band] : 0.0;
+                    float reference_flux = diffuse_flux_buf.diffuse_flux[pc.band_count + band];
 
-                    if (diffuse_flux > 0.0) {
-                        vec3 peak_dir = get_diffuse_peak_dir(band);
-                        float extinction = diffuse_extinction_buf.diffuse_extinction[band];
-                        float dist_norm = diffuse_dist_norm_buf.diffuse_dist_norm[band];
-                        vec4 sky_params = sky_radiance_params_buf.sky_radiance_params[band];
-
-                        float fd = evaluate_sky_distribution(ray_direction, peak_dir, extinction, dist_norm, sky_params);
+                    if (sky_flux > 0.0 || reference_flux != 0.0) {
+                        float fd = 0.0;
+                        if (sky_flux > 0.0) {
+                            vec3 peak_dir = get_diffuse_peak_dir(band);
+                            float extinction = diffuse_extinction_buf.diffuse_extinction[band];
+                            float dist_norm = diffuse_dist_norm_buf.diffuse_dist_norm[band];
+                            vec4 sky_params = sky_radiance_params_buf.sky_radiance_params[band];
+                            fd = evaluate_sky_distribution(ray_direction, peak_dir, extinction, dist_norm, sky_params);
+                        }
                         // Attenuate sky radiation by any translucent covers the ray passed through.
                         float band_cover_tau = (band < uint(GLASS_MAX_BANDS)) ? cover_tau[band] : 1.0;
-                        float sky_energy = fd * diffuse_flux * strength * band_cover_tau;
+                        float sky_energy = fd * sky_flux * strength * band_cover_tau;
+                        float miss_energy = sky_energy - reference_flux * strength * band_cover_tau;
 
-                        absorption_val = sky_energy * absorption_factor;
+                        absorption_val = miss_energy * absorption_factor;
 
-                        float sky_reflect  = sky_energy * rho;
-                        float sky_transmit = sky_energy * tau;
-                        camera_energy = sky_energy;
+                        float sky_reflect  = miss_energy * rho;
+                        float sky_transmit = miss_energy * tau;
+                        camera_energy = miss_energy;
                         white_reference_energy = sky_energy;
                         if (pc.launch_face == 1) {
                             scatter_top_val    = sky_reflect;
@@ -756,6 +813,10 @@ void main() {
                     uint cam_mat_idx = mat_idx * pc.camera_count + cam;
                     float rho_cam = reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
                     float tau_cam = transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
+                    if (layer >= 0) {
+                        rho_cam *= body_fraction;
+                        tau_cam *= body_fraction;
+                    }
                     if (origin_is_cover) {
                         // A cover's reflectance is spectrally flat within a band: each camera weights it by its white reference.
                         rho_cam = rho * white_reference_cam_buf.white_reference_cam[(pc.source_count * pc.material_band_count + global_b) * pc.camera_count + cam]; // diffuse/scatter slot
@@ -773,6 +834,32 @@ void main() {
                             atomicAdd(camera_scatter_top_buf.camera_scatter_top[cam_global_idx], scatter_top_cam_sum);
                         if (scatter_bottom_cam_sum != 0.0)
                             atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[cam_global_idx], scatter_bottom_cam_sum);
+                    }
+                }
+
+                // What a surface layer reflects of everything arriving goes into the second outgoing component of the launch face,
+                // for every camera weighted by its white reference since the layer reflects all wavelengths alike
+                if (surface_layers_enabled()) {
+                    uint layer_offset = pc.primitive_count * pc.band_count;
+                    float layer_sum = subgroupAdd(camera_energy * layer_albedo);
+                    if (subgroupElect() && layer_sum != 0.0) {
+                        if (pc.launch_face == 1) {
+                            atomicAdd(scatter_top_buf.scatter_top[layer_offset + global_idx], layer_sum);
+                        } else {
+                            atomicAdd(scatter_bottom_buf.scatter_bottom[layer_offset + global_idx], layer_sum);
+                        }
+                    }
+                    for (uint cam = 0u; cam < pc.camera_count; cam++) {
+                        float white = white_reference_cam_buf.white_reference_cam[(pc.source_count * pc.material_band_count + global_b) * pc.camera_count + cam];
+                        float layer_cam_sum = subgroupAdd(camera_energy * layer_albedo * white);
+                        uint cam_global_idx = (pc.camera_count + cam) * cam_scatter_stride + global_idx;
+                        if (subgroupElect() && layer_cam_sum != 0.0) {
+                            if (pc.launch_face == 1) {
+                                atomicAdd(camera_scatter_top_buf.camera_scatter_top[cam_global_idx], layer_cam_sum);
+                            } else {
+                                atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[cam_global_idx], layer_cam_sum);
+                            }
+                        }
                     }
                 }
 

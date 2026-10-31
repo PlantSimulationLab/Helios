@@ -8027,3 +8027,183 @@ DOCTEST_TEST_CASE("CollisionDetection Flat Single-Plane Mesh Ray Casting") {
     DOCTEST_CHECK(oblique.hit == true);
 }
 
+
+namespace CapsuleTests {
+
+    //! Distance from a point to a triangle: to the plane if the point projects inside the triangle, otherwise to the nearest edge
+    float pointTriangleDistance(const vec3 &point, const vec3 &a, const vec3 &b, const vec3 &c) {
+        vec3 normal = cross(b - a, c - a);
+        normal.normalize();
+        float plane_distance = (point - a) * normal;
+        vec3 projected = point - plane_distance * normal;
+        bool inside = cross(b - a, projected - a) * normal >= 0.f && cross(c - b, projected - b) * normal >= 0.f && cross(a - c, projected - c) * normal >= 0.f;
+        if (inside) {
+            return std::fabs(plane_distance);
+        }
+        float nearest = std::numeric_limits<float>::max();
+        const vec3 corners[3] = {a, b, c};
+        for (int e = 0; e < 3; e++) {
+            vec3 start = corners[e];
+            vec3 edge = corners[(e + 1) % 3] - start;
+            float t = std::clamp(((point - start) * edge) / (edge * edge), 0.f, 1.f);
+            nearest = std::min(nearest, (point - (start + t * edge)).magnitude());
+        }
+        return nearest;
+    }
+
+    //! Distance from a capsule's axis to a primitive, approximated by sampling the axis at sample_count points
+    float sampledAxisDistance(const Context &context, const CollisionDetection::Capsule &capsule, uint UUID, int sample_count) {
+        std::vector<vec3> vertices = context.getPrimitiveVertices(UUID);
+        float nearest = std::numeric_limits<float>::max();
+        for (int i = 0; i < sample_count; i++) {
+            vec3 point = capsule.start + (float(i) / float(sample_count - 1)) * (capsule.end - capsule.start);
+            nearest = std::min(nearest, pointTriangleDistance(point, vertices.at(0), vertices.at(1), vertices.at(2)));
+            if (vertices.size() == 4) {
+                nearest = std::min(nearest, pointTriangleDistance(point, vertices.at(0), vertices.at(2), vertices.at(3)));
+            }
+        }
+        return nearest;
+    }
+
+} // namespace CapsuleTests
+
+DOCTEST_TEST_CASE("CollisionDetection capsule distance to triangles and patches, analytic cases") {
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    uint triangle = context.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
+    uint patch = context.addPatch(make_vec3(5, 0, 0), make_vec2(2, 2));
+    collision.buildBVH({triangle, patch});
+    const float radius = 0.1f;
+
+    // Above the interior of the triangle: the face is closest
+    CollisionDetection::CapsuleDistanceResult above = collision.findMinimumCapsuleDistance({{make_vec3(0.2f, 0.2f, 0.5f), make_vec3(0.2f, 0.2f, 1.f), radius}}, 2.f);
+    DOCTEST_REQUIRE(above.found);
+    DOCTEST_CHECK(above.distance == doctest::Approx(0.4f).epsilon(1e-5));
+    DOCTEST_CHECK(above.primitive_UUID == triangle);
+    DOCTEST_CHECK(above.capsule_index == 0);
+    DOCTEST_CHECK((above.closest_point_on_axis - make_vec3(0.2f, 0.2f, 0.5f)).magnitude() < 1e-5f);
+    DOCTEST_CHECK((above.closest_point_on_primitive - make_vec3(0.2f, 0.2f, 0.f)).magnitude() < 1e-5f);
+
+    // The axis passes through the triangle: the capsule penetrates it by its full radius
+    CollisionDetection::CapsuleDistanceResult crossing = collision.findMinimumCapsuleDistance({{make_vec3(0.2f, 0.2f, -1.f), make_vec3(0.2f, 0.2f, 1.f), radius}}, 2.f);
+    DOCTEST_REQUIRE(crossing.found);
+    DOCTEST_CHECK(crossing.distance == doctest::Approx(-radius).epsilon(1e-5));
+
+    // Parallel to an edge, in the triangle's plane: the edge is closest, although every endpoint projects outside the face
+    CollisionDetection::CapsuleDistanceResult beside_edge = collision.findMinimumCapsuleDistance({{make_vec3(-0.5f, -0.3f, 0.f), make_vec3(1.5f, -0.3f, 0.f), radius}}, 2.f);
+    DOCTEST_REQUIRE(beside_edge.found);
+    DOCTEST_CHECK(beside_edge.distance == doctest::Approx(0.3f - radius).epsilon(1e-5));
+
+    // Across an edge: a vertical axis outside the triangle beyond edge x + y = 1, nearest the middle of that edge
+    CollisionDetection::CapsuleDistanceResult across_edge = collision.findMinimumCapsuleDistance({{make_vec3(1.f, 1.f, -0.5f), make_vec3(1.f, 1.f, 0.5f), 0.f}}, 2.f);
+    DOCTEST_REQUIRE(across_edge.found);
+    DOCTEST_CHECK(across_edge.distance == doctest::Approx(std::sqrt(0.5f)).epsilon(1e-5));
+    DOCTEST_CHECK((across_edge.closest_point_on_primitive - make_vec3(0.5f, 0.5f, 0.f)).magnitude() < 1e-5f);
+
+    // Pointing away from a vertex: the end of the axis is closest to the vertex
+    CollisionDetection::CapsuleDistanceResult from_vertex = collision.findMinimumCapsuleDistance({{make_vec3(1.5f, 0.f, 0.f), make_vec3(3.f, 0.f, 0.f), radius}}, 2.f);
+    DOCTEST_REQUIRE(from_vertex.found);
+    DOCTEST_CHECK(from_vertex.distance == doctest::Approx(0.5f - radius).epsilon(1e-5));
+    DOCTEST_CHECK((from_vertex.closest_point_on_primitive - make_vec3(1, 0, 0)).magnitude() < 1e-5f);
+
+    // Above both halves of the patch
+    for (const vec2 &xy: {make_vec2(5.6f, 0.7f), make_vec2(4.3f, -0.8f)}) {
+        CollisionDetection::CapsuleDistanceResult over_patch = collision.findMinimumCapsuleDistance({{make_vec3(xy.x, xy.y, 0.3f), make_vec3(xy.x, xy.y, 1.f), radius}}, 2.f);
+        DOCTEST_REQUIRE(over_patch.found);
+        DOCTEST_CHECK(over_patch.primitive_UUID == patch);
+        DOCTEST_CHECK(over_patch.distance == doctest::Approx(0.3f - radius).epsilon(1e-5));
+    }
+
+    // Nothing within the search distance
+    CollisionDetection::CapsuleDistanceResult far_away = collision.findMinimumCapsuleDistance({{make_vec3(0.2f, 0.2f, 5.f), make_vec3(0.2f, 0.2f, 6.f), radius}}, 1.f);
+    DOCTEST_CHECK_FALSE(far_away.found);
+
+    // The capsule nearest the geometry is reported
+    CollisionDetection::CapsuleDistanceResult two = collision.findMinimumCapsuleDistance({{make_vec3(0.2f, 0.2f, 0.9f), make_vec3(0.2f, 0.2f, 1.f), radius}, {make_vec3(5.f, 0.f, 0.25f), make_vec3(5.f, 0.f, 1.f), radius}}, 2.f);
+    DOCTEST_REQUIRE(two.found);
+    DOCTEST_CHECK(two.capsule_index == 1);
+    DOCTEST_CHECK(two.primitive_UUID == patch);
+
+    // Near-set queries
+    std::vector<uint> near_triangle = collision.findPrimitivesNearCapsule({make_vec3(0.2f, 0.2f, 0.5f), make_vec3(0.2f, 0.2f, 1.f), radius}, 0.45f);
+    DOCTEST_CHECK(near_triangle == std::vector<uint>{triangle});
+    DOCTEST_CHECK(collision.findPrimitivesNearCapsule({make_vec3(0.2f, 0.2f, 0.5f), make_vec3(0.2f, 0.2f, 1.f), radius}, 0.35f).empty());
+
+    // Invalid input
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findMinimumCapsuleDistance({{make_vec3(0, 0, 1), make_vec3(0, 0, 2), -0.1f}}, 1.f)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findMinimumCapsuleDistance({{make_vec3(0, 0, 1), make_vec3(0, 0, 2), 0.1f}}, -1.f)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(collision.findPrimitivesNearCapsule({make_vec3(0, 0, 1), make_vec3(0, 0, 2), 0.1f}, -1.f)));
+}
+
+DOCTEST_TEST_CASE("CollisionDetection capsule distance queries agree with brute force on a random scene") {
+    Context context;
+    context.seedRandomGenerator(21);
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    std::vector<uint> UUIDs;
+    for (int i = 0; i < 300; i++) {
+        vec3 center = make_vec3(context.randu(-2.f, 2.f), context.randu(-2.f, 2.f), context.randu(0.f, 2.f));
+        if (i % 3 == 0) {
+            UUIDs.push_back(context.addPatch(center, make_vec2(context.randu(0.05f, 0.3f), context.randu(0.05f, 0.3f)), make_SphericalCoord(context.randu(0.f, PI_F), context.randu(0.f, 2.f * PI_F))));
+        } else {
+            UUIDs.push_back(context.addTriangle(center, center + make_vec3(context.randu(-0.2f, 0.2f), context.randu(-0.2f, 0.2f), context.randu(-0.2f, 0.2f)),
+                                                center + make_vec3(context.randu(-0.2f, 0.2f), context.randu(-0.2f, 0.2f), context.randu(-0.2f, 0.2f))));
+        }
+    }
+    // A primitive outside the BVH must be ignored
+    uint excluded = context.addTriangle(make_vec3(-10, -10, 1), make_vec3(10, -10, 1), make_vec3(0, 10, 1));
+    collision.buildBVH(UUIDs);
+
+    std::vector<CollisionDetection::Capsule> capsules;
+    for (int i = 0; i < 25; i++) {
+        vec3 start = make_vec3(context.randu(-2.5f, 2.5f), context.randu(-2.5f, 2.5f), context.randu(-0.5f, 2.5f));
+        capsules.push_back({start, start + make_vec3(context.randu(-0.6f, 0.6f), context.randu(-0.6f, 0.6f), context.randu(-0.6f, 0.6f)), context.randu(0.f, 0.05f)});
+    }
+
+    const int sample_count = 4001;
+    const float max_distance = 0.5f;
+    const float near_distance = 0.1f;
+    float brute_minimum = std::numeric_limits<float>::max();
+    int set_mismatches = 0;
+    std::vector<std::vector<uint>> batch = collision.findPrimitivesNearCapsules(capsules, near_distance);
+    DOCTEST_REQUIRE(batch.size() == capsules.size());
+    for (size_t c = 0; c < capsules.size(); c++) {
+        const CollisionDetection::Capsule &capsule = capsules.at(c);
+        // Sampling overestimates the axis distance by at most half the sample spacing
+        const float sampling_tolerance = 0.5f * (capsule.end - capsule.start).magnitude() / float(sample_count - 1) + 1e-5f;
+        std::vector<uint> single = collision.findPrimitivesNearCapsule(capsule, near_distance);
+        if (single != batch.at(c)) {
+            set_mismatches++;
+        }
+        std::set<uint> found(single.begin(), single.end());
+        for (uint UUID: UUIDs) {
+            float gap = CapsuleTests::sampledAxisDistance(context, capsule, UUID, sample_count) - capsule.radius;
+            brute_minimum = std::min(brute_minimum, gap);
+            if (gap < near_distance - sampling_tolerance && found.count(UUID) == 0) {
+                set_mismatches++;
+            } else if (gap > near_distance + sampling_tolerance && found.count(UUID) > 0) {
+                set_mismatches++;
+            }
+        }
+        if (found.count(excluded) > 0) {
+            set_mismatches++;
+        }
+    }
+    DOCTEST_CHECK(set_mismatches == 0);
+
+    CollisionDetection::CapsuleDistanceResult minimum = collision.findMinimumCapsuleDistance(capsules, max_distance);
+    DOCTEST_REQUIRE(minimum.found);
+    DOCTEST_CHECK(minimum.distance <= brute_minimum + 1e-5f);
+    DOCTEST_CHECK(minimum.distance >= brute_minimum - 0.5f * 2.1f / float(sample_count - 1) - 1e-5f); // capsule axes are at most 2.1 long
+    // The reported closest points realize the reported distance
+    DOCTEST_CHECK((minimum.closest_point_on_axis - minimum.closest_point_on_primitive).magnitude() - capsules.at(minimum.capsule_index).radius == doctest::Approx(minimum.distance).epsilon(1e-4));
+
+    // An early exit stops at the first gap no larger than the threshold
+    const float early_exit_distance = minimum.distance + 0.05f;
+    CollisionDetection::CapsuleDistanceResult early = collision.findMinimumCapsuleDistance(capsules, max_distance, early_exit_distance);
+    DOCTEST_REQUIRE(early.found);
+    DOCTEST_CHECK(early.distance <= early_exit_distance);
+    DOCTEST_CHECK(early.distance >= minimum.distance);
+}

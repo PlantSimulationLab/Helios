@@ -112,14 +112,14 @@ A number of plant models are available in the plant architecture library, which 
 | Pistachio Tree (*Pistachia vera*)        | generic                            | "pistachio"                | trunk, proleptic                                   |
 | Puncturevine (*Tribulus terrestris*)     | generic                            | "puncturevine"             | base, offshoots, children                          |
 | Rice (*Oryza sativa*)                    | generic                            | "rice"                     | mainstem                                           |
-| Sorghum (*Sorghum bicolor*)              | grain sorghum                      | "sorghum"                  | mainstem                                           |
+| Sorghum (*Sorghum bicolor*)              | grain sorghum                      | "sorghum"                  | mainstem, tiller                                   |
 | Soybean (*Glycine max*)                  | upright growth habit (determinate) | "soybean"                  | unifoliate, trifoliate                             |
 | Strawberry (*Fragaria × ananassa*)       | generic                            | "strawberry"               | mainstem                                           |
 | Sugar Beet (*Beta vulgaris*)             | generic                            | "sugarbeet"                | mainstem                                           |
 | Tomato (*Solanum lycopersicum*)          | determinate growth                 | "tomato"                   | mainstem                                           |
 | Cherry Tomato (*Solanum lycopersicum*)   | upright trained                    | "cherrytomato"             | mainstem                                           |
 | Walnut Tree (*Juglans regia*)            | generic                            | "walnut"                   | trunk, scaffold, proleptic                         |
-| Wheat (*Triticum aestivum*)              | generic                            | "wheat"                    | mainstem                                           |
+| Wheat (*Triticum aestivum*)              | generic                            | "wheat"                    | mainstem, tiller                                   |
 
 \subsection PlantArchBuild_default Loading a Plant from the Library with Default Parameters
 
@@ -254,6 +254,12 @@ The sorghum model accepts the panicle parameters listed in \ref SorghumPanicle, 
 |-----------|---------|-------------|-------|-------------|
 | tiller_count | 0 | 0-6 | - | Number of tillers. See \ref SorghumTillering. |
 
+<b>Wheat (wheat)</b>
+
+| Parameter | Default | Valid Range | Units | Description |
+|-----------|---------|-------------|-------|-------------|
+| tiller_count | 0 | 0-4 | - | Number of tillers. See \ref WheatTillering. |
+
 <b>Tree Species (almond, apple, walnut, pistachio)</b>
 
 Tree species use a simplified height-based training system. The code automatically calculates trunk node counts based on species-specific internode lengths (almond: 3cm, apple: 4cm, walnut: 4cm, pistachio: 5cm).
@@ -272,15 +278,70 @@ The pistachio model also trains the young tree as California orchards do (UC ANR
 
 \subsubsection PlantArchBuildParamsValidation Parameter Validation
 
-All build parameters are validated when the plant is built, before any geometry is created. If a parameter value is outside the valid range, or is not a finite number, a `helios_runtime_error` will be thrown with a clear error message indicating the parameter name, the provided value, and the valid range. A parameter name that the model does not accept, such as a misspelled name or one belonging to another species, also throws, and the message lists the names the model does accept. \ref PlantArchitecture::getPlantModelBuildParameterNames() returns the accepted names of a model.
+All build parameters are validated when the plant is built, before any geometry is created (for parameters given as distributions, see \ref PlantArchBuildParamDistributions). If a parameter value is outside the valid range, or is not a finite number, a `helios_runtime_error` will be thrown with a clear error message indicating the parameter name, the provided value, and the valid range. A parameter name that the model does not accept, such as a misspelled name or one belonging to another species, also throws, and the message lists the names the model does accept. \ref PlantArchitecture::getPlantModelBuildParameterNames() returns the accepted names of a model.
 
 Parameters that count something (e.g., scaffold counts, branch counts, grain counts) must be whole numbers; a fractional value such as 3.9 throws rather than being rounded or truncated. A parameter that is a mean, such as cluster_berry_count, may be fractional.
 
 A plant keeps the build parameters it was built with for its whole life, because some of them, such as the sorghum tiller count and the panicle and grape cluster parameters, are read as the plant grows. \ref PlantArchitecture::getPlantBuildParameters() returns them. They are copied by \ref PlantArchitecture::duplicatePlantInstance(), and written to and read back from the plant structure XML (see \ref PlantArchitecture::writePlantStructureXML()) together with the name of the model, so that they can be validated when the file is read.
 
-Plants built with different parameters can share a PlantArchitecture. Flower and fruit prototypes are cached for each distinct set of the parameters that shape the flowers and fruit, so plants that differ only in other parameters, such as trellis dimensions or tiller count, or not at all, share their prototypes.
+Plants built with different parameters can share a PlantArchitecture. Flower and fruit prototypes are cached for each distinct set of the parameters that shape the flowers and fruit (or of their distributions), so plants that differ only in other parameters, such as trellis dimensions or tiller count, or not at all, share their prototypes.
 
 A custom flower or fruit prototype function assigned to a library model (see \ref SorghumPanicle for an example) receives the parameters that shape the model's flowers and fruit as its last argument. It can read only the parameters the model declares for its flowers and fruit; it cannot be given parameters of its own, because a name the model does not declare is rejected.
+
+\subsubsection PlantArchBuildParamDistributions Drawing Build Parameters from Distributions
+
+Plants of a crop are not identical: in a stand of wheat, some plants have no tillers and others three or four. Any build parameter can therefore be given as a \ref BuildParameterDistribution instead of a fixed value, by passing a `std::map<std::string, BuildParameterDistribution>` to \ref PlantArchitecture::buildPlantInstanceFromLibrary() or \ref PlantArchitecture::buildPlantCanopyFromLibrary(). Fixed values and distributions can be mixed in the same map, with \ref BuildParameterDistribution::constant() for a fixed value.
+
+| Distribution | Values drawn |
+|--------------|--------------|
+| \ref BuildParameterDistribution::constant() "constant(value)" | Always the given value. Nothing is drawn from the random generator, so a plant given only constants is identical to one given the same values directly. |
+| \ref BuildParameterDistribution::uniform() "uniform(min, max)" | Uniformly between min and max |
+| \ref BuildParameterDistribution::normal() "normal(mean, standard deviation, min, max)" | Normally distributed, with values outside [min, max] redrawn. The bounds are required, since every parameter has a bounded valid range. |
+| \ref BuildParameterDistribution::discrete() "discrete(values, weights)" | One of the given values, each with probability proportional to its weight, or all equally likely if no weights are given |
+
+How a distribution is sampled depends on what the parameter shapes:
+
+- A parameter that shapes the plant itself, such as "tiller_count", "trunk_height" or "vine_spacing", is sampled once for each plant when it is built. \ref PlantArchitecture::getPlantBuildParameters() returns the value each plant drew, and the plant structure XML stores it.
+- A parameter that shapes the flowers and fruit, such as "berry_diameter" or the sorghum panicle parameters, is sampled once for each flower and fruit prototype. A library model builds a small set of prototypes (5 grape clusters, 3 sorghum panicles), and every plant given the same distributions, whether in one canopy or in separate calls, shares that set and draws its clusters or panicles from it. The variation between plants therefore spans only as many distinct organs as the set holds, but the memory cost stays that of a single set however many plants there are. \ref PlantArchitecture::getPlantOrganBuildParameters() returns these distributions, and the plant structure XML stores them.
+
+Before any plant is built, every distribution is checked over its whole range: the range must lie within the valid range of its parameter, and a parameter that counts something, such as "tiller_count", "num_scaffolds" or "grain_count", accepts only \ref BuildParameterDistribution::discrete() distributions of whole numbers (or a constant). A distribution that could only occasionally draw an invalid value therefore fails at once, rather than partway through a canopy. Constraints between parameters are checked on each plant's sample when it is built: a "grapevine_Wye" plant whose "catch_wire_height" sample is not above its "trunk_height" sample throws, so the two distributions should not overlap.
+
+Samples are drawn from the Context random generator, so seeding it with \ref helios::Context::seedRandomGenerator() reproduces a canopy on a given platform. The sequence of values is not guaranteed to be the same across compilers and standard libraries.
+
+~~~~~~
+plantarchitecture.loadPlantModelFromLibrary( "wheat" );
+
+// About 10% of plants without tillers, 30% with one, 30% with two, 20% with three and 10% with four
+std::map<std::string, BuildParameterDistribution> params = {
+    {"tiller_count", BuildParameterDistribution::discrete( {0, 1, 2, 3, 4}, {0.1, 0.3, 0.3, 0.2, 0.1} )}
+};
+std::vector<uint> plantIDs = plantarchitecture.buildPlantCanopyFromLibrary( canopy_center, plant_spacing, plant_count, age, 1.0, params );
+~~~~~~
+
+To vary a parameter across the field, for example more tillering in the edge rows, build the plants one at a time with \ref PlantArchitecture::buildPlantInstanceFromLibrary(), giving each plant the distribution for its position:
+
+~~~~~~
+BuildParameterDistribution interior_tillering = BuildParameterDistribution::discrete( {0, 1, 2}, {0.3, 0.5, 0.2} );
+BuildParameterDistribution edge_tillering = BuildParameterDistribution::discrete( {1, 2, 3, 4}, {0.1, 0.3, 0.4, 0.2} );
+for( int row = 0; row < row_count; row++ ){
+    bool is_edge_row = ( row == 0 || row == row_count - 1 );
+    for( int i = 0; i < plants_per_row; i++ ){
+        vec3 position = make_vec3( float(i) * plant_spacing, float(row) * row_spacing, 0 );
+        plantarchitecture.buildPlantInstanceFromLibrary( position, age, {{"tiller_count", is_edge_row ? edge_tillering : interior_tillering}} );
+    }
+}
+~~~~~~
+
+For a grapevine canopy with varied berry size, the vines share one set of five clusters, each with its own berry diameter between 10 and 14 mm:
+
+~~~~~~
+plantarchitecture.loadPlantModelFromLibrary( "grapevine_VSP" );
+std::map<std::string, BuildParameterDistribution> params = {
+    {"berry_diameter", BuildParameterDistribution::uniform( 0.010, 0.014 )},
+    {"trunk_height", BuildParameterDistribution::normal( 0.8, 0.05, 0.7, 0.9 )}
+};
+plantarchitecture.buildPlantCanopyFromLibrary( canopy_center, plant_spacing, plant_count, age, 1.0, params );
+~~~~~~
 
 \subsubsection PlantArchBuildParamsExamples Common Use Case Examples
 
@@ -402,7 +463,7 @@ Plant type string argument | time_to_dormancy_break | time_to_flower_initiation 
 "sugarbeet" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "tomato" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "walnut" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1095 days (3 years) |
-"wheat" | 0 | -1 | -1 | 4 | 10 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"wheat" | 0 | -1 | -1 | 4 | 39 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 
 \subsection PlantArchCollision Collision Avoidance
 
@@ -764,7 +825,7 @@ uint(*prototype_function)( helios::Context*, uint subdivisions )
 
 \subsubsection SorghumPanicle Procedural Sorghum Panicle
 
-The sorghum panicle is generated procedurally by \ref buildSorghumPanicle() from a \ref SorghumPanicleParameters structure, with every grain resolved as its own small mesh rather than suggested by a texture. The panicle is a central rachis bearing whorls of primary branches. The distal, fertile part of each primary branch carries short racemes, and each raceme carries a row of grains, each grain partly enclosed by a pair of glumes. The parameters are meant to cover the range of panicle types seen across grain sorghum genotypes, from compact cylindrical heads with short, erect branches to loose, open heads with long, spreading branches that expose the rachis.
+The sorghum panicle of the library sorghum model is generated procedurally, with every grain resolved as its own small mesh rather than suggested by a texture. The panicle is a central rachis bearing whorls of primary branches. The distal, fertile part of each primary branch carries short racemes, and each raceme carries a row of grains, each grain partly enclosed by a pair of glumes. The parameters are meant to cover the range of panicle types seen across grain sorghum genotypes, from compact cylindrical heads with short, erect branches to loose, open heads with long, spreading branches that expose the rachis.
 
 Two quantities set most of what distinguishes one genotype's head from another's. The <I>outline</I> of the head comes from the primary branches: their length at the base, middle and tip of the rachis (a conical head has long basal branches, a cylindrical head roughly equal ones), and their insertion angle from the rachis. The <I>density</I> of the head comes from \htmlonly<span style="font-family: Courier, monospace; color: blue;">compactness</span>\endhtmlonly. A real head holds its grain in a layer a few grains deep over the branches rather than solid through, and compactness draws the grains into such a layer just inside the branch envelope until they bear on one another. At zero each grain stays where its raceme places it; at one the head is a closed surface of grain with the branches hidden beneath it. Because the layer follows the branch envelope, compaction closes the head without shrinking it, and grains are not wasted in the hidden interior.
 
@@ -806,13 +867,13 @@ The panicle is built in meters along +x from its attachment at the origin, so th
 | glume_spread | 5 deg | Angle by which the glumes gape open from the grain. |
 | glume_color | (0.45, 0.30, 0.18) | Mean glume color. |
 | --- **branches** --- |||
-| branch_color | (0.42, 0.45, 0.28) | Color of the rachis, branches and racemes. The library sorghum gives its peduncle this default as the color at its top, blending down to the culm color at its base, so a custom color should also be set on `peduncle.color` to keep the junction seamless. |
+| branch_color | (0.42, 0.45, 0.28) | Color of the rachis, branches and racemes. The library sorghum gives its peduncle this color at its top, blending down to the culm color at its base. |
 | branch_radial_subdivisions | 3 | Radial subdivisions of the branch and raceme tubes. |
 | rachis_radial_subdivisions | 10 | Radial subdivisions of the rachis tube; the default matches the library sorghum peduncle. |
 
-\ref SorghumPanicleParameters::compact() and \ref SorghumPanicleParameters::loose() return the two ends of the range of head types. Grain and glume color are independent of head type; white, cream, tan, red and brown grain with straw to near-black glumes are all common, and are set directly through the color parameters.
+Two presets, compact and loose, give the two ends of the range of head types. Grain and glume color are independent of head type; white, cream, tan, red and brown grain with straw to near-black glumes are all common, and are set directly through the color parameters.
 
-The panicle of a library sorghum plant is chosen through its build parameters (see \ref PlantArchBuildParams), so plants of different genotypes can be built side by side. The key "panicle_type" is applied first: 0 gives \ref SorghumPanicleParameters::compact(), 0.5 the defaults above, and 1 \ref SorghumPanicleParameters::loose(), with values in between blending linearly between neighbouring presets. Each key in the table below then sets one field, overriding the preset, and fields not given keep their value.
+The panicle of a library sorghum plant is chosen through its build parameters (see \ref PlantArchBuildParams), so plants of different genotypes can be built side by side. The key "panicle_type" is applied first: 0 gives the compact preset, 0.5 the defaults above, and 1 the loose preset, with values in between blending linearly between neighbouring presets. Each key in the table below then sets one field, overriding the preset, and fields not given keep their value.
 
 | Build parameter | Field | Valid Range |
 | ------| ------ | ------ |
@@ -852,22 +913,6 @@ uint compact_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3
 uint loose_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0.5, 0, 0), 120, {{"panicle_type", 1}, {"grain_count", 1500}});
 ~~~~~~
 
-For full control, including the fields that are not build parameters, write a prototype function of your own that builds the panicle from its parameters, and assign it to the shoot type after the library model is loaded. The build parameters of the plant are passed to it, and can be ignored:
-
-~~~~~~{.cpp}
-uint RedCompactPanicle(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
-    SorghumPanicleParameters parameters = SorghumPanicleParameters::compact();
-    parameters.grain_color = make_RGBcolor(0.55, 0.28, 0.14);
-    parameters.glume_length_fraction = 0.8;
-    return buildSorghumPanicle(context_ptr, parameters);
-}
-
-plantarchitecture.loadPlantModelFromLibrary("sorghum");
-ShootParameters mainstem = plantarchitecture.getCurrentShootParameters("mainstem");
-mainstem.phytomer_parameters.inflorescence.fruit_prototype_function = RedCompactPanicle;
-plantarchitecture.defineShootType("mainstem", mainstem);
-~~~~~~
-
 Panicles of the library sorghum are copied from three prototypes, so neighbouring plants differ in branch layout and grain placement.
 
 \subsubsection SorghumTillering Sorghum Tillering
@@ -885,6 +930,23 @@ uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( make_vec3(0,0,0)
 <li><b>Leaf number.</b> Each tiller has one leaf fewer than the main stem for every main-stem leaf below its own: on a 16-leaf main stem, T1 has 15 leaves and T6 has 10. This brings the final leaves of all tillers out together, shortly after the main stem's, as Lafarge et al. (2002) observed. Every tiller ends in a panicle, so a plant has tiller_count + 1 panicles.</li>
 <li><b>Crown.</b> The lowest six main-stem internodes do not elongate (each is 8 mm long), so the lowest leaves and all tillers emerge at the soil surface. The next two internodes are transitional and the rest elongate fully, following the basal internodes of sweet sorghum (Nakamura & Goto 1996, Japanese Journal of Crop Science 65:324).</li>
 <li><b>Orientation.</b> A tiller leans out over its subtending leaf, within the main stem's leaf plane. Its prophyll faces the main stem and its first leaf is opposite, so its own leaves begin in a plane parallel to that of the main stem (Choob 2022, Frontiers in Plant Science 13:855146). The tiller leaves the main stem at 15-30 degrees from vertical, and gravitropism brings it back to 10-20 degrees from base to tip by maturity. No measurements of these angles were found for sorghum, so they are estimates. They are set by the "tiller" shoot type and can be changed with \ref PlantArchitecture::updateCurrentShootParameters().</li>
+</ul>
+
+\subsubsection WheatTillering Wheat Tillering
+
+A library wheat plant has no tillers by default. The build parameter "tiller_count" (0-4, see \ref PlantArchBuildParams) gives it tillers, which grow from axillary buds in the axils of the lowest main-stem leaves as the plant grows, following the scheme of \ref SorghumTillering .
+
+~~~~~~
+plantarchitecture.loadPlantModelFromLibrary( "wheat" );
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( make_vec3(0,0,0), 100, {{"tiller_count", 2}} );
+~~~~~~
+
+<ul>
+<li><b>Position.</b> Tiller Tn grows from the axil of main-stem leaf n. Tillers are added in the order T1, T2, T3, T4, the order in which they emerge, because the last-formed tillers are the first to die. A tiller_count of 2 therefore gives T1 and T2, which with the main stem bear most of the ears of a field crop. The coleoptile tiller is not modelled.</li>
+<li><b>Height of emergence.</b> A real tiller grows from the crown at the soil surface. A tiller of the model grows from the ligule of its subtending leaf, because the wheat leaf sheaths are built into the internodes of the culm. T1 and T2 emerge 1.5 and 3.6 cm above the soil, close to the crown; T3 and T4 emerge 7 and 11 cm up.</li>
+<li><b>Timing.</b> A tiller emerges 15 days (2.5 phyllochrons) after the leaf that subtends it, so T1 appears as main-stem leaf 3 appears and the others follow at one per phyllochron (Alzueta et al. 2012, European Journal of Agronomy 41:92).</li>
+<li><b>Leaf number.</b> Tillers carry fewer leaves than the main stem, which brings their ears out close to those of the main stem (Stern & Kirby 1979, Journal of Agricultural Science). No count by tiller position was found, so each tiller has one leaf fewer than the main stem for every main-stem leaf below its own, as for sorghum: on the 8-leaf main stem, T1 has 7 leaves and T4 has 4. The ears of all tillers reach full size together, about 9 days after the main stem's. Every tiller ends in an ear, so a plant has tiller_count + 1 ears.</li>
+<li><b>Orientation.</b> A tiller leans out over its subtending leaf and is turned back toward vertical as it grows. No measurements of these angles were found for wheat, so they are taken from the sorghum "tiller" shoot type and can be changed with \ref PlantArchitecture::updateCurrentShootParameters().</li>
 </ul>
 
 \subsection PlantArch_leafdroop Leaf Droop Under Self-Weight
@@ -1811,6 +1873,59 @@ for (uint shootID : plantarchitecture.getAllShootIDs(plantID)) {
 
 Pruning is idempotent: calling \ref PlantArchitecture::pruneBranch() again on a shoot that has already been pruned away does nothing. This matters when pruning a whole branch system, because removing a shoot also empties its descendants and a loop over shoot IDs will reach those descendants again later.
 
+\subsection PlantArchPruningKeep Keeping the Cut Material and Cutting Where a Tool Touches
+
+By default \ref PlantArchitecture::pruneBranch() deletes the material it removes. Passing `true` as its last argument keeps that material in the Context instead, in place but detached from the plant, and returns its object IDs, for example to animate the falling branch or hand it to a physics simulation. The returned objects are one connected piece: the removed section of the shoot with everything it bears and every shoot descending from it. When the cut is partway along a shoot, the cut-off part of the shoot's internode tube becomes a new tube object that begins at the node where the remaining stub ends. As with \ref PlantArchitecture::prunePlantsByPlane(), the detached objects keep their object and primitive data, the plant no longer refers to them, and deleting them is up to the caller.
+
+~~~~~~
+std::vector<uint> branch_objIDs = plantarchitecture.pruneBranch(plantID, shootID, node_index, true);
+context.translateObject(branch_objIDs, make_vec3(0, 0, -0.1)); // the branch drops away from the stub
+~~~~~~
+
+A pruning tool, robot or ray cast usually identifies where to cut by a primitive it touches rather than by a shoot and node. \ref PlantArchitecture::pruneBranchAtPrimitive() takes the UUID of a primitive of a shoot's internode tube, finds the shoot and the phytomer whose internode that primitive belongs to (see \ref PlantArchOrganLookup), and prunes there:
+
+~~~~~~
+CollisionDetection::HitResult hit = collision.castRay(tool_origin, tool_direction, reach);
+if (hit.hit && plantarchitecture.isPlantPrimitive(hit.primitive_UUID) && plantarchitecture.getPrimitiveOrganLocation(hit.primitive_UUID).organ_type == PlantOrganType::INTERNODE) {
+    std::vector<uint> branch_objIDs = plantarchitecture.pruneBranchAtPrimitive(hit.primitive_UUID, true);
+}
+~~~~~~
+
+A primitive of a leaf, petiole, flower or fruit does not identify a node of a shoot to cut at, so passing one raises an error.
+
+\subsection PlantArchHedging Hedging Cuts Across a Plane
+
+\ref PlantArchitecture::prunePlantsByPlane() shears plants across a plane, as in a mechanical hedging pass. The plane is given by any point on it and a normal vector; everything on the side the normal points toward is trimmed. A hedge with a flat top and two vertical sides is three calls:
+
+~~~~~~
+std::vector<uint> plantIDs = plantarchitecture.buildPlantCanopyFromLibrary(make_vec3(0, 0, 0), make_vec2(1.5, 3), make_int2(20, 1), 730);
+
+plantarchitecture.prunePlantsByPlane(plantIDs, make_vec3(0, 0, 1.8), make_vec3(0, 0, 1));   // top at 1.8 m
+plantarchitecture.prunePlantsByPlane(plantIDs, make_vec3(0, 0.6, 0), make_vec3(0, 1, 0));   // side at y = +0.6 m
+plantarchitecture.prunePlantsByPlane(plantIDs, make_vec3(0, -0.6, 0), make_vec3(0, -1, 0)); // side at y = -0.6 m
+~~~~~~
+
+Only the axes of the plant are cut, and each cut is made the way \ref PlantArchitecture::pruneBranch() would make it:
+
+- <b>Internodes.</b> A shoot whose internode crosses the plane is pruned at that phytomer: the node at its tip, with its leaves, flowers, fruit and child shoots, and every phytomer above it are removed. The cut snaps to nodes, so the remaining stub ends at the last node short of the plane, up to one internode length from it.
+- <b>Petioles.</b> A phytomer whose petiole crosses the plane loses its leaves and petioles. All the petioles of that phytomer are removed, including any that do not themselves cross the plane.
+- <b>Peduncles.</b> A floral bud whose peduncle crosses the plane loses its peduncle and its flowers or fruit, and the bud dies.
+
+Leaf blades and fruit that reach across the plane from an axis that does not cross it are left in place, and so are flowers and fruit whose peduncle geometry is not built (see \ref PlantArchitecture::disablePeduncleContextBuild()). The plant keeps growing from what is left after the cut.
+
+By default the trimmed material is deleted from the Context. Passing `true` as the last argument keeps it in the Context instead, in place but detached from the plant, which is useful for handing it to a physics simulation of the falling clippings. The trimmed material is then returned as fragments, each a vector of object IDs forming one connected piece: a pruned shoot section with everything it bears, the leaves and petiole of one petiole, or one peduncle with its flowers or fruit. When a shoot is cut partway along, the cut-off part of its internode tube becomes a new tube object that begins at the node where the remaining stub ends.
+
+~~~~~~
+std::vector<std::vector<uint>> fragments = plantarchitecture.prunePlantsByPlane(plantIDs, make_vec3(0, 0, 1.8), make_vec3(0, 0, 1), true);
+for (const std::vector<uint> &fragment : fragments) {
+    // each fragment is one rigid body
+}
+~~~~~~
+
+The detached objects keep their object data (such as "plantID" and "age") and primitive data (such as "object_label"), but the plant no longer refers to them: later growth, \ref PlantArchitecture::deletePlantInstance() and the other plant queries and operations do not include them, and deleting them is up to the caller.
+
+The cut is tested against the centerlines the plug-in already stores for each organ rather than against the primitive geometry, so it costs little compared with building or growing the plants. Cutting a 20-tree apple hedge row of about 800,000 primitives with three planes takes a fraction of a second.
+
 \subsection PlantArchCallbackEdits Structural Edits from Phytomer Callbacks
 
 A plant model can attach two functions to the \ref PhytomerParameters of a shoot type -- \ref PhytomerParameters::phytomer_creation_function, called once when each phytomer is created (both while building a plant and while growing it), and \ref PhytomerParameters::phytomer_callback_function, called for every phytomer on every time step of \ref PlantArchitecture::advanceTime(). Both run while the plug-in is part-way through walking the plant: the per-step callback runs inside the loop over a shoot's phytomers, and the creation function runs while a phytomer is still being appended. Anything that adds or removes phytomers, shoots, or plants at that moment would invalidate the loop, so a callback is limited in what it can change.
@@ -1822,7 +1937,7 @@ A plant model can attach two functions to the \ref PhytomerParameters of a shoot
 - during \ref PlantArchitecture::advanceTime(), at the end of the current time step of the plant being grown;
 - during a build call that creates phytomers (for example \ref PlantArchitecture::buildPlantInstanceFromLibrary() or \ref PlantArchitecture::addChildShoot()), before that call returns.
 
-Until then the shoot still looks uncut, including to the callbacks of the phytomers that are visited later in the same time step. Queued cuts are applied in the order they were requested. A cut whose shoot was already removed by an earlier cut, or whose node an earlier cut lower down the same shoot already took off, is already satisfied and does nothing. No queued cut outlives the public call that ran the callback; if that call ends in an error, the cuts it queued are discarded along with it. \ref PlantArchitecture::pruneBranch() called outside a callback is applied immediately, exactly as before.
+Until then the shoot still looks uncut, including to the callbacks of the phytomers that are visited later in the same time step. Queued cuts are applied in the order they were requested. A cut whose shoot was already removed by an earlier cut, or whose node an earlier cut lower down the same shoot already took off, is already satisfied and does nothing. No queued cut outlives the public call that ran the callback; if that call ends in an error, the cuts it queued are discarded along with it. \ref PlantArchitecture::pruneBranch() called outside a callback is applied immediately, exactly as before. Because a deferred cut has not happened when the call returns, a callback cannot ask \ref PlantArchitecture::pruneBranch() to keep the cut material (see \ref PlantArchPruningKeep); doing so raises an error.
 
 ~~~~~~
 // Head back any shoot of this type once it has reached 12 nodes
@@ -1844,6 +1959,47 @@ void MyPhytomerCallback(std::shared_ptr<Phytomer> phytomer) {
 <b>Operations that raise an error inside a callback.</b> The following return the ID of the structure they create, and there is no meaningful ID to return for a call that is not carried out, so a call made from a callback raises an error instead: \ref PlantArchitecture::appendPhytomerToShoot(), \ref PlantArchitecture::addBaseStemShoot(), \ref PlantArchitecture::appendShoot(), \ref PlantArchitecture::addChildShoot(), \ref PlantArchitecture::addShootFromNodePositions(), \ref PlantArchitecture::addEpicormicShoot(), \ref PlantArchitecture::duplicatePlantInstance(), \ref PlantArchitecture::buildPlantInstanceFromLibrary(), \ref PlantArchitecture::buildPlantCanopyFromLibrary(), \ref PlantArchitecture::generatePlantFromString(), and \ref PlantArchitecture::readPlantStructureXML(). \ref PlantArchitecture::setPlantBasePosition() also raises an error inside a callback, because the shoot being grown holds positions that would not be moved with the plant. To add structure in response to something a callback observed, record it in the callback and make the call between calls to \ref PlantArchitecture::advanceTime(). To release growth below a cut from a callback, set the state of the buds there to active instead of adding shoots, subject to the timing rule below.
 
 <b>Setting buds active: timing.</b> A bud set to active grows into a shoot at the next opportunity, but only if its state survives until then. When a plant breaks dormancy, every vegetative bud that is not dead is drawn again, active or dead, from the shoot type's bud-break probabilities, so a bud set to active while the plant is dormant is overwritten by that draw. The per-step callback of a phytomer also runs before its shoot breaks dormancy in the same time step, so this includes the step on which dormancy ends. Set buds active only once the phytomer's shoot is out of dormancy (<tt>!phytomer->parent_shoot_ptr->isdormant</tt>), which is from the time step after that shoot breaks dormancy. Use the shoot's flag rather than <tt>phytomer->isdormant</tt>: a shoot's tip phytomer is also marked dormant when the shoot reaches its node cap for the season, while the plant is still growing. Nor is \ref PlantArchitecture::isPlantDormant() a safe test on the time step dormancy ends, since shoots break dormancy one at a time within that step. A rule that acts in winter, such as a heading cut, therefore has to record what it did and release the buds below the cut in a later callback, once the plant is growing again. Buds set active during the growing season grow within that season.
+
+\section PlantArchOrganLookup Mapping Primitives to Organs
+
+Ray casting, synthetic LiDAR, collision queries and cameras report the Context primitives they touch. \ref PlantArchitecture::getPrimitiveOrganLocation() maps such a primitive back to the plant structure, returning a \ref PlantOrganLocation with:
+
+- the plant, the shoot within the plant, and the phytomer (node) on the shoot;
+- the kind of organ (\ref PlantOrganType): internode, petiole, leaf, peduncle, flower or fruit;
+- where applicable, the index of the petiole within the phytomer, of the leaf within the petiole, and of the floral bud (as stored in Phytomer::floral_buds, see Phytomer::getFloralBudStorageIndex());
+- the Context object ID of the organ.
+
+Index fields that do not apply to the organ are set to \ref PlantOrganLocation::not_applicable.
+
+A shoot's internodes are drawn as a single tube object that spans all of its phytomers, so for an internode primitive the node index is that of the phytomer whose internode the primitive (one triangle of the tube) belongs to. This is exact: it does not depend on where along the triangle a ray happened to hit.
+
+~~~~~~
+std::vector<CollisionDetection::HitResult> hits = collision.castRays(rays);
+for (const CollisionDetection::HitResult &hit : hits) {
+    if (!hit.hit || !plantarchitecture.isPlantPrimitive(hit.primitive_UUID)) {
+        continue; // missed, or hit the ground or another non-plant object
+    }
+    PlantOrganLocation organ = plantarchitecture.getPrimitiveOrganLocation(hit.primitive_UUID);
+    if (organ.organ_type == PlantOrganType::LEAF) {
+        // hit leaf organ.leaf_index of petiole organ.petiole_index on node organ.node_index of shoot organ.shootID
+    }
+}
+~~~~~~
+
+\ref PlantArchitecture::getPrimitiveOrganLocations() does the same for a whole vector of UUIDs, such as every hit of a LiDAR scan, and \ref PlantArchitecture::getObjectOrganLocation() looks up an organ by its object ID. All of them raise an error for a primitive that is not part of a plant of this PlantArchitecture instance -- the ground, other objects, prototypes, and material detached by pruning -- so filter mixed sets with \ref PlantArchitecture::isPlantPrimitive() first.
+
+Lookups use an index from object (and, for internode tubes, primitive) to organ, so each costs O(1) on average. The index is built on the first lookup and rebuilt automatically on the next lookup after anything changes the plants' organ objects: growth, pruning, removing leaves, harvesting, reading plants from XML, deleting plants and so on. A rebuild takes time proportional to the number of organ objects and internode primitives, a few milliseconds for a large tree, so for best speed group lookups between such changes rather than interleaving them one by one. Lookups are not thread-safe, since the first one after a change rebuilds the index.
+
+\subsection PlantArchSkeleton Plant Skeleton Segments
+
+For proximity tests against a plant -- for example the clearance between a robot arm and the branches it must avoid -- the plant's axes are often better modeled as their centerlines with a radius than as their triangle mesh. \ref PlantArchitecture::getPlantSkeletonSegments() returns the centerline of every internode as a list of straight segments, each with the organ's radius at both ends and the \ref PlantOrganLocation of the phytomer it belongs to. Petiole and peduncle segments can be requested as well:
+
+~~~~~~
+std::vector<PlantSkeletonSegment> branches = plantarchitecture.getPlantSkeletonSegments(plantID);
+std::vector<PlantSkeletonSegment> all_axes = plantarchitecture.getPlantSkeletonSegments(plantID, {PlantOrganType::INTERNODE, PlantOrganType::PETIOLE, PlantOrganType::PEDUNCLE});
+~~~~~~
+
+Leaves, flowers and fruit have no centerline and cannot be requested. To measure distances to the plant's actual surface geometry instead, use the capsule queries of the CollisionDetection plug-in (\ref CollisionDetection::findMinimumCapsuleDistance()).
 
 \section PlantArchCarbohydrate Carbohydrate Model
 

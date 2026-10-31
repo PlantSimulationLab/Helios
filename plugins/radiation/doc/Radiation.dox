@@ -214,20 +214,28 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
      <td>0</td>
    </tr>
    <tr>
-     <td>specular\_exponent</td>
+     <td>specular\_roughness</td>
      <td>N/A</td>
      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
-     <td>Value controlling the spread of specular reflection distribution in simulated camera images.</td>
+     <td>GGX roughness (0.05 to 1) of a specular surface layer, which makes reflection, transmission and emission depend on the angle. Can be set on a material. See Sect. \ref RadSurfaceLayer below.</td>
      <td>N/A</td>
-     <td>-1 (specular reflection disabled)</td>
+     <td>no surface layer</td>
    </tr>
    <tr>
-     <td>specular\_scale</td>
+     <td>specular\_n</td>
      <td>N/A</td>
      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
-     <td>Value that scales the strength of specular reflection in simulated camera images.</td>
+     <td>Refractive index (1 to 3) of the surface layer in every band. Can be set on a material.</td>
      <td>N/A</td>
-     <td>1.0</td>
+     <td>1.5</td>
+   </tr>
+   <tr>
+     <td>specular\_n\_*</td>
+     <td>N/A</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
+     <td>Refractive index of the surface layer in band <code>*</code>, overriding specular_n; 1 removes the layer in that band. Can be set on a material.</td>
+     <td>N/A</td>
+     <td>specular_n</td>
    </tr>
  </table>	
  
@@ -341,7 +349,9 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically resolved by the asset management system regardless of where the executable is run. The files "leaf_surface_spectral_library.xml", "soil_surface_spectral_library.xml", etc. have many surface reflectivity and/or transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.
 
- In order to get the spectral data into the Context as global data, the XML file containing the data must be loaded. This is done via the usual procedure:
+ The radiation model finds the spectra in these libraries (and in the colorboard files under "spectral_data/color_board") by label on its own: a label given as primitive data "reflectivity_spectrum" or "transmissivity_spectrum", to \ref RadiationModel::setCameraSpectralResponse(), \ref RadiationModel::setSourceSpectrum() or \ref RadiationModel::setDiffuseSpectrum() that is not yet in the Context is loaded from whichever library contains it. A label that is found neither in the Context nor in the libraries, or that names global data that is not a spectrum, is an error, which names the label - a misspelled spectrum is never silently replaced by a reflectivity of 0 or a flat camera response.
+
+ To use spectral data in your own code, or spectra from any other file, the XML file containing the data must be loaded into the Context as global data. This is done via the usual procedure:
 
  ~~~~~~{.cpp}
  context.loadXML("plugins/radiation/spectral_data/leaf_surface_spectral_library.xml");
@@ -383,7 +393,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  Note that absorptivity is not directly set, rather it is calculated as \f$1-\rho-\tau\f$.  If \f$1-\rho-\tau\f$ is calculated to be negative or greater than 1, an error is thrown.
 
- If reflectivity or transmissivity primitive data does not exist for a primitive, a default value of 0 is assumed. If radiative properties are changed from default values, the number of scattering iterations needs to be increased from the default value of 0 (see \ref RadScatter). If radiative properties are changed, but the number of scattering iterations is set to the default value of 0, the modified radiative property values are overridden and set back to their default values (black surface).
+ If reflectivity or transmissivity primitive data does not exist for a primitive, a default value of 0 is assumed. Reflected and transmitted radiation is traced through scattering iterations, of which there are 3 by default (see \ref RadScatter). If the number of scattering iterations is set to 0, the modified radiative property values are overridden and set back to their default values (black surface).
 
  2\. Specifying reflectivity and transmissivity based on spectral data
 
@@ -493,8 +503,8 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  <ul>
  <li>The camera ray is not refracted, so there is no lateral offset of the scene seen through a pane.</li>
  <li>A cover does not mirror its surroundings: its reflection is shaded as diffuse, from the light it receives.
- A cover shows a specular highlight of a radiation source only if it is given specular_exponent, as for any
- other primitive (see \ref RadCamSpecular).</li>
+ A cover shows no specular highlight of a radiation source, since a cover cannot also have a specular surface layer
+ (see \ref RadSurfaceLayer).</li>
  </ul>
 
  <b>Limitations (current version):</b>
@@ -513,6 +523,25 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  concern for the common per-band workflow (runBand with one band) or for covers configured as glass in
  every launched band.</li>
  </ul>
+
+ \subsection RadSurfaceLayer Specular Surface Layers
+
+ By default every surface reflects, transmits and emits diffusely (a Lambertian surface), with the same reflectivity, transmissivity and emissivity at every angle. Real leaves and many other surfaces have a thin, smooth outer layer, such as a leaf's waxy cuticle, that reflects light at its surface before it enters, and more of it at grazing angles: a shiny leaf looks brighter from an oblique angle, and its emissivity falls off toward grazing angles. A primitive can be given such a specular surface layer by setting the float data "specular_roughness" (the GGX microfacet roughness \f$\alpha\f$, from 0.05 for a glossy surface to 1 for a very rough one) and optionally "specular_n" (the layer's refractive index, default 1.5):
+
+ ~~~~~~{.cpp}
+ context.addMaterial("bean_leaf");
+ context.setMaterialData("bean_leaf", "specular_roughness", 0.3f);
+ context.setMaterialData("bean_leaf", "specular_n", 1.45f);
+ context.assignMaterialToObject(leaf_objIDs, "bean_leaf");
+ ~~~~~~
+
+ The parameters are usually the same for all the leaves of a plant, so they are best set on a material (Context::setMaterialData()), which every leaf shares. They can also be set as primitive data; when both are present the material's value is used, as for other material data. They cannot be set on the automatically generated materials Helios gives primitives of the same color or texture, whose labels begin with "__", since every primitive of that color would then get them. The PlantArchitecture plug-in gives the leaves of each plant type a named material such as "bean_mainstem_leaf".
+
+ The layer reflects a fraction \f$a(\mu)\f$ of the radiation arriving at an angle whose cosine is \f$\mu\f$: the directional albedo of a dielectric interface (Fresnel reflectance) with a GGX distribution of microfacet orientations. For \f$n = 1.5\f$ it is 0.04 at normal incidence and rises toward grazing angles. The rest enters the body, which reflects, transmits and absorbs it diffusely. The reflectivity and transmissivity given for the primitive (reflectivity_*, reflectivity_spectrum, etc.) are the totals at normal incidence, as an integrating-sphere measurement or a leaf optical model such as PROSPECT reports them, so the body's reflectivity \f$\rho_b\f$ and transmissivity \f$\tau_b\f$ follow from them:
+ \f[ \rho = a(1) + \rho_b\,(1 - a(1)),\qquad \tau = \tau_b\,(1 - a(1)). \f]
+ At other angles the reflectance is \f$R(\mu) = a(\mu) + \rho_b\,(1 - a(\mu))\f$ and the transmittance \f$T(\mu) = \tau_b\,(1 - a(\mu))\f$. In an emission band the emissivity depends on the angle in the same way, \f$\varepsilon(\mu) = 1 - R(\mu) - T(\mu) = (1 - \rho_b - \tau_b)(1 - a(\mu))\f$, as Kirchhoff's law requires, so the given emissivity is the emissivity at normal incidence and the hemispherical emissivity is lower. Because the layer alone reflects \f$a(1)\f$ at normal incidence, the reflectivity of a band cannot be less than \f$a(1)\f$, nor its emissivity more than \f$1 - a(1)\f$ (0.96 for \f$n = 1.5\f$); \ref RadiationModel::runBand() raises an error otherwise. Since the layer reflects all wavelengths alike, a different refractive index can be given for a band with "specular_n_<band>" (e.g., a lower one in a longwave band, where leaf emissivities are around 0.97), and "specular_n_<band>" = 1 removes the layer in that band. The layer has no effect in a band with a scattering depth of 0, where every surface is black.
+
+ Each face of a primitive with a surface layer sends out two components of radiation: what its body reflects, transmits and emits, with angular distribution proportional to \f$1 - a(\mu)\f$, and what its layer reflects, with angular distribution proportional to \f$a(\mu)\f$. The layer's reflection is distributed by angle according to its directional albedo, but not coupled to the direction the radiation came from, so the model gives the correct amount of reflection, transmission and emission in every direction, and an isothermal scene stays in radiative equilibrium. The direct radiation of the radiation sources, whose direction is known, is reflected instead into the layer's microfacet lobe around the mirror direction of each source, in the fluxes and in camera images (Sect. \ref RadCamSpecular); the energy it reflects is the same. Radiation cameras see the same components. The lobe needs the direct flux reaching each primitive with a layer from each source, one value per source, primitive and band. The second component doubles the memory of the outgoing and scattered radiation buffers (four additional values per primitive and band, and two per camera, primitive and band); it is allocated only when some primitive has a surface layer. A primitive cannot have both a surface layer and a translucent cover material (Sect. \ref RadGlass).
 
  \subsection RadEmission Radiative Emission
 
@@ -542,6 +571,8 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  ~~~~~~
 
  Note that you can also set the reflectivity and transmissivity for a band with emission. It is required that \f$\rho+\tau+\varepsilon=1\f$ in order to satisfy conservation of energy. If only the emissivity is set and reflectivity and transmissivity are left at their default values of 0, it is automatically assumed that \f$\rho=1-\varepsilon\f$ and \f$\tau=0\f$.
+
+ Each scattering pass samples new ray directions, so in a scene whose surfaces have different emissivities or reflectivities the gathered emission and scattering cancel only on average: even an isothermal scene under a sky at the same temperature shows small net fluxes that shrink as the ray count grows. Calling \ref RadiationModel::enableEmissionReferenceField() for a band removes this. Emission is then computed relative to a uniform reference blackbody field whose emissive power is the area-weighted mean of the scene's blackbody emissive power in the band. If every surface and the sky radiated at that one temperature, the radiation field would be the same in every direction and each face would absorb exactly \f$(1-\rho-\tau)\f$ times the reference emissive power, whatever the geometry. The model adds this absorption exactly and traces rays only for the departure of each surface's emission and of the sky's radiance from the reference field. The results are the same on average, an isothermal scene is in exact radiative equilibrium at any number of rays, and the ray-sampling noise scales with the temperature differences in the scene. It reduces the noise most in enclosed or near-isothermal scenes with surfaces of different emissivities, such as greenhouse interiors or growth chambers. In an open canopy under a sky much colder than the leaves it can increase the noise somewhat (by about 5-10% on leaves in a typical clear-sky canopy), because a surface's share of the reference field that it reflects is counted in the first scattering pass while the cold sky differs from the reference by the full amount; it is therefore off by default. The band must have emission enabled, a scattering depth of at least 1 and a diffuse ray count of at least 1, and must not contain translucent covers (see \ref RadGlass). A ray that reaches the periodic wrap limit (Sect. \ref RadPeriodic), which otherwise sees nothing, sees the reference field instead.
 
  \subsection RadSources External Radiation Sources
 
@@ -707,13 +738,13 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  \subsection RadScatter Scattering Iterations
  
- If the reflectivity or transmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport.  These scattering calculations are performed iteratively: in each iteration, every primitive launches the energy it scattered in the previous one.  The maximum number of scattering iterations is defined using:
+ If the reflectivity or transmissivity are set to values greater than 0, scattering calculations are required to simulate the reflected or transmitted radiation transport.  These scattering calculations are performed iteratively: in each iteration, every primitive launches the energy it scattered in the previous one.  The maximum number of scattering iterations, or scattering depth, is 3 by default and can be changed using:
 
  ~~~~~~{.cpp}
  radiationmodel.setScatteringDepth( "PAR", 3); //set the maximum number of scattering iterations
  ~~~~~~
 
- Each iteration launches a fraction q of the energy launched in the one before. In a dense canopy, q is roughly the leaf scattering albedo (reflectivity plus transmissivity) times the chance that scattered light hits another leaf: about 0.1 for PAR leaves and 0.5 for near-infrared leaves with reflectivity and transmissivity of 0.4. After the last iteration some energy is still waiting to be scattered. Rather than absorbing it where it sits, which overestimates absorption by a fraction that falls only as q to the power of the depth, the model sums the remaining iterations as a geometric series: each primitive receives its absorption in the last iteration times q/(1-q), where q is measured from the energy launched in the last two iterations. In a homogeneous canopy with near-infrared leaves, leaf absorption is then within about 0.1% of the converged value after three iterations and a few hundredths of a percent after four, so a depth of 3 to 5 is usually enough. A band with a depth of 0 has no scattering: its primitives absorb all the radiation they intercept.
+ Each iteration launches a fraction q of the energy launched in the one before. In a dense canopy, q is roughly the leaf scattering albedo (reflectivity plus transmissivity) times the chance that scattered light hits another leaf: about 0.1 for PAR leaves and 0.5 for near-infrared leaves with reflectivity and transmissivity of 0.4. After the last iteration some energy is still waiting to be scattered. Rather than absorbing it where it sits, which overestimates absorption by a fraction that falls only as q to the power of the depth, the model sums the remaining iterations as a geometric series: each primitive receives its absorption in the last iteration times q/(1-q), where q is measured from the energy launched in the last two iterations. In a homogeneous canopy with near-infrared leaves, leaf absorption is then within about 0.1% of the converged value after three iterations and a few hundredths of a percent after four, so a depth of 3 to 5 is usually enough. A band with a depth of 0 has no scattering: its primitives absorb all the radiation they intercept. A band in which no primitive reflects or transmits (all have the default reflectivity and transmissivity of 0, and in an emission band an emissivity of 1) has nothing to scatter, so its scattering iterations stop before any rays are traced and add almost no run time.
 
  \note The summed tail applies to the absorbed flux (the "radiation_flux_<band>" primitive data), not to radiation camera images. A camera sees the radiation scattered in the iterations that were traced, so an image of a strongly scattering band still misses the multiply-scattered light beyond the scattering depth; keep the depth higher for such images.
 
@@ -978,29 +1009,13 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  \subsubsection RadCamSpecular Radiation Camera Specular Reflection
 
- Specular reflection causes a surface to look "shiny". Waxy leaves or polished objects have high specular reflection, causing glancing light angles to appear very bright. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to Fresnel reflection at the air-material interface.
+ Specular reflection causes a surface to look "shiny": waxy leaves or polished objects reflect part of the light at their surface, before it enters the material, so a glossy leaf shows a bright highlight around the mirror direction of the sun, in the color of the light rather than of the leaf. It is modeled by a specular surface layer (Sect. \ref RadSurfaceLayer), set with the primitive or material data "specular_roughness" and "specular_n". The layer reflects the direct radiation of every radiation source (collimated, sun sphere, sphere, disk and rectangle) into a Fresnel + GGX microfacet lobe around the source's mirror direction, whose width is set by the roughness; this reflection is part of the radiation the surface reflects, not added to it, and the same lobe reaches the other surfaces in the radiative fluxes. Radiation scattered by other surfaces and diffuse sky radiation are reflected by the layer without a highlight.
 
- Physically, specular reflection occurs at the surface interface before light penetrates the material. For dielectric materials like leaves and plastics, the specular highlight reflects the color of the incident light source (typically white for sunlight), not the material's diffuse color. This is why shiny leaves have white highlights rather than green ones.
+ The figure below shows the effect of the roughness \f$\alpha\f$ on the simulated camera image of a sphere with the default refractive index of 1.5. A smoother layer concentrates the reflection into a smaller, brighter highlight, in the color of the source rather than of the sphere.
 
- Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" and/or "specular_scale" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive. Specular reflection is supported for all radiation source types (collimated, sunsphere, sphere, disk, and rectangle).
+ \image html specular_roughness_comparison.png
 
- The strength of specular reflection is calculated according to the following equation:
-
- \f[
-    I_{spec} = I_{s} \, k_s \, \mathrm{max}\left(0, \vec{n}_{spec} \cdot \vec{n}_p \right)^k\left(\frac{k+2}{2\pi}\right),
- \f]
-
- where \f$I_{spec}\f$ is the specular flux contribution, \f$I_s\f$ is the incident flux from the radiation source, \f$k_s\f$ is the specular scaling coefficient, \f$\vec{n}_p\f$ is the surface normal, \f$\vec{n}_s\f$ is the source direction, \f$\vec{n}_{ray}\f$ is the ray direction, and \f$k\f$ is the specular exponent. \f$\vec{n}_{spec}\f$ is the specular reflection direction, which is calculated as:
-
- \f[
-    \vec{n}_{spec} = \frac{\vec{n}_s - \vec{n}_{ray}}{|| \vec{n}_s + \vec{n}_{ray} ||}.
- \f]
-
- \f$k_s\f$ is the value of the primitive data "specular_scale" for the primitive, or 1.0 for a primitive without it; a value of 0 turns specular reflection off for that primitive. The primitive data "specular_exponent" must be set in order to enable specular reflection (if it is not set, the value of primitive data "specular_scale" will be ignored).
-
- The figure below shows the effect of different specular exponents on the simulated camera image (\f$k_s = 1\f$ for all images).
-
- \image html specular_exponent_comparison.png
+ The primitive data "specular_exponent" and "specular_scale" of earlier versions, which drew a Blinn-Phong highlight in camera images only, are no longer supported; \ref RadiationModel::runBand() raises an error if they are present. A Blinn-Phong exponent \f$k\f$ corresponds roughly to a roughness \f$\alpha \approx \sqrt{2/(k+2)}\f$.
 
  \subsubsection RadCamSmoothing Camera Flux Smoothing
 
@@ -1036,6 +1051,17 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  The crease angle, given in degrees to \ref RadiationModel::enableCameraFluxSmoothing() "enableCameraFluxSmoothing()", is the angle between adjacent facet normals above which a shared edge is treated as a hard edge and flux is not averaged across it. It applies to \ref helios::Polymesh "Polymesh" objects only: an imported mesh may contain an edge that is genuinely there, such as the edge of a cube, and averaging across it would bleed the lit face into the shadowed one. The curved object types are smooth by construction and are never creased - a tube of six radial divisions has sixty degrees between neighbouring facets, which is under-resolution rather than a crease, so applying a crease test to it would defeat the feature entirely.
 
  \note Vertex normals are neither required nor used. Smoothing interpolates a scalar flux, not a direction, so a mesh reporting \ref helios::NORMAL_SOURCE_NONE is smoothed just as one carrying authored normals is. This is unrelated to the \ref Visualizer smooth shading controlled by \ref Visualizer::enableSmoothShading(), which does interpolate normals and is a pure rendering concern with no measurement semantics.
+
+ \subsubsection RadCamSky The Sky Seen by Radiation Cameras
+
+ A camera ray that leaves the scene above the horizon sees the sky, and each camera sees it through its own spectral responses. Which sky that is depends on what has been set up:
+
+ - <b>Prague sky model.</b> When the solar position plug-in has computed the Prague sky model (\ref SolarPosition::updatePragueSkyModel()), the camera sees its spectral sky radiance, with the horizon brightening and the circumsolar region the model describes. The circumsolar region surrounds the first collimated or sun sphere source if it has a flux in the bands being run, and otherwise the sun direction the sky model was computed for. This is the most realistic sky, and it has absolute units, so it should be paired with source and diffuse fluxes from the same atmosphere (e.g. \ref SolarPosition::calculateDirectSolarSpectrum() and \ref SolarPosition::calculateDiffuseSolarSpectrum()).
+ - <b>Otherwise, the diffuse sky.</b> The camera sees the diffuse sky that lights the scene: the band's diffuse flux set by \ref RadiationModel::setDiffuseRadiationFlux(), spread over the band's angular distribution - isotropic, or the power law set by \ref RadiationModel::setDiffuseRadiationExtinctionCoeff(). It is weighted by the camera's spectral response in the same way as diffuse light reflected by a perfectly white surface, so a white surface under this sky looks exactly as bright as the sky. The sky is black only when the band has no diffuse flux, or no diffuse rays are traced.
+
+ For a band with emission enabled, the camera instead sees the band's diffuse flux as isotropic sky longwave radiation. Below the horizon the camera sees no sky unless \ref RadiationModel::enableBelowHorizonDiffuseRadiation() has been called.
+
+ Note that a camera's "auto" exposure meters the whole image, sky pixels included, so the sky affects the exposure of the rest of the image.
 
  \subsubsection RadCamAtmosphere Simulating Satellite Imagery
 

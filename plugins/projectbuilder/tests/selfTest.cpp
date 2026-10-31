@@ -64,6 +64,37 @@ DOCTEST_TEST_CASE("ProjectBuilder - updateGround replaces the ground built from 
     DOCTEST_CHECK(objects_after_update == objects_after_build);
 }
 
+#ifdef ENABLE_RADIATION_MODEL
+DOCTEST_TEST_CASE("ProjectBuilder - InitializeRadiation assigns a ground spectrum that is not loaded yet") {
+    // The radiation model loads a library spectrum by label when it needs it, so a project that names one without listing its library file must not end up with a black ground.
+    SKIP_IF_NO_GPU();
+    const std::filesystem::path xml_path = std::filesystem::temp_directory_path() / "helios_projectbuilder_ground_spectrum_test.xml";
+    {
+        std::ofstream xml_file(xml_path);
+        xml_file << "<helios><radiation><diffuse_extinction_coeff>0.1</diffuse_extinction_coeff><air_turbidity>0.05</air_turbidity><ground_reflectivity_spectrum>soil_reflectivity_0000</ground_reflectivity_spectrum></radiation></helios>";
+    }
+
+    Context context;
+    const uint ground_UUID = context.addPatch();
+    context.setGlobalData("ground_UUIDs", std::vector<uint>{ground_UUID});
+    DOCTEST_REQUIRE(!context.doesGlobalDataExist("soil_reflectivity_0000"));
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+    {
+        capture_cout capture;
+        InitializeRadiation(xml_path.string(), nullptr, &radiation, &context); // the solar position model is only used to calibrate a turbidity that is not given
+    }
+    std::filesystem::remove(xml_path);
+
+    std::string ground_spectrum;
+    if (context.doesPrimitiveDataExist(ground_UUID, "reflectivity_spectrum")) {
+        context.getPrimitiveData(ground_UUID, "reflectivity_spectrum", ground_spectrum);
+    }
+    DOCTEST_CHECK(ground_spectrum == "soil_reflectivity_0000");
+}
+#endif
+
 int ProjectBuilder::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

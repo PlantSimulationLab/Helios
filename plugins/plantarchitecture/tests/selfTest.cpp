@@ -1,5 +1,6 @@
 #include "PlantArchitecture.h"
 #include "Assets.h"
+#include "../src/PlantArchitectureInternal.h"
 // getCollisionDetection() hands back a CollisionDetection, which PlantArchitecture.h only forward-declares.
 // The plugin links collisiondetection unconditionally (see its CMakeLists), so this adds no new dependency.
 #include "CollisionDetection.h"
@@ -8,6 +9,8 @@
 #include <doctest.h>
 #include "doctest_utils.h"
 #include "global.h"
+
+#include <numeric>
 
 using namespace helios;
 
@@ -1559,6 +1562,702 @@ DOCTEST_TEST_CASE("PlantArchitecture shoot queries on a pruned shoot") {
     DOCTEST_CHECK_NOTHROW(std::ignore = plantarchitecture.getShootTaper(plantID, 0));
 }
 
+// Largest signed distance past a plane of any point on the plant's cuttable axes: internode centerlines, the centerlines of petioles that still bear leaves, and peduncle tube nodes.
+// A positive value means some axis still reaches past the plane.
+static float maxAxisDistancePastPlane(const PlantArchitecture &plantarchitecture, const Context &context, uint plantID, const vec3 &plane_point, const vec3 &plane_normal) {
+    const vec3 unit_normal = plane_normal / plane_normal.magnitude();
+    float max_distance = -1e30f;
+    auto update = [&](const vec3 &point) { max_distance = std::max(max_distance, unit_normal * (point - plane_point)); };
+    for (const std::shared_ptr<Shoot> &shoot: PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID)) {
+        if (shoot->isPruned()) {
+            continue;
+        }
+        for (const std::vector<vec3> &internode: shoot->shoot_internode_vertices) {
+            for (const vec3 &vertex: internode) {
+                update(vertex);
+            }
+        }
+        for (const std::shared_ptr<Phytomer> &phytomer: shoot->phytomers) {
+            if (!phytomer->leaf_objIDs.empty()) {
+                for (const std::vector<vec3> &petiole: phytomer->petiole_vertices) {
+                    for (const vec3 &vertex: petiole) {
+                        update(vertex);
+                    }
+                }
+            }
+            for (const auto &petiole_floral_buds: phytomer->floral_buds) {
+                for (const FloralBud &fbud: petiole_floral_buds) {
+                    for (uint peduncle_objID: fbud.peduncle_objIDs) {
+                        for (const vec3 &node: context.getTubeObjectNodes(peduncle_objID)) {
+                            update(node);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return max_distance;
+}
+
+static float maxPlantInternodeHeight(const PlantArchitecture &plantarchitecture, uint plantID) {
+    float max_height = -1e30f;
+    for (const std::shared_ptr<Shoot> &shoot: PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID)) {
+        for (const std::vector<vec3> &internode: shoot->shoot_internode_vertices) {
+            for (const vec3 &vertex: internode) {
+                max_height = std::max(max_height, vertex.z);
+            }
+        }
+    }
+    return max_height;
+}
+
+static size_t countObjectPrimitives(const Context &context, const std::vector<uint> &objIDs) {
+    size_t count = 0;
+    for (uint objID: objIDs) {
+        count += context.getObjectPrimitiveUUIDs(objID).size();
+    }
+    return count;
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture prunePlantsByPlane horizontal cut deletes trimmed material") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("tomato");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 60);
+
+    const float cut_height = 0.5f * maxPlantInternodeHeight(plantarchitecture, plantID);
+    const vec3 plane_point = make_vec3(0, 0, cut_height);
+    const vec3 plane_normal = make_vec3(0, 0, 1);
+    DOCTEST_REQUIRE(maxAxisDistancePastPlane(plantarchitecture, context, plantID, plane_point, plane_normal) > 0.f);
+
+    std::vector<uint> objIDs_before = plantarchitecture.getAllPlantObjectIDs(plantID);
+    size_t peduncles_before = plantarchitecture.getPlantPeduncleObjectIDs(plantID).size();
+
+    std::vector<std::vector<uint>> fragments = plantarchitecture.prunePlantsByPlane(plantID, plane_point, plane_normal);
+
+    DOCTEST_CHECK(fragments.empty());
+    DOCTEST_CHECK(maxAxisDistancePastPlane(plantarchitecture, context, plantID, plane_point, plane_normal) <= 0.f);
+
+    std::vector<uint> objIDs_after = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(objIDs_after.size() < objIDs_before.size());
+    for (uint objID: objIDs_after) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+    // Everything the plant no longer refers to was deleted, except the internode tubes that were shortened in place
+    std::set<uint> after_set(objIDs_after.begin(), objIDs_after.end());
+    int orphaned = 0;
+    for (uint objID: objIDs_before) {
+        if (after_set.count(objID) == 0 && context.doesObjectExist(objID)) {
+            orphaned++;
+        }
+    }
+    DOCTEST_CHECK(orphaned == 0);
+    DOCTEST_CHECK(plantarchitecture.getPlantPeduncleObjectIDs(plantID).size() <= peduncles_before);
+
+    // The plant keeps growing from what is left
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 10));
+    for (uint objID: plantarchitecture.getAllPlantObjectIDs(plantID)) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture prunePlantsByPlane keeps trimmed material as detached fragments") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 365);
+
+    const float cut_height = 0.6f * maxPlantInternodeHeight(plantarchitecture, plantID);
+    const vec3 plane_point = make_vec3(0, 0, cut_height);
+    const vec3 plane_normal = make_vec3(0, 0, 2); // need not be unit length
+
+    std::vector<uint> objIDs_before = plantarchitecture.getAllPlantObjectIDs(plantID);
+    const size_t plant_primitives_before = countObjectPrimitives(context, objIDs_before);
+    const size_t context_primitives_before = context.getPrimitiveCount();
+
+    std::vector<std::vector<uint>> fragments = plantarchitecture.prunePlantsByPlane(plantID, plane_point, plane_normal, true);
+
+    DOCTEST_REQUIRE(fragments.size() > 1);
+    DOCTEST_CHECK(maxAxisDistancePastPlane(plantarchitecture, context, plantID, plane_point, plane_normal) <= 0.f);
+
+    // Nothing was deleted: every primitive of the plant is either still on the plant or in exactly one fragment
+    DOCTEST_CHECK(context.getPrimitiveCount() == context_primitives_before);
+    std::vector<uint> objIDs_after = plantarchitecture.getAllPlantObjectIDs(plantID);
+    std::set<uint> seen(objIDs_after.begin(), objIDs_after.end());
+    DOCTEST_CHECK(seen.size() == objIDs_after.size());
+    size_t fragment_primitives = 0;
+    int duplicate_or_missing = 0;
+    for (const std::vector<uint> &fragment: fragments) {
+        DOCTEST_CHECK(!fragment.empty());
+        for (uint objID: fragment) {
+            if (!context.doesObjectExist(objID) || !seen.insert(objID).second) {
+                duplicate_or_missing++;
+            }
+        }
+        fragment_primitives += countObjectPrimitives(context, fragment);
+    }
+    DOCTEST_CHECK(duplicate_or_missing == 0);
+    DOCTEST_CHECK(countObjectPrimitives(context, objIDs_after) + fragment_primitives == plant_primitives_before);
+
+    // Detached material sits where it was cut from: some of it lies past the plane
+    bool fragment_past_plane = false;
+    for (const std::vector<uint> &fragment: fragments) {
+        for (uint objID: fragment) {
+            if (context.getObjectCenter(objID).z > cut_height) {
+                fragment_past_plane = true;
+            }
+        }
+    }
+    DOCTEST_CHECK(fragment_past_plane);
+
+    // The plant no longer owns the fragments: growing it leaves them untouched
+    std::vector<size_t> fragment_sizes;
+    for (const std::vector<uint> &fragment: fragments) {
+        fragment_sizes.push_back(countObjectPrimitives(context, fragment));
+    }
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 10));
+    for (size_t f = 0; f < fragments.size(); f++) {
+        bool all_exist = true;
+        for (uint objID: fragments.at(f)) {
+            all_exist = all_exist && context.doesObjectExist(objID);
+        }
+        DOCTEST_REQUIRE(all_exist);
+        DOCTEST_CHECK(countObjectPrimitives(context, fragments.at(f)) == fragment_sizes.at(f));
+    }
+    plantarchitecture.deletePlantInstance(plantID);
+    for (const std::vector<uint> &fragment: fragments) {
+        for (uint objID: fragment) {
+            DOCTEST_CHECK(context.doesObjectExist(objID));
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture prunePlantsByPlane side cut, no-op and whole-plant cases") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    std::vector<uint> plantIDs = {plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 365), plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(3, 0, 0), 365)};
+
+    // A tilted plane cutting the +x side of both plants: only material on the side the normal points toward is removed
+    const vec3 side_normal = make_vec3(1, 0, 0.5f);
+    for (uint plantID: plantIDs) {
+        const vec3 plane_point = plantarchitecture.getPlantBasePosition(plantID) + make_vec3(0.3f, 0, 0);
+        DOCTEST_REQUIRE(maxAxisDistancePastPlane(plantarchitecture, context, plantID, plane_point, side_normal) > 0.f);
+        DOCTEST_REQUIRE(maxAxisDistancePastPlane(plantarchitecture, context, plantID, plane_point, -1.f * side_normal) > 0.f);
+        plantarchitecture.prunePlantsByPlane(plantID, plane_point, side_normal);
+        DOCTEST_CHECK(maxAxisDistancePastPlane(plantarchitecture, context, plantID, plane_point, side_normal) <= 0.f);
+        // The other side keeps its material
+        DOCTEST_CHECK(maxAxisDistancePastPlane(plantarchitecture, context, plantID, plane_point, -1.f * side_normal) > 0.f);
+    }
+
+    // A plane above every plant changes nothing
+    std::vector<uint> objIDs_before = plantarchitecture.getAllPlantObjectIDs(plantIDs.at(0));
+    std::vector<std::vector<uint>> fragments = plantarchitecture.prunePlantsByPlane(plantIDs, make_vec3(0, 0, 100), make_vec3(0, 0, 1), true);
+    DOCTEST_CHECK(fragments.empty());
+    DOCTEST_CHECK(plantarchitecture.getAllPlantObjectIDs(plantIDs.at(0)) == objIDs_before);
+
+    // A plane that removes everything above the ground takes the whole plant
+    plantarchitecture.prunePlantsByPlane(plantIDs.at(1), make_vec3(0, 0, -0.01f), make_vec3(0, 0, 1));
+    DOCTEST_CHECK(plantarchitecture.isShootPruned(plantIDs.at(1), 0));
+    DOCTEST_CHECK(plantarchitecture.getAllPlantObjectIDs(plantIDs.at(1)).empty());
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture prunePlantsByPlane cuts a peduncle whose node is kept") {
+    // A plane through the middle of one peduncle, normal along it, leaves the node bearing it on the kept side, so only the peduncle cut can remove the flower or fruit.
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("tomato");
+
+    // Only about half of plants have a peduncle that such a plane can isolate, and which ones do depends on how they happened to grow, so plants are grown until one has.
+    // A single seed would not be enough, since the same seed grows a different plant on a different platform.
+    constexpr uint max_plants = 25;
+    uint plantID = 0;
+    std::shared_ptr<Phytomer> bearing_phytomer;
+    size_t petiole_index = 0;
+    size_t bud_index = 0;
+    vec3 plane_point;
+    vec3 plane_normal;
+    for (uint plant = 0; plant < max_plants && !bearing_phytomer; plant++) {
+        plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 100);
+        const std::vector<std::shared_ptr<Shoot>> &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+        for (const std::shared_ptr<Shoot> &shoot: shoot_tree) {
+            for (const std::shared_ptr<Phytomer> &phytomer: shoot->phytomers) {
+                for (size_t p = 0; p < phytomer->floral_buds.size() && !bearing_phytomer; p++) {
+                    for (size_t b = 0; b < phytomer->floral_buds.at(p).size() && !bearing_phytomer; b++) {
+                        const FloralBud &fbud = phytomer->floral_buds.at(p).at(b);
+                        if (fbud.peduncle_objIDs.size() != 1) {
+                            continue;
+                        }
+                        std::vector<vec3> peduncle_nodes = context.getTubeObjectNodes(fbud.peduncle_objIDs.front());
+                        vec3 peduncle_axis = peduncle_nodes.back() - peduncle_nodes.front();
+                        if (peduncle_axis.magnitude() < 1e-3f) {
+                            continue;
+                        }
+                        const vec3 candidate_point = peduncle_nodes.front() + 0.5f * peduncle_axis;
+                        // The bearing node and every internode below it, up through the ancestors, must lie on the kept side
+                        bool path_kept = true;
+                        const Shoot *path_shoot = shoot.get();
+                        int last_node = phytomer->shoot_index.x;
+                        while (path_kept) {
+                            for (int node = 0; node <= last_node && path_kept; node++) {
+                                for (const vec3 &vertex: path_shoot->shoot_internode_vertices.at(node)) {
+                                    if (peduncle_axis * (vertex - candidate_point) > 0.f) {
+                                        path_kept = false;
+                                    }
+                                }
+                            }
+                            if (path_shoot->parent_shoot_ID < 0) {
+                                break;
+                            }
+                            last_node = (int) path_shoot->parent_node_index;
+                            path_shoot = shoot_tree.at(path_shoot->parent_shoot_ID).get();
+                        }
+                        if (path_kept) {
+                            bearing_phytomer = phytomer;
+                            petiole_index = p;
+                            bud_index = b;
+                            plane_point = candidate_point;
+                            plane_normal = peduncle_axis;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    DOCTEST_REQUIRE(bearing_phytomer);
+
+    const FloralBud &fbud = bearing_phytomer->floral_buds.at(petiole_index).at(bud_index);
+    std::vector<uint> bud_objIDs = fbud.peduncle_objIDs;
+    bud_objIDs.insert(bud_objIDs.end(), fbud.inflorescence_objIDs.begin(), fbud.inflorescence_objIDs.end());
+
+    std::vector<std::vector<uint>> fragments = plantarchitecture.prunePlantsByPlane(plantID, plane_point, plane_normal, true);
+
+    DOCTEST_REQUIRE(!bearing_phytomer->parent_shoot_ptr->isPruned());
+    DOCTEST_CHECK(fbud.peduncle_objIDs.empty());
+    DOCTEST_CHECK(fbud.inflorescence_objIDs.empty());
+    DOCTEST_CHECK(fbud.state == BUD_DEAD);
+    // The peduncle and its flowers or fruit come back together as one fragment
+    bool fragment_found = false;
+    for (const std::vector<uint> &fragment: fragments) {
+        if (fragment == bud_objIDs) {
+            fragment_found = true;
+        }
+    }
+    DOCTEST_CHECK(fragment_found);
+    for (uint objID: bud_objIDs) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture prunePlantsByPlane XML round trip and errors") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+
+    const float cut_height = 0.5f * maxPlantInternodeHeight(plantarchitecture, plantID);
+    plantarchitecture.prunePlantsByPlane(plantID, make_vec3(0, 0, cut_height), make_vec3(0, 0, 1));
+
+    std::string xml_filename = "test_prune_by_plane.xml";
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.writePlantStructureXML(plantID, xml_filename));
+    Context context_read;
+    PlantArchitecture plantarchitecture_read(&context_read);
+    plantarchitecture_read.disableMessages();
+    plantarchitecture_read.loadPlantModelFromLibrary("bean");
+    std::vector<uint> plantIDs_read;
+    DOCTEST_CHECK_NOTHROW(plantIDs_read = plantarchitecture_read.readPlantStructureXML(xml_filename, true));
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(plantIDs_read.size() == 1);
+    DOCTEST_CHECK(maxPlantInternodeHeight(plantarchitecture_read, plantIDs_read.front()) <= cut_height + 1e-4f);
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.prunePlantsByPlane(plantID, make_vec3(0, 0, 0), make_vec3(0, 0, 0))));
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.prunePlantsByPlane(plantID + 100, make_vec3(0, 0, 0), make_vec3(0, 0, 1))));
+}
+
+//! Organ records of every organ object of a plant, found by walking the plant structure independently of the plug-in's organ index.
+//! The node_index of an internode tube record is left as not_applicable: each tube triangle's node is found geometrically by nearestInternodeNode().
+static std::map<uint, PlantOrganLocation> referenceOrganLocations(const PlantArchitecture &plantarchitecture, const Context &context, uint plantID) {
+    std::map<uint, PlantOrganLocation> reference;
+    const uint none = PlantOrganLocation::not_applicable;
+    for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        if (plantarchitecture.isShootPruned(plantID, shootID)) {
+            continue;
+        }
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        if (context.doesObjectExist(shoot->internode_tube_objID)) {
+            reference[shoot->internode_tube_objID] = {plantID, shootID, none, PlantOrganType::INTERNODE, none, none, none, shoot->internode_tube_objID};
+        }
+        for (uint node = 0; node < shoot->phytomers.size(); node++) {
+            const std::shared_ptr<Phytomer> &phytomer = shoot->phytomers.at(node);
+            for (uint petiole = 0; petiole < phytomer->petiole_objIDs.size(); petiole++) {
+                uint objID = phytomer->petiole_objIDs.at(petiole);
+                if (objID != Phytomer::no_petiole_objID && context.doesObjectExist(objID)) {
+                    reference[objID] = {plantID, shootID, node, PlantOrganType::PETIOLE, petiole, none, none, objID};
+                }
+            }
+            for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
+                for (uint leaf = 0; leaf < phytomer->leaf_objIDs.at(petiole).size(); leaf++) {
+                    uint objID = phytomer->leaf_objIDs.at(petiole).at(leaf);
+                    reference[objID] = {plantID, shootID, node, PlantOrganType::LEAF, petiole, leaf, none, objID};
+                }
+            }
+            for (uint petiole = 0; petiole < phytomer->floral_buds.size(); petiole++) {
+                for (uint bud = 0; bud < phytomer->floral_buds.at(petiole).size(); bud++) {
+                    const FloralBud &fbud = phytomer->floral_buds.at(petiole).at(bud);
+                    for (uint objID: fbud.peduncle_objIDs) {
+                        reference[objID] = {plantID, shootID, node, PlantOrganType::PEDUNCLE, petiole, none, bud, objID};
+                    }
+                    PlantOrganType inflorescence_type = fbud.state == BUD_FRUITING ? PlantOrganType::FRUIT : PlantOrganType::FLOWER;
+                    for (uint objID: fbud.inflorescence_objIDs) {
+                        reference[objID] = {plantID, shootID, node, inflorescence_type, petiole, none, bud, objID};
+                    }
+                }
+            }
+        }
+    }
+    return reference;
+}
+
+//! Nodes of a shoot whose internode centerline passes nearest to a triangle's centroid
+/**
+ * A triangle's centroid lies about one tube radius from the centerline. Where an internode is much shorter than the tube radius, as at a growing shoot tip, the centroids of its triangles are
+ * about equally far from its centerline and the end of its neighbor's, so nearness alone cannot tell the two apart. Every node within 10% of the nearest distance is therefore returned. A triangle
+ * placed a whole segment of a normally grown internode away from its own lies well outside that tolerance.
+ */
+static std::set<uint> nearestInternodeNodes(const Context &context, const std::shared_ptr<Shoot> &shoot, uint UUID) {
+    std::vector<vec3> vertices = context.getPrimitiveVertices(UUID);
+    vec3 centroid = (vertices.at(0) + vertices.at(1) + vertices.at(2)) / 3.f;
+    std::vector<float> node_distances(shoot->phytomers.size(), std::numeric_limits<float>::max());
+    for (uint node = 0; node < shoot->phytomers.size(); node++) {
+        std::vector<vec3> centerline = shoot->phytomers.at(node)->getInternodeNodePositions();
+        for (size_t s = 0; s + 1 < centerline.size(); s++) {
+            vec3 segment = centerline.at(s + 1) - centerline.at(s);
+            float t = clamp(((centroid - centerline.at(s)) * segment) / (segment * segment), 0.f, 1.f);
+            node_distances.at(node) = std::min(node_distances.at(node), (centroid - (centerline.at(s) + t * segment)).magnitude());
+        }
+    }
+    float nearest_distance = *std::min_element(node_distances.begin(), node_distances.end());
+    std::set<uint> nearest_nodes;
+    for (uint node = 0; node < node_distances.size(); node++) {
+        if (node_distances.at(node) <= 1.1f * nearest_distance) {
+            nearest_nodes.insert(node);
+        }
+    }
+    return nearest_nodes;
+}
+
+//! Look up every primitive of every organ of the plants, one at a time and in bulk, and count the records that differ from the reference walk
+static int countOrganLookupMismatches(const PlantArchitecture &plantarchitecture, const Context &context, const std::vector<uint> &plantIDs) {
+    int mismatches = 0;
+    for (uint plantID: plantIDs) {
+        std::map<uint, PlantOrganLocation> reference = referenceOrganLocations(plantarchitecture, context, plantID);
+        std::vector<uint> plant_objIDs = plantarchitecture.getAllPlantObjectIDs(plantID);
+        if (plant_objIDs.size() != reference.size()) {
+            mismatches++;
+        }
+        std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(plant_objIDs);
+        std::vector<PlantOrganLocation> bulk = plantarchitecture.getPrimitiveOrganLocations(UUIDs);
+        if (bulk.size() != UUIDs.size()) {
+            return mismatches + 1;
+        }
+        for (size_t i = 0; i < UUIDs.size(); i++) {
+            uint UUID = UUIDs.at(i);
+            uint objID = context.getPrimitiveParentObjectID(UUID);
+            auto expected_entry = reference.find(objID);
+            if (expected_entry == reference.end()) {
+                mismatches++;
+                continue;
+            }
+            const PlantOrganLocation &expected = expected_entry->second;
+            std::set<uint> expected_nodes = {expected.node_index};
+            if (expected.organ_type == PlantOrganType::INTERNODE) {
+                expected_nodes = nearestInternodeNodes(context, plantarchitecture.getPlantShoot(plantID, expected.shootID), UUID);
+            }
+            PlantOrganLocation single = plantarchitecture.getPrimitiveOrganLocation(UUID);
+            for (const PlantOrganLocation &found: {single, bulk.at(i)}) {
+                if (found.plantID != expected.plantID || found.shootID != expected.shootID || expected_nodes.count(found.node_index) == 0 || found.organ_type != expected.organ_type || found.petiole_index != expected.petiole_index ||
+                    found.leaf_index != expected.leaf_index || found.floral_bud_index != expected.floral_bud_index || found.objID != expected.objID) {
+                    mismatches++;
+                }
+            }
+            if (!plantarchitecture.isPlantPrimitive(UUID)) {
+                mismatches++;
+            }
+        }
+        for (const auto &[objID, expected]: reference) {
+            PlantOrganLocation found = plantarchitecture.getObjectOrganLocation(objID);
+            if (found.plantID != expected.plantID || found.shootID != expected.shootID || found.node_index != expected.node_index || found.organ_type != expected.organ_type || found.objID != objID) {
+                mismatches++;
+            }
+        }
+    }
+    return mismatches;
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture organ lookup maps every plant primitive to its organ through growth and edits") {
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    std::vector<uint> plantIDs = {plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30), plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(1, 0, 0), 30)};
+    DOCTEST_CHECK(countOrganLookupMismatches(plantarchitecture, context, plantIDs) == 0);
+
+    // Growth adds phytomers to existing tubes, new shoots, leaves and inflorescences, and turns flowers into fruit
+    plantarchitecture.advanceTime(plantIDs, 30);
+    DOCTEST_CHECK(countOrganLookupMismatches(plantarchitecture, context, plantIDs) == 0);
+    plantarchitecture.advanceTime(plantIDs, 30);
+    DOCTEST_CHECK(countOrganLookupMismatches(plantarchitecture, context, plantIDs) == 0);
+
+    // A cut part-way up the main stem, deleting and keeping the material
+    for (uint plantID: plantIDs) {
+        uint shootID = 1;
+        uint node_count = plantarchitecture.getShootNodeCount(plantID, shootID);
+        DOCTEST_REQUIRE(node_count >= 3);
+        std::vector<uint> kept = plantarchitecture.pruneBranch(plantID, shootID, node_count - 2, plantID == plantIDs.back());
+        DOCTEST_CHECK(kept.empty() == (plantID != plantIDs.back()));
+        DOCTEST_CHECK(countOrganLookupMismatches(plantarchitecture, context, plantIDs) == 0);
+        // Material that was cut off is no longer part of any plant
+        for (uint objID: kept) {
+            for (uint UUID: context.getObjectPrimitiveUUIDs(objID)) {
+                DOCTEST_CHECK_FALSE(plantarchitecture.isPlantPrimitive(UUID));
+            }
+            DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getObjectOrganLocation(objID)));
+        }
+        if (!kept.empty()) {
+            DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPrimitiveOrganLocation(context.getObjectPrimitiveUUIDs(kept.front()).front())));
+        }
+    }
+
+    plantarchitecture.prunePlantsByPlane(plantIDs, make_vec3(0, 0, 0.5f * maxPlantInternodeHeight(plantarchitecture, plantIDs.front())), make_vec3(0, 0, 1), true);
+    DOCTEST_CHECK(countOrganLookupMismatches(plantarchitecture, context, plantIDs) == 0);
+
+    plantarchitecture.removePlantLeaves(plantIDs.front());
+    plantarchitecture.harvestPlant(plantIDs.back());
+    DOCTEST_CHECK(countOrganLookupMismatches(plantarchitecture, context, plantIDs) == 0);
+
+    // A shoot with prescribed geometry on a new plant
+    uint prescribed_plantID = plantarchitecture.addPlantInstance(make_vec3(3, 0, 0), 0);
+    std::vector<vec3> node_positions = {make_vec3(3, 0, 0), make_vec3(3, 0, 0.05f), make_vec3(3.01f, 0, 0.1f), make_vec3(3.02f, 0, 0.15f)};
+    plantarchitecture.addShootFromNodePositions(prescribed_plantID, -1, 0, node_positions, {0.004f, 0.0035f, 0.003f, 0.0025f}, "trifoliate");
+    plantIDs.push_back(prescribed_plantID);
+    DOCTEST_CHECK(countOrganLookupMismatches(plantarchitecture, context, plantIDs) == 0);
+
+    // Deleting a plant removes it from the index
+    std::vector<uint> deleted_UUIDs = context.getObjectPrimitiveUUIDs(plantarchitecture.getAllPlantObjectIDs(plantIDs.front()));
+    plantarchitecture.deletePlantInstance(plantIDs.front());
+    plantIDs.erase(plantIDs.begin());
+    DOCTEST_CHECK(countOrganLookupMismatches(plantarchitecture, context, plantIDs) == 0);
+    DOCTEST_REQUIRE(!deleted_UUIDs.empty());
+    DOCTEST_CHECK_FALSE(plantarchitecture.isPlantPrimitive(deleted_UUIDs.front()));
+
+    // A primitive that is not part of any plant
+    uint ground_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    DOCTEST_CHECK_FALSE(plantarchitecture.isPlantPrimitive(ground_UUID));
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPrimitiveOrganLocation(ground_UUID)));
+    std::vector<uint> mixed_UUIDs = {context.getObjectPrimitiveUUIDs(plantarchitecture.getAllPlantObjectIDs(plantIDs.front())).front(), ground_UUID};
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPrimitiveOrganLocations(mixed_UUIDs)));
+
+    // An internode tube object spans several nodes, so its object-level record has no node
+    uint shootID = plantarchitecture.getAllShootIDs(plantIDs.front()).front();
+    PlantOrganLocation tube_location = plantarchitecture.getObjectOrganLocation(plantarchitecture.getPlantShoot(plantIDs.front(), shootID)->internode_tube_objID);
+    DOCTEST_CHECK(tube_location.organ_type == PlantOrganType::INTERNODE);
+    DOCTEST_CHECK(tube_location.node_index == PlantOrganLocation::not_applicable);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture organ lookup on an apple tree and after an XML round trip") {
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+    DOCTEST_CHECK(countOrganLookupMismatches(plantarchitecture, context, {plantID}) == 0);
+
+    std::string xml_filename = "test_organ_lookup.xml";
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    std::vector<uint> plantIDs_read = plantarchitecture.readPlantStructureXML(xml_filename, true);
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(plantIDs_read.size() == 1);
+    DOCTEST_CHECK(countOrganLookupMismatches(plantarchitecture, context, {plantID, plantIDs_read.front()}) == 0);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture pruneBranch keeps the trimmed material as one detached piece") {
+    Context context;
+    context.seedRandomGenerator(11);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 365);
+
+    // The longest shoot other than the trunk, cut above its base so its tube is split
+    uint shootID = 0;
+    uint node_count = 0;
+    for (uint candidate: plantarchitecture.getAllShootIDs(plantID)) {
+        uint count = plantarchitecture.getShootNodeCount(plantID, candidate);
+        if (candidate != 0 && count > node_count) {
+            shootID = candidate;
+            node_count = count;
+        }
+    }
+    DOCTEST_REQUIRE(node_count >= 4);
+    const uint cut_node = node_count / 2;
+
+    std::vector<uint> objIDs_before = plantarchitecture.getAllPlantObjectIDs(plantID);
+    const size_t plant_primitives_before = countObjectPrimitives(context, objIDs_before);
+    const size_t context_primitives_before = context.getPrimitiveCount();
+    const uint tube_objID = plantarchitecture.getPlantShoot(plantID, shootID)->internode_tube_objID;
+    const size_t tube_nodes_before = context.getTubeObjectNodeCount(tube_objID);
+    const vec3 tube_tip = context.getTubeObjectNodes(tube_objID).back();
+
+    std::vector<uint> piece = plantarchitecture.pruneBranch(plantID, shootID, cut_node, true);
+
+    DOCTEST_CHECK(plantarchitecture.getShootNodeCount(plantID, shootID) == cut_node);
+    DOCTEST_REQUIRE(!piece.empty());
+    DOCTEST_CHECK(context.getPrimitiveCount() == context_primitives_before);
+    std::vector<uint> objIDs_after = plantarchitecture.getAllPlantObjectIDs(plantID);
+    std::set<uint> seen(objIDs_after.begin(), objIDs_after.end());
+    int duplicate_or_missing = 0;
+    for (uint objID: piece) {
+        if (!context.doesObjectExist(objID) || !seen.insert(objID).second) {
+            duplicate_or_missing++;
+        }
+    }
+    DOCTEST_CHECK(duplicate_or_missing == 0);
+    DOCTEST_CHECK(countObjectPrimitives(context, objIDs_after) + countObjectPrimitives(context, piece) == plant_primitives_before);
+
+    // The upper part of the shoot's tube is split off into the piece, ending at the old tip
+    DOCTEST_CHECK(context.getTubeObjectNodeCount(tube_objID) < tube_nodes_before);
+    bool tube_tip_in_piece = false;
+    for (uint objID: piece) {
+        if (context.getObjectType(objID) == OBJECT_TYPE_TUBE && (context.getTubeObjectNodes(objID).back() - tube_tip).magnitude() < 1e-6f) {
+            tube_tip_in_piece = true;
+        }
+    }
+    DOCTEST_CHECK(tube_tip_in_piece);
+
+    // The piece is no longer part of the plant: growth and deleting the plant leave it alone
+    const size_t piece_primitives = countObjectPrimitives(context, piece);
+    plantarchitecture.advanceTime(plantID, 10);
+    DOCTEST_CHECK(countObjectPrimitives(context, piece) == piece_primitives);
+
+    // Pruning a shoot that is already gone keeps nothing
+    DOCTEST_CHECK(plantarchitecture.pruneBranch(plantID, shootID, 0, true).size() > 0);
+    DOCTEST_CHECK(plantarchitecture.pruneBranch(plantID, shootID, 0, true).empty());
+
+    plantarchitecture.deletePlantInstance(plantID);
+    for (uint objID: piece) {
+        DOCTEST_CHECK(context.doesObjectExist(objID));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture pruneBranchAtPrimitive cuts at the node of the internode primitive") {
+    Context context;
+    context.seedRandomGenerator(13);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+
+    const uint shootID = 1;
+    const uint node_count = plantarchitecture.getShootNodeCount(plantID, shootID);
+    DOCTEST_REQUIRE(node_count >= 3);
+    const uint cut_node = node_count - 2;
+    const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    uint target_UUID = 0;
+    bool found = false;
+    for (uint UUID: context.getObjectPrimitiveUUIDs(shoot->internode_tube_objID)) {
+        if (nearestInternodeNodes(context, shoot, UUID) == std::set<uint>{cut_node}) {
+            target_UUID = UUID;
+            found = true;
+            break;
+        }
+    }
+    DOCTEST_REQUIRE(found);
+
+    // Leaves are not internodes
+    std::vector<uint> leaf_objIDs = plantarchitecture.getPlantLeafObjectIDs(plantID);
+    DOCTEST_REQUIRE(!leaf_objIDs.empty());
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.pruneBranchAtPrimitive(context.getObjectPrimitiveUUIDs(leaf_objIDs.front()).front())));
+    uint ground_UUID = context.addPatch();
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.pruneBranchAtPrimitive(ground_UUID)));
+
+    std::vector<uint> piece = plantarchitecture.pruneBranchAtPrimitive(target_UUID, true);
+    DOCTEST_CHECK(plantarchitecture.getShootNodeCount(plantID, shootID) == cut_node);
+    DOCTEST_CHECK(!piece.empty());
+    DOCTEST_CHECK(context.getPrimitiveParentObjectID(target_UUID) != shoot->internode_tube_objID);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture getPlantSkeletonSegments follows the organ centerlines") {
+    Context context;
+    context.seedRandomGenerator(17);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 50);
+
+    // Internodes, the default: one segment per centerline segment of every phytomer, in order
+    std::vector<PlantSkeletonSegment> internodes = plantarchitecture.getPlantSkeletonSegments(plantID);
+    size_t expected_count = 0;
+    int mismatches = 0;
+    for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        for (uint node = 0; node < shoot->phytomers.size(); node++) {
+            std::vector<vec3> centerline = shoot->phytomers.at(node)->getInternodeNodePositions();
+            std::vector<float> radii = shoot->phytomers.at(node)->getInternodeNodeRadii();
+            for (size_t s = 0; s + 1 < centerline.size(); s++, expected_count++) {
+                if (expected_count >= internodes.size()) {
+                    mismatches++;
+                    continue;
+                }
+                const PlantSkeletonSegment &segment = internodes.at(expected_count);
+                if (!(segment.start == centerline.at(s)) || !(segment.end == centerline.at(s + 1)) || segment.start_radius != radii.at(s) || segment.end_radius != radii.at(s + 1) || segment.organ.organ_type != PlantOrganType::INTERNODE ||
+                    segment.organ.shootID != shootID || segment.organ.node_index != node || segment.organ.objID != shoot->internode_tube_objID) {
+                    mismatches++;
+                }
+            }
+        }
+    }
+    DOCTEST_CHECK(internodes.size() == expected_count);
+    DOCTEST_CHECK(mismatches == 0);
+
+    // Petioles and peduncles on request, labelled with their organ
+    std::vector<PlantSkeletonSegment> axes = plantarchitecture.getPlantSkeletonSegments(plantID, {PlantOrganType::INTERNODE, PlantOrganType::PETIOLE, PlantOrganType::PEDUNCLE});
+    size_t petiole_segments = 0;
+    int bad_petioles = 0;
+    for (const PlantSkeletonSegment &segment: axes) {
+        if (segment.organ.organ_type == PlantOrganType::PETIOLE) {
+            petiole_segments++;
+            const uint petiole_objID = plantarchitecture.getPlantShoot(plantID, segment.organ.shootID)->phytomers.at(segment.organ.node_index)->petiole_objIDs.at(segment.organ.petiole_index);
+            if (petiole_objID != segment.organ.objID) {
+                bad_petioles++;
+                continue;
+            }
+            const std::vector<vec3> centerline = context.getTubeObjectNodes(petiole_objID);
+            bool on_centerline = false;
+            for (size_t s = 0; s + 1 < centerline.size(); s++) {
+                on_centerline = on_centerline || (segment.start == centerline.at(s) && segment.end == centerline.at(s + 1));
+            }
+            if (!on_centerline) {
+                bad_petioles++;
+            }
+        }
+    }
+    DOCTEST_CHECK(petiole_segments > 0);
+    DOCTEST_CHECK(bad_petioles == 0);
+    DOCTEST_CHECK(axes.size() > internodes.size());
+
+    // Leaves, flowers and fruit have no centerline
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantSkeletonSegments(plantID, {PlantOrganType::LEAF})));
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantSkeletonSegments(plantID + 100)));
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture advanceTime after pruneBranch with internode context build disabled") {
     // A pruned shoot must not keep a live apical meristem: advanceTime() reads phytomers.back() on
     // any shoot whose meristem is alive, which segfaults on a shoot with no phytomers. The meristem
@@ -1894,6 +2593,47 @@ DOCTEST_TEST_CASE("PlantArchitecture pruneBranch outside a phytomer callback is 
 
     plantarchitecture.pruneBranch(plantID, shootID, 2);
     DOCTEST_CHECK(plantarchitecture.getShootNodeCount(plantID, shootID) == 2);
+}
+
+namespace {
+    // Asks to keep the material of a cut from inside a callback, which cannot be done because the cut is deferred. Records whether the request was refused.
+    void pruneKeepingMaterialCallback(std::shared_ptr<Phytomer> phytomer) {
+        CallbackEditState &state = callback_edit_state;
+        if (!state.armed || state.done || phytomer->plantID != state.plantID || phytomer->parent_shoot_ID != state.shootID) {
+            return;
+        }
+        state.done = true;
+        try {
+            static_cast<void>(phytomer->parent_shoot_ptr->plantarchitecture_ptr->pruneBranch(state.plantID, state.shootID, state.node_index, true));
+        } catch (const std::runtime_error &) {
+            state.invocations++;
+        }
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("PlantArchitecture pruneBranch keeping the trimmed material is refused inside a phytomer callback") {
+    resetCallbackEditState();
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    installBeanCallbacks(plantarchitecture, pruneKeepingMaterialCallback, nullptr);
+
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 20.f);
+    const uint shootID = 1;
+    const uint node_count_before = plantarchitecture.getShootNodeCount(plantID, shootID);
+    DOCTEST_REQUIRE(node_count_before >= 3);
+
+    callback_edit_state.armed = true;
+    callback_edit_state.plantID = plantID;
+    callback_edit_state.shootID = shootID;
+    callback_edit_state.node_index = 1;
+    plantarchitecture.advanceTime(plantID, 1.f);
+    DOCTEST_REQUIRE(callback_edit_state.done);
+    DOCTEST_CHECK(callback_edit_state.invocations == 1);
+    // The refused request leaves no cut behind
+    DOCTEST_CHECK(plantarchitecture.getShootNodeCount(plantID, shootID) >= node_count_before);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture pruneBranch from a creation callback during a build call is applied before the call returns") {
@@ -4752,6 +5492,235 @@ DOCTEST_TEST_CASE("Build Parameters - Names A Model Does Not Accept Throw") {
     DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"trunk_height", 0.5f}})), doctest::Contains("accepts no build parameters"));
 }
 
+DOCTEST_TEST_CASE("Build Parameter Distributions - Invalid Distributions Throw When Constructed") {
+    DOCTEST_CHECK_THROWS(static_cast<void>(BuildParameterDistribution::uniform(2.f, 1.f)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(BuildParameterDistribution::uniform(0.f, std::numeric_limits<float>::infinity())));
+    DOCTEST_CHECK_THROWS(static_cast<void>(BuildParameterDistribution::normal(1.f, 0.f, 0.f, 2.f)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(BuildParameterDistribution::normal(1.f, 0.1f, 2.f, 2.f)));
+    // An interval holding a negligible share of the distribution would leave the sampler redrawing almost forever
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(BuildParameterDistribution::normal(0.f, 0.1f, 1.f, 2.f)), doctest::Contains("0.1%"));
+    DOCTEST_CHECK_THROWS(static_cast<void>(BuildParameterDistribution::discrete({})));
+    DOCTEST_CHECK_THROWS(static_cast<void>(BuildParameterDistribution::discrete({1.f, 2.f}, {1.f})));
+    DOCTEST_CHECK_THROWS(static_cast<void>(BuildParameterDistribution::discrete({1.f, 2.f}, {1.f, -1.f})));
+    DOCTEST_CHECK_THROWS(static_cast<void>(BuildParameterDistribution::discrete({1.f, 2.f}, {0.f, 0.f})));
+
+    const BuildParameterDistribution normal = BuildParameterDistribution::normal(1.f, 0.5f, 0.5f, 1.2f);
+    DOCTEST_CHECK(normal.getMinimum() == 0.5f);
+    DOCTEST_CHECK(normal.getMaximum() == 1.2f);
+    const BuildParameterDistribution discrete = BuildParameterDistribution::discrete({3.f, 1.f, 2.f});
+    DOCTEST_CHECK(discrete.getMinimum() == 1.f);
+    DOCTEST_CHECK(discrete.getMaximum() == 3.f);
+}
+
+DOCTEST_TEST_CASE("Build Parameter Distributions - A Distribution Outside Its Parameter's Range Throws Before Any Plant Is Built") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("wheat");
+
+    // Every plant of a canopy would draw from it, so a value that only some draws would reach must fail at once, not partway through the canopy
+    std::map<std::string, BuildParameterDistribution> out_of_range = {{"tiller_count", BuildParameterDistribution::discrete({0.f, 2.f, 5.f}, {1.f, 1.f, 0.01f})}};
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantCanopyFromLibrary(make_vec3(0, 0, 0), make_vec2(0.1f, 0.1f), make_int2(5, 5), 0, 1.f, out_of_range)), doctest::Contains("tiller_count"));
+    DOCTEST_CHECK(plantarchitecture.getAllPlantIDs().empty());
+
+    // A parameter that counts something takes only whole-number discrete values
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"tiller_count", BuildParameterDistribution::uniform(0.f, 4.f)}})), doctest::Contains("discrete"));
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"tiller_count", BuildParameterDistribution::discrete({1.f, 1.5f})}})), doctest::Contains("1.5"));
+    DOCTEST_CHECK(plantarchitecture.getAllPlantIDs().empty());
+
+    // The same range checks apply to continuous structure parameters and to organ parameters
+    plantarchitecture.loadPlantModelFromLibrary("walnut");
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"scaffold_angle", BuildParameterDistribution::uniform(30.f, 65.f)}})), doctest::Contains("scaffold_angle"));
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"berry_diameter", BuildParameterDistribution::normal(0.012f, 0.004f, 0.002f, 0.02f)}})),
+                              doctest::Contains("berry_diameter"));
+    DOCTEST_CHECK(plantarchitecture.getAllPlantIDs().empty());
+
+    // A name the model does not accept is still rejected
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"berry_diamter", BuildParameterDistribution::uniform(0.01f, 0.012f)}})), doctest::Contains("berry_diamter"));
+}
+
+DOCTEST_TEST_CASE("Build Parameter Distributions - Each Plant Of A Canopy Gets Its Own Sample") {
+    Context context;
+    context.seedRandomGenerator(11);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("wheat");
+
+    // Equally likely tiller counts: 50 plants all drawing the same value has a probability of 2^-49
+    const std::vector<uint> plantIDs = plantarchitecture.buildPlantCanopyFromLibrary(make_vec3(0, 0, 0), make_vec2(0.1f, 0.1f), make_int2(10, 5), 0, 1.f, {{"tiller_count", BuildParameterDistribution::discrete({1.f, 3.f})}});
+    DOCTEST_REQUIRE(plantIDs.size() == 50);
+    std::set<float> tiller_counts;
+    for (uint plantID: plantIDs) {
+        const std::map<std::string, float> &build_parameters = plantarchitecture.getPlantBuildParameters(plantID);
+        DOCTEST_REQUIRE(build_parameters.size() == 1);
+        tiller_counts.insert(build_parameters.at("tiller_count"));
+    }
+    DOCTEST_CHECK(tiller_counts == std::set<float>{1.f, 3.f});
+
+    // A value of zero weight is never drawn
+    const std::vector<uint> weighted_plantIDs = plantarchitecture.buildPlantCanopyFromLibrary(make_vec3(0, 0, 0), make_vec2(1.f, 1.f), 20, 0, {{"tiller_count", BuildParameterDistribution::discrete({0.f, 2.f, 4.f}, {0.f, 1.f, 0.f})}});
+    for (uint plantID: weighted_plantIDs) {
+        DOCTEST_CHECK(plantarchitecture.getPlantBuildParameters(plantID).at("tiller_count") == 2.f);
+    }
+
+    // Continuous structure parameters are sampled within their distribution
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    std::set<float> trunk_heights;
+    for (int i = 0; i < 10; i++) {
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(float(i) * 5.f, 20, 0), 0, {{"trunk_height", BuildParameterDistribution::normal(0.7f, 0.2f, 0.5f, 0.9f)}});
+        const float trunk_height = plantarchitecture.getPlantBuildParameters(plantID).at("trunk_height");
+        DOCTEST_CHECK(trunk_height >= 0.5f);
+        DOCTEST_CHECK(trunk_height <= 0.9f);
+        trunk_heights.insert(trunk_height);
+    }
+    DOCTEST_CHECK(trunk_heights.size() == 10);
+}
+
+DOCTEST_TEST_CASE("Build Parameter Distributions - Each Wheat Plant Grows The Tillers It Drew") {
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("wheat");
+    const std::vector<uint> plantIDs = plantarchitecture.buildPlantCanopyFromLibrary(make_vec3(0, 0, 0), make_vec2(0.3f, 0.3f), make_int2(3, 2), 100, 1.f, {{"tiller_count", BuildParameterDistribution::discrete({0.f, 1.f, 2.f, 3.f, 4.f})}});
+    DOCTEST_REQUIRE(plantIDs.size() == 6);
+    for (uint plantID: plantIDs) {
+        const int tiller_count = int(plantarchitecture.getPlantBuildParameters(plantID).at("tiller_count"));
+        DOCTEST_INFO("plant " << plantID << ", tiller_count " << tiller_count);
+        DOCTEST_CHECK(plantarchitecture.getAllShootIDs(plantID).size() == size_t(tiller_count + 1));
+        DOCTEST_CHECK(plantarchitecture.getPlantFruitObjectIDs(plantID).size() == size_t(tiller_count + 1));
+    }
+}
+
+DOCTEST_TEST_CASE("Build Parameter Distributions - A Fixed Value Draws No Random Numbers") {
+    // A fixed value is taken without drawing from the random generator, so a canopy given fixed values is placed exactly as one given none. Here the fixed value is the default, so the plants are the same too.
+    std::vector<vec3> base_positions_without_parameters;
+    std::vector<vec3> base_positions_with_fixed_value;
+    for (bool give_fixed_value: {false, true}) {
+        Context context;
+        context.seedRandomGenerator(7);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("wheat");
+        std::map<std::string, BuildParameterDistribution> build_parameters;
+        if (give_fixed_value) {
+            build_parameters.emplace("tiller_count", BuildParameterDistribution::constant(0.f));
+        }
+        for (uint plantID: plantarchitecture.buildPlantCanopyFromLibrary(make_vec3(0, 0, 0), make_vec2(2.f, 2.f), 4, 0, build_parameters)) {
+            (give_fixed_value ? base_positions_with_fixed_value : base_positions_without_parameters).push_back(plantarchitecture.getPlantBasePosition(plantID));
+        }
+    }
+    DOCTEST_REQUIRE(base_positions_without_parameters.size() == 4);
+    DOCTEST_CHECK(base_positions_with_fixed_value == base_positions_without_parameters);
+}
+
+// Fruit prototype function for the library grapevines that records the build parameters each prototype is built from
+static std::vector<std::map<std::string, float>> recorded_fruit_prototype_build_parameters;
+static uint recordingGrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
+    recorded_fruit_prototype_build_parameters.push_back(build_parameters);
+    return GrapevineFruitPrototype(context_ptr, subdivisions, build_parameters);
+}
+
+DOCTEST_TEST_CASE("Build Parameter Distributions - Organ Parameters Are Sampled For Each Prototype Of A Shared Set") {
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    std::map<std::string, ShootParameters> shoot_types = plantarchitecture.getCurrentShootParameters();
+    for (auto &[label, shoot_parameters]: shoot_types) {
+        if (shoot_parameters.phytomer_parameters.inflorescence.fruit_prototype_function == GrapevineFruitPrototype) {
+            shoot_parameters.phytomer_parameters.inflorescence.fruit_prototype_function = recordingGrapevineFruitPrototype;
+        }
+    }
+    plantarchitecture.updateCurrentShootParameters(shoot_types);
+    recorded_fruit_prototype_build_parameters.clear();
+
+    const std::map<std::string, BuildParameterDistribution> build_parameters = {{"berry_diameter", BuildParameterDistribution::uniform(0.008f, 0.016f)},
+                                                                               {"cluster_berry_count", BuildParameterDistribution::constant(60.f)},
+                                                                               {"vine_spacing", BuildParameterDistribution::uniform(2.f, 2.6f)}};
+    const uint first_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 100, build_parameters);
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(first_plantID).empty());
+
+    // The model builds a set of 5 cluster prototypes, each from its own draw of the berry diameter
+    DOCTEST_REQUIRE(recorded_fruit_prototype_build_parameters.size() == 5);
+    std::set<float> berry_diameters;
+    for (const std::map<std::string, float> &prototype_parameters: recorded_fruit_prototype_build_parameters) {
+        DOCTEST_CHECK(prototype_parameters.size() == 2);
+        DOCTEST_CHECK(prototype_parameters.at("cluster_berry_count") == 60.f);
+        DOCTEST_CHECK(prototype_parameters.at("berry_diameter") >= 0.008f);
+        DOCTEST_CHECK(prototype_parameters.at("berry_diameter") <= 0.016f);
+        berry_diameters.insert(prototype_parameters.at("berry_diameter"));
+    }
+    DOCTEST_CHECK(berry_diameters.size() == 5);
+
+    // The plant keeps the organ distributions and its own sample of the structure parameter, and not a single value for the organ parameter given as a distribution
+    DOCTEST_CHECK(plantarchitecture.getPlantOrganBuildParameters(first_plantID) ==
+                  std::map<std::string, BuildParameterDistribution>{{"berry_diameter", BuildParameterDistribution::uniform(0.008f, 0.016f)}, {"cluster_berry_count", BuildParameterDistribution::constant(60.f)}});
+    const std::map<std::string, float> &first_plant_parameters = plantarchitecture.getPlantBuildParameters(first_plantID);
+    DOCTEST_CHECK(first_plant_parameters.size() == 2);
+    DOCTEST_CHECK(first_plant_parameters.at("cluster_berry_count") == 60.f);
+    DOCTEST_CHECK(first_plant_parameters.find("berry_diameter") == first_plant_parameters.end());
+
+    // A second vine given the same distributions, in a separate call, shares the set rather than building another
+    const uint second_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 3, 0), 100, build_parameters);
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(second_plantID).empty());
+    DOCTEST_CHECK(recorded_fruit_prototype_build_parameters.size() == 5);
+    DOCTEST_CHECK(plantarchitecture.getPlantBuildParameters(second_plantID).at("vine_spacing") != first_plant_parameters.at("vine_spacing"));
+
+    // A vine with a fixed berry diameter gets its own set, all with that diameter
+    const uint fixed_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 6, 0), 100, {{"berry_diameter", 0.012f}});
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(fixed_plantID).empty());
+    DOCTEST_REQUIRE(recorded_fruit_prototype_build_parameters.size() == 10);
+    for (size_t i = 5; i < 10; i++) {
+        DOCTEST_CHECK(recorded_fruit_prototype_build_parameters.at(i) == std::map<std::string, float>{{"berry_diameter", 0.012f}});
+    }
+}
+
+DOCTEST_TEST_CASE("Build Parameter Distributions - XML Keeps Organ Distributions And Sampled Structure Values") {
+    const std::string xml_filename = "test_build_parameter_distributions.xml";
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 100, {{"berry_diameter", BuildParameterDistribution::discrete({0.01f, 0.014f}, {0.3f, 0.7f})},
+                                                                                                  {"trunk_height", BuildParameterDistribution::uniform(0.6f, 0.9f)}});
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(plantID).empty());
+    const size_t prototype_primitives = plantarchitecture.getAllPlantUUIDs(plantID, true).size() - plantarchitecture.getAllPlantUUIDs(plantID, false).size();
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(restored_plantIDs = plantarchitecture.readPlantStructureXML(xml_filename, true));
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+    const uint restored_plantID = restored_plantIDs.front();
+    DOCTEST_CHECK(plantarchitecture.getPlantBuildParameters(restored_plantID) == plantarchitecture.getPlantBuildParameters(plantID));
+    DOCTEST_CHECK(plantarchitecture.getPlantOrganBuildParameters(restored_plantID) == plantarchitecture.getPlantOrganBuildParameters(plantID));
+    // The restored vine shares the cluster prototypes of the vine it was written from
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(restored_plantID).empty());
+    const size_t prototype_primitives_after = plantarchitecture.getAllPlantUUIDs(restored_plantID, true).size() - plantarchitecture.getAllPlantUUIDs(restored_plantID, false).size();
+    DOCTEST_CHECK(prototype_primitives_after == prototype_primitives);
+
+    // A structure parameter is sampled once for the plant, so a file giving one a distribution is invalid
+    std::string content;
+    {
+        std::ifstream file(xml_filename);
+        content.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    }
+    const size_t tag_start = content.find("<build_parameter name=\"trunk_height\">");
+    DOCTEST_REQUIRE(tag_start != std::string::npos);
+    const std::string tag_end = "</build_parameter>";
+    const size_t tag_stop = content.find(tag_end, tag_start);
+    content.replace(tag_start, tag_stop + tag_end.size() - tag_start, "<build_parameter name=\"trunk_height\" distribution=\"uniform\"> 0.6 0.9 </build_parameter>");
+    {
+        std::ofstream file(xml_filename);
+        file << content;
+    }
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.readPlantStructureXML(xml_filename, true)), doctest::Contains("trunk_height"));
+    std::remove(xml_filename.c_str());
+}
+
 DOCTEST_TEST_CASE("Grapevine VSP - Fruit Zone Leaves Are Pulled At Fruit Set") {
     // The leaves of the basal six nodes of each fruiting shoot, which is where the clusters are, are removed at fruit set, as in
     // commercial fruit-zone leaf removal. The leaves above the fruit zone and the leaves of the laterals stay.
@@ -5335,7 +6304,7 @@ DOCTEST_TEST_CASE("PlantArchitecture shade-driven branch shedding thins the bran
         PlantArchitecture plantarchitecture(&context);
         plantarchitecture.disableMessages();
         plantarchitecture.loadPlantModelFromLibrary("almond");
-        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 1200, {});
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 1200);
 
         // Count shoots by rank, and record the deepest rank reached.
         std::map<uint, uint> shoots_by_rank;
@@ -5390,7 +6359,7 @@ DOCTEST_TEST_CASE("PlantArchitecture branch shedding spares structural wood and 
     PlantArchitecture plantarchitecture(&context);
     plantarchitecture.disableMessages();
     plantarchitecture.loadPlantModelFromLibrary("almond");
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 1200, {});
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 1200);
 
     // Topological depth is the right measure for the branching tail itself: shedding thins the deepest wood.
     std::map<int, uint> shoots_by_rank;
@@ -5524,7 +6493,7 @@ DOCTEST_TEST_CASE("PlantArchitecture structural wood is identified by shoot type
     PlantArchitecture plantarchitecture(&context);
     plantarchitecture.disableMessages();
     plantarchitecture.loadPlantModelFromLibrary("almond_aldrich");
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 1500, {});
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 1500);
 
     uint scaffold_type_count = 0;
     for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
@@ -5569,7 +6538,7 @@ DOCTEST_TEST_CASE("PlantArchitecture pruneBranch clears child references on the 
     plantarchitecture.disableMessages();
     plantarchitecture.loadPlantModelFromLibrary("almond");
 
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 400, {});
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 400);
 
     // Find a shoot that actually carries children, so that pruning it exercises the cascade.
     uint target_shootID = uint(-1);
@@ -7522,7 +8491,9 @@ DOCTEST_TEST_CASE("USD export error handling") {
 DOCTEST_TEST_CASE("USD export fails when a texture file is missing") {
     const std::string structure_filename = "test_usd_missing_texture.usda";
     const std::string growth_filename = "test_usd_growth_missing_texture.usda";
-    const std::string missing_texture = "missing_texture_for_usd_export_test.png";
+    // A real image, since the Context will not accept a texture file that does not exist. It is deleted once the primitives are using it.
+    const std::string missing_texture = (std::filesystem::temp_directory_path() / "missing_texture_for_usd_export_test.png").string();
+    helios::writePNG(missing_texture, 2, 2, std::vector<RGBAcolor>(4, make_RGBAcolor(0.f, 1.f, 0.f, 1.f)));
 
     std::string structure_content;
     bool structure_threw = false;
@@ -7552,6 +8523,7 @@ DOCTEST_TEST_CASE("USD export fails when a texture file is missing") {
                 context.setPrimitiveTextureFile(UUID, missing_texture);
             }
         }
+        std::filesystem::remove(missing_texture);
 
         try {
             plantarchitecture.writePlantStructureUSD(plantID, structure_filename);
@@ -9659,6 +10631,247 @@ DOCTEST_TEST_CASE("Sorghum mainstem honors the shoot type internode_length_max")
     DOCTEST_CHECK_MESSAGE(long_internodes > 1.5f * short_internodes, "short=" << short_internodes << " long=" << long_internodes << " ratio=" << (long_internodes/short_internodes));
 }
 
+DOCTEST_TEST_CASE("Wheat development matches field phenology") {
+    // Wheat had the same too-fast development as maize and sorghum did: a 2-day phyllochron completed the 8-leaf culm by day 14, and the ear appeared the same day. The main-stem phyllochron of spring
+    // wheat is 87.7 degree-days, 6.2 days at a 14 C mean (Kang et al. 2008, Annals of Botany 101:1099), and its eight leaves appeared over 45-65 days in the field (McMaster et al. 2003, Annals of Botany
+    // 91:697).
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("wheat");
+
+    const int max_nodes = plantarchitecture.getCurrentShootParameters("mainstem").max_nodes.val();
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    const auto &main_stem = plantarchitecture.getPlantShoot(plantID, 0);
+
+    auto earIsFullSize = [&main_stem]() {
+        for (const auto &phytomer: main_stem->phytomers) {
+            for (const auto &petiole: phytomer->floral_buds) {
+                for (const auto &fbud: petiole) {
+                    if (fbud.isterminal && fbud.state == BUD_FRUITING && fbud.current_fruit_scale_factor >= 1.f) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    };
+
+    int final_node_day = -1;
+    int ear_day = -1;
+    for (int day = 1; day <= 100 && ear_day < 0; day++) {
+        plantarchitecture.advanceTime(plantID, 1.f);
+        if (final_node_day < 0 && int(main_stem->phytomers.size()) >= max_nodes) {
+            final_node_day = day;
+        }
+        if (earIsFullSize()) {
+            ear_day = day;
+        }
+    }
+
+    // Guard against a vacuous pass: without these the bounds below would test the -1 sentinels.
+    DOCTEST_REQUIRE(final_node_day > 0);
+    DOCTEST_REQUIRE(ear_day > 0);
+
+    DOCTEST_CHECK(final_node_day >= 40);
+    DOCTEST_CHECK(final_node_day <= 65);
+
+    // The ear reaches full size as it emerges from the flag-leaf sheath at heading, after the flag leaf has expanded, rather than on the day the flag leaf appears. Nor is it still growing through
+    // grain fill.
+    DOCTEST_CHECK(ear_day >= final_node_day + 5);
+    DOCTEST_CHECK(ear_day <= final_node_day + 20);
+
+    // A senesced wheat leaf stays attached to the culm, so every leaf is still on the plant at the end of the 39 days of grain fill (Aude et al. 1994, Pesquisa Agropecuaria Brasileira 29:1533). The model
+    // can only represent senescence by deleting the leaf, which stripped the lower culm bare.
+    plantarchitecture.advanceTime(plantID, 39.f);
+    for (const auto &phytomer: main_stem->phytomers) {
+        DOCTEST_CHECK(phytomer->hasLeaf());
+    }
+}
+
+DOCTEST_TEST_CASE("Wheat leaf blades match field dimensions") {
+    // The blades were built 36 cm long at an aspect ratio of 0.1, giving a 68 cm^2 flag leaf 3.1 cm wide. Across 272 US winter wheat accessions the flag leaf averaged 20.0 cm long (15.9-28.9), 1.3 cm wide
+    // (1.0-1.6) and 19.1 cm^2 (13.7-28.8) (Kumar et al. 2024, Theoretical and Applied Genetics 137:205). Blade length also rises up the culm to the penultimate leaf (Weightman et al. 1997, Journal of
+    // Agricultural Science 129:385), where the model built the lowest leaf at 62% of the longest.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("wheat");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    const auto &main_stem = plantarchitecture.getPlantShoot(plantID, 0);
+    const size_t max_nodes = size_t(plantarchitecture.getCurrentShootParameters("mainstem").max_nodes.val());
+
+    // Grown until the flag leaf has finished expanding, which must happen while the lowest leaf is still attached for the length profile to be compared.
+    bool flag_leaf_expanded = false;
+    for (int day = 1; day <= 150 && !flag_leaf_expanded; day++) {
+        plantarchitecture.advanceTime(plantID, 1.f);
+        flag_leaf_expanded = main_stem->phytomers.size() == max_nodes && main_stem->phytomers.back()->current_leaf_scale_factor.front() >= 1.f;
+    }
+    DOCTEST_REQUIRE(flag_leaf_expanded);
+    DOCTEST_REQUIRE(main_stem->phytomers.front()->hasLeaf());
+
+    std::vector<float> blade_lengths;
+    for (const auto &phytomer: main_stem->phytomers) {
+        blade_lengths.push_back(phytomer->leaf_size_max.front().front() * phytomer->current_leaf_scale_factor.front());
+    }
+    const float longest_blade = *std::max_element(blade_lengths.begin(), blade_lengths.end());
+    const float flag_length = blade_lengths.back();
+
+    const auto &flag_phytomer = main_stem->phytomers.back();
+    float flag_area = 0.f;
+    for (uint UUID: context.getObjectPrimitiveUUIDs(flag_phytomer->leaf_objIDs.front().front())) {
+        flag_area += context.getPrimitiveArea(UUID);
+    }
+
+    DOCTEST_INFO("flag length " << flag_length << " m, flag area " << flag_area * 1e4f << " cm^2, lowest blade " << blade_lengths.front() << " m, longest blade " << longest_blade << " m");
+    DOCTEST_CHECK(flag_length > 0.159f);
+    DOCTEST_CHECK(flag_length < 0.289f);
+    DOCTEST_CHECK(flag_area * 1e4f > 13.7f);
+    DOCTEST_CHECK(flag_area * 1e4f < 28.8f);
+    DOCTEST_CHECK(flag_length < longest_blade);
+    DOCTEST_CHECK(blade_lengths.front() < 0.5f * longest_blade);
+}
+
+DOCTEST_TEST_CASE("Wheat blades emerge from their sheaths above the culm nodes") {
+    // A wheat blade begins at its ligule, at the top of a sheath that wraps the culm upward from the node the leaf is inserted on, so the internodes of the model run from ligule to ligule. On winter
+    // wheat 'Soissons' the lowest five ligules stood 2.9-4.1 cm up, on sheaths about a third as long as their blades, and the flag-leaf sheath, 18.8 cm, enclosed the base of the peduncle (Ljutovac 2002,
+    // as tabulated in the elong-wheat model of OpenAlea). The model built its blades at the culm nodes instead: the lowest four in a crown below the soil surface, and the flag leaf at the base of a fully
+    // exposed 0.32 m peduncle.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("wheat");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 100);
+    const auto &main_stem = plantarchitecture.getPlantShoot(plantID, 0);
+    DOCTEST_REQUIRE(main_stem->phytomers.size() == size_t(plantarchitecture.getCurrentShootParameters("mainstem").max_nodes.val()));
+
+    std::vector<float> blade_base_heights;
+    for (const auto &phytomer: main_stem->phytomers) {
+        DOCTEST_REQUIRE(phytomer->hasLeaf());
+        blade_base_heights.push_back(phytomer->getLeafBasePosition(0, 0).z);
+    }
+    DOCTEST_INFO("lowest blade base " << blade_base_heights.front() << " m, flag blade base " << blade_base_heights.back() << " m");
+    // The lowest blade emerges from its sheath a few centimetres above the soil surface rather than at or below it.
+    DOCTEST_CHECK(blade_base_heights.front() > 0.01f);
+    DOCTEST_CHECK(blade_base_heights.front() < 0.06f);
+    for (size_t leaf = 1; leaf < blade_base_heights.size(); leaf++) {
+        DOCTEST_CHECK(blade_base_heights.at(leaf) > blade_base_heights.at(leaf - 1));
+    }
+
+    float exposed_peduncle_length = -1.f;
+    for (size_t petiole = 0; petiole < main_stem->phytomers.back()->floral_buds.size(); petiole++) {
+        for (size_t bud = 0; bud < main_stem->phytomers.back()->floral_buds.at(petiole).size(); bud++) {
+            if (main_stem->phytomers.back()->floral_buds.at(petiole).at(bud).isterminal) {
+                exposed_peduncle_length = main_stem->phytomers.back()->peduncle_length.at(petiole).at(bud);
+            }
+        }
+    }
+    DOCTEST_REQUIRE(exposed_peduncle_length > 0.f);
+
+    const float plant_height = plantarchitecture.getPlantHeight(plantID);
+    DOCTEST_INFO("plant height " << plant_height << " m, exposed peduncle " << exposed_peduncle_length << " m");
+    // A semi-dwarf cultivar stands 0.75-1.0 m to the ear tip.
+    DOCTEST_CHECK(plant_height > 0.7f);
+    DOCTEST_CHECK(plant_height < 1.0f);
+    // The peduncle is about 40% of plant stature (Scheeren et al. 1981, Pesquisa Agropecuaria Brasileira), but its lower part is hidden inside the flag-leaf sheath, which takes 10-20 cm off what shows.
+    DOCTEST_CHECK(exposed_peduncle_length > 0.4f * plant_height - 0.2f);
+    DOCTEST_CHECK(exposed_peduncle_length < 0.4f * plant_height - 0.1f);
+}
+
+DOCTEST_TEST_CASE("Wheat Tillering - Tillers Grow From The Requested Leaf Axils") {
+    // Tillers are added in the order T1, T2, T3, T4, where Tn grows from the axil of main-stem leaf n. Each has one leaf fewer than the 8 of the main stem for every main-stem leaf below its own, finishes
+    // with an ear, emerges low on the plant, and is turned back toward vertical as it grows.
+    {
+        // A plant built without the parameter has no tillers.
+        Context context;
+        context.seedRandomGenerator(5);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("wheat");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 100);
+        DOCTEST_CHECK(plantarchitecture.getAllShootIDs(plantID).size() == 1);
+    }
+    for (int tiller_count: {0, 2, 4}) {
+        DOCTEST_INFO("tiller_count " << tiller_count);
+        Context context;
+        context.seedRandomGenerator(5);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("wheat");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 100, {{"tiller_count", float(tiller_count)}});
+
+        std::vector<uint> tiller_leaf_numbers_found;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+            if (shootID == 0) {
+                DOCTEST_CHECK(shoot->shoot_type_label == "mainstem");
+                DOCTEST_CHECK(shoot->phytomers.size() == 8);
+                continue;
+            }
+            DOCTEST_CHECK(shoot->shoot_type_label == "tiller");
+            DOCTEST_CHECK(shoot->parent_shoot_ID == 0);
+            const uint leaf_number = shoot->parent_node_index + 1;
+            tiller_leaf_numbers_found.push_back(leaf_number);
+            DOCTEST_CHECK(shoot->phytomers.size() == 8 - leaf_number);
+            const vec3 base = shoot->shoot_internode_vertices.front().front();
+            const vec3 tip = shoot->shoot_internode_vertices.back().back();
+            // A real tiller grows from the crown at the soil surface. A tiller of the model grows from the top of its parent internode, which on wheat is the ligule of the subtending leaf, since the
+            // leaf sheaths are built into the internodes. The lowest sheaths are short enough that T1 and T2 still emerge within a few centimetres of the soil; T3 and T4 emerge higher, one sheath up.
+            const vec3 subtending_ligule = plantarchitecture.getPlantShoot(plantID, 0)->phytomers.at(shoot->parent_node_index)->getLeafBasePosition(0, 0);
+            DOCTEST_CHECK(std::fabs(base.z - subtending_ligule.z) < 0.01f);
+            if (leaf_number <= 2) {
+                DOCTEST_CHECK(base.z < 0.05f);
+            }
+            const float zenith = rad2deg(acosf((tip - base).normalize().z));
+            DOCTEST_CHECK(zenith < 30.f);
+        }
+        std::vector<uint> expected(tiller_count);
+        std::iota(expected.begin(), expected.end(), 1u);
+        std::sort(tiller_leaf_numbers_found.begin(), tiller_leaf_numbers_found.end());
+        DOCTEST_CHECK(tiller_leaf_numbers_found == expected);
+        // One ear on the main stem and one on every tiller
+        DOCTEST_CHECK(plantarchitecture.getPlantFruitObjectIDs(plantID).size() == size_t(tiller_count + 1));
+    }
+}
+
+DOCTEST_TEST_CASE("Wheat Tillering - The First Tiller Emerges As Main-Stem Leaf 3 Appears") {
+    // The first tiller appears as the second to fourth main-stem leaf emerges, and further tillers follow at one per phyllochron (Alzueta et al. 2012, European Journal of Agronomy 41:92); T1 is placed
+    // at Haun stage 2.5 and T2 at 3.5 in the Klepper-Haun staging system.
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("wheat");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"tiller_count", 2.f}});
+    // Held by value: the shoot list grows as tillers are added, which would leave a reference into it dangling.
+    const std::shared_ptr<Shoot> main_stem = plantarchitecture.getPlantShoot(plantID, 0);
+
+    std::vector<size_t> main_stem_leaves_at_tiller_emergence;
+    for (int day = 1; day <= 60 && main_stem_leaves_at_tiller_emergence.size() < 2; day++) {
+        plantarchitecture.advanceTime(plantID, 1.f);
+        while (plantarchitecture.getAllShootIDs(plantID).size() > main_stem_leaves_at_tiller_emergence.size() + 1) {
+            main_stem_leaves_at_tiller_emergence.push_back(main_stem->phytomers.size());
+        }
+    }
+    DOCTEST_REQUIRE(main_stem_leaves_at_tiller_emergence.size() == 2);
+    DOCTEST_CHECK(main_stem_leaves_at_tiller_emergence.at(0) >= 2);
+    DOCTEST_CHECK(main_stem_leaves_at_tiller_emergence.at(0) <= 4);
+    // T2 follows one phyllochron, so one main-stem leaf, after T1.
+    DOCTEST_CHECK(main_stem_leaves_at_tiller_emergence.at(1) == main_stem_leaves_at_tiller_emergence.at(0) + 1);
+}
+
+DOCTEST_TEST_CASE("Wheat Tillering - Tiller Count Outside Its Range Throws") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("wheat");
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"tiller_count", 5.f}})), doctest::Contains("tiller_count"));
+    DOCTEST_CHECK_THROWS_WITH(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"tiller_count", 1.5f}})), doctest::Contains("tiller_count"));
+}
+
 DOCTEST_TEST_CASE("ShootParameters value-only rebuild without inheriting fails fast on the leaf prototype") {
     // The five function pointers lost by a value-only rebuild split into two behavior classes, and
     // this test pins the loud one so the two are not confused. Losing leaf.prototype.prototype_function
@@ -10642,6 +11855,98 @@ DOCTEST_TEST_CASE("PlantArchitecture leaf deflection behaves sensibly outside th
         DOCTEST_CHECK_THROWS(deformLeafLattice(rest, Nx + 1, Ny, 1.f, 1.f, 1.f));
         DOCTEST_CHECK_THROWS(deformLeafLattice(rest, Nx, Ny, -1.f, 1.f, 1.f));
         DOCTEST_CHECK_THROWS(deformLeafLattice(rest, Nx, Ny, 1.f, 1.f, -1.f));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture leaf deflection follows the direction of gravity") {
+
+    const uint Nx = 40;
+    const uint Ny = 4;
+    const std::vector<vec3> rest = makeFlatBladeLattice(Nx, Ny, 0.1f);
+    auto index = [&](uint i, uint j) { return size_t(j) * (size_t(Nx) + 1) + size_t(i); };
+
+    // Angle in degrees through which the midrib turns from its base segment to its tip segment.
+    auto midribTurn = [&](const std::vector<vec3> &lattice) {
+        const vec3 base = lattice.at(index(1, Ny / 2)) - lattice.at(index(0, Ny / 2));
+        const vec3 tip = lattice.at(index(Nx, Ny / 2)) - lattice.at(index(Nx - 1, Ny / 2));
+        return acos_safe(base * tip / (base.magnitude() * tip.magnitude())) * 180.f / PI_F;
+    };
+
+    // Gravity in the frame of a blade that leaves its base pitched 80 degrees above horizontal: the blade runs along +x, so world "down" lies mostly along the frame's -x.
+    const float pitch = 80.f * PI_F / 180.f;
+    const vec3 steep_gravity = make_vec3(-sinf(pitch), 0.f, -cosf(pitch));
+
+    DOCTEST_SUBCASE("Gravity along the frame's -z is the default") {
+        const std::vector<vec3> implicit = deformLeafLattice(rest, Nx, Ny, 1.f, 1.f, 10.f, 3.f);
+        const std::vector<vec3> explicit_down = deformLeafLattice(rest, Nx, Ny, 1.f, 1.f, 10.f, 3.f, make_vec3(0.f, 0.f, -2.f));
+        DOCTEST_REQUIRE(implicit.size() == explicit_down.size());
+        for (size_t v = 0; v < implicit.size(); v++) {
+            DOCTEST_CHECK(implicit.at(v).x == explicit_down.at(v).x);
+            DOCTEST_CHECK(implicit.at(v).y == explicit_down.at(v).y);
+            DOCTEST_CHECK(implicit.at(v).z == explicit_down.at(v).z);
+        }
+    }
+
+    DOCTEST_SUBCASE("A blade leaving its base steeply arches over past perpendicular") {
+        // A grass leaf emerging from the whorl leaves its base nearly vertical and arches over until its outer part hangs. Bent under the frame's -z, the blade could turn at most 90 degrees from its base
+        // direction, so a leaf pitched 80 degrees up could only reach 10 degrees below horizontal and never hang.
+        const std::vector<vec3> frame_down = deformLeafLattice(rest, Nx, Ny, 1.f, 1.f, 200.f, 10.f);
+        const std::vector<vec3> world_down = deformLeafLattice(rest, Nx, Ny, 1.f, 1.f, 200.f, 10.f, steep_gravity);
+        DOCTEST_CHECK(midribTurn(frame_down) < 90.f);
+        DOCTEST_CHECK(midribTurn(world_down) > 120.f);
+        // It stops once it hangs along gravity, 170 degrees from where it started, rather than curling underneath itself.
+        DOCTEST_CHECK(midribTurn(world_down) < 170.f);
+
+        // Bending does not stretch the blade, however far it arches.
+        float arclength = 0.f;
+        for (uint i = 1; i <= Nx; i++) {
+            arclength += (world_down.at(index(i, Ny / 2)) - world_down.at(index(i - 1, Ny / 2))).magnitude();
+        }
+        DOCTEST_CHECK(arclength == doctest::Approx(1.f).epsilon(0.01));
+    }
+
+    DOCTEST_SUBCASE("The arch is the blade's equilibrium, not where a fixed number of passes left it") {
+        // A blade that arches far overshoots its equilibrium on a full step of the moment balance and swings about it, so a fixed number of passes leaves it wherever the swing happened to be. The returned
+        // shape is checked against the balance itself: the moment of the weight beyond each station, taken on the RETURNED shape, must account for how far the blade has turned there.
+        const float flexibility = 200.f;
+        const float taper = 10.f;
+        const std::vector<vec3> deformed = deformLeafLattice(rest, Nx, Ny, 1.f, 1.f, flexibility, taper, steep_gravity);
+        std::vector<vec3> midrib(Nx + 1);
+        for (uint i = 0; i <= Nx; i++) {
+            midrib.at(i) = deformed.at(index(i, Ny / 2));
+        }
+        const vec3 gravity = steep_gravity / steep_gravity.magnitude();
+        const vec3 bending_axis = make_vec3(0.f, 1.f, 0.f);
+        const float segment_length = 1.f / float(Nx);
+        const float segment_mass = 0.1f * segment_length;
+
+        float predicted_turn = 0.f;
+        float largest_error = 0.f;
+        for (uint i = 1; i <= Nx; i++) {
+            float moment = 0.f;
+            for (uint k = i + 1; k <= Nx; k++) {
+                const vec3 lever = 0.5f * (midrib.at(k) + midrib.at(k - 1)) - midrib.at(i);
+                moment += segment_mass * (cross(lever, gravity) * bending_axis);
+            }
+            predicted_turn -= flexibility * powf(taper, float(i) / float(Nx)) * moment * segment_length;
+            const vec3 segment = midrib.at(i) - midrib.at(i - 1);
+            largest_error = std::max(largest_error, std::fabs(std::atan2(segment.z, segment.x) - predicted_turn));
+        }
+        DOCTEST_CHECK_MESSAGE(largest_error < 0.01f, "largest departure from the moment balance " << largest_error << " rad");
+    }
+
+    DOCTEST_SUBCASE("Gravity across the blade does not bend it") {
+        // The blade bends only in its own plane, so a pull straight across it exerts no moment there.
+        const std::vector<vec3> deformed = deformLeafLattice(rest, Nx, Ny, 1.f, 1.f, 10.f, 1.f, make_vec3(0.f, 1.f, 0.f));
+        for (size_t v = 0; v < rest.size(); v++) {
+            DOCTEST_CHECK(deformed.at(v).x == doctest::Approx(rest.at(v).x).epsilon(1e-5));
+            DOCTEST_CHECK(deformed.at(v).z == doctest::Approx(rest.at(v).z).epsilon(1e-5));
+        }
+    }
+
+    DOCTEST_SUBCASE("A zero or non-finite gravity is rejected") {
+        DOCTEST_CHECK_THROWS(deformLeafLattice(rest, Nx, Ny, 1.f, 1.f, 1.f, 1.f, make_vec3(0.f, 0.f, 0.f)));
+        DOCTEST_CHECK_THROWS(deformLeafLattice(rest, Nx, Ny, 1.f, 1.f, 1.f, 1.f, make_vec3(0.f, 0.f, std::numeric_limits<float>::quiet_NaN())));
     }
 }
 
@@ -13430,6 +14735,123 @@ DOCTEST_TEST_CASE("PlantArchitecture XML round-trip rebuilds the internode paths
 
         std::remove(filename.c_str());
     }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture XML round-trip replays the gravitropic turn of each internode segment") {
+    // The gravitropic factor doubles where a shoot axis passes below horizontal. A reader that recomputed it from the rebuilt axis
+    // could land on the other side of horizontal from the grown shoot through rounding alone, take a turn of the wrong size, and
+    // leave the rest of the shoot up to centimetres away. This happened on about 0.4% of almond plants, so the wall-clock seeded test
+    // above failed only occasionally. Seed 1094 is one such plant on arm64 macOS. Growth is not reproducible across platforms, so it
+    // will be an ordinary plant elsewhere, which is why the zeroed-angle check below does not rely on any particular plant.
+    const std::string filename = "test_xml_roundtrip_gravitropic_angles.xml";
+    const std::string filename_rewritten = "test_xml_roundtrip_gravitropic_angles_rewritten.xml";
+    const std::string filename_zeroed = "test_xml_roundtrip_gravitropic_angles_zeroed.xml";
+
+    // Farthest that the tip of any internode of the second plant lies from where it is on the first
+    auto largestInternodeTipOffset = [](const PlantArchitecture &first, uint first_plantID, const PlantArchitecture &second, uint second_plantID) {
+        float largest_offset = 0;
+        for (uint shootID: first.getAllShootIDs(first_plantID)) {
+            if (first.isShootPruned(first_plantID, shootID)) {
+                continue;
+            }
+            const std::shared_ptr<Shoot> &first_shoot = first.getPlantShoot(first_plantID, shootID);
+            const std::shared_ptr<Shoot> &second_shoot = second.getPlantShoot(second_plantID, shootID);
+            for (size_t phytomer = 0; phytomer < first_shoot->shoot_internode_vertices.size(); phytomer++) {
+                largest_offset = std::max(largest_offset, (second_shoot->shoot_internode_vertices.at(phytomer).back() - first_shoot->shoot_internode_vertices.at(phytomer).back()).magnitude());
+            }
+        }
+        return largest_offset;
+    };
+
+    Context grown_context;
+    grown_context.seedRandomGenerator(1094);
+    PlantArchitecture grown_plantarchitecture(&grown_context);
+    grown_plantarchitecture.disableMessages();
+    grown_plantarchitecture.loadPlantModelFromLibrary("almond");
+    const uint grown_plantID = grown_plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0.f);
+    grown_plantarchitecture.advanceTime(grown_plantID, 400.f);
+    DOCTEST_REQUIRE_NOTHROW(grown_plantarchitecture.writePlantStructureXML(grown_plantID, filename));
+
+    Context reload_context;
+    reload_context.seedRandomGenerator(1001094);
+    PlantArchitecture reload_plantarchitecture(&reload_context);
+    reload_plantarchitecture.disableMessages();
+    reload_plantarchitecture.loadPlantModelFromLibrary("almond");
+    std::vector<uint> reload_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(reload_plantIDs = reload_plantarchitecture.readPlantStructureXML(filename, true));
+    DOCTEST_REQUIRE(!reload_plantIDs.empty());
+    DOCTEST_CHECK(largestInternodeTipOffset(grown_plantarchitecture, grown_plantID, reload_plantarchitecture, reload_plantIDs.front()) < 0.002f);
+
+    // Writing a reloaded plant has to carry the angles forward
+    DOCTEST_REQUIRE_NOTHROW(reload_plantarchitecture.writePlantStructureXML(reload_plantIDs.front(), filename_rewritten));
+    Context rewritten_context;
+    PlantArchitecture rewritten_plantarchitecture(&rewritten_context);
+    rewritten_plantarchitecture.disableMessages();
+    rewritten_plantarchitecture.loadPlantModelFromLibrary("almond");
+    std::vector<uint> rewritten_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(rewritten_plantIDs = rewritten_plantarchitecture.readPlantStructureXML(filename_rewritten, true));
+    DOCTEST_REQUIRE(!rewritten_plantIDs.empty());
+    DOCTEST_CHECK(largestInternodeTipOffset(grown_plantarchitecture, grown_plantID, rewritten_plantarchitecture, rewritten_plantIDs.front()) < 0.002f);
+
+    // On any plant, the turn taken must be the saved one and not one worked out again from the axis: with every saved angle set to zero
+    // the reloaded branches lose their gravitropic bend, which at the 180 deg/m of an almond branch moves them by far more than 1 cm.
+    {
+        std::ifstream file_in(filename);
+        std::ofstream file_out(filename_zeroed);
+        const std::string open_tag = "<gravitropic_angles>";
+        const std::string close_tag = "</gravitropic_angles>";
+        size_t zeroed_tags = 0;
+        std::string line;
+        while (std::getline(file_in, line)) {
+            const size_t open_position = line.find(open_tag);
+            const size_t close_position = line.find(close_tag);
+            if (open_position != std::string::npos && close_position != std::string::npos) {
+                const size_t value_start = open_position + open_tag.size();
+                const std::string values = line.substr(value_start, close_position - value_start);
+                std::string zeros = "0";
+                for (char character: values) {
+                    if (character == ';') {
+                        zeros += ";0";
+                    }
+                }
+                line = line.substr(0, value_start) + zeros + line.substr(close_position);
+                zeroed_tags++;
+            }
+            file_out << line << "\n";
+        }
+        DOCTEST_REQUIRE(zeroed_tags > 0);
+    }
+    Context zeroed_context;
+    PlantArchitecture zeroed_plantarchitecture(&zeroed_context);
+    zeroed_plantarchitecture.disableMessages();
+    zeroed_plantarchitecture.loadPlantModelFromLibrary("almond");
+    std::vector<uint> zeroed_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(zeroed_plantIDs = zeroed_plantarchitecture.readPlantStructureXML(filename_zeroed, true));
+    DOCTEST_REQUIRE(!zeroed_plantIDs.empty());
+    DOCTEST_CHECK(largestInternodeTipOffset(grown_plantarchitecture, grown_plantID, zeroed_plantarchitecture, zeroed_plantIDs.front()) > 0.01f);
+
+    // A file written before the angles were saved still loads
+    {
+        std::ifstream file_in(filename);
+        std::ofstream file_out(filename_zeroed);
+        std::string line;
+        while (std::getline(file_in, line)) {
+            if (line.find("<gravitropic_angles>") == std::string::npos) {
+                file_out << line << "\n";
+            }
+        }
+    }
+    Context legacy_context;
+    PlantArchitecture legacy_plantarchitecture(&legacy_context);
+    legacy_plantarchitecture.disableMessages();
+    legacy_plantarchitecture.loadPlantModelFromLibrary("almond");
+    std::vector<uint> legacy_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(legacy_plantIDs = legacy_plantarchitecture.readPlantStructureXML(filename_zeroed, true));
+    DOCTEST_CHECK(!legacy_plantIDs.empty());
+
+    std::remove(filename.c_str());
+    std::remove(filename_rewritten.c_str());
+    std::remove(filename_zeroed.c_str());
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture XML round-trip keeps terminal floral buds") {
@@ -19401,12 +20823,10 @@ DOCTEST_TEST_CASE("PlantArchitecture library leaf areas are physiologically plau
             {"soybean", 50.f, 34.f, 85.f}, //
             {"cowpea", 50.f, 15.f, 39.f}, //
             {"rice", 60.f, 5.3f, 13.f}, //
-            // Wheat builds ~78 cm^2 blades where field flag leaves are typically 14-35 cm^2, with an
-            // outlying cultivar range reaching 89. The ceiling admits the model at the very top of
-            // that outlying range rather than failing it: the leaves this test measures are not only
-            // flag leaves, so the comparison is not strictly like for like. Flagged as suspect and
-            // worth calibrating, but not asserted as a defect on evidence this indirect.
-            {"wheat", 60.f, 8.f, 90.f}, //
+            // Wheat builds blades of 4-25 cm^2 from the lowest leaf to the one below the flag leaf, a
+            // mean near 16 cm^2. Its 19.5 cm^2 flag leaf sits at the 19.1 cm^2 mean of 272 US winter
+            // wheat accessions, whose flag leaves ranged 13.7-28.8 cm^2 (Kumar et al. 2024).
+            {"wheat", 60.f, 8.f, 28.f}, //
             {"strawberry", 60.f, 61.f, 150.f}, //
             {"sugarbeet", 60.f, 62.f, 176.f}, //
             {"butterlettuce", 60.f, 125.f, 342.f}, //

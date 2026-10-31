@@ -46,7 +46,7 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
     diffuseFlux_default = -1.f;
 
     minScatterEnergy_default = 0.f;
-    scatteringDepth_default = 0;
+    scatteringDepth_default = 3;
 
     rho_default = 0.f;
     tau_default = 0.f;
@@ -70,6 +70,7 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/solar_spectrum_ASTMG173.xml").string());
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml").string());
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Datacolor_SpyderCHECKR_24_colorboard.xml").string());
 
     // Initialize backend abstraction layer with runtime hardware detection
     backend = helios::RayTracingBackend::create("auto");
@@ -96,7 +97,7 @@ RadiationModel::RadiationModel(helios::Context *context_a, bool skip_backend_ini
     diffuseRayCount_default = 1000;
     diffuseFlux_default = -1.f;
     minScatterEnergy_default = 0.f;
-    scatteringDepth_default = 0;
+    scatteringDepth_default = 3;
     rho_default = 0.f;
     tau_default = 0.f;
     eps_default = 1.f;
@@ -116,6 +117,7 @@ RadiationModel::RadiationModel(helios::Context *context_a, bool skip_backend_ini
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/solar_spectrum_ASTMG173.xml").string());
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml").string());
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Datacolor_SpyderCHECKR_24_colorboard.xml").string());
 
     // Skip backend creation - will be injected by caller
 }
@@ -438,6 +440,24 @@ void RadiationModel::enableEmission(const std::string &label) {
     }
 
     radiation_bands.at(label).emissionFlag = true;
+}
+
+void RadiationModel::enableEmissionReferenceField(const std::string &label) {
+
+    if (!doesBandExist(label)) {
+        helios_runtime_error("ERROR (RadiationModel::enableEmissionReferenceField): Cannot enable the emission reference field for band '" + label + "' because it is not a valid band.");
+    }
+
+    radiation_bands.at(label).emissionReferenceFieldFlag = true;
+}
+
+void RadiationModel::disableEmissionReferenceField(const std::string &label) {
+
+    if (!doesBandExist(label)) {
+        helios_runtime_error("ERROR (RadiationModel::disableEmissionReferenceField): Cannot disable the emission reference field for band '" + label + "' because it is not a valid band.");
+    }
+
+    radiation_bands.at(label).emissionReferenceFieldFlag = false;
 }
 
 // --- Solar-induced chlorophyll fluorescence (SIF) v2 ---
@@ -2602,22 +2622,10 @@ void RadiationModel::updateRadiativeProperties() {
 
                 std::string camera_response = camera.second.band_spectral_response.at(band_labels.at(b));
 
-                if (!camera_response.empty()) {
-
-                    if (!context->doesGlobalDataExist(camera_response.c_str())) {
-                        if (camera_response != "uniform") {
-                            warnings.addWarning("missing_camera_response", "Camera spectral response \"" + camera_response + "\" does not exist. Assuming a uniform spectral response.");
-                        }
-                    } else if (context->getGlobalDataType(camera_response.c_str()) == helios::HELIOS_TYPE_VEC2) {
-
-                        std::vector<helios::vec2> data = loadSpectralData(camera_response.c_str());
-
-                        camera_response_unique.at(cam).at(b) = data;
-
-                    } else if (context->getGlobalDataType(camera_response.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(camera_response.c_str()) != helios::HELIOS_TYPE_STRING) {
-                        camera_response.clear();
-                        warnings.addWarning("camera_response_wrong_type", "Camera spectral response \"" + camera_response + "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral response...");
-                    }
+                // "uniform" (or no response) means a flat response. Any other name must be a spectrum: loadSpectralData() loads it from the radiation plug-in's
+                // spectral libraries if it is not already in the Context, and raises an error naming it if it is found nowhere or is not a valid spectrum.
+                if (!camera_response.empty() && camera_response != "uniform") {
+                    camera_response_unique.at(cam).at(b) = loadSpectralData(camera_response);
                 }
             }
             cam++;
@@ -2925,23 +2933,10 @@ void RadiationModel::updateRadiativeProperties() {
                 std::string spectrum_label;
                 context->getPrimitiveData(UUID, "reflectivity_spectrum", spectrum_label);
 
-                // get the spectral reflectivity data and store it in surface_spectra to avoid having to load it again
-                if (surface_spectra_rho.find(spectrum_label) == surface_spectra_rho.end()) {
-                    if (!context->doesGlobalDataExist(spectrum_label.c_str())) {
-                        if (!spectrum_label.empty()) {
-                            warnings.addWarning("missing_reflectivity_spectrum", "Primitive spectral reflectivity \"" + spectrum_label + "\" does not exist. Using default reflectivity of 0.");
-                        }
-                        std::vector<helios::vec2> data;
-                        surface_spectra_rho.emplace(spectrum_label, data);
-                    } else if (context->getGlobalDataType(spectrum_label.c_str()) == HELIOS_TYPE_VEC2) {
-
-                        std::vector<helios::vec2> data = loadSpectralData(spectrum_label.c_str());
-                        surface_spectra_rho.emplace(spectrum_label, data);
-
-                    } else if (context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_STRING) {
-                        spectrum_label.clear();
-                        warnings.addWarning("reflectivity_spectrum_wrong_type", "Object spectral reflectivity \"" + spectrum_label + "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral distribution...");
-                    }
+                // get the spectral reflectivity data and store it in surface_spectra to avoid having to load it again. loadSpectralData() loads a spectrum from the
+                // radiation plug-in's spectral libraries if it is not already in the Context, and raises an error naming it if it is found nowhere or is not a valid spectrum.
+                if (!spectrum_label.empty() && surface_spectra_rho.find(spectrum_label) == surface_spectra_rho.end()) {
+                    surface_spectra_rho.emplace(spectrum_label, loadSpectralData(spectrum_label));
                 }
             }
         }
@@ -2951,23 +2946,9 @@ void RadiationModel::updateRadiativeProperties() {
                 std::string spectrum_label;
                 context->getPrimitiveData(UUID, "transmissivity_spectrum", spectrum_label);
 
-                // get the spectral transmissivity data and store it in surface_spectra to avoid having to load it again
-                if (surface_spectra_tau.find(spectrum_label) == surface_spectra_tau.end()) {
-                    if (!context->doesGlobalDataExist(spectrum_label.c_str())) {
-                        if (!spectrum_label.empty()) {
-                            warnings.addWarning("missing_transmissivity_spectrum", "Primitive spectral transmissivity \"" + spectrum_label + "\" does not exist. Using default transmissivity of 0.");
-                        }
-                        std::vector<helios::vec2> data;
-                        surface_spectra_tau.emplace(spectrum_label, data);
-                    } else if (context->getGlobalDataType(spectrum_label.c_str()) == HELIOS_TYPE_VEC2) {
-
-                        std::vector<helios::vec2> data = loadSpectralData(spectrum_label.c_str());
-                        surface_spectra_tau.emplace(spectrum_label, data);
-
-                    } else if (context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_STRING) {
-                        spectrum_label.clear();
-                        warnings.addWarning("transmissivity_spectrum_wrong_type", "Object spectral transmissivity \"" + spectrum_label + "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral distribution...");
-                    }
+                // get the spectral transmissivity data and store it in surface_spectra to avoid having to load it again (see the reflectivity above)
+                if (!spectrum_label.empty() && surface_spectra_tau.find(spectrum_label) == surface_spectra_tau.end()) {
+                    surface_spectra_tau.emplace(spectrum_label, loadSpectralData(spectrum_label));
                 }
             }
         }
@@ -3024,21 +3005,27 @@ void RadiationModel::updateRadiativeProperties() {
                 // Without wavelength bounds a spectrum cannot be integrated over the band, so the default stands unless the cameras give a value below
 
                 if (Ncameras > 0) {
-                    float camera_sum = 0.f;
+                    float normalized_camera_sum = 0.f;
+                    uint Nresponding_cameras = 0;
                     for (uint cam = 0; cam < Ncameras; cam++) {
                         if (camera_response_unique.at(cam).at(b).empty()) {
                             cam_values.at(b).at(c).at(cam) = value;
                         } else {
                             const float camera_value = cachedSpectralValue(spectrum_label + "|" + std::to_string(b) + "|" + contributor_id + "|cam" + std::to_string(cam), [&]() { return cameraWeightedValue(spectrum, b, c, cam); });
                             cam_values.at(b).at(c).at(cam) = camera_value;
-                            camera_sum += camera_value;
+                            const float white_reference = cachedSpectralValue("white|" + std::to_string(b) + "|" + contributor_id + "|cam" + std::to_string(cam), [&]() { return cameraWeightedValue({}, b, c, cam); });
+                            if (white_reference > 0.f) {
+                                normalized_camera_sum += camera_value / white_reference;
+                                Nresponding_cameras++;
+                            }
                         }
                     }
 
                     // Without wavelength bounds, the camera-weighted value averaged over the cameras stands in for the band value. This lets regular
-                    // scattering work when only a reflectivity spectrum and camera responses are given.
-                    if (camera_average_without_bounds && !band_has_bounds.at(b) && value == default_value && camera_sum > 0.f) {
-                        value = camera_sum / float(Ncameras);
+                    // scattering work when only a reflectivity spectrum and camera responses are given. A camera-weighted value keeps the magnitude
+                    // of the response, so it is divided by the white reference to give a reflectivity.
+                    if (camera_average_without_bounds && !band_has_bounds.at(b) && value == default_value && Nresponding_cameras > 0) {
+                        value = normalized_camera_sum / float(Nresponding_cameras);
                     }
                 }
             }
@@ -3111,7 +3098,7 @@ void RadiationModel::updateRadiativeProperties() {
                     context->getPrimitiveData(UUID, prop.c_str(), rho_s);
                 }
 
-                // A value set for the band (whatever its value, including 0), or a missing spectrum, applies to every slot; otherwise the spectrum's weighted values are used
+                // A value set for the band (whatever its value, including 0), or no spectrum, applies to every slot; otherwise the spectrum's weighted values are used
                 const bool use_constant_rho = has_band_rho || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str()) || rho_unique.find(spectrum_label) == rho_unique.end();
                 if (!use_constant_rho) {
                     // Recorded rather than raised here: runBand() raises it only if this band is run
@@ -3358,31 +3345,12 @@ void RadiationModel::updateRadiativeProperties() {
         }
     }
 
-    // Specular reflection properties. A primitive's specular reflection is multiplied by its own "specular_scale", or by 1 when it has none, so an explicit
-    // scale of 0 turns it off for that primitive.
-    material_data.specular_exponent.assign(Nprimitives, -1.f);
-    material_data.specular_scale.assign(Nprimitives, 1.f);
+    updateSurfaceLayers(warnings);
 
-    bool specular_exponent_specified = false;
-
-    for (size_t u = 0; u < Nprimitives; u++) {
-        uint UUID = context_UUIDs.at(u);
-
-        if (context->doesPrimitiveDataExist(UUID, "specular_exponent") && context->getPrimitiveDataType("specular_exponent") == HELIOS_TYPE_FLOAT) {
-            context->getPrimitiveData(UUID, "specular_exponent", material_data.specular_exponent.at(u));
-            if (material_data.specular_exponent.at(u) >= 0.f) {
-                specular_exponent_specified = true;
-            }
-        }
-
-        if (context->doesPrimitiveDataExist(UUID, "specular_scale") && context->getPrimitiveDataType("specular_scale") == HELIOS_TYPE_FLOAT) {
-            context->getPrimitiveData(UUID, "specular_scale", material_data.specular_scale.at(u));
-        }
-    }
-
-    // Specular reflection is traced only if some primitive has a specular exponent
-    specular_reflection_mode = specular_exponent_specified ? 1 : 0;
-    material_data.specular_reflection_enabled = specular_exponent_specified;
+    // A surface layer reflects a source's direct radiation into its microfacet lobe, which needs the direct flux reaching each
+    // primitive with a layer (radiation_specular)
+    specular_reflection_mode = material_data.surface_layer_enabled ? 1 : 0;
+    material_data.specular_reflection_enabled = material_data.surface_layer_enabled;
 
     backend->updateMaterials(material_data);
 
@@ -3394,6 +3362,181 @@ void RadiationModel::updateRadiativeProperties() {
 
     // Report aggregated warnings
     warnings.report(std::cerr);
+}
+
+void RadiationModel::updateSurfaceLayers(helios::WarningAggregator &warnings) {
+
+    const size_t Nprimitives = context_UUIDs.size();
+    const uint Nbands = radiation_bands.size();
+    const uint Nslots = radiation_sources.size() + 1;
+    const uint Ncameras = cameras.size();
+    const uint32_t table_size = material_data.surface_layer_table_size;
+    std::vector<std::string> band_labels;
+    for (const auto &band: radiation_bands) {
+        band_labels.push_back(band.first);
+    }
+
+    material_data.surface_model.assign(Nprimitives, 0);
+    material_data.surface_model_band_table.clear();
+    material_data.surface_layer_tables.clear();
+    material_data.surface_layer_enabled = false;
+
+    MaterialPropertyIndexer mat_idx(Nslots, Nprimitives, Nbands);
+    CameraMaterialIndexer cam_idx(Nslots, Nprimitives, Nbands, Ncameras);
+
+    // A surface model is a roughness and a refractive index in each band; each distinct (refractive index, roughness) pair has one albedo table
+    std::map<std::vector<float>, uint32_t> model_index;
+    std::map<std::pair<float, float>, uint32_t> table_index;
+
+    // Reads a surface-layer parameter of a primitive. Material data takes precedence over primitive data, as elsewhere in Helios.
+    auto readParameter = [&](uint UUID, const std::string &label, float &value) -> bool {
+        const Material &material = context->getMaterial(context->getPrimitiveMaterialID(UUID));
+        const bool on_primitive = context->doesPrimitiveDataExist(UUID, label.c_str());
+        if (material.doesMaterialDataExist(label.c_str())) {
+            // The default material and the automatically generated ones (labels beginning "__") are shared by every primitive with the same color and texture
+            if (material.label.rfind("__", 0) == 0) {
+                helios_runtime_error("ERROR (RadiationModel): Surface-layer data '" + label + "' is set on the automatically generated material '" + material.label + "' of primitive #" + std::to_string(UUID) +
+                                     ". Automatic and default materials are shared by every primitive with the same color and texture, so the data would apply to unrelated primitives. Assign a named material "
+                                     "(Context::addMaterial() and Context::assignMaterialToPrimitive()) and set the data on it, or set it as primitive data.");
+            }
+            if (material.getMaterialDataType(label.c_str()) != HELIOS_TYPE_FLOAT) {
+                helios_runtime_error("ERROR (RadiationModel): Material data '" + label + "' of material '" + material.label + "' must be of type float.");
+            }
+            material.getMaterialData(label.c_str(), value);
+            if (on_primitive) {
+                warnings.addWarning("surface_layer_data_shadowed", "Primitive #" + std::to_string(UUID) + " has '" + label + "' both as primitive data and in its material '" + material.label + "'; the material value is used.");
+            }
+            return true;
+        }
+        if (on_primitive) {
+            if (context->getPrimitiveDataType(label.c_str()) != HELIOS_TYPE_FLOAT) {
+                helios_runtime_error("ERROR (RadiationModel): Primitive data '" + label + "' must be of type float.");
+            }
+            context->getPrimitiveData(UUID, label.c_str(), value);
+            return true;
+        }
+        return false;
+    };
+
+    for (size_t u = 0; u < Nprimitives; u++) {
+        const uint UUID = context_UUIDs.at(u);
+
+        // The camera-only Blinn-Phong highlight these controlled added energy on top of the diffuse reflection
+        for (const char *legacy_label: {"specular_exponent", "specular_scale"}) {
+            if (context->doesPrimitiveDataExist(UUID, legacy_label) || context->getMaterial(context->getPrimitiveMaterialID(UUID)).doesMaterialDataExist(legacy_label)) {
+                helios_runtime_error("ERROR (RadiationModel): Primitive #" + std::to_string(UUID) + " has '" + std::string(legacy_label) +
+                                     "' data, which is no longer supported. Specular reflection is now modelled by a surface layer that conserves energy and appears in the fluxes as well as in "
+                                     "camera images: set 'specular_roughness' (GGX roughness from 0.05 to 1; a Blinn-Phong exponent k corresponds roughly to sqrt(2 / (k + 2))) and optionally 'specular_n' "
+                                     "(refractive index, default 1.5) instead, and remove the old data.");
+            }
+        }
+
+        float roughness;
+        if (!readParameter(UUID, "specular_roughness", roughness)) {
+            continue;
+        }
+        // Below this roughness the reflection lobe is so narrow that the rays gathering it are too noisy to be useful
+        if (!(roughness >= 0.05f && roughness <= 1.f)) {
+            helios_runtime_error("ERROR (RadiationModel): The specular_roughness of primitive #" + std::to_string(UUID) + " is " + std::to_string(roughness) + ", but it must be between 0.05 and 1.");
+        }
+        float refractive_index_all = 1.5f;
+        readParameter(UUID, "specular_n", refractive_index_all);
+
+        std::vector<float> model_key{roughness};
+        for (uint b = 0; b < Nbands; b++) {
+            float refractive_index = refractive_index_all;
+            readParameter(UUID, "specular_n_" + band_labels.at(b), refractive_index);
+            if (!(refractive_index >= 1.f && refractive_index <= 3.f)) {
+                helios_runtime_error("ERROR (RadiationModel): The refractive index of the surface layer of primitive #" + std::to_string(UUID) + " in band '" + band_labels.at(b) + "' is " + std::to_string(refractive_index) +
+                                     ", but it must be between 1 (no layer) and 3 (specular_n or specular_n_" + band_labels.at(b) + ").");
+            }
+            // Without scattering every surface is black, so there is no layer to reflect anything
+            if (radiation_bands.at(band_labels.at(b)).scatteringDepth == 0) {
+                refractive_index = 1.f;
+            }
+            if (refractive_index > 1.f) {
+                for (uint slot = 0; slot < Nslots; slot++) {
+                    if (material_data.is_glass.at(mat_idx(slot, u, b)) != 0) {
+                        helios_runtime_error("ERROR (RadiationModel): Primitive #" + std::to_string(UUID) + " is a translucent cover in band '" + band_labels.at(b) + "' (glass_n_" + band_labels.at(b) +
+                                             ") and also has a specular surface layer (specular_roughness). A primitive can have only one of the two.");
+                    }
+                }
+            }
+            model_key.push_back(refractive_index);
+        }
+
+        auto model_it = model_index.find(model_key);
+        if (model_it == model_index.end()) {
+            model_it = model_index.emplace(model_key, uint32_t(model_index.size())).first;
+            for (uint b = 0; b < Nbands; b++) {
+                const float refractive_index = model_key.at(b + 1);
+                if (refractive_index == 1.f) {
+                    material_data.surface_model_band_table.push_back(UINT32_MAX);
+                    continue;
+                }
+                auto table_it = table_index.find({refractive_index, roughness});
+                if (table_it == table_index.end()) {
+                    table_it = table_index.emplace(std::make_pair(refractive_index, roughness), uint32_t(table_index.size())).first;
+                    const std::vector<float> table = computeSurfaceLayerAlbedoTable(refractive_index, roughness, table_size);
+                    material_data.surface_layer_tables.insert(material_data.surface_layer_tables.end(), table.begin(), table.end());
+                    // The microfacet lobe of the direct radiation is evaluated from the layer's parameters
+                    material_data.surface_layer_tables.push_back(refractive_index);
+                    material_data.surface_layer_tables.push_back(roughness);
+                }
+                material_data.surface_model_band_table.push_back(table_it->second);
+            }
+        }
+        material_data.surface_model.at(u) = model_it->second + 1;
+
+        // The reflectivity and transmissivity are the totals at normal incidence. The body's are what remains after the layer:
+        // rho = a(1) + rho_b (1 - a(1)) and tau = tau_b (1 - a(1)).
+        for (uint b = 0; b < Nbands; b++) {
+            const float *table = surfaceLayerTable(u, b);
+            if (table == nullptr) {
+                continue;
+            }
+            material_data.surface_layer_enabled = true;
+            const float normal_albedo = table[table_size - 1];
+            for (uint slot = 0; slot < Nslots; slot++) {
+                float &rho = material_data.reflectivity.at(mat_idx(slot, u, b));
+                float &tau = material_data.transmissivity.at(mat_idx(slot, u, b));
+                if (rho < normal_albedo - 1e-6f) {
+                    helios_runtime_error("ERROR (RadiationModel): The reflectivity of primitive #" + std::to_string(UUID) + " in band '" + band_labels.at(b) + "' is " + std::to_string(rho) + ", less than the " + std::to_string(normal_albedo) +
+                                         " that its specular surface layer (refractive index " + std::to_string(model_key.at(b + 1)) +
+                                         ") alone reflects at normal incidence. The reflectivity is the total reflectance at normal incidence, so it cannot be smaller than that of the surface layer. In an emission band the "
+                                         "emissivity likewise cannot exceed 1 minus that value. Lower the refractive index for this band with specular_n_" +
+                                         band_labels.at(b) + " (1 removes the layer), or raise the reflectivity.");
+                }
+                rho = std::max(0.f, rho - normal_albedo) / (1.f - normal_albedo);
+                tau = tau / (1.f - normal_albedo);
+                for (uint cam = 0; cam < Ncameras; cam++) {
+                    // The layer reflects all wavelengths alike, so a camera sees it as it sees a white surface
+                    const float white = material_data.white_reference_cam.at(((size_t) slot * Nbands + b) * Ncameras + cam);
+                    float &rho_cam = material_data.reflectivity_cam.at(cam_idx(slot, u, b, cam));
+                    float &tau_cam = material_data.transmissivity_cam.at(cam_idx(slot, u, b, cam));
+                    if (rho_cam < normal_albedo * white - 1e-6f) {
+                        helios_runtime_error("ERROR (RadiationModel): The reflectivity of primitive #" + std::to_string(UUID) + " in band '" + band_labels.at(b) + "', weighted by the spectral response of camera #" + std::to_string(cam) +
+                                             ", is less than its specular surface layer alone reflects at normal incidence (" + std::to_string(normal_albedo) +
+                                             "). Its reflectivity spectrum falls below that value within the camera's response; lower the refractive index for this band with specular_n_" + band_labels.at(b) + ".");
+                    }
+                    rho_cam = std::max(0.f, rho_cam - normal_albedo * white) / (1.f - normal_albedo);
+                    tau_cam = tau_cam / (1.f - normal_albedo);
+                }
+            }
+        }
+    }
+}
+
+const float *RadiationModel::surfaceLayerTable(size_t u, size_t b_global) const {
+    const uint32_t model = material_data.surface_model.empty() ? 0 : material_data.surface_model.at(u);
+    if (model == 0) {
+        return nullptr;
+    }
+    const uint32_t table = material_data.surface_model_band_table.at((size_t) (model - 1) * radiation_bands.size() + b_global);
+    if (table == UINT32_MAX) {
+        return nullptr;
+    }
+    return material_data.surface_layer_tables.data() + (size_t) table * (material_data.surface_layer_table_size + 3);
 }
 
 void RadiationModel::applyCameraAtmosphere(RadiationCamera &camera, const std::vector<std::string> &launched_band_labels) {
@@ -3611,131 +3754,83 @@ void RadiationModel::applyCameraThermalAtmosphere(RadiationCamera &camera, const
     context->setGlobalData(data_label.c_str(), pixels);
 }
 
-std::vector<float> RadiationModel::updateAtmosphericSkyModel(const std::vector<std::string> &band_labels, const RadiationCamera &camera) {
-    // Prague Sky Model implementation for atmospheric sky radiance
-    // Uses validated spectral radiance from brute-force atmospheric simulations
-    // (Wilkie et al. 2021, Vévoda et al. 2022)
+void RadiationModel::computeCameraSky(const std::vector<std::string> &band_labels, const RadiationCamera &camera, uint camera_index, bool diffuse_rays_launched, std::vector<float> &camera_sky_radiance,
+                                      std::vector<helios::vec4> &sky_pattern_params) const {
 
     size_t Nbands_launch = band_labels.size();
-    std::vector<float> sky_base_radiances(Nbands_launch, 0.0f);
+    camera_sky_radiance.assign(Nbands_launch, 0.0f);
+    sky_pattern_params.assign(Nbands_launch, helios::make_vec4(0.f, 0.f, 0.f, 0.f));
 
-    // Only run atmospheric sky model if user has explicitly enabled it by setting atmospheric parameters
-    // This prevents the model from running with default values in tests/scripts that don't want it
-    bool has_atmospheric_data =
-            context->doesGlobalDataExist("atmosphere_pressure_Pa") || context->doesGlobalDataExist("atmosphere_temperature_K") || context->doesGlobalDataExist("atmosphere_humidity_rel") || context->doesGlobalDataExist("atmosphere_turbidity");
-
-    if (!has_atmospheric_data) {
-        // No atmospheric parameters set - return zeros (camera will use user-set diffuse flux or 0)
-        return sky_base_radiances;
-    }
-
-    // Read atmospheric parameters from Context global data (set by SolarPosition plugin)
-    // Default values match SolarPosition::getAtmosphericConditions() defaults
-    float pressure_Pa = 101325.f; // Standard atmosphere (1 atm)
-    float temperature_K = 300.f; // 27°C
-    float humidity_rel = 0.5f; // 50% relative humidity
-    float turbidity = 0.02f; // Clear sky - Ångström's aerosol turbidity coefficient (AOD at 500nm)
-
-    if (context->doesGlobalDataExist("atmosphere_pressure_Pa")) {
-        context->getGlobalData("atmosphere_pressure_Pa", pressure_Pa);
-    }
-    if (context->doesGlobalDataExist("atmosphere_temperature_K")) {
-        context->getGlobalData("atmosphere_temperature_K", temperature_K);
-    }
-    if (context->doesGlobalDataExist("atmosphere_humidity_rel")) {
-        context->getGlobalData("atmosphere_humidity_rel", humidity_rel);
-    }
-    if (context->doesGlobalDataExist("atmosphere_turbidity")) {
-        context->getGlobalData("atmosphere_turbidity", turbidity);
-    }
-
-    // --- Check Prague data availability from Context ---
     int prague_valid = 0;
     if (context->doesGlobalDataExist("prague_sky_valid")) {
         context->getGlobalData("prague_sky_valid", prague_valid);
     }
 
-    // Get sun direction from first radiation source (assumed to be sun)
-    helios::vec3 sun_dir(0, 0, 1); // Default zenith
-    if (!radiation_sources.empty()) {
-        sun_dir = radiation_sources[0].source_position;
-        sun_dir.normalize();
+    if (prague_valid == 1 && !context->doesGlobalDataExist("prague_sky_spectral_params")) {
+        helios_runtime_error("ERROR (RadiationModel::computeCameraSky): Global data \"prague_sky_valid\" is set, but \"prague_sky_spectral_params\" does not exist. Call SolarPosition::updatePragueSkyModel() to compute the Prague sky model, or remove \"prague_sky_valid\" to use the diffuse sky.");
     }
 
-    // Compute per-band sky radiance parameters
-    std::vector<helios::vec4> sky_params(Nbands_launch);
-
-    // Check if Prague data is available
-    bool use_prague_fallback = (prague_valid != 1);
-    if (use_prague_fallback) {
-        // Will use Rayleigh sky fallback - warn user once
-        std::cerr << "WARNING (RadiationModel::updateAtmosphericSkyModel): "
-                  << "Prague sky model data not available in Context. "
-                  << "Using simple Rayleigh sky fallback. "
-                  << "Call SolarPosition::updatePragueSkyModel() for accurate sky radiance." << std::endl;
+    if (prague_valid != 1) {
+        // Without the Prague sky model the camera sees the diffuse sky that lights the scene (setDiffuseRadiationFlux()). The diffuse launches
+        // deliver radiance flux * f(direction) / pi from each direction, where f is the band's angular distribution (isotropic, or the power law
+        // of setDiffuseRadiationExtinctionCoeff()) normalized so that a horizontal surface receives the band's diffuse flux. The camera weights
+        // this light as it weights diffuse light reflected by a perfectly white surface (its diffuse-slot white reference), so a white surface
+        // under this sky looks as bright as the sky itself. The pattern parameters stay zero, so the camera miss programs evaluate the band's
+        // own angular distribution.
+        if (!diffuse_rays_launched) {
+            return; // no diffuse light reached the scene, so there is no sky to see
+        }
+        const size_t Nbands_global = radiation_bands.size();
+        const size_t Ncameras = cameras.size();
+        const size_t diffuse_slot = radiation_sources.size();
+        for (size_t b = 0; b < Nbands_launch; b++) {
+            const std::string &band_label = band_labels[b];
+            const RadiationBand &band = radiation_bands.at(band_label);
+            // Emission bands see the sky's longwave flux through their own path in the camera miss programs
+            if (band.emissionFlag || std::find(camera.band_labels.begin(), camera.band_labels.end(), band_label) == camera.band_labels.end()) {
+                continue;
+            }
+            const float flux = getDiffuseFlux(band_label);
+            if (flux <= 0.f) {
+                continue;
+            }
+            float white_reference = 1.f;
+            if (!material_data.white_reference_cam.empty()) {
+                const size_t global_band = std::distance(radiation_bands.begin(), radiation_bands.find(band_label));
+                const size_t index = (diffuse_slot * Nbands_global + global_band) * Ncameras + camera_index;
+                if (index >= material_data.white_reference_cam.size()) {
+                    helios_runtime_error("ERROR (RadiationModel::computeCameraSky): The camera white references were computed for a different set of sources, bands or cameras than camera '" + camera.label +
+                                         "' is being rendered with. Call updateGeometry() after adding sources, bands or cameras.");
+                }
+                white_reference = material_data.white_reference_cam.at(index);
+            }
+            camera_sky_radiance[b] = flux * white_reference / float(M_PI);
+        }
+        return;
     }
 
-    // Prepare spectral data (either Prague or Rayleigh fallback)
-    std::vector<float> wavelengths;
-    std::vector<float> L_zenith_spectrum;
-    std::vector<float> circ_str_spectrum;
-    std::vector<float> circ_width_spectrum;
-    std::vector<float> horiz_bright_spectrum;
-    std::vector<float> norm_spectrum;
+    // Prague Sky Model (SolarPosition::updatePragueSkyModel()): spectral sky radiance from brute-force atmospheric simulations
+    // (Wilkie et al. 2021, Vévoda et al. 2022), integrated over this camera's spectral responses
 
-    if (use_prague_fallback) {
-        // --- Create simple Rayleigh sky spectrum (λ^-4 dependence) ---
-        // 360-750 nm at 10 nm spacing (visible range only for fallback)
-        const int n_wavelengths = 40; // (750-360)/10 + 1
-        wavelengths.resize(n_wavelengths);
-        L_zenith_spectrum.resize(n_wavelengths);
-        circ_str_spectrum.resize(n_wavelengths);
-        circ_width_spectrum.resize(n_wavelengths);
-        horiz_bright_spectrum.resize(n_wavelengths);
-        norm_spectrum.resize(n_wavelengths);
+    std::vector<float> spectral_params;
+    context->getGlobalData("prague_sky_spectral_params", spectral_params);
 
-        const float L_base = 0.4f; // W/m²/sr/nm at 550 nm (typical clear sky zenith)
-        const float lambda_ref = 550.0f; // Reference wavelength
+    const int params_per_wavelength = 6;
+    const int n_wavelengths = spectral_params.size() / params_per_wavelength;
 
-        for (int i = 0; i < n_wavelengths; ++i) {
-            float lambda = 360.0f + i * 10.0f;
-            wavelengths[i] = lambda;
+    std::vector<float> wavelengths(n_wavelengths);
+    std::vector<float> L_zenith_spectrum(n_wavelengths);
+    std::vector<float> circ_str_spectrum(n_wavelengths);
+    std::vector<float> circ_width_spectrum(n_wavelengths);
+    std::vector<float> horiz_bright_spectrum(n_wavelengths);
 
-            // Rayleigh scattering: L(λ) ∝ λ^-4 (blue sky)
-            float rayleigh_factor = std::pow(lambda_ref / lambda, 4.0f);
-            L_zenith_spectrum[i] = L_base * rayleigh_factor;
-
-            // Simple angular parameters (no strong circumsolar for fallback)
-            circ_str_spectrum[i] = 0.5f;
-            circ_width_spectrum[i] = 20.0f;
-            horiz_bright_spectrum[i] = 1.8f;
-            norm_spectrum[i] = 0.7f;
-        }
-    } else {
-        // --- Read spectral parameters from Context ---
-        std::vector<float> spectral_params;
-        context->getGlobalData("prague_sky_spectral_params", spectral_params);
-
-        const int params_per_wavelength = 6;
-        const int n_wavelengths = spectral_params.size() / params_per_wavelength;
-
-        // Parse into structured format
-        wavelengths.resize(n_wavelengths);
-        L_zenith_spectrum.resize(n_wavelengths);
-        circ_str_spectrum.resize(n_wavelengths);
-        circ_width_spectrum.resize(n_wavelengths);
-        horiz_bright_spectrum.resize(n_wavelengths);
-        norm_spectrum.resize(n_wavelengths);
-
-        for (int i = 0; i < n_wavelengths; ++i) {
-            int base = i * params_per_wavelength;
-            wavelengths[i] = spectral_params[base + 0];
-            L_zenith_spectrum[i] = spectral_params[base + 1];
-            circ_str_spectrum[i] = spectral_params[base + 2];
-            circ_width_spectrum[i] = spectral_params[base + 3];
-            horiz_bright_spectrum[i] = spectral_params[base + 4];
-            norm_spectrum[i] = spectral_params[base + 5];
-        }
+    for (int i = 0; i < n_wavelengths; ++i) {
+        int base = i * params_per_wavelength;
+        wavelengths[i] = spectral_params[base + 0];
+        L_zenith_spectrum[i] = spectral_params[base + 1];
+        circ_str_spectrum[i] = spectral_params[base + 2];
+        circ_width_spectrum[i] = spectral_params[base + 3];
+        horiz_bright_spectrum[i] = spectral_params[base + 4];
     }
 
     // --- Process each band ---
@@ -3749,6 +3844,11 @@ std::vector<float> RadiationModel::updateAtmosphericSkyModel(const std::vector<s
 
         // Skip thermal/longwave bands - Prague Sky Model only handles shortwave radiation
         if (band.emissionFlag) {
+            continue;
+        }
+
+        // A band this camera does not render has no sky for it
+        if (std::find(camera.band_labels.begin(), camera.band_labels.end(), band_label) == camera.band_labels.end()) {
             continue;
         }
 
@@ -3786,7 +3886,7 @@ std::vector<float> RadiationModel::updateAtmosphericSkyModel(const std::vector<s
                         wavelength_range.x = band.diffuse_spectrum.front().x;
                         wavelength_range.y = band.diffuse_spectrum.back().x;
                     } else {
-                        helios_runtime_error("ERROR (RadiationModel::updateAtmosphericSkyModel): Camera '" + camera.label + "' band '" + band_label + "' has uniform spectral response but no wavelength bounds set.");
+                        helios_runtime_error("ERROR (RadiationModel::computeCameraSky): Camera '" + camera.label + "' band '" + band_label + "' has uniform spectral response but no wavelength bounds set.");
                     }
                 }
             }
@@ -3798,7 +3898,7 @@ std::vector<float> RadiationModel::updateAtmosphericSkyModel(const std::vector<s
             camera_response = loadSpectralData(spectral_response_label);
 
             if (camera_response.empty()) {
-                helios_runtime_error("ERROR (RadiationModel::updateAtmosphericSkyModel): Camera spectral response '" + spectral_response_label + "' not found for camera '" + camera.label + "' band '" + band_label + "'.");
+                helios_runtime_error("ERROR (RadiationModel::computeCameraSky): Camera spectral response '" + spectral_response_label + "' not found for camera '" + camera.label + "' band '" + band_label + "'.");
             }
         }
 
@@ -3815,17 +3915,14 @@ std::vector<float> RadiationModel::updateAtmosphericSkyModel(const std::vector<s
         // Recompute normalization from averaged angular parameters
         float integrated_norm = computeAngularNormalization(integrated_circ_str, integrated_circ_width, integrated_horiz_bright);
 
-        // CRITICAL: GPU multiplies by normalization (see rayHit.cu:evaluateSkyRadiance)
-        // Since normalization < 1 (typically 0.6-0.7), this darkens the sky
-        // Pre-divide by normalization so it cancels: GPU does (L/norm) × pattern × norm = L × pattern
-        float base_radiance_for_gpu = integrated_L_zenith / std::max(integrated_norm, 0.1f);
-
-        sky_base_radiances[b] = base_radiance_for_gpu;
-        sky_params[b] = helios::make_vec4(integrated_circ_str, integrated_circ_width, integrated_horiz_bright, integrated_norm);
+        // The camera miss programs render the sky as camera_sky_radiance * evaluateDiffuseAngularDistribution(), and for these
+        // parameters that distribution returns pattern * normalization * pi -- the form the diffuse launches need, whose
+        // cosine-weighted integral over the hemisphere is pi. The sky radiance is L_zenith * pattern, so the base radiance divides
+        // out both the normalization and pi. The parameters uploaded with it must be these same ones, so that the normalization
+        // the device multiplies by is the one divided out here.
+        camera_sky_radiance[b] = integrated_L_zenith / (integrated_norm * float(M_PI));
+        sky_pattern_params[b] = helios::make_vec4(integrated_circ_str, integrated_circ_width, integrated_horiz_bright, integrated_norm);
     }
-
-    // Sky parameters will be uploaded to backend via updateSkyModel()
-    return sky_base_radiances;
 }
 
 void RadiationModel::updatePragueParametersForGeneralDiffuse(const std::vector<std::string> &band_labels) {
@@ -4442,9 +4539,6 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     }
     // NOTE: diffuse_flux now passed to backend via launch params, not uploaded here
 
-    // Initialize camera sky radiance buffer to zeros (will be set per-camera if atmospheric model is used)
-    std::vector<float> camera_sky_radiance(Nbands_launch, 0.0f);
-
     // Update Prague parameters for general diffuse (if available in Context)
     // This must be done before uploading diffuse parameters to GPU
     if (diffuseenabled) {
@@ -4487,7 +4581,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             const auto &params = radiation_bands.at(band_labels.at(b)).diffusePragueParams;
             prague_params.at(b) = helios::make_vec4(params.x, params.y, params.z, params.w);
         }
-        // Prague params will be uploaded to backend via updateSkyModel() during scattering
+        // Prague params are passed to the backend with each diffuse launch; each camera uploads its own with updateSkyModel()
     }
 
     // Determine whether emission is enabled for any band
@@ -4535,6 +4629,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     if (Ncameras > 0) {
         backend->zeroCameraScatterBuffers(Nbands_launch);
     }
+
+    // Primitives with a specular surface layer send out two components of outgoing radiation (see
+    // RayTracingMaterial::surface_model). The outgoing, scattered and retired buffers then hold the second component after the
+    // first, starting at layer_offset, and the camera buffers after all the cameras' first components.
+    const size_t outgoing_components = material_data.surface_layer_enabled ? 2 : 1;
+    const size_t layer_offset = Nprimitives * Nbands_launch;
 
     std::vector<float> TBS_top, TBS_bottom;
     TBS_top.resize(Nbands_launch * Nprimitives, 0);
@@ -4685,8 +4785,18 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     // This needs to happen BEFORE diffuse/emission block so scattered direct energy
     // is available for both diffuse/emission (via flux_top/flux_bottom) and scattering (via radiation_out)
     std::vector<float> flux_top, flux_bottom;
-    flux_top.resize(Nbands_launch * Nprimitives, 0);
+    flux_top.resize(outgoing_components * Nbands_launch * Nprimitives, 0);
     flux_bottom = flux_top;
+
+    // Reference blackbody field for emission bands. If every surface and the sky radiated at one temperature, the radiation
+    // field would be uniform and each face would absorb exactly (1 - rho - tau) times its blackbody emissive power, whatever the
+    // geometry. Emission is therefore traced as its departure from such a field at the area-weighted mean emissive power of the
+    // scene (reference_flux, W/m^2 per band), and the sky as its departure from the reference radiance; what each face absorbs
+    // from the reference field is added back exactly (reference_absorption). The gathered estimate then carries noise only in
+    // proportion to the temperature differences in the scene, and an isothermal scene is in exact equilibrium at any ray count.
+    // It is enabled per band with enableEmissionReferenceField(); a band that does not use it has a reference_flux of 0.
+    std::vector<float> reference_flux(Nbands_launch, 0.f);
+    std::vector<float> reference_absorption(Nbands_launch * Nprimitives, 0.f);
 
     // scatteringDepth is per band, but all bands in the dispatch share one scattering loop that runs to the deepest band's
     // depth. When a band's scattering is done it is "retired": the outgoing energy it was about to launch is zeroed in the
@@ -4697,16 +4807,19 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     // A band must NOT be retired by clearing its entry in band_launch_flag. That array defines the band -> launch slot
     // mapping ([primitive * Nbands_launch + slot], slot = position among the set flags) that the host and every backend
     // recompute independently, so changing it part way through the dispatch renumbers the slots of the remaining bands.
-    std::vector<float> retired_top(Nbands_launch * Nprimitives, 0.f);
-    std::vector<float> retired_bottom(Nbands_launch * Nprimitives, 0.f);
+    std::vector<float> retired_top(outgoing_components * Nbands_launch * Nprimitives, 0.f);
+    std::vector<float> retired_bottom(outgoing_components * Nbands_launch * Nprimitives, 0.f);
     std::vector<char> band_retired(Nbands_launch, 0);
-    auto retireBand = [&](size_t launch_slot, std::vector<float> &outgoing_top, std::vector<float> &outgoing_bottom) {
-        for (size_t p = 0; p < Nprimitives; p++) {
-            const size_t ind = p * Nbands_launch + launch_slot;
-            retired_top.at(ind) += outgoing_top.at(ind);
-            retired_bottom.at(ind) += outgoing_bottom.at(ind);
-            outgoing_top.at(ind) = 0.f;
-            outgoing_bottom.at(ind) = 0.f;
+    // Retires a band, moving the given outgoing components (all by default) to the retired accumulators
+    auto retireBand = [&](size_t launch_slot, std::vector<float> &outgoing_top, std::vector<float> &outgoing_bottom, size_t retired_components = SIZE_MAX) {
+        for (size_t component = 0; component < std::min(retired_components, outgoing_components); component++) {
+            for (size_t p = 0; p < Nprimitives; p++) {
+                const size_t ind = component * layer_offset + p * Nbands_launch + launch_slot;
+                retired_top.at(ind) += outgoing_top.at(ind);
+                retired_bottom.at(ind) += outgoing_bottom.at(ind);
+                outgoing_top.at(ind) = 0.f;
+                outgoing_bottom.at(ind) = 0.f;
+            }
         }
         band_retired.at(launch_slot) = 1;
     };
@@ -4726,18 +4839,22 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         helios_runtime_error("ERROR (RadiationModel::runBand): The geometry holds " + std::to_string(geometry_data.primitive_areas.size()) + " primitive areas for " + std::to_string(Nprimitives) +
                              " primitives. Call updateGeometry() after adding or removing primitives.");
     }
-    // Power each band would launch from the outgoing buffers, and the largest outgoing flux of any primitive face
+    // Power each band would launch from the outgoing buffers, and the largest outgoing flux of any primitive face, both in
+    // absolute value
     auto measureOutgoingEnergy = [&](const std::vector<float> &outgoing_top, const std::vector<float> &outgoing_bottom, std::vector<double> &power, std::vector<float> &max_flux) {
         power.assign(Nbands_launch, 0.0);
         max_flux.assign(Nbands_launch, 0.f);
         for (size_t p = 0; p < Nprimitives; p++) {
             const double area = geometry_data.primitive_areas[p];
             for (size_t b = 0; b < Nbands_launch; b++) {
-                const size_t ind = p * Nbands_launch + b;
-                const float top = outgoing_top[ind];
-                const float bottom = outgoing_bottom[ind];
-                power[b] += area * (double(top) + double(bottom));
-                max_flux[b] = std::max(max_flux[b], std::max(top, bottom));
+                for (size_t component = 0; component < outgoing_components; component++) {
+                    const size_t ind = component * layer_offset + p * Nbands_launch + b;
+                    // Outgoing fluxes are negative where a surface radiates less than the reference field (see reference_flux)
+                    const float top = fabsf(outgoing_top[ind]);
+                    const float bottom = fabsf(outgoing_bottom[ind]);
+                    power[b] += area * (double(top) + double(bottom));
+                    max_flux[b] = std::max(max_flux[b], std::max(top, bottom));
+                }
             }
         }
     };
@@ -4772,8 +4889,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     std::vector<float> scatter_top_cam;
     std::vector<float> scatter_bottom_cam;
     if (Ncameras > 0) {
-        scatter_top_cam.resize(Ncameras * camera_scatter_stride, 0.0f);
-        scatter_bottom_cam.resize(Ncameras * camera_scatter_stride, 0.0f);
+        scatter_top_cam.resize(outgoing_components * Ncameras * camera_scatter_stride, 0.0f);
+        scatter_bottom_cam.resize(outgoing_components * Ncameras * camera_scatter_stride, 0.0f);
     }
 
     if (scatteringenabled && rundirect) {
@@ -4797,6 +4914,14 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             }
         }
 
+        // The second outgoing component holds what surface layers reflected of the direct radiation, which the primary
+        // diffuse/emission launch delivers through their reflection lobe instead. Without that launch it stays, so that the first
+        // scattering launch, which then delivers the lobe, counts it in the energy it scatters.
+        if (outgoing_components == 2 && (emissionenabled || diffuseenabled)) {
+            std::fill(flux_top.begin() + std::ptrdiff_t(layer_offset), flux_top.begin() + std::ptrdiff_t(2 * layer_offset), 0.f);
+            std::fill(flux_bottom.begin() + std::ptrdiff_t(layer_offset), flux_bottom.begin() + std::ptrdiff_t(2 * layer_offset), 0.f);
+        }
+
         // Each face launches what it scattered: a one-sided primitive's reflected energy leaves its top face and its transmitted
         // energy its bottom face, as in every later scattering iteration. Copying the sum into both faces, as was done here,
         // made the first launch emit up to twice the energy one-sided primitives scattered.
@@ -4804,6 +4929,39 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         // Upload scattered energy to backend's radiation_out buffers for scattering iterations
         backend->uploadRadiationOut(flux_top, flux_bottom);
         backend->zeroScatterBuffers();
+    }
+
+    // The reference blackbody field (see reference_flux above) needs a band that scatters: without scattering, cameras read the
+    // gathered outgoing buffers rather than their own, which hold the departure from the field rather than the outgoing flux.
+    // A translucent cover has an angular emissivity that a uniform field does not satisfy face by face, and a SIF band's
+    // emission is not thermal.
+    for (size_t b = 0; b < Nbands_launch; b++) {
+        const RadiationBand &band = radiation_bands.at(band_labels.at(b));
+        if (!band.emissionReferenceFieldFlag) {
+            continue;
+        }
+        std::string problem;
+        if (!band.emissionFlag) {
+            problem = "emission is disabled for the band";
+        } else if (scattering_depth.at(b) == 0) {
+            problem = "its scattering depth is 0 (set it to at least 1 with setScatteringDepth(); without scattering every surface is black and an isothermal scene is already in exact equilibrium)";
+        } else if (sif_emission_bands.count(band_labels.at(b)) > 0) {
+            problem = "it is a SIF emission band, whose emission is not thermal";
+        } else if (band.diffuseRayCount == 0) {
+            problem = "its diffuse ray count is 0, so no emission would be traced to balance the absorption of the reference field that is added to every surface (set it with setDiffuseRayCount())";
+        } else {
+            MaterialPropertyIndexer cover_mat_idx(Nsources + 1, Nprimitives, Nbands_global);
+            const size_t b_global = std::distance(radiation_bands.begin(), radiation_bands.find(band_labels.at(b)));
+            for (size_t u = 0; u < Nprimitives; u++) {
+                if (material_data.is_glass.at(cover_mat_idx(Nsources, u, b_global)) != 0) {
+                    problem = "it contains translucent cover primitives (glass_n_" + band_labels.at(b) + " primitive data, e.g. UUID " + std::to_string(context_UUIDs.at(u)) + "), whose angular emissivity a uniform field does not satisfy";
+                    break;
+                }
+            }
+        }
+        if (!problem.empty()) {
+            helios_runtime_error("ERROR (RadiationModel::runBand): The emission reference field is enabled for band '" + band_labels.at(b) + "', but " + problem + ". Call disableEmissionReferenceField(\"" + band_labels.at(b) + "\") for this band.");
+        }
     }
 
     // --- Diffuse/Emission launch ---- //
@@ -4817,6 +4975,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
             // Create indexer for emission flux buffers
             RadiationBufferIndexer emission_indexer(Nprimitives, Nbands_launch);
+            MaterialPropertyIndexer reference_mat_idx(Nsources + 1, Nprimitives, Nbands_global);
+            CameraMaterialIndexer reference_cam_idx(Nsources + 1, Nprimitives, Nbands_global, Ncameras);
 
             for (auto b = 0; b < Nbands_launch; b++) {
                 //\todo For emissivity and twosided_flag, this should be done in updateRadiativeProperties() to avoid having to do it on every runBand() call
@@ -4831,6 +4991,45 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                     // A band with wavelength bounds emits only the in-band portion of the Planck spectrum; a band without bounds (both zero) emits the full sigma*T^4. A band may start at 0 nm.
                     const helios::vec2 emission_wavebounds = radiation_bands.at(band_labels.at(b)).wavebandBounds;
                     const bool emission_band_has_bounds = radiation_bands.at(band_labels.at(b)).hasWavebandBounds();
+                    const size_t b_global = std::distance(radiation_bands.begin(), radiation_bands.find(band_labels.at(b)));
+
+                    // Blackbody (in-band) emissive power of each primitive at its temperature
+                    std::vector<float> blackbody_power;
+                    if (!have_sif_band) {
+                        blackbody_power.resize(Nprimitives);
+                        for (size_t u = 0; u < Nprimitives; u++) {
+                            uint p = context_UUIDs.at(u);
+                            if (context->doesPrimitiveDataExist(p, "temperature")) {
+                                context->getPrimitiveData(p, "temperature", temperature);
+                                if (temperature < 0) {
+                                    temperature = temperature_default;
+                                }
+                            } else {
+                                temperature = temperature_default;
+                            }
+                            blackbody_power.at(u) = sigma * pow(temperature, 4);
+                            if (emission_band_has_bounds && temperature > 0.f) {
+                                blackbody_power.at(u) *= blackbodyBandFraction(emission_wavebounds.x, emission_wavebounds.y, temperature);
+                            }
+                        }
+                    }
+
+                    // Reference blackbody field (see reference_flux above), if enabled for the band
+                    if (radiation_bands.at(band_labels.at(b)).emissionReferenceFieldFlag && !have_sif_band) {
+                        double weighted_power = 0.0;
+                        double visible_area = 0.0;
+                        for (size_t u = 0; u < Nprimitives; u++) {
+                            if (geometry_data.twosided_flags.at(u) != 3) {
+                                weighted_power += geometry_data.primitive_areas.at(u) * double(blackbody_power.at(u));
+                                visible_area += geometry_data.primitive_areas.at(u);
+                            }
+                        }
+                        if (visible_area > 0.0) {
+                            reference_flux.at(b) = float(weighted_power / visible_area);
+                        }
+                    }
+                    const float reference_power = reference_flux.at(b);
+
                     for (size_t u = 0; u < Nprimitives; u++) {
                         // Use BufferIndexer: [primitive][band]
                         size_t ind = emission_indexer(u, b);
@@ -4866,45 +5065,71 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                                 if (scattering_depth.at(b) == 0 && eps != 1.f) {
                                     eps = 1.f;
                                 }
-                                if (context->doesPrimitiveDataExist(p, "temperature")) {
-                                    context->getPrimitiveData(p, "temperature", temperature);
-                                    if (temperature < 0) {
-                                        temperature = temperature_default;
-                                    }
-                                } else {
-                                    temperature = temperature_default;
-                                }
-                                out_top = sigma * eps * pow(temperature, 4);
-                                if (emission_band_has_bounds && temperature > 0.f) {
-                                    out_top *= blackbodyBandFraction(emission_wavebounds.x, emission_wavebounds.y, temperature);
-                                }
+                                out_top = eps * blackbody_power.at(u);
                             }
                         }
-                        flux_top.at(ind) += out_top;
-                        // Emission is not weighted by a spectral response, so every camera receives the same value.
-                        for (size_t cam = 0; cam < Ncameras; cam++) {
-                            scatter_top_cam[cam * camera_scatter_stride + ind] += out_top;
+
+                        // Check twosided_flag - check material first, then primitive data. A two-sided primitive emits from its
+                        // bottom face too: only its own emitted energy, NOT the top face's accumulated scattered-direct energy that
+                        // flux_top already holds, which would be re-emitted from the bottom face and violate energy conservation.
+                        // A two-sided SIF primitive emits its own bottom-face flux (physically distinct emission lobes).
+                        float out_bottom = 0.f;
+                        if (context->getPrimitiveTwosidedFlag(p, 1) != 0) {
+                            out_bottom = used_sif ? sif_bottom_flux : out_top;
                         }
-                        // Check twosided_flag - check material first, then primitive data
-                        uint twosided_flag = context->getPrimitiveTwosidedFlag(p, 1);
-                        if (twosided_flag != 0) { // If two-sided, emit from bottom face too
-                            if (used_sif) {
-                                // SIF two-sided: use the bottom-face flux rather than copying
-                                // the top-face flux. Physically distinct emission lobes.
-                                flux_bottom.at(ind) += sif_bottom_flux;
-                                for (size_t cam = 0; cam < Ncameras; cam++) {
-                                    scatter_bottom_cam[cam * camera_scatter_stride + ind] += sif_bottom_flux;
-                                }
-                            } else {
-                                // Two-sided emission: the bottom face emits only its own emitted
-                                // energy (out_top), NOT the top face's accumulated scattered-direct
-                                // energy that flux_top already holds. Adding flux_top here would
-                                // re-emit the top face's scattered radiation from the bottom face,
-                                // violating energy conservation. This matches the camera-scatter
-                                // accumulator below and the SIF branch above.
-                                flux_bottom.at(ind) += out_top;
-                                for (size_t cam = 0; cam < Ncameras; cam++) {
-                                    scatter_bottom_cam[cam * camera_scatter_stride + ind] += out_top;
+
+                        // A face with a specular surface layer emits eps_b (1 - a(mu)) times the blackbody radiance, with
+                        // eps_b = eps / (1 - a(1)) for the emissivity eps at normal incidence: its emitted flux is
+                        // eps (1 - abar) / (1 - a(1)) of the blackbody's, all in the first outgoing component. A SIF flux is already
+                        // the flux leaving the face.
+                        const float *layer_table = surfaceLayerTable(u, b_global);
+                        const float normal_albedo = layer_table != nullptr ? layer_table[material_data.surface_layer_table_size - 1] : 0.f;
+                        const float mean_albedo = layer_table != nullptr ? layer_table[material_data.surface_layer_table_size] : 0.f;
+                        if (layer_table != nullptr && !used_sif) {
+                            out_top *= (1.f - mean_albedo) / (1.f - normal_albedo);
+                            out_bottom *= (1.f - mean_albedo) / (1.f - normal_albedo);
+                        }
+
+                        if (reference_power == 0.f) {
+                            flux_top.at(ind) += out_top;
+                            flux_bottom.at(ind) += out_bottom;
+                            // Emission is not weighted by a spectral response, so every camera receives the same value.
+                            for (size_t cam = 0; cam < Ncameras; cam++) {
+                                scatter_top_cam[cam * camera_scatter_stride + ind] += out_top;
+                                scatter_bottom_cam[cam * camera_scatter_stride + ind] += out_bottom;
+                            }
+                        } else {
+                            // Under the reference field every face leaves the reference flux: (1 - abar) of it in the first
+                            // component and abar in the second (abar = 0 without a surface layer). A face's share of it that is not
+                            // reflected or transmitted from the faces that gather (a one-sided primitive's bottom face gathers
+                            // nothing) is the emission consistent with that field; only the departure from it is traced. rho and
+                            // tau are those of the body for a primitive with a surface layer.
+                            const char twosided_flag = geometry_data.twosided_flags.at(u);
+                            const float gathers_top = twosided_flag != 3 ? 1.f : 0.f;
+                            const float gathers_bottom = twosided_flag == 1 ? 1.f : 0.f;
+                            const float rho = material_data.reflectivity.at(reference_mat_idx(Nsources, u, b_global));
+                            const float tau = material_data.transmissivity.at(reference_mat_idx(Nsources, u, b_global));
+                            const float body_reference = reference_power * (1.f - mean_albedo);
+                            const float layer_reference = reference_power * mean_albedo;
+                            flux_top.at(ind) += out_top - body_reference * (1.f - rho * gathers_top - tau * gathers_bottom);
+                            flux_bottom.at(ind) += out_bottom - body_reference * (1.f - rho * gathers_bottom - tau * gathers_top);
+                            if (outgoing_components == 2) {
+                                flux_top.at(layer_offset + ind) -= layer_reference * (1.f - gathers_top);
+                                flux_bottom.at(layer_offset + ind) -= layer_reference * (1.f - gathers_bottom);
+                            }
+                            reference_absorption.at(ind) = body_reference * (1.f - rho - tau) * (gathers_top + gathers_bottom);
+                            // Cameras read their own outgoing buffers, which hold the true outgoing flux: the emission, plus the
+                            // reference field each face reflects and transmits (the traced departure from it is added as gathered).
+                            // The surface layer reflects all wavelengths alike, so a camera weights it by its white reference.
+                            for (size_t cam = 0; cam < Ncameras; cam++) {
+                                const float rho_cam = material_data.reflectivity_cam.at(reference_cam_idx(Nsources, u, b_global, cam));
+                                const float tau_cam = material_data.transmissivity_cam.at(reference_cam_idx(Nsources, u, b_global, cam));
+                                scatter_top_cam[cam * camera_scatter_stride + ind] += out_top + body_reference * (rho_cam * gathers_top + tau_cam * gathers_bottom);
+                                scatter_bottom_cam[cam * camera_scatter_stride + ind] += out_bottom + body_reference * (rho_cam * gathers_bottom + tau_cam * gathers_top);
+                                if (outgoing_components == 2) {
+                                    const float white = material_data.white_reference_cam.at(((size_t) Nsources * Nbands_global + b_global) * Ncameras + cam);
+                                    scatter_top_cam[(Ncameras + cam) * camera_scatter_stride + ind] += layer_reference * white * gathers_top;
+                                    scatter_bottom_cam[(Ncameras + cam) * camera_scatter_stride + ind] += layer_reference * white * gathers_bottom;
                                 }
                             }
                         }
@@ -4963,9 +5188,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         params.scattering_iteration = 0;
         params.radiation_out_top = flux_top;
         params.radiation_out_bottom = flux_bottom;
+        // This launch reads the first scattering of the direct radiation, so it also evaluates the surface layers' reflection lobe of it
+        params.specular_reflection_enabled = (rundirect && scatteringenabled) ? specular_reflection_mode : 0;
 
-        // Pass diffuse radiation parameters to backend
+        // Pass diffuse radiation parameters to backend: the sky flux of each band, followed by its reference flux
         params.diffuse_flux = diffuse_flux;
+        params.diffuse_flux.insert(params.diffuse_flux.end(), reference_flux.begin(), reference_flux.end());
         params.below_horizon_diffuse_enabled = below_horizon_diffuse_enabled ? 1 : 0;
         params.diffuse_extinction = diffuse_extinction;
         params.diffuse_dist_norm = diffuse_dist_norm;
@@ -5046,6 +5274,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 launched_power_first = launched_power;
             }
 
+            // With direct radiation only, the first scattering launch also delivers the surface layers' reflection lobe of the
+            // direct radiation, whose energy is in the second outgoing component (see above). A band that stops before that launch
+            // keeps it there until it is known whether the launch will happen.
+            const bool layer_lobe_pending = s == 0 && rundirect && !(emissionenabled || diffuseenabled) && specular_reflection_mode != 0;
+            std::vector<size_t> retired_before_lobe;
+
             // Retire the bands whose scattering is done: their depth is exhausted, their largest outgoing flux is below their
             // threshold, or they have nothing left to scatter.
             for (size_t b = 0; b < Nbands_launch; b++) {
@@ -5075,12 +5309,17 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 if (s == 0) {
                     // Below its threshold before any scattering launch, so there is no earlier iteration to extrapolate from: the
                     // little energy left is absorbed where it is.
-                    retireBand(b, flux_top_scatter, flux_bottom_scatter);
+                    retireBand(b, flux_top_scatter, flux_bottom_scatter, layer_lobe_pending ? 1 : SIZE_MAX);
+                    if (layer_lobe_pending) {
+                        retired_before_lobe.push_back(b);
+                    }
                 } else {
                     addScatteringTail(b, scatter_results.radiation_in, launched_power_previous.at(b), launched_power.at(b), s);
-                    for (size_t p = 0; p < Nprimitives; p++) {
-                        flux_top_scatter[p * Nbands_launch + b] = 0.f;
-                        flux_bottom_scatter[p * Nbands_launch + b] = 0.f;
+                    for (size_t component = 0; component < outgoing_components; component++) {
+                        for (size_t p = 0; p < Nprimitives; p++) {
+                            flux_top_scatter[component * layer_offset + p * Nbands_launch + b] = 0.f;
+                            flux_bottom_scatter[component * layer_offset + p * Nbands_launch + b] = 0.f;
+                        }
                     }
                     band_retired.at(b) = 1;
                 }
@@ -5090,7 +5329,22 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 }
             }
             if (std::all_of(band_retired.begin(), band_retired.end(), [](char retired) { return retired != 0; })) {
-                break; // every band is done, so further launches would carry no energy
+                // Every band is done, so further launches would carry no energy, and no launch delivers the surface layers' lobe: what
+                // they reflected of the direct radiation is absorbed in place, like the rest of the retired energy
+                for (size_t b: retired_before_lobe) {
+                    for (size_t p = 0; p < Nprimitives; p++) {
+                        const size_t ind = layer_offset + p * Nbands_launch + b;
+                        retired_top.at(ind) += flux_top_scatter.at(ind);
+                        retired_bottom.at(ind) += flux_bottom_scatter.at(ind);
+                    }
+                }
+                break;
+            }
+            if (layer_lobe_pending) {
+                // This launch delivers the surface layers' reflection of the direct radiation through their lobe, so it must not read
+                // it from the outgoing buffers too
+                std::fill(flux_top_scatter.begin() + std::ptrdiff_t(layer_offset), flux_top_scatter.begin() + std::ptrdiff_t(2 * layer_offset), 0.f);
+                std::fill(flux_bottom_scatter.begin() + std::ptrdiff_t(layer_offset), flux_bottom_scatter.begin() + std::ptrdiff_t(2 * layer_offset), 0.f);
             }
 
             // Later iterations carry less energy and so contribute less noise: give them rays in proportion to that energy. A
@@ -5139,9 +5393,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
             params.band_launch_flag = band_flags;
             params.scattering_iteration = s;
+            // Without a primary diffuse/emission launch, the first scattering launch reads the first scattering of the direct
+            // radiation, so it evaluates the surface layers' reflection lobe of it
+            params.specular_reflection_enabled = (s == 0 && rundirect && !(emissionenabled || diffuseenabled)) ? specular_reflection_mode : 0;
 
-            // Pass diffuse radiation parameters to backend
-            params.diffuse_flux = diffuse_flux;
+            // Pass diffuse radiation parameters to backend: no sky and no reference field, which enter only the primary launch
+            params.diffuse_flux.assign(2 * Nbands_launch, 0.f);
             params.below_horizon_diffuse_enabled = below_horizon_diffuse_enabled ? 1 : 0;
             params.diffuse_extinction = diffuse_extinction;
             params.diffuse_dist_norm = diffuse_dist_norm;
@@ -5221,6 +5478,17 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             }
         }
 
+        // With no sun source emitting in these bands (runBand() adds a zero-flux source at the zenith to a model without sources), only the Prague data say where the
+        // sun is, and the camera's circumsolar brightening must surround it as the diffuse launches' does
+        int prague_valid = 0;
+        if (context->doesGlobalDataExist("prague_sky_valid")) {
+            context->getGlobalData("prague_sky_valid", prague_valid);
+        }
+        const bool sun_emits = std::any_of(solar_radiances.begin(), solar_radiances.end(), [](float radiance) { return radiance > 0.f; });
+        if (prague_valid == 1 && !sun_emits) {
+            context->getGlobalData("prague_sky_sun_direction", sun_dir);
+        }
+
         if (scatteringenabled && (emissionenabled || diffuseenabled || rundirect)) {
             // re-set diffuse radiation fluxes (will be passed via launch params)
             if (diffuseenabled) {
@@ -5231,25 +5499,14 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
             size_t n = ceil(sqrt(double(diffuseRayCount)));
 
-            // Upload sky model parameters to backend (for camera rendering)
-
-            if (!cameras.empty() && prague_params.size() == Nbands_launch) {
-                // Get sky radiances for first camera (already computed above)
-                std::vector<float> sky_for_backend = updateAtmosphericSkyModel(band_labels, cameras.begin()->second);
-
-                // Build per-band diffuse flux and emission-flag vectors for camera longwave/emission sky sampling.
-                // For emission bands, getDiffuseFlux() returns the user-set sky thermal flux (W/m²).
-                std::vector<float> camera_diffuse_flux(Nbands_launch, 0.f);
-                std::vector<uint32_t> band_emission_flag(Nbands_launch, 0u);
-                for (size_t b = 0; b < Nbands_launch; b++) {
-                    camera_diffuse_flux[b] = getDiffuseFlux(band_labels[b]);
-                    band_emission_flag[b] = radiation_bands.at(band_labels[b]).emissionFlag ? 1u : 0u;
-                }
-
-                // Upload to backend
-                backend->updateSkyModel(prague_params, sky_for_backend, sun_dir, solar_radiances,
-                                        has_sun_source ? 0.999989f : 0.0f, // solar_disk_cos_angle
-                                        camera_diffuse_flux, band_emission_flag);
+            // Per-band diffuse flux and emission-flag vectors for camera longwave/emission sky sampling, the same for every camera.
+            // For emission bands, getDiffuseFlux() returns the user-set sky thermal flux (W/m²). The shortwave sky is computed per
+            // camera in the loop below, since each camera sees it through its own spectral response.
+            std::vector<float> camera_diffuse_flux(Nbands_launch, 0.f);
+            std::vector<uint32_t> band_emission_flag(Nbands_launch, 0u);
+            for (size_t b = 0; b < Nbands_launch; b++) {
+                camera_diffuse_flux[b] = getDiffuseFlux(band_labels[b]);
+                band_emission_flag[b] = radiation_bands.at(band_labels[b]).emissionFlag ? 1u : 0u;
             }
 
             // Each camera's white reference: what the camera would record from a white surface in place of each primitive, lit by the light arriving there straight from a source or the sky.
@@ -5284,15 +5541,27 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                     continue;
                 }
 
+                // This camera's sky: its radiance and angular pattern weighted by this camera's spectral responses. Uploading them here
+                // is safe for the diffuse launches, which upload their own sky parameters with every launch.
+                std::vector<float> camera_sky_radiance;
+                std::vector<helios::vec4> sky_pattern_params;
+                computeCameraSky(band_labels, camera.second, cam, diffuseenabled && diffuseRayCount > 0, camera_sky_radiance, sky_pattern_params);
+                backend->updateSkyModel(sky_pattern_params, camera_sky_radiance, sun_dir, solar_radiances,
+                                        has_sun_source ? 0.999989f : 0.0f, // solar_disk_cos_angle
+                                        camera_diffuse_flux, band_emission_flag);
+
                 // Hand this camera its own slice of the accumulated camera-weighted scatter as the radiance it
                 // integrates. Cameras read radiation_out during hits, and what a camera integrates is the scattered
                 // radiance weighted by its own spectral response with the emitted flux folded in, which is a different
                 // quantity both from the primitive's band-weighted outgoing flux and from another camera's slice.
                 if (scatteringenabled) {
-                    const auto camera_top_begin = scatter_top_cam.begin() + static_cast<std::ptrdiff_t>(cam * camera_scatter_stride);
-                    const auto camera_bottom_begin = scatter_bottom_cam.begin() + static_cast<std::ptrdiff_t>(cam * camera_scatter_stride);
-                    const std::vector<float> camera_scatter_top(camera_top_begin, camera_top_begin + static_cast<std::ptrdiff_t>(camera_scatter_stride));
-                    const std::vector<float> camera_scatter_bottom(camera_bottom_begin, camera_bottom_begin + static_cast<std::ptrdiff_t>(camera_scatter_stride));
+                    // Each component of this camera's slice, laid out as the outgoing buffers are: [component][primitive][band]
+                    std::vector<float> camera_scatter_top, camera_scatter_bottom;
+                    for (size_t component = 0; component < outgoing_components; component++) {
+                        const size_t begin = (component * Ncameras + cam) * camera_scatter_stride;
+                        camera_scatter_top.insert(camera_scatter_top.end(), scatter_top_cam.begin() + std::ptrdiff_t(begin), scatter_top_cam.begin() + std::ptrdiff_t(begin + camera_scatter_stride));
+                        camera_scatter_bottom.insert(camera_scatter_bottom.end(), scatter_bottom_cam.begin() + std::ptrdiff_t(begin), scatter_bottom_cam.begin() + std::ptrdiff_t(begin + camera_scatter_stride));
+                    }
                     backend->uploadRadiationOut(camera_scatter_top, camera_scatter_bottom);
 
                     // Resample the same field this camera is about to read onto the shared mesh vertices.
@@ -5570,7 +5839,11 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 R.at(u) = radiation_flux_data.at(ind) + (scattering_tail.empty() ? 0.f : scattering_tail.at(ind));
             } else {
                 R.at(u) = radiation_flux_data.at(ind) + TBS_top.at(ind) + TBS_bottom.at(ind);
+                if (outgoing_components == 2) {
+                    R.at(u) += TBS_top.at(layer_offset + ind) + TBS_bottom.at(layer_offset + ind);
+                }
             }
+            R.at(u) += reference_absorption.at(ind); // absorbed from the reference field, which the gathered flux excludes
         }
         context->setPrimitiveData(context_UUIDs, prop.c_str(), R);
 

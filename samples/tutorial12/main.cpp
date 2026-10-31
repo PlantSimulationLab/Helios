@@ -50,10 +50,10 @@ int main() {
     // Label the dragon with a different class "dragon" and instance ID 6
     context.setPrimitiveData(UUIDs_dragon, "dragon", 6u);
 
-    // Set specular properties to make objects appear slightly shiny
-    context.setPrimitiveData(UUIDs_bunny_1, "specular_exponent", 10.f);
-    context.setPrimitiveData(UUIDs_bunny_2, "specular_exponent", 10.f);
-    context.setPrimitiveData(UUIDs_dragon, "specular_exponent", 10.f);
+    // Give the objects a glossy surface layer so that they appear slightly shiny
+    context.setPrimitiveData(UUIDs_bunny_1, "specular_roughness", 0.2f);
+    context.setPrimitiveData(UUIDs_bunny_2, "specular_roughness", 0.1f);
+    context.setPrimitiveData(UUIDs_dragon, "specular_roughness", 0.15f);
 
     // STEP 4: Set up the radiation model for RGB imaging
     RadiationModel radiation(&context);
@@ -100,9 +100,6 @@ int main() {
 
     // Run the radiation simulation for all RGB bands
     radiation.runBand(bandlabels);
-
-    // Apply standard image processing pipeline (tone mapping, gamma correction, etc.)
-    radiation.applyCameraImageCorrections(cameralabel, "red", "green", "blue", 1.2, 1, 1);
 
     // STEP 7: Export results for computer vision applications
 

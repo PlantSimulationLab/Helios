@@ -242,8 +242,10 @@ namespace helios {
         Buffer reflectivity_cam_buffer;
         Buffer transmissivity_cam_buffer;
         Buffer white_reference_cam_buffer; //!< Camera-weighted reflectivity of a white surface [source][band][camera]
-        Buffer specular_exponent_buffer; //!< Per-primitive Blinn-Phong exponent
-        Buffer specular_scale_buffer; //!< Per-primitive specular scale coefficient
+        //! Specular surface layers (see RayTracingMaterial::surface_model), packed as uint words: a 4-word header (table size, or 0 when no
+        //! primitive has a layer; band count; start of the band tables; start of the albedo tables), then the surface model of each
+        //! primitive, the albedo table of each model in each band, and the tables (float bits)
+        Buffer surface_layer_buffer;
         Buffer source_fluxes_cam_buffer; //!< Camera spectral response weights [source × band]
         Buffer band_map_buffer; //!< Maps launch band index → global band index [launch_band_count]
         Buffer is_glass_buffer; //!< Translucent-cover flag per [source][prim][band] (uint, source-0 slice used)
@@ -267,7 +269,7 @@ namespace helios {
         Buffer camera_scatter_bottom_buffer; //!< Camera-weighted scatter (bottom face)
         Buffer white_reference_top_buffer; //!< Each camera's white reference (top face) [camera × primitive × launch band], accumulated over all the launches of a runBand()
         Buffer white_reference_bottom_buffer; //!< Each camera's white reference (bottom face), same layout
-        Buffer radiation_specular_buffer; //!< Accumulated incident radiation for specular [source × primitive × band]
+        Buffer radiation_specular_buffer; //!< Direct flux reaching primitives with a surface layer [source × primitive × band]
 
         // Sky parameter buffers (Set 3)
         Buffer diffuse_flux_buffer;
@@ -369,6 +371,7 @@ namespace helios {
         void requireSpecularBufferSized(const char *caller, const RayTracingLaunchParams &params) const;
 
         bool specular_reflection_enabled = false; //!< Set by updateMaterials(); radiation_specular is sized only when true
+        size_t outgoing_components = 1; //!< Components of outgoing radiation per face: 2 when any primitive has a surface layer (see RayTracingMaterial::surface_model)
 
         // Descriptor set update tracking
         bool descriptors_dirty = false;

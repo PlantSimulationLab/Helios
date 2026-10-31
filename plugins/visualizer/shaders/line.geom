@@ -22,7 +22,6 @@ layout(triangle_strip, max_vertices = 4) out;
 // Inputs from vertex shader (per-vertex)
 in vec2 vs_texcoord[];
 in vec2 vs_uv_scale[];
-in vec4 vs_ShadowCoord[];
 in vec3 vs_worldPosition[];
 in vec3 vs_interpolatedNormal[];
 flat in int vs_faceID[];
@@ -30,7 +29,6 @@ flat in int vs_faceID[];
 // Outputs to fragment shader (per-vertex of generated quad)
 out vec2 texcoord;
 out vec2 uv_scale;
-out vec4 ShadowCoord;
 out vec3 worldPosition;
 out vec3 interpolatedNormal;
 flat out int faceID;
@@ -74,7 +72,6 @@ void main() {
     gl_Position = vec4((ndc0 - ndcOffset) * p0.w, p0.z, p0.w);
     texcoord = vs_texcoord[0];
     uv_scale = vs_uv_scale[0];
-    ShadowCoord = vs_ShadowCoord[0];
     worldPosition = vs_worldPosition[0];
     interpolatedNormal = vs_interpolatedNormal[0];
     faceID = vs_faceID[0];
@@ -84,7 +81,6 @@ void main() {
     gl_Position = vec4((ndc0 + ndcOffset) * p0.w, p0.z, p0.w);
     texcoord = vs_texcoord[0];
     uv_scale = vs_uv_scale[0];
-    ShadowCoord = vs_ShadowCoord[0];
     worldPosition = vs_worldPosition[0];
     interpolatedNormal = vs_interpolatedNormal[0];
     faceID = vs_faceID[0];
@@ -94,7 +90,6 @@ void main() {
     gl_Position = vec4((ndc1 - ndcOffset) * p1.w, p1.z, p1.w);
     texcoord = vs_texcoord[1];
     uv_scale = vs_uv_scale[1];
-    ShadowCoord = vs_ShadowCoord[1];
     worldPosition = vs_worldPosition[1];
     interpolatedNormal = vs_interpolatedNormal[1];
     faceID = vs_faceID[1];
@@ -104,7 +99,6 @@ void main() {
     gl_Position = vec4((ndc1 + ndcOffset) * p1.w, p1.z, p1.w);
     texcoord = vs_texcoord[1];
     uv_scale = vs_uv_scale[1];
-    ShadowCoord = vs_ShadowCoord[1];
     worldPosition = vs_worldPosition[1];
     interpolatedNormal = vs_interpolatedNormal[1];
     faceID = vs_faceID[1];

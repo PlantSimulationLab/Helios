@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(helios)  
 
-add_library( boundarylayerconductance STATIC "src/BoundaryLayerConductanceModel.cpp" "tests/selfTest.cpp" )
+add_library( boundarylayerconductance STATIC "src/BoundaryLayerConductanceModel.cpp" "src/GraefeConvection.cpp" "tests/selfTest.cpp" )
 
 target_include_directories(boundarylayerconductance PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 

@@ -37,7 +37,7 @@ struct Phytomer;
 /**
  * Arguments are the Context, the number of subdivisions, and the organ build parameters of the plant bearing the fruit: the entries of the map passed to
  * \ref PlantArchitecture::buildPlantInstanceFromLibrary() that the plant model declares as shaping its flowers and fruit (see \ref PlantArchBuildParamsValidation). The map is empty for a
- * plant not built from the library. A prototype function reads the keys it understands with \ref getBuildParameterValue() and ignores the rest.
+ * plant not built from the library. A prototype function reads the keys it understands and ignores the rest.
  * \note A custom prototype function assigned to a library model receives only that model's declared organ parameters. It cannot be given keys of its own, because
  * \ref PlantArchitecture::buildPlantInstanceFromLibrary() rejects any name the model does not declare.
  */
@@ -289,6 +289,138 @@ private:
     bool sampled;
     int constval;
     std::minstd_rand0 *generator;
+};
+
+//! Probability distribution of a build parameter of a library plant model
+/**
+ * Given to \ref PlantArchitecture::buildPlantInstanceFromLibrary() or \ref PlantArchitecture::buildPlantCanopyFromLibrary() in place of a fixed value, so that plants built in one call, or in separate
+ * calls with the same distributions, differ from one another, for example in their number of tillers. A parameter that shapes the plant, such as "tiller_count" or "trunk_height", is sampled once for
+ * each plant. A parameter that shapes its flowers and fruit, such as "berry_diameter", is sampled once for each flower and fruit prototype, and plants given the same distribution share the same set of
+ * prototypes. See \ref PlantArchBuildParamDistributions.
+ *
+ * The whole range of a distribution must lie within the valid range of its parameter, and a parameter that counts something takes only \ref constant() or \ref discrete() whole-number values. Both are
+ * checked before any plant is built. A constant is checked, as a value passed without a distribution is, when the plant is built.
+ */
+class BuildParameterDistribution {
+public:
+    //! Kind of distribution
+    enum class Type {
+        //! A single fixed value
+        CONSTANT,
+        //! Uniform over a closed interval
+        UNIFORM,
+        //! Normal, truncated to an interval
+        NORMAL,
+        //! A set of values, each with a probability
+        DISCRETE
+    };
+
+    //! A single fixed value, the same as passing the value itself
+    /**
+     * \param[in] value Value of the parameter. It is checked against the parameter's valid range when the plant is built.
+     */
+    [[nodiscard]] static BuildParameterDistribution constant(float value);
+
+    //! Uniform distribution over a closed interval
+    /**
+     * \param[in] min_value Lower end of the interval.
+     * \param[in] max_value Upper end of the interval. Must not be less than min_value.
+     */
+    [[nodiscard]] static BuildParameterDistribution uniform(float min_value, float max_value);
+
+    //! Normal distribution truncated to an interval
+    /**
+     * Values outside the interval are redrawn. The interval is required because every build parameter has a bounded valid range that the distribution must lie within.
+     * \param[in] mean Mean of the untruncated distribution.
+     * \param[in] standard_deviation Standard deviation of the untruncated distribution. Must be positive.
+     * \param[in] min_value Lower end of the interval.
+     * \param[in] max_value Upper end of the interval. Must be greater than min_value, and the interval must hold at least 0.1% of the untruncated distribution.
+     */
+    [[nodiscard]] static BuildParameterDistribution normal(float mean, float standard_deviation, float min_value, float max_value);
+
+    //! Discrete distribution over a set of values
+    /**
+     * \param[in] values Values the parameter may take. Must not be empty.
+     * \param[in] weights [optional] Relative probability of each value, which need not sum to 1. Must be non-negative, with a positive sum, and as many as there are values. If not given, every value is
+     * equally likely.
+     */
+    [[nodiscard]] static BuildParameterDistribution discrete(const std::vector<float> &values, const std::vector<float> &weights = {});
+
+    //! Kind of distribution
+    [[nodiscard]] Type getType() const {
+        return type;
+    }
+
+    //! Parameters of the distribution
+    /**
+     * \return {value} for \ref Type::CONSTANT, {min, max} for \ref Type::UNIFORM, {mean, standard deviation, min, max} for \ref Type::NORMAL, and the values for \ref Type::DISCRETE.
+     */
+    [[nodiscard]] const std::vector<float> &getParameters() const {
+        return parameters;
+    }
+
+    //! Weights of the values of a \ref Type::DISCRETE distribution, or an empty vector if the values are equally likely or the distribution is not discrete
+    [[nodiscard]] const std::vector<float> &getWeights() const {
+        return weights;
+    }
+
+    //! Smallest value the distribution can take
+    [[nodiscard]] float getMinimum() const;
+
+    //! Largest value the distribution can take
+    [[nodiscard]] float getMaximum() const;
+
+    //! Draw a value from the distribution. A constant is returned without drawing from the generator.
+    /**
+     * \param[in] generator Random number generator to draw from.
+     * \return Sampled value.
+     */
+    [[nodiscard]] float sample(std::minstd_rand0 &generator) const;
+
+    bool operator==(const BuildParameterDistribution &other) const {
+        return type == other.type && parameters == other.parameters && weights == other.weights;
+    }
+
+    bool operator!=(const BuildParameterDistribution &other) const {
+        return !(*this == other);
+    }
+
+    //! Ordering by type and then parameters, so that a map of distributions can be used as a key
+    bool operator<(const BuildParameterDistribution &other) const {
+        if (type != other.type) {
+            return type < other.type;
+        }
+        if (parameters != other.parameters) {
+            return parameters < other.parameters;
+        }
+        return weights < other.weights;
+    }
+
+private:
+    BuildParameterDistribution(Type type, std::vector<float> parameters, std::vector<float> weights) : type(type), parameters(std::move(parameters)), weights(std::move(weights)) {
+    }
+
+    Type type;
+    std::vector<float> parameters;
+    std::vector<float> weights;
+};
+
+//! Name, valid range and kind of a build parameter declared by a library plant model
+/**
+ * Each declaration is the single statement of a parameter's range: the code that reads the parameter checks the value it is given against it, and \ref PlantArchitecture::buildPlantInstanceFromLibrary()
+ * checks the whole range of a \ref BuildParameterDistribution against it before any plant is built.
+ */
+struct BuildParameterDeclaration {
+    //! Name of the parameter, the key passed to \ref PlantArchitecture::buildPlantInstanceFromLibrary()
+    const char *name;
+    //! Smallest valid value
+    float min_value;
+    //! Largest valid value
+    float max_value;
+    //! Whether the parameter counts something and must be a whole number
+    bool is_integer;
+    //! Description of the parameter, quoted in error messages
+    const char *description;
 };
 
 struct AxisRotation {
@@ -1877,6 +2009,19 @@ public:
     void deletePhytomer();
 
 private:
+    //! Remove the leaves and petioles of the phytomer, optionally handing their Context objects to the caller instead of deleting them
+    /**
+     * \param[out] detached_objIDs If not null, the Context objects of the leaves and petioles are appended here and left in the Context; if null, they are deleted, as by removeLeaf().
+     */
+    void removeLeaf(std::vector<uint> *detached_objIDs);
+
+    //! Delete the phytomer, the phytomers above it and their descendants, optionally handing their Context objects to the caller instead of deleting them
+    /**
+     * The plant bookkeeping is identical to deletePhytomer(). In detach mode the removed part of the shoot's internode tube is split off into its own object (see helios::Context::splitTubeObject()).
+     * \param[out] detached_objIDs If not null, the removed Context objects are appended here and left in the Context; if null, they are deleted, as by deletePhytomer().
+     */
+    void deletePhytomer(std::vector<uint> *detached_objIDs);
+
     //! Pin this petiole's leaf and petiole growth fractions at 1, which is what exempts it from the rescaling in PlantArchitecture::advanceTime().
     /**
      * A leaf's rendered size is leaf_size_max multiplied by current_leaf_scale_factor, so pinning the fraction on a petiole that is still expanding would leave the bookkeeping overstating every leaf on it while
@@ -1990,10 +2135,10 @@ public:
      * pinned, carries its own measured length here (see lockPetioleScale()).
      */
     std::vector<float> petiole_length_max; // index is petiole within internode
-    std::vector<float> petiole_pitch; // index is petiole within internode
+    std::vector<float> petiole_pitch; //!< Pitch angle of each petiole in radians; index is petiole within internode
     //! Whether the leaves of this phytomer have no petiole (PhytomerParameters::PetioleParameters::length of exactly 0) and sit directly on the stem
     /**
-     * Such a leaf still has a petiole axis of minimal length, which runs along the leaf's base and gives the side of the stem it grows on, but none of the petiole parameters: ef petiole_pitch holds the
+     * Such a leaf still has a petiole axis of minimal length, which runs along the leaf's base and gives the side of the stem it grows on, but none of the petiole parameters: \ref Phytomer::petiole_pitch holds the
      * blade's angle off the internode, drawn from PhytomerParameters::LeafParameters::pitch, and the blade is posed in the frame of the stem (see orientLeaf()).
      */
     bool leaf_is_sessile = false;
@@ -2229,6 +2374,11 @@ public:
      * The angle is saved rather than recomputed on reading because it is ill-conditioned: on a nearly vertical shoot the heading can lie almost opposite the initial heading, where the direction of the turn is decided by rounding.
      */
     std::vector<float> internode_azimuthal_restoring_angles;
+    //! Angle in degrees that each internode segment was turned by the gravitropic response (for exact XML reconstruction)
+    /**
+     * The angle is saved rather than recomputed on reading because it is discontinuous: its inclination factor doubles where the shoot axis passes below horizontal, so for an axis close to horizontal, rounding decides which side of the jump the segment lands on.
+     */
+    std::vector<float> internode_gravitropic_angles;
     //! Arc length in meters that each segment of this internode was curved over when it was built, or zero if no curvature was applied to it.
     /**
      * This is the maximum internode length the phytomer was created with divided by its number of segments. It is kept separately because \ref internode_length_max can be rescaled after the internode has been built (see \ref scaleInternodeMaxLength()), and readPlantStructureXML() needs the original value to replay the curvature.
@@ -2713,12 +2863,12 @@ struct PlantInstance {
     float time_since_dormancy = 0;
     helios::Context *context_ptr;
     std::string plant_name;
-    //! Build parameters the plant was built with by \ref PlantArchitecture::buildPlantInstanceFromLibrary(). Kept for the life of the plant, because some of them, such as the tiller count of sorghum, are
-    //! read as the plant grows.
+    //! Build parameters the plant was built with by \ref PlantArchitecture::buildPlantInstanceFromLibrary(): the value sampled for this plant of each structure parameter, and each organ parameter given as
+    //! a fixed value. Kept for the life of the plant, because some of them, such as the tiller count of sorghum, are read as the plant grows.
     std::map<std::string, float> build_parameters;
-    //! The entries of build_parameters that shape the plant's flowers and fruit. Its flower and fruit prototypes are built from them and cached by them, so plants that differ only in other parameters share
-    //! their prototypes.
-    std::map<std::string, float> organ_build_parameters;
+    //! The build parameters that shape the plant's flowers and fruit, as distributions, a fixed value being a constant one. Its flower and fruit prototypes are sampled from them and cached by them, so
+    //! plants that differ only in other parameters share their prototypes.
+    std::map<std::string, BuildParameterDistribution> organ_build_parameters;
     std::pair<std::string, float> epicormic_shoot_probability_perlength_per_day; //.first is the epicormic shoot label string, .second is the probability
 
     // Phenological thresholds.
@@ -2985,33 +3135,61 @@ struct PlantGrowthAnimationStorage {
     std::map<uint, std::vector<std::shared_ptr<GrowthFrameSnapshot>>> plant_frames;
 };
 
-//! Look up a build parameter, falling back to a default if it was not given
-/**
- * Used by the library plant builders and by flower/fruit prototype functions to read the build parameters passed to \ref PlantArchitecture::buildPlantInstanceFromLibrary().
- * \param[in] build_parameters Map of parameter names to values
- * \param[in] parameter_name Name of the parameter to retrieve
- * \param[in] default_value Default value to use if parameter not specified
- * \param[in] min_value Minimum valid value for the parameter
- * \param[in] max_value Maximum valid value for the parameter
- * \param[in] parameter_description Description of the parameter for error messages
- * \return The parameter value from the map if specified, otherwise the default value
- * \throws helios_runtime_error if the parameter value is outside the valid range
- */
-[[nodiscard]] float getBuildParameterValue(const std::map<std::string, float> &build_parameters, const std::string &parameter_name, float default_value, float min_value, float max_value, const std::string &parameter_description);
+//! Kind of plant organ that a Context object of a plant belongs to
+enum class PlantOrganType {
+    //! Internode: the shoot's internode tube, which spans all phytomers of the shoot
+    INTERNODE,
+    //! Petiole tube
+    PETIOLE,
+    //! Leaf (or leaflet of a compound leaf)
+    LEAF,
+    //! Peduncle tube of a floral bud
+    PEDUNCLE,
+    //! Flower, open or closed, of a floral bud
+    FLOWER,
+    //! Fruit of a floral bud
+    FRUIT
+};
 
-//! Look up an integer-valued build parameter, falling back to a default if it was not given
+//! Where a Context primitive or object sits in the structure of a plant, as returned by PlantArchitecture::getPrimitiveOrganLocation()
 /**
- * As \ref getBuildParameterValue(), and in addition the value must be a whole number.
- * \param[in] build_parameters Map of parameter names to values
- * \param[in] parameter_name Name of the parameter to retrieve
- * \param[in] default_value Default value to use if parameter not specified
- * \param[in] min_value Minimum valid value for the parameter
- * \param[in] max_value Maximum valid value for the parameter
- * \param[in] parameter_description Description of the parameter for error messages
- * \return The parameter value from the map if specified, otherwise the default value
- * \throws helios_runtime_error if the parameter value is outside the valid range or is not a whole number
+ * Fields that do not apply to the organ type are set to \ref PlantOrganLocation::not_applicable.
  */
-[[nodiscard]] int getBuildParameterIntegerValue(const std::map<std::string, float> &build_parameters, const std::string &parameter_name, int default_value, int min_value, int max_value, const std::string &parameter_description);
+struct PlantOrganLocation {
+    //! Value of an index field that does not apply to the organ type
+    static constexpr uint not_applicable = 0xFFFFFFFF;
+
+    //! Identifier of the plant
+    uint plantID;
+    //! Identifier of the shoot within the plant
+    uint shootID;
+    //! Index of the phytomer (node) on the shoot, counted from 0 at the shoot base. For an internode primitive, the phytomer whose internode the primitive belongs to.
+    uint node_index;
+    //! Kind of organ
+    PlantOrganType organ_type;
+    //! Index of the petiole within the phytomer (petioles, leaves), or the first index of the floral bud in Phytomer::floral_buds (peduncles, flowers, fruit; see Phytomer::getFloralBudStorageIndex())
+    uint petiole_index;
+    //! Index of the leaf within its petiole (leaves only)
+    uint leaf_index;
+    //! Second index of the floral bud in Phytomer::floral_buds (peduncles, flowers and fruit only; see Phytomer::getFloralBudStorageIndex())
+    uint floral_bud_index;
+    //! Context object ID of the organ
+    uint objID;
+};
+
+//! One straight segment of the centerline of a plant axis (internode, petiole or peduncle), as returned by PlantArchitecture::getPlantSkeletonSegments()
+struct PlantSkeletonSegment {
+    //! Start of the segment, nearer the base of the organ
+    helios::vec3 start;
+    //! End of the segment
+    helios::vec3 end;
+    //! Radius of the organ at the start of the segment
+    float start_radius;
+    //! Radius of the organ at the end of the segment
+    float end_radius;
+    //! Organ the segment belongs to. Its node_index is the phytomer the segment belongs to.
+    PlantOrganLocation organ;
+};
 
 class PlantArchitecture {
 public:
@@ -3120,6 +3298,19 @@ public:
      */
     uint buildPlantInstanceFromLibrary(const helios::vec3 &base_position, float age, const std::map<std::string, float> &build_parameters = {});
 
+    //! Build a plant instance based on the model currently loaded from the library, with build parameters drawn from distributions
+    /**
+     * A structure parameter, such as "tiller_count" or "trunk_height", is sampled once for the plant. An organ parameter, such as "berry_diameter", is sampled once for each of the model's flower and fruit
+     * prototypes, which are shared by every plant given the same organ distributions. See \ref PlantArchBuildParamDistributions.
+     * \param[in] base_position Cartesian coordinates of the base of the plant.
+     * \param[in] age Age of the plant in days.
+     * \param[in] build_parameters Map of parameter names to distributions overriding species-specific defaults of the model (see \ref PlantArchBuildParams). A name the model does not accept, a distribution
+     * reaching outside the valid range of its parameter, or a parameter that counts something given other than whole-number constant or discrete values throws.
+     * \return ID of the plant instance.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
+     */
+    uint buildPlantInstanceFromLibrary(const helios::vec3 &base_position, float age, const std::map<std::string, BuildParameterDistribution> &build_parameters);
+
     //! Build a canopy of regularly spaced plants based on the model currently loaded from the library
     /**
      * \param[in] canopy_center_position Cartesian coordinates of the center of the canopy.
@@ -3147,6 +3338,39 @@ public:
      * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, uint plant_count, float age, const std::map<std::string, float> &build_parameters = {});
+
+    //! Build a canopy of regularly spaced plants based on the model currently loaded from the library, with build parameters drawn from distributions
+    /**
+     * Each plant is given its own sample of every structure parameter, such as "tiller_count", and the plants share one set of flower and fruit prototypes sampled from the organ parameters. See
+     * \ref PlantArchBuildParamDistributions.
+     * \param[in] canopy_center_position Cartesian coordinates of the center of the canopy.
+     * \param[in] plant_spacing_xy Spacing between plants in the canopy in the x- and y-directions.
+     * \param[in] plant_count_xy Number of plants in the canopy in the x- and y-directions.
+     * \param[in] age Age of the plants in the canopy in days.
+     * \param[in] germination_rate Probability that a plant in the canopy germinates and a plant is created.
+     * \param[in] build_parameters Map of parameter names to distributions overriding species-specific defaults of the model (see \ref PlantArchBuildParams), checked as by
+     * \ref buildPlantInstanceFromLibrary(const helios::vec3 &, float, const std::map<std::string, BuildParameterDistribution> &).
+     * \return Vector of plant instance IDs.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
+     */
+    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, float germination_rate,
+                                                  const std::map<std::string, BuildParameterDistribution> &build_parameters);
+
+    //! Build a canopy of randomly scattered plants based on the model currently loaded from the library, with build parameters drawn from distributions
+    /**
+     * Each plant is given its own sample of every structure parameter, such as "tiller_count", and the plants share one set of flower and fruit prototypes sampled from the organ parameters. See
+     * \ref PlantArchBuildParamDistributions.
+     * \param[in] canopy_center_position Cartesian coordinates of the center of the canopy boundaries.
+     * \param[in] canopy_extent_xy Size/extent of the canopy boundaries in the x- and y-directions.
+     * \param[in] plant_count Number of plants to randomly generate inside canopy bounds.
+     * \param[in] age Age of the plants in the canopy in days.
+     * \param[in] build_parameters Map of parameter names to distributions overriding species-specific defaults of the model (see \ref PlantArchBuildParams), checked as by
+     * \ref buildPlantInstanceFromLibrary(const helios::vec3 &, float, const std::map<std::string, BuildParameterDistribution> &).
+     * \return Vector of plant instance IDs.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
+     */
+    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, uint plant_count, float age,
+                                                  const std::map<std::string, BuildParameterDistribution> &build_parameters);
 
     //! Get the shoot parameters structure for a specific shoot type in the current plant model
     /**
@@ -4098,13 +4322,114 @@ public:
      * order they were requested; a cut whose shoot or node has already been removed by an earlier one
      * is already satisfied and does nothing. See \ref PlantArchCallbackEdits.
      *
+     * With \a keep_trimmed_material set, the removed Context objects are not deleted but left in place, detached from the plant, and returned, for example to hand them to a physics simulation. They form one
+     * connected piece: the removed section of the shoot, whose internode tube is split off from the part that stays on the plant (see helios::Context::splitTubeObject()), with everything it bears and every
+     * shoot descending from it. The objects keep their object and primitive data (e.g., "plantID", "object_label"), but the plant no longer refers to them, so later growth, deletePlantInstance() and other
+     * plant operations do not touch them; deleting them is up to the caller. Keeping the material cannot be requested from inside a phytomer callback, where the cut is deferred.
+     *
      * \param[in] plantID Unique identifier of the plant to prune.
      * \param[in] shootID Identifier of the shoot to prune from within the plant.
      * \param[in] node_index Index of the node on the shoot where the branch will be pruned.
-     * \note Throws an error if node_index is out of range for a shoot that still has nodes.
-     * \sa isShootPruned()
+     * \param[in] keep_trimmed_material [optional] If true, the removed material is left in the Context and returned; if false (default), it is deleted.
+     * \return Object IDs of the removed material. Empty when \a keep_trimmed_material is false, or when the shoot had already been pruned away.
+     * \note Throws an error if node_index is out of range for a shoot that still has nodes, or if \a keep_trimmed_material is true inside a phytomer callback.
+     * \sa isShootPruned(), pruneBranchAtPrimitive(), prunePlantsByPlane()
      */
-    void pruneBranch(uint plantID, uint shootID, uint node_index);
+    std::vector<uint> pruneBranch(uint plantID, uint shootID, uint node_index, bool keep_trimmed_material = false);
+
+    //! Prune the branch at the node of an internode primitive, for example the primitive hit by a ray from a pruning tool
+    /**
+     * Equivalent to pruneBranch() at the plant, shoot and node given by getPrimitiveOrganLocation() for \a UUID.
+     * \param[in] UUID Unique identifier of a primitive of a shoot's internode tube.
+     * \param[in] keep_trimmed_material [optional] If true, the removed material is left in the Context and returned; if false (default), it is deleted. See pruneBranch().
+     * \return Object IDs of the removed material. Empty when \a keep_trimmed_material is false.
+     * \note Throws an error if the primitive is not part of a plant's internode tube (a leaf, petiole or flower primitive, or one that is not part of any plant).
+     */
+    std::vector<uint> pruneBranchAtPrimitive(uint UUID, bool keep_trimmed_material = false);
+
+    //! Find the plant organ that a Context primitive belongs to
+    /**
+     * Maps a primitive, for example one hit by a ray, a LiDAR beam or a collision query, to its plant, shoot, phytomer (node) and organ. For an internode primitive, node_index is the phytomer whose
+     * internode the primitive belongs to. Lookups use an index that is built on the first lookup and rebuilt automatically, on the next lookup, after any operation that changes the plants' organ objects
+     * (growth, pruning, leaf removal, harvesting, XML reading, deleting plants and so on), so a lookup costs O(1) on average.
+     * \param[in] UUID Unique identifier of the primitive.
+     * \return Location of the primitive's organ.
+     * \note Throws an error if the primitive is not part of an organ of a plant of this PlantArchitecture instance, including material detached by pruning. Use isPlantPrimitive() to filter primitives first.
+     * \note Not thread-safe: the first lookup after a change rebuilds the index.
+     */
+    [[nodiscard]] PlantOrganLocation getPrimitiveOrganLocation(uint UUID) const;
+
+    //! Find the plant organ that each of several Context primitives belongs to
+    /**
+     * See \ref getPrimitiveOrganLocation(uint) const.
+     * \param[in] UUIDs Unique identifiers of the primitives.
+     * \return Location of each primitive's organ, in the order of \a UUIDs.
+     * \note Throws an error if any of the primitives is not part of an organ of a plant. Use isPlantPrimitive() to filter primitives first.
+     */
+    [[nodiscard]] std::vector<PlantOrganLocation> getPrimitiveOrganLocations(const std::vector<uint> &UUIDs) const;
+
+    //! Find the plant organ that a Context object is
+    /**
+     * See \ref getPrimitiveOrganLocation(uint) const. A shoot's internode tube is a single object spanning all of the shoot's phytomers, so for it node_index is PlantOrganLocation::not_applicable.
+     * \param[in] objID Identifier of the object.
+     * \return Location of the organ.
+     * \note Throws an error if the object is not an organ of a plant.
+     */
+    [[nodiscard]] PlantOrganLocation getObjectOrganLocation(uint objID) const;
+
+    //! Check whether a Context primitive is part of an organ of a plant
+    /**
+     * \param[in] UUID Unique identifier of the primitive.
+     * \return True if getPrimitiveOrganLocation() would find the primitive's organ; false if the primitive does not exist or is not part of a plant of this PlantArchitecture instance.
+     */
+    [[nodiscard]] bool isPlantPrimitive(uint UUID) const;
+
+    //! Get the centerline segments of a plant's axes, with their radii, for example for proximity or collision tests against the plant's skeleton
+    /**
+     * Each internode, petiole or peduncle centerline is returned as the straight segments between its successive nodes, in order from base to tip, with the radius of the organ at both ends and the organ
+     * the segment belongs to. Internode segments come from Phytomer::getInternodeNodePositions(). Shoots that have been pruned away contribute nothing.
+     * \param[in] plantID Identifier of the plant.
+     * \param[in] organ_types [optional] Organs to include: any of PlantOrganType::INTERNODE (default), PlantOrganType::PETIOLE and PlantOrganType::PEDUNCLE.
+     * \return Segments of the requested organs.
+     * \note Throws an error if the plant does not exist, or if \a organ_types includes an organ without a centerline (leaves, flowers or fruit).
+     */
+    [[nodiscard]] std::vector<PlantSkeletonSegment> getPlantSkeletonSegments(uint plantID, const std::vector<PlantOrganType> &organ_types = {PlantOrganType::INTERNODE}) const;
+
+    //! Cut plants across a plane, as in a hedging pass
+    /**
+     * Everything on the side of the plane that \a plane_normal points toward is trimmed. Only the axes of the plant are cut:
+     * - A shoot whose internode crosses the plane is pruned at that phytomer, exactly as by pruneBranch(), so the node, its leaves, inflorescences and child shoots, and every phytomer above it are
+     *   removed. The cut snaps to nodes: the remaining stub ends at the last node short of the plane, up to one internode length from it.
+     * - A phytomer whose petiole crosses the plane loses its leaves and petioles, as by Phytomer::removeLeaf(). This removes every petiole on that phytomer, including any that do not cross the plane.
+     * - A floral bud whose peduncle crosses the plane loses its peduncle and its flowers or fruit, and the bud is set to BUD_DEAD.
+     *
+     * Leaf blades and fruit that reach across the plane from an axis that does not cross it are not trimmed, and neither are flowers or fruit whose peduncle geometry is not built.
+     *
+     * With \a keep_trimmed_material set, the trimmed Context objects are not deleted but left in place, detached from the plant, for example to hand them to a physics simulation. They are returned
+     * grouped into fragments, each of which is one connected piece: a pruned shoot section with everything it bears, the leaves and petioles of one petiole, or one peduncle with its flowers or fruit.
+     * The trimmed objects keep their object and primitive data (e.g., "plantID", "object_label"), but the plant no longer refers to them, so later growth, deletePlantInstance() and other plant
+     * operations do not touch them; deleting them is up to the caller.
+     *
+     * \param[in] plantIDs Identifiers of the plants to cut.
+     * \param[in] plane_point Any point on the cutting plane.
+     * \param[in] plane_normal Normal of the cutting plane, pointing toward the side to be trimmed. It need not be unit length.
+     * \param[in] keep_trimmed_material [optional] If true, the trimmed material is left in the Context and returned; if false (default), it is deleted.
+     * \return Object IDs of the trimmed material, one inner vector per fragment. Empty when \a keep_trimmed_material is false.
+     * \note Cannot be called from inside a phytomer callback.
+     * \sa pruneBranch()
+     */
+    std::vector<std::vector<uint>> prunePlantsByPlane(const std::vector<uint> &plantIDs, const helios::vec3 &plane_point, const helios::vec3 &plane_normal, bool keep_trimmed_material = false);
+
+    //! Cut a plant across a plane, as in a hedging pass
+    /**
+     * See \ref prunePlantsByPlane(const std::vector<uint>&, const helios::vec3&, const helios::vec3&, bool) for details.
+     * \param[in] plantID Identifier of the plant to cut.
+     * \param[in] plane_point Any point on the cutting plane.
+     * \param[in] plane_normal Normal of the cutting plane, pointing toward the side to be trimmed. It need not be unit length.
+     * \param[in] keep_trimmed_material [optional] If true, the trimmed material is left in the Context and returned; if false (default), it is deleted.
+     * \return Object IDs of the trimmed material, one inner vector per fragment. Empty when \a keep_trimmed_material is false.
+     */
+    std::vector<std::vector<uint>> prunePlantsByPlane(uint plantID, const helios::vec3 &plane_point, const helios::vec3 &plane_normal, bool keep_trimmed_material = false);
 
     // -- methods for querying information about the plant -- //
 
@@ -4118,12 +4443,22 @@ public:
 
     //! Get the build parameters a plant was built with
     /**
-     * These are the parameters given to \ref buildPlantInstanceFromLibrary() (see \ref PlantArchBuildParams). A plant keeps them for its life, and they are restored with it from XML. Parameters that were not
-     * given are absent, and take the model's default where they are read.
+     * These are the parameters given to \ref buildPlantInstanceFromLibrary() (see \ref PlantArchBuildParams). A parameter given as a \ref BuildParameterDistribution appears with the value sampled for this
+     * plant, except an organ parameter, which is sampled for each flower and fruit prototype rather than for the plant and appears only in \ref getPlantOrganBuildParameters(). A plant keeps its parameters
+     * for its life, and they are restored with it from XML. Parameters that were not given are absent, and take the model's default where they are read.
      * \param[in] plantID Unique identifier of the plant.
      * \return Map of build parameter names to values, empty for a plant not built from the library or built without parameters.
      */
     [[nodiscard]] const std::map<std::string, float> &getPlantBuildParameters(uint plantID) const;
+
+    //! Get the build parameters that shape a plant's flowers and fruit, as distributions
+    /**
+     * These are the organ parameters given to \ref buildPlantInstanceFromLibrary(), such as "berry_diameter" (see \ref PlantArchBuildParams), with a fixed value given as a constant distribution. Each
+     * flower and fruit prototype of the plant is built from its own sample of them, and plants with the same organ parameters share their prototypes.
+     * \param[in] plantID Unique identifier of the plant.
+     * \return Map of organ parameter names to distributions, empty if none were given.
+     */
+    [[nodiscard]] const std::map<std::string, BuildParameterDistribution> &getPlantOrganBuildParameters(uint plantID) const;
 
     /**
      * \brief Retrieves the age of a specific plant.
@@ -5051,10 +5386,37 @@ private:
     void rejectStructuralOperationInCallback(const std::string &operation) const;
 
     //! Apply a validated cut: the removal performed by pruneBranch()
-    void applyPruneBranch(uint plantID, uint shootID, uint node_index);
+    void applyPruneBranch(uint plantID, uint shootID, uint node_index, std::vector<uint> *detached_objIDs = nullptr);
 
     //! Apply, in call order, every pruneBranch() call deferred from inside a phytomer callback
     void flushDeferredPrunes();
+
+    //! Mark the primitive-to-organ index out of date, so that the next organ lookup rebuilds it
+    /**
+     * Called wherever organ objects of a plant are created, deleted, detached or have primitives added, i.e. wherever Shoot::internode_tube_objID, Phytomer::petiole_objIDs, Phytomer::leaf_objIDs,
+     * FloralBud::peduncle_objIDs or FloralBud::inflorescence_objIDs change or an internode tube gains, loses or moves primitives.
+     */
+    void invalidateOrganIndex() const;
+
+    //! Rebuild the primitive-to-organ index from the structure of every plant, if it is out of date
+    void ensureOrganIndexCurrent() const;
+
+    //! Look up a primitive in the organ index (which must be current)
+    /**
+     * \param[in] UUID Unique identifier of the primitive.
+     * \param[out] node_index Node of the primitive: the record's node_index, or for an internode primitive the phytomer its triangle belongs to.
+     * \return The organ record of the primitive's parent object, or nullptr if the primitive does not exist or is not part of a plant.
+     */
+    [[nodiscard]] const PlantOrganLocation *findPrimitiveOrganLocation(uint UUID, uint &node_index) const;
+
+    //! Organ record of every live organ object of every plant, keyed by object ID. For internode tubes node_index is PlantOrganLocation::not_applicable.
+    mutable std::unordered_map<uint, PlantOrganLocation> organ_index_by_objID;
+
+    //! Phytomer (node) index of every primitive of every live internode tube, keyed by primitive UUID
+    mutable std::unordered_map<uint, uint> internode_node_by_UUID;
+
+    //! False when the organ index must be rebuilt before the next lookup
+    mutable bool organ_index_current = false;
 
     //! Number of phytomer callbacks currently running (nested invocations count separately)
     int phytomer_callback_depth = 0;
@@ -5086,15 +5448,15 @@ protected:
 
     //! Build parameters declared for a library plant model, see \ref registerPlantModelBuildParameters()
     struct PlantModelBuildParameters {
-        std::vector<std::string> structure_parameter_names;
-        std::vector<std::string> organ_parameter_names;
+        std::vector<BuildParameterDeclaration> structure_parameters;
+        std::vector<BuildParameterDeclaration> organ_parameters;
         std::function<void(const std::map<std::string, float> &)> validate_organ_parameters;
     };
 
-    // Build parameters of the plant being built by buildPlantInstanceFromLibrary(), set only for the duration of that call. The builder reads current_build_parameters, and addPlantInstance() attaches
-    // both maps to the plant the builder creates.
+    // Build parameters of the plant being built by buildPlantInstanceFromLibrary(), set only for the duration of that call. The builder reads current_build_parameters, which hold the values sampled for
+    // the plant, and addPlantInstance() attaches both maps to the plant the builder creates.
     std::map<std::string, float> current_build_parameters;
-    std::map<std::string, float> current_organ_build_parameters;
+    std::map<std::string, BuildParameterDistribution> current_organ_build_parameters;
 
     // Function pointer maps for plant model registration
     std::map<std::string, std::function<void()>> shoot_initializers;
@@ -5185,13 +5547,20 @@ protected:
      */
     [[nodiscard]] uint getCachedLeafPrototypeObjID(uint prototype_identifier, uint leaves_per_petiole, uint prototype_index, uint leaf_index, const std::string &calling_function) const;
 
-    // Key is the prototype function pointer and the build parameters of the plant it was built for, so plants built with different parameters get their own prototypes; value index is the unique flower
-    // prototype
-    std::map<std::pair<FlowerPrototypeFunction, std::map<std::string, float>>, std::vector<uint>> unique_open_flower_prototype_objIDs;
-    // Key is the prototype function pointer and the plant build parameters; value index is the unique flower prototype
-    std::map<std::pair<FlowerPrototypeFunction, std::map<std::string, float>>, std::vector<uint>> unique_closed_flower_prototype_objIDs;
-    // Key is the prototype function pointer and the plant build parameters; value index is the unique fruit prototype
-    std::map<std::pair<FruitPrototypeFunction, std::map<std::string, float>>, std::vector<uint>> unique_fruit_prototype_objIDs;
+    // Key is the prototype function pointer and the organ build parameter distributions of the plant it was built for, so plants built with different parameters get their own prototypes, and each
+    // prototype of a set is built from its own sample of the distributions; value index is the unique flower prototype
+    std::map<std::pair<FlowerPrototypeFunction, std::map<std::string, BuildParameterDistribution>>, std::vector<uint>> unique_open_flower_prototype_objIDs;
+    // Key is the prototype function pointer and the plant's organ build parameter distributions; value index is the unique flower prototype
+    std::map<std::pair<FlowerPrototypeFunction, std::map<std::string, BuildParameterDistribution>>, std::vector<uint>> unique_closed_flower_prototype_objIDs;
+    // Key is the prototype function pointer and the plant's organ build parameter distributions; value index is the unique fruit prototype
+    std::map<std::pair<FruitPrototypeFunction, std::map<std::string, BuildParameterDistribution>>, std::vector<uint>> unique_fruit_prototype_objIDs;
+
+    //! Draw one value of each organ build parameter of a plant, for building one flower or fruit prototype
+    /**
+     * \param[in] organ_build_parameters Organ build parameter distributions of the plant.
+     * \return Map of organ parameter names to sampled values. Constants are returned without drawing from the random generator.
+     */
+    [[nodiscard]] std::map<std::string, float> sampleOrganBuildParameters(const std::map<std::string, BuildParameterDistribution> &organ_build_parameters) const;
 
     //! Get object IDs for all hidden prototype objects managed by this PlantArchitecture instance
     [[nodiscard]] std::vector<uint> getAllPrototypeObjectIDs() const;
@@ -5228,23 +5597,28 @@ protected:
      * Every declared parameter given to \ref buildPlantInstanceFromLibrary() is kept with the plant for its life. They are declared in two groups. Structure parameters are read by the model's builder, and
      * possibly by its phytomer creation function as the plant grows. Organ parameters shape the model's flowers and fruit: they are passed to its prototype functions and identify its cached prototypes, so
      * plants that differ only in structure parameters share their flower and fruit prototypes.
+     * Each parameter is declared with its valid range, which must be the declaration the code reading it checks against, so that a \ref BuildParameterDistribution can be checked for its whole range
+     * before any plant is built.
      * \param[in] name Plant model label, which must already be registered with \ref registerPlantModel().
-     * \param[in] structure_parameter_names Names of every build parameter read by the model's builder.
-     * \param[in] organ_parameter_names [optional] Names of every build parameter read by the model's flower and fruit prototype functions.
-     * \param[in] validate_organ_parameters [optional] Function that reads every organ parameter and throws if one is invalid. It is called before the plant is built and when organ parameters are read from
-     * XML, so an invalid value fails then rather than when the first flower or fruit forms. Required when organ parameters are declared.
+     * \param[in] structure_parameters Declarations of every build parameter read by the model's builder.
+     * \param[in] organ_parameters [optional] Declarations of every build parameter read by the model's flower and fruit prototype functions.
+     * \param[in] validate_organ_parameters [optional] Function that reads every organ parameter and throws if one is invalid. It is called with the organ parameters given as fixed values before the plant
+     * is built and when organ parameters are read from XML, so an invalid value fails then rather than when the first flower or fruit forms. Required when organ parameters are declared.
      */
-    void registerPlantModelBuildParameters(const std::string &name, const std::vector<std::string> &structure_parameter_names, const std::vector<std::string> &organ_parameter_names = {},
+    void registerPlantModelBuildParameters(const std::string &name, const std::vector<BuildParameterDeclaration> &structure_parameters, const std::vector<BuildParameterDeclaration> &organ_parameters = {},
                                            std::function<void(const std::map<std::string, float> &)> validate_organ_parameters = nullptr);
 
-    //! Check that every entry of a build parameter map is declared for a plant model, and that its organ parameters are valid
+    //! Check that every entry of a build parameter map is declared for a plant model, that every distribution lies within its parameter's range, and that its fixed organ parameters are valid
     /**
+     * A fixed structure parameter is checked by the builder that reads it, and a fixed organ parameter by the model's organ validator. A distribution is checked here against its declaration, since the
+     * code reading it sees only one sample at a time.
      * \param[in] plant_model_name Name of the library plant model.
-     * \param[in] build_parameters Map of build parameter names to values.
+     * \param[in] build_parameters Map of build parameter names to distributions.
      * \param[in] calling_function Name of the calling function, quoted in error messages.
      * \return The organ parameters among the entries of build_parameters.
      */
-    [[nodiscard]] std::map<std::string, float> validateBuildParameters(const std::string &plant_model_name, const std::map<std::string, float> &build_parameters, const std::string &calling_function) const;
+    [[nodiscard]] std::map<std::string, BuildParameterDistribution> validateBuildParameters(const std::string &plant_model_name, const std::map<std::string, BuildParameterDistribution> &build_parameters,
+                                                                                            const std::string &calling_function) const;
 
     //! Initialize all plant model registrations
     void initializePlantModelRegistrations();

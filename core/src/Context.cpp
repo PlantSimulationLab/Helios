@@ -735,7 +735,9 @@ float Context::queryTimeseriesData(const char *label, const Date &date, const Ti
         double tminus = timeseries_datevalue.at(label).at(i);
         double tplus = timeseries_datevalue.at(label).at(i + 1);
 
-        return float(xminus + (xplus - xminus) * (date_value - tminus) / (tplus - tminus));
+        // This form returns the stored value exactly at a sample time, and cannot go negative between non-negative samples
+        double fraction = (date_value - tminus) / (tplus - tminus);
+        return float((1.0 - fraction) * xminus + fraction * xplus);
     }
 }
 
@@ -3319,9 +3321,15 @@ std::string Context::getPrimitiveTextureFile(uint UUID) const {
     return getPrimitivePointer_private(UUID)->getTextureFile();
 }
 
-void Context::setPrimitiveTextureFile(uint UUID, const std::string &texturefile) const {
+void Context::setPrimitiveTextureFile(uint UUID, const std::string &texturefile) {
     api_warnings.addWarning("setPrimitiveTextureFile_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
-    getPrimitivePointer_private(UUID)->setTextureFile(texturefile.c_str());
+    // Registered before the primitive is touched, so that a file that cannot be used leaves the primitive as it was. The texture's transparency data, which the solid fraction and the radiation model's mask come from, is only available once it is registered.
+    if (!texturefile.empty()) {
+        addTexture(texturefile.c_str());
+    }
+    Primitive *primitive = getPrimitivePointer_private(UUID);
+    primitive->setTextureFile(texturefile.c_str());
+    updatePrimitiveSolidFraction(primitive);
 }
 
 helios::int2 Context::getPrimitiveTextureSize(uint UUID) const {
@@ -3658,8 +3666,10 @@ void Context::addMaterial(const std::string &material_label) {
         // to this label stays assigned to it and sees the new material; erasing the ID instead would leave them referencing nothing.
         const uint existingID = existing->second;
         const uint reference_count = materials.at(existingID).reference_count;
+        const bool texture_changed = !materials.at(existingID).texture_file.empty();
         materials.at(existingID) = Material(existingID, material_label, make_RGBAcolor(0, 0, 0, 1), "", false);
         materials.at(existingID).reference_count = reference_count;
+        markMaterialPrimitivesModified(existingID, texture_changed);
         return;
     }
 
@@ -3713,6 +3723,57 @@ bool Context::isMaterialShared(uint materialID) const {
     }
     // Use reference count for O(1) lookup instead of O(n) scan
     return materials.at(materialID).reference_count > 1;
+}
+
+void Context::updatePrimitiveSolidFraction(Primitive *primitive) {
+    const std::string &texture_file = materials.at(primitive->materialID).texture_file;
+    if (texture_file.empty()) {
+        primitive->setSolidFraction(1.f);
+        return;
+    }
+
+    addTexture(texture_file.c_str());
+    std::vector<vec2> uv = primitive->getTextureUV();
+    if (uv.empty() && primitive->prim_type == PRIMITIVE_TYPE_PATCH) {
+        // A patch given no (u,v) coordinates maps the whole image
+        uv = {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)};
+    }
+    primitive->setSolidFraction(textures.at(texture_file).getSolidFraction(uv));
+}
+
+void Context::setPrimitiveMaterial(Primitive *primitive, uint materialID) {
+    const uint oldMaterialID = primitive->materialID;
+    if (oldMaterialID == materialID) {
+        return;
+    }
+
+    materials[oldMaterialID].reference_count--;
+    materials[materialID].reference_count++;
+    primitive->materialID = materialID;
+
+    // The opaque area and the transparency mask only depend on the texture, so a material that shares it is not a change of shape
+    if (materials.at(oldMaterialID).texture_file != materials.at(materialID).texture_file) {
+        updatePrimitiveSolidFraction(primitive);
+    } else {
+        primitive->markDirty();
+    }
+}
+
+void Context::markMaterialPrimitivesModified(uint materialID, bool texture_changed) {
+    // Materials are commonly configured before anything is assigned to them, and nothing maps a material to its primitives, so the scan of every primitive is only done when there is something to find
+    if (materials.at(materialID).reference_count == 0) {
+        return;
+    }
+    for (const auto &[UUID, primitive]: primitives) {
+        if (primitive->materialID != materialID) {
+            continue;
+        }
+        if (texture_changed) {
+            updatePrimitiveSolidFraction(primitive);
+        } else {
+            primitive->markDirty();
+        }
+    }
 }
 
 uint Context::copyMaterialForPrimitive(uint primitiveUUID) {
@@ -3812,7 +3873,11 @@ bool Context::isMaterialTextureColorOverridden(const std::string &material_label
 
 void Context::setMaterialColor(const std::string &material_label, const RGBAcolor &color) {
     uint matID = getMaterialIDFromLabel(material_label);
+    if (materials.at(matID).color == color) {
+        return;
+    }
     materials[matID].color = color;
+    markMaterialPrimitivesModified(matID, false);
 }
 
 void Context::setMaterialTexture(const std::string &material_label, const std::string &texture_file) {
@@ -3821,12 +3886,20 @@ void Context::setMaterialTexture(const std::string &material_label, const std::s
     if (!texture_file.empty()) {
         addTexture(texture_file.c_str());
     }
+    if (materials.at(matID).texture_file == texture_file) {
+        return;
+    }
     materials[matID].texture_file = texture_file;
+    markMaterialPrimitivesModified(matID, true);
 }
 
 void Context::setMaterialTextureColorOverride(const std::string &material_label, bool override) {
     uint matID = getMaterialIDFromLabel(material_label);
+    if (materials.at(matID).texture_color_overridden == override) {
+        return;
+    }
     materials[matID].texture_color_overridden = override;
+    markMaterialPrimitivesModified(matID, false);
 }
 
 uint Context::getMaterialTwosidedFlag(const std::string &material_label) const {
@@ -3857,24 +3930,13 @@ uint Context::getPrimitiveTwosidedFlag(uint UUID, uint default_value) const {
 }
 
 void Context::assignMaterialToPrimitive(uint UUID, const std::string &material_label) {
-    uint materialID = getMaterialIDFromLabel(material_label);
-    Primitive *prim = getPrimitivePointer_private(UUID);
-    uint oldMaterialID = prim->materialID;
-    // Update reference counts
-    materials[oldMaterialID].reference_count--;
-    materials[materialID].reference_count++;
-    prim->materialID = materialID;
+    setPrimitiveMaterial(getPrimitivePointer_private(UUID), getMaterialIDFromLabel(material_label));
 }
 
 void Context::assignMaterialToPrimitive(const std::vector<uint> &UUIDs, const std::string &material_label) {
     uint materialID = getMaterialIDFromLabel(material_label);
     for (uint UUID: UUIDs) {
-        Primitive *prim = getPrimitivePointer_private(UUID);
-        uint oldMaterialID = prim->materialID;
-        // Update reference counts
-        materials[oldMaterialID].reference_count--;
-        materials[materialID].reference_count++;
-        prim->materialID = materialID;
+        setPrimitiveMaterial(getPrimitivePointer_private(UUID), materialID);
     }
 }
 
@@ -3928,11 +3990,7 @@ void Context::deleteMaterial(const std::string &material_label) {
         std::cerr << "WARNING (Context::deleteMaterial): Material '" << material_label << "' is in use by " << users.size() << " primitives. They will be reassigned to the default material." << std::endl;
         // Reassign primitives to default material
         for (uint UUID: users) {
-            Primitive *prim = getPrimitivePointer_private(UUID);
-            // Update material reference counts
-            materials[materialID].reference_count--; // Decrement deleted material
-            prim->materialID = 0; // Default material ID
-            materials[0].reference_count++; // Increment default material
+            setPrimitiveMaterial(getPrimitivePointer_private(UUID), 0); // Default material ID
         }
     }
 
@@ -4878,6 +4936,72 @@ void Context::pruneTubeNodes(uint ObjID, uint node_index) {
     }
 #endif
     dynamic_cast<Tube *>(objects.at(ObjID))->pruneTubeNodes(node_index);
+}
+
+uint Context::splitTubeObject(uint ObjID, uint node_index) {
+    if (!doesObjectExist(ObjID)) {
+        helios_runtime_error("ERROR (Context::splitTubeObject): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+    } else if (objects.at(ObjID)->getObjectType() != OBJECT_TYPE_TUBE) {
+        helios_runtime_error("ERROR (Context::splitTubeObject): ObjectID of " + std::to_string(ObjID) + " is not a Tube object.");
+    }
+
+    Tube *tube = getTubeObjectPointer_private(ObjID);
+    const uint node_count = tube->nodes.size();
+    if (node_index < 2 || node_index >= node_count) {
+        helios_runtime_error("ERROR (Context::splitTubeObject): Node index of " + std::to_string(node_index) + " is out of range for a tube with " + std::to_string(node_count) +
+                             " nodes. It must be at least 2 and less than the node count so that each piece keeps at least one segment.");
+    }
+
+    // Partition the primitives into those of the segments that stay and those that move. UUIDs are stored in j-outer, i-inner order (see Tube::pruneTubeNodes()), and keeping that order within each
+    // partition leaves both lists in the layout a tube with the reduced segment count expects.
+    const uint original_segment_count = node_count - 1;
+    const uint segments_to_keep = node_index - 1;
+    std::vector<uint> kept_UUIDs;
+    std::vector<uint> moved_UUIDs;
+    kept_UUIDs.reserve(2 * segments_to_keep * tube->subdiv);
+    moved_UUIDs.reserve(2 * (original_segment_count - segments_to_keep) * tube->subdiv);
+    size_t ii = 0;
+    for (uint j = 0; j < tube->subdiv; j++) {
+        for (uint i = 0; i < original_segment_count; i++) {
+            std::vector<uint> &destination = (i < segments_to_keep) ? kept_UUIDs : moved_UUIDs;
+            destination.push_back(tube->UUIDs.at(ii));
+            destination.push_back(tube->UUIDs.at(ii + 1));
+            ii += 2;
+        }
+    }
+
+    // The node, radius, color and ring vectors are in the object's local frame. The transformation matrix is copied to the new object below, so the moved ring stays where it is drawn.
+    const size_t first_moved_node = node_index - 1;
+    std::vector<vec3> upper_nodes(tube->nodes.begin() + first_moved_node, tube->nodes.end());
+    std::vector<float> upper_radius(tube->radius.begin() + first_moved_node, tube->radius.end());
+    std::vector<RGBcolor> upper_colors(tube->colors.begin() + first_moved_node, tube->colors.end());
+    std::vector<std::vector<vec3>> upper_triangle_vertices(tube->triangle_vertices.begin() + first_moved_node, tube->triangle_vertices.end());
+
+    const uint new_objID = currentObjectID;
+    auto *tube_new = new Tube(new_objID, moved_UUIDs, upper_nodes, upper_radius, upper_colors, upper_triangle_vertices, tube->subdiv, tube->texturefile.c_str(), this);
+    objects[new_objID] = tube_new;
+    currentObjectID++;
+
+    for (uint UUID: moved_UUIDs) {
+        Primitive *primitive = getPrimitivePointer_private(UUID);
+        primitive->setParentObjectID(new_objID);
+        primitive->markDirty();
+    }
+
+    float T[16];
+    tube->getTransformationMatrix(T);
+    tube_new->setTransformationMatrix(T);
+    tube_new->ishidden = tube->ishidden;
+    copyObjectData(ObjID, new_objID);
+    tube_new->object_origin = getObjectCenter(new_objID);
+
+    tube->nodes.erase(tube->nodes.begin() + node_index, tube->nodes.end());
+    tube->radius.erase(tube->radius.begin() + node_index, tube->radius.end());
+    tube->colors.erase(tube->colors.begin() + node_index, tube->colors.end());
+    tube->triangle_vertices.erase(tube->triangle_vertices.begin() + node_index, tube->triangle_vertices.end());
+    tube->UUIDs = kept_UUIDs;
+
+    return new_objID;
 }
 
 void Context::setTubeNodes(uint ObjID, const std::vector<helios::vec3> &node_xyz) {

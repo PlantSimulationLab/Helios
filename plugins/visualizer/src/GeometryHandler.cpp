@@ -949,6 +949,51 @@ void GeometryHandler::getDomainBoundingBox(helios::vec2 &xbounds, helios::vec2 &
     }
 }
 
+bool GeometryHandler::getShadowCasterBoundingBox(helios::vec3 &bounds_min, helios::vec3 &bounds_max) const {
+
+    // Accumulate in locals: the output references could alias the vertex arrays as far as the compiler knows, which would force a store and reload per vertex
+    float min_x = std::numeric_limits<float>::max(), min_y = std::numeric_limits<float>::max(), min_z = std::numeric_limits<float>::max();
+    float max_x = -std::numeric_limits<float>::max(), max_y = -std::numeric_limits<float>::max(), max_z = -std::numeric_limits<float>::max();
+    bool found_caster = false;
+
+    // Each per-primitive array of a geometry type holds one entry per primitive slot, in the order the primitives were
+    // registered (see registerUUID() and defragmentBuffers()), and the vertex array holds the slot's vertices in the same
+    // order. Sweeping the arrays directly, rather than visiting every primitive through UUID_map, keeps this pass a
+    // contiguous read; it runs on every frame in which any geometry changes.
+    for (const auto &[geometry_type, vertices]: vertex_data) {
+        const std::vector<int> &coordinate_flags = coordinate_flag_data.at(geometry_type);
+        const std::vector<char> &visible_flags = visible_flag_data.at(geometry_type);
+        const std::vector<char> &sky_flags = sky_geometry_flag_data.at(geometry_type);
+        const size_t slot_count = visible_flags.size();
+        const size_t floats_per_slot = 3 * size_t(getVertexCount(geometry_type));
+        if (coordinate_flags.size() != slot_count || sky_flags.size() != slot_count || vertices.size() != slot_count * floats_per_slot) {
+            helios::helios_runtime_error("ERROR (GeometryHandler::getShadowCasterBoundingBox): The geometry buffers of one geometry type hold different numbers of primitives (" + std::to_string(slot_count) + " visibility flags, " +
+                                 std::to_string(coordinate_flags.size()) + " coordinate flags, " + std::to_string(sky_flags.size()) + " sky flags, " + std::to_string(vertices.size() / floats_per_slot) +
+                                 " vertex sets). This is an internal error in the Visualizer plug-in.");
+        }
+
+        for (size_t slot = 0; slot < slot_count; slot++) {
+            // Only visible, non-sky COORDINATES_CARTESIAN (flag 1) geometry is drawn in the shadow pass; deleted primitives are invisible
+            if (coordinate_flags[slot] != 1 || sky_flags[slot] != 0 || !visible_flags[slot]) {
+                continue;
+            }
+            for (size_t offset = slot * floats_per_slot; offset < (slot + 1) * floats_per_slot; offset += 3) {
+                min_x = std::min(min_x, vertices[offset]);
+                min_y = std::min(min_y, vertices[offset + 1]);
+                min_z = std::min(min_z, vertices[offset + 2]);
+                max_x = std::max(max_x, vertices[offset]);
+                max_y = std::max(max_y, vertices[offset + 1]);
+                max_z = std::max(max_z, vertices[offset + 2]);
+            }
+            found_caster = true;
+        }
+    }
+
+    bounds_min = helios::make_vec3(min_x, min_y, min_z);
+    bounds_max = helios::make_vec3(max_x, max_y, max_z);
+    return found_caster;
+}
+
 void GeometryHandler::getDomainBoundingSphere(helios::vec3 &center, helios::vec3 &radius) const {
 
     helios::vec2 xbounds, ybounds, zbounds;
