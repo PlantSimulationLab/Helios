@@ -56,9 +56,7 @@ control steps/s, or 27-38 hours per 10^8 control steps, without rendering.
 
 - **Rigid internodes are the practical training default.** They are 6-8x faster than flexible ones. Flexible wood should
   be limited to the branches near the arm.
-- **The Visualizer is the rendering bottleneck, and pixels are not why.** Going from 1280x720 to 640x480 barely changes
-  its time in a run, which points at per-frame geometry handling. It has not been profiled. This must be fixed before
-  phase 4, since it currently costs more than the radiation camera.
+- **Most of the Visualizer's time is not spent on pixels.** It takes 43 ms even at 128x128, which points at per-frame geometry handling. It has not been profiled.
 - **BVH rebuilds are not the bottleneck** at this scene size, contrary to the risk listed below.
 
 **Phase 2 complete (2026-10-30).** `plugins/robotics` and `samples/robotics_pruning`, a URDF of the PruningRobot's arm working on a
@@ -107,7 +105,20 @@ Results on 12 trees never used for training or for setting up the task, 240 epis
 What this does not show: see "What is idealized" in the sample's README. The policy has exact positions, there are no leaves, only easy front-facing fruit are targeted, the grip is ideal, and detachment ignores
 pull direction. Peak contact can reach about 1000 N for a moment when the arm strikes rigid wood at speed, before the stop acts. Neither a rendered episode nor real hardware has checked any of this. No plant stiffness has been validated.
 
-**For phase 4:** rendering is the obstacle. A control step costs about 20 ms per thread, while a Visualizer frame costs about 270 ms, so vision in the training loop is not usable until Visualizer updates are far faster.
+**For phase 4:** rendering is the obstacle. Measured twice on an otherwise idle machine, on the 12720-primitive scene of the benchmark:
+
+| Camera, per frame | ms |
+|---|---|
+| Visualizer, 128x128, no antialiasing, no shadows | 43 |
+| Visualizer, 640x480, no antialiasing, no shadows | 72 |
+| Visualizer, 1280x720, 4x antialiasing, shadows | 125-139 |
+| Radiation, 128x128, 1 sample per pixel, 1 ray per primitive, no scattering | 39 (16 geometry + 23 run) |
+| Radiation, 128x128, 8 samples per pixel, 100 rays per primitive, 1 scatter | 100 (16 + 85) |
+| Radiation, 640x480, 8 samples per pixel, 100 rays per primitive, 1 scatter | 112 (16 + 96) |
+
+These replace the rendering times measured during phase 1, which were up to 3.7x higher on a busy machine. Radiation ran on the Vulkan backend with its software BVH. OptiX on an NVIDIA GPU has not been measured. The quality of the images from the cheapest radiation setting has not been looked at.
+
+A control step costs about 20 ms per thread, and physics runs on many threads while a renderer draws one frame at a time, so 40 ms per frame limits training to about 25 frames/s against 300 control steps/s without vision.
 
 ## Plug-in structure
 
@@ -145,8 +156,7 @@ Each phase has a gate to pass before moving on.
    *Gate:* the arm deflects a branch, a sensor reads the force, and a cut completes mid-run.
 3. **One trained task.** Python environment, and state-based fruit reach and detach.
    *Gate:* a policy learns across varied plants at a tolerable speed. This is the go/no-go for CPU MuJoCo.
-4. **Vision.** Add randomization and train with the Visualizer. Use radiation cameras for perception datasets and
-   validation, not in the training loop, unless benchmarks say otherwise. This needs a fast path for images into Python;
+4. **Vision.** Add randomization and train with images. Which camera is in the training loop is undecided: see the measurements under phase 3, where the two cost about the same. This needs a fast path for images into Python;
    PyHelios label maps currently go through a temporary file and `numpy.loadtxt`.
 5. **ROS 2.** A bridge for testing real robot software in simulation (`/clock`, tf, joint states, images, point clouds,
    a `ros2_control` interface), optional and Linux-first.

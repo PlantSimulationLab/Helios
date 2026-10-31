@@ -205,6 +205,7 @@ int main(int argc, char **argv) {
                 {"Visualizer, 640x480, 4x AA, shadows", 640, 480, 4, Visualizer::LIGHTING_PHONG_SHADOWED},
                 {"Visualizer, 640x480, 4x AA, no shadows", 640, 480, 4, Visualizer::LIGHTING_PHONG},
                 {"Visualizer, 640x480, no AA, no shadows", 640, 480, 1, Visualizer::LIGHTING_PHONG},
+                {"Visualizer, 128x128, no AA, no shadows", 128, 128, 1, Visualizer::LIGHTING_PHONG},
         };
         for (const RenderSetup &setup: render_setups) {
             Visualizer visualizer(setup.width, setup.height, setup.antialiasing_samples, false, true);
@@ -225,22 +226,34 @@ int main(int argc, char **argv) {
             std::fflush(stdout);
         }
 
-        {
+        struct CameraSetup {
+            std::string name;
+            int width, height;
+            uint samples_per_pixel;
+            size_t rays_per_primitive; // for the band's own radiation calculation, which runs along with the camera
+            uint scattering_depth;
+        };
+        const std::vector<CameraSetup> camera_setups = {
+                {"640x480, 8 spp, 100 rays per primitive", 640, 480, 8, 100, 1},
+                {"128x128, 8 spp, 100 rays per primitive", 128, 128, 8, 100, 1},
+                {"128x128, 1 spp, 1 ray per primitive, no scatter", 128, 128, 1, 1, 0},
+        };
+        for (const CameraSetup &setup: camera_setups) {
             RadiationModel radiation(&scene.context);
             radiation.disableMessages();
             radiation.addRadiationBand("visible");
             radiation.disableEmission("visible");
-            radiation.setDirectRayCount("visible", 100);
-            radiation.setDiffuseRayCount("visible", 100);
-            radiation.setScatteringDepth("visible", 1);
+            radiation.setDirectRayCount("visible", setup.rays_per_primitive);
+            radiation.setDiffuseRayCount("visible", setup.rays_per_primitive);
+            radiation.setScatteringDepth("visible", setup.scattering_depth);
             uint sun = radiation.addCollimatedRadiationSource(make_vec3(0.3f, -0.5f, 0.8f));
             radiation.setSourceFlux(sun, "visible", 500.f);
             radiation.setDiffuseRadiationFlux("visible", 100.f);
             CameraProperties camera;
-            camera.camera_resolution = make_int2(640, 480);
+            camera.camera_resolution = make_int2(setup.width, setup.height);
             camera.HFOV = 45.f;
             camera.lens_diameter = 0.f;
-            radiation.addRadiationCamera("camera", {"visible"}, camera_position, scene.center, camera, 8);
+            radiation.addRadiationCamera("camera", {"visible"}, camera_position, scene.center, camera, setup.samples_per_pixel);
 
             auto timer = std::chrono::steady_clock::now();
             radiation.updateGeometry();
@@ -259,9 +272,7 @@ int main(int argc, char **argv) {
                 radiation.runBand("visible");
                 trace_seconds += secondsSince(timer);
             }
-            std::printf("%-46s %10.2f ms/frame\n", "Radiation geometry update (BVH rebuild)", 1000. * geometry_seconds / frames);
-            std::printf("%-46s %10.2f ms/frame\n", "Radiation band + camera, 640x480, 8 spp", 1000. * trace_seconds / frames);
-            std::printf("%-46s %10.2f ms\n", "Radiation first frame", 1000. * first_seconds);
+            std::printf("Radiation %-48s geometry %7.2f + run %7.2f ms/frame (first frame %.0f ms)\n", setup.name.c_str(), 1000. * geometry_seconds / frames, 1000. * trace_seconds / frames, 1000. * first_seconds);
             std::fflush(stdout);
         }
     }
