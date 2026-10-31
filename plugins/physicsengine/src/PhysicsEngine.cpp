@@ -808,6 +808,9 @@ void PhysicsEngine::splitTubesAtLink(uint articulationID, uint link_index) {
         tube.node_local_position[junction_node] = junction_local_to_parent;
         tube_bindings.push_back(std::move(upper));
     }
+
+    // The nodes have new bindings, whether or not their bodies move
+    synced_transforms.clear();
 }
 
 void PhysicsEngine::setKinematicBoxPosition(uint boxID, const vec3 &center, const vec3 &velocity, uint instance) {
@@ -912,7 +915,19 @@ void PhysicsEngine::updateContextGeometry(uint instance) {
         T[15] = 1.f;
     }
 
+    // Bodies that have not moved since the last update leave their geometry alone, so that its dirty flags in the Context mean something
+    const bool first_update = synced_transforms.size() != rest_to_current.size();
+    std::vector<char> moved(rest_poses.size(), 1);
+    if (!first_update) {
+        for (size_t i = 0; i < rest_poses.size(); i++) {
+            moved[i] = rest_to_current[i] != synced_transforms[i];
+        }
+    }
+
     for (const PrimitiveBinding &binding: primitive_bindings) {
+        if (!moved[binding.rest_pose_index]) {
+            continue;
+        }
         float transform[16];
         const std::array<float, 16> &T = rest_to_current[binding.rest_pose_index];
         for (int r = 0; r < 4; r++) {
@@ -924,6 +939,13 @@ void PhysicsEngine::updateContextGeometry(uint instance) {
     }
 
     for (const TubeBinding &tube: tube_bindings) {
+        bool tube_moved = false;
+        for (size_t rest_pose_index: tube.node_rest_pose_index) {
+            tube_moved = tube_moved || moved[rest_pose_index];
+        }
+        if (!tube_moved) {
+            continue;
+        }
         std::vector<vec3> nodes(tube.node_local_position.size());
         for (size_t n = 0; n < nodes.size(); n++) {
             const BodyRestPose &pose = rest_poses[tube.node_rest_pose_index[n]];
@@ -934,6 +956,8 @@ void PhysicsEngine::updateContextGeometry(uint instance) {
         }
         context->setTubeNodes(tube.objID, nodes);
     }
+
+    synced_transforms = std::move(rest_to_current);
 }
 
 void PhysicsEngine::writeMJCF(const std::string &filename) const {

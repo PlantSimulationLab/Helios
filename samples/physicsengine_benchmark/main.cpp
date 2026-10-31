@@ -215,12 +215,18 @@ int main(int argc, char **argv) {
             visualizer.buildContextGeometry(&scene.context);
             visualizer.plotUpdate(true); // the first frame allocates everything, and is not counted
             double render_seconds = 0;
+            std::vector<uint> pixels;
+            uint pixel_width = 0;
+            uint pixel_height = 0;
             for (uint f = 0; f < frames; f++) {
                 scene.stepWithBox(steps_per_frame);
                 scene.engine.updateContextGeometry();
                 auto timer = std::chrono::steady_clock::now();
                 visualizer.plotUpdate(true);
+                // Reading the image waits for the GPU to finish it. Without this, only sending the commands would be timed.
+                visualizer.getWindowPixelsRGB(pixels, pixel_width, pixel_height);
                 render_seconds += secondsSince(timer);
+                scene.context.markGeometryClean();
             }
             std::printf("%-46s %10.2f ms/frame\n", setup.name.c_str(), 1000. * render_seconds / frames);
             std::fflush(stdout);

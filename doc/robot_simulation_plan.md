@@ -56,7 +56,7 @@ control steps/s, or 27-38 hours per 10^8 control steps, without rendering.
 
 - **Rigid internodes are the practical training default.** They are 6-8x faster than flexible ones. Flexible wood should
   be limited to the branches near the arm.
-- **Most of the Visualizer's time is not spent on pixels.** It takes 43 ms even at 128x128, which points at per-frame geometry handling. It has not been profiled.
+- **Most of the Visualizer's time was not spent on pixels.** Profiling found it in per-primitive buffer updates. See "Rendering for phase 4" below.
 - **BVH rebuilds are not the bottleneck** at this scene size, contrary to the risk listed below.
 
 **Phase 2 complete (2026-10-30).** `plugins/robotics` and `samples/robotics_pruning`, a URDF of the PruningRobot's arm working on a
@@ -105,20 +105,17 @@ Results on 12 trees never used for training or for setting up the task, 240 epis
 What this does not show: see "What is idealized" in the sample's README. The policy has exact positions, there are no leaves, only easy front-facing fruit are targeted, the grip is ideal, and detachment ignores
 pull direction. Peak contact can reach about 1000 N for a moment when the arm strikes rigid wood at speed, before the stop acts. Neither a rendered episode nor real hardware has checked any of this. No plant stiffness has been validated.
 
-**For phase 4:** rendering is the obstacle. Measured twice on an otherwise idle machine, on the 12720-primitive scene of the benchmark:
+**Rendering for phase 4 (2026-10-31).** The Visualizer is the default camera. Most of its time went to making 12 separate buffer updates per changed primitive, each of which could make the macOS driver synchronize with the GPU. Grouping them, and leaving unmoved geometry out of what the Context marks as changed, gave:
 
-| Camera, per frame | ms |
-|---|---|
-| Visualizer, 128x128, no antialiasing, no shadows | 43 |
-| Visualizer, 640x480, no antialiasing, no shadows | 72 |
-| Visualizer, 1280x720, 4x antialiasing, shadows | 125-139 |
-| Radiation, 128x128, 1 sample per pixel, 1 ray per primitive, no scattering | 39 (16 geometry + 23 run) |
-| Radiation, 128x128, 8 samples per pixel, 100 rays per primitive, 1 scatter | 100 (16 + 85) |
-| Radiation, 640x480, 8 samples per pixel, 100 rays per primitive, 1 scatter | 112 (16 + 96) |
+| Visualizer at 128x128, no antialiasing, no shadows, ms per frame | Before | After |
+|---|---|---|
+| Whole plant moving, 12,700 primitives | 408 | 12-14 |
+| Whole plant moving, 40,000 primitives | 1467 | 52 |
+| Harvest-like: 40,000 primitives, rigid wood, a box moving | 26-29 (with the grouped uploads) | 8-10 with dirty flags cleared each frame |
 
-These replace the rendering times measured during phase 1, which were up to 3.7x higher on a busy machine. Radiation ran on the Vulkan backend with its software BVH. OptiX on an NVIDIA GPU has not been measured. The quality of the images from the cheapest radiation setting has not been looked at.
+Reading the pixels back adds 1-2 ms, which the table does not include. With it, on the benchmark's smaller scene (12,700 primitives, rigid wood), a frame takes 9-10 ms at 128x128 and 14-15 ms at 1280x720 with antialiasing and shadows, so resolution matters little. The speedup is measured on macOS only, where the driver's cost per call is high, and other drivers may gain less. These are single frames of one scene on an idle machine. A control step costs about 20 ms per thread, so one environment now spends more time on physics than on rendering.
 
-A control step costs about 20 ms per thread, and physics runs on many threads while a renderer draws one frame at a time, so 40 ms per frame limits training to about 25 frames/s against 300 control steps/s without vision.
+Still unmeasured: rendering many environments from one renderer, where each frame shows a different instance and so moves everything that differs between them, and the training loop with images as a whole. A Visualizer created after Context::markGeometryClean() draws only what has changed since, unless Context::markGeometryDirty() is called first. A second Visualizer destroyed while the first is in use breaks the first ("Framebuffer is not complete"), which matters for rendering several environments. The radiation camera took about 39 ms per frame at its cheapest setting, whose image quality has not been looked at, and is the option for when physically based images are worth the setup.
 
 ## Plug-in structure
 
@@ -156,7 +153,7 @@ Each phase has a gate to pass before moving on.
    *Gate:* the arm deflects a branch, a sensor reads the force, and a cut completes mid-run.
 3. **One trained task.** Python environment, and state-based fruit reach and detach.
    *Gate:* a policy learns across varied plants at a tolerable speed. This is the go/no-go for CPU MuJoCo.
-4. **Vision.** Add randomization and train with images. Which camera is in the training loop is undecided: see the measurements under phase 3, where the two cost about the same. This needs a fast path for images into Python;
+4. **Vision.** Add randomization and train with images. The Visualizer is the default camera, since it works with almost no setup. The radiation camera gives better images but needs much more setup and input data, so it is the option for when that is worth it, such as perception datasets and validation against real images. This needs a fast path for images into Python;
    PyHelios label maps currently go through a temporary file and `numpy.loadtxt`.
 5. **ROS 2.** A bridge for testing real robot software in simulation (`/clock`, tf, joint states, images, point clouds,
    a `ros2_control` interface), optional and Linux-first.

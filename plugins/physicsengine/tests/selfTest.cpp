@@ -211,6 +211,55 @@ DOCTEST_TEST_CASE("PhysicsEngine - kinematic box state is per instance, and Cont
     }
 }
 
+DOCTEST_TEST_CASE("PhysicsEngine - copying to the Context only touches geometry that moved") {
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+
+    // A link fixed to the world, whose sphere never moves, and a swinging pendulum, whose sphere does
+    PhysicsArticulation pendulum = makePendulum("pendulum", 1.f, 0.5f, 0.3f);
+    uint pendulumID = engine.addArticulation(pendulum);
+    uint fixed_sphere = context.addSphereObject(6, pendulum.links[0].position, 0.05f);
+    uint moving_sphere = context.addSphereObject(6, pendulum.links[1].position, 0.05f);
+    uint tube = context.addTubeObject(6, {pendulum.links[0].position, pendulum.links[0].position + make_vec3(0, 0, 0.2f)}, {0.01f, 0.01f});
+    engine.bindObjectToLink(fixed_sphere, pendulumID, 0);
+    engine.bindObjectToLink(moving_sphere, pendulumID, 1);
+    engine.bindTubeNodesToLinks(tube, pendulumID, {0, 0});
+    engine.initialize();
+
+    const std::vector<uint> fixed_UUIDs = context.getObjectPrimitiveUUIDs(fixed_sphere);
+    const std::vector<uint> moving_UUIDs = context.getObjectPrimitiveUUIDs(moving_sphere);
+    const std::vector<uint> tube_UUIDs = context.getObjectPrimitiveUUIDs(tube);
+
+    engine.step(100);
+    engine.updateContextGeometry();
+    context.markGeometryClean();
+    engine.step(100);
+    engine.updateContextGeometry();
+
+    // A renderer can find what moved from the dirty flags, instead of checking everything
+    DOCTEST_CHECK(context.isPrimitiveDirty(moving_UUIDs.front()));
+    DOCTEST_CHECK(!context.isPrimitiveDirty(fixed_UUIDs.front()));
+    DOCTEST_CHECK(!context.isPrimitiveDirty(tube_UUIDs.front()));
+
+    // Nothing has stepped, so a second copy has nothing to touch
+    context.markGeometryClean();
+    engine.updateContextGeometry();
+    DOCTEST_CHECK(!context.isPrimitiveDirty(moving_UUIDs.front()));
+
+    // Showing another instance moves the geometry back
+    uint other = engine.createInstance();
+    engine.updateContextGeometry(other);
+    DOCTEST_CHECK(context.isPrimitiveDirty(moving_UUIDs.front()));
+    vec3 mean = make_vec3(0, 0, 0);
+    std::vector<vec3> vertices = getAllVertices(context, {moving_sphere});
+    for (const vec3 &vertex: vertices) {
+        mean = mean + vertex;
+    }
+    mean = mean / float(vertices.size());
+    DOCTEST_CHECK((mean - pendulum.links[1].position).magnitude() < 1e-3f);
+}
+
 DOCTEST_TEST_CASE("PhysicsEngine - model and state are available directly") {
     Context context;
     PhysicsEngine engine(&context);

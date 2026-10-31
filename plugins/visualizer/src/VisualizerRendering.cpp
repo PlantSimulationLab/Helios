@@ -962,76 +962,87 @@ void Visualizer::transferBufferData() {
         glBindTexture(GL_TEXTURE_BUFFER, 0);
     }
 
+    // Upload the changed primitives. Buffer updates are grouped into ranges rather than made one primitive at a time, because
+    // the cost of an update is mostly in the call, not the bytes: each call can make the driver synchronize with the GPU, and
+    // twelve calls per primitive took about 30 microseconds per primitive on macOS, so most of a frame when a whole plant moves.
+    using IndexMapPointer = decltype(&geometry_handler.getIndexMap(0));
+    std::array<std::vector<IndexMapPointer>, GeometryHandler::all_geometry_types.size()> dirty_by_type;
     bool rect_dirty = false;
     for (size_t UUID: dirty) {
         if (!geometry_handler.doesGeometryExist(UUID)) {
             continue;
         }
-
         const auto &index_map = geometry_handler.getIndexMap(UUID);
-        auto geometry_type = index_map.geometry_type;
-        size_t i = std::find(GeometryHandler::all_geometry_types.begin(), GeometryHandler::all_geometry_types.end(), geometry_type) - GeometryHandler::all_geometry_types.begin();
-
-        const char vcount = GeometryHandler::getVertexCount(geometry_type);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.vertex_index * sizeof(GLfloat), vcount * 3 * sizeof(GLfloat), geometry_handler.getVertexData_ptr(geometry_type)->data() + index_map.vertex_index);
-
-        glBindBuffer(GL_ARRAY_BUFFER, uv_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.uv_index * sizeof(GLfloat), vcount * 2 * sizeof(GLfloat), geometry_handler.getUVData_ptr(geometry_type)->data() + index_map.uv_index);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vertex_normal_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.vertex_normal_index * sizeof(GLfloat), vcount * 3 * sizeof(GLfloat), geometry_handler.getVertexNormalData_ptr(geometry_type)->data() + index_map.vertex_normal_index);
-
-        glBindBuffer(GL_ARRAY_BUFFER, face_index_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.face_index_index * sizeof(GLint), vcount * sizeof(GLint), geometry_handler.getFaceIndexData_ptr(geometry_type)->data() + index_map.face_index_index);
-
-        glBindBuffer(GL_TEXTURE_BUFFER, color_buffer.at(i));
-        glBufferSubData(GL_TEXTURE_BUFFER, index_map.color_index * sizeof(GLfloat), 4 * sizeof(GLfloat), geometry_handler.getColorData_ptr(geometry_type)->data() + index_map.color_index);
-        glBindTexture(GL_TEXTURE_BUFFER, color_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, color_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, normal_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.normal_index * sizeof(GLfloat), 3 * sizeof(GLfloat), geometry_handler.getNormalData_ptr(geometry_type)->data() + index_map.normal_index);
-        glBindTexture(GL_TEXTURE_BUFFER, normal_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, normal_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, material_index_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.material_index_index * sizeof(GLint), sizeof(GLint), geometry_handler.getMaterialIndexData_ptr(geometry_type)->data() + index_map.material_index_index);
-        glBindTexture(GL_TEXTURE_BUFFER, material_index_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, material_index_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, texture_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.texture_flag_index * sizeof(GLint), sizeof(GLint), geometry_handler.getTextureFlagData_ptr(geometry_type)->data() + index_map.texture_flag_index);
-        glBindTexture(GL_TEXTURE_BUFFER, texture_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, texture_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, texture_ID_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.texture_ID_index * sizeof(GLint), sizeof(GLint), geometry_handler.getTextureIDData_ptr(geometry_type)->data() + index_map.texture_ID_index);
-        glBindTexture(GL_TEXTURE_BUFFER, texture_ID_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, texture_ID_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, coordinate_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.coordinate_flag_index * sizeof(GLint), sizeof(GLint), geometry_handler.getCoordinateFlagData_ptr(geometry_type)->data() + index_map.coordinate_flag_index);
-        glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, coordinate_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, sky_geometry_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.sky_geometry_flag_index * sizeof(GLbyte), sizeof(GLbyte), geometry_handler.getSkyGeometryFlagData_ptr(geometry_type)->data() + index_map.sky_geometry_flag_index);
-        glBindTexture(GL_TEXTURE_BUFFER, sky_geometry_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R8I, sky_geometry_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, hidden_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.visible_index * sizeof(GLbyte), sizeof(GLbyte), geometry_handler.getVisibilityFlagData_ptr(geometry_type)->data() + index_map.visible_index);
-        glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R8I, hidden_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindTexture(GL_TEXTURE_BUFFER, 0);
-
-        if (geometry_type == GeometryHandler::GEOMETRY_TYPE_RECTANGLE) {
+        const size_t type_index = std::find(GeometryHandler::all_geometry_types.begin(), GeometryHandler::all_geometry_types.end(), index_map.geometry_type) - GeometryHandler::all_geometry_types.begin();
+        dirty_by_type.at(type_index).push_back(&index_map);
+        if (index_map.geometry_type == GeometryHandler::GEOMETRY_TYPE_RECTANGLE) {
             rect_dirty = true;
         }
+    }
+
+    // Ranges this close together are uploaded as one, along with the unchanged bytes between them, which is cheaper than another call
+    constexpr GLintptr range_merge_gap = 64 * 1024;
+    std::vector<std::pair<GLintptr, GLsizeiptr>> ranges;
+
+    // Uploads one attribute of the given primitives, where index_of gives the position of a primitive's first element in data
+    auto uploadChangedRanges = [&](GLenum target, GLuint buffer, const auto *data, const std::vector<IndexMapPointer> &primitives, size_t elements_per_primitive, auto index_of) {
+        using Element = std::remove_const_t<std::remove_pointer_t<decltype(data)>>;
+        ranges.clear();
+        for (const IndexMapPointer primitive: primitives) {
+            ranges.emplace_back(GLintptr(index_of(*primitive) * sizeof(Element)), GLsizeiptr(elements_per_primitive * sizeof(Element)));
+        }
+        std::sort(ranges.begin(), ranges.end());
+        glBindBuffer(target, buffer);
+        for (size_t first = 0; first < ranges.size();) {
+            GLintptr start = ranges[first].first;
+            GLintptr end = start + ranges[first].second;
+            size_t next = first + 1;
+            while (next < ranges.size() && ranges[next].first <= end + range_merge_gap) {
+                end = std::max(end, GLintptr(ranges[next].first + ranges[next].second));
+                next++;
+            }
+            glBufferSubData(target, start, end - start, reinterpret_cast<const char *>(data) + start);
+            first = next;
+        }
+    };
+
+    for (size_t i = 0; i < dirty_by_type.size(); i++) {
+        const auto &primitives = dirty_by_type[i];
+        if (primitives.empty()) {
+            continue;
+        }
+        const auto geometry_type = GeometryHandler::all_geometry_types[i];
+        const size_t vcount = GeometryHandler::getVertexCount(geometry_type);
+
+        uploadChangedRanges(GL_ARRAY_BUFFER, vertex_buffer.at(i), geometry_handler.getVertexData_ptr(geometry_type)->data(), primitives, vcount * 3, [](const auto &map) { return map.vertex_index; });
+        uploadChangedRanges(GL_ARRAY_BUFFER, uv_buffer.at(i), geometry_handler.getUVData_ptr(geometry_type)->data(), primitives, vcount * 2, [](const auto &map) { return map.uv_index; });
+        uploadChangedRanges(GL_ARRAY_BUFFER, vertex_normal_buffer.at(i), geometry_handler.getVertexNormalData_ptr(geometry_type)->data(), primitives, vcount * 3, [](const auto &map) { return map.vertex_normal_index; });
+        uploadChangedRanges(GL_ARRAY_BUFFER, face_index_buffer.at(i), geometry_handler.getFaceIndexData_ptr(geometry_type)->data(), primitives, vcount, [](const auto &map) { return map.face_index_index; });
+        uploadChangedRanges(GL_TEXTURE_BUFFER, color_buffer.at(i), geometry_handler.getColorData_ptr(geometry_type)->data(), primitives, 4, [](const auto &map) { return map.color_index; });
+        uploadChangedRanges(GL_ARRAY_BUFFER, normal_buffer.at(i), geometry_handler.getNormalData_ptr(geometry_type)->data(), primitives, 3, [](const auto &map) { return map.normal_index; });
+        uploadChangedRanges(GL_ARRAY_BUFFER, material_index_buffer.at(i), geometry_handler.getMaterialIndexData_ptr(geometry_type)->data(), primitives, 1, [](const auto &map) { return map.material_index_index; });
+        uploadChangedRanges(GL_ARRAY_BUFFER, texture_flag_buffer.at(i), geometry_handler.getTextureFlagData_ptr(geometry_type)->data(), primitives, 1, [](const auto &map) { return map.texture_flag_index; });
+        uploadChangedRanges(GL_ARRAY_BUFFER, texture_ID_buffer.at(i), geometry_handler.getTextureIDData_ptr(geometry_type)->data(), primitives, 1, [](const auto &map) { return map.texture_ID_index; });
+        uploadChangedRanges(GL_ARRAY_BUFFER, coordinate_flag_buffer.at(i), geometry_handler.getCoordinateFlagData_ptr(geometry_type)->data(), primitives, 1, [](const auto &map) { return map.coordinate_flag_index; });
+        uploadChangedRanges(GL_ARRAY_BUFFER, sky_geometry_flag_buffer.at(i), geometry_handler.getSkyGeometryFlagData_ptr(geometry_type)->data(), primitives, 1, [](const auto &map) { return map.sky_geometry_flag_index; });
+        uploadChangedRanges(GL_ARRAY_BUFFER, hidden_flag_buffer.at(i), geometry_handler.getVisibilityFlagData_ptr(geometry_type)->data(), primitives, 1, [](const auto &map) { return map.visible_index; });
+
+        const std::array<std::tuple<GLuint, GLenum, GLuint>, 8> texture_buffers = {std::make_tuple(color_texture_object.at(i), GLenum(GL_RGBA32F), color_buffer.at(i)),
+                                                                                    std::make_tuple(normal_texture_object.at(i), GLenum(GL_RGB32F), normal_buffer.at(i)),
+                                                                                    std::make_tuple(material_index_texture_object.at(i), GLenum(GL_R32I), material_index_buffer.at(i)),
+                                                                                    std::make_tuple(texture_flag_texture_object.at(i), GLenum(GL_R32I), texture_flag_buffer.at(i)),
+                                                                                    std::make_tuple(texture_ID_texture_object.at(i), GLenum(GL_R32I), texture_ID_buffer.at(i)),
+                                                                                    std::make_tuple(coordinate_flag_texture_object.at(i), GLenum(GL_R32I), coordinate_flag_buffer.at(i)),
+                                                                                    std::make_tuple(sky_geometry_flag_texture_object.at(i), GLenum(GL_R8I), sky_geometry_flag_buffer.at(i)),
+                                                                                    std::make_tuple(hidden_flag_texture_object.at(i), GLenum(GL_R8I), hidden_flag_buffer.at(i))};
+        for (const auto &[texture_object, format, buffer]: texture_buffers) {
+            glBindTexture(GL_TEXTURE_BUFFER, texture_object);
+            glTexBuffer(GL_TEXTURE_BUFFER, format, buffer);
+        }
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_TEXTURE_BUFFER, 0);
+        glBindTexture(GL_TEXTURE_BUFFER, 0);
     }
 
     if (rect_dirty) {

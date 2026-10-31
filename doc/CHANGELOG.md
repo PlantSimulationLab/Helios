@@ -14,6 +14,9 @@
 - Added `PlantPhysicsParameters::flexible_links`, which keeps chosen internodes flexible while `rigid_internodes` makes the rest rigid.
 - Added `addPlantToPhysicsEngine()`, available when `plantarchitecture` is also in the project's plug-ins, which simulates plants built by the plant architecture plug-in so they deflect under gravity and contact.
 
+## Visualizer
+- Updating geometry that changed between frames is much faster, because changed primitives are now uploaded to the GPU in merged ranges rather than one at a time. On macOS, a frame in which a whole plant of 12,700 primitives moved went from about 400 ms to about 12 ms.
+
 ## Robotics
 - Added the robotics plug-in (`robotics`). `Robot` loads a robot from a URDF or MJCF file into a `PhysicsEngine` simulation, with servo-driven joints, inverse kinematics of its tool, the contact force on its tool, and a home pose, for each parallel simulation instance. Instances can be simulated and solved from separate threads.
 - Added `samples/robotics_apple_harvest`, a reinforcement learning environment for picking apples, with a Python interface for Stable-Baselines3.

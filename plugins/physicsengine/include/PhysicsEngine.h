@@ -311,6 +311,7 @@ public:
 
     //! Move the Context geometry that follows the simulation to the poses of one instance
     /**
+     * Only geometry whose body has moved since the last call is touched. To find quickly what moved, as a renderer can, call Context::markGeometryClean() after each frame so that the Context's dirty flags mark only those primitives.
      * \param[in] instance ID of the simulation instance.
      */
     void updateContextGeometry(uint instance = 0);
@@ -511,6 +512,7 @@ private:
     std::vector<ObjectBodyRequest> object_body_requests;
 
     std::vector<BodyRestPose> rest_poses;
+    std::vector<std::array<float, 16>> synced_transforms; // rigid motion of each rest pose as of the last updateContextGeometry(), empty before the first
     std::vector<PrimitiveBinding> primitive_bindings;
     std::vector<TubeBinding> tube_bindings;
     std::vector<char> body_is_external; // indexed by MuJoCo body ID: true for kinematic boxes and bodies of loaded models

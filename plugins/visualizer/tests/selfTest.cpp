@@ -5158,6 +5158,154 @@ DOCTEST_TEST_CASE("Visualizer::printWindow builds Context geometry that was neve
     std::filesystem::remove(outfile);
 }
 
+TEST_CASE("Visualizer updating scattered primitives in place matches rendering them from scratch") {
+    // A grid of triangles and patches, of which some scattered ones change between frames. The frame updated in place has to
+    // match a fresh visualizer drawing the same scene, however the changed primitives are grouped when they are uploaded.
+    Context context;
+    std::vector<uint> triangles, patches;
+    const int grid = 30;
+    for (int j = 0; j < grid; j++) {
+        for (int i = 0; i < grid; i++) {
+            const vec3 center = make_vec3(float(i) - 0.5f * float(grid), float(j) - 0.5f * float(grid), 0);
+            const RGBcolor color = make_RGBcolor(0.2f + 0.6f * float(i) / float(grid), 0.3f, 0.2f + 0.6f * float(j) / float(grid));
+            if ((i + j) % 2 == 0) {
+                triangles.push_back(context.addTriangle(center + make_vec3(-0.4f, -0.4f, 0), center + make_vec3(0.4f, -0.4f, 0), center + make_vec3(0, 0.4f, 0), color));
+            } else {
+                patches.push_back(context.addPatch(center, make_vec2(0.8f, 0.8f), make_SphericalCoord(0, 0), color));
+            }
+        }
+    }
+
+    const uint width = 200;
+    const uint height = 200;
+    auto configure = [&](Visualizer &visualizer) {
+        visualizer.disableMessages();
+        visualizer.setCameraPosition(make_vec3(0, 0, 40), make_vec3(0, 0, 0));
+        visualizer.setBackgroundColor(make_RGBcolor(0, 0, 0));
+        visualizer.hideWatermark();
+        visualizer.setLightingModel(Visualizer::LIGHTING_NONE);
+    };
+
+    Visualizer updated(width, height, 1, false, true);
+    configure(updated);
+    updated.buildContextGeometry(&context);
+    updated.plotUpdate(true);
+    std::vector<uint> before, after, fresh;
+    uint w, h;
+    updated.getWindowPixelsRGB(before, w, h);
+
+    // Change every seventh triangle and every eleventh patch, so that the changes are spread across both geometry buffers with gaps of different sizes
+    for (size_t i = 0; i < triangles.size(); i += 7) {
+        context.translatePrimitive(triangles[i], make_vec3(0.3f, 0.2f, 0));
+    }
+    for (size_t i = 0; i < patches.size(); i += 11) {
+        context.translatePrimitive(patches[i], make_vec3(-0.2f, 0.3f, 0));
+        context.setPrimitiveColor(patches[i], make_RGBcolor(1, 1, 0));
+    }
+    updated.plotUpdate(true);
+    updated.getWindowPixelsRGB(after, w, h);
+
+    {
+        Visualizer from_scratch(width, height, 1, false, true);
+        configure(from_scratch);
+        from_scratch.buildContextGeometry(&context);
+        from_scratch.plotUpdate(true);
+        from_scratch.getWindowPixelsRGB(fresh, w, h);
+    }
+
+    // The update has to have changed the image, or this says nothing about uploading it
+    size_t changed_by_update = 0;
+    int largest_difference = 0;
+    REQUIRE(after.size() == fresh.size());
+    REQUIRE(after.size() == before.size());
+    for (size_t k = 0; k < after.size(); k++) {
+        if (after[k] != before[k]) {
+            changed_by_update++;
+        }
+        largest_difference = std::max(largest_difference, std::abs(int(after[k]) - int(fresh[k])));
+    }
+    CHECK(changed_by_update > after.size() / 100);
+    CHECK(largest_difference == 0);
+}
+
+TEST_CASE("Visualizer updating primitives after the dirty flags are cleared matches rendering them from scratch") {
+    // Cleared after each frame, the flags report only what changed since the last one
+    Context context;
+    std::vector<uint> triangles;
+    const int grid = 30;
+    for (int j = 0; j < grid; j++) {
+        for (int i = 0; i < grid; i++) {
+            const vec3 center = make_vec3(float(i) - 0.5f * float(grid), float(j) - 0.5f * float(grid), 0);
+            triangles.push_back(context.addTriangle(center + make_vec3(-0.4f, -0.4f, 0), center + make_vec3(0.4f, -0.4f, 0), center + make_vec3(0, 0.4f, 0), make_RGBcolor(0.2f + 0.6f * float(i) / float(grid), 0.3f, 0.5f)));
+        }
+    }
+
+    const uint width = 200;
+    const uint height = 200;
+    auto configure = [&](Visualizer &visualizer) {
+        visualizer.disableMessages();
+        visualizer.setCameraPosition(make_vec3(0, 0, 40), make_vec3(0, 0, 0));
+        visualizer.setBackgroundColor(make_RGBcolor(0, 0, 0));
+        visualizer.hideWatermark();
+        visualizer.setLightingModel(Visualizer::LIGHTING_NONE);
+    };
+
+    std::vector<uint> before, after, fresh;
+    uint w, h;
+    {
+        Visualizer updated(width, height, 1, false, true);
+        configure(updated);
+        updated.buildContextGeometry(&context);
+        updated.plotUpdate(true);
+        updated.getWindowPixelsRGB(before, w, h);
+        context.markGeometryClean();
+
+        // Nothing changed: the same image
+        updated.plotUpdate(true);
+        updated.getWindowPixelsRGB(after, w, h);
+        CHECK(after == before);
+        context.markGeometryClean();
+
+        // Two rounds of changes, with the flags cleared between them
+        for (size_t i = 0; i < triangles.size(); i += 7) {
+            context.translatePrimitive(triangles[i], make_vec3(0.3f, 0.2f, 0));
+        }
+        updated.plotUpdate(true);
+        context.markGeometryClean();
+        for (size_t i = 3; i < triangles.size(); i += 13) {
+            context.translatePrimitive(triangles[i], make_vec3(-0.2f, -0.2f, 0));
+        }
+        updated.plotUpdate(true);
+        updated.getWindowPixelsRGB(after, w, h);
+    }
+    {
+        // A new visualizer builds what the Context reports as changed, so the whole scene has to be reported for it to draw the whole scene
+        context.markGeometryDirty();
+        Visualizer from_scratch(width, height, 1, false, true);
+        configure(from_scratch);
+        from_scratch.buildContextGeometry(&context);
+        from_scratch.plotUpdate(true);
+        from_scratch.getWindowPixelsRGB(fresh, w, h);
+    }
+
+    REQUIRE(after.size() == fresh.size());
+    size_t changed = 0;
+    size_t differing = 0;
+    int largest_difference = 0;
+    for (size_t k = 0; k < after.size(); k++) {
+        if (after[k] != before[k]) {
+            changed++;
+        }
+        largest_difference = std::max(largest_difference, std::abs(int(after[k]) - int(fresh[k])));
+        if (after[k] != fresh[k]) {
+            differing++;
+        }
+    }
+    INFO("differing values " << differing << " of " << after.size() << ", changed by the updates " << changed);
+    CHECK(changed > after.size() / 100);
+    CHECK(largest_difference == 0);
+}
+
 TEST_CASE("Visualizer headless rendering anti-aliases geometry edges") {
     // A patch rotated off-axis presents a diagonal silhouette, which is where aliasing is visible:
     // without multisampling every pixel along that edge is either fully the patch or fully the
