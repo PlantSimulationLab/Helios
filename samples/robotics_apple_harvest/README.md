@@ -31,7 +31,7 @@ force passes 40 N, the fruit detaches without being gripped, or 10 s pass.
 ## Camera
 
 `harvest_env_enable_camera()` adds a camera on the robot's wrist, rendered with the Visualizer, and `harvest_env_render()` returns an image from every simulation. `./robotics_apple_harvest camera` measures the speed.
-Nothing trains on the images yet.
+`train_vision.py` trains an image policy by imitating a state policy from `train.py`. It gets the camera, what the robot knows about itself, and a target position with an error that stays the same for a whole episode (4 cm standard deviation along each axis by default). With `--blind`, it trains the same policy without the camera, as a baseline.
 
 ## What is idealized
 

@@ -22,6 +22,9 @@ _lib.harvest_env_count.argtypes = [ctypes.c_void_p]
 _float_pointer = ctypes.POINTER(ctypes.c_float)
 _int_pointer = ctypes.POINTER(ctypes.c_int)
 _lib.harvest_env_reset.argtypes = [ctypes.c_void_p, _float_pointer]
+_lib.harvest_env_enable_camera.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+_lib.harvest_env_render.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ubyte)]
+_lib.harvest_env_save_camera_image.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_char_p]
 _lib.harvest_env_step.argtypes = [ctypes.c_void_p, _float_pointer, _float_pointer, _float_pointer, _int_pointer, _float_pointer]
 
 
@@ -92,6 +95,20 @@ class AppleHarvestVecEnv(VecEnv):
             self._episode_rewards[i] = 0
             self._episode_lengths[i] = 0
         return self._observations.copy(), self._rewards.copy(), dones, infos
+
+    def enable_camera(self, size):
+        """Add a square camera on the wrist of the robot in every simulation."""
+        if not _lib.harvest_env_enable_camera(self._env, size, size):
+            raise RuntimeError("The camera could not be created.")
+        self._images = np.zeros((self.num_envs, size, size, 3), np.uint8)
+
+    def render_images(self):
+        """The current image of every simulation, as an array of shape (simulations, height, width, 3). The first row is the top of the image."""
+        _lib.harvest_env_render(self._env, self._images.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte)))
+        return self._images
+
+    def save_camera_image(self, index, filename):
+        _lib.harvest_env_save_camera_image(self._env, index, filename.encode())
 
     def last_episode(self, index):
         record = EpisodeRecord()

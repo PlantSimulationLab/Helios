@@ -6,6 +6,7 @@
 - Added the `TPE` algorithm (`ParameterOptimization::setAlgorithm(const TPE &)`), a C++ port of the Tree-structured Parzen Estimator sampler from Optuna 5.0.0. It supports FLOAT, INTEGER and CATEGORICAL parameters. For a given seed it evaluates the same parameter values as Optuna up to single-precision rounding, except for INTEGER parameters on x86 CPUs with AVX2 or AVX-512, where NumPy orders tied values differently.
 - `ParameterOptimization::run()` now defaults to `TPE` instead of `GeneticAlgorithm` when no algorithm is selected and there are INTEGER or CATEGORICAL parameters, unless there are more than 50 parameters. Existing discrete optimizations relying on the default will give different results and run far fewer evaluations (100, instead of up to 2000), an objective returning NaN now raises an error, and so does setting `read_input_from_file`. Call `setAlgorithm(GeneticAlgorithm{})` to keep the previous behavior.
 - `ParameterOptimization::run()` now raises an error if a FLOAT or INTEGER parameter has an infinite `min` or `max`. The bounds were accepted, and the objective could then receive NaN parameter values.
+
 ## Physics Engine
 - Added the physics engine plug-in (`physicsengine`), which simulates rigid-body dynamics with MuJoCo 3.16.0. `PhysicsEngine` simulates articulations and kinematic boxes, makes Context geometry follow them, runs many instances of one compiled model in parallel, and gives direct access to the MuJoCo model and state.
 - `PhysicsEngine` can load MJCF and URDF models with `addModelFile()`, drive their joints with `addPositionServo()`, and attach Context geometry to their bodies with `bindObjectToBody()`.
@@ -17,12 +18,11 @@
 
 ## Visualizer
 - Updating geometry that changed between frames is much faster, because changed primitives are now uploaded to the GPU in merged ranges rather than one at a time. On macOS, a frame in which a whole plant of 12,700 primitives moved went from about 400 ms to about 12 ms.
-
 - Fixed `Visualizer` instances alive at the same time drawing and reading each other's scenes, with no error, because only the most recently created one's OpenGL context was current. Added `Visualizer::makeContextCurrent()`.
 
 ## Robotics
 - Added the robotics plug-in (`robotics`). `Robot` loads a robot from a URDF or MJCF file into a `PhysicsEngine` simulation, with servo-driven joints, inverse kinematics of its tool, the contact force on its tool, and a home pose, for each parallel simulation instance. Instances can be simulated and solved from separate threads.
-- Added `samples/robotics_apple_harvest`, a reinforcement learning environment for picking apples, with a Python interface for Stable-Baselines3 and a camera on the robot's wrist.
+- Added `samples/robotics_apple_harvest`, a reinforcement learning environment for picking apples, with a Python interface for Stable-Baselines3 and a camera on the robot's wrist, and examples of training from state and from images.
 
 ## Plant Architecture
 - Added `PlantArchitecture::getPlantArticulation()`, which returns a plant as rigid links and elastic joints: the same description written by `writePlantStructureUSD()`.

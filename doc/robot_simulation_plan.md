@@ -130,7 +130,20 @@ Visualizers alive together used to draw the wrong scene silently, because only t
 
 The radiation camera took about 39 ms per frame at its cheapest setting, whose image quality has not been looked at, and is the option for when physically based images are worth the setup.
 
-**Next for phase 4:** train on the images. Learning from them directly at 50 steps/s is slow, so the plan is teacher-student: the state policy from phase 3 labels what the image policy should do, which needs far fewer frames. Several fruit can be in view, so the student also needs to be told which one is the target.
+**First image policy (phase 4, in progress).** `train_vision.py` imitates the phase 3 state policy (DAgger, about 77,000 frames, 8 training trees) with no exact fruit or wood positions, given a target position with an error of 4 cm standard deviation along each axis for the whole episode. That error is larger than the cup's 3 cm reach. On 12 unseen trees, 240 episodes each, one training seed each:
+
+| Policy | Success (95% interval) | Protective stop | Knocked off | Timeout | Training time |
+|---|---|---|---|---|---|
+| State policy (exact positions, phase 3) | 86-88% | 12-13% | 0-0.4% | 0-0.8% | 28 min |
+| Camera, 64x64 | 60.4% (54.1-66.4) | 36.2% | 0.0% | 3.3% | 51 min, 34 collecting and 17 training |
+| Blind, same target error | 46.7% (40.5-53.0) | 43.3% | 3.8% | 6.2% | 4 min |
+
+- **The camera helps:** about 14 points, with intervals that do not overlap. It is one training seed of each, on the same set of trees.
+- **Collisions are the main failure.** The image policy cannot see the exact wood positions that the state policy uses, and wood is thin at 64x64.
+- **Unseen trees are much harder:** while collecting on the training trees in the last rounds, the camera policy succeeded about 85% and the blind one about 65%, against 60% and 47% on unseen trees. Eight trees are probably too few. Those collection rates are a guide, not a controlled comparison, and each fruit recurs on the training trees, so a policy can partly memorize them.
+- **Rate:** 35-43 frames/s while collecting, against about 50 steps/s measured without a network.
+
+Still to do: more training trees, a second seed, higher resolution to see thin wood, and leaves. Leaves are essential, since they hide fruit and wood, and everything here is without them. The images have not been compared with real ones.
 
 ## Plug-in structure
 
