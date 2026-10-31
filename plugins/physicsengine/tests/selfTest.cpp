@@ -260,6 +260,36 @@ DOCTEST_TEST_CASE("PhysicsEngine - copying to the Context only touches geometry 
     DOCTEST_CHECK((mean - pendulum.links[1].position).magnitude() < 1e-3f);
 }
 
+DOCTEST_TEST_CASE("PhysicsEngine - a tolerance ignores small motion, and slow drift still arrives") {
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint pendulumID = engine.addArticulation(makePendulum("pendulum", 1.f, 0.5f, 0.2f));
+    uint sphere = context.addSphereObject(6, make_vec3(0.1f, 0, 0.5f), 0.05f);
+    engine.bindObjectToLink(sphere, pendulumID, 1);
+    engine.setContextUpdateTolerance(0.01f);
+    DOCTEST_CHECK_THROWS(engine.setContextUpdateTolerance(-1.f));
+    engine.initialize();
+    const uint UUID = context.getObjectPrimitiveUUIDs(sphere).front();
+
+    engine.updateContextGeometry();
+    context.markGeometryClean();
+
+    // One step moves the bob by much less than a centimeter
+    engine.step();
+    engine.updateContextGeometry();
+    DOCTEST_CHECK(!context.isPrimitiveDirty(UUID));
+
+    // Keep stepping: each step is under the tolerance, but what they add up to is not, so the geometry has to move at some point
+    bool moved = false;
+    for (int s = 0; s < 300 && !moved; s++) {
+        engine.step();
+        engine.updateContextGeometry();
+        moved = context.isPrimitiveDirty(UUID);
+    }
+    DOCTEST_CHECK(moved);
+}
+
 DOCTEST_TEST_CASE("PhysicsEngine - model and state are available directly") {
     Context context;
     PhysicsEngine engine(&context);

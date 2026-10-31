@@ -7,6 +7,7 @@
 
 #include "PlantPhysics.h"
 #include "Robot.h"
+#include "Visualizer.h"
 
 #include <mujoco/mujoco.h>
 
@@ -43,6 +44,9 @@ namespace {
     // A robot stops itself when it presses on something this hard, as a protective stop does. Chosen for this task, not taken from a particular robot.
     const float protective_stop_force = 50.f; // N
 
+    // Smaller motion of a body does not move its geometry for the camera. It is about 0.1 pixel at 128x128 for something 30 cm from the camera.
+    const float context_update_tolerance = 0.0005f; // m
+
     const float start_offset = 0.2f; // m along the row that the robot starts from the fruit, at most
 
     const int observation_size = 23;
@@ -73,6 +77,7 @@ namespace {
         std::vector<Candidate> candidates;
         std::vector<mjtNum> settled_qpos;
         std::vector<WoodSegment> wood; // where the wood stands at rest, which stands in for what perception would report
+        std::unique_ptr<Visualizer> camera;
 
         explicit Tree(int seed, int instance_count) : plantarchitecture(&context), engine(&context) {
             context.seedRandomGenerator(seed);
@@ -136,6 +141,12 @@ namespace {
             robot->addJointServo("wrist", 200.f, 30.f, 60.f, 0.2f);
             robot->addJointServo("roll", 30.f, 5.f, 30.f, 0.05f);
             robot->setTool("tool", cup_face, make_vec3(1, 0, 0));
+
+            // What the camera can see of the robot, in its zero pose, in which the tool lies along +x from the wrist
+            const vec3 wrist = robot_base + make_vec3(0.15f + 0.65f + 0.6f, 0, 0.75f);
+            engine.bindObjectToBody(context.addConeObject(16, wrist, wrist + make_vec3(0.28f, 0, 0), 0.03f, 0.018f, make_RGBcolor(0.9f, 0.4f, 0.08f)), "robot/tool");
+            engine.bindObjectToBody(context.addSphereObject(16, wrist + make_vec3(0.3f, 0, 0), 0.02f, make_RGBcolor(0.15f, 0.15f, 0.15f)), "robot/tool");
+            context.addPatch(make_vec3(0, 0, 0), make_vec2(20.f, 20.f), make_SphericalCoord(0, 0), make_RGBcolor(0.42f, 0.33f, 0.24f));
 
             PhysicsEngineParameters parameters;
             parameters.ground_collisions = true;
@@ -223,6 +234,23 @@ namespace {
             }
         }
         return nearest_offset;
+    }
+
+    // A camera on the wrist, behind and above the cup, looking along the tool past the cup
+    void pointCamera(Slot &slot) {
+        Robot &robot = *slot.tree->robot;
+        const vec3 cup = robot.getToolPosition(slot.instance);
+        const vec3 axis = robot.getToolAxis(slot.instance);
+        slot.tree->camera->setCameraPosition(cup - 0.3f * axis + make_vec3(0, 0, 0.08f), cup + 0.3f * axis);
+    }
+
+    void renderSlot(Slot &slot) {
+        Tree &tree = *slot.tree;
+        tree.engine.updateContextGeometry(slot.instance);
+        pointCamera(slot);
+        tree.camera->plotUpdate(true);
+        // Flags cleared after each frame report only what moves between frames, so the visualizer does not check every primitive
+        tree.context.markGeometryClean();
     }
 
     void writeObservation(const Slot &slot, float *observation) {
@@ -523,6 +551,55 @@ int harvest_env_action_size(void) {
 
 int harvest_env_max_steps(void) {
     return max_control_steps;
+}
+
+int harvest_env_enable_camera(void *env, int width, int height) {
+    Environment &environment = *static_cast<Environment *>(env);
+    try {
+        for (const std::unique_ptr<Tree> &tree: environment.trees) {
+            tree->camera = std::make_unique<Visualizer>(static_cast<uint>(width), static_cast<uint>(height), 1, false, true);
+            tree->camera->disableMessages();
+            tree->camera->hideWatermark();
+            tree->camera->setBackgroundColor(make_RGBcolor(0.6f, 0.75f, 0.95f));
+            tree->camera->setLightingModel(Visualizer::LIGHTING_PHONG);
+            tree->camera->setLightDirection(make_vec3(0.3f, -0.5f, 0.8f));
+            tree->camera->setCameraFieldOfView(70.f);
+            tree->camera->hideNavigationGizmo(); // the gizmo is rebuilt whenever the camera moves, which is every frame on a wrist
+            tree->camera->buildContextGeometry(&tree->context);
+            tree->engine.setContextUpdateTolerance(context_update_tolerance);
+        }
+        return 1;
+    } catch (const std::exception &error) {
+        std::cerr << error.what() << std::endl;
+        return 0;
+    }
+}
+
+void harvest_env_render(void *env, unsigned char *images) {
+    Environment &environment = *static_cast<Environment *>(env);
+    std::vector<uint> pixels;
+    for (size_t i = 0; i < environment.slots.size(); i++) {
+        Slot &slot = environment.slots[i];
+        renderSlot(slot);
+        uint width = 0;
+        uint height = 0;
+        slot.tree->camera->getWindowPixelsRGB(pixels, width, height);
+        // OpenGL gives the bottom row first
+        unsigned char *image = images + i * size_t(width) * size_t(height) * 3;
+        for (uint row = 0; row < height; row++) {
+            const uint *source = pixels.data() + size_t(height - 1 - row) * size_t(width) * 3;
+            unsigned char *destination = image + size_t(row) * size_t(width) * 3;
+            for (uint k = 0; k < width * 3; k++) {
+                destination[k] = static_cast<unsigned char>(source[k]);
+            }
+        }
+    }
+}
+
+void harvest_env_save_camera_image(void *env, int index, const char *filename) {
+    Slot &slot = static_cast<Environment *>(env)->slots.at(index);
+    renderSlot(slot);
+    slot.tree->camera->printWindow(filename, "jpeg");
 }
 
 void harvest_env_last_episode(const void *env, int index, HarvestEpisodeRecord *record) {

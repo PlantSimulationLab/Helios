@@ -115,7 +115,22 @@ pull direction. Peak contact can reach about 1000 N for a moment when the arm st
 
 Reading the pixels back adds 1-2 ms, which the table does not include. With it, on the benchmark's smaller scene (12,700 primitives, rigid wood), a frame takes 9-10 ms at 128x128 and 14-15 ms at 1280x720 with antialiasing and shadows, so resolution matters little. The speedup is measured on macOS only, where the driver's cost per call is high, and other drivers may gain less. These are single frames of one scene on an idle machine. A control step costs about 20 ms per thread, so one environment now spends more time on physics than on rendering.
 
-Still unmeasured: rendering many environments from one renderer, where each frame shows a different instance and so moves everything that differs between them, and the training loop with images as a whole. A Visualizer created after Context::markGeometryClean() draws only what has changed since, unless Context::markGeometryDirty() is called first. A second Visualizer destroyed while the first is in use breaks the first ("Framebuffer is not complete"), which matters for rendering several environments. The radiation camera took about 39 ms per frame at its cheapest setting, whose image quality has not been looked at, and is the option for when physically based images are worth the setup.
+Rendering many environments, with `samples/robotics_apple_harvest` and a camera on the wrist, at 128x128 or 64x64:
+
+| Simulations | Render per simulation, ms | Steps/s with images | Steps/s without |
+|---|---|---|---|
+| 8 trees x 2, before the changes below | 44-46 | 20-21 | 282 |
+| 8 trees x 4, before the changes below | 65 | 15 | 320 |
+| 8 trees x 2 | 17 | 48 | 281 |
+| 8 trees x 4 | 17 | 49 | 298 |
+
+Those changes were hiding the navigation gizmo, which is rebuilt whenever the camera moves, and `PhysicsEngine::setContextUpdateTolerance()`, which leaves motion too small to see out of the update. Instances are drawn one at a time, so about 50 steps/s is what is left, against about 280 without images: 500,000 steps would take about 3 hours rather than 28 minutes. Most of the remaining time is the driver's work in the draw call. These are measured with a scripted controller and no network, on macOS only.
+
+Visualizers alive together used to draw the wrong scene silently, because only the newest one's OpenGL context was current. They now each make their own current. A Visualizer created after Context::markGeometryClean() still draws only what has changed since, unless Context::markGeometryDirty() is called first.
+
+The radiation camera took about 39 ms per frame at its cheapest setting, whose image quality has not been looked at, and is the option for when physically based images are worth the setup.
+
+**Next for phase 4:** train on the images. Learning from them directly at 50 steps/s is slow, so the plan is teacher-student: the state policy from phase 3 labels what the image policy should do, which needs far fewer frames. Several fruit can be in view, so the student also needs to be told which one is the target.
 
 ## Plug-in structure
 

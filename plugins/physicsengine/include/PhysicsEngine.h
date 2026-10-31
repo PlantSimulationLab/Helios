@@ -316,6 +316,13 @@ public:
      */
     void updateContextGeometry(uint instance = 0);
 
+    //! Set how far a body has to move before updateContextGeometry() moves its geometry
+    /**
+     * Small motion that nothing would notice still costs a renderer the update of that geometry, which adds up when switching between simulation instances that differ only slightly.
+     * \param[in] tolerance Largest change in meters of a body's pose that is ignored, in its translation and in the entries of its rotation matrix (roughly radians). Zero, the default, moves geometry on any change.
+     */
+    void setContextUpdateTolerance(float tolerance);
+
     //! Write the compiled model in MuJoCo MJCF format, so it can be opened in the MuJoCo viewer
     /**
      * \param[in] filename Path of the output file (should have .xml extension).
@@ -512,7 +519,8 @@ private:
     std::vector<ObjectBodyRequest> object_body_requests;
 
     std::vector<BodyRestPose> rest_poses;
-    std::vector<std::array<float, 16>> synced_transforms; // rigid motion of each rest pose as of the last updateContextGeometry(), empty before the first
+    std::vector<std::array<float, 16>> synced_transforms; // rigid motion of each rest pose that the Context geometry shows, empty before the first updateContextGeometry()
+    float context_update_tolerance = 0.f;
     std::vector<PrimitiveBinding> primitive_bindings;
     std::vector<TubeBinding> tube_bindings;
     std::vector<char> body_is_external; // indexed by MuJoCo body ID: true for kinematic boxes and bodies of loaded models

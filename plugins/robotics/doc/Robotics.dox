@@ -79,6 +79,6 @@ Robot::setHomePose() sets the pose the robot starts from. Every method that read
 Use Robot::resetInstance() to reset one, which restores the home pose and the servo targets. PhysicsEngine::resetInstance() returns the servo targets to zero. Robot::setJointPositions() places the joints directly.
 
 Instances can be simulated from separate threads, each one on a single thread at a time. Robot::solveInverseKinematics() can run on them at the same time, after a call to Robot::prepareInstances() once all instances exist.
-See <tt>samples/robotics_apple_harvest</tt>, which trains a policy this way.
+See <tt>samples/robotics_apple_harvest</tt>, which trains a policy this way and has a camera on the wrist of the robot, with one Visualizer per tree. When rendering from a moving camera every frame, hide the Visualizer's navigation gizmo, which is rebuilt whenever the camera moves.
 
 */

@@ -5158,6 +5158,77 @@ DOCTEST_TEST_CASE("Visualizer::printWindow builds Context geometry that was neve
     std::filesystem::remove(outfile);
 }
 
+TEST_CASE("Visualizer instances that are alive together each keep drawing their own scene") {
+    // Each visualizer has its own OpenGL context, so it has to be the current one whenever that visualizer draws, reads, or cleans up
+    const uint width = 64;
+    const uint height = 64;
+    auto addSquare = [](Context &context, const RGBcolor &color) { context.addPatch(make_vec3(0, 0, 0), make_vec2(10, 10), make_SphericalCoord(0, 0), color); };
+    auto configure = [&](Visualizer &visualizer, Context &context) {
+        visualizer.disableMessages();
+        visualizer.setCameraPosition(make_vec3(0, 0, 5), make_vec3(0, 0, 0));
+        visualizer.setBackgroundColor(make_RGBcolor(0, 0, 0));
+        visualizer.hideWatermark();
+        visualizer.setLightingModel(Visualizer::LIGHTING_NONE);
+        visualizer.buildContextGeometry(&context);
+    };
+    // The image is a color filling the view, so its center pixel tells which scene was drawn
+    auto centerColor = [&](Visualizer &visualizer) {
+        visualizer.plotUpdate(true);
+        std::vector<uint> pixels;
+        uint w, h;
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        REQUIRE(pixels.size() == size_t(w) * size_t(h) * 3);
+        const size_t center = 3 * (size_t(h / 2) * size_t(w) + size_t(w / 2));
+        return make_int3(int(pixels[center]), int(pixels[center + 1]), int(pixels[center + 2]));
+    };
+
+    Context red_context;
+    addSquare(red_context, make_RGBcolor(1, 0, 0));
+    Context blue_context;
+    addSquare(blue_context, make_RGBcolor(0, 0, 1));
+    Context green_context;
+    addSquare(green_context, make_RGBcolor(0, 1, 0));
+
+    Visualizer red(width, height, 1, false, true);
+    configure(red, red_context);
+    {
+        Visualizer blue(width, height, 1, false, true);
+        configure(blue, blue_context);
+
+        // Alternating between them, each draws its own scene
+        for (int round = 0; round < 2; round++) {
+            const int3 from_red = centerColor(red);
+            CHECK(from_red.x > 200);
+            CHECK(from_red.z < 50);
+            const int3 from_blue = centerColor(blue);
+            CHECK(from_blue.z > 200);
+            CHECK(from_blue.x < 50);
+        }
+
+        // Geometry changed in one reaches its own buffers, not the other's
+        red_context.setPrimitiveColor(red_context.getAllUUIDs().front(), make_RGBcolor(1, 1, 0));
+        const int3 yellow = centerColor(red);
+        CHECK(yellow.y > 200);
+        const int3 still_blue = centerColor(blue);
+        CHECK(still_blue.z > 200);
+        CHECK(still_blue.y < 50);
+
+        // A third is created and destroyed while the others are not the current ones
+        {
+            Visualizer green(width, height, 1, false, true);
+            configure(green, green_context);
+            CHECK(centerColor(green).y > 200);
+        }
+        const int3 blue_after_green = centerColor(blue);
+        CHECK(blue_after_green.z > 200);
+    }
+
+    // Destroying one leaves the one that outlives it working
+    const int3 red_after_blue = centerColor(red);
+    CHECK(red_after_blue.y > 200);
+    CHECK(red_after_blue.x > 200);
+}
+
 TEST_CASE("Visualizer updating scattered primitives in place matches rendering them from scratch") {
     // A grid of triangles and patches, of which some scattered ones change between frames. The frame updated in place has to
     // match a fresh visualizer drawing the same scene, however the changed primitives are grouped when they are uploaded.

@@ -28,6 +28,11 @@ positions, whether it is gripping, grip force, contact force on the tree, time, 
 **Episode end:** success if the fruit detaches while gripped. Failure if the force on the tree passes 50 N (a protective stop), the grip
 force passes 40 N, the fruit detaches without being gripped, or 10 s pass.
 
+## Camera
+
+`harvest_env_enable_camera()` adds a camera on the robot's wrist, rendered with the Visualizer, and `harvest_env_render()` returns an image from every simulation. `./robotics_apple_harvest camera` measures the speed.
+Nothing trains on the images yet.
+
 ## What is idealized
 
 - The policy is given exact positions of the fruit and wood, which stand in for perception.

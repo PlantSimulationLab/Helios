@@ -918,9 +918,22 @@ void PhysicsEngine::updateContextGeometry(uint instance) {
     // Bodies that have not moved since the last update leave their geometry alone, so that its dirty flags in the Context mean something
     const bool first_update = synced_transforms.size() != rest_to_current.size();
     std::vector<char> moved(rest_poses.size(), 1);
-    if (!first_update) {
+    if (first_update) {
+        synced_transforms = rest_to_current;
+    } else {
         for (size_t i = 0; i < rest_poses.size(); i++) {
-            moved[i] = rest_to_current[i] != synced_transforms[i];
+            bool body_moved = false;
+            for (size_t k = 0; k < 12 && !body_moved; k++) {
+                // Inverting the test also counts a NaN as a change
+                body_moved = !(std::abs(rest_to_current[i][k] - synced_transforms[i][k]) <= context_update_tolerance);
+            }
+            moved[i] = body_moved;
+            // A body within tolerance keeps the transform it is shown at, so that slow drift adds up until it does move
+            if (body_moved) {
+                synced_transforms[i] = rest_to_current[i];
+            } else {
+                rest_to_current[i] = synced_transforms[i];
+            }
         }
     }
 
@@ -956,8 +969,13 @@ void PhysicsEngine::updateContextGeometry(uint instance) {
         }
         context->setTubeNodes(tube.objID, nodes);
     }
+}
 
-    synced_transforms = std::move(rest_to_current);
+void PhysicsEngine::setContextUpdateTolerance(float tolerance) {
+    if (tolerance < 0.f) {
+        helios_runtime_error("ERROR (PhysicsEngine::setContextUpdateTolerance): The tolerance must not be negative.");
+    }
+    context_update_tolerance = tolerance;
 }
 
 void PhysicsEngine::writeMJCF(const std::string &filename) const {

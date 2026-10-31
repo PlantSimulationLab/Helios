@@ -45,6 +45,15 @@ typedef struct {
     int steps; //!< Control steps in the episode
 } HarvestEpisodeRecord;
 
+//! Add a camera on the robot's wrist to every simulation, with images of width by height pixels. Call it on the thread that will call harvest_env_render(), since OpenGL is tied to a thread. Returns 0 and prints the reason on failure.
+int harvest_env_enable_camera(void *env, int width, int height);
+
+//! Render the camera of every simulation, one at a time. images has room for count * height * width * 3 bytes, RGB with the first row at the top of the image.
+void harvest_env_render(void *env, unsigned char *images);
+
+//! Write the camera image of one simulation to a JPEG file, for looking at it
+void harvest_env_save_camera_image(void *env, int index, const char *filename);
+
 //! Get the record of a simulation's last finished episode
 void harvest_env_last_episode(const void *env, int index, HarvestEpisodeRecord *record);
 

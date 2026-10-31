@@ -1361,6 +1361,13 @@ public:
      */
     void plotUpdate(bool hide_window);
 
+    //! Make this visualizer's OpenGL context the current one
+    /**
+     * Each visualizer has its own OpenGL context, so several can be alive together, such as one per simulated environment. Drawing, reading images, and destruction do this themselves. Call it before any other method that
+     * touches the GPU, such as adding a texture, if another visualizer has been used since this one was.
+     */
+    void makeContextCurrent() const;
+
     //! Print the current graphics window to a JPEG image file. File will be given a default filename and saved to the current directory from which the executable was run.
     /**
      * \sa printWindow(const char*, const std::string&) for how the frame being captured is produced.

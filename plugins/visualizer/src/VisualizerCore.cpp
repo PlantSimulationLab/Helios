@@ -1949,6 +1949,9 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 }
 
 Visualizer::~Visualizer() {
+    // Everything below belongs to this visualizer's context, which another visualizer may have replaced as the current one
+    makeContextCurrent();
+
     // Clean up the shadow-map framebuffer, which either mode may have created. The zero
     // checks cover the common case where shadowed lighting was never used.
     if (framebufferID != 0) {

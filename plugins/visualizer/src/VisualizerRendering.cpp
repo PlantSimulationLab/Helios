@@ -37,6 +37,8 @@ float dy_m = 0.0;
 float dscroll = 0.0;
 
 void Visualizer::printWindow() {
+    makeContextCurrent();
+
     char outfile[100];
     if (context != nullptr) { // context has been given to visualizer via buildContextGeometry()
         Date date = context->getDate();
@@ -51,6 +53,8 @@ void Visualizer::printWindow() {
 }
 
 void Visualizer::printWindow(const char *outfile, const std::string &image_format) {
+    makeContextCurrent();
+
 
     // Save current navigation gizmo state and temporarily hide it for screenshot
     bool gizmo_was_visible = navigation_gizmo_enabled;
@@ -417,6 +421,8 @@ void Visualizer::displayImageWithSegmentationMasks(const std::string &image_file
 }
 
 void Visualizer::getWindowPixelsRGB(uint *buffer) const {
+    makeContextCurrent();
+
     // Validate framebuffer completeness
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         helios_runtime_error("ERROR (getWindowPixelsRGB): Framebuffer is not complete");
@@ -544,6 +550,8 @@ void Visualizer::getWindowPixelsRGB(std::vector<uint> &pixel_data, uint &width_p
 }
 
 void Visualizer::getDepthMap(float *buffer) {
+    makeContextCurrent();
+
     // The caller sizes this buffer from the window dimensions, but the depth image has the dimensions of the framebuffer. Where the two differ the image does not fit, and copying the part that does would
     // hand back rows of the wrong length.
     if (Wframebuffer != Wdisplay || Hframebuffer != Hdisplay) {
@@ -608,6 +616,8 @@ void Visualizer::closeWindow() const {
 }
 
 std::vector<helios::vec3> Visualizer::plotInteractive() {
+    makeContextCurrent();
+
     // Interactive plotting needs a window to show and a keyboard to read; a headless Visualizer has
     // neither. Saying so is better than the alternatives, which are a 1x1 window that never appears
     // (GLFW headless) or a null window handle passed straight into GLFW (EGL headless).
@@ -764,6 +774,8 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 }
 
 void Visualizer::plotOnce(bool getKeystrokes) {
+    makeContextCurrent();
+
 
     // plotOnce() is the body of plotInteractive()'s render loop, exposed so an external loop (e.g.
     // ProjectBuilder's ImGui frame) can drive rendering itself. plotInteractive() uploads geometry
@@ -1659,7 +1671,15 @@ void Visualizer::plotUpdate() {
     plotUpdate(false);
 }
 
+void Visualizer::makeContextCurrent() const {
+    if (window != nullptr && glfwGetCurrentContext() != scast<GLFWwindow *>(window)) {
+        glfwMakeContextCurrent(scast<GLFWwindow *>(window));
+    }
+}
+
 void Visualizer::plotUpdate(bool hide_window) {
+    makeContextCurrent();
+
     // Check if window is marked for closure to prevent hanging on glfwSwapBuffers()
     if (!headless && window != nullptr && glfwWindowShouldClose(scast<GLFWwindow *>(window))) {
         return; // Don't render to a window that should be closed
