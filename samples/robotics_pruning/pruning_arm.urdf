@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<!-- Mobile pruning robot: a platform that drives along the row (y), a 5-DOF arm, and bypass pruner jaws. In the zero pose the arm is straight along +x. -->
+<robot name="pruning_arm">
+  <mujoco><compiler fusestatic="false" discardvisual="true"/></mujoco>
+
+  <link name="world_base"><inertial><mass value="1"/><inertia ixx="0.01" iyy="0.01" izz="0.01" ixy="0" ixz="0" iyz="0"/></inertial></link>
+
+  <link name="platform">
+    <inertial><origin xyz="0 0 0.22"/><mass value="80"/><inertia ixx="5" iyy="5" izz="5" ixy="0" ixz="0" iyz="0"/></inertial>
+    <collision><origin xyz="0 0 0.22"/><geometry><box size="0.55 0.8 0.2"/></geometry></collision>
+  </link>
+  <joint name="drive" type="prismatic"><parent link="world_base"/><child link="platform"/><axis xyz="0 1 0"/><limit lower="-10" upper="10" effort="2000" velocity="1"/></joint>
+
+  <link name="turret">
+    <inertial><origin xyz="0 0 0.5"/><mass value="8"/><inertia ixx="0.3" iyy="0.3" izz="0.05" ixy="0" ixz="0" iyz="0"/></inertial>
+    <collision><origin xyz="0 0 0.5"/><geometry><cylinder radius="0.075" length="0.5"/></geometry></collision>
+  </link>
+  <joint name="yaw" type="revolute"><origin xyz="0.15 0 0"/><parent link="platform"/><child link="turret"/><axis xyz="0 0 1"/><limit lower="-2.5" upper="2.5" effort="300" velocity="2"/></joint>
+
+  <link name="upper_arm">
+    <inertial><origin xyz="0.325 0 0"/><mass value="4"/><inertia ixx="0.01" iyy="0.15" izz="0.15" ixy="0" ixz="0" iyz="0"/></inertial>
+    <collision><origin xyz="0.325 0 0" rpy="0 1.5708 0"/><geometry><cylinder radius="0.05" length="0.65"/></geometry></collision>
+  </link>
+  <joint name="shoulder" type="revolute"><origin xyz="0 0 0.75"/><parent link="turret"/><child link="upper_arm"/><axis xyz="0 -1 0"/><limit lower="-0.8" upper="2.4" effort="300" velocity="2"/></joint>
+
+  <link name="forearm">
+    <inertial><origin xyz="0.3 0 0"/><mass value="2.5"/><inertia ixx="0.005" iyy="0.08" izz="0.08" ixy="0" ixz="0" iyz="0"/></inertial>
+    <collision><origin xyz="0.3 0 0" rpy="0 1.5708 0"/><geometry><cylinder radius="0.038" length="0.6"/></geometry></collision>
+  </link>
+  <joint name="elbow" type="revolute"><origin xyz="0.65 0 0"/><parent link="upper_arm"/><child link="forearm"/><axis xyz="0 -1 0"/><limit lower="-2.6" upper="2.6" effort="200" velocity="2"/></joint>
+
+  <link name="wrist_link">
+    <inertial><origin xyz="0.04 0 0"/><mass value="0.5"/><inertia ixx="0.0005" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/></inertial>
+  </link>
+  <joint name="wrist" type="revolute"><origin xyz="0.6 0 0"/><parent link="forearm"/><child link="wrist_link"/><axis xyz="0 -1 0"/><limit lower="-2.2" upper="2.2" effort="60" velocity="3"/></joint>
+
+  <!-- The tool: the pivot of the pruner is at x = 0.22. The fixed jaw (anvil) is on the -y side of the throat. -->
+  <link name="tool">
+    <inertial><origin xyz="0.14 0 0"/><mass value="0.6"/><inertia ixx="0.0005" iyy="0.002" izz="0.002" ixy="0" ixz="0" iyz="0"/></inertial>
+    <collision name="neck"><origin xyz="0.11 0 0" rpy="0 1.5708 0"/><geometry><cylinder radius="0.018" length="0.2"/></geometry></collision>
+    <collision name="anvil"><origin xyz="0.27 -0.016 0"/><geometry><box size="0.1 0.008 0.016"/></geometry></collision>
+  </link>
+  <joint name="roll" type="revolute"><parent link="wrist_link"/><child link="tool"/><axis xyz="1 0 0"/><limit lower="-3" upper="3" effort="30" velocity="3"/></joint>
+
+  <!-- The cutting blade pivots at the pruner pivot. Its geometry is drawn open by 0.5 rad, so the jaw closes as its joint goes to -0.5. -->
+  <link name="blade">
+    <inertial><origin xyz="0.04 0.02 0"/><mass value="0.1"/><inertia ixx="0.00002" iyy="0.00005" izz="0.00005" ixy="0" ixz="0" iyz="0"/></inertial>
+    <collision><origin xyz="0.0439 0.024 0" rpy="0 0 0.5"/><geometry><box size="0.1 0.008 0.016"/></geometry></collision>
+  </link>
+  <joint name="jaw" type="revolute"><origin xyz="0.22 0 0"/><parent link="tool"/><child link="blade"/><axis xyz="0 0 1"/><limit lower="-0.6" upper="0.05" effort="20" velocity="5"/></joint>
+</robot>

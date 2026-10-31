@@ -61,6 +61,28 @@ control steps/s, or 27-38 hours per 10^8 control steps, without rendering.
   phase 4, since it currently costs more than the radiation camera.
 - **BVH rebuilds are not the bottleneck** at this scene size, contrary to the risk listed below.
 
+**Phase 2 complete (2026-10-30).** `plugins/robotics` and `samples/robotics_pruning`, a URDF of the PruningRobot's arm working on a
+dormant grapevine (911 links, flexible stems). `projects/PruningRobot` itself is unchanged: the new sample replaces its role
+for physics, but not its appearance, planning, or its choice among many cuts.
+
+Gate, measured in that sample:
+
+- **The arm deflects a branch:** 148 mm, against 0.07 mm of drift before first touch.
+- **A sensor reads the force:** 0.62 N on the tool, equal to the force on the plant, falling to 0 N right after the cut. Separately,
+  on a rod with a known spring, the force matches theory within the 15% test tolerance. No plant stiffness has been checked against a real plant.
+- **A cut completes mid-run:** the cut piece, over 40 cm of shoot, falls and comes to rest on the ground, and the stump stays up.
+
+What this changes or leaves open:
+
+- **Cuts use welds, not `mj_recompile`.** A detachable link is a free body held by a weld that is released per instance, so parallel environments can
+  each cut somewhere different with no change to the model. `mj_recompile` would change the model shared by every instance. The cost: cut sites must be
+  chosen before compile, each adds 6 degrees of freedom, and a held joint is rigid. Arbitrary cuts anywhere on a plant are not supported.
+- **The tool force is an ideal contact sum.** MuJoCo's force sensor read about 0.3 N with no contact while moving at 0.1 m/s, and is only reliable at rest. The
+  likely cause, not proven, is the interaction of the discrete integrator and joint damping. Weight, inertia, noise, and bandwidth of a real sensor are not modeled yet.
+- **The sample cuts by joint angle.** The blade does not physically shear the shoot, and no cutting force or breaking limit is modeled.
+- **Nothing in the sample plans around obstacles.** It fails with an error if the arm hits the vine while driving. During the push, it can touch neighboring shoots.
+- **The PlantArchitecture model is not updated by a cut.** Only the physics and the Context change.
+
 ## Plug-in structure
 
 Two plug-ins, static libraries in one process, so the boundary itself costs nothing at run time.
@@ -112,8 +134,7 @@ Each phase has a gate to pass before moving on.
   homogeneous models, MJX shares structural fields across worlds, and MuJoCo Warp needs an NVIDIA GPU for fast simulation.
 - **Contact accuracy.** Penetration of 2-3 mm at 0.5 m/s, up to about 1 cm for leaves, is about the size of a thin shoot
   or fruit stem.
-- **Cutting and detachment.** Fruit can likely be welded free bodies released with `eq_active`, which is confirmed only
-  indirectly. Cuts would use `mj_recompile`, whose cost per cut is unmeasured.
+- **Cutting and detachment.** See phase 2 above. Fruit detachment is the same mechanism but has not been tried on fruit, and no force threshold triggers it yet.
 - **Render sync.** The radiation BVH rebuild takes about 20 ms at 12720 primitives, so it is not urgent, but it was not measured on larger scenes. The Visualizer update is the larger cost.
 
 ## Open decisions

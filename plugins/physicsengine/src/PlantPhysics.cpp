@@ -249,15 +249,18 @@ uint addPlantToPhysicsEngine(PhysicsEngine &engine, const Context &context, cons
         physics_link.mass = link.mass;
         physics_link.inertia_diagonal = link.inertia_diagonal;
 
+        if (link.parent_index >= 0 && joint_of_child[i] < 0) {
+            helios_runtime_error("ERROR (addPlantToPhysicsEngine): Link " + link.name + " of plant " + std::to_string(plantID) + " has a parent but no joint.");
+        }
+        if (link.parent_index >= 0) {
+            physics_link.anchor_in_parent = plant.joints.at(joint_of_child[i]).anchor_in_parent;
+        }
+
         // A link without a joint is welded to its parent
         bool welded = params.rigid_internodes && link.type == ARTICULATION_LINK_INTERNODE;
         if (link.parent_index >= 0 && !welded) {
-            if (joint_of_child[i] < 0) {
-                helios_runtime_error("ERROR (addPlantToPhysicsEngine): Link " + link.name + " of plant " + std::to_string(plantID) + " has a parent but no joint.");
-            }
             const PlantArticulationJoint &joint = plant.joints.at(joint_of_child[i]);
             physics_link.joint_type = PHYSICS_JOINT_BALL;
-            physics_link.anchor_in_parent = joint.anchor_in_parent;
             physics_link.stiffness = joint.stiffness;
             physics_link.damping = joint.damping;
             physics_link.armature = params.apply_joint_armature ? joint.armature : 0.f;
@@ -274,6 +277,13 @@ uint addPlantToPhysicsEngine(PhysicsEngine &engine, const Context &context, cons
         }
     }
     articulation.contact_exclusions = findContactExclusions(links);
+
+    for (uint link_index: params.detachable_links) {
+        if (link_index >= links.size() || links[link_index].parent_index < 0) {
+            helios_runtime_error("ERROR (addPlantToPhysicsEngine): Detachable link " + std::to_string(link_index) + " of plant " + std::to_string(plantID) + " does not exist or has no parent to detach from.");
+        }
+        articulation.links[link_index].joint_type = PHYSICS_JOINT_DETACHABLE;
+    }
 
     uint articulationID = engine.addArticulation(articulation);
 

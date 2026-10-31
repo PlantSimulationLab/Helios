@@ -316,6 +316,9 @@ DOCTEST_TEST_CASE("PhysicsEngine - misuse is reported") {
     DOCTEST_CHECK_THROWS(engine.bindObjectToLink(sphere_objID + 100, pendulumID, 0));
     DOCTEST_CHECK_THROWS(engine.bindObjectToLink(sphere_objID, pendulumID, 2));
     DOCTEST_CHECK_THROWS(engine.bindObjectToLink(sphere_objID, pendulumID + 1, 0));
+    DOCTEST_CHECK_THROWS(engine.bindObjectToBody(sphere_objID + 100, "pendulum_bob"));
+    DOCTEST_CHECK_THROWS(engine.addModelFile("does_not_exist.urdf", "x/"));
+    DOCTEST_CHECK_THROWS(engine.addPositionServo("j", 0.f, 1.f));
     DOCTEST_CHECK_THROWS(engine.bindTubeNodesToLinks(sphere_objID, pendulumID, {0}));
     uint tube_objID = context.addTubeObject(4, {make_vec3(0, 0, 0), make_vec3(0, 0, 1)}, {0.1f, 0.1f});
     DOCTEST_CHECK_THROWS(engine.bindTubeNodesToLinks(tube_objID, pendulumID, {0}));
@@ -345,6 +348,307 @@ DOCTEST_TEST_CASE("PhysicsEngine - misuse is reported") {
     DOCTEST_CHECK_THROWS(static_cast<void>(engine.getMuJoCoData(1)));
     DOCTEST_CHECK_THROWS(static_cast<void>(engine.getLinkPosition(pendulumID + 1, 0)));
     DOCTEST_CHECK_THROWS(static_cast<void>(engine.getLinkPosition(pendulumID, engine.getLinkCount())));
+}
+
+DOCTEST_TEST_CASE("PhysicsEngine - detachable link is held until released, then falls freely") {
+    Context context;
+    PhysicsArticulation branch = makePendulum("branch", 1.f, 0.5f, 0.f);
+    branch.links[1].joint_type = PHYSICS_JOINT_DETACHABLE;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint branchID = engine.addArticulation(branch);
+    engine.initialize();
+    uint other_instance = engine.createInstance();
+
+    vec3 rest = engine.getLinkPosition(branchID, 1);
+    engine.stepInstances(500, 2);
+
+    // Held rigidly against gravity in every instance
+    DOCTEST_CHECK(!engine.isLinkDetached(branchID, 1));
+    DOCTEST_CHECK((engine.getLinkPosition(branchID, 1) - rest).magnitude() < 5e-3f);
+    DOCTEST_CHECK((engine.getLinkPosition(branchID, 1, other_instance) - rest).magnitude() < 5e-3f);
+
+    // Released in one instance only: that one falls as a free body, and the other stays put
+    vec3 before_fall = engine.getLinkPosition(branchID, 1);
+    engine.detachLink(branchID, 1);
+    DOCTEST_CHECK(engine.isLinkDetached(branchID, 1));
+    DOCTEST_CHECK(!engine.isLinkDetached(branchID, 1, other_instance));
+    const uint fall_steps = 150;
+    engine.stepInstances(fall_steps, 2);
+    const float fall_time = float(fall_steps) * engine.getTimestep();
+    const float fallen = before_fall.z - engine.getLinkPosition(branchID, 1).z;
+    DOCTEST_CHECK(fallen == doctest::Approx(0.5f * 9.81f * fall_time * fall_time).epsilon(0.05));
+    DOCTEST_CHECK((engine.getLinkPosition(branchID, 1, other_instance) - rest).magnitude() < 5e-3f);
+
+    // Resetting restores the joint
+    engine.resetInstance(0);
+    DOCTEST_CHECK(!engine.isLinkDetached(branchID, 1));
+    DOCTEST_CHECK((engine.getLinkPosition(branchID, 1) - rest).magnitude() < 1e-4f);
+
+    // Only detachable links can be released
+    DOCTEST_CHECK_THROWS(engine.detachLink(branchID, 0));
+    DOCTEST_CHECK_THROWS(static_cast<void>(engine.isLinkDetached(branchID, 0)));
+}
+
+DOCTEST_TEST_CASE("PhysicsEngine - a detached link comes to rest on the ground when ground collisions are enabled") {
+    auto finalHeight = [](bool ground_collisions) {
+        Context context;
+        PhysicsArticulation branch = makePendulum("branch", 1.f, 0.5f, 0.f);
+        branch.links[1].joint_type = PHYSICS_JOINT_DETACHABLE;
+        PhysicsEngine engine(&context);
+        engine.disableMessages();
+        uint branchID = engine.addArticulation(branch);
+        PhysicsEngineParameters params;
+        params.ground_collisions = ground_collisions;
+        engine.initialize(params);
+        engine.detachLink(branchID, 1);
+        engine.step(1000);
+        return engine.getLinkPosition(branchID, 1).z;
+    };
+    // The bob's collision sphere has a radius of 2 cm
+    DOCTEST_CHECK(finalHeight(true) == doctest::Approx(0.02f).epsilon(0.1));
+    DOCTEST_CHECK(finalHeight(false) < -1.f);
+}
+
+static void checkTubeSplit(const std::vector<uint> &node_link_indices) {
+    Context context;
+
+    // A chain of four links up the z-axis, the third one detachable, and one tube with a node at the base of each link and one at the top
+    PhysicsArticulation chain;
+    chain.name = "chain";
+    const float segment = 0.2f;
+    for (int i = 0; i < 4; i++) {
+        PhysicsLink link;
+        link.name = "s" + std::to_string(i);
+        link.parent_index = i - 1;
+        link.position = make_vec3(0, 0, (float(i) + 0.5f) * segment);
+        link.mass = 0.1f;
+        link.inertia_diagonal = make_vec3(1e-4f, 1e-4f, 1e-4f);
+        link.anchor_in_parent = make_vec3(0, 0, 0.5f * segment);
+        chain.links.push_back(link);
+    }
+    chain.links[2].joint_type = PHYSICS_JOINT_DETACHABLE;
+
+    std::vector<vec3> nodes;
+    for (int i = 0; i <= 4; i++) {
+        nodes.push_back(make_vec3(0, 0, float(i) * segment));
+    }
+    uint tube = context.addTubeObject(6, nodes, std::vector<float>(5, 0.01f));
+
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint chainID = engine.addArticulation(chain);
+    engine.bindTubeNodesToLinks(tube, chainID, node_link_indices);
+    engine.initialize();
+
+    const size_t objects_before = context.getAllObjectIDs().size();
+    engine.detachLink(chainID, 2);
+    engine.splitTubesAtLink(chainID, 2);
+    DOCTEST_CHECK(context.getAllObjectIDs().size() == objects_before + 1);
+
+    engine.step(150);
+    engine.updateContextGeometry();
+
+    // The original tube keeps the lower links and stays where it was; the new one holds the upper links and has fallen with them
+    std::vector<vec3> lower = context.getTubeObjectNodes(tube);
+    DOCTEST_REQUIRE(lower.size() == 3);
+    DOCTEST_CHECK(lower.back().z == doctest::Approx(2.f * segment).epsilon(0.02));
+
+    uint upper_tube = 0;
+    for (uint objID: context.getAllObjectIDs()) {
+        if (objID != tube) {
+            upper_tube = objID;
+        }
+    }
+    std::vector<vec3> upper = context.getTubeObjectNodes(upper_tube);
+    DOCTEST_REQUIRE(upper.size() == 3);
+    const float fall = 0.5f * 9.81f * std::pow(150.f * engine.getTimestep(), 2.f);
+    DOCTEST_CHECK(upper.front().z == doctest::Approx(2.f * segment - fall).epsilon(0.05));
+    // The upper piece fell as one rigid body, so its segments keep their length rather than stretching
+    DOCTEST_CHECK((upper[1] - upper[0]).magnitude() == doctest::Approx(segment).epsilon(0.01));
+}
+
+DOCTEST_TEST_CASE("PhysicsEngine - a tube split at a detached link parts cleanly") {
+    // A node at the junction of two links can be bound to either, and both must part the tube at the same node
+    DOCTEST_SUBCASE("junction nodes bound to the lower link") {
+        checkTubeSplit({0, 0, 1, 2, 3});
+    }
+    DOCTEST_SUBCASE("junction nodes bound to the upper link") {
+        checkTubeSplit({0, 1, 2, 3, 3});
+    }
+}
+
+namespace {
+
+    // A hinged arm along +x: base link, then an upper arm on a hinge about y with a sphere collision shape at its tip
+    const char *hinged_arm_urdf = R"(<?xml version="1.0"?>
+<robot name="hinged_arm">
+  <mujoco><compiler fusestatic="false" discardvisual="true"/></mujoco>
+  <link name="base"><inertial><mass value="1"/><inertia ixx="0.01" iyy="0.01" izz="0.01" ixy="0" ixz="0" iyz="0"/></inertial></link>
+  <link name="arm">
+    <inertial><origin xyz="0.5 0 0"/><mass value="2"/><inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/></inertial>
+    <collision><origin xyz="0.5 0 0"/><geometry><sphere radius="0.05"/></geometry></collision>
+  </link>
+  <joint name="hinge" type="revolute"><parent link="base"/><child link="arm"/><axis xyz="0 -1 0"/><limit lower="-3" upper="3" effort="1000" velocity="5"/></joint>
+</robot>
+)";
+
+    std::string writeHingedArmFile() {
+        std::string filename = "physicsengine_test_hinged_arm.urdf";
+        std::ofstream file(filename);
+        file << hinged_arm_urdf;
+        return filename;
+    }
+
+} // namespace
+
+DOCTEST_TEST_CASE("PhysicsEngine - a URDF model loads, is placed, is driven by a servo, and carries Context geometry") {
+    std::string arm_file = writeHingedArmFile();
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    const vec3 base = make_vec3(1, 1, 1);
+    engine.addModelFile(arm_file, "a/", base, 90.f);
+    engine.addPositionServo("a/hinge", 500.f, 50.f);
+    const vec3 tip_rest = base + make_vec3(0, 0.5f, 0);
+    uint sphere = context.addSphereObject(10, tip_rest, 0.05f);
+    engine.bindObjectToBody(sphere, "a/arm");
+    engine.initialize();
+
+    const mjModel *model = engine.getMuJoCoModel();
+    mjData *data = engine.getMuJoCoData();
+    DOCTEST_REQUIRE(mj_name2id(model, mjOBJ_JOINT, "a/hinge") >= 0);
+    const int actuator = mj_name2id(model, mjOBJ_ACTUATOR, "a/hinge_servo");
+    DOCTEST_REQUIRE(actuator >= 0);
+
+    // Placed with its yaw: the arm's +x points along world +y
+    const int arm_body = mj_name2id(model, mjOBJ_BODY, "a/arm");
+    DOCTEST_REQUIRE(arm_body >= 0);
+    DOCTEST_CHECK(float(data->xpos[3 * arm_body]) == doctest::Approx(base.x).epsilon(1e-4));
+    DOCTEST_CHECK(float(data->xpos[3 * arm_body + 1]) == doctest::Approx(base.y).epsilon(1e-4));
+
+    // The hinge axis is -y in the model, so positive angles lift the tip
+    const double target = 0.5;
+    data->ctrl[actuator] = target;
+    engine.step(2000);
+    const int joint = mj_name2id(model, mjOBJ_JOINT, "a/hinge");
+    DOCTEST_CHECK(float(data->qpos[model->jnt_qposadr[joint]]) == doctest::Approx(float(target)).epsilon(0.02));
+
+    // The bound object rides on the body. The sphere's center is at the tip, which has risen along the arc.
+    engine.updateContextGeometry();
+    vec3 mean = make_vec3(0, 0, 0);
+    std::vector<vec3> vertices = getAllVertices(context, {sphere});
+    for (const vec3 &vertex: vertices) {
+        mean = mean + vertex;
+    }
+    mean = mean / float(vertices.size());
+    DOCTEST_CHECK(mean.z - base.z == doctest::Approx(0.5f * std::sin(float(target))).epsilon(0.05));
+    DOCTEST_CHECK(mean.y - base.y == doctest::Approx(0.5f * std::cos(float(target))).epsilon(0.05));
+
+    // The whole model including the loaded file can be written out, and MuJoCo can load it back
+    engine.writeMJCF("physicsengine_test_written.xml");
+    char error[1024] = "";
+    mjModel *reloaded = mj_loadXML("physicsengine_test_written.xml", nullptr, error, sizeof(error));
+    INFO(error);
+    DOCTEST_REQUIRE(reloaded != nullptr);
+    DOCTEST_CHECK(reloaded->nu == model->nu);
+    mj_deleteModel(reloaded);
+    std::filesystem::remove("physicsengine_test_written.xml");
+    std::filesystem::remove(arm_file);
+}
+
+DOCTEST_TEST_CASE("PhysicsEngine - force/torque sensor reads the load on a body") {
+    std::string arm_file = writeHingedArmFile();
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    engine.addModelFile(arm_file, "a/");
+    engine.addPositionServo("a/hinge", 500.f, 50.f);
+    engine.addForceTorqueSensor("wrist", "a/arm");
+    engine.initialize();
+    engine.step(1000);
+
+    const mjModel *model = engine.getMuJoCoModel();
+    const mjData *data = engine.getMuJoCoData();
+    const int sensor = mj_name2id(model, mjOBJ_SENSOR, "wrist_force");
+    DOCTEST_REQUIRE(sensor >= 0);
+    const mjtNum *force = data->sensordata + model->sensor_adr[sensor];
+
+    // At rest, holding up a 2 kg arm
+    DOCTEST_CHECK(float(mju_norm3(force)) == doctest::Approx(2.f * 9.81f).epsilon(0.02));
+    std::filesystem::remove(arm_file);
+}
+
+DOCTEST_TEST_CASE("PhysicsEngine - a loaded model pushes articulations, and the contact force matches the joint spring") {
+    std::string arm_file = writeHingedArmFile();
+    Context context;
+
+    // A horizontal rod along y on an elastic joint at its end, just above the arc of the arm's tip at x = 0.5
+    const float rod_half_length = 0.3f;
+    const float joint_stiffness = 2.f; // N*m/rad
+    const float rod_height = 0.12f;
+    PhysicsArticulation rod;
+    rod.name = "rod";
+    PhysicsLink root;
+    root.name = "root";
+    root.position = make_vec3(0.5f, -rod_half_length, rod_height);
+    root.mass = 0.01f;
+    root.inertia_diagonal = make_vec3(1e-6f, 1e-6f, 1e-6f);
+    rod.links.push_back(root);
+    PhysicsLink shaft;
+    shaft.name = "shaft";
+    shaft.parent_index = 0;
+    shaft.position = make_vec3(0.5f, 0, rod_height);
+    // Local z, the capsule axis, along world y
+    shaft.qw = std::sqrt(0.5f);
+    shaft.qx = -std::sqrt(0.5f);
+    shaft.mass = 0.05f;
+    shaft.inertia_diagonal = make_vec3(1e-3f, 1e-3f, 1e-5f);
+    shaft.joint_type = PHYSICS_JOINT_BALL;
+    shaft.stiffness = joint_stiffness;
+    shaft.damping = 0.5f;
+    PhysicsCollisionShape capsule;
+    capsule.type = PHYSICS_SHAPE_CAPSULE;
+    capsule.size = make_vec3(0.005f, rod_half_length, 0);
+    shaft.shapes.push_back(capsule);
+    rod.links.push_back(shaft);
+
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint rodID = engine.addArticulation(rod);
+    engine.addModelFile(arm_file, "a/");
+    engine.addPositionServo("a/hinge", 500.f, 50.f);
+    PhysicsEngineParameters params;
+    params.gravity = false;
+    engine.initialize(params);
+
+    mjData *data = engine.getMuJoCoData();
+    const int actuator = mj_name2id(engine.getMuJoCoModel(), mjOBJ_ACTUATOR, "a/hinge_servo");
+    DOCTEST_REQUIRE(actuator >= 0);
+
+    // Clear of the rod at the start
+    engine.step(10);
+    DOCTEST_REQUIRE(engine.getContactCount() == 0);
+    DOCTEST_CHECK(engine.getExternalContactForce(rodID).magnitude() == doctest::Approx(0.f));
+
+    // Lift the tip into the rod slowly, and hold
+    const uint ramp_steps = 1500;
+    for (uint s = 0; s < ramp_steps; s++) {
+        data->ctrl[actuator] = 0.3 * double(s + 1) / double(ramp_steps);
+        engine.step();
+    }
+    engine.step(1000);
+    DOCTEST_REQUIRE(engine.getContactCount() > 0);
+
+    // The rod is pushed upward, and at rest the contact torque about its joint balances the spring: F * L = K * angle
+    const vec3 force = engine.getExternalContactForce(rodID);
+    const float angle = engine.getMaxLinkDisplacement() / rod_half_length;
+    const float expected_force = joint_stiffness * angle / rod_half_length;
+    INFO("force " << force.x << " " << force.y << " " << force.z << " N, angle " << rad2deg(angle) << " deg, expected " << expected_force << " N");
+    DOCTEST_CHECK(angle > deg2rad(1.f));
+    DOCTEST_CHECK(force.z > 0.f);
+    DOCTEST_CHECK(force.z == doctest::Approx(expected_force).epsilon(0.15));
+    std::filesystem::remove(arm_file);
 }
 
 #ifdef HELIOS_PHYSICS_ENGINE_PLANTS

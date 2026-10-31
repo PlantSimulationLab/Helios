@@ -36,6 +36,8 @@ struct PlantPhysicsParameters {
     std::string leaf_collision_shape = "box";
     //! Weld the internode segments of the plant to each other, so that only petioles, peduncles, leaves, fruit, and flowers move. This makes large plants several times faster to simulate.
     bool rigid_internodes = false;
+    //! Indices of the links in PlantArchitecture::getPlantArticulation() that can later be released with PhysicsEngine::detachLink(), such as branches that may be cut or fruit that may be picked. Each one adds six degrees of freedom and a constraint to the model, and is rigidly held to its parent until released.
+    std::vector<uint> detachable_links;
 };
 
 //! Add a plant to a physics simulation, and make its Context geometry follow the simulated links. Must be called before PhysicsEngine::initialize().

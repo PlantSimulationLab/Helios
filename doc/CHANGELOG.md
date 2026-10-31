@@ -8,7 +8,12 @@
 - `ParameterOptimization::run()` now raises an error if a FLOAT or INTEGER parameter has an infinite `min` or `max`. The bounds were accepted, and the objective could then receive NaN parameter values.
 ## Physics Engine
 - Added the physics engine plug-in (`physicsengine`), which simulates rigid-body dynamics with MuJoCo 3.16.0. `PhysicsEngine` simulates articulations and kinematic boxes, makes Context geometry follow them, runs many instances of one compiled model in parallel, and gives direct access to the MuJoCo model and state.
+- `PhysicsEngine` can load MJCF and URDF models with `addModelFile()`, drive their joints with `addPositionServo()`, and attach Context geometry to their bodies with `bindObjectToBody()`.
+- Links with the joint type `PHYSICS_JOINT_DETACHABLE` can be released mid-simulation with `PhysicsEngine::detachLink()` for cutting a branch or picking a fruit, separately in each simulation instance. `splitTubesAtLink()` keeps the Context geometry from stretching across the break.
 - Added `addPlantToPhysicsEngine()`, available when `plantarchitecture` is also in the project's plug-ins, which simulates plants built by the plant architecture plug-in so they deflect under gravity and contact.
+
+## Robotics
+- Added the robotics plug-in (`robotics`). `Robot` loads a robot from a URDF or MJCF file into a `PhysicsEngine` simulation, with servo-driven joints, inverse kinematics of its tool, the contact force on its tool, and a home pose, for each parallel simulation instance.
 
 ## Plant Architecture
 - Added `PlantArchitecture::getPlantArticulation()`, which returns a plant as rigid links and elastic joints: the same description written by `writePlantStructureUSD()`.

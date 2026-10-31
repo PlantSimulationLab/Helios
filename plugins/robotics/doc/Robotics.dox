@@ -1,0 +1,81 @@
+/*! \page "RoboticsDoc" Robotics Plugin Documentation
+
+ \tableofcontents
+
+ <p> <br><br> </p>
+
+ <table>
+   <tr>
+      <th>Dependencies</th>
+      <td>\ref PhysicsEngineDoc "Physics Engine" plug-in, which is loaded automatically</td>
+   </tr>
+   <tr>
+     <th>CMakeLists.txt</th>
+     <td>set( PLUGINS "robotics" ), or set( PLUGINS "plantarchitecture;physicsengine;robotics" ) to work on plants</td>
+   </tr>
+   <tr>
+     <th>Header File</th>
+     <td>#include "Robot.h"</td>
+   </tr>
+   <tr>
+     <th>Class</th>
+     <td>\ref Robot</td>
+   </tr>
+ </table>
+
+\section RoboticsIntro Introduction
+
+This plug-in simulates a robot loaded from a URDF or MJCF file in a \ref PhysicsEngine simulation. The robot's joints are
+driven by position servos, its tool can be placed with inverse kinematics, and the force on its tool can be read. The robot
+is simulated, not animated: it follows its servos, what it touches pushes back, and an overloaded or poorly placed arm is
+pushed off its target.
+
+\section RoboticsUse Using the plug-in
+
+\code{.cpp}
+    Context context;
+    PhysicsEngine engine(&context);
+
+    Robot robot(&engine, "arm.urdf", "robot");
+    robot.addJointServo("shoulder", 2000.f, 400.f, 0.f, 2.f);
+    robot.addJointServo("elbow", 1000.f, 200.f, 0.f, 1.f);
+    robot.addJointServo("wrist", 200.f, 30.f, 0.f, 0.2f);
+    robot.setTool("tool", make_vec3(0.2f, 0, 0), make_vec3(1, 0, 0));
+
+    engine.initialize();
+    robot.initialize();
+
+    RobotInverseKinematicsResult pose = robot.solveInverseKinematics(make_vec3(0.8f, 0, 1), make_vec3(1, 0, 0));
+    if (pose.converged) {
+        robot.setJointTargets(pose.joint_positions);
+    }
+    engine.step(1000);
+    helios::vec3 tool_force = robot.getToolForce();
+\endcode
+
+The order matters: the robot is described before PhysicsEngine::initialize(), and Robot::initialize() connects it to the compiled model afterward.
+Joint positions are in degrees for hinges and meters for slides. See <tt>samples/robotics_pruning</tt> for a complete example, in which a robot pushes into a
+grapevine shoot, measures the force, and cuts it.
+
+\section RoboticsModels Robot models
+
+The model's geometry collides with articulations such as plants, but not with itself, so it is the job of whatever plans the motion to keep the arm from folding through itself.
+In a URDF file, include <tt>&lt;mujoco&gt;&lt;compiler fusestatic="false" discardvisual="true"/&gt;&lt;/mujoco&gt;</tt> so that bodies joined by fixed joints are kept, and give every link an inertial with a positive mass.
+
+\section RoboticsServos Choosing servo gains
+
+A servo is only stable when its damping is small compared with the inertia it drives: damping * timestep / (link inertia + armature) should be well below one. Light links near the tool
+would need very low damping to meet this, but on a real robot the motor's inertia, reflected through its gearing, is usually far larger than theirs. Set it with the armature argument of Robot::addJointServo().
+An unstable servo shows up as large oscillations of the arm or an error from PhysicsEngine::step().
+
+\section RoboticsForce Reading force
+
+Robot::getToolForce() sums the contact forces on the tool and its descendants. It is zero when nothing touches the tool, and needs no taring. It is what an ideal wrist sensor would read once the tool's weight and inertia are removed, with no noise or bandwidth limit.
+Use it rather than PhysicsEngine::addForceTorqueSensor() while the arm is moving, since that sensor's reading is only reliable at rest.
+
+\section RoboticsResets Home pose and parallel instances
+
+Robot::setHomePose() sets the pose the robot starts from. Every method that reads or commands the robot takes a simulation instance, so one Robot drives all instances created with PhysicsEngine::createInstance().
+Use Robot::resetInstance() to reset one, which restores the home pose and the servo targets. PhysicsEngine::resetInstance() returns the servo targets to zero.
+
+*/

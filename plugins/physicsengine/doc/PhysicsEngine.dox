@@ -93,6 +93,20 @@ Kinematic boxes follow the positions and velocities they are given and push what
 Always pass the box's true velocity to PhysicsEngine::setKinematicBoxPosition(): MuJoCo resolves contacts against the
 velocity of the bodies, and a box that is only repositioned lets what it pushes sink into it.
 
+\section PhysicsEngineModels Loading models
+
+PhysicsEngine::addModelFile() loads an MJCF or URDF file, and adds a prefix to every name in it. Its geometry collides with articulations but not with itself, kinematic boxes, or other loaded models.
+PhysicsEngine::addPositionServo() drives one of its joints, PhysicsEngine::addForceTorqueSensor() adds a sensor on one of its bodies, and PhysicsEngine::bindObjectToBody() makes Context geometry follow one of its bodies.
+The \ref RoboticsDoc "Robotics" plug-in builds robots on these.
+
+\section PhysicsEngineDetach Detaching links
+
+A link with the joint type \ref PHYSICS_JOINT_DETACHABLE is held rigidly to its parent until PhysicsEngine::detachLink() releases it, after which it and its descendants move freely. This is how a branch is cut or a fruit is picked.
+Set PhysicsEngineParameters::ground_collisions so that a detached link comes to rest on the ground. PhysicsEngine::splitTubesAtLink() splits any tube spanning the link and its parent, so that it parts cleanly rather than stretching.
+
+The links that may be detached have to be chosen before PhysicsEngine::initialize(), and each adds six degrees of freedom and a constraint to the model. In return, detaching needs no change to the model, so each simulation instance can detach different links, and PhysicsEngine::resetInstance() restores them.
+A held link is rigid at that joint, rather than bending as a ball joint would. PlantPhysicsParameters::detachable_links chooses them for a plant.
+
 \section PhysicsEngineInstances Running many instances
 
 One compiled model can have many simulation instances, each with entirely separate state. PhysicsEngine::createInstance()

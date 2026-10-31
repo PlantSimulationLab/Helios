@@ -28,6 +28,10 @@ namespace {
         return articulation_name + "_" + link_name;
     }
 
+    std::string detachEqualityName(const std::string &body_name) {
+        return body_name + "_detach";
+    }
+
     std::string boxBodyName(uint boxID) {
         return "box" + std::to_string(boxID);
     }
@@ -81,6 +85,12 @@ PhysicsEngine::~PhysicsEngine() {
     }
     if (model != nullptr) {
         mj_deleteModel(model);
+    }
+    if (spec != nullptr) {
+        mj_deleteSpec(spec);
+    }
+    for (mjSpec *model_file_spec: model_file_specs) {
+        mj_deleteSpec(model_file_spec);
     }
 }
 
@@ -164,6 +174,43 @@ uint PhysicsEngine::addKinematicBox(const vec3 &center, const vec3 &size, const 
     return static_cast<uint>(boxes.size() - 1);
 }
 
+void PhysicsEngine::addModelFile(const std::string &filename, const std::string &prefix, const vec3 &position, float yaw_degrees, bool gravity_compensation) {
+    requireNotInitialized("addModelFile");
+    if (prefix.empty()) {
+        helios_runtime_error("ERROR (PhysicsEngine::addModelFile): The prefix must not be empty, since it is what keeps the names of the model apart from everything else in the simulation.");
+    }
+    for (const ModelFileRecord &existing: model_files) {
+        if (existing.prefix == prefix) {
+            helios_runtime_error("ERROR (PhysicsEngine::addModelFile): A model with the prefix \"" + prefix + "\" was already added.");
+        }
+    }
+    if (!std::filesystem::exists(filename)) {
+        helios_runtime_error("ERROR (PhysicsEngine::addModelFile): The model file " + filename + " does not exist.");
+    }
+    model_files.push_back({filename, prefix, position, yaw_degrees, gravity_compensation});
+}
+
+void PhysicsEngine::addPositionServo(const std::string &joint_name, float stiffness, float damping, float force_limit, float armature) {
+    requireNotInitialized("addPositionServo");
+    if (stiffness <= 0.f || damping < 0.f || force_limit < 0.f || armature < 0.f) {
+        helios_runtime_error("ERROR (PhysicsEngine::addPositionServo): The servo on joint " + joint_name + " must have positive stiffness, and damping, force limit, and armature that are not negative.");
+    }
+    servo_requests.push_back({joint_name, stiffness, damping, force_limit, armature});
+}
+
+void PhysicsEngine::addForceTorqueSensor(const std::string &name, const std::string &body_name, const vec3 &position) {
+    requireNotInitialized("addForceTorqueSensor");
+    sensor_requests.push_back({name, body_name, position});
+}
+
+void PhysicsEngine::bindObjectToBody(uint objID, const std::string &body_name) {
+    requireNotInitialized("bindObjectToBody");
+    if (!context->doesObjectExist(objID)) {
+        helios_runtime_error("ERROR (PhysicsEngine::bindObjectToBody): Object " + std::to_string(objID) + " does not exist in the Context.");
+    }
+    object_body_requests.push_back({objID, body_name});
+}
+
 void PhysicsEngine::bindObjectToLink(uint objID, uint articulationID, uint link_index) {
     requireNotInitialized("bindObjectToLink");
     requireLink(articulationID, link_index, "bindObjectToLink");
@@ -217,19 +264,26 @@ std::string PhysicsEngine::buildMJCF(const PhysicsEngineParameters &params) cons
     std::ostringstream assets;
     assets << std::setprecision(9);
     bodies << "    <light pos=\"0 0 10\" dir=\"0 0 -1\" directional=\"true\"/>\n";
-    bodies << "    <geom name=\"ground\" type=\"plane\" size=\"10 10 0.1\" contype=\"0\" conaffinity=\"0\" rgba=\"0.35 0.45 0.3 1\"/>\n";
+    // A colliding ground uses the same bits as a kinematic box: it collides with articulation links, but not with kinematic boxes or loaded models
+    bodies << "    <geom name=\"ground\" type=\"plane\" size=\"10 10 0.1\" contype=\"" << (params.ground_collisions ? 1 : 0) << "\" conaffinity=\"" << (params.ground_collisions ? 2 : 0) << "\" rgba=\"0.35 0.45 0.3 1\"/>\n";
 
     std::ostringstream exclusions;
+    std::ostringstream equalities;
     for (const ArticulationRecord &record: articulations) {
         const PhysicsArticulation &articulation = record.description;
         const auto &links = articulation.links;
         std::vector<std::vector<size_t>> children(links.size());
         std::vector<size_t> roots;
         for (size_t i = 0; i < links.size(); i++) {
-            if (links[i].parent_index < 0) {
+            // A detachable link is a free body at the top of the tree, which a weld holds to its parent until it is released
+            if (links[i].parent_index < 0 || links[i].joint_type == PHYSICS_JOINT_DETACHABLE) {
                 roots.push_back(i);
             } else {
                 children.at(links[i].parent_index).push_back(i);
+            }
+            if (links[i].parent_index >= 0 && links[i].joint_type == PHYSICS_JOINT_DETACHABLE) {
+                const std::string body_name = linkBodyName(articulation.name, links[i].name);
+                equalities << "    <weld name=\"" << detachEqualityName(body_name) << "\" body1=\"" << body_name << "\" body2=\"" << linkBodyName(articulation.name, links[links[i].parent_index].name) << "\" solref=\"" << params.contact_time_constant << " 1\"/>\n";
             }
         }
         for (size_t root: roots) {
@@ -265,6 +319,9 @@ std::string PhysicsEngine::buildMJCF(const PhysicsEngineParameters &params) cons
     if (!exclusions.str().empty()) {
         xml << "  <contact>\n" << exclusions.str() << "  </contact>\n";
     }
+    if (!equalities.str().empty()) {
+        xml << "  <equality>\n" << equalities.str() << "  </equality>\n";
+    }
     xml << "</mujoco>\n";
 
     return xml.str();
@@ -280,11 +337,12 @@ void PhysicsEngine::writeLinkBody(std::ostringstream &xml, std::ostringstream &a
     mjtNum R_link[9];
     quaternionToMatrix(link.qw, link.qx, link.qy, link.qz, R_link);
 
-    // MJCF bodies are positioned relative to their parent body
+    // MJCF bodies are positioned relative to their parent body. A detachable link has no parent body.
+    const bool detachable = link.parent_index >= 0 && link.joint_type == PHYSICS_JOINT_DETACHABLE;
     vec3 position = link.position;
     mjtNum quat[4] = {link.qw, link.qx, link.qy, link.qz};
     mju_normalize4(quat);
-    if (link.parent_index >= 0) {
+    if (link.parent_index >= 0 && !detachable) {
         const PhysicsLink &parent = links.at(link.parent_index);
         mjtNum R_parent[9];
         quaternionToMatrix(parent.qw, parent.qx, parent.qy, parent.qz, R_parent);
@@ -306,6 +364,10 @@ void PhysicsEngine::writeLinkBody(std::ostringstream &xml, std::ostringstream &a
     xml << indent << "  <inertial pos=\"0 0 0\" mass=\"" << mass << "\"";
     writeVec(xml, "diaginertia", std::max(link.inertia_diagonal.x, 1e-14f), std::max(link.inertia_diagonal.y, 1e-14f), std::max(link.inertia_diagonal.z, 1e-14f));
     xml << "/>\n";
+
+    if (detachable) {
+        xml << indent << "  <freejoint/>\n";
+    }
 
     // A body without a joint is welded to its parent
     if (link.parent_index >= 0 && link.joint_type == PHYSICS_JOINT_BALL) {
@@ -370,8 +432,8 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
     if (model != nullptr) {
         helios_runtime_error("ERROR (PhysicsEngine::initialize): The simulation was already initialized.");
     }
-    if (articulations.empty()) {
-        helios_runtime_error("ERROR (PhysicsEngine::initialize): No articulations were added. Call addArticulation() before initialize().");
+    if (articulations.empty() && model_files.empty()) {
+        helios_runtime_error("ERROR (PhysicsEngine::initialize): Nothing was added to simulate. Call addArticulation() or addModelFile() before initialize().");
     }
     if (params.timestep <= 0.f) {
         helios_runtime_error("ERROR (PhysicsEngine::initialize): The time step must be positive.");
@@ -388,17 +450,17 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
     mjcf_text = buildMJCF(params);
 
     char error[1024] = "";
-    mjSpec *spec = mj_parseXMLString(mjcf_text.c_str(), nullptr, error, sizeof(error));
+    spec = mj_parseXMLString(mjcf_text.c_str(), nullptr, error, sizeof(error));
     if (spec == nullptr) {
         helios_runtime_error("ERROR (PhysicsEngine::initialize): MuJoCo could not parse the generated model: " + std::string(error));
     }
+    attachModelFiles(params);
+    addServosAndSensors();
+
     model = mj_compile(spec, nullptr);
     if (model == nullptr) {
-        std::string compile_error = mjs_getError(spec);
-        mj_deleteSpec(spec);
-        helios_runtime_error("ERROR (PhysicsEngine::initialize): MuJoCo could not compile the generated model: " + compile_error);
+        helios_runtime_error("ERROR (PhysicsEngine::initialize): MuJoCo could not compile the model: " + std::string(mjs_getError(spec)));
     }
-    mj_deleteSpec(spec);
 
     createInstance();
 
@@ -413,15 +475,34 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
             }
             record.link_body_IDs[i] = body_ID;
         }
+        record.link_detach_equality_IDs.assign(links.size(), -1);
+        for (size_t i = 0; i < links.size(); i++) {
+            if (links[i].parent_index >= 0 && links[i].joint_type == PHYSICS_JOINT_DETACHABLE) {
+                record.link_detach_equality_IDs[i] = mj_name2id(model, mjOBJ_EQUALITY, detachEqualityName(linkBodyName(record.description.name, links[i].name)).c_str());
+                if (record.link_detach_equality_IDs[i] < 0) {
+                    helios_runtime_error("ERROR (PhysicsEngine::initialize): The constraint holding detachable link " + links[i].name + " is missing from the compiled model.");
+                }
+            }
+        }
     }
-    body_is_kinematic_box.assign(model->nbody, 0);
+    body_articulation.assign(model->nbody, -1);
+    for (size_t a = 0; a < articulations.size(); a++) {
+        for (int body_ID: articulations[a].link_body_IDs) {
+            body_articulation[body_ID] = static_cast<int>(a);
+        }
+    }
+    body_is_external.assign(model->nbody, 0);
+    for (int body_ID = 1; body_ID < model->nbody; body_ID++) {
+        if (body_articulation[body_ID] < 0) {
+            body_is_external[body_ID] = 1;
+        }
+    }
     for (size_t b = 0; b < boxes.size(); b++) {
         std::string name = boxBodyName(static_cast<uint>(b));
         boxes[b].body_ID = mj_name2id(model, mjOBJ_BODY, name.c_str());
         if (boxes[b].body_ID < 0 || model->body_jntnum[boxes[b].body_ID] != 3) {
             helios_runtime_error("ERROR (PhysicsEngine::initialize): Kinematic box " + name + " is missing from the compiled model.");
         }
-        body_is_kinematic_box[boxes[b].body_ID] = 1;
         int first_joint = model->body_jntadr[boxes[b].body_ID];
         boxes[b].qpos_address = model->jnt_qposadr[first_joint];
         boxes[b].dof_address = model->jnt_dofadr[first_joint];
@@ -504,6 +585,98 @@ void PhysicsEngine::bindContextGeometry() {
     for (const BoxRecord &box: boxes) {
         bindObjectPrimitives(box.objID, addRestPose(box.body_ID));
     }
+
+    for (const ObjectBodyRequest &request: object_body_requests) {
+        int body_ID = mj_name2id(model, mjOBJ_BODY, request.body_name.c_str());
+        if (body_ID < 0) {
+            helios_runtime_error("ERROR (PhysicsEngine::initialize): Object " + std::to_string(request.objID) + " was bound to body " + request.body_name + ", which is not in the compiled model.");
+        }
+        bindObjectPrimitives(request.objID, addRestPose(body_ID));
+    }
+}
+
+void PhysicsEngine::attachModelFiles(const PhysicsEngineParameters &params) {
+    mjsBody *world = mjs_findBody(spec, "world");
+    for (const ModelFileRecord &record: model_files) {
+        char error[1024] = "";
+        mjSpec *model_file_spec = mj_parseXML(record.filename.c_str(), nullptr, error, sizeof(error));
+        if (model_file_spec == nullptr) {
+            helios_runtime_error("ERROR (PhysicsEngine::initialize): MuJoCo could not parse the model file " + record.filename + ": " + std::string(error));
+        }
+        model_file_specs.push_back(model_file_spec);
+
+        // Geometry of a loaded model collides like a kinematic box: with articulations only (see the contype and conaffinity comment in buildMJCF)
+        for (mjsElement *element = mjs_firstElement(model_file_spec, mjOBJ_GEOM); element != nullptr; element = mjs_nextElement(model_file_spec, element)) {
+            mjsGeom *geom = mjs_asGeom(element);
+            geom->contype = 1;
+            geom->conaffinity = 2;
+            geom->condim = 3;
+            geom->friction[0] = params.friction;
+            geom->solref[0] = params.contact_time_constant;
+            geom->solref[1] = 1;
+        }
+        if (record.gravity_compensation) {
+            for (mjsElement *element = mjs_firstElement(model_file_spec, mjOBJ_BODY); element != nullptr; element = mjs_nextElement(model_file_spec, element)) {
+                mjs_asBody(element)->gravcomp = 1;
+            }
+        }
+
+        mjsFrame *frame = mjs_addFrame(world, nullptr);
+        frame->pos[0] = record.position.x;
+        frame->pos[1] = record.position.y;
+        frame->pos[2] = record.position.z;
+        const double half_yaw = 0.5 * double(deg2rad(record.yaw_degrees));
+        frame->quat[0] = std::cos(half_yaw);
+        frame->quat[1] = 0;
+        frame->quat[2] = 0;
+        frame->quat[3] = std::sin(half_yaw);
+        if (mjs_attach(frame->element, model_file_spec->element, record.prefix.c_str(), "") == nullptr) {
+            helios_runtime_error("ERROR (PhysicsEngine::initialize): MuJoCo could not add the model file " + record.filename + " to the simulation: " + std::string(mjs_getError(spec)));
+        }
+    }
+}
+
+void PhysicsEngine::addServosAndSensors() {
+    for (const ServoRequest &request: servo_requests) {
+        mjsElement *joint_element = mjs_findElement(spec, mjOBJ_JOINT, request.joint_name.c_str());
+        if (joint_element == nullptr) {
+            helios_runtime_error("ERROR (PhysicsEngine::initialize): A servo was added to joint " + request.joint_name + ", which is not in the model. Joint names include the prefix given to addModelFile().");
+        }
+        mjs_asJoint(joint_element)->armature = request.armature;
+        mjsActuator *actuator = mjs_addActuator(spec, nullptr);
+        mjs_setName(actuator->element, (request.joint_name + "_servo").c_str());
+        actuator->trntype = mjTRN_JOINT;
+        mjs_setString(actuator->target, request.joint_name.c_str());
+        double kv[1] = {request.damping};
+        const char *servo_error = mjs_setToPosition(actuator, request.stiffness, kv, nullptr, nullptr, 0);
+        if (servo_error != nullptr && servo_error[0] != '\0') {
+            helios_runtime_error("ERROR (PhysicsEngine::initialize): MuJoCo could not make a servo on joint " + request.joint_name + ": " + std::string(servo_error));
+        }
+        if (request.force_limit > 0.f) {
+            actuator->forcelimited = mjLIMITED_TRUE;
+            actuator->forcerange[0] = -request.force_limit;
+            actuator->forcerange[1] = request.force_limit;
+        }
+    }
+
+    for (const SensorRequest &request: sensor_requests) {
+        mjsBody *body = mjs_findBody(spec, request.body_name.c_str());
+        if (body == nullptr) {
+            helios_runtime_error("ERROR (PhysicsEngine::initialize): Force/torque sensor " + request.name + " was added to body " + request.body_name + ", which is not in the model. Body names include the prefix given to addModelFile().");
+        }
+        mjsSite *site = mjs_addSite(body, nullptr);
+        mjs_setName(site->element, request.name.c_str());
+        site->pos[0] = request.position.x;
+        site->pos[1] = request.position.y;
+        site->pos[2] = request.position.z;
+        for (const auto &[sensor_type, suffix]: {std::pair<mjtSensor, std::string>{mjSENS_FORCE, "_force"}, std::pair<mjtSensor, std::string>{mjSENS_TORQUE, "_torque"}}) {
+            mjsSensor *sensor = mjs_addSensor(spec);
+            mjs_setName(sensor->element, (request.name + suffix).c_str());
+            sensor->type = sensor_type;
+            sensor->objtype = mjOBJ_SITE;
+            mjs_setString(sensor->objname, request.name.c_str());
+        }
+    }
 }
 
 void PhysicsEngine::bindObjectPrimitives(uint objID, size_t rest_pose_index) {
@@ -513,6 +686,101 @@ void PhysicsEngine::bindObjectPrimitives(uint objID, size_t rest_pose_index) {
         binding.rest_pose_index = rest_pose_index;
         context->getPrimitiveTransformationMatrix(UUID, binding.rest_transform);
         primitive_bindings.push_back(binding);
+    }
+}
+
+void PhysicsEngine::detachLink(uint articulationID, uint link_index, uint instance) {
+    static_cast<void>(getInstance(instance, "detachLink"));
+    requireLink(articulationID, link_index, "detachLink");
+    const int equality_ID = articulations[articulationID].link_detach_equality_IDs[link_index];
+    if (equality_ID < 0) {
+        helios_runtime_error("ERROR (PhysicsEngine::detachLink): Link " + std::to_string(link_index) + " of articulation " + std::to_string(articulationID) + " does not have a detachable joint. Set its joint type to PHYSICS_JOINT_DETACHABLE before initialize().");
+    }
+    instances[instance].data->eq_active[equality_ID] = 0;
+}
+
+bool PhysicsEngine::isLinkDetached(uint articulationID, uint link_index, uint instance) const {
+    const mjData *data = getInstance(instance, "isLinkDetached").data;
+    requireLink(articulationID, link_index, "isLinkDetached");
+    const int equality_ID = articulations[articulationID].link_detach_equality_IDs[link_index];
+    if (equality_ID < 0) {
+        helios_runtime_error("ERROR (PhysicsEngine::isLinkDetached): Link " + std::to_string(link_index) + " of articulation " + std::to_string(articulationID) + " does not have a detachable joint.");
+    }
+    return data->eq_active[equality_ID] == 0;
+}
+
+void PhysicsEngine::splitTubesAtLink(uint articulationID, uint link_index) {
+    requireInitialized("splitTubesAtLink");
+    requireLink(articulationID, link_index, "splitTubesAtLink");
+    const ArticulationRecord &record = articulations[articulationID];
+    const PhysicsLink &link = record.description.links[link_index];
+    if (link.parent_index < 0) {
+        helios_runtime_error("ERROR (PhysicsEngine::splitTubesAtLink): Link " + std::to_string(link_index) + " of articulation " + std::to_string(articulationID) + " has no parent to part from.");
+    }
+    const size_t link_rest_pose = record.link_rest_pose_indices[link_index];
+
+    const PhysicsLink &parent = record.description.links[link.parent_index];
+    mjtNum R_parent[9];
+    quaternionToMatrix(parent.qw, parent.qx, parent.qy, parent.qz, R_parent);
+    const vec3 anchor_world = parent.position + rotateToWorldFrame(R_parent, link.anchor_in_parent);
+
+    // Splitting appends to the list, and appended tubes begin at the link, so they need no further splitting
+    const size_t tube_count = tube_bindings.size();
+    for (size_t t = 0; t < tube_count; t++) {
+        const std::vector<size_t> &node_rest_poses = tube_bindings[t].node_rest_pose_index;
+        auto first_on_link = std::find(node_rest_poses.begin(), node_rest_poses.end(), link_rest_pose);
+        if (first_on_link == node_rest_poses.end() || first_on_link == node_rest_poses.begin()) {
+            continue;
+        }
+        const size_t first_node = static_cast<size_t>(first_on_link - node_rest_poses.begin());
+
+        auto nodeRestPosition = [&](size_t node) {
+            const BodyRestPose &pose = rest_poses[node_rest_poses[node]];
+            mjtNum R[9];
+            for (int k = 0; k < 9; k++) {
+                R[k] = pose.rotation[k];
+            }
+            return rotateToWorldFrame(R, tube_bindings[t].node_local_position[node]) + pose.position;
+        };
+
+        // The tube parts at the node where the link meets its parent. That is the first node following the link or the one
+        // before it, depending on which link a node at the junction of two links was bound to.
+        const size_t junction_node = (nodeRestPosition(first_node) - anchor_world).magnitude() < (nodeRestPosition(first_node - 1) - anchor_world).magnitude() ? first_node : first_node - 1;
+        const vec3 junction_rest = nodeRestPosition(junction_node);
+        const BodyRestPose &link_pose = rest_poses[link_rest_pose];
+        mjtNum R_link[9];
+        for (int k = 0; k < 9; k++) {
+            R_link[k] = link_pose.rotation[k];
+        }
+        const vec3 junction_local = rotateToBodyFrame(R_link, junction_rest - link_pose.position);
+        const size_t parent_rest_pose = record.link_rest_pose_indices[link.parent_index];
+        const BodyRestPose &parent_pose = rest_poses[parent_rest_pose];
+        mjtNum R_parent_rest[9];
+        for (int k = 0; k < 9; k++) {
+            R_parent_rest[k] = parent_pose.rotation[k];
+        }
+        const vec3 junction_local_to_parent = rotateToBodyFrame(R_parent_rest, junction_rest - parent_pose.position);
+
+        TubeBinding &tube = tube_bindings[t];
+        if (junction_node == 0) {
+            // The tube begins at the junction, so there is nothing to leave behind: the whole tube follows the link
+            tube.node_rest_pose_index[0] = link_rest_pose;
+            tube.node_local_position[0] = junction_local;
+            continue;
+        }
+
+        TubeBinding upper;
+        upper.objID = context->splitTubeObject(tube.objID, static_cast<uint>(junction_node + 1));
+        upper.node_rest_pose_index.assign(tube.node_rest_pose_index.begin() + static_cast<std::ptrdiff_t>(junction_node), tube.node_rest_pose_index.end());
+        upper.node_local_position.assign(tube.node_local_position.begin() + static_cast<std::ptrdiff_t>(junction_node), tube.node_local_position.end());
+        upper.node_rest_pose_index[0] = link_rest_pose;
+        upper.node_local_position[0] = junction_local;
+        // The junction ends the piece left behind, so there it stays with the parent whichever link it was bound to
+        tube.node_rest_pose_index.resize(junction_node + 1);
+        tube.node_local_position.resize(junction_node + 1);
+        tube.node_rest_pose_index[junction_node] = parent_rest_pose;
+        tube.node_local_position[junction_node] = junction_local_to_parent;
+        tube_bindings.push_back(std::move(upper));
     }
 }
 
@@ -648,7 +916,22 @@ void PhysicsEngine::writeMJCF(const std::string &filename) const {
     if (!file.is_open()) {
         helios_runtime_error("ERROR (PhysicsEngine::writeMJCF): Could not open " + filename + " for writing. Make sure the directory exists and is writable.");
     }
-    file << mjcf_text;
+    if (model_files.empty() && servo_requests.empty() && sensor_requests.empty()) {
+        file << mjcf_text;
+        return;
+    }
+    // Loaded models are only in the spec, not in the generated text. MuJoCo returns the size needed when the buffer is too small.
+    char error[1024] = "";
+    std::string xml(1 << 20, '\0');
+    int required_size = mj_saveXMLString(spec, xml.data(), static_cast<int>(xml.size()), error, sizeof(error));
+    if (required_size > 0) {
+        xml.resize(required_size + 1);
+        required_size = mj_saveXMLString(spec, xml.data(), static_cast<int>(xml.size()), error, sizeof(error));
+    }
+    if (required_size != 0) {
+        helios_runtime_error("ERROR (PhysicsEngine::writeMJCF): MuJoCo could not write the model: " + std::string(error));
+    }
+    file << xml.c_str();
 }
 
 mjModel *PhysicsEngine::getMuJoCoModel() const {
@@ -685,7 +968,7 @@ float PhysicsEngine::getMaxLinkDisplacement(uint instance) const {
     const mjData *data = getInstance(instance, "getMaxLinkDisplacement").data;
     float max_displacement = 0.f;
     for (const BodyRestPose &pose: rest_poses) {
-        if (body_is_kinematic_box[pose.body_ID]) {
+        if (body_is_external[pose.body_ID]) {
             continue;
         }
         const mjtNum *p = data->xpos + 3 * pose.body_ID;
@@ -721,7 +1004,7 @@ float PhysicsEngine::getMaxKinematicBoxPenetration(uint instance) const {
 
 bool PhysicsEngine::isLinkContact(const mjData *data, int contact_index) const {
     const mjContact &contact = data->contact[contact_index];
-    return !body_is_kinematic_box[model->geom_bodyid[contact.geom[0]]] && !body_is_kinematic_box[model->geom_bodyid[contact.geom[1]]];
+    return !body_is_external[model->geom_bodyid[contact.geom[0]]] && !body_is_external[model->geom_bodyid[contact.geom[1]]];
 }
 
 uint PhysicsEngine::getLinkOverlapCount(float min_depth, uint instance) const {
@@ -744,6 +1027,39 @@ float PhysicsEngine::getMaxLinkOverlapDepth(uint instance) const {
         }
     }
     return max_depth;
+}
+
+vec3 PhysicsEngine::getExternalContactForce(uint articulationID, uint instance) const {
+    const mjData *data = getInstance(instance, "getExternalContactForce").data;
+    if (articulationID >= articulations.size()) {
+        helios_runtime_error("ERROR (PhysicsEngine::getExternalContactForce): Articulation " + std::to_string(articulationID) + " does not exist.");
+    }
+    mjtNum total[3] = {0, 0, 0};
+    for (int c = 0; c < data->ncon; c++) {
+        const mjContact &contact = data->contact[c];
+        if (contact.efc_address < 0) {
+            continue;
+        }
+        const int body_0 = model->geom_bodyid[contact.geom[0]];
+        const int body_1 = model->geom_bodyid[contact.geom[1]];
+        // MuJoCo gives the force that geom 0 exerts on geom 1, with the contact normal as the first axis of the contact frame
+        mjtNum sign = 0;
+        if (body_articulation[body_1] == static_cast<int>(articulationID) && body_is_external[body_0]) {
+            sign = 1;
+        } else if (body_articulation[body_0] == static_cast<int>(articulationID) && body_is_external[body_1]) {
+            sign = -1;
+        } else {
+            continue;
+        }
+        mjtNum contact_force[6];
+        mj_contactForce(model, data, c, contact_force);
+        mjtNum world_force[3];
+        mju_mulMatTVec3(world_force, contact.frame, contact_force);
+        for (int k = 0; k < 3; k++) {
+            total[k] += sign * world_force[k];
+        }
+    }
+    return make_vec3(float(total[0]), float(total[1]), float(total[2]));
 }
 
 vec3 PhysicsEngine::getLinkPosition(uint articulationID, uint link_index, uint instance) const {

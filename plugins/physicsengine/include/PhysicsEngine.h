@@ -24,6 +24,7 @@
 // Forward declarations of the MuJoCo types, so that including this header does not require the MuJoCo headers. Code that uses the model and data directly includes <mujoco/mujoco.h>.
 struct mjModel_;
 struct mjData_;
+struct mjSpec_;
 
 //! Settings of the physics simulation
 struct PhysicsEngineParameters {
@@ -39,6 +40,8 @@ struct PhysicsEngineParameters {
     bool articulation_collisions = false;
     //! Distance in meters at which colliding articulation links start to push each other apart when articulation_collisions is enabled, so that they come to rest separated rather than slightly overlapping
     float articulation_collision_margin = 0.001f;
+    //! Let articulation links collide with the ground plane at z = 0, so that detached links come to rest on it
+    bool ground_collisions = false;
     //! Sliding friction coefficient of contacts
     float friction = 0.5f;
     //! Apply gravity
@@ -80,7 +83,9 @@ enum PhysicsJointType {
     //! Rigidly attached to the parent
     PHYSICS_JOINT_WELDED,
     //! Elastic ball joint that resists rotation away from the rest pose
-    PHYSICS_JOINT_BALL
+    PHYSICS_JOINT_BALL,
+    //! Held rigidly to the parent until released by PhysicsEngine::detachLink(), after which the link and its descendants move freely. Each one adds six degrees of freedom and a constraint to the model.
+    PHYSICS_JOINT_DETACHABLE
 };
 
 //! One rigid link of an articulation
@@ -99,7 +104,7 @@ struct PhysicsLink {
     helios::vec3 inertia_diagonal;
     //! Connection to the parent link. Ignored for roots.
     PhysicsJointType joint_type = PHYSICS_JOINT_WELDED;
-    //! Joint anchor in the parent link frame
+    //! Point in the parent link frame where the link meets its parent. This is where a ball joint pivots, and where PhysicsEngine::splitTubesAtLink() parts a tube.
     helios::vec3 anchor_in_parent;
     //! Rotational spring stiffness in N*m/rad
     float stiffness = 0;
@@ -119,7 +124,7 @@ struct PhysicsArticulation {
     std::string name;
     //! Links ordered so that every parent precedes its children
     std::vector<PhysicsLink> links;
-    //! Pairs of link indices that never collide. Only used when PhysicsEngineParameters::articulation_collisions is enabled. MuJoCo does not filter contacts with a parent that is fixed to the world, so such pairs must be listed explicitly.
+    //! Pairs of link indices that never collide. Only used when PhysicsEngineParameters::articulation_collisions is enabled. MuJoCo does not filter contacts with a parent that is fixed to the world or held by a detachable joint, so such pairs must be listed explicitly.
     std::vector<std::pair<uint, uint>> contact_exclusions;
 };
 
@@ -166,6 +171,37 @@ public:
      */
     uint addKinematicBox(const helios::vec3 &center, const helios::vec3 &size, const helios::RGBcolor &color = helios::make_RGBcolor(0.9f, 0.35f, 0.1f));
 
+    //! Load a model from an MJCF or URDF file and add it to the simulation. Must be called before initialize().
+    /**
+     * Its geometry collides with articulations but not with itself, kinematic boxes, or other loaded models. Everything named in the file is given the prefix, so several copies can be loaded.
+     * \param[in] filename Path of the MJCF or URDF file.
+     * \param[in] prefix Text added to the start of every name in the model. Must be unique within the simulation and not empty.
+     * \param[in] position Position in the world of the model's origin.
+     * \param[in] yaw_degrees Rotation of the model about the world z-axis in degrees.
+     * \param[in] gravity_compensation Cancel gravity on every body of the model, as a robot controller does.
+     */
+    void addModelFile(const std::string &filename, const std::string &prefix, const helios::vec3 &position = helios::nullorigin, float yaw_degrees = 0.f, bool gravity_compensation = false);
+
+    //! Add a position servo to a joint of a loaded model. Must be called before initialize().
+    /**
+     * \param[in] joint_name Name of the joint, including the prefix given to addModelFile().
+     * \param[in] stiffness Proportional gain, in N*m/rad for a hinge or N/m for a slide.
+     * \param[in] damping Derivative gain, in N*m*s/rad for a hinge or N*s/m for a slide.
+     * \param[in] force_limit Largest torque or force the servo can apply. Zero leaves it unlimited.
+     * \param[in] armature Inertia of the motor reflected through its gearing, in kg*m^2 for a hinge or kg for a slide. On a real robot this usually far exceeds the inertia of the light links near the tool. The simulation is only stable when damping * timestep / (link inertia + armature) is well below one, so a stiff servo on a light link needs it.
+     */
+    void addPositionServo(const std::string &joint_name, float stiffness, float damping, float force_limit = 0.f, float armature = 0.f);
+
+    //! Add a force and torque sensor at a point on a body of a loaded model. Must be called before initialize().
+    /**
+     * It measures what the body exerts on its parent, as a wrist force/torque sensor does, including the weight of the body and its descendants. The reading is in MuJoCo's sensor data, under the names \c name_force and \c name_torque, in a frame aligned with the body.
+     * The reading is only reliable while the joints are at rest: with the discrete integrator and damped joints it has an error while they move, measured at about 0.3 N on a tool moving at 0.1 m/s. Use getExternalContactForce() to measure contact during motion.
+     * \param[in] name Name of the sensor.
+     * \param[in] body_name Name of the body, including the prefix given to addModelFile().
+     * \param[in] position Position of the sensor in the body frame.
+     */
+    void addForceTorqueSensor(const std::string &name, const std::string &body_name, const helios::vec3 &position = helios::nullorigin);
+
     //! Make a Context object follow a link rigidly. Must be called before initialize().
     /**
      * \param[in] objID ID of the Context object.
@@ -173,6 +209,14 @@ public:
      * \param[in] link_index Index of the link within the articulation.
      */
     void bindObjectToLink(uint objID, uint articulationID, uint link_index);
+
+    //! Make a Context object follow a body of a loaded model rigidly. Must be called before initialize().
+    /**
+     * The object must be placed where the body is in the model's initial state, so that it moves with the body from there.
+     * \param[in] objID ID of the Context object.
+     * \param[in] body_name Name of the body, including the prefix given to addModelFile().
+     */
+    void bindObjectToBody(uint objID, const std::string &body_name);
 
     //! Make each node of a Context tube object follow a link, so that the tube bends with the articulation. Must be called before initialize().
     /**
@@ -203,6 +247,31 @@ public:
      * \param[in] instance ID of the simulation instance.
      */
     void resetInstance(uint instance = 0);
+
+    //! Release a link that has a detachable joint, so that it and its descendants move freely
+    /**
+     * This takes effect in one instance only, and needs no change to the model, so instances can each detach different links. Resetting the instance restores the joint.
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     * \param[in] link_index Index of the link within the articulation. Its joint type must be \ref PHYSICS_JOINT_DETACHABLE.
+     * \param[in] instance ID of the simulation instance.
+     */
+    void detachLink(uint articulationID, uint link_index, uint instance = 0);
+
+    //! Check whether a link with a detachable joint has been released
+    /**
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     * \param[in] link_index Index of the link within the articulation. Its joint type must be \ref PHYSICS_JOINT_DETACHABLE.
+     * \param[in] instance ID of the simulation instance.
+     */
+    [[nodiscard]] bool isLinkDetached(uint articulationID, uint link_index, uint instance = 0) const;
+
+    //! Split any Context tube object that spans a link and its parent, so that the part following the link separates cleanly when the link is detached
+    /**
+     * Without this, the tube segment between the link and its parent would stretch as they part. The split changes the Context, so it applies to every instance rendered from then on, and is not undone by resetInstance().
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     * \param[in] link_index Index of the link within the articulation.
+     */
+    void splitTubesAtLink(uint articulationID, uint link_index);
 
     //! Set the position and velocity of a kinematic box. They take effect at the next step.
     /**
@@ -281,7 +350,7 @@ public:
      */
     [[nodiscard]] float getMaxLinkSpeed(uint instance = 0) const;
 
-    //! Get the deepest penetration into a kinematic box among the contacts of the last step, in meters
+    //! Get the deepest penetration of an articulation into a kinematic box or loaded model among the contacts of the last step, in meters
     /**
      * \param[in] instance ID of the simulation instance.
      */
@@ -302,6 +371,14 @@ public:
      */
     [[nodiscard]] float getMaxLinkOverlapDepth(uint instance = 0) const;
 
+    //! Get the total force on an articulation from kinematic boxes and loaded models, among the contacts of the last step
+    /**
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     * \param[in] instance ID of the simulation instance.
+     * \return Force on the articulation in N, in the world frame.
+     */
+    [[nodiscard]] helios::vec3 getExternalContactForce(uint articulationID, uint instance = 0) const;
+
     //! Get the current world position of an articulation link
     /**
      * \param[in] articulationID ID of the articulation returned by addArticulation().
@@ -321,6 +398,34 @@ private:
         PhysicsArticulation description;
         std::vector<int> link_body_IDs; // MuJoCo body ID of each link
         std::vector<size_t> link_rest_pose_indices;
+        std::vector<int> link_detach_equality_IDs; // MuJoCo equality ID of each detachable link, otherwise -1
+    };
+
+    struct ModelFileRecord {
+        std::string filename;
+        std::string prefix;
+        helios::vec3 position;
+        float yaw_degrees;
+        bool gravity_compensation;
+    };
+
+    struct ServoRequest {
+        std::string joint_name;
+        float stiffness;
+        float damping;
+        float force_limit;
+        float armature;
+    };
+
+    struct SensorRequest {
+        std::string name;
+        std::string body_name;
+        helios::vec3 position;
+    };
+
+    struct ObjectBodyRequest {
+        uint objID;
+        std::string body_name;
     };
 
     struct BoxRecord {
@@ -370,6 +475,8 @@ private:
     };
 
     [[nodiscard]] std::string buildMJCF(const PhysicsEngineParameters &params) const;
+    void attachModelFiles(const PhysicsEngineParameters &params);
+    void addServosAndSensors();
     void writeLinkBody(std::ostringstream &xml, std::ostringstream &assets, const PhysicsArticulation &articulation, size_t link_index, const std::vector<std::vector<size_t>> &children, int depth) const;
     void bindContextGeometry();
     void bindObjectPrimitives(uint objID, size_t rest_pose_index);
@@ -388,14 +495,21 @@ private:
     std::vector<BoxRecord> boxes;
     std::vector<ObjectLinkRequest> object_link_requests;
     std::vector<TubeLinkRequest> tube_link_requests;
+    std::vector<ModelFileRecord> model_files;
+    std::vector<ServoRequest> servo_requests;
+    std::vector<SensorRequest> sensor_requests;
+    std::vector<ObjectBodyRequest> object_body_requests;
 
     std::vector<BodyRestPose> rest_poses;
     std::vector<PrimitiveBinding> primitive_bindings;
     std::vector<TubeBinding> tube_bindings;
-    std::vector<char> body_is_kinematic_box; // indexed by MuJoCo body ID
+    std::vector<char> body_is_external; // indexed by MuJoCo body ID: true for kinematic boxes and bodies of loaded models
+    std::vector<int> body_articulation; // indexed by MuJoCo body ID: the articulation the body belongs to, otherwise -1
 
     std::string mjcf_text; // MJCF model that was compiled
 
+    mjSpec_ *spec = nullptr; // kept for writing models with loaded files
+    std::vector<mjSpec_ *> model_file_specs; // each is attached to spec, which refers to it until both are deleted
     mjModel_ *model = nullptr;
     std::vector<Instance> instances;
 
