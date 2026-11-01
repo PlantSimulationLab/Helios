@@ -2263,7 +2263,10 @@ std::unordered_map<uint, int> Visualizer::buildPhongMaterialTable(const helios::
     }
 
     phong_material_table_size = static_cast<GLint>(table.size() / 4);
-    uploadPhongMaterialTable(std::move(table));
+    if (table != phong_material_table_data) {
+        phong_material_table_data = std::move(table);
+        phong_material_table_upload_pending = true;
+    }
 
     return material_ID_to_index;
 }

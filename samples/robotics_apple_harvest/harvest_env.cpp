@@ -38,6 +38,10 @@ namespace {
     const size_t candidates_per_tree = 8;
     const int flexible_internodes_per_candidate = 8;
 
+    // How long the fruit and flexible wood settle under gravity, once, at 2 ms per step. Episodes start from the pose reached, with no velocity, so a shorter
+    // settling leaves the tree out of balance and it swings for much of each episode. That also costs time to render, since all the wood that swings has to be redrawn.
+    const uint settling_physics_steps = 10000; // 20 s
+
     const vec3 robot_base = make_vec3(-1.05f, 0, 0);
     const vec3 cup_face = make_vec3(0.32f, 0, 0); // in the tool's frame
     const std::vector<float> tucked_pose = {0.f, 0.f, 110.f, -150.f, 40.f, 0.f}; // drive, yaw, shoulder, elbow, wrist, roll
@@ -161,9 +165,9 @@ namespace {
             const mjModel *model = engine.getMuJoCoModel();
             tool_body_ID = mj_name2id(model, mjOBJ_BODY, "robot/tool");
 
-            // Let the fruit and flexible wood settle under gravity once, and start every episode from there
+            // Let the fruit and flexible wood settle, and start every episode from there
             robot->setJointPositions(tucked_pose, 0);
-            engine.step(500, 0);
+            engine.step(settling_physics_steps, 0);
             const mjData *data = engine.getMuJoCoData(0);
             settled_qpos.assign(data->qpos, data->qpos + model->nq);
 
@@ -244,13 +248,19 @@ namespace {
         slot.tree->camera->setCameraPosition(cup - 0.3f * axis + make_vec3(0, 0, 0.08f), cup + 0.3f * axis);
     }
 
-    void renderSlot(Slot &slot) {
+    // The part of rendering that needs no OpenGL, so that trees can do it in parallel
+    void prepareSlotFrame(Slot &slot) {
         Tree &tree = *slot.tree;
         tree.engine.updateContextGeometry(slot.instance);
         pointCamera(slot);
-        tree.camera->plotUpdate(true);
+        tree.camera->prepareContextGeometry();
         // Flags cleared after each frame report only what moves between frames, so the visualizer does not check every primitive
         tree.context.markGeometryClean();
+    }
+
+    void renderSlot(Slot &slot) {
+        prepareSlotFrame(slot);
+        slot.tree->camera->plotUpdate(true);
     }
 
     void writeObservation(const Slot &slot, float *observation) {
@@ -477,14 +487,14 @@ namespace {
         int thread_count = 1;
     };
 
-    // Run a function on every slot, each on one thread at a time
+    // Run a function for every index up to a count, each on one thread at a time
     template<typename Function>
-    void forEachSlot(Environment &environment, Function function) {
+    void forEachIndex(const Environment &environment, size_t count, Function function) {
         std::atomic<size_t> next{0};
         std::exception_ptr first_failure;
         std::mutex failure_mutex;
         auto worker = [&]() {
-            for (size_t i = next++; i < environment.slots.size(); i = next++) {
+            for (size_t i = next++; i < count; i = next++) {
                 try {
                     function(i);
                 } catch (...) {
@@ -506,6 +516,11 @@ namespace {
         if (first_failure) {
             std::rethrow_exception(first_failure);
         }
+    }
+
+    template<typename Function>
+    void forEachSlot(Environment &environment, Function function) {
+        forEachIndex(environment, environment.slots.size(), function);
     }
 
 } // namespace
@@ -578,19 +593,28 @@ int harvest_env_enable_camera(void *env, int width, int height) {
 void harvest_env_render(void *env, unsigned char *images) {
     Environment &environment = *static_cast<Environment *>(env);
     std::vector<uint> pixels;
-    for (size_t i = 0; i < environment.slots.size(); i++) {
-        Slot &slot = environment.slots[i];
-        renderSlot(slot);
-        uint width = 0;
-        uint height = 0;
-        slot.tree->camera->getWindowPixelsRGB(pixels, width, height);
-        // OpenGL gives the bottom row first
-        unsigned char *image = images + i * size_t(width) * size_t(height) * 3;
-        for (uint row = 0; row < height; row++) {
-            const uint *source = pixels.data() + size_t(height - 1 - row) * size_t(width) * 3;
-            unsigned char *destination = image + size_t(row) * size_t(width) * 3;
-            for (uint k = 0; k < width * 3; k++) {
-                destination[k] = static_cast<unsigned char>(source[k]);
+    // Instances of a tree share its visualizer and so its framebuffer, so one instance of each tree is rendered at a time. The slots of a tree are next to each other.
+    const size_t tree_count = environment.trees.size();
+    const size_t instances_per_tree = environment.slots.size() / tree_count;
+    for (size_t instance = 0; instance < instances_per_tree; instance++) {
+        forEachIndex(environment, tree_count, [&](size_t tree) { prepareSlotFrame(environment.slots[tree * instances_per_tree + instance]); });
+        // Reading the images back only after all are drawn lets the GPU work through them while the next is being drawn, rather than waiting for each one
+        for (size_t tree = 0; tree < tree_count; tree++) {
+            environment.slots[tree * instances_per_tree + instance].tree->camera->plotUpdate(true);
+        }
+        for (size_t tree = 0; tree < tree_count; tree++) {
+            const size_t i = tree * instances_per_tree + instance;
+            uint width = 0;
+            uint height = 0;
+            environment.slots[i].tree->camera->getWindowPixelsRGB(pixels, width, height);
+            // OpenGL gives the bottom row first
+            unsigned char *image = images + i * size_t(width) * size_t(height) * 3;
+            for (uint row = 0; row < height; row++) {
+                const uint *source = pixels.data() + size_t(height - 1 - row) * size_t(width) * 3;
+                unsigned char *destination = image + size_t(row) * size_t(width) * 3;
+                for (uint k = 0; k < width * 3; k++) {
+                    destination[k] = static_cast<unsigned char>(source[k]);
+                }
             }
         }
     }

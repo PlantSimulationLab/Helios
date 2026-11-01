@@ -33,6 +33,10 @@ force passes 40 N, the fruit detaches without being gripped, or 10 s pass.
 `harvest_env_enable_camera()` adds a camera on the robot's wrist, rendered with the Visualizer, and `harvest_env_render()` returns an image from every simulation. `./robotics_apple_harvest camera` measures the speed.
 `train_vision.py` trains an image policy by imitating a state policy from `train.py`. It gets the camera, what the robot knows about itself, and a target position with an error that stays the same for a whole episode (4 cm standard deviation along each axis by default). With `--blind`, it trains the same policy without the camera, as a baseline.
 
+Trees are prepared for rendering in parallel, using the environment's threads, and drawn one at a time. Images are read back only after one instance of every tree has been drawn, so that the GPU can work through them while the next is drawn.
+
+Each tree settles under gravity for 20 s when it is built, which takes about 7 s per tree, or about 30 s with leaves. Every episode starts from the pose reached. A shorter settling leaves the tree out of balance, and it then swings for much of each episode, which also makes rendering about twice as slow because all the wood that swings has to be redrawn.
+
 ## What is idealized
 
 - The policy is given exact positions of the fruit and wood, which stand in for perception.

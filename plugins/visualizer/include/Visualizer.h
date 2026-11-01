@@ -1361,6 +1361,17 @@ public:
      */
     void plotUpdate(bool hide_window);
 
+    //! Do the part of plotUpdate() that brings the Context geometry into the visualizer, which needs no OpenGL
+    /**
+     * The next plotUpdate() then skips this work, unless the Context geometry has changed in the meantime. This lets the work be done on another thread: rendering several visualizers one after another is then limited by the time to draw, rather than
+     * by the time to update each one in turn. Only the call to plotUpdate() needs the thread with the OpenGL contexts.
+     *
+     * This may be called at the same time for different visualizers only when each has a different Context. Nothing else may be done with the visualizer or its Context on other threads during the call.
+     *
+     * A change made after this call to the data of a material, or to which primitives are colored by data, may not appear until the plotUpdate() after next, so this should be called just before plotUpdate().
+     */
+    void prepareContextGeometry();
+
     //! Make this visualizer's OpenGL context the current one
     /**
      * Each visualizer has its own OpenGL context, so several can be alive together, such as one per simulated environment. Drawing, reading images, and destruction do this themselves. Call it before any other method that
@@ -2304,6 +2315,12 @@ private:
      */
     void uploadPhongMaterialTable(std::vector<GLfloat> table);
 
+    //! The packed Phong material table as it should be on the GPU
+    std::vector<GLfloat> phong_material_table_data;
+
+    //! Whether \ref phong_material_table_data differs from what is on the GPU. It is uploaded before the next draw rather than when it changes, because building Context geometry must not need OpenGL (see \ref prepareContextGeometry()).
+    bool phong_material_table_upload_pending = false;
+
     //! Resolve per-material Phong parameters and stamp the resulting table index onto each primitive
     /**
      * Called at every exit of \ref buildContextGeometry_private(), including the early return taken
@@ -2311,22 +2328,40 @@ private:
      * \ref helios::Context::setMaterialData() does not touch the primitives that reference the
      * material.
      *
-     * The per-primitive loop is skipped entirely when the resolved Phong data is unchanged from the
-     * previous build, which is the common case in an interactive session.
+     * Each call resolves the parameters of the materials in use, which costs in proportion to the
+     * number of materials. The passes over every displayed primitive run only when the set of
+     * displayed primitives, the material of one of them, or the number of materials has changed, or
+     * when the resolved table has moved to different indices, so that an ordinary frame does not cost
+     * in proportion to the size of the scene.
      */
     void updatePhongMaterialIndices();
 
     //! Fingerprint of the Phong material data resolved into the packed table on the last build
     /**
-     * Used to skip the whole per-material resolve and per-primitive index assignment when no Phong
-     * material data has changed since the previous build, which is the overwhelmingly common case.
-     * Rebuilding the table is cheap, but reassigning indices walks every displayed primitive, so it
-     * must not run on every frame of an interactive session.
+     * Used to skip the per-primitive index assignment when the table has not moved to different
+     * indices since the previous build, which is the overwhelmingly common case. Rebuilding the table
+     * is cheap, but reassigning indices walks every displayed primitive, so it must not run on every
+     * frame of an interactive session.
      */
     std::vector<float> phong_material_fingerprint;
 
     //! Whether the per-primitive Phong material indices have ever been assigned
     bool phong_material_indices_assigned = false;
+
+    //! Whether a primitive has been displayed, removed, or given a different material since the indices were last assigned
+    bool phong_material_indices_stale = true;
+
+    //! The materials used by displayed primitives when the indices were last assigned
+    std::set<uint> phong_referenced_material_IDs;
+
+    //! Number of materials in the Context when the indices were last assigned. A deleted material can have been used by a hidden primitive, which the dirty primitives do not report.
+    uint phong_material_count = 0;
+
+    //! Whether \ref prepareContextGeometry() has done the work of the next \ref plotUpdate()
+    bool context_geometry_prepared = false;
+
+    //! Context geometry revision when \ref prepareContextGeometry() was called
+    uint64_t prepared_context_geometry_revision = 0;
 
     bool isWatermarkVisible;
 
@@ -2495,6 +2530,12 @@ private:
 
     bool build_all_context_geometry = false;
 
+    //! What is known of a Context primitive when it was last uploaded to the geometry handler
+    struct ContextPrimitiveUploadState {
+        uint64_t fingerprint = 0;
+        uint materialID = 0;
+    };
+
     //! UUIDs that have already been built into the geometry handler, each with a fingerprint of the Context state it was built from
     /**
      * Context dirty flags are sticky: Context::markGeometryClean() is the only thing that clears them, and it is the
@@ -2511,9 +2552,11 @@ private:
      * primitive whose fingerprint still matches is skipped; one whose fingerprint differs was modified in place - moved,
      * recolored, retextured, or given new color-by data - and is rebuilt.
      *
+     * The material is stored too, since changing it is not always seen in the fingerprint and it decides the primitive's Phong parameters.
+     *
      * \sa buildContextGeometry_private(), computeContextPrimitiveFingerprint()
      */
-    std::unordered_map<uint, uint64_t> contextUUIDs_uploaded;
+    std::unordered_map<uint, ContextPrimitiveUploadState> contextUUIDs_uploaded;
 
     //! Fingerprint of the Context state of a primitive that determines what the geometry handler holds for it
     /**

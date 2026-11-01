@@ -99,11 +99,33 @@ public:
     void addGeometry(size_t UUID, const VisualizerGeometryType &geometry_type, const std::vector<helios::vec3> &vertices, const helios::RGBAcolor &color, const std::vector<helios::vec2> &uvs, int textureID, bool override_texture_color,
                      bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, bool isskygeometry = false, float size = 0, bool blend_texture_alpha = false);
 
-    //! Mark a geometry primitive as modified
-    void markDirty(size_t UUID);
+    //! Per-primitive buffers that can need uploading to the GPU, as bits to be combined
+    enum BufferAttribute : uint16_t {
+        ATTRIBUTE_VERTEX = 1 << 0,
+        ATTRIBUTE_UV = 1 << 1,
+        ATTRIBUTE_VERTEX_NORMAL = 1 << 2,
+        ATTRIBUTE_FACE_INDEX = 1 << 3,
+        ATTRIBUTE_COLOR = 1 << 4,
+        ATTRIBUTE_NORMAL = 1 << 5,
+        ATTRIBUTE_MATERIAL_INDEX = 1 << 6,
+        ATTRIBUTE_TEXTURE_FLAG = 1 << 7,
+        ATTRIBUTE_TEXTURE_ID = 1 << 8,
+        ATTRIBUTE_COORDINATE_FLAG = 1 << 9,
+        ATTRIBUTE_SKY_GEOMETRY_FLAG = 1 << 10,
+        ATTRIBUTE_VISIBILITY = 1 << 11,
+        ATTRIBUTE_ALL = 0xFFF
+    };
 
-    //! Retrieve the set of modified primitives
-    [[nodiscard]] const std::unordered_set<size_t> &getDirtyUUIDs() const;
+    //! Mark a geometry primitive as modified
+    /**
+     * \param[in] UUID Unique identifier of the geometry primitive
+     * \param[in] attributes [optional] Combination of BufferAttribute bits saying which of its buffers changed. Bits add up until clearDirtyUUIDs(). A primitive can be marked with none, in which case nothing of it is uploaded but it still counts as
+     * modified.
+     */
+    void markDirty(size_t UUID, uint16_t attributes = ATTRIBUTE_ALL);
+
+    //! Retrieve the modified primitives, each with the BufferAttribute bits of the buffers that changed
+    [[nodiscard]] const std::unordered_map<size_t, uint16_t> &getDirtyUUIDs() const;
 
     //! Clear the list of modified primitives
     void clearDirtyUUIDs();
@@ -591,7 +613,7 @@ private:
     std::unordered_map<VisualizerGeometryType, std::vector<bool>> delete_flag_data;
     std::unordered_map<VisualizerGeometryType, std::vector<float>> size_data;
 
-    std::unordered_set<size_t> dirty_UUIDs;
+    std::unordered_map<size_t, uint16_t> dirty_UUIDs;
 
     //! Set when all geometry is cleared at once, which leaves no dirty UUIDs to signal the change
     bool buffer_needs_full_update = false;

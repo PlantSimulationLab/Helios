@@ -25,6 +25,8 @@ void Visualizer::clearContextGeometry() {
 
     contextUUIDs_build.clear();
     contextUUIDs_uploaded.clear();
+    context_geometry_prepared = false;
+    phong_material_indices_stale = true;
     colorPrimitives_UUIDs.clear();
     colorPrimitives_objIDs.clear();
     color_primitive_set_stale = true;
@@ -36,6 +38,8 @@ void Visualizer::clearContextGeometry() {
 
 void Visualizer::buildContextGeometry(helios::Context *context_ptr) {
     context = context_ptr;
+    context_geometry_prepared = false;
+    phong_material_indices_stale = true;
     // The data-colored set belongs to the Context it was settled from; a handed-over Context may hold different primitives
     // even at the same count, so the next build settles it again.
     color_primitive_set_stale = true;
@@ -62,6 +66,8 @@ void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::v
     }
 
     context = context_ptr;
+    context_geometry_prepared = false;
+    phong_material_indices_stale = true;
     color_primitive_set_stale = true; // see buildContextGeometry(Context*)
 
     // Asset directory registration removed - now using HELIOS_BUILD resolution
@@ -125,6 +131,7 @@ void Visualizer::buildContextGeometry_private() {
             }
             if (contextUUIDs_uploaded.erase(UUID) > 0) {
                 context_geometry_deleted = true;
+                phong_material_indices_stale = true;
             }
         }
     }
@@ -205,19 +212,29 @@ void Visualizer::buildContextGeometry_private() {
     // A change to the mapping from data to color alone (primitiveColorsNeedUpdate, or an automatic colorbar range that
     // moved) changes no primitive, so it rebuilds none: it is applied after the build by one recoloring pass over the
     // displayed geometry.
-    std::vector<std::pair<uint, uint64_t>> fingerprints_to_record;
+    std::vector<std::pair<uint, ContextPrimitiveUploadState>> fingerprints_to_record;
     fingerprints_to_record.reserve(contextUUIDs_needupdate.size());
+    bool any_primitive_new = false;
     {
         std::vector<uint> contextUUIDs_changed;
         contextUUIDs_changed.reserve(contextUUIDs_needupdate.size());
         for (uint UUID: contextUUIDs_needupdate) {
             const uint64_t fingerprint = computeContextPrimitiveFingerprint(UUID);
+            const uint materialID = context->getPrimitiveMaterialID(UUID);
             const auto uploaded = contextUUIDs_uploaded.find(UUID);
-            if (uploaded != contextUUIDs_uploaded.end() && uploaded->second == fingerprint && geometry_handler.doesGeometryExist(UUID)) {
+            const bool is_displayed = uploaded != contextUUIDs_uploaded.end() && geometry_handler.doesGeometryExist(UUID);
+            if (!is_displayed) {
+                any_primitive_new = true;
+                phong_material_indices_stale = true;
+            } else if (uploaded->second.materialID != materialID) {
+                uploaded->second.materialID = materialID;
+                phong_material_indices_stale = true;
+            }
+            if (is_displayed && uploaded->second.fingerprint == fingerprint) {
                 continue;
             }
             contextUUIDs_changed.push_back(UUID);
-            fingerprints_to_record.emplace_back(UUID, fingerprint);
+            fingerprints_to_record.emplace_back(UUID, ContextPrimitiveUploadState{fingerprint, materialID});
         }
         contextUUIDs_needupdate = std::move(contextUUIDs_changed);
     }
@@ -281,15 +298,22 @@ void Visualizer::buildContextGeometry_private() {
 
     // add primitives
 
-    size_t patch_count = context->getPatchCount();
-    geometry_handler.allocateBufferSize(patch_count, GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
-    size_t triangle_count = context->getTriangleCount();
-    geometry_handler.allocateBufferSize(triangle_count, GeometryHandler::GEOMETRY_TYPE_TRIANGLE);
+    // Counting the primitives walks all of them, and only new ones need more space
+    if (any_primitive_new) {
+        size_t patch_count = context->getPatchCount();
+        geometry_handler.allocateBufferSize(patch_count, GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
+        size_t triangle_count = context->getTriangleCount();
+        geometry_handler.allocateBufferSize(triangle_count, GeometryHandler::GEOMETRY_TYPE_TRIANGLE);
+    }
 
     // Vertex normals belong to the parent object rather than to the individual triangle, and resolving them costs work proportional to the size of that object. Triangles are therefore collected by parent
     // object here and resolved once per object after the loop, rather than resolving the parent again for every one of its triangles. Applying them after the loop is also required for correctness, because
     // addGeometry() resets a primitive's vertex normals to its face normal, so a primitive re-added later in the loop would otherwise discard normals set earlier.
     std::unordered_map<uint, std::vector<uint>> smooth_shaded_triangles;
+
+    // Primitives usually come in long runs with one texture, and looking one up by its file name costs more than comparing the name with the last one
+    std::string previous_texture_file;
+    int previous_textureID = -1;
 
     for (unsigned int UUID: contextUUIDs_needupdate) {
 
@@ -380,7 +404,11 @@ void Visualizer::buildContextGeometry_private() {
 
         int textureID = -1;
         if (!texture_file.empty()) {
-            textureID = registerTextureImage(texture_file);
+            if (texture_file != previous_texture_file) {
+                previous_textureID = registerTextureImage(texture_file);
+                previous_texture_file = texture_file;
+            }
+            textureID = previous_textureID;
         }
 
         // ---- PATCHES ---- //
@@ -509,8 +537,8 @@ void Visualizer::buildContextGeometry_private() {
 
     // Record what was just built, and the Context state it was built from, so that the next frame does not rebuild these
     // primitives again purely because their Context dirty flags are still set - but does rebuild them if they change.
-    for (const auto &[UUID, fingerprint]: fingerprints_to_record) {
-        contextUUIDs_uploaded[UUID] = fingerprint;
+    for (const auto &[UUID, upload_state]: fingerprints_to_record) {
+        contextUUIDs_uploaded[UUID] = upload_state;
     }
 
     updatePhongMaterialIndices();
@@ -632,24 +660,32 @@ void Visualizer::updatePhongMaterialIndices() {
     // directly to the Visualizer rather than from the Context is skipped: it has no material. It has to
     // be skipped by its flag, not by asking the Context whether the ID exists: such geometry carries a
     // random 64-bit ID, and truncated to a UUID that can equal an unrelated Context primitive.
-    const std::vector<size_t> live_geometry = geometry_handler.getAllGeometryIDs();
-
-    std::set<uint> referenced_material_IDs;
-    for (size_t geometry_UUID: live_geometry) {
-        if (!geometry_handler.isContextGeometry(geometry_UUID)) {
-            continue;
+    //
+    // Finding them walks every displayed primitive, so it happens only when they can have changed. A change to a material's data
+    // dirties no primitive and adds no material, and is seen by resolving the materials below on every call.
+    const uint material_count = context->getMaterialCount();
+    const bool referenced_materials_may_have_changed = !phong_material_indices_assigned || phong_material_indices_stale || material_count != phong_material_count;
+    std::vector<size_t> live_geometry;
+    if (referenced_materials_may_have_changed) {
+        live_geometry = geometry_handler.getAllGeometryIDs();
+        phong_referenced_material_IDs.clear();
+        for (size_t geometry_UUID: live_geometry) {
+            if (!geometry_handler.isContextGeometry(geometry_UUID)) {
+                continue;
+            }
+            const uint UUID = GeometryHandler::getContextUUID(geometry_UUID);
+            if (context->doesPrimitiveExist(UUID)) {
+                phong_referenced_material_IDs.insert(context->getPrimitiveMaterialID(UUID));
+            }
         }
-        const uint UUID = GeometryHandler::getContextUUID(geometry_UUID);
-        if (context->doesPrimitiveExist(UUID)) {
-            referenced_material_IDs.insert(context->getPrimitiveMaterialID(UUID));
-        }
+        phong_material_count = material_count;
     }
 
-    const std::unordered_map<uint, int> material_ID_to_index = buildPhongMaterialTable(context, referenced_material_IDs);
+    const std::unordered_map<uint, int> material_ID_to_index = buildPhongMaterialTable(context, phong_referenced_material_IDs);
 
-    // Reassigning indices walks every displayed primitive, so it is skipped when the resolved Phong
-    // data is identical to the previous build. Building the table itself is O(materials) and cheap
-    // enough to redo each time, and it is what produces the fingerprint.
+    // Reassigning indices walks every displayed primitive, so it is skipped when no primitive can need a
+    // different index: none is new or has another material, and the table's indices are the same. Building
+    // the table itself is O(materials) and cheap enough to redo each time, and it is what produces the fingerprint.
     std::vector<float> fingerprint;
     fingerprint.reserve(material_ID_to_index.size() * 2);
     for (const auto &[materialID, table_index]: material_ID_to_index) {
@@ -658,10 +694,13 @@ void Visualizer::updatePhongMaterialIndices() {
     }
     std::sort(fingerprint.begin(), fingerprint.end());
 
-    if (phong_material_indices_assigned && fingerprint == phong_material_fingerprint) {
+    if (phong_material_indices_assigned && !phong_material_indices_stale && fingerprint == phong_material_fingerprint) {
         return;
     }
 
+    if (live_geometry.empty()) {
+        live_geometry = geometry_handler.getAllGeometryIDs();
+    }
     for (size_t geometry_UUID: live_geometry) {
         if (!geometry_handler.isContextGeometry(geometry_UUID)) {
             continue;
@@ -677,6 +716,7 @@ void Visualizer::updatePhongMaterialIndices() {
 
     phong_material_fingerprint = fingerprint;
     phong_material_indices_assigned = true;
+    phong_material_indices_stale = false;
 }
 
 void Visualizer::updateContextPrimitiveColors() {

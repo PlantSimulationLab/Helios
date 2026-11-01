@@ -130,6 +130,11 @@ public:
         return visualizer.geometry_handler.getDirtyUUIDs().size();
     }
 
+    //! Which buffers of one geometry element will be pushed to the GPU on the next transferBufferData()
+    static uint16_t getDirtyGeometryAttributes(const Visualizer &visualizer, size_t geometry_id) {
+        return visualizer.geometry_handler.getDirtyUUIDs().at(geometry_id);
+    }
+
     //! Vertices of one geometry element as they currently sit in the geometry handler
     static std::vector<helios::vec3> getGeometryVertices(const Visualizer &visualizer, size_t geometry_id) {
         return visualizer.geometry_handler.getVertices(geometry_id);
@@ -5227,6 +5232,321 @@ TEST_CASE("Visualizer instances that are alive together each keep drawing their 
     const int3 red_after_blue = centerColor(red);
     CHECK(red_after_blue.y > 200);
     CHECK(red_after_blue.x > 200);
+}
+
+namespace {
+
+    //! Renders the Context in a new visualizer, for comparing with one that has updated its scene over several frames
+    std::vector<uint> renderPhongScene(Context &context, uint width, uint height) {
+        Visualizer visualizer(width, height, 1, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+        visualizer.setBackgroundColor(make_RGBcolor(0, 0, 0));
+        visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+        visualizer.buildContextGeometry(&context);
+        visualizer.plotUpdate(true);
+        std::vector<uint> pixels;
+        uint w, h;
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        return pixels;
+    }
+
+    //! Two materials of one color that shade differently, so that an image can show only by their Phong parameters which is in use
+    void addDarkAndBrightMaterials(Context &context) {
+        for (const std::string &label: {std::string("dark"), std::string("bright")}) {
+            context.addMaterial(label);
+            context.setMaterialColor(label, make_RGBAcolor(0.5f, 0.5f, 0.5f, 1));
+        }
+        context.setMaterialData("dark", "phong_ambient", 0.05f);
+        context.setMaterialData("dark", "phong_diffuse", 0.05f);
+        context.setMaterialData("bright", "phong_ambient", 0.9f);
+        context.setMaterialData("bright", "phong_diffuse", 0.9f);
+    }
+
+} // namespace
+
+TEST_CASE("Visualizer applies the material of a primitive added after the first frame") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    Context context;
+    addDarkAndBrightMaterials(context);
+    const uint first_dark = context.addPatch(make_vec3(-1, 0, 0), make_vec2(0.8f, 0.8f));
+    const uint first_bright = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.8f, 0.8f));
+    context.assignMaterialToPrimitive(first_dark, "dark");
+    context.assignMaterialToPrimitive(first_bright, "bright");
+
+    const uint width = 100;
+    const uint height = 100;
+    Visualizer updated(width, height, 1, false, true);
+    updated.disableMessages();
+    updated.hideWatermark();
+    updated.hideNavigationGizmo();
+    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
+    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
+    updated.buildContextGeometry(&context);
+    updated.plotUpdate(true);
+
+    // Both materials are already in the table, so adding this primitive changes nothing about the table itself
+    const uint later = context.addPatch(make_vec3(1, 0, 0), make_vec2(0.8f, 0.8f));
+    context.assignMaterialToPrimitive(later, "bright");
+    updated.plotUpdate(true);
+    std::vector<uint> pixels;
+    uint w, h;
+    updated.getWindowPixelsRGB(pixels, w, h);
+
+    CHECK(pixels == renderPhongScene(context, width, height));
+}
+
+TEST_CASE("Visualizer applies a different existing material assigned after the first frame") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    Context context;
+    addDarkAndBrightMaterials(context);
+    const uint first_dark = context.addPatch(make_vec3(-1, 0, 0), make_vec2(0.8f, 0.8f));
+    const uint first_bright = context.addPatch(make_vec3(1, 0, 0), make_vec2(0.8f, 0.8f));
+    // Keeps "dark" in use, so that the assignment below leaves the table of materials as it was
+    const uint other_dark = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.8f, 0.8f));
+    context.assignMaterialToPrimitive(first_dark, "dark");
+    context.assignMaterialToPrimitive(first_bright, "bright");
+    context.assignMaterialToPrimitive(other_dark, "dark");
+
+    const uint width = 100;
+    const uint height = 100;
+    Visualizer updated(width, height, 1, false, true);
+    updated.disableMessages();
+    updated.hideWatermark();
+    updated.hideNavigationGizmo();
+    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
+    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
+    updated.buildContextGeometry(&context);
+    updated.plotUpdate(true);
+    std::vector<uint> before, after;
+    uint w, h;
+    updated.getWindowPixelsRGB(before, w, h);
+
+    context.assignMaterialToPrimitive(first_dark, "bright");
+    updated.plotUpdate(true);
+    updated.getWindowPixelsRGB(after, w, h);
+
+    CHECK(after != before);
+    CHECK(after == renderPhongScene(context, width, height));
+}
+
+TEST_CASE("Visualizer shows a change to the data of a material in use") {
+    // This marks no primitive as changed, so nothing in the geometry says that it happened
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    Context context;
+    addDarkAndBrightMaterials(context);
+    const uint dark = context.addPatch(make_vec3(-1, 0, 0), make_vec2(0.8f, 0.8f));
+    const uint bright = context.addPatch(make_vec3(1, 0, 0), make_vec2(0.8f, 0.8f));
+    context.assignMaterialToPrimitive(dark, "dark");
+    context.assignMaterialToPrimitive(bright, "bright");
+
+    const uint width = 100;
+    const uint height = 100;
+    Visualizer updated(width, height, 1, false, true);
+    updated.disableMessages();
+    updated.hideWatermark();
+    updated.hideNavigationGizmo();
+    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
+    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
+    updated.buildContextGeometry(&context);
+    updated.plotUpdate(true);
+    std::vector<uint> before, after;
+    uint w, h;
+    updated.getWindowPixelsRGB(before, w, h);
+    context.markGeometryClean();
+
+    context.setMaterialData("dark", "phong_ambient", 0.5f);
+    updated.plotUpdate(true);
+    updated.getWindowPixelsRGB(after, w, h);
+
+    context.markGeometryDirty();
+    CHECK(after != before);
+    CHECK(after == renderPhongScene(context, width, height));
+}
+
+TEST_CASE("GeometryHandler reports only the buffers that an update changed") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    Context context;
+    const uint moved = context.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), make_RGBcolor(1, 0, 0));
+    const uint recolored = context.addTriangle(make_vec3(2, 0, 0), make_vec3(3, 0, 0), make_vec3(2, 1, 0), make_RGBcolor(1, 0, 0));
+    const uint untouched = context.addTriangle(make_vec3(4, 0, 0), make_vec3(5, 0, 0), make_vec3(4, 1, 0), make_RGBcolor(1, 0, 0));
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    visualizer.plotUpdate(true);
+    context.markGeometryClean();
+    DOCTEST_REQUIRE(VisualizerTestHelper::getDirtyGeometryCount(visualizer) == 0);
+
+    context.translatePrimitive(moved, make_vec3(0, 0, 1));
+    context.setPrimitiveColor(recolored, make_RGBcolor(0, 1, 0));
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+
+    const uint16_t moved_attributes = VisualizerTestHelper::getDirtyGeometryAttributes(visualizer, moved);
+    CHECK((moved_attributes & GeometryHandler::ATTRIBUTE_VERTEX) != 0);
+    CHECK((moved_attributes & GeometryHandler::ATTRIBUTE_COLOR) == 0);
+    CHECK((moved_attributes & GeometryHandler::ATTRIBUTE_UV) == 0);
+    CHECK((moved_attributes & GeometryHandler::ATTRIBUTE_TEXTURE_ID) == 0);
+
+    const uint16_t recolored_attributes = VisualizerTestHelper::getDirtyGeometryAttributes(visualizer, recolored);
+    CHECK((recolored_attributes & GeometryHandler::ATTRIBUTE_COLOR) != 0);
+    CHECK((recolored_attributes & GeometryHandler::ATTRIBUTE_VERTEX) == 0);
+
+    CHECK(VisualizerTestHelper::getDirtyGeometryCount(visualizer) == 2);
+    static_cast<void>(untouched);
+}
+
+TEST_CASE("Visualizer updating each kind of primitive data separately matches rendering from scratch") {
+    // Each round changes one thing, so that a buffer left out of the upload shows as a difference from a fresh render
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    Context context;
+    const uint triangle = context.addTriangle(make_vec3(-2, -1, 0), make_vec3(-1, -1, 0), make_vec3(-2, 0, 0), make_RGBcolor(1, 0, 0));
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 1, 0));
+    const uint textured = context.addPatch(make_vec3(0, 1.5f, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), "plugins/visualizer/textures/AlmondLeaf.png");
+    const uint tube = context.addTubeObject(8, {make_vec3(1.5f, -1, 0), make_vec3(1.5f, 0, 0), make_vec3(1.5f, 1, 0)}, {0.2f, 0.2f, 0.2f}, std::vector<RGBcolor>(3, make_RGBcolor(0, 0, 1)));
+
+    const uint width = 100;
+    const uint height = 100;
+    Visualizer updated(width, height, 1, false, true);
+    updated.disableMessages();
+    updated.hideWatermark();
+    updated.hideNavigationGizmo();
+    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
+    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
+    updated.buildContextGeometry(&context);
+    updated.plotUpdate(true);
+
+    auto checkMatchesFreshRender = [&](const std::string &round) {
+        updated.plotUpdate(true);
+        std::vector<uint> pixels;
+        uint w, h;
+        updated.getWindowPixelsRGB(pixels, w, h);
+        const std::vector<uint> fresh = renderPhongScene(context, width, height);
+        INFO(round);
+        CHECK(pixels == fresh);
+    };
+
+    context.translatePrimitive(triangle, make_vec3(0.2f, 0.1f, 0));
+    checkMatchesFreshRender("position only");
+    context.setPrimitiveColor(patch, make_RGBcolor(1, 1, 0));
+    checkMatchesFreshRender("color only");
+    context.rotatePrimitive(triangle, 0.3f, "z");
+    checkMatchesFreshRender("position and normal");
+    context.setPrimitiveTextureFile(textured, "plugins/visualizer/textures/GrapeLeaf.png");
+    checkMatchesFreshRender("texture");
+    context.setTubeNodes(tube, {make_vec3(1.5f, -1, 0), make_vec3(1.8f, 0, 0), make_vec3(1.5f, 1, 0.3f)});
+    checkMatchesFreshRender("tube, with smooth normals");
+    context.overridePrimitiveTextureColor(textured);
+    context.setPrimitiveColor(textured, make_RGBcolor(1, 0, 1));
+    checkMatchesFreshRender("texture flag");
+}
+
+TEST_CASE("Visualizer::prepareContextGeometry on other threads matches rendering from scratch") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // Several visualizers, each with its own Context, prepared at once on threads that have no OpenGL context
+    const int tree_count = 4;
+    const uint width = 100;
+    const uint height = 100;
+    std::vector<std::unique_ptr<Context>> contexts;
+    std::vector<std::vector<uint>> patches;
+    std::vector<std::unique_ptr<Visualizer>> visualizers;
+    for (int t = 0; t < tree_count; t++) {
+        contexts.push_back(std::make_unique<Context>());
+        addDarkAndBrightMaterials(*contexts.back());
+        patches.emplace_back();
+        for (int i = 0; i < 40; i++) {
+            const uint UUID = contexts.back()->addPatch(make_vec3(0.2f * float(i - 20), 0.2f * float(t - 2), 0), make_vec2(0.15f, 0.15f));
+            contexts.back()->assignMaterialToPrimitive(UUID, i % 2 == 0 ? "dark" : "bright");
+            patches.back().push_back(UUID);
+        }
+        contexts.back()->addPatch(make_vec3(0, 0, 0.5f), make_vec2(0.3f, 0.3f), make_SphericalCoord(0, 0), "plugins/visualizer/textures/AlmondLeaf.png");
+        visualizers.push_back(std::make_unique<Visualizer>(width, height, 1, false, true));
+        visualizers.back()->disableMessages();
+        visualizers.back()->hideWatermark();
+        visualizers.back()->hideNavigationGizmo();
+        visualizers.back()->setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+        visualizers.back()->setBackgroundColor(make_RGBcolor(0, 0, 0));
+        visualizers.back()->setLightingModel(Visualizer::LIGHTING_PHONG);
+        visualizers.back()->buildContextGeometry(contexts.back().get());
+    }
+
+    // The first round builds the whole scene, which includes reading the texture and resolving the materials
+    for (int round = 0; round < 3; round++) {
+        std::vector<std::thread> threads;
+        for (int t = 0; t < tree_count; t++) {
+            threads.emplace_back([&, t]() {
+                if (round > 0) {
+                    contexts[t]->translatePrimitive(patches[t][size_t(round) * 3], make_vec3(0, 0.05f, 0));
+                }
+                visualizers[t]->prepareContextGeometry();
+            });
+        }
+        for (std::thread &thread: threads) {
+            thread.join();
+        }
+        for (int t = 0; t < tree_count; t++) {
+            visualizers[t]->plotUpdate(true);
+        }
+        for (int t = 0; t < tree_count; t++) {
+            std::vector<uint> pixels;
+            uint w, h;
+            visualizers[t]->getWindowPixelsRGB(pixels, w, h);
+            const std::vector<uint> fresh = renderPhongScene(*contexts[t], width, height);
+            CHECK(pixels == fresh);
+        }
+    }
+}
+
+TEST_CASE("Visualizer::plotUpdate shows a change made after prepareContextGeometry") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    Context context;
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 1, 0));
+
+    const uint width = 100;
+    const uint height = 100;
+    Visualizer updated(width, height, 1, false, true);
+    updated.disableMessages();
+    updated.hideWatermark();
+    updated.hideNavigationGizmo();
+    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
+    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
+    updated.buildContextGeometry(&context);
+    updated.plotUpdate(true);
+
+    updated.prepareContextGeometry();
+    context.translatePrimitive(patch, make_vec3(1, 0, 0));
+    updated.plotUpdate(true);
+    std::vector<uint> pixels;
+    uint w, h;
+    updated.getWindowPixelsRGB(pixels, w, h);
+    CHECK(pixels == renderPhongScene(context, width, height));
+
+    // With no Context there is nothing to prepare, and it is not an error
+    Visualizer without_context(width, height, 1, false, true);
+    without_context.disableMessages();
+    DOCTEST_CHECK_NOTHROW(without_context.prepareContextGeometry());
+    DOCTEST_CHECK_NOTHROW(without_context.plotUpdate(true));
 }
 
 TEST_CASE("Visualizer updating scattered primitives in place matches rendering them from scratch") {

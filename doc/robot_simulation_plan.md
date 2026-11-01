@@ -126,6 +126,22 @@ Rendering many environments, with `samples/robotics_apple_harvest` and a camera 
 
 Those changes were hiding the navigation gizmo, which is rebuilt whenever the camera moves, and `PhysicsEngine::setContextUpdateTolerance()`, which leaves motion too small to see out of the update. Instances are drawn one at a time, so about 50 steps/s is what is left, against about 280 without images: 500,000 steps would take about 3 hours rather than 28 minutes. Most of the remaining time is the driver's work in the draw call. These are measured with a scripted controller and no network, on macOS only.
 
+**Rendering at 180 steps/s (2026-10-31).** Profiling those 17 ms found that about 12.6 ms was CPU time rebuilding geometry, 1 ms was drawing and waiting for the GPU, and about 10,000 primitives, a quarter of the scene, were really moving on every frame. Each tree settled for only 1 s, so every episode released it out of balance, and it swung at up to 0.6 m/s for most of the 10 s episode, even with the arm held still. Each row adds to the one above, for 8 trees x 2 at 128x128:
+
+| Change | Render per simulation, ms | Steps/s with images |
+|---|---|---|
+| Before | 16-17 | 48-51 |
+| Trees settle for 20 s rather than 1 s | 7.4-8.0 | 87-92 |
+| No passes over all primitives on an ordinary frame; only the buffers that changed are uploaded | 4.5-4.7 | 121-125 |
+| Trees prepared in parallel, with `Visualizer::prepareContextGeometry()` | about 2.7 | about 160 |
+| Images read back only after all are drawn | 2.05-2.11 | 178-181 |
+
+The rows before and after the settling show different images, since the tree no longer swings. Below that row the images are identical, by a hash over every frame. Reading back the pixels is included. 8 trees x 4 at 64x64 reaches 199 steps/s. Settling adds about 7 s per tree to the build, which went from 12 s to 70 s for 8 trees. A trained policy succeeded on 87.5% of 240 episodes on unseen trees with either settling, so the swing did not change the outcome of the task, though it did change the images.
+
+With leaves on, physics becomes the limit. A step takes 14 ms, because the leaves add about 3,400 bodies, so rendering at 3.3 ms gives 58 steps/s and the most possible is about 72. Settling takes about 30 s per tree. Leaves that are only visual, not bodies, may be the next large gain, and have not been tried.
+
+The GPU takes about 0.8 ms per image and that barely changes with resolution or with leaves, so frustum culling has little to gain. There is no visible cost in switching OpenGL contexts. By estimate, tiled rendering would reach at most about 200 steps/s, which does not justify the change. All of this was measured on one M2 Pro, and the gain from reading back later is not measured on other drivers.
+
 Visualizers alive together used to draw the wrong scene silently, because only the newest one's OpenGL context was current. They now each make their own current. A Visualizer created after Context::markGeometryClean() still draws only what has changed since, unless Context::markGeometryDirty() is called first.
 
 The radiation camera took about 39 ms per frame at its cheapest setting, whose image quality has not been looked at, and is the option for when physically based images are worth the setup.
@@ -142,6 +158,8 @@ The radiation camera took about 39 ms per frame at its cheapest setting, whose i
 - **Collisions are the main failure.** The image policy cannot see the exact wood positions that the state policy uses, and wood is thin at 64x64.
 - **Unseen trees are much harder:** while collecting on the training trees in the last rounds, the camera policy succeeded about 85% and the blind one about 65%, against 60% and 47% on unseen trees. Eight trees are probably too few. Those collection rates are a guide, not a controlled comparison, and each fruit recurs on the training trees, so a policy can partly memorize them.
 - **Rate:** 35-43 frames/s while collecting, against about 50 steps/s measured without a network.
+
+These were all trained and evaluated before trees settled for 20 s, so on trees that swung for much of each episode. They have not been repeated on trees at rest, which changes the images and may change these results.
 
 Still to do: more training trees, a second seed, higher resolution to see thin wood, and leaves. Leaves are essential, since they hide fruit and wood, and everything here is without them. The images have not been compared with real ones.
 

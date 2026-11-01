@@ -525,10 +525,7 @@ std::vector<uint> Context::getAllUUIDs() const {
 
 std::vector<uint> Context::getDirtyUUIDs(bool include_deleted_UUIDs) const {
 
-    size_t dirty_count = std::count_if(primitives.begin(), primitives.end(), [&](auto const &kv) { return isPrimitiveDirty(kv.first); });
-
     std::vector<uint> dirty_UUIDs;
-    dirty_UUIDs.reserve(dirty_count);
     for (const auto &[UUID, primitive]: primitives) {
         if (!primitive->dirty_flag || primitive->ishidden) {
             continue;

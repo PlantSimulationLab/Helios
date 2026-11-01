@@ -19,10 +19,13 @@
 ## Visualizer
 - Updating geometry that changed between frames is much faster, because changed primitives are now uploaded to the GPU in merged ranges rather than one at a time. On macOS, a frame in which a whole plant of 12,700 primitives moved went from about 400 ms to about 12 ms.
 - Fixed `Visualizer` instances alive at the same time drawing and reading each other's scenes, with no error, because only the most recently created one's OpenGL context was current. Added `Visualizer::makeContextCurrent()`.
+- `Visualizer::plotUpdate()` no longer costs in proportion to the whole scene when little has changed: it no longer walks every displayed primitive on each frame to find their materials, and it uploads only the buffers of a primitive that changed.
+- Added `Visualizer::prepareContextGeometry()`, which does the part of `plotUpdate()` that brings Context geometry into the visualizer and needs no OpenGL, so that several visualizers can do it in parallel on other threads.
+- Fixed a primitive being drawn with the wrong Phong parameters, with no error, when it was added after the first frame or was assigned a different material, if the materials in use did not otherwise change.
 
 ## Robotics
 - Added the robotics plug-in (`robotics`). `Robot` loads a robot from a URDF or MJCF file into a `PhysicsEngine` simulation, with servo-driven joints, inverse kinematics of its tool, the contact force on its tool, and a home pose, for each parallel simulation instance. Instances can be simulated and solved from separate threads.
-- Added `samples/robotics_apple_harvest`, a reinforcement learning environment for picking apples, with a Python interface for Stable-Baselines3 and a camera on the robot's wrist, and examples of training from state and from images.
+- Added `samples/robotics_apple_harvest`, a reinforcement learning environment for picking apples, with a Python interface for Stable-Baselines3 and a camera on the robot's wrist, and examples of training from state and from images. Each tree settles under gravity for 20 s when it is built, so that it starts every episode at rest.
 
 ## Plant Architecture
 - Added `PlantArchitecture::getPlantArticulation()`, which returns a plant as rigid links and elastic joints: the same description written by `writePlantStructureUSD()`.

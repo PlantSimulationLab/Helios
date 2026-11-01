@@ -739,6 +739,34 @@
   - Rectangles and triangles added directly to the %Visualizer (rather than through the Context) hide the Context primitives behind them, but cannot themselves be annotated. Lines and points added to the %Visualizer are ignored: they hide nothing in the annotations or the depth image. The sky dome, colorbar and watermark are ignored by the annotations and have no depth, though they do appear in a saved image; hide the ones that should not be in a training image.
   - On a high-DPI display a windowed %Visualizer renders more pixels than the window size it was created with. The saved image and its annotations always have the same dimensions, which are given by \ref Visualizer::getFramebufferSize() "getFramebufferSize()". A headless %Visualizer always renders at exactly the size requested.
 
+  \subsubsection PrepareContextGeometry Rendering several visualizers quickly
+
+   Most of the time in \ref Visualizer::plotUpdate() can go to bringing changed Context geometry into the visualizer, rather than to drawing. When several visualizers are rendered one after another, each with its own Context, \ref Visualizer::prepareContextGeometry() lets them do that work at the same time. It needs no OpenGL, so it can run on other threads. The next call to plotUpdate() then skips the work, unless the Context geometry has changed in the meantime, and it is that call which must be on the thread that created the visualizers.
+
+   In headless mode, plotUpdate() also starts the GPU on the frame without waiting for it, so reading images back only after all are drawn lets the GPU work through them while the next is drawn.
+
+  ~~~~~~{.cpp}
+   std::vector<std::thread> threads;
+   for( int i=0; i<visualizers.size(); i++ ){
+     threads.emplace_back( [&visualizers, i](){ visualizers.at(i)->prepareContextGeometry(); } );
+   }
+   for( std::thread &thread : threads ){
+     thread.join();
+   }
+
+   for( auto &visualizer : visualizers ){
+     visualizer->plotUpdate(true);
+   }
+
+   for( auto &visualizer : visualizers ){
+     std::vector<uint> pixels;
+     uint width, height;
+     visualizer->getWindowPixelsRGB(pixels, width, height);
+   }
+  ~~~~~~
+
+   Calls may overlap only for visualizers with different Contexts, and nothing else may use a visualizer or its Context on another thread during the call. A change to the data of a material made after this call may not appear until the plotUpdate() after next, so it should be called just before plotUpdate().
+
   \subsubsection AnnotationDepth Depth images
 
   The depth of a pixel is the distance in world units from the camera to the surface visible in that pixel, measured along the viewing direction of the camera (not along the line of sight through the pixel). Pixels in which nothing is visible have a depth of -1. Three output forms are available:

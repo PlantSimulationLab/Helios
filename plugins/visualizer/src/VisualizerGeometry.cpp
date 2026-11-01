@@ -267,6 +267,8 @@ void Visualizer::clearGeometry() {
 
     contextUUIDs_build.clear();
     contextUUIDs_uploaded.clear();
+    context_geometry_prepared = false;
+    phong_material_indices_stale = true;
     colorPrimitives_UUIDs.clear();
     colorPrimitives_objIDs.clear();
     depth_buffer_data.clear();
