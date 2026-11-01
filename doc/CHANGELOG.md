@@ -13,6 +13,7 @@
 - Links with the joint type `PHYSICS_JOINT_DETACHABLE` can be released mid-simulation with `PhysicsEngine::detachLink()` for cutting a branch or picking a fruit, separately in each simulation instance. `splitTubesAtLink()` keeps the Context geometry from stretching across the break.
 - Added `PhysicsEngine::getDetachableLinkLoad()`, which gives the force holding a detachable link, for modeling connections that fail under load.
 - Added `PhysicsEngine::setContextUpdateTolerance()`, which leaves motion too small to see out of `updateContextGeometry()`.
+- Added `PlantPhysicsParameters::rigid_leaves`, which welds petioles and leaves to what they grow from, so that a plant in leaf can be simulated faster when leaves matter only to what a camera sees.
 - Added `PlantPhysicsParameters::flexible_links`, which keeps chosen internodes flexible while `rigid_internodes` makes the rest rigid.
 - Added `addPlantToPhysicsEngine()`, available when `plantarchitecture` is also in the project's plug-ins, which simulates plants built by the plant architecture plug-in so they deflect under gravity and contact.
 

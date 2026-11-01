@@ -163,6 +163,34 @@ These were all trained and evaluated before trees settled for 20 s, so on trees 
 
 Still to do: more training trees, a second seed, higher resolution to see thin wood, and leaves. Leaves are essential, since they hide fruit and wood, and everything here is without them. The images have not been compared with real ones.
 
+**Image policies on settled trees (phase 4, 2026-11-01).** These replace the earlier results on swinging trees. Each policy imitates the state policy on 24 training trees (154,000 frames, about 16 minutes with a camera), at 64x64, with a target position error of 4 cm standard deviation per axis. Success over 240 episodes per cell, 12 trees per set:
+
+| No leaves | Seed 0 | Seed 1 | Seed 2 | Mean |
+|---|---|---|---|---|
+| Camera, trees 301-312 | 71.2% | 67.1% | 65.4% | 67.9% |
+| Blind, trees 301-312 | 48.8% | 57.5% | 44.6% | 50.3% |
+| Camera, trees 401-412 | 56.2% | 50.0% | 56.7% | 54.3% |
+| Blind, trees 401-412 | 40.8% | 53.3% | 42.9% | 45.7% |
+
+Trees 401-412 played no part in choosing the setup, so +9 points is the fairer estimate of what the camera adds, and trees 301-312 give +18. The camera beat blind in 5 of the 6 comparisons with the same seed. The state policy with exact positions scored 86-88% on trees 301-312.
+
+With leaves (fixed to the wood, the arm passes through them, seed 0 only):
+
+| With leaves | Trees 301-312 | Trees 401-412 |
+|---|---|---|
+| Camera | 54.6% | 45.0% |
+| Blind | 53.3% | 45.4% |
+
+**So the camera helps without leaves, and shows no benefit with them, on one seed.** Other findings:
+
+- **Results move a lot between seeds and tree sets.** Single runs ranged from 50% to 71% for the same setup. One run on one tree set is not enough to compare setups: the first run with 24 trees scored 71%, and looked like a bigger gain than it was.
+- **Resolution:** 128x128 was no better than 64x64 (61% vs 63%, 8 training trees, one seed).
+- **More training trees:** the gap between training and unseen trees closed with 24 trees, against 12-15 points with 8.
+- **Failures are mostly protective stops,** at 27-38% for the camera policy without leaves.
+- **Leaves as physics bodies** cap the rate near 72 steps/s, and fixed to the wood they gave 91 steps/s at 64x64, with a startup of about 19 s per tree.
+
+Not done: a rendered episode has not been watched, leaves have one seed, and the images have not been compared with real ones. No target error other than 4 cm has been tried.
+
 ## Plug-in structure
 
 Two plug-ins, static libraries in one process, so the boundary itself costs nothing at run time.
