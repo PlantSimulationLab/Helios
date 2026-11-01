@@ -32,6 +32,9 @@ namespace {
     const float min_detach_force = 14.f; // N
     const float max_detach_force = 28.f; // N
 
+    const std::string plant_model = "apple_fruitingwall";
+    const float plant_age = 650.f; // days
+
     // Fruit that can be targeted must be within reach of the arm
     const float min_fruit_height = 0.8f; // m
     const float max_fruit_height = 1.75f; // m
@@ -59,11 +62,18 @@ namespace {
     struct Candidate {
         uint link;
         uint bearing_wood_link; // the nearest internode toward the trunk
+        uint objID;
         int body_ID;
         float radius;
         vec3 settled_position;
         vec3 settled_wood_position;
     };
+
+    // Labels for measuring what the camera sees. A fruit is labeled by its object, offset past the others.
+    const uint organ_other = 0;
+    const uint organ_leaf = 1;
+    const uint organ_wood = 2;
+    const uint organ_fruit_base = 3;
 
     struct WoodSegment {
         vec3 start;
@@ -82,13 +92,14 @@ namespace {
         std::vector<mjtNum> settled_qpos;
         std::vector<WoodSegment> wood; // where the wood stands at rest, which stands in for what perception would report
         std::unique_ptr<Visualizer> camera;
+        std::unordered_map<uint, uint> organ_of_primitive; // for measuring what the camera sees: which kind of plant organ each primitive belongs to, or which fruit
 
         Tree(int seed, int instance_count, bool leaves) : plantarchitecture(&context), engine(&context) {
             context.seedRandomGenerator(seed);
             plantarchitecture.disableMessages();
             engine.disableMessages();
-            plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
-            uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 650.f);
+            plantarchitecture.loadPlantModelFromLibrary(plant_model);
+            uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), plant_age);
             if (!leaves) {
                 plantarchitecture.removePlantLeaves(plantID);
             }
@@ -121,6 +132,16 @@ namespace {
             }
             if (reachable.empty()) {
                 helios_runtime_error("ERROR (harvest_env): Tree with seed " + std::to_string(seed) + " has no fruit within reach of the robot.");
+            }
+
+            for (const PlantArticulationLink &link: articulation.links) {
+                if (link.source_objID == 0 || !context.doesObjectExist(link.source_objID)) {
+                    continue;
+                }
+                const uint organ = link.type == ARTICULATION_LINK_FRUIT ? link.source_objID + organ_fruit_base : (link.type == ARTICULATION_LINK_LEAF ? organ_leaf : (link.type == ARTICULATION_LINK_INTERNODE ? organ_wood : organ_other));
+                for (uint UUID: context.getObjectPrimitiveUUIDs(link.source_objID)) {
+                    organ_of_primitive[UUID] = organ;
+                }
             }
 
             PlantPhysicsParameters plant_parameters;
@@ -177,6 +198,7 @@ namespace {
             for (uint link: reachable) {
                 Candidate candidate;
                 candidate.link = link;
+                candidate.objID = articulation.links[link].source_objID;
                 int wood = articulation.links[link].parent_index;
                 while (wood >= 0 && articulation.links[wood].type != ARTICULATION_LINK_INTERNODE) {
                     wood = articulation.links[wood].parent_index;
@@ -555,6 +577,22 @@ void harvest_env_destroy(void *env) {
     delete static_cast<Environment *>(env);
 }
 
+int harvest_env_tree_has_reachable_fruit(int tree_seed) {
+    Context context;
+    context.seedRandomGenerator(tree_seed);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary(plant_model);
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), plant_age);
+    USDExportParameters plant_physics;
+    for (const PlantArticulationLink &link: plantarchitecture.getPlantArticulation(plantID, plant_physics).links) {
+        if (link.type == ARTICULATION_LINK_FRUIT && link.position.z >= min_fruit_height && link.position.z <= max_fruit_height) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int harvest_env_count(const void *env) {
     return static_cast<int>(static_cast<const Environment *>(env)->slots.size());
 }
@@ -627,6 +665,47 @@ void harvest_env_save_camera_image(void *env, int index, const char *filename) {
     Slot &slot = static_cast<Environment *>(env)->slots.at(index);
     renderSlot(slot);
     slot.tree->camera->printWindow(filename, "jpeg");
+}
+
+void harvest_env_measure_camera_view(void *env, int index, HarvestCameraView *view) {
+    Slot &slot = static_cast<Environment *>(env)->slots.at(index);
+    Tree &tree = *slot.tree;
+    renderSlot(slot);
+    std::vector<uint> pixel_UUIDs;
+    std::vector<float> depth;
+    uint width = 0;
+    uint height = 0;
+    tree.camera->getPixelUUIDs(pixel_UUIDs, width, height);
+    tree.camera->getDepthImage(depth, width, height);
+    *view = HarvestCameraView{};
+    const uint target_label = slot.target->objID + organ_fruit_base;
+    for (size_t k = 0; k < pixel_UUIDs.size(); k++) {
+        if (pixel_UUIDs[k] == 0) {
+            continue;
+        }
+        const auto organ = tree.organ_of_primitive.find(pixel_UUIDs[k] - 1);
+        if (organ == tree.organ_of_primitive.end()) {
+            continue;
+        }
+        if (organ->second == target_label) {
+            view->target_fruit += 1.f;
+        } else if (organ->second >= organ_fruit_base) {
+            view->other_fruit += 1.f;
+        } else if (organ->second == organ_leaf) {
+            view->leaves += 1.f;
+            if (depth[k] < 0.15f) {
+                view->near_leaves += 1.f;
+            }
+        } else if (organ->second == organ_wood) {
+            view->wood += 1.f;
+        }
+    }
+    const float total = float(pixel_UUIDs.size());
+    view->target_fruit /= total;
+    view->other_fruit /= total;
+    view->leaves /= total;
+    view->near_leaves /= total;
+    view->wood /= total;
 }
 
 void harvest_env_last_episode(const void *env, int index, HarvestEpisodeRecord *record) {

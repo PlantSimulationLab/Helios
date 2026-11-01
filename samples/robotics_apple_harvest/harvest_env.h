@@ -18,6 +18,9 @@ enum HarvestOutcome {
     HARVEST_COLLISION = 5 //!< The arm pressed on the tree hard enough for a protective stop
 };
 
+//! Check whether a tree seed gives a tree with fruit within reach of the robot. A tree without any cannot be used in an environment. Takes about as long as growing the tree.
+int harvest_env_tree_has_reachable_fruit(int tree_seed);
+
 //! Create an environment with instances_per_tree parallel simulations of each tree. With leaves nonzero, trees keep their leaves, which can hide things from the camera but are fixed to the wood and collide with nothing. Returns null and prints the reason on failure.
 void *harvest_env_create(const int *tree_seeds, int tree_count, int instances_per_tree, int thread_count, int seed, int leaves);
 void harvest_env_destroy(void *env);
@@ -53,6 +56,18 @@ void harvest_env_render(void *env, unsigned char *images);
 
 //! Write the camera image of one simulation to a JPEG file, for looking at it
 void harvest_env_save_camera_image(void *env, int index, const char *filename);
+
+//! What the camera of a simulation sees now, as fractions of the image
+typedef struct {
+    float target_fruit; //!< Showing the fruit being reached for
+    float other_fruit; //!< Showing other fruit
+    float leaves; //!< Showing leaves
+    float near_leaves; //!< Showing leaves within 15 cm of the camera, which a real arm would have pushed aside
+    float wood; //!< Showing wood
+} HarvestCameraView;
+
+//! Measure what the camera of one simulation sees. Slow, since it draws the image again: for understanding a policy, not for training.
+void harvest_env_measure_camera_view(void *env, int index, HarvestCameraView *view);
 
 //! Get the record of a simulation's last finished episode
 void harvest_env_last_episode(const void *env, int index, HarvestEpisodeRecord *record);

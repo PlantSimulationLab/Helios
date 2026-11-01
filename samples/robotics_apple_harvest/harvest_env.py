@@ -37,6 +37,15 @@ class EpisodeRecord(ctypes.Structure):
 _lib.harvest_env_last_episode.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(EpisodeRecord)]
 
 
+class CameraView(ctypes.Structure):
+    """What a simulation's camera sees, as fractions of the image. See HarvestCameraView in harvest_env.h."""
+
+    _fields_ = [(name, ctypes.c_float) for name in ("target_fruit", "other_fruit", "leaves", "near_leaves", "wood")]
+
+
+_lib.harvest_env_measure_camera_view.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(CameraView)]
+
+
 class AppleHarvestVecEnv(VecEnv):
     """Each tree seed gives a tree with a different structure, with instances_per_tree simulations of it."""
 
@@ -110,6 +119,12 @@ class AppleHarvestVecEnv(VecEnv):
     def save_camera_image(self, index, filename):
         _lib.harvest_env_save_camera_image(self._env, index, filename.encode())
 
+    def measure_camera_view(self, index):
+        """What the camera of one simulation sees now. Slow: for understanding a policy, not for training."""
+        view = CameraView()
+        _lib.harvest_env_measure_camera_view(self._env, index, ctypes.byref(view))
+        return view
+
     def last_episode(self, index):
         record = EpisodeRecord()
         _lib.harvest_env_last_episode(self._env, index, ctypes.byref(record))
@@ -131,6 +146,22 @@ class AppleHarvestVecEnv(VecEnv):
 
     def env_is_wrapped(self, wrapper_class, indices=None):
         return [False] * self.num_envs
+
+
+def usable_tree_seeds(count, first_seed=1):
+    """The first seeds from first_seed that give a tree with fruit within reach of the robot, since not all do."""
+    seeds = []
+    skipped = []
+    seed = first_seed
+    while len(seeds) < count:
+        if _lib.harvest_env_tree_has_reachable_fruit(seed):
+            seeds.append(seed)
+        else:
+            skipped.append(seed)
+        seed += 1
+    if skipped:
+        print(f"Skipped tree seeds with no fruit within reach: {skipped}", flush=True)
+    return seeds
 
 
 def evaluate(env, choose_actions, episodes_per_simulation, records=None):
