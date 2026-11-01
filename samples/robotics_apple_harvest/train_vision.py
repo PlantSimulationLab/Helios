@@ -8,7 +8,7 @@ way with no camera, so the difference between them is what vision adds.
 Training follows DAgger: run the current policy, have the state policy label every frame with what it would do, add the frames to
 the dataset, train on the whole dataset, and repeat.
 
-Usage, from the build directory: python ../train_vision.py --teacher apple_policy [--target-error 0.04] [--blind] [--output vision_policy]
+Usage, from the build directory: python ../train_vision.py --teacher apple_policy [--target-error 0.04] [--blind] [--image-size 64] [--training-trees 8] [--output vision_policy]
 """
 
 import argparse
@@ -26,6 +26,9 @@ from train import TRAIN_SEEDS
 
 # In the observation: 0-2 the exact fruit position relative to the cup, 3 the exact distance to it, and 20-22 the exact offset to the nearest wood are withheld from the image policy
 ROBOT_STATE = list(range(4, 20))
+
+# Used only once a setup has been chosen, so that the last comparison is on trees that played no part in choosing it
+FINAL_SEEDS = list(range(401, 413))
 
 
 class ImagePolicy(nn.Module):
@@ -54,8 +57,8 @@ class ImagePolicy(nn.Module):
 class Runner:
     """A set of simulations with the target errors of their episodes, and what the image policy is given."""
 
-    def __init__(self, seeds, instances, threads, image_size, use_camera, target_error, seed):
-        self.env = AppleHarvestVecEnv(seeds, instances_per_tree=instances, threads=threads, seed=seed)
+    def __init__(self, seeds, instances, threads, image_size, use_camera, target_error, seed, leaves):
+        self.env = AppleHarvestVecEnv(seeds, instances_per_tree=instances, threads=threads, seed=seed, leaves=leaves)
         self.use_camera = use_camera
         if use_camera:
             self.env.enable_camera(image_size)
@@ -116,12 +119,29 @@ def main():
     parser.add_argument("--epochs", type=int, default=4)
     parser.add_argument("--threads", type=int, default=6)
     parser.add_argument("--evaluation-episodes", type=int, default=10)
+    parser.add_argument("--training-trees", type=int, default=len(TRAIN_SEEDS))
+    parser.add_argument("--instances-per-tree", type=int, default=2)
+    parser.add_argument("--evaluate-only", default=None, help="Skip training, and evaluate this saved policy (.pt)")
+    parser.add_argument("--leaves", action="store_true", help="Trees keep their leaves, which can hide things from the camera but are fixed to the wood and collide with nothing")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--device", default="cpu", help="Where to train the network, such as mps or cuda. Running it while collecting stays on the CPU.")
+    parser.add_argument("--evaluation-trees", default="unseen", choices=["unseen", "final"], help="final is a set of trees kept out of all choices, for the last comparison")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
     torch.set_num_threads(4)
     use_camera = not args.blind
+
+    if args.evaluate_only is not None:
+        saved = torch.load(args.evaluate_only, weights_only=False)
+        policy = ImagePolicy(len(ROBOT_STATE) + 3, saved["image_size"], saved["use_camera"])
+        policy.load_state_dict(saved["policy"])
+        policy.eval()
+        seeds = FINAL_SEEDS if args.evaluation_trees == "final" else EVALUATION_SEEDS
+        evaluation = Runner(seeds, 2, args.threads, saved["image_size"], saved["use_camera"], saved["target_error"], 5000 + args.seed, args.leaves)
+        summarize(f"{args.evaluate_only.split('/')[-1]} on {args.evaluation_trees} trees", evaluate_policy(evaluation, policy, saved["state_mean"], saved["state_std"], args.evaluation_episodes))
+        evaluation.env.close()
+        return
 
     teacher = PPO.load(args.teacher, device="cpu")
     with open(args.teacher + "_normalization.pkl", "rb") as file:
@@ -130,7 +150,8 @@ def main():
     def teacher_actions(observations):
         return np.clip(teacher.predict(teacher_normalization.normalize_obs(observations), deterministic=True)[0], -1.0, 1.0)
 
-    runner = Runner(TRAIN_SEEDS, 2, args.threads, args.image_size, use_camera, args.target_error, args.seed)
+    training_seeds = list(range(1, args.training_trees + 1))
+    runner = Runner(training_seeds, args.instances_per_tree, args.threads, args.image_size, use_camera, args.target_error, args.seed, args.leaves)
     count = runner.env.num_envs
     state_size = len(ROBOT_STATE) + 3
     capacity = args.rounds * args.steps_per_round * count
@@ -181,28 +202,33 @@ def main():
         batch_size = 256
         loss_sum = 0.0
         batches = 0
+        policy.to(args.device)
         for _ in range(args.epochs):
             order = random_generator.permutation(stored)
             for first in range(0, stored - batch_size + 1, batch_size):
                 batch = order[first : first + batch_size]
-                images = torch.as_tensor(dataset_images[batch]) if use_camera else torch.zeros((batch_size, 3, 1, 1), dtype=torch.uint8)
-                states = torch.as_tensor((dataset_states[batch] - state_mean) / state_std, dtype=torch.float32)
-                loss = nn.functional.mse_loss(policy(images, states), torch.as_tensor(dataset_actions[batch]))
+                images = torch.as_tensor(dataset_images[batch]).to(args.device) if use_camera else torch.zeros((batch_size, 3, 1, 1), dtype=torch.uint8).to(args.device)
+                states = torch.as_tensor((dataset_states[batch] - state_mean) / state_std, dtype=torch.float32).to(args.device)
+                loss = nn.functional.mse_loss(policy(images, states), torch.as_tensor(dataset_actions[batch]).to(args.device))
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 loss_sum += loss.item()
                 batches += 1
+        policy.to("cpu")
         train_seconds += time.time() - round_start
         print(f"round {round_index + 1}/{args.rounds}  {stored:7d} frames  {(time.time() - start) / 60:6.1f} min  state policy drove {teacher_share:4.0%}  success while collecting {successes / max(1, episodes):5.1%} of {episodes}  loss {loss_sum / max(1, batches):.4f}  {stored / simulate_seconds:5.0f} frames/s while collecting", flush=True)
 
     torch.save({"policy": policy.state_dict(), "state_mean": state_mean, "state_std": state_std, "image_size": args.image_size, "use_camera": use_camera, "target_error": args.target_error}, args.output + ".pt")
     print(f"Total {(time.time() - start) / 60:.1f} min: {simulate_seconds / 60:.1f} collecting, {train_seconds / 60:.1f} training", flush=True)
+    policy.eval()
+    name = "blind" if args.blind else f"camera {args.image_size}x{args.image_size}"
+    summarize(f"{name}, target error {args.target_error} m, the {len(training_seeds)} training trees", evaluate_policy(runner, policy, state_mean, state_std, max(1, args.evaluation_episodes * 12 // len(training_seeds))))
     runner.env.close()
 
-    evaluation = Runner(EVALUATION_SEEDS, 2, args.threads, args.image_size, use_camera, args.target_error, 5000 + args.seed)
-    policy.eval()
-    summarize(f"{'blind' if args.blind else 'camera'} policy, target error {args.target_error} m, {len(EVALUATION_SEEDS)} unseen trees", evaluate_policy(evaluation, policy, state_mean, state_std, args.evaluation_episodes))
+    evaluation_seeds = FINAL_SEEDS if args.evaluation_trees == "final" else EVALUATION_SEEDS
+    evaluation = Runner(evaluation_seeds, 2, args.threads, args.image_size, use_camera, args.target_error, 5000 + args.seed, args.leaves)
+    summarize(f"{name}, target error {args.target_error} m, {len(evaluation_seeds)} unseen trees", evaluate_policy(evaluation, policy, state_mean, state_std, args.evaluation_episodes))
     evaluation.env.close()
 
 

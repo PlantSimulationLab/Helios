@@ -16,7 +16,7 @@ OUTCOME_NAMES = {SUCCESS: "success", TIMEOUT: "timeout", SLIPPED: "slipped", KNO
 _library_name = "lib/libapple_harvest_env.dylib" if os.path.exists("lib/libapple_harvest_env.dylib") else "lib/libapple_harvest_env.so"
 _lib = ctypes.CDLL(os.path.abspath(_library_name))
 _lib.harvest_env_create.restype = ctypes.c_void_p
-_lib.harvest_env_create.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+_lib.harvest_env_create.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
 _lib.harvest_env_destroy.argtypes = [ctypes.c_void_p]
 _lib.harvest_env_count.argtypes = [ctypes.c_void_p]
 _float_pointer = ctypes.POINTER(ctypes.c_float)
@@ -40,9 +40,9 @@ _lib.harvest_env_last_episode.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.
 class AppleHarvestVecEnv(VecEnv):
     """Each tree seed gives a tree with a different structure, with instances_per_tree simulations of it."""
 
-    def __init__(self, tree_seeds, instances_per_tree=2, threads=4, seed=0):
+    def __init__(self, tree_seeds, instances_per_tree=2, threads=4, seed=0, leaves=False):
         seeds = (ctypes.c_int * len(tree_seeds))(*tree_seeds)
-        self._env = _lib.harvest_env_create(seeds, len(tree_seeds), instances_per_tree, threads, seed)
+        self._env = _lib.harvest_env_create(seeds, len(tree_seeds), instances_per_tree, threads, seed, 1 if leaves else 0)
         if not self._env:
             raise RuntimeError("The apple harvesting environment could not be created. Is this running from the sample's build directory?")
         self.max_steps = _lib.harvest_env_max_steps()

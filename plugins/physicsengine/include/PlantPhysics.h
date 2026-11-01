@@ -36,6 +36,8 @@ struct PlantPhysicsParameters {
     std::string leaf_collision_shape = "box";
     //! Weld the internode segments of the plant to each other, so that only petioles, peduncles, leaves, fruit, and flowers move. This makes large plants several times faster to simulate.
     bool rigid_internodes = false;
+    //! Weld petioles and leaves to what they grow from, so that they follow the wood without moving themselves. Leaves still add weight to the wood, but a plant in leaf can be simulated about as fast as one without leaves, for when they matter to what a camera sees rather than to the mechanics.
+    bool rigid_leaves = false;
     //! Indices of internode links in PlantArchitecture::getPlantArticulation() that stay flexible when rigid_internodes is enabled. Making only the wood near where the plant is touched flexible keeps most of the speed of rigid internodes.
     std::vector<uint> flexible_links;
     //! Indices of the links in PlantArchitecture::getPlantArticulation() that can later be released with PhysicsEngine::detachLink(), such as branches that may be cut or fruit that may be picked. Each one adds six degrees of freedom and a constraint to the model, and is rigidly held to its parent until released.

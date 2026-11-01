@@ -62,9 +62,9 @@ namespace {
 } // namespace
 
 // The speed of stepping alone and of stepping with images, with the time split between them
-void measureCamera(const std::vector<int> &seeds, int instances_per_tree, int threads, int size, const std::string &image_directory) {
+void measureCamera(const std::vector<int> &seeds, int instances_per_tree, int threads, int size, const std::string &image_directory, bool leaves = false) {
     const auto start = std::chrono::steady_clock::now();
-    void *env = harvest_env_create(seeds.data(), static_cast<int>(seeds.size()), instances_per_tree, threads, 0);
+    void *env = harvest_env_create(seeds.data(), static_cast<int>(seeds.size()), instances_per_tree, threads, 0, leaves ? 1 : 0);
     if (env == nullptr || !harvest_env_enable_camera(env, size, size)) {
         std::exit(1);
     }
@@ -106,7 +106,7 @@ void measureCamera(const std::vector<int> &seeds, int instances_per_tree, int th
         }
     }
     const double frames = double(steps * count);
-    std::printf("%2zu trees x %d, %d threads, %3dx%3d images: built in %5.1f s | step %6.2f ms, render %6.2f ms per simulation | %6.0f steps/s with images, %6.0f without\n", seeds.size(), instances_per_tree, threads, size, size, build_seconds, 1000. * step_seconds / frames, 1000. * render_seconds / frames,
+    std::printf("%s%2zu trees x %d, %d threads, %3dx%3d images: built in %5.1f s | step %6.2f ms, render %6.2f ms per simulation | %6.0f steps/s with images, %6.0f without\n", leaves ? "leaves: " : "", seeds.size(), instances_per_tree, threads, size, size, build_seconds, 1000. * step_seconds / frames, 1000. * render_seconds / frames,
                 frames / (step_seconds + render_seconds), frames / step_seconds);
     std::fflush(stdout);
     harvest_env_destroy(env);
@@ -121,6 +121,7 @@ int main(int argc, char **argv) {
         measureCamera(training_seeds, 2, 6, 128, "");
         measureCamera(training_seeds, 2, 6, 64, "");
         measureCamera(training_seeds, 4, 6, 64, "");
+        measureCamera(training_seeds, 2, 6, 64, image_directory, true);
         return 0;
     }
 
@@ -130,7 +131,7 @@ int main(int argc, char **argv) {
     const std::vector<int> seeds = {1, 2, 3};
     const int instances_per_tree = 2;
     const auto start = std::chrono::steady_clock::now();
-    void *env = harvest_env_create(seeds.data(), static_cast<int>(seeds.size()), instances_per_tree, threads, 0);
+    void *env = harvest_env_create(seeds.data(), static_cast<int>(seeds.size()), instances_per_tree, threads, 0, 0);
     if (env == nullptr) {
         return 1;
     }

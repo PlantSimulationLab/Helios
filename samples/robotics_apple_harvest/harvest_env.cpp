@@ -83,13 +83,15 @@ namespace {
         std::vector<WoodSegment> wood; // where the wood stands at rest, which stands in for what perception would report
         std::unique_ptr<Visualizer> camera;
 
-        explicit Tree(int seed, int instance_count) : plantarchitecture(&context), engine(&context) {
+        Tree(int seed, int instance_count, bool leaves) : plantarchitecture(&context), engine(&context) {
             context.seedRandomGenerator(seed);
             plantarchitecture.disableMessages();
             engine.disableMessages();
             plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
             uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 650.f);
-            plantarchitecture.removePlantLeaves(plantID);
+            if (!leaves) {
+                plantarchitecture.removePlantLeaves(plantID);
+            }
 
             USDExportParameters plant_physics;
             plant_physics.elastic_modulus = 5e9f;
@@ -124,6 +126,7 @@ namespace {
             PlantPhysicsParameters plant_parameters;
             plant_parameters.rigid_internodes = true;
             plant_parameters.leaf_collisions = false;
+            plant_parameters.rigid_leaves = true;
             plant_parameters.detachable_links = reachable;
             for (uint fruit: reachable) {
                 int internodes = 0;
@@ -527,12 +530,12 @@ namespace {
 
 extern "C" {
 
-void *harvest_env_create(const int *tree_seeds, int tree_count, int instances_per_tree, int thread_count, int seed) {
+void *harvest_env_create(const int *tree_seeds, int tree_count, int instances_per_tree, int thread_count, int seed, int leaves) {
     try {
         auto environment = std::make_unique<Environment>();
         environment->thread_count = std::max(1, thread_count);
         for (int t = 0; t < tree_count; t++) {
-            environment->trees.push_back(std::make_unique<Tree>(tree_seeds[t], instances_per_tree));
+            environment->trees.push_back(std::make_unique<Tree>(tree_seeds[t], instances_per_tree, leaves != 0));
             for (int i = 0; i < instances_per_tree; i++) {
                 Slot slot;
                 slot.tree = environment->trees.back().get();

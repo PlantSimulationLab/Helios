@@ -1181,6 +1181,58 @@ DOCTEST_TEST_CASE("PlantPhysics - listed internodes stay flexible when the other
     DOCTEST_CHECK_THROWS(addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID, USDExportParameters(), params));
 }
 
+DOCTEST_TEST_CASE("PlantPhysics - rigid leaves have no joints of their own, and follow the wood") {
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    uint plantID = buildTestPlant(context, plantarchitecture);
+    const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+
+    // The relative position of each leaf and its parent, in the rest pose and after sagging
+    auto simulate = [&](bool rigid_leaves) {
+        PlantPhysicsParameters params;
+        params.leaf_collisions = false;
+        params.rigid_leaves = rigid_leaves;
+        PhysicsEngine engine(&context);
+        engine.disableMessages();
+        uint articulationID = addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID, USDExportParameters(), params);
+        engine.initialize();
+        engine.step(250);
+        float largest_leaf_motion_in_world = 0.f;
+        float largest_change_from_parent = 0.f;
+        for (uint i = 0; i < articulation.links.size(); i++) {
+            const PlantArticulationLink &link = articulation.links[i];
+            if (link.type != ARTICULATION_LINK_LEAF) {
+                continue;
+            }
+            const vec3 position = engine.getLinkPosition(articulationID, i);
+            const vec3 parent_position = engine.getLinkPosition(articulationID, static_cast<uint>(link.parent_index));
+            largest_leaf_motion_in_world = std::max(largest_leaf_motion_in_world, (position - link.position).magnitude());
+            const float rest_distance = (link.position - articulation.links[link.parent_index].position).magnitude();
+            largest_change_from_parent = std::max(largest_change_from_parent, std::abs((position - parent_position).magnitude() - rest_distance));
+        }
+        return std::make_tuple(static_cast<int>(engine.getMuJoCoModel()->nv), largest_leaf_motion_in_world, largest_change_from_parent);
+    };
+
+    const auto [flexible_dof, flexible_motion, unused_change] = simulate(false);
+    static_cast<void>(unused_change);
+    const auto [rigid_dof, rigid_motion, rigid_change] = simulate(true);
+
+    int leaf_and_petiole_joints = 0;
+    for (const PlantArticulationLink &link: articulation.links) {
+        if (link.type == ARTICULATION_LINK_LEAF || link.type == ARTICULATION_LINK_PETIOLE) {
+            leaf_and_petiole_joints++;
+        }
+    }
+    DOCTEST_REQUIRE(leaf_and_petiole_joints > 0);
+    // A ball joint has three degrees of freedom
+    DOCTEST_CHECK(flexible_dof - rigid_dof == 3 * leaf_and_petiole_joints);
+    // The stem is still flexible, so the leaves still move with it, but each keeps its place on what it grows from
+    DOCTEST_CHECK(rigid_motion > 1e-4f);
+    DOCTEST_CHECK(rigid_change < 1e-5f);
+    DOCTEST_CHECK(flexible_motion > 0.f);
+}
+
 DOCTEST_TEST_CASE("PlantPhysics - misuse is reported") {
     Context context;
     PlantArchitecture plantarchitecture(&context);

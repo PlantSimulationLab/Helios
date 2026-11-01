@@ -18,8 +18,8 @@ enum HarvestOutcome {
     HARVEST_COLLISION = 5 //!< The arm pressed on the tree hard enough for a protective stop
 };
 
-//! Create an environment with instances_per_tree parallel simulations of each tree. Returns null and prints the reason on failure.
-void *harvest_env_create(const int *tree_seeds, int tree_count, int instances_per_tree, int thread_count, int seed);
+//! Create an environment with instances_per_tree parallel simulations of each tree. With leaves nonzero, trees keep their leaves, which can hide things from the camera but are fixed to the wood and collide with nothing. Returns null and prints the reason on failure.
+void *harvest_env_create(const int *tree_seeds, int tree_count, int instances_per_tree, int thread_count, int seed, int leaves);
 void harvest_env_destroy(void *env);
 int harvest_env_count(const void *env);
 int harvest_env_observation_size(void);

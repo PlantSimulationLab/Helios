@@ -265,7 +265,7 @@ uint addPlantToPhysicsEngine(PhysicsEngine &engine, const Context &context, cons
         }
 
         // A link without a joint is welded to its parent
-        bool welded = params.rigid_internodes && link.type == ARTICULATION_LINK_INTERNODE && !is_flexible[i];
+        bool welded = (params.rigid_internodes && link.type == ARTICULATION_LINK_INTERNODE && !is_flexible[i]) || (params.rigid_leaves && (link.type == ARTICULATION_LINK_PETIOLE || link.type == ARTICULATION_LINK_LEAF));
         if (link.parent_index >= 0 && !welded) {
             const PlantArticulationJoint &joint = plant.joints.at(joint_of_child[i]);
             physics_link.joint_type = PHYSICS_JOINT_BALL;

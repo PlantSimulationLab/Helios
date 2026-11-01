@@ -162,7 +162,7 @@ plug-ins. The PlantArchitecture model itself is not updated.
 \section PhysicsEngineSpeed Simulation speed of plants
 
 Flexible wood is by far the largest cost of simulating a plant. A fruiting-wall apple tree without leaves, with 2381 links, took 26 ms per step with flexible internodes and 0.7 ms with PlantPhysicsParameters::rigid_internodes, measured on one Apple Silicon Mac.
-PlantPhysicsParameters::flexible_links keeps chosen internodes flexible while the rest are rigid, which gives the wood near where the plant is touched its compliance at little cost.
+PlantPhysicsParameters::flexible_links keeps chosen internodes flexible while the rest are rigid, which gives the wood near where the plant is touched its compliance at little cost. PlantPhysicsParameters::rigid_leaves does the same for petioles and leaves, which then cannot be pushed aside, for when they matter only to what a camera sees.
 
 \section PhysicsEngineIntegrator Integrator and time step
 
