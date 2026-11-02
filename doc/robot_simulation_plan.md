@@ -191,6 +191,35 @@ With leaves (fixed to the wood, the arm passes through them, seed 0 only):
 
 Not done: a rendered episode has not been watched, leaves have one seed, and the images have not been compared with real ones. No target error other than 4 cm has been tried.
 
+**Why the camera seemed not to help, and a setup that works (phase 4, 2026-11-01).** This replaces the conclusion above that the camera shows no benefit with leaves.
+
+Leaves were not the main problem. With the state policy driving, the target fruit is as visible with leaves as without (97% vs 98% of frames at 10-25 cm), leaves very near the camera fill under 0.5% of the image, and the state policy still succeeds. `perception_probe.py` then showed that the networks were memorizing trees: 1 cm error locating fruit on training trees, and nothing gained over the given target on unseen ones, with or without leaves. Three changes fixed that: leaving absolute cup position and joint positions out of the input, a spatial softmax encoder, and color jitter. With many more training trees, median fruit error under 10 cm from the fruit fell from 2.6 / 1.7 / 3.7 cm (depth / across / up, blind) to 1.8 / 1.1 / 2.2 cm, on 72 trees without leaves.
+
+Success over 240 episodes per cell. New setup: 48 training trees, 173,000 frames, 64x64, target error 4 cm per axis. The new setup has two seeds. Older camera and blind rows without leaves have three, with leaves one.
+
+| Controller | Trees 301-312 | Final trees 401-412 |
+|---|---|---|
+| State policy, exact positions, no leaves | 87.5% | 75.4% |
+| Scripted, exact positions, no leaves | 75.8% | 70.8% |
+| **Camera, new setup, no leaves** | **81.2%, 82.5%** | **62.5%, 57.9%** |
+| Camera, older setup, no leaves | 67.9% (mean) | 54.3% (mean) |
+| Blind, no leaves | 50.3% (mean) | 45.7% (mean) |
+| State policy, exact positions, leaves | 84.6% | 73.3% |
+| Scripted, exact positions, leaves | 72.5% | 65.4% |
+| **Camera, new setup, leaves** | **70.4%, 68.8%** | **56.2%, 47.1%** |
+| Camera, older setup, leaves | 54.6% | 45.0% |
+| Blind, leaves | 53.3% | 45.4% |
+
+- **The camera now helps with leaves:** about +16 points on trees 301-312 and +6 on the final trees against blind, whose leaves result is one seed, on 24 training trees.
+- **Leaves cost about 8-12 points** with this setup, even though they are fixed to the wood and collide with nothing.
+- **Tree sets differ widely:** even the state policy scores 12 points lower on the final trees. Compare policies on the same trees, and use more than 12 for a firm number.
+- **Blind was not retrained with 48 trees or without position,** so the comparison is not exactly like for like.
+- **The setup was chosen using trees 301-312, so the final trees are the fairer measure.** They have now been seen, so the next choice of setup needs fresh trees.
+- **Protective stops remain the main failure,** at 16-18% and 29-32% without leaves, and 27% and 38-42% with leaves.
+- **Rate:** a run without leaves took 26 minutes on an idle machine, at 157 frames/s while collecting from 48 simulations, and about 94 on a busy one. With leaves, 47 frames/s and 69 minutes.
+
+Not done: a rendered episode has not been watched, leaves still cannot be pushed aside, images have not been compared with real ones, and detachment still ignores pull direction.
+
 ## Plug-in structure
 
 Two plug-ins, static libraries in one process, so the boundary itself costs nothing at run time.
