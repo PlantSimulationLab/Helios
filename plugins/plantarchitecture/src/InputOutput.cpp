@@ -3781,6 +3781,21 @@ void computeJointLocalRot1(const USDLink &parent, const USDLink &child, USDJoint
                  joint.local_rot1_w, joint.local_rot1_x, joint.local_rot1_y, joint.local_rot1_z);
 }
 
+// Rotate a vector by a unit quaternion: q * v * conjugate(q)
+vec3 rotateByQuaternion(float qw, float qx, float qy, float qz, const vec3 &v) {
+    float tw, tx, ty, tz, rw, rx, ry, rz;
+    quatMultiply(qw, qx, qy, qz, 0.f, v.x, v.y, v.z, tw, tx, ty, tz);
+    quatMultiply(tw, tx, ty, tz, qw, -qx, -qy, -qz, rw, rx, ry, rz);
+    return {rx, ry, rz};
+}
+
+// Compute localPos1 so that the child's end of the joint is at the same point in the rest pose as the parent's end
+// (local_pos_parent). PhysX enforces both ends, so if they differ it moves the child when the simulation starts.
+void computeJointLocalPosChild(const USDLink &parent, const USDLink &child, USDJoint &joint) {
+    vec3 anchor_world = parent.position + rotateByQuaternion(parent.qw, parent.qx, parent.qy, parent.qz, joint.local_pos_parent);
+    joint.local_pos_child = rotateByQuaternion(child.qw, -child.qx, -child.qy, -child.qz, anchor_world - child.position);
+}
+
 struct ArticulationData {
     std::vector<USDLink> links;
     std::vector<USDJoint> joints;
@@ -4150,6 +4165,11 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                     joint.parent_link_index = -1;
                     joint.local_pos_parent = start;
                     joint.local_pos_child = vec3(0, 0, -half_len);
+                    // The world frame of the joint is unrotated, so the child frame is rotated back by the base segment's orientation
+                    joint.local_rot1_w = link.qw;
+                    joint.local_rot1_x = -link.qx;
+                    joint.local_rot1_y = -link.qy;
+                    joint.local_rot1_z = -link.qz;
                     joint.stiffness = 0;
                     joint.damping = 0;
                     joint.is_fixed = true;
@@ -4157,7 +4177,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                     joint.name = "J_" + data.links[parent_idx].name + "_to_" + link.name;
                     joint.parent_link_index = parent_idx;
                     joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
-                    joint.local_pos_child = vec3(0, 0, -half_len);
+                    computeJointLocalPosChild(data.links[parent_idx], data.links[this_link_idx], joint);
 
                     float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
                     joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
@@ -4267,7 +4287,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                     joint.parent_link_index = parent_idx;
                     joint.child_link_index = this_link_idx;
                     joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
-                    joint.local_pos_child = vec3(0, 0, -half_len);
+                    computeJointLocalPosChild(data.links[parent_idx], data.links[this_link_idx], joint);
                     float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
                     joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
                     joint.damping = computeJointDamping(joint.stiffness, params.damping_time_constant);
@@ -4334,7 +4354,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                         joint.parent_link_index = parent_idx;
                         joint.child_link_index = this_link_idx;
                         joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
-                        joint.local_pos_child = vec3(0, 0, 0);
+                        computeJointLocalPosChild(data.links[parent_idx], data.links[this_link_idx], joint);
                         joint.stiffness = params.organ_spring_stiffness;
                         joint.damping = params.organ_spring_damping;
                         joint.armature = computeJointArmature(joint.stiffness, params.armature_stability_ratio, params.physics_steps_per_second);
@@ -4429,7 +4449,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                             joint.parent_link_index = parent_idx;
                             joint.child_link_index = this_link_idx;
                             joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
-                            joint.local_pos_child = vec3(0, 0, -half_len);
+                            computeJointLocalPosChild(data.links[parent_idx], data.links[this_link_idx], joint);
                             float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
                             joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
                             joint.damping = computeJointDamping(joint.stiffness, params.damping_time_constant);
@@ -4491,7 +4511,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                         joint.parent_link_index = organ_attach;
                         joint.child_link_index = this_link_idx;
                         joint.local_pos_parent = vec3(0, 0, data.links[organ_attach].half_length);
-                        joint.local_pos_child = vec3(0, 0, 0);
+                        computeJointLocalPosChild(data.links[organ_attach], data.links[this_link_idx], joint);
                         joint.stiffness = params.organ_spring_stiffness;
                         joint.damping = params.organ_spring_damping;
                         joint.armature = computeJointArmature(joint.stiffness, params.armature_stability_ratio, params.physics_steps_per_second);

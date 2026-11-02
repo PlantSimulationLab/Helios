@@ -8253,6 +8253,64 @@ DOCTEST_TEST_CASE("getPlantArticulation links, joints, and source objects") {
     DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantArticulation(plantID + 1)));
 }
 
+DOCTEST_TEST_CASE("USD export joint frames agree with the rest pose") {
+    // PhysX enforces both ends of a joint, so if they are at different points in the rest pose, or the fixed joint at the
+    // base is rotated relative to the base segment, it moves links when the simulation starts.
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 50);
+
+    auto rotate = [](float qw, float qx, float qy, float qz, const vec3 &v) {
+        // v + 2 w (q x v) + 2 q x (q x v), with q the vector part of a unit quaternion
+        const vec3 q = make_vec3(qx, qy, qz);
+        const vec3 t = 2.f * cross(q, v);
+        return v + qw * t + cross(q, t);
+    };
+
+    const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+    std::set<uint> types_checked;
+    float largest_gap = 0.f;
+    for (const auto &joint: articulation.joints) {
+        const PlantArticulationLink &parent = articulation.links.at(joint.parent_index);
+        const PlantArticulationLink &child = articulation.links.at(joint.child_index);
+        const vec3 from_parent = parent.position + rotate(parent.qw, parent.qx, parent.qy, parent.qz, joint.anchor_in_parent);
+        const vec3 from_child = child.position + rotate(child.qw, child.qx, child.qy, child.qz, joint.anchor_in_child);
+        largest_gap = std::max(largest_gap, (from_parent - from_child).magnitude());
+        types_checked.insert(child.type);
+    }
+    DOCTEST_CHECK(largest_gap < 1e-5f);
+    DOCTEST_CHECK(types_checked.count(ARTICULATION_LINK_INTERNODE) == 1);
+    DOCTEST_CHECK(types_checked.count(ARTICULATION_LINK_LEAF) == 1);
+
+    // The fixed joint at the base: its world frame is unrotated, so its child frame must undo the base segment's rotation
+    const PlantArticulationLink &base = articulation.links.front();
+    DOCTEST_REQUIRE(base.parent_index < 0);
+    DOCTEST_REQUIRE(std::abs(base.qw) < 0.9999f); // the base segment is tilted, so the test means something
+
+    std::string filename = "test_usd_world_anchor.usda";
+    plantarchitecture.writePlantStructureUSD(plantID, filename);
+    std::ifstream file(filename);
+    DOCTEST_REQUIRE(file.is_open());
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+    std::remove(filename.c_str());
+
+    const size_t anchor = content.find("def PhysicsFixedJoint \"WorldAnchor\"");
+    DOCTEST_REQUIRE(anchor != std::string::npos);
+    const std::string key = "quatf physics:localRot1 = (";
+    const size_t rotation = content.find(key, anchor);
+    DOCTEST_REQUIRE(rotation != std::string::npos);
+    float w, x, y, z;
+    DOCTEST_REQUIRE(std::sscanf(content.c_str() + rotation + key.size(), "%f, %f, %f, %f", &w, &x, &y, &z) == 4);
+    DOCTEST_CHECK(w == doctest::Approx(base.qw).epsilon(1e-4));
+    DOCTEST_CHECK(x == doctest::Approx(-base.qx).epsilon(1e-4));
+    DOCTEST_CHECK(y == doctest::Approx(-base.qy).epsilon(1e-4));
+    DOCTEST_CHECK(z == doctest::Approx(-base.qz).epsilon(1e-4));
+}
+
 DOCTEST_TEST_CASE("getPlantArticulation link names are unique when a phytomer bears several flowers") {
     // Flowering apple phytomers carry more than one floral bud, and the flowers of different buds must not share a link name
     Context context;
