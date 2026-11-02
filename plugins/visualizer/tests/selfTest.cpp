@@ -6554,6 +6554,7 @@ DOCTEST_TEST_CASE("Visualizer depth image is the distance along the viewing dire
             }
             line_count++;
         }
+        text_stream.close(); // Windows cannot remove the directory below while a file in it is open
         DOCTEST_CHECK(line_count == height);
         DOCTEST_REQUIRE(text_depths.size() == depth_pixels.size());
         bool text_matches = true;
