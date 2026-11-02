@@ -21,6 +21,9 @@ enum HarvestOutcome {
 //! Check whether a tree seed gives a tree with fruit within reach of the robot. A tree without any cannot be used in an environment. Takes about as long as growing the tree.
 int harvest_env_tree_has_reachable_fruit(int tree_seed);
 
+//! Write a tree, without leaves, for simulating the task in IsaacSim: <directory>/tree_<seed>.usda from PlantArchitecture::writePlantStructureUSD(), and tree_<seed>.json with how each link's joint is simulated here, the candidate fruit, the wood, and the task's constants. The directory must exist. Returns 0 and prints the reason on failure.
+int harvest_env_export_tree(int tree_seed, const char *directory);
+
 //! Create an environment with instances_per_tree parallel simulations of each tree. With leaves nonzero, trees keep their leaves, which can hide things from the camera but are fixed to the wood and collide with nothing. Returns null and prints the reason on failure.
 void *harvest_env_create(const int *tree_seeds, int tree_count, int instances_per_tree, int thread_count, int seed, int leaves);
 void harvest_env_destroy(void *env);

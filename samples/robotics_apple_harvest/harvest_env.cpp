@@ -51,6 +51,17 @@ namespace {
     // A robot stops itself when it presses on something this hard, as a protective stop does. Chosen for this task, not taken from a particular robot.
     const float protective_stop_force = 50.f; // N
 
+    // Position servos on the robot's joints. The force limits are the effort limits of the joints in the robot's model.
+    struct JointServo {
+        const char *joint;
+        float stiffness; // N/m or N m/rad
+        float damping; // N s/m or N m s/rad
+        float force_limit; // N or N m
+        float armature; // kg or kg m^2
+    };
+    const JointServo joint_servos[] = {{"drive", 20000.f, 5000.f, 2000.f, 20.f}, {"yaw", 2000.f, 400.f, 300.f, 2.f}, {"shoulder", 2000.f, 400.f, 300.f, 2.f},
+                                       {"elbow", 1000.f, 200.f, 200.f, 1.f}, {"wrist", 200.f, 30.f, 60.f, 0.2f}, {"roll", 30.f, 5.f, 30.f, 0.05f}};
+
     // Smaller motion of a body does not move its geometry for the camera. It is about 0.1 pixel at 128x128 for something 30 cm from the camera.
     const float context_update_tolerance = 0.0005f; // m
 
@@ -81,6 +92,48 @@ namespace {
         float radius;
     };
 
+    USDExportParameters plantPhysics() {
+        USDExportParameters plant_physics;
+        plant_physics.elastic_modulus = 5e9f;
+        plant_physics.wood_density = 750.f;
+        plant_physics.fruit_mass = 0.15f;
+        return plant_physics;
+    }
+
+    // Reachable fruit, nearest the robot first, since those are the ones not hidden behind the wall
+    std::vector<uint> chooseCandidateFruit(const PlantArticulation &articulation, int seed) {
+        std::vector<uint> reachable;
+        for (uint i = 0; i < articulation.links.size(); i++) {
+            const PlantArticulationLink &link = articulation.links[i];
+            if (link.type == ARTICULATION_LINK_FRUIT && link.position.z >= min_fruit_height && link.position.z <= max_fruit_height) {
+                reachable.push_back(i);
+            }
+        }
+        std::sort(reachable.begin(), reachable.end(), [&](uint a, uint b) { return articulation.links[a].position.x < articulation.links[b].position.x; });
+        if (reachable.size() > candidates_per_tree) {
+            reachable.resize(candidates_per_tree);
+        }
+        if (reachable.empty()) {
+            helios_runtime_error("ERROR (harvest_env): Tree with seed " + std::to_string(seed) + " has no fruit within reach of the robot.");
+        }
+        return reachable;
+    }
+
+    // The internodes behind each candidate fruit, which stay flexible while the rest of the wood is rigid
+    std::vector<uint> chooseFlexibleInternodes(const PlantArticulation &articulation, const std::vector<uint> &candidates) {
+        std::vector<uint> flexible;
+        for (uint fruit: candidates) {
+            int internodes = 0;
+            for (int link = articulation.links[fruit].parent_index; link >= 0 && internodes < flexible_internodes_per_candidate; link = articulation.links[link].parent_index) {
+                if (articulation.links[link].type == ARTICULATION_LINK_INTERNODE && articulation.links[link].parent_index >= 0) {
+                    flexible.push_back(static_cast<uint>(link));
+                    internodes++;
+                }
+            }
+        }
+        return flexible;
+    }
+
     struct Tree {
         Context context;
         PlantArchitecture plantarchitecture;
@@ -104,10 +157,7 @@ namespace {
                 plantarchitecture.removePlantLeaves(plantID);
             }
 
-            USDExportParameters plant_physics;
-            plant_physics.elastic_modulus = 5e9f;
-            plant_physics.wood_density = 750.f;
-            plant_physics.fruit_mass = 0.15f;
+            const USDExportParameters plant_physics = plantPhysics();
             const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID, plant_physics);
 
             for (const PlantArticulationLink &link: articulation.links) {
@@ -118,21 +168,7 @@ namespace {
                 }
             }
 
-            // Reachable fruit, nearest the robot first, since those are the ones not hidden behind the wall
-            std::vector<uint> reachable;
-            for (uint i = 0; i < articulation.links.size(); i++) {
-                const PlantArticulationLink &link = articulation.links[i];
-                if (link.type == ARTICULATION_LINK_FRUIT && link.position.z >= min_fruit_height && link.position.z <= max_fruit_height) {
-                    reachable.push_back(i);
-                }
-            }
-            std::sort(reachable.begin(), reachable.end(), [&](uint a, uint b) { return articulation.links[a].position.x < articulation.links[b].position.x; });
-            if (reachable.size() > candidates_per_tree) {
-                reachable.resize(candidates_per_tree);
-            }
-            if (reachable.empty()) {
-                helios_runtime_error("ERROR (harvest_env): Tree with seed " + std::to_string(seed) + " has no fruit within reach of the robot.");
-            }
+            const std::vector<uint> reachable = chooseCandidateFruit(articulation, seed);
 
             for (const PlantArticulationLink &link: articulation.links) {
                 if (link.source_objID == 0 || !context.doesObjectExist(link.source_objID)) {
@@ -149,25 +185,14 @@ namespace {
             plant_parameters.leaf_collisions = false;
             plant_parameters.rigid_leaves = true;
             plant_parameters.detachable_links = reachable;
-            for (uint fruit: reachable) {
-                int internodes = 0;
-                for (int link = articulation.links[fruit].parent_index; link >= 0 && internodes < flexible_internodes_per_candidate; link = articulation.links[link].parent_index) {
-                    if (articulation.links[link].type == ARTICULATION_LINK_INTERNODE && articulation.links[link].parent_index >= 0) {
-                        plant_parameters.flexible_links.push_back(static_cast<uint>(link));
-                        internodes++;
-                    }
-                }
-            }
+            plant_parameters.flexible_links = chooseFlexibleInternodes(articulation, reachable);
             plant = addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID, plant_physics, plant_parameters);
 
             robot = std::make_unique<Robot>(&engine, "../harvest_arm.urdf", "robot", robot_base);
             // The force limits are the effort limits of the joints in the robot's model
-            robot->addJointServo("drive", 20000.f, 5000.f, 2000.f, 20.f);
-            robot->addJointServo("yaw", 2000.f, 400.f, 300.f, 2.f);
-            robot->addJointServo("shoulder", 2000.f, 400.f, 300.f, 2.f);
-            robot->addJointServo("elbow", 1000.f, 200.f, 200.f, 1.f);
-            robot->addJointServo("wrist", 200.f, 30.f, 60.f, 0.2f);
-            robot->addJointServo("roll", 30.f, 5.f, 30.f, 0.05f);
+            for (const JointServo &servo: joint_servos) {
+                robot->addJointServo(servo.joint, servo.stiffness, servo.damping, servo.force_limit, servo.armature);
+            }
             robot->setTool("tool", cup_face, make_vec3(1, 0, 0));
 
             // What the camera can see of the robot, in its zero pose, in which the tool lies along +x from the wrist
@@ -591,6 +616,118 @@ int harvest_env_tree_has_reachable_fruit(int tree_seed) {
         }
     }
     return 0;
+}
+
+int harvest_env_export_tree(int tree_seed, const char *directory) {
+    try {
+        Context context;
+        context.seedRandomGenerator(tree_seed);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary(plant_model);
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), plant_age);
+        plantarchitecture.removePlantLeaves(plantID);
+
+        USDExportParameters plant_physics = plantPhysics();
+        // PhysX needs this much armature to hold a tree up (doc/isaac_comparison_report.md); MuJoCo does not use it
+        plant_physics.armature_stability_ratio = 1.f;
+        plant_physics.physics_steps_per_second = 500.f;
+        const std::filesystem::path base = std::filesystem::path(directory) / ("tree_" + std::to_string(tree_seed));
+        plantarchitecture.writePlantStructureUSD(plantID, base.string() + ".usda", plant_physics);
+
+        const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID, plant_physics);
+        const std::vector<uint> candidates = chooseCandidateFruit(articulation, tree_seed);
+        const std::vector<uint> flexible = chooseFlexibleInternodes(articulation, candidates);
+        std::vector<char> is_flexible(articulation.links.size(), 0), is_candidate(articulation.links.size(), 0);
+        for (uint link: flexible) {
+            is_flexible[link] = 1;
+        }
+        for (uint link: candidates) {
+            is_candidate[link] = 1;
+        }
+
+        std::ofstream json(base.string() + ".json");
+        json << std::setprecision(9);
+        json << "{\n\"seed\": " << tree_seed << ", \"plant_model\": \"" << plant_model << "\", \"plant_age\": " << plant_age << ",\n";
+        // The task, as harvest_env.cpp sets it up
+        json << "\"task\": {\"physics_timestep\": 0.002, \"physics_steps_per_control\": " << physics_steps_per_control << ", \"max_tool_speed\": " << max_tool_speed << ", \"max_target_lead\": " << max_target_lead << ", \"max_control_steps\": " << max_control_steps
+             << ", \"grip_reach\": " << grip_reach << ", \"grip_stiffness\": " << grip_stiffness << ", \"grip_damping\": " << grip_damping << ", \"grip_ramp_seconds\": " << grip_ramp_seconds << ", \"grip_limit\": " << grip_limit
+             << ", \"min_detach_force\": " << min_detach_force << ", \"max_detach_force\": " << max_detach_force << ", \"settling_physics_steps\": " << settling_physics_steps << ", \"protective_stop_force\": " << protective_stop_force
+             << ", \"start_offset\": " << start_offset << ", \"robot_base\": [" << robot_base.x << ", " << robot_base.y << ", " << robot_base.z << "], \"cup_face\": [" << cup_face.x << ", " << cup_face.y << ", " << cup_face.z << "], \"tucked_pose\": [";
+        for (size_t j = 0; j < tucked_pose.size(); j++) {
+            json << (j ? ", " : "") << tucked_pose[j];
+        }
+        // The servos on the robot: stiffness, damping, force limit, armature, in N/m or N m/rad
+        json << "],\n  \"servos\": {";
+        bool first_servo = true;
+        for (const JointServo &servo: joint_servos) {
+            json << (first_servo ? "" : ", ") << "\"" << servo.joint << "\": [" << servo.stiffness << ", " << servo.damping << ", " << servo.force_limit << ", " << servo.armature << "]";
+            first_servo = false;
+        }
+        json << "}},\n";
+
+        // How each link's joint is simulated by addPlantToPhysicsEngine() with the parameters of Tree: "sprung" (a ball joint), "locked" (welded, or held by
+        // the detachable weld of a candidate fruit), or "root". Leaves are removed, so rigid_leaves does not matter.
+        json << "\"links\": [\n";
+        for (size_t i = 0; i < articulation.links.size(); i++) {
+            const PlantArticulationLink &link = articulation.links[i];
+            std::string mode = "sprung";
+            if (link.parent_index < 0) {
+                mode = "root";
+            } else if ((link.type == ARTICULATION_LINK_INTERNODE && !is_flexible[i]) || is_candidate[i] || link.type == ARTICULATION_LINK_PETIOLE || link.type == ARTICULATION_LINK_LEAF) {
+                mode = "locked";
+            }
+            json << "  {\"name\": \"" << link.name << "\", \"type\": " << link.type << ", \"parent\": " << link.parent_index << ", \"joint\": \"" << mode << "\", \"mass\": " << link.mass << ", \"inertia\": [" << link.inertia_diagonal.x << ", " << link.inertia_diagonal.y << ", "
+                 << link.inertia_diagonal.z << "], \"position\": [" << link.position.x << ", " << link.position.y << ", " << link.position.z << "]";
+            if (link.type == ARTICULATION_LINK_FRUIT && link.source_objID != 0 && context.doesObjectExist(link.source_objID)) {
+                // The sphere addPlantToPhysicsEngine() gives a fruit: the mean half extent of its bounding box in the link frame, at the box center
+                vec3 lower = make_vec3(1e30f, 1e30f, 1e30f), upper = make_vec3(-1e30f, -1e30f, -1e30f);
+                for (uint UUID: context.getObjectPrimitiveUUIDs(link.source_objID)) {
+                    for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+                        // Rotate into the link frame by the conjugate of its orientation: v + 2w(q x v) + 2q x (q x v), with q negated
+                        const vec3 q = make_vec3(-link.qx, -link.qy, -link.qz);
+                        const vec3 v = vertex - link.position;
+                        const vec3 t = 2.f * cross(q, v);
+                        const vec3 local = v + link.qw * t + cross(q, t);
+                        lower = make_vec3(std::min(lower.x, local.x), std::min(lower.y, local.y), std::min(lower.z, local.z));
+                        upper = make_vec3(std::max(upper.x, local.x), std::max(upper.y, local.y), std::max(upper.z, local.z));
+                    }
+                }
+                const vec3 extent = upper - lower;
+                const vec3 center = 0.5f * (lower + upper);
+                json << ", \"sphere_radius\": " << (extent.x + extent.y + extent.z) / 6.f << ", \"sphere_center\": [" << center.x << ", " << center.y << ", " << center.z << "]";
+            }
+            json << "}" << (i + 1 < articulation.links.size() ? "," : "") << "\n";
+        }
+        json << "],\n\"candidates\": [";
+        for (size_t c = 0; c < candidates.size(); c++) {
+            int wood = articulation.links[candidates[c]].parent_index;
+            while (wood >= 0 && articulation.links[wood].type != ARTICULATION_LINK_INTERNODE) {
+                wood = articulation.links[wood].parent_index;
+            }
+            if (wood < 0) {
+                helios_runtime_error("ERROR (harvest_env_export_tree): Fruit " + articulation.links[candidates[c]].name + " is not borne on an internode.");
+            }
+            json << (c ? ", " : "") << "{\"link\": \"" << articulation.links[candidates[c]].name << "\", \"bearing_wood\": \"" << articulation.links[wood].name << "\"}";
+        }
+        // The wood where it stands at rest, which stands in for what perception would report
+        json << "],\n\"wood\": [\n";
+        bool first = true;
+        for (const PlantArticulationLink &link: articulation.links) {
+            if (link.type == ARTICULATION_LINK_INTERNODE) {
+                const vec3 axis = make_vec3(2.f * (link.qx * link.qz + link.qw * link.qy), 2.f * (link.qy * link.qz - link.qw * link.qx), 1.f - 2.f * (link.qx * link.qx + link.qy * link.qy));
+                const vec3 start = link.position - link.half_length * axis;
+                const vec3 end = link.position + link.half_length * axis;
+                json << (first ? "  " : ", ") << "[" << start.x << ", " << start.y << ", " << start.z << ", " << end.x << ", " << end.y << ", " << end.z << ", " << link.radius << "]";
+                first = false;
+            }
+        }
+        json << "\n]\n}\n";
+        return 1;
+    } catch (const std::exception &error) {
+        std::cerr << error.what() << std::endl;
+        return 0;
+    }
 }
 
 int harvest_env_count(const void *env) {
