@@ -1,0 +1,119 @@
+{
+  "usd": "build/out_fixed/apple_steps500.usda",
+  "joints": 1001,
+  "joint_anchor_mismatch_m": {
+    "median": 7.52595264005675e-07,
+    "max": 2.7801798005524773e-06
+  },
+  "joint_frame_mismatch_deg": {
+    "median": 0.00016722634062579802,
+    "p90": 0.0022468545487483145,
+    "max": 0.08370948275482057,
+    "count_over_1deg": 0,
+    "median_by_child_type": {
+      "internode": 0.001172416196367337,
+      "petiole": 0.00017035298302881777,
+      "leaf": 0.0
+    }
+  },
+  "links": {
+    "count": 1001,
+    "physx_over_helios_mass": {
+      "internode": {
+        "median": 0.9999615840692583,
+        "min": 0.9992710197492627,
+        "max": 1.0065015627541103
+      },
+      "leaf": {
+        "median": 1.0028018761365007,
+        "min": 0.997103747826417,
+        "max": 1.0028028760353904
+      },
+      "petiole": {
+        "median": 0.9937432645538257,
+        "min": 0.9936029734320517,
+        "max": 0.9938835294441893
+      }
+    },
+    "physx_over_helios_inertia_trace": {
+      "internode": {
+        "median": 1.2739932595698071,
+        "min": 1.1714273484885267,
+        "max": 1.7151868871725056
+      },
+      "leaf": {
+        "median": 0.5512656616766188,
+        "min": 0.5481255049475701,
+        "max": 0.5512933498736383
+      },
+      "petiole": {
+        "median": 1.044165711250742,
+        "min": 1.0440104225800688,
+        "max": 1.0443177245439528
+      }
+    },
+    "com_offset_from_link_frame_m": {
+      "internode": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "leaf": {
+        "median": 0.0036193907726556063,
+        "min": 0.002894133795052767,
+        "max": 0.003620715579017997
+      },
+      "petiole": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    "total_mass_physx": 0.7269150018692017,
+    "total_mass_helios": 0.7269088990718
+  },
+  "dofs": {
+    "count": 3000,
+    "physx_over_helios_stiffness": {
+      "median": 1.0,
+      "min": 0.9999999347820961,
+      "max": 1.000000066468679
+    },
+    "physx_over_helios_damping": {
+      "median": 1.0,
+      "min": 0.9999999330604356,
+      "max": 1.0000000669869287
+    },
+    "physx_over_helios_armature": {
+      "median": 0.9999999998368155,
+      "min": 0.9999999955849689,
+      "max": 1.0000000033378602
+    },
+    "limits_rad_or_deg": {
+      "low_median": -1.0471975803375244,
+      "high_median": 1.0471975803375244
+    },
+    "max_velocity_median": 5.939047009418473e+36,
+    "friction_median": 0.0,
+    "max_force": {
+      "median": Infinity,
+      "min": 3.4028234663852886e+38
+    },
+    "drive_types": {
+      "1": 3000
+    },
+    "drive_model_properties_median": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dof_types": {
+      "0": 3000
+    },
+    "dof_motions": {
+      "0": 1000,
+      "1": 2000
+    },
+    "metatype_dof_count": 3000
+  }
+}

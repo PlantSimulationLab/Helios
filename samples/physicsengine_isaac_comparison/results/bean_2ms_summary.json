@@ -1,0 +1,452 @@
+{
+  "plant": "bean",
+  "height_m": 0.333312064,
+  "links": 295,
+  "runs": {
+    "MuJoCo, no armature": {
+      "finished": true,
+      "simulated_until_s": 3.188,
+      "sag_after_settling_m": {
+        "median": 0.00034867421580735933,
+        "p90": 0.0008955492133967193,
+        "max": 0.0014881917788870536,
+        "by_type": {
+          "internode": 0.00012056888275774594,
+          "leaf": 0.0005439891950697012,
+          "petiole": 0.00031005684586577224
+        },
+        "by_branch_order": {
+          "0": 1.3700765714226426e-06,
+          "1": 0.0003677709222242989,
+          "2": 7.614504202547023e-05
+        },
+        "by_height": {
+          "0-25%": 5.4072018096426714e-05,
+          "25-50%": 0.0005302525629013033,
+          "50-75%": 0.0002866395064893449,
+          "75-100%": 0.0003559830992575896
+        }
+      },
+      "still_moving_at_end_of_settling_m": 0.0,
+      "sweep_displacement_from_settled_m": {
+        "median": 0.010766138360902665,
+        "p90": 0.03913899809577567,
+        "max": 0.13342274277376262,
+        "links_moved_over_1cm": 157,
+        "by_type": {
+          "internode": 0.005012856165912803,
+          "leaf": 0.012973736746562034,
+          "petiole": 0.010589964494892716
+        },
+        "by_branch_order": {
+          "0": 0.0001346975314840059,
+          "1": 0.012194885789495428,
+          "2": 0.000466417420558025
+        },
+        "by_height": {
+          "0-25%": 0.0005344181506086768,
+          "25-50%": 0.009107946976508137,
+          "50-75%": 0.031462181575638154,
+          "75-100%": 0.03968687304718656
+        },
+        "by_height_p90": {
+          "0-25%": 0.0020216043187241757,
+          "25-50%": 0.02743469479675852,
+          "50-75%": 0.05644198122353211,
+          "75-100%": 0.043318140432882415
+        }
+      },
+      "max_displacement_from_rest_m": 0.13263731467869494,
+      "contact": {
+        "rows_with_contact": 71,
+        "peak_force_N": 3.134798,
+        "median_peak_force_in_contact_N": 1.002463,
+        "peak_penetration_mm": 14.13021,
+        "median_peak_penetration_in_contact_mm": 1.6249820000000001,
+        "max_contacts": 7
+      },
+      "meta": {
+        "engine": "mujoco",
+        "plant": "bean",
+        "dt": 0.00200000009,
+        "armature": false,
+        "armature_stability_ratio": 8,
+        "integrator": "discrete",
+        "contact_time_constant": 0.00400000019,
+        "links": 295,
+        "steps": 1594,
+        "simulated_seconds": 3.18800015,
+        "timing_run": false,
+        "physics_wall_seconds": 0.9560913,
+        "diverged": false,
+        "divergence_message": ""
+      }
+    },
+    "MuJoCo, armature ratio 1": {
+      "finished": true,
+      "simulated_until_s": 3.188,
+      "sag_after_settling_m": {
+        "median": 0.00034867421580735933,
+        "p90": 0.0008955492133967193,
+        "max": 0.0014881917788870536,
+        "by_type": {
+          "internode": 0.00012056888275774594,
+          "leaf": 0.0005439891950697012,
+          "petiole": 0.00031005684586577224
+        },
+        "by_branch_order": {
+          "0": 1.3700765714226426e-06,
+          "1": 0.0003677709222242989,
+          "2": 7.614504202547023e-05
+        },
+        "by_height": {
+          "0-25%": 5.4072018096426714e-05,
+          "25-50%": 0.0005302525629013033,
+          "50-75%": 0.0002866395064893449,
+          "75-100%": 0.0003559830992575896
+        }
+      },
+      "still_moving_at_end_of_settling_m": 0.0,
+      "sweep_displacement_from_settled_m": {
+        "median": 0.011032798048768055,
+        "p90": 0.04059007045714087,
+        "max": 0.13471706725180332,
+        "links_moved_over_1cm": 162,
+        "by_type": {
+          "internode": 0.005214862879003628,
+          "leaf": 0.01319382863706544,
+          "petiole": 0.010875155697567238
+        },
+        "by_branch_order": {
+          "0": 0.00014051049851042702,
+          "1": 0.012449061326000991,
+          "2": 0.0005182145524780297
+        },
+        "by_height": {
+          "0-25%": 0.0005954000098253252,
+          "25-50%": 0.009403541903223754,
+          "50-75%": 0.032150137450366115,
+          "75-100%": 0.041012759342985414
+        },
+        "by_height_p90": {
+          "0-25%": 0.002057779968949923,
+          "25-50%": 0.027660858239191687,
+          "50-75%": 0.05442051603479967,
+          "75-100%": 0.044635028041043565
+        }
+      },
+      "max_displacement_from_rest_m": 0.13393640660528214,
+      "contact": {
+        "rows_with_contact": 71,
+        "peak_force_N": 3.580306,
+        "median_peak_force_in_contact_N": 0.8214837,
+        "peak_penetration_mm": 13.25802,
+        "median_peak_penetration_in_contact_mm": 1.525739,
+        "max_contacts": 11
+      },
+      "meta": {
+        "engine": "mujoco",
+        "plant": "bean",
+        "dt": 0.00200000009,
+        "armature": true,
+        "armature_stability_ratio": 1,
+        "integrator": "discrete",
+        "contact_time_constant": 0.00400000019,
+        "links": 295,
+        "steps": 1594,
+        "simulated_seconds": 3.18800015,
+        "timing_run": false,
+        "physics_wall_seconds": 0.8853648,
+        "diverged": false,
+        "divergence_message": ""
+      },
+      "vs_reference": {
+        "settled_position_difference_m": {
+          "median": 0.0,
+          "p90": 0.0,
+          "max": 0.0
+        },
+        "sag_ratio_median": 1.0,
+        "sag_correlation": 1.0,
+        "sweep_displacement_correlation": 0.9995365119008807
+      }
+    },
+    "MuJoCo, armature ratio 8": {
+      "finished": true,
+      "simulated_until_s": 3.188,
+      "sag_after_settling_m": {
+        "median": 0.00034867421580735933,
+        "p90": 0.0008955492133967193,
+        "max": 0.0014881917788870536,
+        "by_type": {
+          "internode": 0.00012056888275774594,
+          "leaf": 0.0005439891950697012,
+          "petiole": 0.00031005684586577224
+        },
+        "by_branch_order": {
+          "0": 1.3700765714226426e-06,
+          "1": 0.0003677709222242989,
+          "2": 7.614504202547023e-05
+        },
+        "by_height": {
+          "0-25%": 5.4072018096426714e-05,
+          "25-50%": 0.0005302525629013033,
+          "50-75%": 0.0002866395064893449,
+          "75-100%": 0.0003559830992575896
+        }
+      },
+      "still_moving_at_end_of_settling_m": 0.0,
+      "sweep_displacement_from_settled_m": {
+        "median": 0.011020603863786236,
+        "p90": 0.039332167303869035,
+        "max": 0.13355186871043917,
+        "links_moved_over_1cm": 161,
+        "by_type": {
+          "internode": 0.005066754524366856,
+          "leaf": 0.013171521846908514,
+          "petiole": 0.01080101378186481
+        },
+        "by_branch_order": {
+          "0": 0.00013646389763127077,
+          "1": 0.012406161270510328,
+          "2": 0.0004678494472584113
+        },
+        "by_height": {
+          "0-25%": 0.000531691322949698,
+          "25-50%": 0.009411134060476646,
+          "50-75%": 0.03177266464703557,
+          "75-100%": 0.039841528836809595
+        },
+        "by_height_p90": {
+          "0-25%": 0.002044577265283868,
+          "25-50%": 0.027714203232327202,
+          "50-75%": 0.0587306986473992,
+          "75-100%": 0.04346369575953678
+        }
+      },
+      "max_displacement_from_rest_m": 0.132764381121904,
+      "contact": {
+        "rows_with_contact": 71,
+        "peak_force_N": 3.428614,
+        "median_peak_force_in_contact_N": 0.9707532,
+        "peak_penetration_mm": 13.927159999999999,
+        "median_peak_penetration_in_contact_mm": 1.62117,
+        "max_contacts": 10
+      },
+      "meta": {
+        "engine": "mujoco",
+        "plant": "bean",
+        "dt": 0.00200000009,
+        "armature": true,
+        "armature_stability_ratio": 8,
+        "integrator": "discrete",
+        "contact_time_constant": 0.00400000019,
+        "links": 295,
+        "steps": 1594,
+        "simulated_seconds": 3.18800015,
+        "timing_run": false,
+        "physics_wall_seconds": 0.9201822,
+        "diverged": false,
+        "divergence_message": ""
+      },
+      "vs_reference": {
+        "settled_position_difference_m": {
+          "median": 0.0,
+          "p90": 0.0,
+          "max": 0.0
+        },
+        "sag_ratio_median": 1.0,
+        "sag_correlation": 1.0,
+        "sweep_displacement_correlation": 0.9997512694734431
+      }
+    },
+    "PhysX, armature ratio 1": {
+      "finished": true,
+      "simulated_until_s": 3.188,
+      "sag_after_settling_m": {
+        "median": 0.0004087455752736669,
+        "p90": 0.001045625862047465,
+        "max": 0.001706821025692792,
+        "by_type": {
+          "internode": 0.00011895356084392752,
+          "leaf": 0.0006517825503261077,
+          "petiole": 0.00035651507213290995
+        },
+        "by_branch_order": {
+          "0": 6.036414486113138e-07,
+          "1": 0.0004411761344494138,
+          "2": 8.851803190909674e-05
+        },
+        "by_height": {
+          "0-25%": 6.43408500489382e-05,
+          "25-50%": 0.0006195000128061173,
+          "50-75%": 0.00031828103607331763,
+          "75-100%": 0.000413436792769839
+        }
+      },
+      "still_moving_at_end_of_settling_m": 5.664803615280207e-07,
+      "sweep_displacement_from_settled_m": {
+        "median": 0.011584989755459433,
+        "p90": 0.03327484826392872,
+        "max": 0.131512851972846,
+        "links_moved_over_1cm": 172,
+        "by_type": {
+          "internode": 0.0051167409634747,
+          "leaf": 0.014210501336045754,
+          "petiole": 0.011496650400100679
+        },
+        "by_branch_order": {
+          "0": 0.0001316874073158824,
+          "1": 0.013200257574977697,
+          "2": 0.0004485888840575495
+        },
+        "by_height": {
+          "0-25%": 0.0005262454867264908,
+          "25-50%": 0.010697989820462848,
+          "50-75%": 0.02640791738682891,
+          "75-100%": 0.03095802893132826
+        },
+        "by_height_p90": {
+          "0-25%": 0.0024015393872123293,
+          "25-50%": 0.029867000835948235,
+          "50-75%": 0.03911235846963471,
+          "75-100%": 0.033960685395184285
+        }
+      },
+      "max_displacement_from_rest_m": 0.1305847425031864,
+      "contact": {
+        "rows_with_contact": 76,
+        "peak_force_N": 3.76649,
+        "median_peak_force_in_contact_N": 0.39187375,
+        "peak_penetration_mm": 1.034163,
+        "median_peak_penetration_in_contact_mm": 0.004410997,
+        "max_contacts": 13
+      },
+      "meta": {
+        "engine": "physx",
+        "isaacsim_version": "6.1.0-rc.26+release.49347.2d230af4.gl",
+        "plant": "bean",
+        "dt": 0.002,
+        "dynamics": "gpu",
+        "gpu_dynamics": true,
+        "solver": "TGS",
+        "position_iterations": 32,
+        "links": 295,
+        "steps": 1594,
+        "simulated_seconds": 3.188,
+        "timing_run": false,
+        "physics_wall_seconds": null,
+        "total_wall_seconds": 416.295367200044,
+        "warmup_max_link_drift": 0.00010128968068313742,
+        "diverged": false,
+        "gravity": true,
+        "stiffness_scale": 1.0,
+        "velocity_iterations_override": 0
+      },
+      "vs_reference": {
+        "settled_position_difference_m": {
+          "median": 6.429701470519558e-05,
+          "p90": 0.00015481188275377633,
+          "max": 0.0002593568252600851
+        },
+        "sag_ratio_median": 1.1469093230505818,
+        "sag_correlation": 0.9988822020775608,
+        "sweep_displacement_correlation": 0.9689441726580621
+      }
+    },
+    "PhysX, armature ratio 8 (export default)": {
+      "finished": true,
+      "simulated_until_s": 3.188,
+      "sag_after_settling_m": {
+        "median": 0.0027742892220193366,
+        "p90": 0.007019606986362948,
+        "max": 0.01015101766898013,
+        "by_type": {
+          "internode": 0.0010223065271147652,
+          "leaf": 0.004307422755118933,
+          "petiole": 0.002432844130439783
+        },
+        "by_branch_order": {
+          "0": 1.2783399494030929e-05,
+          "1": 0.0030065271922815,
+          "2": 0.0005384979999378435
+        },
+        "by_height": {
+          "0-25%": 0.0004993699576352258,
+          "25-50%": 0.004033643852472495,
+          "50-75%": 0.00212663533014728,
+          "75-100%": 0.002790731912836051
+        }
+      },
+      "still_moving_at_end_of_settling_m": 0.0,
+      "sweep_displacement_from_settled_m": {
+        "median": 0.006518111555528411,
+        "p90": 0.03567410516843023,
+        "max": 0.07269954060994196,
+        "links_moved_over_1cm": 133,
+        "by_type": {
+          "internode": 0.001190788890651908,
+          "leaf": 0.009819311175468429,
+          "petiole": 0.006971528100178169
+        },
+        "by_branch_order": {
+          "0": 0.00016120865217615632,
+          "1": 0.009316065362706127,
+          "2": 0.0003694409647020726
+        },
+        "by_height": {
+          "0-25%": 0.0004535397499668586,
+          "25-50%": 0.0036214633831846924,
+          "50-75%": 0.025687767290722988,
+          "75-100%": 0.04164306648974209
+        },
+        "by_height_p90": {
+          "0-25%": 0.0024100154247031036,
+          "25-50%": 0.018236136808053544,
+          "50-75%": 0.04295253673752655,
+          "75-100%": 0.046540272782775
+        }
+      },
+      "max_displacement_from_rest_m": 0.06578481809272359,
+      "contact": {
+        "rows_with_contact": 62,
+        "peak_force_N": 1.085382,
+        "median_peak_force_in_contact_N": 0.07417228000000001,
+        "peak_penetration_mm": 0.5198254,
+        "median_peak_penetration_in_contact_mm": 0.010748623,
+        "max_contacts": 11
+      },
+      "meta": {
+        "engine": "physx",
+        "isaacsim_version": "6.1.0-rc.26+release.49347.2d230af4.gl",
+        "plant": "bean",
+        "dt": 0.002,
+        "dynamics": "gpu",
+        "gpu_dynamics": true,
+        "solver": "TGS",
+        "position_iterations": 32,
+        "links": 295,
+        "steps": 1594,
+        "simulated_seconds": 3.188,
+        "timing_run": false,
+        "physics_wall_seconds": null,
+        "total_wall_seconds": 493.7296450000722,
+        "warmup_max_link_drift": 0.00012053672090295762,
+        "diverged": false,
+        "gravity": true,
+        "stiffness_scale": 1.0,
+        "velocity_iterations_override": 0
+      },
+      "vs_reference": {
+        "settled_position_difference_m": {
+          "median": 0.002440966783368622,
+          "p90": 0.0061480693123687905,
+          "max": 0.008728421160148535
+        },
+        "sag_ratio_median": 6.973633973271019,
+        "sag_correlation": 0.9914977369210897,
+        "sweep_displacement_correlation": 0.8405511557394871
+      }
+    }
+  }
+}

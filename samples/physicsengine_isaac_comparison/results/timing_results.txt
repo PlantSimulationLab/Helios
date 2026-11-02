@@ -1,0 +1,32 @@
+rep1 dt=0.002: Simulated 9.932 s in 35.3544 s of physics wall time (3.55965 s per simulated s).
+rep1 dt=0.002 armature=1 armature_ratio=1: Simulated 9.932 s in 35.1554 s of physics wall time (3.53961 s per simulated s).
+rep1 dt=0.016666667: Simulated 9.93333 s in 4.23372 s of physics wall time (0.426213 s per simulated s).
+rep1 dt=0.033333333: Simulated 9.93333 s in 2.12599 s of physics wall time (0.214026 s per simulated s).
+rep2 dt=0.002: Simulated 9.932 s in 35.1705 s of physics wall time (3.54112 s per simulated s).
+rep2 dt=0.002 armature=1 armature_ratio=1: Simulated 9.932 s in 35.0898 s of physics wall time (3.533 s per simulated s).
+rep2 dt=0.016666667: Simulated 9.93333 s in 4.34817 s of physics wall time (0.437735 s per simulated s).
+rep2 dt=0.033333333: Simulated 9.93333 s in 2.1315 s of physics wall time (0.21458 s per simulated s).
+physx cpu dt=0.002 exit=0
+  "simulated_seconds": 9.932,
+  "physics_wall_seconds": 266.44977489998564,
+  "diverged": false,
+physx cpu dt=0.016666667 exit=0
+  "simulated_seconds": 9.933333531999999,
+  "physics_wall_seconds": 32.37225319992285,
+  "diverged": false,
+physx cpu dt=0.033333333 exit=0
+  "simulated_seconds": 9.933333234,
+  "physics_wall_seconds": 16.26626629999373,
+  "diverged": false,
+physx gpu dt=0.002 exit=0
+  "simulated_seconds": 9.932,
+  "physics_wall_seconds": 1142.5030515999533,
+  "diverged": false,
+physx gpu dt=0.016666667 exit=0
+  "simulated_seconds": 9.933333531999999,
+  "physics_wall_seconds": 138.8606082999613,
+  "diverged": false,
+physx gpu dt=0.033333333 exit=0
+  "simulated_seconds": 9.933333234,
+  "physics_wall_seconds": 69.71175530005712,
+  "diverged": false,
