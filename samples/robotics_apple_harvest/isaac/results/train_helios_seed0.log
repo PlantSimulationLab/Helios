@@ -1,0 +1,12 @@
+steps    50000     2.9 min    288 steps/s  training success 13.1%  held-out success 18.8% timeout 62.5% slipped  0.0% knocked off  0.0% collision 18.8%
+steps   100000     5.2 min    318 steps/s  training success 54.8%  held-out success 93.8% timeout  0.0% slipped  0.0% knocked off  0.0% collision  6.2%
+steps   150000     7.7 min    325 steps/s  training success 73.9%  held-out success 81.2% timeout 12.5% slipped  0.0% knocked off  0.0% collision  6.2%
+steps   200000    10.2 min    327 steps/s  training success 80.5%  held-out success 62.5% timeout 12.5% slipped  0.0% knocked off  0.0% collision 25.0%
+steps   250000    12.6 min    330 steps/s  training success 83.1%  held-out success 81.2% timeout  0.0% slipped  0.0% knocked off  0.0% collision 18.8%
+steps   300000    15.1 min    331 steps/s  training success 85.6%  held-out success 62.5% timeout  6.2% slipped  0.0% knocked off  0.0% collision 31.2%
+steps   350000    17.5 min    334 steps/s  training success 84.2%  held-out success 87.5% timeout  6.2% slipped  0.0% knocked off  0.0% collision  6.2%
+steps   400000    20.1 min    332 steps/s  training success 82.9%  held-out success 75.0% timeout  6.2% slipped  0.0% knocked off  0.0% collision 18.8%
+steps   450000    22.4 min    335 steps/s  training success 85.6%  held-out success 75.0% timeout  0.0% slipped  0.0% knocked off  0.0% collision 25.0%
+steps   500000    24.8 min    336 steps/s  training success 83.0%  held-out success 75.0% timeout 12.5% slipped  0.0% knocked off  0.0% collision 12.5%
+Final, 40 episodes on 4 held-out trees: {'success': 0.775, 'timeout': 0.1, 'slipped': 0.0, 'knocked_off': 0.0, 'collision': 0.125}
+Final, 32 episodes on the 8 training trees: {'success': 0.875, 'timeout': 0.0625, 'slipped': 0.0, 'knocked_off': 0.0, 'collision': 0.0625}
