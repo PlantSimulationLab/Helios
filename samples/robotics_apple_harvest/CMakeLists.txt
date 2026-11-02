@@ -28,3 +28,5 @@ include( "${BASE_DIRECTORY}/core/CMake_project.cmake" )
 # The environment as a shared library, for harvest_env.py
 add_library( apple_harvest_env SHARED harvest_env.cpp )
 target_link_libraries( apple_harvest_env PRIVATE helios plantarchitecture physicsengine robotics visualizer )
+# MSVC exports nothing from a DLL unless told to, so harvest_env.py could not find the functions
+set_target_properties( apple_harvest_env PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON )
