@@ -325,16 +325,30 @@ DOCTEST_TEST_CASE("Robot - arm deflects a plant stem, senses the force, and the 
             top = std::max(top, link.position.z);
         }
     }
-    uint cut_link = 0;
-    float nearest = std::numeric_limits<float>::max();
+    // The tool approaches along +x from 20 cm in front of the stem, so the stem segment chosen is the one nearest two
+    // thirds of the way up whose approach is clear of the rest of the plant. The plant grown from a seed differs between
+    // platforms, and on some the nearest segment has another shoot's petioles in front of it.
+    std::vector<uint> candidates;
     for (uint i = 0; i < articulation.links.size(); i++) {
-        const PlantArticulationLink &link = articulation.links[i];
-        const float distance = std::abs(link.position.z - 0.66f * top);
-        if (link.type == ARTICULATION_LINK_INTERNODE && link.parent_index >= 0 && distance < nearest) {
-            nearest = distance;
-            cut_link = i;
+        if (articulation.links[i].type == ARTICULATION_LINK_INTERNODE && articulation.links[i].parent_index >= 0) {
+            candidates.push_back(i);
         }
     }
+    std::sort(candidates.begin(), candidates.end(), [&](uint a, uint b) { return std::abs(articulation.links[a].position.z - 0.66f * top) < std::abs(articulation.links[b].position.z - 0.66f * top); });
+    auto approachIsClear = [&](uint target) {
+        const vec3 &stem = articulation.links[target].position;
+        for (uint i = 0; i < articulation.links.size(); i++) {
+            const vec3 &p = articulation.links[i].position;
+            const bool adjacent = i == target || int(i) == articulation.links[target].parent_index || articulation.links[i].parent_index == int(target);
+            if (!adjacent && p.x > stem.x - 0.25f && p.x < stem.x - 0.02f && std::abs(p.y - stem.y) < 0.03f && std::abs(p.z - stem.z) < 0.03f) {
+                return false;
+            }
+        }
+        return true;
+    };
+    const auto clear_candidate = std::find_if(candidates.begin(), candidates.end(), approachIsClear);
+    DOCTEST_REQUIRE(clear_candidate != candidates.end());
+    const uint cut_link = *clear_candidate;
     const vec3 stem_point = articulation.links[cut_link].position;
 
     PlantPhysicsParameters plant_parameters;
