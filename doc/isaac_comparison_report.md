@@ -26,6 +26,10 @@ Neither engine is ground truth. Agreement below shows consistency, not correctne
    version allows it to be driven (see the limits). This says nothing about PhysX with many plants on the GPU, which is Part C.
 6. **Windows:** the four test suites pass after two test fixes (commits 88fdfdd78, a80c51edf). Nothing in the plug-ins themselves
    needed changing.
+7. **Apple picking policies transfer both ways (Part C).** On 12 unseen trees, the Helios-trained policy succeeds 79.2% in Helios and
+   75.0% in PhysX. The IsaacSim-trained policy succeeds 75.4% in both. The differences are within the 95% intervals. PhysX records more
+   detachments by pushing, because its fruit joint is rigid. Training with the same settings took 25 minutes in Helios and 7.9 hours in
+   IsaacSim. PhysX's GPU throughput only catches up with a few hundred trees at once.
 
 ## Part A: build and test on Windows
 
@@ -194,7 +198,7 @@ installed, and its cloned environments assume every copy has the same structure,
 Stable-Baselines3 2.9.2 and gymnasium 1.4.0 were installed into IsaacSim's Python (nothing it had was changed). The port, its design
 and its known differences are in `samples/robotics_apple_harvest/isaac/README.md`, and the episode records in its `results/`.
 
-### Results so far
+### Results
 
 Trees 301-312 (never used in training), 2 simulations per tree, 10 episodes each, 240 episodes per row. A "push" is a success with no
 grip force: the cup pushed the fruit off just after gripping, rather than pulling it.
@@ -205,6 +209,8 @@ grip force: the cup pushed the fruit off just after gripping, rather than pullin
 | Scripted | IsaacSim (PhysX) | 66.7% (60.5-72.3) | 18 | 59.2% | 32.1% | 1.2% | 493 / 1755 N |
 | Policy trained in Helios | Helios (MuJoCo) | 79.2% (73.6-83.8) | 2 | 78.3% | 17.5% | 3.3% | 347 / 1199 N |
 | Policy trained in Helios | IsaacSim (PhysX) | 75.0% (69.2-80.1) | 5 | 72.9% | 21.2% | 3.8% | 361 / 2142 N |
+| Policy trained in IsaacSim | Helios (MuJoCo) | 75.4% (69.6-80.4) | 3 | 74.2% | 23.3% | 0.4% | 379 / 901 N |
+| Policy trained in IsaacSim | IsaacSim (PhysX) | 75.4% (69.6-80.4) | 7 | 72.5% | 24.2% | 0.4% | 411 / 2209 N |
 
 - **The scripted controller does the same in both** once pushes are set aside (58.8% against 59.2%). PhysX has three times as many
   pushes, because its fruit is held by a rigid joint where MuJoCo's weld is soft: the stem load spikes to 2-3x the force to detach in
@@ -214,8 +220,19 @@ grip force: the cup pushed the fruit off just after gripping, rather than pullin
   0.94x the grip force needed in both.
 - **PhysX's worst contacts are harder.** The protective stop acts at 50 N, but a stiff arm striking wood peaks higher before it acts:
   1755-2142 N in PhysX against 1012-1199 N in MuJoCo.
-- The policy was trained once (seed 0, 500,000 steps, 25 minutes in Helios on this machine: 77.5% on the 4 held-out trees, 87.5% on the
-  training trees). One seed and one tree set: the plan shows that single runs vary by several points.
+- **A policy trained in IsaacSim transfers to Helios with no drop**: 75.4% in both (74.2% and 72.5% by pulling). It is no better in its
+  own simulator than the Helios-trained policy is in PhysX (75.0%), and 4 points below the Helios-trained policy in Helios, within the
+  intervals. Most of its failures are protective stops (23-24%) rather than timeouts.
+- **The two policies learned different pulls.** The Helios-trained policy pulls mostly downward (mean direction -0.29, -0.01, -0.86) and
+  detaches at 0.94x the grip force needed. The IsaacSim-trained policy pulls toward the robot and upward (-0.59, -0.01, +0.66 in Helios;
+  -0.57, -0.03, +0.62 in PhysX) at 1.05x. Each strategy works in both simulators, so the difference comes from training, not from
+  which physics it learned in; with one seed each, I cannot say whether it is systematic.
+- Each policy was trained once, with seed 0 and the same `train.py` settings, trees (1-8) and 16 simulations, for 500,000 steps. In
+  Helios this took 25 minutes; by the end it reached 87.5% on the training trees and 77.5% on 4 held-out trees. In IsaacSim it took
+  7.9 hours: 18 steps per second against 330, a factor of 18, with settling taking 5.6 minutes. It reached 86% on the training trees at
+  the end, against 83% in Helios. IsaacSim's run learned more slowly at first (2% and 19% success at 50k and 100k steps, against 13% and
+  55%). One seed and one tree set: the plan shows that single runs vary by several points, so these curves do not separate the
+  simulators.
 
 ### Cost, and where PhysX's time went
 
@@ -254,11 +271,11 @@ bound by physics (state reads, inverse kinematics and resets take a few ms per c
 |---|---|---|
 | Building 24 simulations, including 20 s of settling | 2.2 min | 15-19 min with writeback (not re-measured) |
 | Control steps per second, 6 simulations | | 8.3-8.9 |
-| Control steps per second, 16 simulations (`train.py`) | about 330 while training | about 30, estimated from 22 ms per step |
+| Control steps per second, 16 simulations (`train.py`), including PPO's updates | 330 while training | 18 while training (estimated 30 from 22 ms per step) |
 
-The evaluation results above were measured with writeback on; the physics is the same either way.
+The scripted and Helios-trained policy evaluations above were measured with writeback on, and the IsaacSim training and its policy's
+evaluation with it off; the physics is the same either way. Evaluating 240 episodes took 0.6 min in Helios and 11.4 min in IsaacSim.
 
 ### Not done yet
 
-- A policy trained in IsaacSim, evaluated in both (the other half of the cross-evaluation).
 - More training seeds, and a soft fruit joint in PhysX to match MuJoCo's weld, which would show how much of the push difference is that.

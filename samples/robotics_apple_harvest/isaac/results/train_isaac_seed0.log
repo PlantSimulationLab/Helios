@@ -1,0 +1,12 @@
+built and settled 16 simulations in 5.6 min
+steps    50000    48.5 min   17.2 steps/s  training success  2.0%  success  2.0%  timeout 87.1%  slipped  0.0%  knocked_off  0.0%  collision 10.9%
+steps   100000    93.3 min   17.9 steps/s  training success 18.6%  success 18.6%  timeout 75.6%  slipped  0.0%  knocked_off  0.0%  collision  5.9%
+steps   150000   138.7 min   18.0 steps/s  training success 69.8%  success 69.8%  timeout  6.4%  slipped  0.0%  knocked_off  2.0%  collision 21.8%
+steps   200000   184.7 min   18.0 steps/s  training success 80.5%  success 80.5%  timeout  1.6%  slipped  0.0%  knocked_off  1.8%  collision 16.1%
+steps   250000   231.1 min   18.0 steps/s  training success 81.7%  success 81.7%  timeout  1.5%  slipped  0.0%  knocked_off  0.3%  collision 16.6%
+steps   300000   277.6 min   18.0 steps/s  training success 83.1%  success 83.1%  timeout  1.0%  slipped  0.0%  knocked_off  0.4%  collision 15.5%
+steps   350000   323.5 min   18.0 steps/s  training success 85.5%  success 85.5%  timeout  0.3%  slipped  0.0%  knocked_off  0.3%  collision 14.0%
+steps   400000   369.8 min   18.0 steps/s  training success 82.6%  success 82.6%  timeout  0.5%  slipped  0.0%  knocked_off  0.3%  collision 16.6%
+steps   450000   416.1 min   18.0 steps/s  training success 85.6%  success 85.6%  timeout  0.5%  slipped  0.0%  knocked_off  0.6%  collision 13.3%
+steps   500000   462.3 min   18.0 steps/s  training success 86.1%  success 86.1%  timeout  0.1%  slipped  0.0%  knocked_off  0.4%  collision 13.5%
+saved apple_policy_isaac_seed0 after 471.5 min
