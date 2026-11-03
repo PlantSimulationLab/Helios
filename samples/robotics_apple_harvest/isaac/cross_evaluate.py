@@ -42,6 +42,7 @@ def main():
     parser.add_argument("--threads", type=int, default=12, help="Helios threads")
     parser.add_argument("--seed", type=int, default=2000)
     parser.add_argument("--trees", default="isaac_trees", help="directory of trees exported for IsaacSim")
+    parser.add_argument("--fruit-hold", choices=["rigid", "soft"], default="rigid", help="how IsaacSim holds candidate fruit: a rigid joint, or springs with the time constant of MuJoCo's weld")
     parser.add_argument("--output", default="", help="JSON file for the outcome of every episode, with the controller's name inserted before .json")
     args, _ = parser.parse_known_args()
     seeds = parse_seeds(args.seeds)
@@ -51,7 +52,7 @@ def main():
 
         isaac_harvest_env.start_app()
         start = time.perf_counter()
-        env = isaac_harvest_env.IsaacHarvestVecEnv(seeds, instances_per_tree=args.instances, seed=args.seed, trees_directory=os.path.abspath(args.trees))
+        env = isaac_harvest_env.IsaacHarvestVecEnv(seeds, instances_per_tree=args.instances, seed=args.seed, trees_directory=os.path.abspath(args.trees), fruit_hold=args.fruit_hold)
     else:
         import harvest_env
 
@@ -101,6 +102,7 @@ def main():
                 json.dump(
                     {
                         "simulator": args.simulator,
+                        "fruit_hold": args.fruit_hold if args.simulator == "isaac" else "mujoco_weld",
                         "controller": controller,
                         "policy": policy,
                         "seeds": seeds,

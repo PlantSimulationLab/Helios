@@ -19,13 +19,14 @@ parser.add_argument("--seeds", default="1")
 parser.add_argument("--instances", type=int, default=2)
 parser.add_argument("--episodes", type=int, default=3)
 parser.add_argument("--settling-steps", type=int, default=None)
+parser.add_argument("--fruit-hold", choices=["rigid", "soft"], default="rigid")
 args, _ = parser.parse_known_args()
 
 ihe.start_app()
 from arm_kinematics import forward
 
 start = time.perf_counter()
-env = ihe.IsaacHarvestVecEnv([int(s) for s in args.seeds.split(",")], instances_per_tree=args.instances, trees_directory=os.path.abspath(args.trees), settling_steps=args.settling_steps)
+env = ihe.IsaacHarvestVecEnv([int(s) for s in args.seeds.split(",")], instances_per_tree=args.instances, trees_directory=os.path.abspath(args.trees), settling_steps=args.settling_steps, fruit_hold=args.fruit_hold)
 print(f"built and settled in {time.perf_counter() - start:.1f} s (settling {env.settle_seconds:.1f} s)", flush=True)
 observations = env.reset()
 
@@ -35,6 +36,20 @@ base = env.env_origins + np.array(env.task["robot_base"])
 point, axis, *_ = forward(joints, base, np.array(env.task["cup_face"]), np.array([1.0, 0, 0]))
 print("tool from PhysX vs forward kinematics: largest difference", float(np.abs(point - state["tool"].cpu().numpy()).max()), "m; axis", float(np.abs(axis - state["tool_axis"].cpu().numpy()).max()), flush=True)
 print("first observation", np.round(observations[0], 3), flush=True)
+
+# At rest, the stem of every candidate fruit carries the fruit's weight (after the reset, with the arm tucked)
+weights = []
+for tree in env.trees:
+    links = {link["name"]: link for link in tree["description"]["links"]}
+    weights.append(np.array([links[c["link"]]["mass"] * 9.81 for c in tree["description"]["candidates"]]))
+for step in range(1, 1501):
+    env.physics_step()
+    loads = [env.candidate_stem_loads(tv) for tv in env.tree_views]
+    if step in (100, 1500):
+        for tree, load, weight in zip(env.trees, loads, weights):
+            ratio = load.cpu().numpy() / weight
+            print(f"tree {tree['seed']} ({args.fruit_hold}), {step} steps after the reset: stem load / fruit weight over {ratio.size} fruit: min {ratio.min():.4f} median {np.median(ratio):.4f} max {ratio.max():.4f}", flush=True)
+observations = env.reset()
 
 from harvest_env_scripted import scripted_actions
 

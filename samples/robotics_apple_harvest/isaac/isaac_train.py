@@ -25,6 +25,7 @@ def main():
     parser.add_argument("--output", default="apple_policy_isaac")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--trees", default="isaac_trees")
+    parser.add_argument("--fruit-hold", choices=["rigid", "soft"], default="rigid", help="how candidate fruit are held; see isaac_harvest_env.py")
     parser.add_argument("--settling-steps", type=int, default=None, help="only for quick checks; by default trees settle as in harvest_env.cpp")
     args, _ = parser.parse_known_args()
 
@@ -65,7 +66,7 @@ def main():
 
     torch.set_num_threads(2)
     start = time.time()
-    raw = isaac_harvest_env.IsaacHarvestVecEnv(TRAIN_SEEDS, instances_per_tree=2, seed=args.seed, trees_directory=os.path.abspath(args.trees), settling_steps=args.settling_steps)
+    raw = isaac_harvest_env.IsaacHarvestVecEnv(TRAIN_SEEDS, instances_per_tree=2, seed=args.seed, trees_directory=os.path.abspath(args.trees), settling_steps=args.settling_steps, fruit_hold=args.fruit_hold)
     print(f"built and settled {raw.num_envs} simulations in {(time.time() - start) / 60:.1f} min", flush=True)
     env = VecNormalize(raw, norm_obs=True, norm_reward=True, gamma=0.99)
 

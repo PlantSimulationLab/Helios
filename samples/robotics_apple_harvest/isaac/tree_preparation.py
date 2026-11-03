@@ -3,7 +3,7 @@
 import json
 
 import numpy as np
-from pxr import Gf, Usd, UsdGeom, UsdPhysics, UsdShade
+from pxr import Gf, PhysxSchema, Usd, UsdGeom, UsdPhysics, UsdShade
 
 
 def _rotation(matrix):
@@ -46,7 +46,56 @@ def _lock(joint):
             drive.GetDampingAttr().Set(0.0)
 
 
-def prepare_tree(json_path, usd_path, output_path):
+# MuJoCo's weld holding a candidate fruit (PhysicsEngine.cpp): solref = (contact_time_constant, 1) and MuJoCo's default solimp, whose
+# impedance is 0.9 at zero violation (rising to 0.95 over 1 mm; the weld stays well inside that).
+WELD_TIME_CONSTANT = 0.004  # s, PhysicsEngineParameters::contact_time_constant
+WELD_IMPEDANCE = 0.9  # solimp[0]
+WELD_IMPEDANCE_MAX = 0.95  # solimp[1]
+
+
+def soft_hold_gains(mass, inertia):
+    """Stiffness and damping of a spring with the transient of MuJoCo's soft weld, for translation (N/m, N s/m) and rotation (N m/rad, N m s/rad).
+
+    MuJoCo makes a constraint's acceleration follow a = (1 - d) a0 + d (-b v - k r), with k = 1 / (dmax tau)^2 and b = 2 / (dmax tau)
+    for a damping ratio of 1. Its free response is that of a spring with stiffness d k and damping d b per unit of the constraint's
+    effective mass. The effective mass is taken as the fruit's (its inertia about the joint for rotation): the wood on the other side
+    of the stem is much heavier on a 4 ms time scale, which makes this an upper bound and the spring at most slightly stiffer than
+    MuJoCo's. What the spring does not reproduce is the (1 - d) a0 term: MuJoCo's weld passes 90% of a load at once, while a spring
+    builds force over its time constant.
+    """
+    k = 1.0 / (WELD_IMPEDANCE_MAX * WELD_TIME_CONSTANT) ** 2
+    b = 2.0 / (WELD_IMPEDANCE_MAX * WELD_TIME_CONSTANT)
+    return {"linear_stiffness": mass * WELD_IMPEDANCE * k, "linear_damping": mass * WELD_IMPEDANCE * b, "angular_stiffness": inertia * WELD_IMPEDANCE * k, "angular_damping": inertia * WELD_IMPEDANCE * b}
+
+
+def _soften(stage, joint, gains, other_bodies):
+    """Turn a candidate fruit's locked articulation joint into a free D6 joint outside the articulation, held by springs on all six axes."""
+    joint_prim = joint
+    for axis in ("transX", "transY", "transZ", "rotX", "rotY", "rotZ"):
+        joint_prim.RemoveAPI(UsdPhysics.LimitAPI, axis)
+        for name in ("low", "high"):
+            joint_prim.RemoveProperty(f"limit:{axis}:physics:{name}")
+        drive = UsdPhysics.DriveAPI.Apply(joint_prim, axis)
+        drive.CreateTypeAttr().Set("force")
+        drive.CreateTargetPositionAttr().Set(0.0)
+        drive.CreateTargetVelocityAttr().Set(0.0)
+        if axis.startswith("trans"):
+            drive.CreateStiffnessAttr().Set(float(gains["linear_stiffness"]))
+            drive.CreateDampingAttr().Set(float(gains["linear_damping"]))
+        else:
+            # USD gives angular drive gains per degree
+            drive.CreateStiffnessAttr().Set(float(gains["angular_stiffness"] * np.pi / 180.0))
+            drive.CreateDampingAttr().Set(float(gains["angular_damping"] * np.pi / 180.0))
+    joint_prim.RemoveProperty("physxJoint:armature")  # an articulation joint's property
+    UsdPhysics.Joint(joint_prim).CreateExcludeFromArticulationAttr().Set(True)
+    # The fruit is now a body of its own. Nothing of the tree collides with the tree, as in MuJoCo.
+    fruit = stage.GetPrimAtPath(UsdPhysics.Joint(joint_prim).GetBody1Rel().GetTargets()[0])
+    UsdPhysics.FilteredPairsAPI.Apply(fruit).CreateFilteredPairsRel().SetTargets(other_bodies)
+    # The environment reads the contact force on the fruit to find the force on its stem
+    PhysxSchema.PhysxContactReportAPI.Apply(fruit).CreateThresholdAttr().Set(0.0)
+
+
+def prepare_tree(json_path, usd_path, output_path, fruit_hold="rigid"):
     """Make an exported tree simulate in PhysX as harvest_env.cpp simulates it in MuJoCo, at a cost PhysX can afford.
 
     In MuJoCo the tree is one articulation in which most links are welded: all internodes except a few behind each candidate fruit,
@@ -58,12 +107,17 @@ def prepare_tree(json_path, usd_path, output_path):
     - What is left is one articulation, with self-collision off as in MuJoCo, so that no shapes of the tree are ever paired: the base
       link with all the rigid wood, fixed to the world, and below it the links that MuJoCo connects by ball joints, with the export's
       joints.
-    - Candidate fruit stay separate links on fixed joints, so that the load on their stems can be read and the grip applied to them.
-      MuJoCo holds them with a soft weld (4 ms time constant); here the joint is rigid.
+    - Candidate fruit stay separate bodies, so that the load on their stems can be read and the grip applied to them. MuJoCo holds
+      them with a soft weld (4 ms time constant). With fruit_hold "rigid" they are articulation links on locked joints, and the stem
+      load is the force in that joint. With "soft" they are free bodies outside the articulation, held by a D6 joint with springs on
+      all six axes that have the weld's time constant and damping (soft_hold_gains()), and report their contacts so that the
+      environment can find the force on the stem from the fruit's momentum. The sidecar lists each hold's frames and gains.
     - Fruit collide as the sphere MuJoCo gives them, and every body gets its mass and inertia from Helios rather than from PhysX.
 
     Returns counts of what was done.
     """
+    if fruit_hold not in ("rigid", "soft"):
+        raise ValueError(f'fruit_hold must be "rigid" or "soft", not "{fruit_hold}"')
     description = json.load(open(json_path))
     candidates = {c["link"] for c in description["candidates"]}
     stage = Usd.Stage.Open(usd_path)
@@ -129,7 +183,8 @@ def prepare_tree(json_path, usd_path, output_path):
             UsdPhysics.CollisionAPI.Apply(sphere.GetPrim())
             _bind_material(stage, sphere.GetPrim(), material)
 
-    # Joints of the bodies, re-expressed in the frame of the body that carries the parent; candidate fruit locked
+    # Joints of the bodies, re-expressed in the frame of the body that carries the parent; candidate fruit locked or held by springs
+    soft_holds = {}
     for i in bodies:
         joint = joints[names[i]]
         parent = links[i]["parent"]
@@ -141,8 +196,32 @@ def prepare_tree(json_path, usd_path, output_path):
             joint_api.GetBody0Rel().SetTargets([link_prims[carrier].GetPath()])
             joint_api.GetLocalPos0Attr().Set(Gf.Vec3f(in_carrier.ExtractTranslation()))
             joint_api.GetLocalRot0Attr().Set(Gf.Quatf(in_carrier.ExtractRotationQuat()))
-        if names[i] in candidates:
+        if names[i] in candidates and fruit_hold == "rigid":
             _lock(joint)
+        elif names[i] in candidates:
+            joint_api = UsdPhysics.Joint(joint)
+            anchor = np.array(joint_api.GetLocalPos1Attr().Get(), dtype=float)
+            if len(parts[i]) != 1:
+                raise RuntimeError(f"candidate fruit {names[i]} carries welded links; a soft hold assumes the fruit is a body of its own")
+            mass, center, _, diagonal = parts[i][0]
+            offset = anchor - center
+            # Inertia about the joint, averaged over directions
+            inertia = float(np.mean(diagonal) + mass * (2.0 / 3.0) * (offset @ offset))
+            gains = soft_hold_gains(mass, inertia)
+            others = [link_prims[k].GetPath() for k in kept if k != i]
+            _soften(stage, joint, gains, others)
+            frame0 = (np.array(joint_api.GetLocalPos0Attr().Get(), dtype=float), joint_api.GetLocalRot0Attr().Get())
+            frame1 = (anchor, joint_api.GetLocalRot1Attr().Get())
+            soft_holds[names[i]] = dict(
+                carrier=joint_api.GetBody0Rel().GetTargets()[0].name,
+                local_pos0=frame0[0].tolist(),
+                local_rot0=[frame0[1].GetReal(), *frame0[1].GetImaginary()],
+                local_pos1=frame1[0].tolist(),
+                local_rot1=[frame1[1].GetReal(), *frame1[1].GetImaginary()],
+                mass=mass,
+                inertia_about_joint=inertia,
+                **gains,
+            )
 
     for i in kept:
         _set_mass_properties(link_prims[i], parts[i])
@@ -164,7 +243,7 @@ def prepare_tree(json_path, usd_path, output_path):
     # Where each link of the Helios tree ended up: the body it belongs to, and its origin in that body's frame
     owners = {names[i]: [names[owner[i]], list((poses[i] * poses[owner[i]].GetInverse()).ExtractTranslation())] for i in range(len(links))}
     with open(output_path.replace(".usda", ".json"), "w") as f:
-        json.dump({"owners": owners}, f)
+        json.dump({"owners": owners, "fruit_hold": fruit_hold, "soft_holds": soft_holds}, f)
     return {
         "links": len(links),
         "articulation_links": len(kept),

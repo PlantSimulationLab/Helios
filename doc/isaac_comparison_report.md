@@ -28,7 +28,8 @@ Neither engine is ground truth. Agreement below shows consistency, not correctne
    needed changing.
 7. **Apple picking policies transfer both ways (Part C).** On 12 unseen trees, the Helios-trained policy succeeds 79.2% in Helios and
    75.0% in PhysX. The IsaacSim-trained policy succeeds 75.4% in both. The differences are within the 95% intervals. PhysX records more
-   detachments by pushing, because its fruit joint is rigid. Training with the same settings took 25 minutes in Helios and 7.9 hours in
+   detachments by pushing, because its fruit joint is rigid: holding the fruit with springs that have the time constant of MuJoCo's
+   soft weld removes them (18 to 0 for the scripted controller), without changing total success beyond the intervals. Training with the same settings took 25 minutes in Helios and 7.9 hours in
    IsaacSim. PhysX's GPU throughput only catches up with a few hundred trees at once.
 
 ## Part A: build and test on Windows
@@ -212,9 +213,34 @@ grip force: the cup pushed the fruit off just after gripping, rather than pullin
 | Policy trained in IsaacSim | Helios (MuJoCo) | 75.4% (69.6-80.4) | 3 | 74.2% | 23.3% | 0.4% | 379 / 901 N |
 | Policy trained in IsaacSim | IsaacSim (PhysX) | 75.4% (69.6-80.4) | 7 | 72.5% | 24.2% | 0.4% | 411 / 2209 N |
 
-- **The scripted controller does the same in both** once pushes are set aside (58.8% against 59.2%). PhysX has three times as many
-  pushes, because its fruit is held by a rigid joint where MuJoCo's weld is soft: the stem load spikes to 2-3x the force to detach in
-  PhysX and only just past it in MuJoCo.
+The IsaacSim rows hold the fruit with a rigid joint. The rows below hold it with springs that copy the transient of MuJoCo's soft weld
+(`--fruit-hold soft`: the fruit is a free body on a six-axis D6 drive with the weld's 4 ms time constant and damping, and the stem load
+is found from the fruit's momentum; the design and its checks are in the port's README):
+
+| Controller | Simulator | Success (95% interval) | Pushes | Successes by pulling | Protective stop | Timeout | Peak contact, p90 / max |
+|---|---|---|---|---|---|---|---|
+| Scripted | IsaacSim (PhysX), soft hold | 66.2% (60.1-71.9) | 0 | 66.2% | 32.1% | 1.2% | 562 / 1767 N |
+| Policy trained in Helios | IsaacSim (PhysX), soft hold | 81.7% (76.3-86.1) | 4 | 80.0% | 12.9% | 5.0% | 293 / 1797 N |
+| Policy trained in IsaacSim (rigid hold) | IsaacSim (PhysX), soft hold | 77.5% (71.8-82.3) | 1 | 77.1% | 22.5% | 0.0% | 403 / 2136 N |
+
+- **With the rigid hold, the scripted controller does the same in both once pushes are set aside** (58.8% against 59.2%). PhysX has
+  three times as many pushes: the stem load at a push reaches 1.7x the force to detach at the median and 4.5x at most in PhysX, and
+  1.1x and 2.0x in MuJoCo.
+- **The rigid hold causes the extra pushes.** With the soft hold, PhysX has 0, 4 and 1 pushes (scripted, Helios-trained,
+  IsaacSim-trained) against 6, 2 and 3 in MuJoCo and 18, 5 and 7 with the rigid hold. The stem load at a push is at most 1.03-1.14x
+  the force to detach, against 1.01-2.0x in MuJoCo and 2.7-4.9x with the rigid hold. The scripted runs draw the same fruit, force to detach and start position for every episode with either hold, so they can be
+  compared episode by episode: 16 of the 18 pushes became pulls and 2 became protective stops, and all else is nearly unchanged (138
+  pulls and 74 stops in both, 9 episodes changed in other ways). Total success is the same (66.7% and 66.2%), so the scripted
+  controller now succeeds by pulling 7 points more often in PhysX than in MuJoCo (66.2% against 58.8%), within the intervals.
+- **The soft hold does not make PhysX match MuJoCo better on success.** The Helios-trained policy succeeds 81.7% in PhysX with the soft
+  hold against 75.0% with the rigid one and 79.2% in MuJoCo, with fewer protective stops (12.9% against 21.2% and 17.5%). The
+  IsaacSim-trained policy, trained with the rigid hold, succeeds 77.5% with the soft one against 75.4%. These runs are not paired
+  (the policies followed the scripted controller in one process, so they drew different episodes), and every difference is within the
+  intervals.
+- **The soft hold is not MuJoCo's weld.** It has the weld's time constant and damping, but MuJoCo's weld also passes 90% of a load to
+  the stem at once (the `(1 - d) a0` term of its constraint dynamics), where a spring builds force over its time constant, so the
+  springs should be the more forgiving of the two; with so few pushes the counts cannot confirm it. Peak contacts are unchanged: those
+  are the arm against wood.
 - **A policy trained in Helios transfers to PhysX** with a drop of 4 points (5 by pulling), within the intervals at this sample size.
   It behaves the same way in both: it pulls mostly downward (mean direction -0.29, -0.01/-0.03, -0.86 in both) and detaches the fruit at
   0.94x the grip force needed in both.
@@ -278,4 +304,4 @@ evaluation with it off; the physics is the same either way. Evaluating 240 episo
 
 ### Not done yet
 
-- More training seeds, and a soft fruit joint in PhysX to match MuJoCo's weld, which would show how much of the push difference is that.
+- More training seeds, and training in IsaacSim with the soft fruit hold.
