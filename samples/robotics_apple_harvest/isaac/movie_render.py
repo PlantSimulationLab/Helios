@@ -1,7 +1,8 @@
 """A side-by-side movie of episodes recorded by movie_record.py in Helios (MuJoCo) and IsaacSim (PhysX).
 
 Both sides are drawn the same way, by the Helios visualizer, from each simulator's recorded poses: the tree with its real geometry, and the arm
-as its collision shapes. Leaves are drawn for context; neither simulator simulates them (they ride rigidly on their wood, as in training).
+as its collision shapes. Leaves are drawn for context; neither simulator simulates them (they ride rigidly on their wood, as in training). An inset
+in each panel shows what the wrist camera of harvest_env_enable_camera() would see. The policies shown do not use it: they are given exact positions.
 
 From the sample's build directory, with IsaacSim's Python (for numpy, Pillow and imageio-ffmpeg):
     C:/isaacsim/python.bat ../isaac/movie_render.py --helios helios_301.npz --isaac isaac_301.npz --output harvester.mp4 --still harvester.png
@@ -23,6 +24,7 @@ sys.path.insert(0, os.path.dirname(HERE))
 from movie_record import as_floats, helios_library, helios_link_names
 
 FPS = 25  # one frame per control step: real time
+INSET_SCALE = 0.30  # the wrist camera's inset, as a fraction of the panel
 
 # Camera, relative to the fruit being picked: beside the robot, a little above the fruit, looking across the arm at the tree
 EYE_OFFSET = np.array([-1.1, -2.3, 0.45])
@@ -140,6 +142,18 @@ def label_panel(image, title, subtitle, episode_number, frame, episode, ended):
     return image
 
 
+def add_inset(picture, wrist):
+    """The wrist camera's view in the upper right, below the title bar, labelled: the action is lower down."""
+    width, height = picture.size
+    inset = wrist.resize((int(width * INSET_SCALE), int(height * INSET_SCALE)), Image.LANCZOS)
+    x = width - inset.width - 12
+    y = 78 + 12 + 27
+    draw = ImageDraw.Draw(picture, "RGBA")
+    draw.rectangle((x - 3, y - 27, x + inset.width + 2, y + inset.height + 2), fill=(20, 24, 32, 220))
+    draw.text((x + 4, y - 24), "Wrist camera (not used)", font=font(16, True), fill=(255, 255, 255))
+    picture.paste(inset, (x, y))
+
+
 def card(size, lines):
     image = Image.new("RGB", size, (22, 26, 34))
     draw = ImageDraw.Draw(image)
@@ -188,28 +202,35 @@ def main():
     image = np.zeros((panel[1], panel[0], 3), np.uint8)
 
     def render(poses, joints, target):
+        """The view from outside, and the wrist camera's view of the same pose."""
         eye = (target + EYE_OFFSET).astype(np.float32)
         look = (target + LOOK_OFFSET).astype(np.float32)
         joints = np.ascontiguousarray(joints, np.float32)
-        if not lib.harvest_env_render_movie_frame(env, 0, as_floats(np.ascontiguousarray(poses)), as_floats(joints), as_floats(eye), as_floats(look), image.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))):
+        poses = np.ascontiguousarray(poses)
+        pixels = image.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
+        if not lib.harvest_env_render_movie_frame(env, 0, as_floats(poses), as_floats(joints), as_floats(eye), as_floats(look), pixels):
             raise RuntimeError("harvest_env_render_movie_frame failed")
-        return Image.fromarray(image.copy())
+        outside = Image.fromarray(image.copy())
+        if not lib.harvest_env_render_wrist_frame(env, 0, as_floats(poses), as_floats(joints), pixels):
+            raise RuntimeError("harvest_env_render_wrist_frame failed")
+        return outside, Image.fromarray(image.copy())
 
     policy = helios_meta["policy"]
     trained_in = "IsaacSim" if "isaac" in policy else "Helios"
-    subtitle = f"Tree {tree}, policy trained in {trained_in}"
+    subtitle = f"Tree {tree}, policy trained in {trained_in}  ·  drawn by Helios"
 
     def side(episodes, convert, title, k, frame):
         episode = episodes[k]
         last = len(episode["poses"]) - 1
         f = min(frame, last)
-        picture = render(convert(episode["poses"][f]), episode["joints"][f], episode["target"].astype(np.float64))
+        picture, wrist = render(convert(episode["poses"][f]), episode["joints"][f], episode["target"].astype(np.float64))
+        add_inset(picture, wrist)
         return label_panel(picture, title, subtitle, k + 1, frame, episode, frame >= last)
 
     def compose(k, frame):
         canvas = Image.new("RGB", (args.width, args.height))
-        canvas.paste(side(helios_episodes, to_helios, "Helios  (MuJoCo)", k, frame), (0, 0))
-        canvas.paste(side(isaac_episodes, to_isaac, "Isaac Sim  (PhysX)", k, frame), (panel[0], 0))
+        canvas.paste(side(helios_episodes, to_helios, "MuJoCo  (Helios)", k, frame), (0, 0))
+        canvas.paste(side(isaac_episodes, to_isaac, "PhysX  (Isaac Sim)", k, frame), (panel[0], 0))
         ImageDraw.Draw(canvas).rectangle((panel[0] - 2, 0, panel[0] + 1, args.height), fill=(22, 26, 34))
         return canvas
 
@@ -237,7 +258,7 @@ def main():
             frames += 1
 
     size = (args.width, args.height)
-    emit(card(size, [("Apple harvesting robot, two physics engines", 46, True), (f"The same tree and the same policy (trained in {trained_in}), simulated in Helios (MuJoCo) and Isaac Sim (PhysX)", 24, False), ("Episodes are not paired: each simulator draws its own fruit, force to detach and start position", 22, False), ("Both sides drawn by the Helios visualizer from each simulator's recorded poses  ·  real time", 20, False), ("Leaves are drawn for context; neither simulator simulates them", 20, False)]), int(4.0 * FPS))
+    emit(card(size, [("Apple harvesting robot, two physics engines", 46, True), (f"The same tree and the same policy (trained in {trained_in}), simulated in Helios (MuJoCo) and Isaac Sim (PhysX)", 24, False), ("Episodes are not paired: each simulator draws its own fruit, force to detach and start position", 22, False), ("Both sides drawn by the Helios visualizer from each simulator's recorded poses  ·  real time", 20, False), ("Leaves are drawn for context; neither simulator simulates them", 20, False), ("The policy is given exact positions of the fruit and wood, not images; the inset shows what a wrist camera would see", 20, False)]), int(4.0 * FPS))
     for k in range(pairs):
         length = max(len(helios_episodes[k]["poses"]), len(isaac_episodes[k]["poses"]))
         for frame in range(length + int(args.hold * FPS)):

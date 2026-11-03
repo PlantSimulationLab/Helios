@@ -325,12 +325,21 @@ namespace {
     }
 
     // A camera on the wrist, behind and above the cup, looking along the tool past the cup
-    void pointCamera(Slot &slot) {
-        Robot &robot = *slot.tree->robot;
-        const vec3 cup = robot.getToolPosition(slot.instance);
-        const vec3 axis = robot.getToolAxis(slot.instance);
-        slot.tree->camera->setCameraPosition(cup - 0.3f * axis + make_vec3(0, 0, 0.08f), cup + 0.3f * axis);
+    void wristCameraPose(const Robot &robot, uint instance, vec3 &eye, vec3 &look_at) {
+        const vec3 cup = robot.getToolPosition(instance);
+        const vec3 axis = robot.getToolAxis(instance);
+        eye = cup - 0.3f * axis + make_vec3(0, 0, 0.08f);
+        look_at = cup + 0.3f * axis;
     }
+
+    void pointCamera(Slot &slot) {
+        vec3 eye, look_at;
+        wristCameraPose(*slot.tree->robot, slot.instance, eye, look_at);
+        slot.tree->camera->setCameraPosition(eye, look_at);
+    }
+
+    const float wrist_camera_field_of_view = 70.f;
+    const float movie_camera_field_of_view = 40.f;
 
     // The part of rendering that needs no OpenGL, so that trees can do it in parallel
     void prepareSlotFrame(Slot &slot) {
@@ -369,8 +378,9 @@ namespace {
 
     // Show a simulation in a given pose, which need not be one this simulation reached: it may come from another simulator. Every link of the plant takes
     // the given world pose, or, where that is NaN, follows its parent as it does at rest. The robot takes the given joint positions. This leaves the
-    // simulation in the pose shown, with no velocity, so an environment used for this should only be used for showing.
-    void renderMovieFrame(Slot &slot, const float *link_poses, const float *robot_joints, const vec3 &eye, const vec3 &look_at, unsigned char *image) {
+    // simulation in the pose shown, with no velocity, so an environment used for this should only be used for showing. With wrist_view, eye and look_at
+    // are ignored and the camera is where the wrist camera would be (pointCamera()), with its field of view.
+    void renderMovieFrame(Slot &slot, const float *link_poses, const float *robot_joints, const vec3 &eye, const vec3 &look_at, bool wrist_view, unsigned char *image) {
         Tree &tree = *slot.tree;
         if (!tree.movie_camera) {
             helios_runtime_error("ERROR (harvest_env_render_movie_frame): Call harvest_env_enable_movie_camera() first.");
@@ -417,7 +427,15 @@ namespace {
         tree.engine.updateContextGeometry(slot.instance);
         tree.movie_camera->prepareContextGeometry();
         tree.context.markGeometryClean();
-        tree.movie_camera->setCameraPosition(eye, look_at);
+        if (wrist_view) {
+            vec3 wrist_eye, wrist_look_at;
+            wristCameraPose(*tree.robot, slot.instance, wrist_eye, wrist_look_at);
+            tree.movie_camera->setCameraFieldOfView(wrist_camera_field_of_view);
+            tree.movie_camera->setCameraPosition(wrist_eye, wrist_look_at);
+        } else {
+            tree.movie_camera->setCameraFieldOfView(movie_camera_field_of_view);
+            tree.movie_camera->setCameraPosition(eye, look_at);
+        }
         tree.movie_camera->plotUpdate(true);
         std::vector<uint> pixels;
         uint width = 0;
@@ -881,7 +899,7 @@ int harvest_env_enable_camera(void *env, int width, int height) {
             tree->camera->setBackgroundColor(make_RGBcolor(0.6f, 0.75f, 0.95f));
             tree->camera->setLightingModel(Visualizer::LIGHTING_PHONG);
             tree->camera->setLightDirection(make_vec3(0.3f, -0.5f, 0.8f));
-            tree->camera->setCameraFieldOfView(70.f);
+            tree->camera->setCameraFieldOfView(wrist_camera_field_of_view);
             tree->camera->hideNavigationGizmo(); // the gizmo is rebuilt whenever the camera moves, which is every frame on a wrist
             tree->camera->buildContextGeometry(&tree->context);
             tree->engine.setContextUpdateTolerance(context_update_tolerance);
@@ -1030,7 +1048,7 @@ int harvest_env_enable_movie_camera(void *env, int width, int height) {
             tree->movie_camera->setBackgroundColor(make_RGBcolor(0.72f, 0.83f, 0.95f));
             tree->movie_camera->setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
             tree->movie_camera->setLightDirection(make_vec3(-0.35f, -0.45f, 0.82f));
-            tree->movie_camera->setCameraFieldOfView(40.f);
+            tree->movie_camera->setCameraFieldOfView(movie_camera_field_of_view);
             tree->movie_camera->hideNavigationGizmo();
             tree->movie_camera->buildContextGeometry(&tree->context);
             tree->engine.setContextUpdateTolerance(1e-5f);
@@ -1044,7 +1062,17 @@ int harvest_env_enable_movie_camera(void *env, int width, int height) {
 
 int harvest_env_render_movie_frame(void *env, int index, const float *link_poses, const float *robot_joints, const float *eye, const float *look_at, unsigned char *image) {
     try {
-        renderMovieFrame(static_cast<Environment *>(env)->slots.at(index), link_poses, robot_joints, make_vec3(eye[0], eye[1], eye[2]), make_vec3(look_at[0], look_at[1], look_at[2]), image);
+        renderMovieFrame(static_cast<Environment *>(env)->slots.at(index), link_poses, robot_joints, make_vec3(eye[0], eye[1], eye[2]), make_vec3(look_at[0], look_at[1], look_at[2]), false, image);
+        return 1;
+    } catch (const std::exception &error) {
+        std::cerr << error.what() << std::endl;
+        return 0;
+    }
+}
+
+int harvest_env_render_wrist_frame(void *env, int index, const float *link_poses, const float *robot_joints, unsigned char *image) {
+    try {
+        renderMovieFrame(static_cast<Environment *>(env)->slots.at(index), link_poses, robot_joints, make_vec3(0, 0, 0), make_vec3(0, 0, 0), true, image);
         return 1;
     } catch (const std::exception &error) {
         std::cerr << error.what() << std::endl;

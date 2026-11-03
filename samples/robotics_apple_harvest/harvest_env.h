@@ -101,6 +101,10 @@ int harvest_env_enable_movie_camera(void *env, int width, int height);
 //! This leaves the simulation in the pose shown, so an environment used for this should only be used for showing. Returns 0 and prints the reason on failure.
 int harvest_env_render_movie_frame(void *env, int index, const float *link_poses, const float *robot_joints, const float *eye, const float *look_at, unsigned char *image);
 
+//! As harvest_env_render_movie_frame(), seen by the wrist camera of harvest_env_enable_camera() (placed and with the field of view it has), with the
+//! movie camera's image size. Returns 0 and prints the reason on failure.
+int harvest_env_render_wrist_frame(void *env, int index, const float *link_poses, const float *robot_joints, unsigned char *image);
+
 //! Get the record of a simulation's last finished episode
 void harvest_env_last_episode(const void *env, int index, HarvestEpisodeRecord *record);
 

@@ -43,6 +43,7 @@ def helios_library():
     lib.harvest_env_target_fruit.argtypes = [ctypes.c_void_p, ctypes.c_int, floats]
     lib.harvest_env_enable_movie_camera.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
     lib.harvest_env_render_movie_frame.argtypes = [ctypes.c_void_p, ctypes.c_int, floats, floats, floats, floats, ctypes.POINTER(ctypes.c_ubyte)]
+    lib.harvest_env_render_wrist_frame.argtypes = [ctypes.c_void_p, ctypes.c_int, floats, floats, ctypes.POINTER(ctypes.c_ubyte)]
     return lib
 
 
