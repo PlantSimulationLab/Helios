@@ -147,7 +147,15 @@ namespace {
         std::unique_ptr<Visualizer> camera;
         std::unordered_map<uint, uint> organ_of_primitive; // for measuring what the camera sees: which kind of plant organ each primitive belongs to, or which fruit
 
-        Tree(int seed, int instance_count, bool leaves) : plantarchitecture(&context), engine(&context) {
+        // For showing a simulation from outside (movies): the links of the plant, parents first, with the MuJoCo body of each (-1 if it has none) and its
+        // rest pose (x, y, z, qw, qx, qy, qz), which is also the rest pose of its body
+        std::vector<std::string> link_names;
+        std::vector<int> link_parents;
+        std::vector<int> link_bodies;
+        std::vector<std::array<mjtNum, 7>> link_rest_poses;
+        std::unique_ptr<Visualizer> movie_camera;
+
+        Tree(int seed, int instance_count, bool leaves, bool show_arm = false) : plantarchitecture(&context), engine(&context) {
             context.seedRandomGenerator(seed);
             plantarchitecture.disableMessages();
             engine.disableMessages();
@@ -199,6 +207,21 @@ namespace {
             const vec3 wrist = robot_base + make_vec3(0.15f + 0.65f + 0.6f, 0, 0.75f);
             engine.bindObjectToBody(context.addConeObject(16, wrist, wrist + make_vec3(0.28f, 0, 0), 0.03f, 0.018f, make_RGBcolor(0.9f, 0.4f, 0.08f)), "robot/tool");
             engine.bindObjectToBody(context.addSphereObject(16, wrist + make_vec3(0.3f, 0, 0), 0.02f, make_RGBcolor(0.15f, 0.15f, 0.15f)), "robot/tool");
+            if (show_arm) {
+                // The rest of the arm, as the collision shapes of harvest_arm.urdf in its zero pose, for showing the robot from outside. The wrist camera
+                // does not need it, and the observations do not depend on it.
+                const RGBcolor arm_color = make_RGBcolor(0.95f, 0.6f, 0.12f);
+                const RGBcolor joint_color = make_RGBcolor(0.25f, 0.25f, 0.28f);
+                const vec3 shoulder = robot_base + make_vec3(0.15f, 0, 0.75f);
+                const vec3 elbow = shoulder + make_vec3(0.65f, 0, 0);
+                engine.bindObjectToBody(context.addBoxObject(robot_base + make_vec3(0, 0, 0.22f), make_vec3(0.55f, 0.8f, 0.2f), make_int3(1, 1, 1), joint_color), "robot/platform");
+                engine.bindObjectToBody(context.addConeObject(24, robot_base + make_vec3(0.15f, 0, 0.25f), shoulder, 0.075f, 0.075f, arm_color), "robot/turret");
+                engine.bindObjectToBody(context.addSphereObject(16, shoulder, 0.07f, joint_color), "robot/upper_arm");
+                engine.bindObjectToBody(context.addConeObject(24, shoulder, elbow, 0.05f, 0.05f, arm_color), "robot/upper_arm");
+                engine.bindObjectToBody(context.addSphereObject(16, elbow, 0.055f, joint_color), "robot/forearm");
+                engine.bindObjectToBody(context.addConeObject(24, elbow, wrist, 0.038f, 0.038f, arm_color), "robot/forearm");
+                engine.bindObjectToBody(context.addSphereObject(16, wrist, 0.042f, joint_color), "robot/wrist_link");
+            }
             context.addPatch(make_vec3(0, 0, 0), make_vec2(20.f, 20.f), make_SphericalCoord(0, 0), make_RGBcolor(0.42f, 0.33f, 0.24f));
 
             PhysicsEngineParameters parameters;
@@ -213,6 +236,14 @@ namespace {
 
             const mjModel *model = engine.getMuJoCoModel();
             tool_body_ID = mj_name2id(model, mjOBJ_BODY, "robot/tool");
+
+            for (const PlantArticulationLink &link: articulation.links) {
+                link_names.push_back(link.name);
+                link_parents.push_back(link.parent_index);
+                link_bodies.push_back(mj_name2id(model, mjOBJ_BODY, ("p" + std::to_string(plantID) + "_" + link.name).c_str()));
+                link_rest_poses.push_back({link.position.x, link.position.y, link.position.z, link.qw, link.qx, link.qy, link.qz});
+                mju_normalize4(link_rest_poses.back().data() + 3);
+            }
 
             // Let the fruit and flexible wood settle, and start every episode from there
             robot->setJointPositions(tucked_pose, 0);
@@ -261,6 +292,9 @@ namespace {
         vec3 pull_direction;
         HarvestEpisodeRecord current{};
         HarvestEpisodeRecord last{};
+        // How the simulation looked when its last episode ended, for showing it (see captureDisplayState())
+        std::vector<float> last_link_poses;
+        std::vector<float> last_robot_joints;
     };
 
     vec3 toVec3(const mjtNum *p) {
@@ -311,6 +345,92 @@ namespace {
     void renderSlot(Slot &slot) {
         prepareSlotFrame(slot);
         slot.tree->camera->plotUpdate(true);
+    }
+
+    // The world pose (x, y, z, qw, qx, qy, qz) of every link of the plant, NaN for a link with no body, and the robot's joint positions (m, degrees)
+    void captureDisplayState(const Slot &slot, std::vector<float> &link_poses, std::vector<float> &robot_joints) {
+        const Tree &tree = *slot.tree;
+        const mjData *data = tree.engine.getMuJoCoData(slot.instance);
+        link_poses.assign(7 * tree.link_names.size(), std::numeric_limits<float>::quiet_NaN());
+        for (size_t i = 0; i < tree.link_names.size(); i++) {
+            const int body = tree.link_bodies[i];
+            if (body < 0) {
+                continue;
+            }
+            for (int k = 0; k < 3; k++) {
+                link_poses[7 * i + k] = float(data->xpos[3 * body + k]);
+            }
+            for (int k = 0; k < 4; k++) {
+                link_poses[7 * i + 3 + k] = float(data->xquat[4 * body + k]);
+            }
+        }
+        robot_joints = tree.robot->getJointPositions(slot.instance);
+    }
+
+    // Show a simulation in a given pose, which need not be one this simulation reached: it may come from another simulator. Every link of the plant takes
+    // the given world pose, or, where that is NaN, follows its parent as it does at rest. The robot takes the given joint positions. This leaves the
+    // simulation in the pose shown, with no velocity, so an environment used for this should only be used for showing.
+    void renderMovieFrame(Slot &slot, const float *link_poses, const float *robot_joints, const vec3 &eye, const vec3 &look_at, unsigned char *image) {
+        Tree &tree = *slot.tree;
+        if (!tree.movie_camera) {
+            helios_runtime_error("ERROR (harvest_env_render_movie_frame): Call harvest_env_enable_movie_camera() first.");
+        }
+        mjData *data = tree.engine.getMuJoCoData(slot.instance);
+        tree.robot->setJointPositions(std::vector<float>(robot_joints, robot_joints + tree.robot->getJointPositions(slot.instance).size()), slot.instance);
+
+        const size_t link_count = tree.link_names.size();
+        std::vector<std::array<mjtNum, 7>> world(link_count);
+        for (size_t i = 0; i < link_count; i++) {
+            const int parent = tree.link_parents[i];
+            const float *given = link_poses + 7 * i;
+            if (std::isfinite(given[0])) {
+                for (int k = 0; k < 7; k++) {
+                    world[i][k] = given[k];
+                }
+                mju_normalize4(world[i].data() + 3);
+            } else if (parent >= 0) {
+                if (size_t(parent) >= i) {
+                    helios_runtime_error("ERROR (harvest_env_render_movie_frame): Link " + tree.link_names[i] + " is listed before its parent.");
+                }
+                // Carried by the parent: pose = parent * parent_rest^-1 * rest
+                const std::array<mjtNum, 7> &rest = tree.link_rest_poses[i];
+                const std::array<mjtNum, 7> &parent_rest = tree.link_rest_poses[parent];
+                mjtNum parent_rest_conjugate[4], relative_quat[4], offset[3], relative_position[3], moved[3];
+                mju_negQuat(parent_rest_conjugate, parent_rest.data() + 3);
+                mju_mulQuat(relative_quat, parent_rest_conjugate, rest.data() + 3);
+                mju_sub3(offset, rest.data(), parent_rest.data());
+                mju_rotVecQuat(relative_position, offset, parent_rest_conjugate);
+                mju_rotVecQuat(moved, relative_position, world[parent].data() + 3);
+                mju_add3(world[i].data(), world[parent].data(), moved);
+                mju_mulQuat(world[i].data() + 3, world[parent].data() + 3, relative_quat);
+            } else {
+                world[i] = tree.link_rest_poses[i];
+            }
+            const int body = tree.link_bodies[i];
+            if (body >= 0) {
+                mju_copy3(data->xpos + 3 * body, world[i].data());
+                mju_copy4(data->xquat + 4 * body, world[i].data() + 3);
+                mju_quat2Mat(data->xmat + 9 * body, world[i].data() + 3);
+            }
+        }
+
+        tree.engine.updateContextGeometry(slot.instance);
+        tree.movie_camera->prepareContextGeometry();
+        tree.context.markGeometryClean();
+        tree.movie_camera->setCameraPosition(eye, look_at);
+        tree.movie_camera->plotUpdate(true);
+        std::vector<uint> pixels;
+        uint width = 0;
+        uint height = 0;
+        tree.movie_camera->getWindowPixelsRGB(pixels, width, height);
+        // OpenGL gives the bottom row first
+        for (uint row = 0; row < height; row++) {
+            const uint *source = pixels.data() + size_t(height - 1 - row) * size_t(width) * 3;
+            unsigned char *destination = image + size_t(row) * size_t(width) * 3;
+            for (uint k = 0; k < width * 3; k++) {
+                destination[k] = static_cast<unsigned char>(source[k]);
+            }
+        }
     }
 
     void writeObservation(const Slot &slot, float *observation) {
@@ -525,6 +645,7 @@ namespace {
 
         if (outcome != HARVEST_RUNNING) {
             slot.last = slot.current;
+            captureDisplayState(slot, slot.last_link_poses, slot.last_robot_joints);
             writeObservation(slot, terminal_observation);
             resetSlot(slot);
         }
@@ -578,11 +699,15 @@ namespace {
 extern "C" {
 
 void *harvest_env_create(const int *tree_seeds, int tree_count, int instances_per_tree, int thread_count, int seed, int leaves) {
+    return harvest_env_create_for_movie(tree_seeds, tree_count, instances_per_tree, thread_count, seed, leaves, 0);
+}
+
+void *harvest_env_create_for_movie(const int *tree_seeds, int tree_count, int instances_per_tree, int thread_count, int seed, int leaves, int show_arm) {
     try {
         auto environment = std::make_unique<Environment>();
         environment->thread_count = std::max(1, thread_count);
         for (int t = 0; t < tree_count; t++) {
-            environment->trees.push_back(std::make_unique<Tree>(tree_seeds[t], instances_per_tree, leaves != 0));
+            environment->trees.push_back(std::make_unique<Tree>(tree_seeds[t], instances_per_tree, leaves != 0, show_arm != 0));
             for (int i = 0; i < instances_per_tree; i++) {
                 Slot slot;
                 slot.tree = environment->trees.back().get();
@@ -843,6 +968,88 @@ void harvest_env_measure_camera_view(void *env, int index, HarvestCameraView *vi
     view->leaves /= total;
     view->near_leaves /= total;
     view->wood /= total;
+}
+
+int harvest_env_link_count(const void *env, int index) {
+    return static_cast<int>(static_cast<const Environment *>(env)->slots.at(index).tree->link_names.size());
+}
+
+const char *harvest_env_link_name(const void *env, int index, int link) {
+    return static_cast<const Environment *>(env)->slots.at(index).tree->link_names.at(link).c_str();
+}
+
+void harvest_env_rest_link_poses(const void *env, int index, float *link_poses) {
+    const Tree &tree = *static_cast<const Environment *>(env)->slots.at(index).tree;
+    for (size_t i = 0; i < tree.link_rest_poses.size(); i++) {
+        for (int k = 0; k < 7; k++) {
+            link_poses[7 * i + k] = float(tree.link_rest_poses[i][k]);
+        }
+    }
+}
+
+int harvest_env_display_state(const void *env, int index, int last_episode, float *link_poses, float *robot_joints) {
+    try {
+        const Slot &slot = static_cast<const Environment *>(env)->slots.at(index);
+        std::vector<float> poses;
+        std::vector<float> joints;
+        if (last_episode) {
+            if (slot.last_link_poses.empty()) {
+                helios_runtime_error("ERROR (harvest_env_display_state): Simulation " + std::to_string(index) + " has not finished an episode yet.");
+            }
+            poses = slot.last_link_poses;
+            joints = slot.last_robot_joints;
+        } else {
+            captureDisplayState(slot, poses, joints);
+        }
+        std::copy(poses.begin(), poses.end(), link_poses);
+        std::copy(joints.begin(), joints.end(), robot_joints);
+        return 1;
+    } catch (const std::exception &error) {
+        std::cerr << error.what() << std::endl;
+        return 0;
+    }
+}
+
+void harvest_env_target_fruit(const void *env, int index, float *position) {
+    const Slot &slot = static_cast<const Environment *>(env)->slots.at(index);
+    position[0] = slot.target->settled_position.x;
+    position[1] = slot.target->settled_position.y;
+    position[2] = slot.target->settled_position.z;
+}
+
+int harvest_env_enable_movie_camera(void *env, int width, int height) {
+    Environment &environment = *static_cast<Environment *>(env);
+    try {
+        for (const std::unique_ptr<Tree> &tree: environment.trees) {
+            if (tree->camera) {
+                helios_runtime_error("ERROR (harvest_env_enable_movie_camera): The wrist camera is enabled. Both cameras clear the Context's geometry flags after each frame, so each would miss motion the other drew.");
+            }
+            tree->movie_camera = std::make_unique<Visualizer>(static_cast<uint>(width), static_cast<uint>(height), 8, false, true);
+            tree->movie_camera->disableMessages();
+            tree->movie_camera->hideWatermark();
+            tree->movie_camera->setBackgroundColor(make_RGBcolor(0.72f, 0.83f, 0.95f));
+            tree->movie_camera->setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+            tree->movie_camera->setLightDirection(make_vec3(-0.35f, -0.45f, 0.82f));
+            tree->movie_camera->setCameraFieldOfView(40.f);
+            tree->movie_camera->hideNavigationGizmo();
+            tree->movie_camera->buildContextGeometry(&tree->context);
+            tree->engine.setContextUpdateTolerance(1e-5f);
+        }
+        return 1;
+    } catch (const std::exception &error) {
+        std::cerr << error.what() << std::endl;
+        return 0;
+    }
+}
+
+int harvest_env_render_movie_frame(void *env, int index, const float *link_poses, const float *robot_joints, const float *eye, const float *look_at, unsigned char *image) {
+    try {
+        renderMovieFrame(static_cast<Environment *>(env)->slots.at(index), link_poses, robot_joints, make_vec3(eye[0], eye[1], eye[2]), make_vec3(look_at[0], look_at[1], look_at[2]), image);
+        return 1;
+    } catch (const std::exception &error) {
+        std::cerr << error.what() << std::endl;
+        return 0;
+    }
 }
 
 void harvest_env_last_episode(const void *env, int index, HarvestEpisodeRecord *record) {
