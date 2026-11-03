@@ -16,6 +16,7 @@ parser.add_argument("--seed", type=int, default=1)
 parser.add_argument("--copies", type=int, default=4)
 parser.add_argument("--device", default="cuda:0")
 parser.add_argument("--steps", type=int, default=500)
+parser.add_argument("--no-writeback", action="store_true", help="do not write simulation results to USD or Fabric, which only rendering needs")
 parser.add_argument("--strip-tree-shapes", action="store_true", help="diagnosis only: remove every collision shape of the trees")
 parser.add_argument("--no-trees", action="store_true", help="diagnosis only: robots without trees")
 parser.add_argument("--no-tree-collisions", action="store_true", help="diagnosis only: switch off every collision shape of the trees")
@@ -91,6 +92,13 @@ for k in range(args.copies):
         UsdPhysics.DriveAPI(joint, kind).GetTargetPositionAttr().Set(position)
 
 SimulationManager.setup_simulation(dt=task["physics_timestep"], device=args.device)
+if args.no_writeback:
+    import carb
+
+    settings = carb.settings.get_settings()
+    for setting in ("/physics/updateToUsd", "/physics/updateVelocitiesToUsd", "/physics/updateParticlesToUsd", "/physics/updateForceSensorsToUsd", "/physics/fabricUpdateTransformations"):
+        settings.set_bool(setting, False)
+    SimulationManager.enable_fabric(False)
 timeline = omni.timeline.get_timeline_interface()
 timeline.play()
 timeline.commit()

@@ -182,6 +182,14 @@ class IsaacHarvestVecEnv(VecEnv):
         if SimulationManager.get_active_physics_engine() != "physx":
             SimulationManager.switch_physics_engine("physx")
         SimulationManager.setup_simulation(dt=self.task["physics_timestep"], device=self.device)
+        # Nothing here renders, and writing every body's pose to USD and Fabric after each step took most of the time: with 64 trees on
+        # the GPU, 224 ms per step with it and 27 ms without. The tensor API reads the state from PhysX directly.
+        import carb
+
+        settings = carb.settings.get_settings()
+        for setting in ("/physics/updateToUsd", "/physics/updateVelocitiesToUsd", "/physics/updateParticlesToUsd", "/physics/updateForceSensorsToUsd", "/physics/fabricUpdateTransformations"):
+            settings.set_bool(setting, False)
+        SimulationManager.enable_fabric(False)
         self.timeline = omni.timeline.get_timeline_interface()
         self.timeline.play()
         self.timeline.commit()

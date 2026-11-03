@@ -164,7 +164,8 @@ at each engine's coarsest step used here (1/30 s for both; MuJoCo goes coarser b
 PhysX on the CPU. The PhysX loop is driven from Python (one `set_kinematic_targets` and one `SimulationManager.step` per step), which
 costs little next to 54 ms.
 
-**The GPU figures are not representative of IsaacSim's GPU pipeline.** IsaacSim 6.1.0's GPU tensor API does not implement kinematic
+**The GPU figures are not representative of IsaacSim's GPU pipeline.** Part C found that most of each step was spent writing results
+to USD and Fabric for rendering; switching that off made the GPU 3-9x faster (see "Cost, and where PhysX's time went"). IsaacSim 6.1.0's GPU tensor API does not implement kinematic
 targets ("GPU Rigid Body View kinematic target setting not implemented"), so GPU dynamics were run with state readback on and the numpy
 tensor API, which synchronizes with the GPU every step. One tree is also the worst case for the GPU, which is built for many at once.
 
@@ -216,19 +217,46 @@ grip force: the cup pushed the fruit off just after gripping, rather than pullin
 - The policy was trained once (seed 0, 500,000 steps, 25 minutes in Helios on this machine: 77.5% on the 4 held-out trees, 87.5% on the
   training trees). One seed and one tree set: the plan shows that single runs vary by several points.
 
-### Cost
+### Cost, and where PhysX's time went
 
-PhysX takes 5-7 ms per tree per physics step on the CPU and about 3.7 ms on the GPU with 64 trees; most of it is the articulation's
-dynamics, not collision. MuJoCo takes about 1 ms for a whole environment step. In the harvest environment that gives:
+The first measurements made PhysX look 5-7x slower than MuJoCo per tree. Profiling with Tracy (`capture.exe` and `csvexport.exe` from
+`omni.kit.profiler.tracy`, run by hand because IsaacSim's `tools/profiling/tracy_capture.py` looks for Linux binary names) showed that
+most of it was not physics:
 
-| | Helios (MuJoCo, 12 threads) | IsaacSim (PhysX, GPU) |
+| Per physics step, 4 trees, CPU dynamics | ms |
+|---|---|
+| `PhysX simulate` and its worker tasks | 7.6 |
+| Writing every body's pose to USD and Fabric for rendering (`updateRenderTransforms`, `USDWrite`, USD notices, Fabric hierarchy) | about 20 |
+
+Nothing in these runs renders, and the tensor API reads the state from PhysX directly. With `/physics/updateToUsd`,
+`/physics/updateVelocitiesToUsd`, `/physics/fabricUpdateTransformations` off and Fabric disabled, on the GPU (the result is unchanged
+to 0.01 mm):
+
+| Trees on the GPU | Before, ms per step | After, ms per step | Tree-steps per second after |
+|---|---|---|---|
+| 4 | 30 | 20 | 198 |
+| 16 | 68 | 22 | 728 |
+| 64 | 224 | 27 | 2383 |
+| 128 | | 33 | 3869 |
+| 256 | | 59 | 4367 |
+
+On the CPU path the same settings changed nothing (28 ms for 4 trees), so the CPU figures above and in Part B still include the
+writeback. What remains on the GPU is a floor of about 20 ms per step, almost all inside `PhysX simulate` (one worker task waiting on
+the GPU), that hardly grows with the number of trees: latency, not work. I could not see inside it without Nsight Systems, which is
+not installed. Changing the articulation's position iterations (32, 16, 8, 4) changed neither the time nor the result on the GPU, so
+I cannot tell whether that override took effect there.
+
+For comparison, Helios's training ran 6,000-6,700 physics steps per second on 12 threads. PhysX on the GPU matches that only with
+a few hundred trees at once, and is far slower with the 16 simulations `train.py` uses. In the harvest environment, which is now
+bound by physics (state reads, inverse kinematics and resets take a few ms per control step):
+
+| | Helios (MuJoCo, 12 threads) | IsaacSim (PhysX, GPU, without writeback) |
 |---|---|---|
-| Building 24 simulations, including 20 s of settling | 2.2 min | 15-19 min |
-| 240 evaluation episodes | 1-2 min | 29-44 min |
-| Control steps per second | 130-240 | about 7.5 |
+| Building 24 simulations, including 20 s of settling | 2.2 min | 15-19 min with writeback (not re-measured) |
+| Control steps per second, 6 simulations | | 8.3-8.9 |
+| Control steps per second, 16 simulations (`train.py`) | about 330 while training | about 30, estimated from 22 ms per step |
 
-Training in IsaacSim with `train.py`'s settings (500,000 steps) would take about 15-18 hours at that rate, against 25 minutes in
-Helios.
+The evaluation results above were measured with writeback on; the physics is the same either way.
 
 ### Not done yet
 

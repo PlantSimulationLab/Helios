@@ -33,9 +33,10 @@ the body that carries it (exact for rigid bodies): the rigid wood into the base 
 That leaves about 105 links per tree. Candidate fruit stay separate links on locked joints, so their stem load can be read as the
 force in that joint. Fruit collide as MuJoCo's sphere, and every body gets the Helios mass and inertia.
 
-Even so, PhysX takes about 5-7 ms per tree per physics step on the CPU, and about 3.7 ms on the GPU with 64 trees, against about
-1 ms in MuJoCo for the whole environment step. About 80% of that is the articulation's dynamics, not collision: removing every collision
-shape of the tree saved 20%, and the solver's iteration count made no difference to the time.
+Most of PhysX's time at first went to writing every body's pose to USD and Fabric after each step, which only rendering needs. The
+environment switches that off: with 64 trees on the GPU a step went from 224 to 27 ms. What remains is a floor of about 20 ms per step
+inside PhysX's GPU solve that hardly grows with the number of trees, so the GPU pays off only with many simulations (`bench_tree.py
+--no-writeback`; see `doc/isaac_comparison_report.md`).
 
 ## Known differences from the Helios environment
 
