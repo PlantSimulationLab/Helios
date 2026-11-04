@@ -46,6 +46,15 @@ namespace {
         }
     }
 
+    //! Dry mass of a plant's root system (g DW): a fixed fraction of its wood under CARBON_SUBMODEL_TREE, or the mass of the carbon grown by allocation under CARBON_SUBMODEL_GRASS
+    float rootDryMass(const PlantInstance &plant_instance, float wood_mass_gDW) {
+        const CarbohydrateParameters &params = plant_instance.carb_parameters;
+        if (params.submodel == CARBON_SUBMODEL_GRASS) {
+            return plant_instance.root_structural_carbon_molC * C_molecular_wt / params.stem_structural_carbon_percentage;
+        }
+        return wood_mass_gDW / params.shoot_root_ratio;
+    }
+
     //! Move starch into sugar to cover a sugar deficit, as far as the starch allows.
     void hydrolyzeStarchToCoverSugar(float &sugar_molC, float &starch_molC) {
         if (sugar_molC < 0.f && starch_molC > 0.f) {
@@ -111,10 +120,12 @@ void PlantArchitecture::markShootConstructionCharged(Shoot &shoot) const {
         const auto &phytomer = shoot.phytomers.at(p);
         phytomer->internode_carbon_charged_molC = phytomer->calculateInternodeStructuralCarbon(p);
         phytomer->leaf_carbon_charged_molC = phytomer->calculatePhytomerConstructionCosts();
-        for (auto &petiole: phytomer->floral_buds) {
-            for (auto &fbud: petiole) {
-                fbud.fruit_carbon_fraction_charged = phytomer->calculateFruitDryMatterFraction(fbud);
-                fbud.fruit_potential_fraction = fbud.fruit_carbon_fraction_charged;
+        if (plant_instance.carb_parameters.submodel == CARBON_SUBMODEL_TREE) {
+            for (auto &petiole: phytomer->floral_buds) {
+                for (auto &fbud: petiole) {
+                    fbud.fruit_carbon_fraction_charged = phytomer->calculateFruitDryMatterFraction(fbud);
+                    fbud.fruit_potential_fraction = fbud.fruit_carbon_fraction_charged;
+                }
             }
         }
     }
@@ -140,15 +151,20 @@ void PlantArchitecture::initializePlantCarbohydratePool(uint plantID, float carb
     const CarbohydrateParameters &carbohydrate_params = plant_instance.carb_parameters;
 
     float wood_volume = 0.f;
+    float wood_structural_carbon = 0.f;
     for (const auto &shoot: plant_instance.shoot_tree) {
         initializeShootCarbohydratePool(plantID, shoot->ID, carbohydrate_concentration_molC_m3);
         wood_volume += shoot->calculateShootInternodeVolume();
+        for (const auto &phytomer: shoot->phytomers) {
+            wood_structural_carbon += phytomer->internode_carbon_charged_molC;
+        }
     }
 
-    // Roots are filled to the same fraction of their storage capacity as the wood.
+    // Roots are filled to the same fraction of their storage capacity as the wood, and start at the shoot:root ratio of the parameters.
     const float root_wood_equivalent_volume = wood_volume / carbohydrate_params.shoot_root_ratio;
     plant_instance.root_sugar_pool_molC = carbohydrate_concentration_molC_m3 * root_wood_equivalent_volume * carbohydrate_params.root_storage_ratio;
     plant_instance.root_starch_pool_molC = 0.f;
+    plant_instance.root_structural_carbon_molC = wood_structural_carbon / carbohydrate_params.shoot_root_ratio;
     plant_instance.carbon_budget = PlantCarbonBudget();
 }
 
@@ -301,7 +317,6 @@ void PlantArchitecture::subtractShootMaintenanceCarbon(uint plantID, float dt) {
     const CarbohydrateParameters &carbohydrate_params = plant_instance.carb_parameters;
     const float temperature_factor = plant_instance.respiration_temperature_factor;
 
-    float wood_structural_carbon = 0.f;
     float wood_maintenance_respiration_step = 0.f;
     for (const auto &shoot: plant_instance.shoot_tree) {
         if (shoot->isPruned()) {
@@ -322,7 +337,6 @@ void PlantArchitecture::subtractShootMaintenanceCarbon(uint plantID, float dt) {
                 rate_20C = carbohydrate_params.r_m_w_20;
             }
             respiration += phytomer->internode_carbon_charged_molC * rate_20C;
-            wood_structural_carbon += phytomer->internode_carbon_charged_molC;
         }
         respiration *= temperature_factor * dt;
 
@@ -335,7 +349,7 @@ void PlantArchitecture::subtractShootMaintenanceCarbon(uint plantID, float dt) {
         }
     }
 
-    const float root_structural_carbon = wood_structural_carbon / carbohydrate_params.shoot_root_ratio;
+    const float root_structural_carbon = plantRootStructuralCarbon(plantID);
     const float root_respiration = root_structural_carbon * carbohydrate_params.r_m_r_20 * temperature_factor * dt;
     plant_instance.root_sugar_pool_molC -= root_respiration;
     plant_instance.carbon_budget.root_maintenance_respiration += root_respiration;
@@ -348,6 +362,7 @@ void PlantArchitecture::subtractShootGrowthCarbon(uint plantID, float dt) {
     PlantCarbonBudget &budget = plant_instance.carbon_budget;
 
     double reserve_funded_spending = 0.0; // stem, leaf and root growth, with growth respiration, charged to the pools this sub-step (mol C)
+    float total_wood_growth = 0.f;
 
     for (const auto &shoot: plant_instance.shoot_tree) {
         if (shoot->isPruned()) {
@@ -374,16 +389,11 @@ void PlantArchitecture::subtractShootGrowthCarbon(uint plantID, float dt) {
         shoot->sugar_pool_molC -= wood_growth + leaf_growth + growth_respiration;
         shoot->season_growth_molC += wood_growth + leaf_growth + growth_respiration;
 
-        // Roots grow in proportion to the stem, and are paid for from the root system's own pool.
-        const float root_growth = wood_growth / carbohydrate_params.shoot_root_ratio;
-        const float root_growth_respiration = root_growth * carbohydrate_params.growth_respiration_fraction;
-        plant_instance.root_sugar_pool_molC -= root_growth + root_growth_respiration;
-
         budget.wood_growth += wood_growth;
         budget.leaf_growth += leaf_growth;
-        budget.root_growth += root_growth;
-        budget.growth_respiration += growth_respiration + root_growth_respiration;
-        reserve_funded_spending += wood_growth + leaf_growth + growth_respiration + root_growth + root_growth_respiration;
+        budget.growth_respiration += growth_respiration;
+        reserve_funded_spending += wood_growth + leaf_growth + growth_respiration;
+        total_wood_growth += wood_growth;
 
         if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
             context_ptr->setObjectData(shoot->internode_tube_objID, "daily_growth", wood_growth + leaf_growth);
@@ -391,13 +401,53 @@ void PlantArchitecture::subtractShootGrowthCarbon(uint plantID, float dt) {
         }
     }
 
+    // Root growth is the sub-model's rule: in a tree the roots keep pace with the wood; in a grass a stage-dependent share of the photosynthate goes below ground, high at emergence and
+    // falling as the reproductive sinks take over. Either way it is paid from the root system's own pool.
+    float root_growth = 0.f;
+    switch (carbohydrate_params.submodel) {
+        case CARBON_SUBMODEL_TREE:
+            root_growth = total_wood_growth / carbohydrate_params.shoot_root_ratio;
+            break;
+        case CARBON_SUBMODEL_GRASS: {
+            const CarbonGrassParameters &grass_params = carbohydrate_params.grass;
+            float allocation = grass_params.root_allocation_early + (grass_params.root_allocation_late - grass_params.root_allocation_early) * grassMainStemDevelopmentFraction(plantID);
+            for (const auto &shoot: plant_instance.shoot_tree) {
+                // Root growth stops once the main stem has flowered
+                if (!shoot->isPruned() && shoot->parent_shoot_ID < 0 && !shoot->phytomers.empty()) {
+                    for (const auto &petiole: shoot->phytomers.back()->floral_buds) {
+                        for (const auto &fbud: petiole) {
+                            if (fbud.isterminal && fbud.state == BUD_FRUITING && fbud.time_counter >= grass_params.anthesis_days) {
+                                allocation = 0.f;
+                            }
+                        }
+                    }
+                }
+            }
+            root_growth = allocation * std::max(0.f, plant_instance.photosynthesis_supply_rate_molC_day) * dt / (1.f + carbohydrate_params.growth_respiration_fraction);
+            plant_instance.root_structural_carbon_molC += root_growth;
+            break;
+        }
+    }
+    const float root_growth_respiration = root_growth * carbohydrate_params.growth_respiration_fraction;
+    plant_instance.root_sugar_pool_molC -= root_growth + root_growth_respiration;
+    budget.root_growth += root_growth;
+    budget.growth_respiration += root_growth_respiration;
+    reserve_funded_spending += root_growth + root_growth_respiration;
+
+    // The vegetative demand rate, averaged over the supply-averaging period, is the demand side of the grass sub-model's tiller supply/demand index
+    if (dt > 0.f) {
+        const float relaxation = 1.f - std::exp(-dt / carbohydrate_params.supply_averaging_days);
+        plant_instance.vegetative_demand_rate_molC_day += relaxation * (float(reserve_funded_spending) / dt - plant_instance.vegetative_demand_rate_molC_day);
+    }
+
     // The reproductive sink is the sub-model's: what it is, and whether it is built from reserves or from current photosynthate, differs between crops.
     switch (carbohydrate_params.submodel) {
         case CARBON_SUBMODEL_TREE:
             subtractFruitGrowthCarbon(plantID, dt, reserve_funded_spending);
             break;
-        default:
-            validateCarbonSubmodel(carbohydrate_params, "subtractShootGrowthCarbon");
+        case CARBON_SUBMODEL_GRASS:
+            subtractGrainGrowthCarbon(plantID, dt, reserve_funded_spending);
+            break;
     }
 }
 
@@ -425,7 +475,7 @@ float PlantArchitecture::plantStorageCapacityMass(uint plantID) const {
             wood_mass_gDW += shoot->calculateShootInternodeVolume() * carbohydrate_params.stem_density;
         }
     }
-    return wood_mass_gDW * (1.f + carbohydrate_params.root_storage_ratio / carbohydrate_params.shoot_root_ratio);
+    return wood_mass_gDW + rootDryMass(plant_instance, wood_mass_gDW) * carbohydrate_params.root_storage_ratio;
 }
 
 void PlantArchitecture::allocateSurplusCarbon(uint plantID, float dt, const PlantCarbonBudget &budget_before) {
@@ -472,7 +522,7 @@ void PlantArchitecture::allocateSurplusCarbon(uint plantID, float dt, const Plan
     // Photosynthate left after everything charged in this sub-step (a deficit is met from the pools as usual), and with the
     // girth growth added back, what radial growth and storage compete for
     auto spent = [](const PlantCarbonBudget &b) {
-        return b.wood_maintenance_respiration + b.root_maintenance_respiration + b.wood_growth + b.root_growth + b.leaf_growth + b.fruit_growth + b.flower_construction + b.growth_respiration;
+        return b.wood_maintenance_respiration + b.root_maintenance_respiration + b.wood_growth + b.root_growth + b.leaf_growth + b.fruit_growth + b.flower_construction + b.growth_respiration + b.panicle_growth + b.grain_growth;
     };
     const float remainder_molC = plant_instance.photosynthesis_supply_rate_molC_day * dt - (spent(budget) - spent(budget_before));
     const float available_molC = remainder_molC + girth_cost_molC;
@@ -568,7 +618,7 @@ void PlantArchitecture::checkCarbonPool_redistributeCarbon(uint plantID, float d
         compartments.push_back({&shoot->sugar_pool_molC, &shoot->starch_pool_molC, wood_mass, wood_mass});
         wood_mass_gDW += wood_mass;
     }
-    const float root_mass_gDW = wood_mass_gDW / carbohydrate_params.shoot_root_ratio;
+    const float root_mass_gDW = rootDryMass(plant_instance, wood_mass_gDW);
     if (root_mass_gDW > 0.f) {
         compartments.push_back({&plant_instance.root_sugar_pool_molC, &plant_instance.root_starch_pool_molC, root_mass_gDW * carbohydrate_params.root_storage_ratio, root_mass_gDW});
     }
@@ -754,10 +804,8 @@ void PlantArchitecture::checkCarbonPool_abortOrgans(uint plantID, float dt) {
                             continue;
                         }
 
-                        // Aborting a fruit saves the carbon it would still have needed to reach full size.
-                        if (fbud.state == BUD_FRUITING) {
-                            working_carb_pool += phytomer->calculateMatureFruitCarbon(fbud) * (1.f - fbud.fruit_carbon_fraction_charged) * (1.f + carbohydrate_params.fruit.growth_respiration_fraction);
-                        }
+                        // Aborting a fruit or panicle saves the carbon it would still have needed to reach its potential.
+                        working_carb_pool += remainingReproductiveCarbon(*phytomer, fbud);
                         phytomer->setFloralBudState(BUD_DEAD, fbud);
                         // Kill a floral bud to eliminate it as a future sink
 
@@ -846,6 +894,11 @@ bool Shoot::sampleVegetativeBudBreak_carb(uint node_index) {
         bud_break_probability *= vigour_factor;
     }
 
+    // In a grass, tiller bud outgrowth also follows the plant's carbon supply relative to its vegetative demand
+    if (carbohydrate_params.submodel == CARBON_SUBMODEL_GRASS) {
+        bud_break_probability *= plantarchitecture_ptr->grassTillerBudBreakFactor(plantID);
+    }
+
     bool bud_break = true;
     if (context_ptr->randu() > bud_break_probability) {
         bud_break = false;
@@ -872,9 +925,140 @@ void PlantArchitecture::validateCarbonSubmodel(const CarbohydrateParameters &car
                 helios_runtime_error(where + "CarbonWoodParameters::sapwood_functional_years must be positive when sapwood_area_per_leaf_area is set (got " + std::to_string(carb_parameters.wood.sapwood_functional_years) + ").");
             }
             return;
-        case CARBON_SUBMODEL_GRASS:
-            helios_runtime_error(where + "CARBON_SUBMODEL_GRASS is not yet implemented. Set CarbohydrateParameters::submodel to CARBON_SUBMODEL_TREE.");
+        case CARBON_SUBMODEL_GRASS: {
+            const CarbonGrassParameters &grass = carb_parameters.grass;
+            const std::string prefix = where + "CarbonGrassParameters::";
+            if (grass.stem_elongation_node < 1) {
+                helios_runtime_error(prefix + "stem_elongation_node must be at least 1 (got " + std::to_string(grass.stem_elongation_node) + ").");
+            }
+            if (!(grass.anthesis_days > 0.f) || !(grass.grain_fill_lag_days >= 0.f) || !(grass.grain_fill_days > 0.f)) {
+                helios_runtime_error(prefix + "anthesis_days and grain_fill_days must be positive and grain_fill_lag_days must not be negative (got " + std::to_string(grass.anthesis_days) + ", " +
+                                     std::to_string(grass.grain_fill_lag_days) + " and " + std::to_string(grass.grain_fill_days) + " days).");
+            }
+            if (!(grass.panicle_potential_carbon >= 0.f) || !(grass.panicle_carbon_percentage > 0.f) || !(grass.grains_per_gram_panicle >= 0.f) || !(grass.kernel_potential_carbon >= 0.f)) {
+                helios_runtime_error(prefix + "panicle_potential_carbon, grains_per_gram_panicle and kernel_potential_carbon must not be negative and panicle_carbon_percentage must be positive (got " +
+                                     std::to_string(grass.panicle_potential_carbon) + ", " + std::to_string(grass.grains_per_gram_panicle) + ", " + std::to_string(grass.kernel_potential_carbon) + " and " +
+                                     std::to_string(grass.panicle_carbon_percentage) + ").");
+            }
+            if (!(grass.culm_reserve_floor >= carb_parameters.carbohydrate_growth_threshold)) {
+                helios_runtime_error(prefix + "culm_reserve_floor must be at least CarbohydrateParameters::carbohydrate_growth_threshold, or grain filling would starve the culm (got " + std::to_string(grass.culm_reserve_floor) + " and " +
+                                     std::to_string(carb_parameters.carbohydrate_growth_threshold) + " g C / g DW).");
+            }
+            if (!(grass.panicle_growth_respiration_fraction >= 0.f) || !(grass.grain_growth_respiration_fraction >= 0.f)) {
+                helios_runtime_error(prefix + "panicle_growth_respiration_fraction and grain_growth_respiration_fraction must not be negative (got " + std::to_string(grass.panicle_growth_respiration_fraction) + " and " +
+                                     std::to_string(grass.grain_growth_respiration_fraction) + ").");
+            }
+            if (!(grass.tiller_supply_demand_min >= 0.f) || !(grass.tiller_supply_demand_max > grass.tiller_supply_demand_min)) {
+                helios_runtime_error(prefix + "tiller_supply_demand_min must not be negative and tiller_supply_demand_max must exceed it (got " + std::to_string(grass.tiller_supply_demand_min) + " and " +
+                                     std::to_string(grass.tiller_supply_demand_max) + ").");
+            }
+            if (!(grass.root_allocation_early >= 0.f && grass.root_allocation_early < 1.f) || !(grass.root_allocation_late >= 0.f && grass.root_allocation_late < 1.f)) {
+                helios_runtime_error(prefix + "root_allocation_early and root_allocation_late must be at least 0 and below 1 (got " + std::to_string(grass.root_allocation_early) + " and " +
+                                     std::to_string(grass.root_allocation_late) + ").");
+            }
+            return;
+        }
         default:
             helios_runtime_error(where + "CarbohydrateParameters::submodel has an unknown value (" + std::to_string(int(carb_parameters.submodel)) + ").");
+    }
+}
+
+CarbohydrateParameters CarbohydrateParameters::forSubmodel(CarbonSubmodel submodel) {
+    CarbohydrateParameters params;
+    params.submodel = submodel;
+    switch (submodel) {
+        case CARBON_SUBMODEL_TREE:
+            break;
+        case CARBON_SUBMODEL_GRASS:
+            // Grain sorghum. A culm is a pithy stem of low dry density that reaches its mature density within weeks of elongating; its leaves are thin; its tissues respire at herbaceous rates.
+            params.stem_density = 200000.f; // ~0.2 g/cm^3 stalk dry bulk density (pith and rind); to be calibrated against stalk dry mass per length
+            params.stem_structural_carbon_percentage = 0.42f;
+            params.maturity_age = 20.f;
+            params.initial_density_ratio = 0.3f;
+            params.shoot_root_ratio = 4.f;
+            params.leaf_carbon_percentage = 0.44f;
+            params.SLA = 0.02f; // sorghum leaf mass per area 40-55 g/m^2
+            params.leaf_mass_fraction_at_expansion = 1.f;
+            params.total_flower_cost = 0.f; // the panicle is the sink; it bears no separate flowers
+            // Herbaceous maintenance respiration (~0.012 g C per g C per day at 20 C for stems; roots somewhat lower). Every internode of an annual is younger than a year, so the current-year
+            // rate is the one in use; the older-wood rates are set equal so that nothing changes should a culm outlive a year.
+            params.r_m_w_current_20 = 0.012f;
+            params.r_m_w_branch_20 = 0.012f;
+            params.r_m_w_20 = 0.012f;
+            params.r_m_r_20 = 0.01f;
+            params.growth_respiration_fraction = 0.25f;
+            // Stem water-soluble carbohydrate reaches 30-50% of dry mass in cereal culms around anthesis (~0.15 g C / g DW), far above the 5% of tree wood, and accumulates within weeks
+            params.root_storage_ratio = 1.f;
+            params.storage_capacity = 0.15f;
+            params.storage_refill_rate = 0.1f;
+            break;
+    }
+    return params;
+}
+
+// -------------------- Shared helpers of the sub-models -------------------- //
+
+float PlantArchitecture::recordReproductiveSupply(uint plantID, float supply_molC, float demand_molC, float dt) {
+    PlantInstance &plant_instance = plant_instances.at(plantID);
+    const float averaging_days = plant_instance.carb_parameters.supply_averaging_days;
+    auto &history = plant_instance.reproductive_assimilate_history;
+    history.push_back({supply_molC, demand_molC, dt});
+    float history_days = 0.f;
+    for (const auto &entry: history) {
+        history_days += entry[2];
+    }
+    while (history.size() > 1 && history_days - history.front()[2] >= averaging_days) {
+        history_days -= history.front()[2];
+        history.erase(history.begin());
+    }
+    double supply_sum = 0.0;
+    double demand_sum = 0.0;
+    for (const auto &entry: history) {
+        supply_sum += entry[0];
+        demand_sum += entry[1];
+    }
+    plant_instance.reproductive_supply_ratio = demand_sum > 0.0 ? float(std::min(1.0, supply_sum / demand_sum)) : 1.f;
+    return plant_instance.reproductive_supply_ratio;
+}
+
+float PlantArchitecture::plantRootStructuralCarbon(uint plantID) const {
+    const PlantInstance &plant_instance = plant_instances.at(plantID);
+    switch (plant_instance.carb_parameters.submodel) {
+        case CARBON_SUBMODEL_GRASS:
+            return plant_instance.root_structural_carbon_molC;
+        case CARBON_SUBMODEL_TREE:
+        default: {
+            float wood_structural_carbon = 0.f;
+            for (const auto &shoot: plant_instance.shoot_tree) {
+                if (shoot->isPruned()) {
+                    continue;
+                }
+                for (const auto &phytomer: shoot->phytomers) {
+                    wood_structural_carbon += phytomer->internode_carbon_charged_molC;
+                }
+            }
+            return wood_structural_carbon / plant_instance.carb_parameters.shoot_root_ratio;
+        }
+    }
+}
+
+float PlantArchitecture::remainingReproductiveCarbon(const Phytomer &phytomer, const FloralBud &fbud) const {
+    if (fbud.state != BUD_FRUITING) {
+        return 0.f;
+    }
+    const CarbohydrateParameters &carbohydrate_params = plant_instances.at(phytomer.plantID).carb_parameters;
+    switch (carbohydrate_params.submodel) {
+        case CARBON_SUBMODEL_GRASS: {
+            const CarbonGrassParameters &grass_params = carbohydrate_params.grass;
+            const GrainSink &grain = fbud.grain;
+            const float panicle_remaining = std::max(0.f, grass_params.panicle_potential_carbon - grain.panicle_carbon_molC) * (1.f + grass_params.panicle_growth_respiration_fraction);
+            // Until the grain number is fixed, the grain a full panicle would set
+            const float grain_number = grain.grain_number_set ? grain.grain_number : grass_params.grains_per_gram_panicle * grass_params.panicle_potential_carbon * C_molecular_wt / grass_params.panicle_carbon_percentage;
+            const float grain_remaining = std::max(0.f, grain_number * grass_params.kernel_potential_carbon - grain.grain_carbon_molC) * (1.f + grass_params.grain_growth_respiration_fraction);
+            return panicle_remaining + grain_remaining;
+        }
+        case CARBON_SUBMODEL_TREE:
+        default:
+            return phytomer.calculateMatureFruitCarbon(fbud) * (1.f - fbud.fruit_carbon_fraction_charged) * (1.f + carbohydrate_params.fruit.growth_respiration_fraction);
     }
 }

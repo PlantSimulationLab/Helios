@@ -194,26 +194,9 @@ void PlantArchitecture::subtractFruitGrowthCarbon(uint plantID, float dt, double
     // Girth growth, paid from photosynthate, ranks below fruit (allocateSurplusCarbon()), so it does not reduce the fruit's supply
     reserve_funded_spending -= plant_instance.step_girth_growth_molC * (1.f + carbohydrate_params.growth_respiration_fraction) * (1.f + 1.f / carbohydrate_params.shoot_root_ratio);
     const double fruit_supply = std::max(0.0, photosynthate - plant_instance.step_maintenance_respiration_molC - reserve_funded_spending);
-    auto &history = plant_instance.fruit_assimilate_history;
-    history.push_back({float(fruit_supply), float(potential_demand), dt});
-    float history_days = 0.f;
-    for (const auto &entry: history) {
-        history_days += entry[2];
-    }
-    while (history.size() > 1 && history_days - history.front()[2] >= carbohydrate_params.supply_averaging_days) {
-        history_days -= history.front()[2];
-        history.erase(history.begin());
-    }
-    double supply_sum = 0.0;
-    double demand_sum = 0.0;
-    for (const auto &entry: history) {
-        supply_sum += entry[0];
-        demand_sum += entry[1];
-    }
-    plant_instance.fruit_growth_supply_ratio = demand_sum > 0.0 ? float(std::min(1.0, supply_sum / demand_sum)) : 1.f;
+    const float supply_ratio = recordReproductiveSupply(plantID, float(fruit_supply), float(potential_demand), dt);
 
     // Each fruit grows at its potential times the supply ratio; the potential it reached is recorded either way, so growth lost now is not made up later
-    const float supply_ratio = plant_instance.fruit_growth_supply_ratio;
     for (const auto &fruit: photosynthate_fruit) {
         const float fruit_growth = fruit.potential_carbon * supply_ratio;
         const float fruit_growth_respiration = fruit_growth * fruit_params.growth_respiration_fraction;
@@ -269,7 +252,7 @@ void PlantArchitecture::checkCarbonPool_dropFruit(uint plantID, float dt) {
         helios_runtime_error("ERROR (PlantArchitecture::checkCarbonPool_dropFruit): CarbonFruitParameters::abscission_growth_ratio must be greater than 0 and at most 1 (got " + std::to_string(fruit_params.abscission_growth_ratio) +
                              ").");
     }
-    const float supply_ratio = plant_instance.fruit_growth_supply_ratio;
+    const float supply_ratio = plant_instance.reproductive_supply_ratio;
     if (young_fruit.empty() || supply_ratio >= fruit_params.abscission_growth_ratio) {
         plant_instance.fruit_drop_debt = 0.f;
         return;

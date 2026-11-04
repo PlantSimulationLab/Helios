@@ -5460,6 +5460,9 @@ uint PlantArchitecture::buildSorghumPlant(const helios::vec3 &base_position) {
     // The lowest internodes form a compressed crown (see SorghumPhytomerCreationFunction()), set just below the soil surface so that the lowest leaves and the tillers emerge at ground level.
     uint plantID = addPlantInstance(base_position - make_vec3(0, 0, 0.01), 0);
 
+    // A grain crop runs the carbohydrate model's grass sub-model, with its sorghum defaults, when the model is enabled
+    plant_instances.at(plantID).carb_parameters = CarbohydrateParameters::forSubmodel(CARBON_SUBMODEL_GRASS);
+
     // The base stem is built upright. A tilt here is not confined to leaning the plant over: the phyllotactic rotation of each successive phytomer is applied about its own internode axis, so tilting the
     // base makes those axes non-parallel and the two ranks of a distichous grass converge instead of staying opposite. The previous 0.075*pi tilt cost roughly 18 degrees of rank separation.
     uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(0.f, context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.003,

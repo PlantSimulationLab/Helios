@@ -1142,8 +1142,9 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model does not abort on the pa
 
 DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model does not abort on any library plant") {
     // The out_of_range abort was in a code path taken by every shoot on its first timestep, so it was
-    // not specific to one plant model. Cover a spread of growth habits (herbaceous, vine, grass, woody).
-    const std::vector<std::string> plant_labels = {"bean", "cowpea", "maize", "tomato", "almond"};
+    // not specific to one plant model. Cover a spread of growth habits (herbaceous, vine, grass, woody), including the
+    // library plant that runs the grass sub-model.
+    const std::vector<std::string> plant_labels = {"bean", "cowpea", "maize", "tomato", "almond", "sorghum"};
 
     for (const std::string &label: plant_labels) {
         DOCTEST_CAPTURE(label);
@@ -1168,8 +1169,8 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model does not abort on any li
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model selects its sub-model from CarbohydrateParameters::submodel") {
-    // The default parameters run the tree sub-model. A sub-model this build does not implement is rejected when the
-    // parameters are set, before a plant can be advanced with it.
+    // The default parameters run the tree sub-model; the grass sub-model is selected by the field, and a sub-model's own
+    // parameters are checked when the parameters are set, before a plant can be advanced with them.
     Context context;
     PlantArchitecture plantarchitecture(&context);
     plantarchitecture.disableMessages();
@@ -1182,6 +1183,11 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model selects its sub-model fr
     DOCTEST_CHECK_NOTHROW(plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params));
 
     params.submodel = CARBON_SUBMODEL_GRASS;
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params));
+
+    params = CarbohydrateParameters();
+    params.wood.sapwood_area_per_leaf_area = 0.05f;
+    params.wood.sapwood_functional_years = 0.f;
     DOCTEST_CHECK_THROWS_AS(plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params), std::runtime_error);
 }
 
@@ -2521,6 +2527,281 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate maintenance respiration follow
     const float respiration_20C = oneDayOfRespiration(20.f, 2.5f);
     DOCTEST_REQUIRE(respiration_20C > 0.f);
     DOCTEST_CHECK(oneDayOfRespiration(30.f, 2.5f) == doctest::Approx(2.5f * respiration_20C).epsilon(1e-4));
+}
+
+// ---------------- Grass sub-model (CARBON_SUBMODEL_GRASS) ---------------- //
+
+//! Build a sorghum seedling under the carbohydrate model. The library plant selects the grass sub-model.
+/**
+ * The library sorghum builds its lowest leaves at near their mature size, so the first weeks of leaf construction cost far more carbon than a seed holds and than the seedling's culm
+ * could store. The plant is therefore started with a large reserve (0.3 mol C) and, as in the bean tests, a storage capacity far above it, so that the reserve is not released as
+ * overflow and the capacity plays no part in the mechanisms under test.
+ */
+static uint buildSorghumSeedlingForCarbon(PlantArchitecture &plantarchitecture, int tiller_count, CarbohydrateParameters params = CarbohydrateParameters::forSubmodel(CARBON_SUBMODEL_GRASS)) {
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableCarbohydrateModel();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"tiller_count", float(tiller_count)}});
+    params.storage_capacity = 1e3f;
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.adjustPlantMaintenanceRespiration(298.15f);
+    const float stem_volume = plantarchitecture.getPlantShoot(plantID, 0)->calculateShootInternodeVolume();
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 0.3f / stem_volume);
+    return plantID;
+}
+
+//! One day of photosynthesis on a sorghum plant, at one rate (umol CO2 m-2 s-1) on the main stem's leaves and another on the tillers' leaves
+static void driveSorghumPhotosynthesisForOneDay(Context &context, PlantArchitecture &plantarchitecture, uint plantID, float main_stem_rate, float tiller_rate) {
+    for (int hour = 0; hour < 12; hour++) {
+        for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            if (plantarchitecture.isShootPruned(plantID, shootID)) {
+                continue;
+            }
+            const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+            const float rate = shoot->parent_shoot_ID < 0 ? main_stem_rate : tiller_rate;
+            for (const auto &phytomer: shoot->phytomers) {
+                for (const auto &petiole: phytomer->leaf_objIDs) {
+                    for (const uint objID: petiole) {
+                        if (context.doesObjectExist(objID)) {
+                            for (const uint UUID: context.getObjectPrimitiveUUIDs(objID)) {
+                                context.setPrimitiveData(UUID, "net_photosynthesis", rate);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        plantarchitecture.accumulateHourlyLeafPhotosynthesis();
+    }
+}
+
+struct SorghumCulmRun {
+    int flag_leaf_day = -1; //!< first day on which the main stem bore a panicle
+    PlantGrainStatus status;
+    float remobilization = 0; //!< grain carbon paid from reserves over the run (mol C)
+    bool main_stem_pruned = false;
+};
+
+//! Grow a single-culm sorghum from seed for a number of days at 30 umol m-2 s-1, with the light multiplied by shade_factor on days shade_from to shade_to inclusive. From
+//! realistic_reserve_day (if not negative) the culm's storage capacity is returned to its sorghum default, so that the reserve it can carry into grain filling is a real culm's rather than the
+//! unlimited one the seedling was started with.
+static SorghumCulmRun runSorghumCulm(int days, int shade_from, int shade_to, float shade_factor, int realistic_reserve_day = -1) {
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    const uint plantID = buildSorghumSeedlingForCarbon(plantarchitecture, 0);
+    SorghumCulmRun run;
+    for (int day = 0; day < days; day++) {
+        if (day == realistic_reserve_day) {
+            plantarchitecture.setPlantCarbohydrateModelParameters(plantID, CarbohydrateParameters::forSubmodel(CARBON_SUBMODEL_GRASS));
+        }
+        const float light = (day >= shade_from && day <= shade_to) ? 30.f * shade_factor : 30.f;
+        driveSorghumPhotosynthesisForOneDay(context, plantarchitecture, plantID, light, light);
+        plantarchitecture.advanceTime(plantID, 1);
+        run.remobilization += plantarchitecture.getPlantCarbonBudget(plantID).reserve_remobilization;
+        if (run.flag_leaf_day < 0 && plantarchitecture.getPlantGrainStatus(plantID).culms > 0.f) {
+            run.flag_leaf_day = day;
+        }
+    }
+    run.status = plantarchitecture.getPlantGrainStatus(plantID);
+    run.main_stem_pruned = plantarchitecture.isShootPruned(plantID, 0);
+    return run;
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture grass sub-model sets sorghum grain number in the critical period and fills the grain") {
+    // A single-culm sorghum grown from seed under ample light. Its panicle appears with the flag leaf; over the critical period the panicle
+    // structure is built from photosynthate and no grain is counted; at the period's end the grain number is fixed from that structure, and
+    // the grain then fills toward its potential. Roots take a share of photosynthate while the stem develops and none after anthesis. The
+    // carbon budget, with the panicle and grain terms, closes every day.
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    const uint plantID = buildSorghumSeedlingForCarbon(plantarchitecture, 0);
+    const CarbonGrassParameters grass = CarbohydrateParameters::forSubmodel(CARBON_SUBMODEL_GRASS).grass;
+    const float critical_period_days = grass.anthesis_days + grass.grain_fill_lag_days;
+
+    int flag_leaf_day = -1;
+    bool roots_grew_early = false;
+    float root_growth_after_anthesis = 0.f;
+    PlantGrainStatus status;
+    for (int day = 0; day < 140; day++) {
+        DOCTEST_CAPTURE(day);
+        driveSorghumPhotosynthesisForOneDay(context, plantarchitecture, plantID, 30.f, 30.f);
+        const float pool_before = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+        plantarchitecture.advanceTime(plantID, 1);
+        const float pool_change = plantarchitecture.getPlantTotalCarbohydratePool(plantID) - pool_before;
+
+        const PlantCarbonBudget budget = plantarchitecture.getPlantCarbonBudget(plantID);
+        const float expected_change = budget.net_photosynthesis - budget.wood_maintenance_respiration - budget.root_maintenance_respiration - budget.wood_growth - budget.root_growth - budget.leaf_growth - budget.fruit_growth -
+                                      budget.flower_construction - budget.growth_respiration - budget.storage_overflow - budget.shed_branch_carbohydrate - budget.panicle_growth - budget.grain_growth;
+        DOCTEST_CHECK(pool_change == doctest::Approx(expected_change).epsilon(1e-3).scale(pool_before));
+
+        status = plantarchitecture.getPlantGrainStatus(plantID);
+        if (flag_leaf_day < 0 && status.culms > 0.f) {
+            flag_leaf_day = day;
+        }
+        if (day < 20 && budget.root_growth > 0.f) {
+            roots_grew_early = true;
+        }
+        if (flag_leaf_day >= 0) {
+            if (day < flag_leaf_day + critical_period_days - 1) {
+                DOCTEST_CHECK(status.grain_number == 0.f);
+                DOCTEST_CHECK(status.grain_carbon_molC == 0.f);
+            }
+            if (day > flag_leaf_day + grass.anthesis_days + 1) {
+                root_growth_after_anthesis += budget.root_growth;
+            }
+        }
+    }
+    DOCTEST_REQUIRE(flag_leaf_day > 0);
+    DOCTEST_REQUIRE(!plantarchitecture.isShootPruned(plantID, 0));
+    DOCTEST_CHECK(status.culms == 1.f);
+    DOCTEST_CHECK(roots_grew_early);
+    DOCTEST_CHECK(root_growth_after_anthesis == 0.f);
+
+    // Under ample light the panicle reaches its potential and sets the grain of a full panicle, which then fills to its potential within the run
+    const float full_panicle_grains = grass.grains_per_gram_panicle * grass.panicle_potential_carbon * C_molecular_wt / grass.panicle_carbon_percentage;
+    DOCTEST_CHECK(status.panicle_carbon_molC == doctest::Approx(grass.panicle_potential_carbon).epsilon(0.02));
+    DOCTEST_CHECK(status.grain_number == doctest::Approx(full_panicle_grains).epsilon(0.02));
+    DOCTEST_CHECK(status.grain_potential_carbon_molC == doctest::Approx(status.grain_number * grass.kernel_potential_carbon).epsilon(1e-3));
+    DOCTEST_CHECK(status.grain_carbon_molC == doctest::Approx(status.grain_potential_carbon_molC).epsilon(0.02));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture grass sub-model: carbon in the critical period sets grain number, carbon during filling sets grain weight") {
+    // Three sorghum plants with the same seed. Shade over the critical period, after the panicle has appeared, cuts the panicle built in the
+    // window and with it the grain number, which later carbon does not restore. The same shade during grain filling leaves the grain number
+    // exactly as in the unshaded plant, draws the culm reserve into the grain, and leaves the grain lighter. Every plant is given a real
+    // culm's storage capacity from the start of filling, so that the reserve buffer is the one a culm carries (it filled the grain on its own
+    // when left unlimited).
+    const CarbonGrassParameters grass = CarbohydrateParameters::forSubmodel(CARBON_SUBMODEL_GRASS).grass;
+    const int critical_period_days = int(std::round(grass.anthesis_days + grass.grain_fill_lag_days));
+    const int grain_fill_days = int(std::round(grass.grain_fill_days));
+
+    const SorghumCulmRun scout = runSorghumCulm(60, -1, -1, 1.f);
+    DOCTEST_REQUIRE(scout.flag_leaf_day > 0);
+    const int flag = scout.flag_leaf_day;
+    const int filling_day = flag + critical_period_days + 1;
+
+    const SorghumCulmRun full_light = runSorghumCulm(140, -1, -1, 1.f, filling_day);
+    DOCTEST_REQUIRE(full_light.flag_leaf_day == flag);
+    DOCTEST_REQUIRE(!full_light.main_stem_pruned);
+    DOCTEST_REQUIRE(full_light.status.grain_number > 0.f);
+    DOCTEST_REQUIRE(full_light.status.grain_carbon_molC > 0.f);
+
+    // The plants are identical until the shade begins, so the flag leaf appears on the same day
+    const SorghumCulmRun shaded_window = runSorghumCulm(140, flag + 1, flag + critical_period_days, 0.1f, filling_day);
+    DOCTEST_CHECK(shaded_window.flag_leaf_day == flag);
+    DOCTEST_REQUIRE(shaded_window.status.culms == 1.f);
+    DOCTEST_CHECK(shaded_window.status.grain_number < 0.5f * full_light.status.grain_number);
+    DOCTEST_CHECK(shaded_window.status.panicle_carbon_molC < 0.5f * full_light.status.panicle_carbon_molC);
+
+    const SorghumCulmRun shaded_filling = runSorghumCulm(140, filling_day, flag + critical_period_days + grain_fill_days, 0.1f, filling_day);
+    DOCTEST_CHECK(shaded_filling.flag_leaf_day == flag);
+    DOCTEST_REQUIRE(shaded_filling.status.culms == 1.f);
+    DOCTEST_CHECK(shaded_filling.status.grain_number == full_light.status.grain_number);
+    DOCTEST_CHECK(shaded_filling.status.grain_carbon_molC < full_light.status.grain_carbon_molC);
+    DOCTEST_CHECK(shaded_filling.remobilization > full_light.remobilization);
+    DOCTEST_CHECK(shaded_filling.remobilization > 0.f);
+    DOCTEST_CHECK(shaded_filling.status.culm_carbohydrate_molC < full_light.status.culm_carbohydrate_molC);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture grass sub-model sheds a tiller whose leaves do not pay for it once the stem elongates") {
+    // Two sorghum plants with one tiller each and the same seed. Where every leaf is lit the tiller pays for itself and is kept; where the
+    // tiller's leaves fix nothing it is shed once the main stem elongates -- counted in tillers_shed and left pruned -- and the main stem
+    // lives on. The supply/demand gate is opened so that the tiller forms in both plants.
+    auto grow = [](float tiller_light) {
+        Context context;
+        context.seedRandomGenerator(11);
+        PlantArchitecture plantarchitecture(&context);
+        CarbohydrateParameters params = CarbohydrateParameters::forSubmodel(CARBON_SUBMODEL_GRASS);
+        params.grass.tiller_supply_demand_min = 0.f;
+        params.grass.tiller_supply_demand_max = 1e-3f;
+        const uint plantID = buildSorghumSeedlingForCarbon(plantarchitecture, 1, params);
+
+        struct Outcome {
+            bool tiller_formed = false;
+            bool tiller_pruned = false;
+            float tillers_shed = 0.f;
+            bool main_stem_pruned = false;
+        } outcome;
+        for (int day = 0; day < 70; day++) {
+            driveSorghumPhotosynthesisForOneDay(context, plantarchitecture, plantID, 30.f, tiller_light);
+            plantarchitecture.advanceTime(plantID, 1);
+            outcome.tillers_shed += plantarchitecture.getPlantCarbonBudget(plantID).tillers_shed;
+        }
+        for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            if (shootID == 0) {
+                outcome.main_stem_pruned = plantarchitecture.isShootPruned(plantID, shootID);
+            } else {
+                outcome.tiller_formed = true;
+                outcome.tiller_pruned = plantarchitecture.isShootPruned(plantID, shootID);
+            }
+        }
+        return outcome;
+    };
+
+    const auto lit = grow(30.f);
+    DOCTEST_REQUIRE(lit.tiller_formed);
+    DOCTEST_CHECK(!lit.main_stem_pruned);
+    DOCTEST_CHECK(!lit.tiller_pruned);
+    DOCTEST_CHECK(lit.tillers_shed == 0.f);
+
+    const auto dark = grow(0.f);
+    DOCTEST_REQUIRE(dark.tiller_formed);
+    DOCTEST_CHECK(!dark.main_stem_pruned);
+    DOCTEST_CHECK(dark.tiller_pruned);
+    DOCTEST_CHECK(dark.tillers_shed == 1.f);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture grass sub-model gates tiller bud outgrowth on the carbon supply/demand index") {
+    // A sorghum allowed three tillers forms all three when any positive supply/demand index opens the gate, and forms none when the index
+    // needed for a bud to break is set beyond reach, with the light unchanged.
+    auto tillersFormed = [](float supply_demand_min, float supply_demand_max) {
+        Context context;
+        context.seedRandomGenerator(11);
+        PlantArchitecture plantarchitecture(&context);
+        CarbohydrateParameters params = CarbohydrateParameters::forSubmodel(CARBON_SUBMODEL_GRASS);
+        params.grass.tiller_supply_demand_min = supply_demand_min;
+        params.grass.tiller_supply_demand_max = supply_demand_max;
+        const uint plantID = buildSorghumSeedlingForCarbon(plantarchitecture, 3, params);
+        for (int day = 0; day < 40; day++) {
+            driveSorghumPhotosynthesisForOneDay(context, plantarchitecture, plantID, 30.f, 30.f);
+            plantarchitecture.advanceTime(plantID, 1);
+        }
+        return plantarchitecture.getAllShootIDs(plantID).size() - 1;
+    };
+    DOCTEST_CHECK(tillersFormed(0.f, 1e-3f) == 3);
+    DOCTEST_CHECK(tillersFormed(1e6f, 2e6f) == 0);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture grass sub-model validates its parameters and reports grain only for grass plants") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableCarbohydrateModel();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // The library sorghum runs the grass sub-model with its defaults
+    CarbohydrateParameters params = CarbohydrateParameters::forSubmodel(CARBON_SUBMODEL_GRASS);
+    DOCTEST_CHECK(params.submodel == CARBON_SUBMODEL_GRASS);
+    DOCTEST_CHECK(params.storage_capacity > CarbohydrateParameters().storage_capacity);
+    DOCTEST_CHECK_NOTHROW(static_cast<void>(plantarchitecture.getPlantGrainStatus(plantID)));
+    DOCTEST_CHECK(plantarchitecture.getPlantGrainStatus(plantID).culms == 0.f);
+
+    CarbohydrateParameters invalid = params;
+    invalid.grass.grain_fill_days = 0.f;
+    DOCTEST_CHECK_THROWS_AS(plantarchitecture.setPlantCarbohydrateModelParameters(plantID, invalid), std::runtime_error);
+    invalid = params;
+    invalid.grass.tiller_supply_demand_max = invalid.grass.tiller_supply_demand_min;
+    DOCTEST_CHECK_THROWS_AS(plantarchitecture.setPlantCarbohydrateModelParameters(plantID, invalid), std::runtime_error);
+    invalid = params;
+    invalid.grass.root_allocation_early = 1.f;
+    DOCTEST_CHECK_THROWS_AS(plantarchitecture.setPlantCarbohydrateModelParameters(plantID, invalid), std::runtime_error);
+
+    // A plant on the tree sub-model has no grain sink to report
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, CarbohydrateParameters());
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(plantarchitecture.getPlantGrainStatus(plantID)), std::runtime_error);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture shoot topology accessors") {

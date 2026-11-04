@@ -24,9 +24,9 @@ Crops differ less in their carbon accounting than in a few mechanisms: how the n
 | Sub-model | Mechanisms | Parameters |
 | ------ | ------ | ------ |
 | CARBON_SUBMODEL_TREE (default) | A volumetric fruit sink set in number and then dropped for lack of carbon (\ref CarbFruitDrop); a cambium that lays down pipe-model wood and sapwood rings from photosynthate, in competition with storage (\ref CarbGirthMod); branches judged on their own carbon balance at the end of each season (\ref CarbBranchShedding). | CarbohydrateParameters::fruit (\ref CarbonFruitParameters), CarbohydrateParameters::wood (\ref CarbonWoodParameters) |
-| CARBON_SUBMODEL_GRASS | Tillers, a culm reserve and a grain sink whose number is set in a critical period around flowering. Not yet implemented: selecting it raises an error. | - |
+| CARBON_SUBMODEL_GRASS | Tiller bud outgrowth gated by a carbon supply/demand index and tillers shed during stem elongation; roots allocated a share of photosynthate that falls with development; a panicle built from photosynthate over a critical period around flowering that sets the grain number; grain filled from photosynthate and then from the culm reserve (\ref CarbGrass). | CarbohydrateParameters::grass (\ref CarbonGrassParameters) |
 
-A sub-model's mechanisms take part in the carbon balance at fixed points of each sub-step: after the shared stem, leaf and root growth has been charged, the sub-model charges its reproductive sink; after that it may drop or abort organs; and the sinks it builds from current photosynthate (the cambium, in the tree sub-model) bid for the surplus against storage (\ref CarbSurplus). Within a time step the sequence is the same for every sub-model.
+A sub-model's mechanisms take part in the carbon balance at fixed points of each sub-step: after the shared stem and leaf growth has been charged, the sub-model grows the roots and charges its reproductive sink; after that it may drop or abort organs (fruit drop, tiller death); and the sinks it builds from current photosynthate (the cambium, in the tree sub-model) bid for the surplus against storage (\ref CarbSurplus). Within a time step the sequence is the same for every sub-model. The library plants select their sub-model: the sorghum plant runs CARBON_SUBMODEL_GRASS with its sorghum defaults (CarbohydrateParameters::forSubmodel()), every other plant the tree sub-model.
 
 \section CarbEnable Enabling the Carbohydrate Model
 
@@ -119,6 +119,28 @@ The parameters shared by every sub-model are members of \ref CarbohydrateParamet
 || sapwood_area_per_leaf_area | 0 | m<sup>2</sup> m<sup>-2</sup> | Sapwood area per unit of leaf area it supplies (Huber value). Sets the ring each internode must lay down per season to replace sapwood that becomes heartwood. Non-positive disables it. |
 || sapwood_functional_years | 0 | years | Number of years a ring stays functional sapwood. Must be positive when sapwood_area_per_leaf_area is set. |
 || branch_shedding_carbon_ratio | 1 | - | A branch is shed at the end of a season when its leaves' net photosynthesis over the year is below this multiple of the carbon it spent (wood maintenance plus construction). |
+
+<b>Grass sub-model (CARBON_SUBMODEL_GRASS)</b>, parameterized by \ref CarbonGrassParameters, held in CarbohydrateParameters::grass. Defaults are for grain sorghum. `CarbohydrateParameters::forSubmodel(CARBON_SUBMODEL_GRASS)` also gives the shared parameters sorghum values: stem_density 200000 g/m³, stem_structural_carbon_percentage 0.42, maturity_age 20 d, initial_density_ratio 0.3, shoot_root_ratio 4, leaf_carbon_percentage 0.44, SLA 0.02 m²/g, no flower cost, maintenance respiration 0.012 (stem) and 0.01 (root) mol C/mol C/day, growth_respiration_fraction 0.25, root_storage_ratio 1, storage_capacity 0.15 g C/g DW and storage_refill_rate 0.1/day.
+
+| Structure | Parameter | Default Value | Units | Description |
+| ------| ------ | ------ | ------ | ------ |
+| **grass** |||||
+|| stem_elongation_node | 7 | - | Main-stem node count at which stem elongation begins: tiller buds stop breaking and tillers are judged from then on. |
+|| anthesis_days | 12 | days | Flag leaf (appearance of the panicle) to anthesis. |
+|| grain_fill_lag_days | 5 | days | Anthesis to the start of effective grain filling; the critical period ends here. |
+|| grain_fill_days | 35 | days | Duration of effective grain filling. |
+|| panicle_potential_carbon | 0.3 | mol C | Structural carbon of a full panicle (without grain) built over the critical period when carbon does not limit (~8 g DW). |
+|| panicle_carbon_percentage | 0.45 | g C/g DW | Carbon content of panicle dry matter. |
+|| panicle_growth_respiration_fraction | 0.25 | mol C/mol C | Growth respiration of panicle structure. |
+|| grains_per_gram_panicle | 250 | g<sup>-1</sup> | Grains set per gram of panicle dry mass built over the critical period (~2000 on a full panicle). |
+|| kernel_potential_carbon | 1.05e-3 | mol C | Potential structural carbon of one grain (~30 mg at 0.42 g C/g DW); a ceiling approached at a constant rate over grain_fill_days. |
+|| grain_growth_respiration_fraction | 0.2 | mol C/mol C | Growth respiration of grain. |
+|| culm_reserve_floor | 0.04 | g C/g DW | Concentration to which grain filling may draw the culm and root reserves; below it the grain grows on current photosynthate only. Must be at least carbohydrate_growth_threshold. |
+|| tiller_supply_demand_min | 0.5 | - | Supply/demand index at or below which no tiller bud breaks. |
+|| tiller_supply_demand_max | 1.5 | - | Supply/demand index at or above which carbon does not limit tiller bud outgrowth; the bud-break probability rises linearly between the two. |
+|| tiller_survival_carbon_ratio | 1 | - | A tiller is shed during stem elongation when its leaves' net photosynthesis since elongation began is below this multiple of its spending. Non-positive disables tiller death. |
+|| root_allocation_early | 0.35 | - | Fraction of net photosynthate allocated to roots at emergence. |
+|| root_allocation_late | 0.05 | - | Fraction of net photosynthate allocated to roots at flag leaf; 0 after anthesis. |
 
 Sources: wood, leaf and fruit carbon contents and the respiration coefficients are from the PEACH model (Grossman & DeJong 1994, Tree Physiology 14:37-48 and 14:329-345); growth respiration from DeJong & Goudriaan (1989); almond leaf mass per area from Pica et al. (2022); the root storage ratio from almond tree excavations (Esparza et al. 2001); the shoot:root ratio from excavated mature almond (Muhammad et al. 2020). The sugar-starch and threshold values are set from seasonal almond twig NSC measurements (20-170 mg glucose/g DW over the year).
 
@@ -310,9 +332,42 @@ Short shoots such as almond spurs can be given carbon-based dynamics through the
 
 Because the evaluation uses the photosynthesis each leaf actually received, it depends on the light environment supplied through the \c net_photosynthesis primitive data: a model that gives every leaf the same rate per unit area sheds branches only by their leaf area relative to their wood.
 
+\section CarbGrass Grass Sub-model
+
+The grass sub-model (CARBON_SUBMODEL_GRASS, \ref CarbonGrassParameters) is built on the evidence that in grain crops carbon limitation is strongest in one short window: grain number per unit area, which drives most of the yield variation in wheat, barley, maize, sorghum and rice, tracks crop or reproductive-organ growth rate during a critical period around flowering, and acts with much less force before or after. A cereal has no multi-year reserve and a determinate, one-shot critical period, so a short carbon deficit in the window translates directly into lost grain number that later carbon cannot recover. The sub-model represents each <b>culm</b> -- the main stem or a tiller, a shoot ending in a terminal panicle -- and runs the following mechanisms on the shared accounting. Its defaults are for grain sorghum; rules borrowed from maize or wheat are noted on the parameters.
+
+<b>Development.</b> The sub-model keeps no clock of its own. The main stem's development runs from emergence to flag leaf as its node count over its node cap, and each culm's reproductive clock is the age of its panicle, which appears with the flag leaf (the terminal fruiting bud of the shoot). From that moment the <b>critical period</b> lasts anthesis_days + grain_fill_lag_days -- from flag leaf to the start of effective filling, where it falls in sorghum (van Oosterom & Hammer 2008) -- and grain filling the following grain_fill_days. Stem elongation begins when the main stem has stem_elongation_node nodes.
+
+<b>Tiller outgrowth.</b> Bud outgrowth in grasses is set by hormones and light quality and adjusted in real time by sugar supply; at crop scale a carbon supply/demand index explains more than half of the variation in sorghum tiller number (Alam et al. 2014). Each sub-step records the plant's vegetative growth demand (stem, leaf and root construction with growth respiration) as a rate averaged over supply_averaging_days, and the index is the plant's photosynthate supply rate over that demand. The probability that a tiller bud breaks, as set by its shoot type, is multiplied by 0 at or below tiller_supply_demand_min, rising linearly to 1 at tiller_supply_demand_max; the shoot type's own probability and the library plant's tillering positions stand for the genotype's propensity to tiller. No tiller bud breaks once stem elongation has begun.
+
+<b>Tiller death.</b> Tillers stop forming and begin to die at the onset of stem elongation, when the elongating stem becomes the dominant sink, youngest first (Xie et al. 2015; Kebrom et al. 2012), and the carbon in dead tillers is largely not recovered. When the main stem reaches stem_elongation_node every shoot's carbon records restart. From supply_averaging_days later until the main stem reaches anthesis, a tiller that has not yet produced its own panicle is shed when the net photosynthesis of its own leaves since elongation began is less than tiller_survival_carbon_ratio times what it spent on maintenance and growth over the same time -- the branch-autonomy test of the tree sub-model, applied at a phenological trigger rather than a season boundary. Shed tillers are counted in PlantCarbonBudget::tillers_shed and their carbohydrate in shed_branch_carbohydrate.
+
+<b>Roots.</b> Belowground allocation is highest early and falls as reproductive growth begins (Pausch & Kuzyakov 2018; CERES-Wheat gives roots at least 35% of assimilate until terminal spikelet). Each sub-step a fraction of the plant's net photosynthate goes to root growth: root_allocation_early at emergence, falling linearly with the main stem's development to root_allocation_late at flag leaf, and 0 once the main stem has reached anthesis. The root system's structural carbon is tracked, respires at r_m_r_20, and sets the root compartment's storage capacity, in place of the tree sub-model's fixed shoot:root ratio.
+
+<b>Panicle and grain number.</b> During the critical period each panicle's structure (rachis, branches, glumes) grows at a constant potential rate toward panicle_potential_carbon, built from current photosynthate: at its potential times the reproductive supply ratio, the photosynthate left after maintenance respiration and the reserve-funded stem, leaf and root growth relative to the panicles' potential growth, averaged over supply_averaging_days. The panicle competes with the elongating stem, which is charged first, so a shortfall in the window falls on the panicle, as the Rht dwarfing genes show it does in wheat. At the end of the critical period the grain number is fixed as grains_per_gram_panicle times the panicle dry mass built -- grain number is linear in panicle growth over the window in sorghum (van Oosterom & Hammer 2008) and nearly constant per gram of spike at anthesis in wheat (Fischer 1985).
+
+<b>Grain filling and the culm reserve.</b> Grain then grows toward grain_number x kernel_potential_carbon at a constant potential rate over grain_fill_days. Sorghum grain weight responds to late source (Gambín et al. 2008), so the potential is a ceiling rather than a size set in the lag phase as in maize. Grain is paid from the photosynthate left after the panicle first and then from the carbohydrate the culms and roots hold above culm_reserve_floor: the stem water-soluble carbohydrate laid down around anthesis is remobilized to the grain, down to a concentration that keeps the culm above the one at which it is short of carbon, and the share it contributes -- 10-30% of grain mass when water is ample, more under stress -- is an outcome of the balance rather than a constant. The part paid from reserves is reported in PlantCarbonBudget::reserve_remobilization. A culm drained to the floor keeps its grain growing only as fast as current photosynthate allows; carbohydrate left in the culm at maturity is the stem reserve that was not needed.
+
+<b>Starvation.</b> A culm whose carbohydrate stays below the growth threshold for carbohydrate_starvation_days aborts its panicle (\ref CarbFlowerFruitAbort), which saves the panicle structure and grain it would still have built.
+
+\ref PlantArchitecture::getPlantGrainStatus() returns a \ref PlantGrainStatus with the number of culms bearing a panicle, their grain number, the carbon built into grain and into panicle structure, the carbon the grain could have received at its potential rate, and the carbohydrate the culms hold:
+
+~~~~~~
+plantarchitecture.enableCarbohydrateModel();
+plantarchitecture.loadPlantModelFromLibrary("sorghum"); // runs CARBON_SUBMODEL_GRASS
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(nullorigin, 0, {{"tiller_count", 3.f}});
+plantarchitecture.initializePlantCarbohydratePool(plantID, 1e5f); // the seed reserve
+// ... grow the plant with photosynthesis supplied each day ...
+PlantGrainStatus grain = plantarchitecture.getPlantGrainStatus(plantID);
+float grain_dry_mass_g = grain.grain_carbon_molC * 12.01f / 0.42f;
+float mean_kernel_mass_mg = 1000.f * grain_dry_mass_g / grain.grain_number;
+~~~~~~
+
+Not yet represented: the panicle geometry is not driven by the grain sink (the panicle object expands on the plant's own fruit-maturity clock and its grain count build parameter is independent of the grain number set here); sink-side failures to use sugar under heat and drought at meiosis and anthesis, which can coexist with sugar accumulation; superior and inferior grain cohorts; leaf senescence and nitrogen remobilization at maturity; and thermal time, since the plant architecture model's phenology runs in days.
+
 \section CarbBudget Carbon Budget
 
-\ref PlantArchitecture::getPlantCarbonBudget() returns a \ref PlantCarbonBudget with every carbon flux of a plant summed over the most recent call to \ref PlantArchitecture::advanceTime(): net photosynthesis, wood and root maintenance respiration, wood, root, leaf and fruit structural growth, flower construction, growth respiration and the carbohydrate lost with branches shed for carbon starvation (all mol C). The change in \ref PlantArchitecture::getPlantTotalCarbohydratePool() over the call equals net photosynthesis minus the other terms, unless shoots were pruned during the call by other means (e.g. \ref PlantArchitecture::pruneBranch() or shoot death). \ref PlantArchitecture::getPlantRootCarbohydratePool() returns the root pool alone.
+\ref PlantArchitecture::getPlantCarbonBudget() returns a \ref PlantCarbonBudget with every carbon flux of a plant summed over the most recent call to \ref PlantArchitecture::advanceTime(): net photosynthesis, wood and root maintenance respiration, wood, root, leaf and fruit structural growth, flower construction, growth respiration, the carbohydrate lost with branches or tillers shed for carbon starvation and, under the grass sub-model, panicle and grain structural growth (all mol C). The change in \ref PlantArchitecture::getPlantTotalCarbohydratePool() over the call equals net photosynthesis minus the other terms, unless shoots were pruned during the call by other means (e.g. \ref PlantArchitecture::pruneBranch() or shoot death). PlantCarbonBudget::reserve_remobilization (the grain growth paid from reserves, already included in grain growth and growth respiration), photosynthesis_downregulation, fruit_dropped and tillers_shed are diagnostics. \ref PlantArchitecture::getPlantRootCarbohydratePool() returns the root pool alone.
 
 ~~~~~~
 plantarchitecture.advanceTime(plantID, 1.0);

@@ -1407,6 +1407,7 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
         fbud.previous_fruit_scale_factor = fbud.current_fruit_scale_factor;
         fbud.fruit_carbon_fraction_charged = 0.f;
         fbud.fruit_potential_fraction = 0.f;
+        fbud.grain = GrainSink();
     }
 
     // Delete geometry from previous reproductive state (if present)
@@ -11664,8 +11665,13 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 const PlantCarbonBudget budget_before = plant_instances.at(plantID).carbon_budget;
                 subtractShootMaintenanceCarbon(plantID, dt_max_days);
                 subtractShootGrowthCarbon(plantID, dt_max_days);
-                if (plant_instance.carb_parameters.submodel == CARBON_SUBMODEL_TREE) {
-                    checkCarbonPool_dropFruit(plantID, dt_max_days);
+                switch (plant_instance.carb_parameters.submodel) {
+                    case CARBON_SUBMODEL_TREE:
+                        checkCarbonPool_dropFruit(plantID, dt_max_days);
+                        break;
+                    case CARBON_SUBMODEL_GRASS:
+                        updateGrassTillers(plantID, dt_max_days);
+                        break;
                 }
                 allocateSurplusCarbon(plantID, dt_max_days, budget_before);
                 checkCarbonPool_redistributeCarbon(plantID, dt_max_days);
