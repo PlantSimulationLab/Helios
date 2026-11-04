@@ -1,0 +1,45 @@
+
+|---------------------------------------------------------------------------------------------|
+| Driver Version: 610.60        | Graphics API: Vulkan
+|=============================================================================================|
+| GPU | Name                             | Active | LDA | GPU Memory | Vendor-ID | LUID       |
+|     |                                  |        |     |            | Device-ID | UUID       |
+|     |                                  |        |     |            | Bus-ID    |            |
+|---------------------------------------------------------------------------------------------|
+| 0   | NVIDIA GeForce RTX 5070          | Yes: 0 |     | 11944   MB | 10de      | ed020100.. |
+|     |                                  |        |     |            | 2f04      | 24361c25.. |
+|     |                                  |        |     |            | 2         |            |
+|---------------------------------------------------------------------------------------------|
+| 1   | Intel(R) Graphics                |        |     | 18360   MB | 8086      | 72170100.. |
+|     |                                  |        |     |            | 7d67      | 8680677d.. |
+|     |                                  |        |     |            | N/A       |            |
+|=============================================================================================|
+| OS: Windows 11 Enterprise, Version: 10.0 (25H2), Build: 26200, Kernel: 10.0.26100.9711
+| Processor: Intel(R) Core(TM) Ultra 7 265K
+| Cores: 20 | Logical Cores: 20
+|---------------------------------------------------------------------------------------------|
+| Total Memory (MB): 32210 | Free Memory: 16358
+| Total Page/Swap (MB): 37074 | Free Page/Swap: 12128
+|---------------------------------------------------------------------------------------------|
+  warnings.warn("The `render_mode` attribute is not defined in your environment. It will be set to None.")
+Starting kit application with the following args:  ['C:\\isaacsim\\exts\\isaacsim.simulation_app\\isaacsim\\simulation_app\\simulation_app.py', 'C:\\isaacsim\\apps/isaacsim.exp.base.python.kit', '--/app/tokens/exe-path=C:\\isaacsim\\kit', '--/persistent/app/viewport/displayOptions=3094', '--/rtx/materialDb/syncLoads=True', '--/rtx/hydra/materialSyncLoads=True', '--/omni/kit/plugin/syncUsdLoads=True', '--/app/renderer/resolution/width=1280', '--/app/renderer/resolution/height=720', '--/app/window/width=1440', '--/app/window/height=900', '--/renderer/multiGpu/enabled=True', '--/app/fastShutdown=True', '--/app/installSignalHandlers=0', '--ext-folder', 'C:\\isaacsim/exts', '--ext-folder', 'C:\\isaacsim/apps', '--/exts/isaacsim.physics.newton/auto_switch_on_startup=false', '--/exts/isaacsim.core.simulation_manager/default_engine=physx', '--/physics/cudaDevice=0', '--/plugins/carb.tasking.plugin/threadCount=16', '--/plugins/omni.tbb.globalcontrol/maxThreadCount=16', '--portable', '--no-window', '--/app/window/hideUi=1']
+Passing the following args to the base kit application:  ['--steps', '500000', '--report-every', '50000', '--output', 'apple_policy_isaac_contact_soft_seed0', '--seed', '0', '--fruit-hold', 'soft']
+Warp 1.16.0 initialized:
+   CUDA Toolkit 12.9, Driver 13.3
+   Devices:
+     "cpu"      : "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel"
+     "cuda:0"   : "NVIDIA GeForce RTX 5070" (12 GiB, sm_120, mempool enabled)
+   Kernel cache:
+     \\?\C:\Users\bnbailey\AppData\Local\NVIDIA\warp\Cache\1.16.0
+built and settled 16 simulations in 6.8 min
+steps    50000    82.5 min   10.1 steps/s  training success  0.0%  success  0.0%  timeout 86.4%  slipped  0.0%  knocked_off  0.0%  collision 13.6%
+steps   100000   178.0 min    9.4 steps/s  training success  0.5%  success  0.5%  timeout 94.2%  slipped  0.0%  knocked_off  0.0%  collision  5.3%
+steps   150000   284.7 min    8.8 steps/s  training success  4.8%  success  4.8%  timeout 84.3%  slipped  0.0%  knocked_off  0.0%  collision 11.0%
+steps   200000   338.0 min    9.9 steps/s  training success 18.4%  success 18.4%  timeout 70.9%  slipped  0.0%  knocked_off  1.8%  collision  9.0%
+steps   250000   392.8 min   10.6 steps/s  training success 64.8%  success 64.8%  timeout 13.4%  slipped  0.0%  knocked_off  3.9%  collision 17.8%
+steps   300000   448.2 min   11.2 steps/s  training success 68.3%  success 68.3%  timeout  8.9%  slipped  0.0%  knocked_off  6.4%  collision 16.4%
+steps   350000   501.7 min   11.6 steps/s  training success 72.0%  success 72.0%  timeout  7.6%  slipped  0.0%  knocked_off  3.4%  collision 17.0%
+steps   400000   556.6 min   12.0 steps/s  training success 71.6%  success 71.6%  timeout  6.9%  slipped  0.0%  knocked_off  4.5%  collision 17.0%
+steps   450000   610.4 min   12.3 steps/s  training success 72.9%  success 72.9%  timeout  6.3%  slipped  0.0%  knocked_off  4.0%  collision 16.8%
+steps   500000   664.0 min   12.5 steps/s  training success 73.8%  success 73.8%  timeout  5.6%  slipped  0.0%  knocked_off  4.3%  collision 16.3%
+saved apple_policy_isaac_contact_soft_seed0 after 674.9 min

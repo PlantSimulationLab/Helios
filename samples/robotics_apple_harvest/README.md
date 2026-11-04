@@ -61,7 +61,7 @@ Success over 240 episodes (2 simulations of each of trees 301-312, never used in
 
 | Grip | Scripted | Trained policy | Main failures of the policy |
 |---|---|---|---|
-| Grips within 3 cm, pulls toward the fruit's center | 66.7% | 79.2% | collision |
+| Grips within 3 cm, pulls toward the fruit's center | 61.3% | 79.2% | collision |
 | Must touch the fruit (5 mm), pulls toward its center | 57.9% | 69.2% | timeout 15%, collision 16% |
 | Must touch, holds the fruit on the face, seal limits on pull, sliding and peeling | 45.0% | 52.1% | slipped 23%, collision 15% |
 

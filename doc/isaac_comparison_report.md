@@ -31,6 +31,10 @@ Neither engine is ground truth. Agreement below shows consistency, not correctne
    detachments by pushing, because its fruit joint is rigid: holding the fruit with springs that have the time constant of MuJoCo's
    soft weld removes them (18 to 0 for the scripted controller), without changing total success beyond the intervals. Training with the same settings took 25 minutes in Helios and 7.9 hours in
    IsaacSim. PhysX's GPU throughput only catches up with a few hundred trees at once.
+8. **With a grip that needs contact, the policies still transfer (Part C, second grip).** The cup must now touch the fruit (5 mm) where
+   it gripped from 3 cm. The Helios-trained policy succeeds 69.2% in both simulators (soft hold). The IsaacSim-trained policy, now
+   trained with the soft hold, succeeds 75.8% in Helios and 70.8% in PhysX. The scripted controller does worse in PhysX (49.2% against
+   57.9%), mostly because it knocks fruit off more often there. Training took 37 minutes in Helios and 11.2 hours in IsaacSim.
 
 ## Part A: build and test on Windows
 
@@ -260,6 +264,49 @@ is found from the fruit's momentum; the design and its checks are in the port's 
   55%). One seed and one tree set: the plan shows that single runs vary by several points, so these curves do not separate the
   simulators.
 
+### With a grip that needs contact (commit c63f6a035)
+
+The movie showed the cup gripping fruit from a distance. The grip was changed so that the cup grips only a fruit whose surface is
+within 5 mm of its face (it was 3 cm), and then pulls only along the line from its face to the fruit's center, with its rest length at
+the fruit's radius. Both simulators were changed the same way, both policies were retrained with the same settings, and the IsaacSim
+policy was trained with the soft hold this time. Same trees and episodes as above; the scripted controller still backs straight away
+from the tree once it grips.
+
+| Controller | Simulator | Success (95% interval) | Pushes | Protective stop | Timeout | Knocked off | Peak contact, p90 / max |
+|---|---|---|---|---|---|---|---|
+| Scripted | Helios (MuJoCo) | 57.9% (51.6-64.0) | 3 | 35.0% | 1.7% | 5.4% | 501 / 1012 N |
+| Scripted | IsaacSim (PhysX), rigid hold | 49.6% (43.3-55.9) | 9 | 35.0% | 1.2% | 13.8% | 534 / 1755 N |
+| Scripted | IsaacSim (PhysX), soft hold | 49.2% (42.9-55.5) | 2 | 35.4% | 1.2% | 13.8% | 581 / 460868 N |
+| Policy trained in Helios | Helios (MuJoCo) | 69.2% (63.1-74.7) | 0 | 15.8% | 15.0% | 0.0% | 308 / 839 N |
+| Policy trained in Helios | IsaacSim (PhysX), rigid hold | 62.5% (56.2-68.4) | 1 | 20.4% | 12.1% | 5.0% | 361 / 1260 N |
+| Policy trained in Helios | IsaacSim (PhysX), soft hold | 69.2% (63.1-74.7) | 0 | 18.3% | 10.4% | 2.1% | 373 / 1310 N |
+| Policy trained in IsaacSim (soft hold) | Helios (MuJoCo) | 75.8% (70.0-80.8) | 0 | 15.0% | 6.2% | 2.9% | 247 / 700 N |
+| Policy trained in IsaacSim (soft hold) | IsaacSim (PhysX), soft hold | 70.8% (64.8-76.2) | 0 | 19.6% | 7.1% | 2.5% | 302 / 1350 N |
+
+- **Against the 3 cm grip**, the scripted controller loses 3 points in Helios and 17 in PhysX, and the Helios-trained policy 10 in
+  Helios and 12 in PhysX (soft hold). The IsaacSim-trained policy, retrained, is unchanged in Helios (75.4% to 75.8%) and 7 points
+  lower in PhysX (soft hold, 77.5% to 70.8%).
+- **Fewer pushes**: 0-3 in every row but the scripted controller with the rigid hold (9, against 18 with the 3 cm grip), since the cup
+  no longer grips a fruit it is about to push off from a distance.
+- **The scripted controller does 9 points worse in PhysX**, near the edge of the intervals (51.6-64.0 against 42.9-55.5). The difference
+  is mostly fruit knocked off without being gripped (13.8% against 5.4%), the same with either hold, so it comes from how the cup
+  strikes the fruit or wood on its way in, not from the hold. One episode in PhysX with the soft hold peaked at 4.6e5 N on the tree before the fruit was knocked off; the next highest is
+  1743 N. It looks like a solver blow-up in that one episode, which I have not investigated.
+- **Both policies transfer.** The Helios-trained policy succeeds 69.2% in both simulators with the soft hold (62.5% with the rigid one).
+  The IsaacSim-trained policy succeeds 75.8% in Helios and 70.8% in PhysX. All within the intervals.
+- **The IsaacSim-trained policy is the better one here**, by 6.6 points in Helios and 1.6 in PhysX, within the intervals. It times out
+  less (6-7% against 10-15%). Again the two pull differently: the Helios-trained policy straight toward the robot (-0.89, 0.01, -0.03),
+  the IsaacSim-trained one toward the robot and upward (-0.81, -0.04, +0.38 in Helios). One seed each, so not a difference between the
+  simulators.
+- **Training.** Helios: 37 minutes, 225 steps per second, 78.1% on the training trees at the end. IsaacSim: 11.2 hours, 12.5 steps per
+  second, 73.8% on the training trees. IsaacSim's run learned slowly at first (0.5% success at 100k steps, 18% at 200k, 65% at 250k).
+  Both runs shared the machine with other work for part of the time, so the times are not a clean comparison of speed; the factor of
+  18 measured above is.
+
+Helios's grip has since changed again (commit 0d2a7a5e0: the fruit is held on the face in position and orientation, and the seal
+breaks on sliding and peeling as well as pulling). The IsaacSim port has not been brought up to that grip; further changes to the task
+are made in Helios only, and IsaacSim will be compared again at chosen checkpoints.
+
 ### Cost, and where PhysX's time went
 
 The first measurements made PhysX look 5-7x slower than MuJoCo per tree. Profiling with Tracy (`capture.exe` and `csvexport.exe` from
@@ -304,4 +351,5 @@ evaluation with it off; the physics is the same either way. Evaluating 240 episo
 
 ### Not done yet
 
-- More training seeds, and training in IsaacSim with the soft fruit hold.
+- More training seeds.
+- The IsaacSim port of the current grip (held on the face, with seal limits on sliding and peeling).
