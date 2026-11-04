@@ -846,9 +846,11 @@ void AlmondPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->scaleLeafPrototypeScale(0.8);
         phytomer->setFloralBudState(BUD_DEAD);
-        // A shoot of type "spur" sets its own number of leaves per season.
+        // A shoot of type "spur" sets its own number of leaves per season. A cap already set lower (by
+        // ShootParameters::lateral_vigour_ratio when the shoot broke) is kept.
         if (phytomer->parent_shoot_ptr->shoot_type_label != "spur") {
-            phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap = 7;
+            int &season_cap = phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap;
+            season_cap = season_cap >= 0 ? std::min(season_cap, 7) : 7;
         }
     }
 
@@ -958,7 +960,9 @@ void ApplePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
             }
         }
         phytomer->scaleLeafPrototypeScale(0.8);
-        phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap = 6;
+        // A cap already set lower (by ShootParameters::lateral_vigour_ratio when the shoot broke) is kept.
+        int &season_cap = phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap;
+        season_cap = season_cap >= 0 ? std::min(season_cap, 6) : 6;
     }
 
     // Axillary flower buds of a long shoot. The basal latent zone is decided here, by position within the season's growth unit; the

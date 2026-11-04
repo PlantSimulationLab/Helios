@@ -1466,6 +1466,53 @@ GPU_TEST_CASE("RadiationModel no direct or diffuse radiation leaks into a closed
     }
 }
 
+GPU_TEST_CASE("RadiationModel diffuse rays launched in the plane of another surface do not hit it") {
+    // Rays start with no minimum distance, so a ray launched in the plane of another surface meets it at a distance of zero, which
+    // the intersection arithmetic may produce as -0. A hit at zero distance is not a hit, but the OptiX 8 backend accepted it, and
+    // OptiX does not take -0 as a hit distance: it ended the trace in the direct-ray miss program instead of the diffuse ray's own,
+    // which read past the end of the source flux buffer. In large scenes (a wheat canopy of a million primitives, where rays leave
+    // from the shared edges of tube triangles) this crashed runBand() with an illegal memory access. A black primitive at 0 K lying
+    // exactly on a black primitive at 400 K therefore receives nothing from it, as in the other backends; the OptiX 8 backend gave
+    // it sigma T^4 (hits at +0 from one face, nothing from the rays lost at -0 from the other). Raised 1 mm above it, the hot
+    // primitive fills nearly all of the view from its top face.
+    const float sigma = 5.670374419e-8f;
+    const float hot_emission = sigma * powf(400.f, 4);
+    for (const std::string &shape: {"patch", "triangle"}) {
+        for (const float gap: {0.f, 0.001f}) {
+            Context context;
+            std::vector<uint> UUIDs;
+            for (const float z: {0.f, gap}) {
+                UUIDs.push_back(shape == "patch" ? context.addPatch(make_vec3(0, 0, z), make_vec2(1, 1)) : context.addTriangle(make_vec3(-0.5f, -0.5f, z), make_vec3(0.5f, -0.5f, z), make_vec3(0.5f, 0.5f, z)));
+            }
+            context.setPrimitiveData(UUIDs, "reflectivity_LW", 0.f);
+            context.setPrimitiveData(UUIDs, "transmissivity_LW", 0.f);
+            context.setPrimitiveData(UUIDs, "emissivity_LW", 1.f);
+            const uint cold = UUIDs.at(0);
+            context.setPrimitiveData(cold, "temperature", 0.f);
+            context.setPrimitiveData(UUIDs.at(1), "temperature", 400.f);
+
+            RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+            radiation.disableMessages();
+            radiation.addRadiationBand("LW");
+            radiation.setScatteringDepth("LW", 0);
+            radiation.setDiffuseRadiationFlux("LW", 0.f);
+            radiation.setDiffuseRayCount("LW", 1024);
+            radiation.updateGeometry();
+            radiation.runBand("LW");
+
+            float absorbed;
+            context.getPrimitiveData(cold, "radiation_flux_LW", absorbed);
+            DOCTEST_INFO("shape: " << shape << ", gap: " << gap << " m");
+            if (gap == 0.f) {
+                DOCTEST_CHECK(absorbed < 1e-3f * hot_emission);
+            } else {
+                DOCTEST_CHECK(absorbed > 0.95f * hot_emission);
+                DOCTEST_CHECK(absorbed <= 1.0001f * hot_emission);
+            }
+        }
+    }
+}
+
 GPU_TEST_CASE("RadiationModel invisible primitives - invisible primitive does not appear in camera images") {
     // Camera looks straight down at a sunlit, reflective ground through a black blocker. A visible blocker fills the centre of
     // the image with black; an invisible one must let the camera see the lit ground.

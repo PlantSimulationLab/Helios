@@ -2,20 +2,20 @@
 
 \section CarbIntro Overview
 
-The carbohydrate model is an optional feature in the PlantArchitecture plugin that simulates carbon allocation and its effects on plant growth dynamics. When enabled, the model mechanistically tracks carbohydrate pools in each shoot, accumulates photosynthate produced by leaves, accounts for maintenance and growth respiration costs, and dynamically adjusts growth rates based on carbon availability. This provides a physiologically-based mechanism to simulate source-sink relationships and carbon-limited growth.
+The carbohydrate model is an optional feature in the PlantArchitecture plugin that simulates carbon allocation and its effects on plant growth dynamics. When enabled, the model tracks non-structural carbohydrate (NSC: soluble sugar and starch) in each shoot and in the root system, credits the photosynthate produced by leaves, charges maintenance respiration and the construction of wood, roots, leaves, flowers and fruit, moves carbohydrate between organs, and adjusts growth according to carbon availability. This provides a physiologically-based mechanism to simulate source-sink relationships and carbon-limited growth.
 
-<b>Important architectural note:</b> Carbohydrate pools are calculated and maintained at the <b>whole-shoot level</b>, not at the individual phytomer level. This is a key distinction from other functional-structural plant models such as L-Peach, which track carbohydrate concentrations at the phytomer (or metamer) level. In the Helios carbohydrate model, all phytomers within a shoot share a common carbon pool, and the carbon concentration is uniform across all internodes in that shoot. This simplification reduces computational cost while still capturing the essential dynamics of carbon allocation and shoot-to-shoot transfer within the plant architecture.
-
-The model integrates with the Photosynthesis plugin to accumulate leaf-level net photosynthesis as a carbon source, and uses this carbon to support organ construction, maintenance respiration, and radial growth. When carbon becomes limiting, the model can slow or stop growth, abort organs (flowers, fruits, or entire shoots), and redistribute carbon between shoots to maintain plant viability.
+<b>Important architectural note:</b> Carbohydrate pools are held at the <b>whole-shoot level</b>, not at the individual phytomer level. This is a key distinction from other functional-structural plant models such as L-Peach, which track carbohydrate concentrations at the phytomer (or metamer) level. In the Helios carbohydrate model, all phytomers within a shoot share a common pool, and the carbohydrate concentration is uniform across all internodes in that shoot. The root system has a single pool of its own.
 
 Key features of the carbohydrate model include:
 - Photosynthate accumulation from leaf-level photosynthesis
-- Maintenance and growth respiration costs
-- Carbon transfer between shoots based on concentration gradients
-- Dynamic modulation of phyllochron (leaf emergence rate)
-- Dynamic modulation of internode elongation and radial growth
+- Maintenance respiration of wood (by age and size class) and roots, with a Q10 temperature response
+- Construction and growth respiration of wood, roots, leaves, flowers and fruit
+- A root carbohydrate reserve
+- Phloem transport that evens out carbohydrate between shoots and roots
+- Temperature-dependent partitioning between sugar and starch
+- Dynamic modulation of phyllochron, internode elongation, leaf expansion, vegetative bud break and radial growth
 - Organ abortion (flowers, fruits, shoots) under carbon stress
-- User-configurable parameters for different species/conditions
+- A per-plant carbon budget reporting every flux
 
 \section CarbEnable Enabling the Carbohydrate Model
 
@@ -36,46 +36,69 @@ The model can be disabled at any time using \ref PlantArchitecture::disableCarbo
 
 \section CarbParameters Model Parameters
 
-The behavior of the carbohydrate model is controlled by a comprehensive set of parameters stored in the \ref CarbohydrateParameters structure. Parameters can be set for individual plants or groups of plants using \ref PlantArchitecture::setPlantCarbohydrateModelParameters().
+The behavior of the carbohydrate model is controlled by the parameters in the \ref CarbohydrateParameters structure. Parameters can be set for individual plants or groups of plants using \ref PlantArchitecture::setPlantCarbohydrateModelParameters().
 
 \subsection CarbParamTable Parameter Descriptions
 
-Parameters in the \ref CarbohydrateParameters structure are organized into several categories. <b>Default values are based on almond trees (*Prunus dulcis*).</b>
+<b>Default values are for mature almond trees (*Prunus dulcis*)</b>, with peach values where almond measurements are not available. All carbohydrate concentration thresholds are expressed per gram of wood dry mass (g C / g DW). Most NSC assays report mg of glucose equivalents per g DW; 1 mg glucose/g DW = 4.0e-4 g C/g DW.
 
 | Category | Parameter | Default Value | Units | Description |
 | ------| ------ | ------ | ------ | ------ |
-| **Stem/Wood Properties** |||||
-|| stem_density | 675000 | g/m³ | Density of mature internode wood tissue. |
-|| stem_carbon_percentage | 0.457 | - | Fraction of stem dry weight that is carbon. |
-|| initial_density_ratio | 0.25 | - | Ratio of initial internode carbon density to mature density (0-1). |
-|| maturity_age | 120 | days | Age at which internode reaches full mature density. |
-|| shoot_root_ratio | 3 | - | Ratio of shoot biomass to root biomass. Used to partition carbon for belowground growth. |
-| **Leaf Properties** |||||
-|| SLA | 0.0244 | m²/g | Specific leaf area (leaf area per unit dry mass). |
-|| leaf_carbon_percentage | 0.453 | - | Fraction of leaf dry weight that is carbon. |
-| **Flower Properties** |||||
+| **Wood** |||||
+|| stem_density | 675000 | g/m³ | Dry density of mature wood. |
+|| stem_structural_carbon_percentage | 0.43 | g C/g DW | Structural carbon of wood: total wood carbon (0.457) less its NSC. |
+|| initial_density_ratio | 0.25 | - | Carbon density of new internode tissue as a fraction of the mature density. |
+|| maturity_age | 120 | days | Age at which an internode reaches its mature carbon density. |
+|| shoot_root_ratio | 5 | - | Ratio of woody shoot dry mass to root dry mass. |
+| **Leaves** |||||
+|| leaf_carbon_percentage | 0.453 | g C/g DW | Carbon content of leaf dry matter. |
+|| SLA | 0.009 | m²/g | Specific leaf area (almond leaf mass per area 109-124 g/m²). |
+|| leaf_mass_fraction_at_expansion | 1 | - | Fraction of a leaf's final dry mass per unit area in place when its blade expands; the rest is charged as the leaf ages. 1 charges the whole leaf with its area. |
+|| leaf_maturation_days | 60 | days | Days from leaf emergence over which leaf dry mass per unit area rises to its final value (1/SLA). |
+| **Flowers** |||||
 || total_flower_cost | 8.33e-4 | mol C | Carbon cost to construct a single flower. |
-| **Fruit Properties** |||||
-|| fruit_density | 525000 | g/m³ | Density of fruit tissue. |
-|| fruit_carbon_percentage | 0.475 | - | Fraction of fruit dry weight that is carbon. |
-| **Respiration Rates** |||||
-|| r_m_w_20 | 5.25164e-05 | mol C/mol C/day | Daily maintenance respiration rate for stem (woody) tissue at 20 degC, as a fraction of stem carbon content. |
-|| r_m_r_20 | 5.25164e-03 | mol C/mol C/day | Daily maintenance respiration rate for root tissue at 20 degC, as a fraction of root carbon content. Note this is 100x the stem rate. |
-|| growth_respiration_fraction | 0.211 | - | Fraction of total carbon used during growth that goes toward respiration rather than structure. |
-| **Organ Abortion Thresholds** |||||
-|| carbohydrate_abortion_threshold | 0.1 | g C/g DW | Carbon concentration threshold below which fruits/flowers may be aborted. |
-|| carbohydrate_pruning_threshold | 0.025 | g C/g DW | Carbon concentration threshold below which entire shoots may be pruned. |
-|| bud_death_threshold_days | 2 | days | Duration of time below abortion threshold before fruits/flowers are aborted. |
-|| branch_death_threshold_days | 5 | days | Duration of time below pruning threshold before shoots are removed. |
-| **Growth Modulation Thresholds** |||||
-|| carbohydrate_phyllochron_threshold | 0.05 | g C/g DW | Carbon concentration below which phyllochron (leaf emergence rate) is slowed. |
-|| carbohydrate_vegetative_break_threshold | 0.05 | g C/g DW | Carbon concentration below which vegetative bud break probability is reduced. |
-|| carbohydrate_growth_threshold | 0.2 | g C/g DW | Carbon concentration below which radial growth rate is reduced. |
-| **Carbon Transfer** |||||
-|| carbohydrate_transfer_threshold_down | 0.025 | g C/g DW | Minimum carbon concentration required for a shoot to export carbon downward to parent shoots. |
-|| carbohydrate_transfer_threshold_up | 0.04 | g C/g DW | Minimum carbon concentration required for a shoot to export carbon upward to child shoots. |
-|| carbon_conductance_down | 0.95 | - | Conductance coefficient for carbon transfer from child shoots to parent shoots (0-1). Typically larger than upward conductance. |
-|| carbon_conductance_up | 0.475 | - | Conductance coefficient for carbon transfer from parent shoots to child shoots (0-1). Typically smaller than downward conductance. |
+| **Fruit** |||||
+|| fruit_density | 525000 | g/m³ | Dry mass per unit volume of the mature fruit. |
+|| fruit_carbon_percentage | 0.475 | g C/g DW | Carbon content of fruit dry matter. |
+|| fruit_growth_respiration_fraction | 0.3 | mol C/mol C | Growth respiration of fruit per unit of structural carbon. |
+|| fruit_dry_matter_midpoint | 0.4 | - | Fraction of the fruit development period at which half of the fruit's dry matter is in place. |
+|| fruit_dry_matter_width | 0.1 | - | Width of the logistic fruit dry-matter curve, as a fraction of the development period. |
+|| fruit_late_fraction | 0 | - | Fraction of fruit carbon laid down in a second, later phase with its own logistic curve (kernel fill in a nut). 0 keeps the single curve. |
+|| fruit_late_midpoint | 0.8 | - | Fraction of the development period at which half of the late-phase carbon is in place. |
+|| fruit_late_width | 0.06 | - | Width of the late-phase logistic curve, as a fraction of the development period. |
+| **Respiration** |||||
+|| r_m_w_20 | 1.75e-4 | mol C/mol C/day | Maintenance respiration of mature wood (trunk, scaffolds) at 20 °C. |
+|| r_m_w_branch_20 | 1.8e-3 | mol C/mol C/day | Maintenance respiration at 20 °C of wood over one year old and thinner than branch_radius_threshold. |
+|| r_m_w_current_20 | 5.2e-3 | mol C/mol C/day | Maintenance respiration at 20 °C of wood under one year old. |
+|| branch_radius_threshold | 0.005 | m | Internode radius separating branch wood from mature wood. |
+|| r_m_r_20 | 1.8e-3 | mol C/mol C/day | Maintenance respiration of roots at 20 °C. |
+|| respiration_Q10 | 2.0 | - | Q10 of maintenance respiration. |
+|| growth_respiration_fraction | 0.211 | mol C/mol C | Growth respiration of wood, roots and leaves per unit of structural carbon. |
+| **Storage and transport** |||||
+|| root_storage_ratio | 1.5 | - | Carbohydrate storage capacity of roots per unit dry mass, relative to wood. |
+|| carbon_mixing_rate | 10 | 1/day | Rate at which transport evens out carbohydrate between shoots and roots. |
+|| storage_capacity | 0.05 | g C/g DW | Largest carbohydrate concentration wood holds (~125 mg glucose/g DW); roots hold root_storage_ratio times as much per unit dry mass. |
+|| storage_refill_rate | 0.03 | 1/day | Rate at which storage takes up surplus photosynthate toward capacity, competing with radial growth; photosynthate beyond both is forgone. |
+| **Sugar and starch** |||||
+|| sugar_saturation_warm | 0.018 | g C/g DW | Sugar held before storing starch, in warm conditions (~45 mg glucose/g DW). |
+|| sugar_saturation_cold | 0.036 | g C/g DW | Sugar held before storing starch, in cold conditions (~90 mg glucose/g DW). |
+|| starch_temperature_warm | 15 | °C | Temperature at and above which sugar_saturation_warm applies. |
+|| starch_temperature_cold | 5 | °C | Temperature at and below which sugar_saturation_cold applies. |
+|| starch_conversion_rate | 0.2 | 1/day | Rate at which sugar and starch relax toward their partition. |
+| **Starvation and fruit drop** |||||
+|| carbohydrate_starvation_days | 2 | days | Days below carbohydrate_growth_threshold before a shoot's flowers and fruit are aborted. |
+|| fruit_drop_window_end | 63 | days | Days after fruit set after which fruit no longer drops for lack of carbon. |
+|| fruit_drop_averaging_days | 5 | days | Period over which carbon supply and demand are averaged for fruit drop. |
+|| fruit_reserve_funded_days | 14 | days | Days after fruit set during which fruit grows at its potential from reserves; older fruit is built from current photosynthate. |
+|| fruit_abscission_growth_ratio | 0.55 | - | Fruit drops when its realized growth falls below this fraction of its potential. |
+|| branch_shedding_carbon_ratio | 1 | - | A branch is shed at the end of a season when its leaves' net photosynthesis over the year is below this multiple of the carbon it spent (wood maintenance plus construction). |
+| **Growth modulation** |||||
+|| carbohydrate_growth_threshold | 0.02 | g C/g DW | Concentration below which a shoot is short of carbon: the phyllochron lengthens, elongation, leaf expansion and bud break slow, radial growth stops, and after carbohydrate_starvation_days its flowers and fruit are aborted. |
+|| radial_growth_rate | 0.025 | 1/day | Rate at which an internode's radius approaches its girth target, paid from photosynthate in competition with storage. 0 stops radial growth. |
+|| sapwood_area_per_leaf_area | 0 | m<sup>2</sup> m<sup>-2</sup> | Sapwood area per unit of leaf area it supplies (Huber value). Sets the ring each internode must lay down per season to replace sapwood that becomes heartwood. Non-positive disables it. |
+|| sapwood_functional_years | 0 | years | Number of years a ring stays functional sapwood. Must be positive when sapwood_area_per_leaf_area is set. |
+
+Sources: wood, leaf and fruit carbon contents and the respiration coefficients are from the PEACH model (Grossman & DeJong 1994, Tree Physiology 14:37-48 and 14:329-345); growth respiration from DeJong & Goudriaan (1989); almond leaf mass per area from Pica et al. (2022); the root storage ratio from almond tree excavations (Esparza et al. 2001); the shoot:root ratio from excavated mature almond (Muhammad et al. 2020). The sugar-starch and threshold values are set from seasonal almond twig NSC measurements (20-170 mg glucose/g DW over the year).
 
 \subsection CarbParamSet Setting Parameters
 
@@ -87,10 +110,8 @@ plantarchitecture.enableCarbohydrateModel();
 
 // Create custom parameter set
 CarbohydrateParameters carb_params;
-carb_params.stem_density = 600000;  // Denser wood
-carb_params.SLA = 0.030;  // Different specific leaf area
-carb_params.carbohydrate_abortion_threshold = 0.12;  // More tolerant to low carbon
-carb_params.carbon_conductance_up = 0.25;  // Faster upward carbon transport
+carb_params.SLA = 0.030;  // thinner leaves than almond
+carb_params.shoot_root_ratio = 3;  // young tree
 
 // Load and build plant
 plantarchitecture.loadPlantModelFromLibrary("tomato");
@@ -109,301 +130,173 @@ plantarchitecture.setPlantCarbohydrateModelParameters(plantIDs, carb_params);
 
 \section CarbInitialization Initializing Carbon Pools
 
-Before growing a plant with the carbohydrate model enabled, carbon pools must be initialized. This sets the initial carbon concentration in each shoot based on the volume of its internodes. Three initialization methods are available:
+Before growing a plant with the carbohydrate model enabled, its carbohydrate pools must be initialized. Three initialization methods are available:
 
-**1. Initialize all plants:**
 ~~~~~~
 // Initialize all plants in the simulation
-float initial_concentration = 1500.0;  // mol C/m³
+float initial_concentration = 2000.0;  // mol C per m^3 of wood (~90 mg glucose/g DW at the default wood density)
 plantarchitecture.initializeCarbohydratePool(initial_concentration);
-~~~~~~
 
-**2. Initialize specific plant:**
-~~~~~~
 // Initialize a single plant
 plantarchitecture.initializePlantCarbohydratePool(plantID, initial_concentration);
-~~~~~~
 
-**3. Initialize specific shoot:**
-~~~~~~
 // Initialize a single shoot within a plant
 plantarchitecture.initializeShootCarbohydratePool(plantID, shootID, initial_concentration);
 ~~~~~~
 
-The carbon pool for each shoot is calculated as:
-\f[
-\text{carbohydrate_pool} = C_{\text{conc}} \times V_{\text{internode}}
-\f]
+Each shoot's pool is set to the concentration times its internode volume. \ref PlantArchitecture::initializePlantCarbohydratePool() also fills the root system to the same fraction of its storage capacity: the concentration times the root volume (wood volume / shoot_root_ratio) times root_storage_ratio. A concentration \f$C\f$ in mol C/m³ corresponds to \f$C \times 12.01 / \rho_{\text{stem}}\f$ g C/g DW.
 
-where \f$C_{\text{conc}}\f$ is the specified concentration (mol C/m³) and \f$V_{\text{internode}}\f$ is the total volume of internodes in the shoot (m³).
+Initializing a pool also marks the plant's standing structure as already built: only growth after initialization is charged. A plant can therefore be grown to the desired size with the carbohydrate model disabled, and the model enabled and initialized afterwards.
 
-**Important Notes:**
-- Carbon pools should be initialized after plant construction but before calling \ref PlantArchitecture::advanceTime()
-- The initial concentration should be high enough to support at least a few days of growth and maintenance respiration
-- Typical initial concentrations range from 1000-2000 mol C/m³, but this is species-dependent
-- If pools are not initialized, they default to zero and plants may immediately experience carbon stress
-
-\warning The pool required to keep a seedling alive can be considerably larger than the range above. The pool is sized as concentration × internode volume, so a plant built at age 0 gives its base stem a pool proportional to that stem's very small volume, while the base stem must fund the construction of its first child shoot -- which for a bean seedling is an order of magnitude larger in volume than the stem itself. Starting a bean at 1500 mol C/m³ leaves the base stem unable to pay for that first shoot, so its pool goes negative and the whole plant is pruned by the instant-death check on the first day. Raising the initial concentration resolves this. If a plant dies immediately after \ref PlantArchitecture::advanceTime() is first called, check the initial pool size before looking elsewhere.
+\warning A seedling's stem has a very small volume, so a pool sized as concentration × volume can be far smaller than the seed reserve that pays for a real seedling's first leaves. If a seedling dies within its first days, give it a larger initial concentration.
 
 \section CarbMechanisms Model Mechanisms
 
+Each call to \ref PlantArchitecture::advanceTime() credits the photosynthate accumulated since the previous call, then, in each sub-step, charges maintenance respiration and growth, redistributes carbohydrate, adjusts growth rates, and checks for organ abortion.
+
 \subsection CarbSources Carbon Sources
 
-The primary source of carbon in the model is leaf-level net photosynthesis calculated by the Photosynthesis plugin. The model reads primitive data labeled "net_photosynthesis" from leaf primitives, which should be in units of μmol CO₂ m⁻² s⁻¹.
+The source of carbon is leaf-level net photosynthesis, read from the primitive data "net_photosynthesis" (μmol CO₂ m⁻² s⁻¹) written by the Photosynthesis plugin. \ref PlantArchitecture::accumulateHourlyLeafPhotosynthesis() integrates it hourly, and each shoot is credited the net photosynthesis of its leaves, whatever its sign: a shoot whose leaves respire more than they fix is a net sink.
 
-During each call to \ref PlantArchitecture::advanceTime(), the model:
-1. Accumulates photosynthesis over the timestep using an hourly time resolution
-2. Converts CO₂ uptake to carbon (1 mol CO₂ = 1 mol C)
-3. Adds accumulated carbon to the carbohydrate pool of the shoot containing each leaf
-
-If the "net_photosynthesis" data is not present on leaf primitives (e.g., Photosynthesis plugin not run), the model issues a warning and continues without adding photosynthate. This allows for testing of the model's carbon sink and transfer mechanisms independently.
+If "net_photosynthesis" is not present on leaf primitives, the model issues a warning and continues without adding photosynthate. This allows the sinks and transport to be tested on their own.
 
 ~~~~~~
-// Typical workflow integrating with Photosynthesis plugin
 PhotosynthesisModel photosynthesis(&context);
 PlantArchitecture plantarchitecture(&context);
 
 plantarchitecture.enableCarbohydrateModel();
 plantarchitecture.loadPlantModelFromLibrary("bean");
 uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(nullorigin, 0);
-plantarchitecture.initializePlantCarbohydratePool(plantID, 1500);
+plantarchitecture.initializePlantCarbohydratePool(plantID, 2e6);
 
-// Growth loop
-for(int day = 0; day < 60; day++){
-    // Run photosynthesis model to calculate net photosynthesis
-    photosynthesis.run();
-
-    // Advance plant growth - automatically uses photosynthesis data
+for (int day = 0; day < 60; day++) {
+    for (int hour = 0; hour < 24; hour++) {
+        // ... update radiation, then:
+        photosynthesis.run();
+        plantarchitecture.accumulateHourlyLeafPhotosynthesis();
+    }
     plantarchitecture.advanceTime(1.0);
 }
 ~~~~~~
 
-\subsection CarbSinks Carbon Sinks
+\subsection CarbMaintResp Maintenance Respiration
 
-Carbon from the carbohydrate pool is consumed by three main processes:
-
-\subsubsection CarbMaintResp Maintenance Respiration
-
-Maintenance respiration represents the carbon cost of maintaining existing tissue. It is calculated separately for shoot (stem) and root tissues:
+Maintenance respiration is charged in proportion to structural carbon. Wood respiration per unit of carbon falls steeply with age and size, so each internode respires at one of three rates: r_m_w_current_20 while under one year old, r_m_w_branch_20 when older but thinner than branch_radius_threshold, and r_m_w_20 otherwise. Roots, whose structural carbon is the wood's divided by shoot_root_ratio, respire at r_m_r_20 from the root pool:
 
 \f[
-R_{\text{maint}} = (r_{\text{stem}} \times C_{\text{stem}} + r_{\text{root}} \times C_{\text{root}}) \times \Delta t
+R_{\text{maint}} = Q_{10}^{(T-20)/10} \left( \sum_i r_i C_{i} + r_{\text{root}} \frac{\sum_i C_i}{\text{shoot\_root\_ratio}} \right) \Delta t
 \f]
 
-where:
-- \f$r_{\text{stem}}\f$ is the stem maintenance respiration rate (mol C/mol C/day)
-- \f$r_{\text{root}}\f$ is the root maintenance respiration rate (mol C/mol C/day)
-- \f$C_{\text{stem}}\f$ is the carbon content of shoot stem tissue (mol C)
-- \f$C_{\text{root}}\f$ is the carbon content of root tissue (mol C), calculated from shoot carbon using the shoot-root ratio
-- \f$\Delta t\f$ is the timestep (days)
+where \f$C_i\f$ is the structural carbon of internode \f$i\f$. The temperature \f$T\f$ (°C) is set with \ref PlantArchitecture::adjustPlantMaintenanceRespiration(); for a daily time step, pass the temperature whose \f$Q_{10}\f$ factor equals the day's mean factor.
 
-Stem carbon content is calculated from internode volume and carbon density, which increases with age according to:
+\subsection CarbConstruction Organ Construction
 
+Each organ is charged for the structural carbon it gains, plus growth respiration. Organs are charged only for growth; shed or aborted organs are not refunded.
+
+<b>Wood:</b> the structural carbon of an internode is its volume times the wood carbon density, which rises linearly with age from initial_density_ratio of the mature value to the mature value at maturity_age:
 \f[
-\rho_C(t) = \rho_{C,\text{initial}} + (\rho_{C,\text{mature}} - \rho_{C,\text{initial}}) \times \min\left(1, \frac{t}{t_{\text{maturity}}}\right)
+C_{\text{internode}} = V \, \frac{\rho_{\text{stem}} f_{\text{struct}}}{M_C} \left[ r_0 + (1-r_0) \min\left(1, \frac{\text{age}}{\text{maturity\_age}}\right) \right]
 \f]
+Both new volume and the rising density are charged.
 
-where \f$\rho_{C,\text{initial}} = \rho_{C,\text{mature}} \times \text{initial_density_ratio}\f$.
+<b>Roots</b> grow in proportion to wood, by the wood's structural carbon gain divided by shoot_root_ratio, paid from the root pool.
 
-For dormant shoots, maintenance respiration is reduced by 80% (multiplied by 0.2).
+<b>Leaves:</b> the structural carbon of a leaf is its area divided by SLA times leaf_carbon_percentage. Leaf expansion is charged as it happens. With leaf_mass_fraction_at_expansion below 1, only that fraction of the leaf's final mass per unit area is charged with its area; the rest is charged as the leaf thickens, in proportion to its age over leaf_maturation_days.
 
-\subsubsection CarbGrowthResp Growth Respiration
+<b>Flowers:</b> total_flower_cost per flower, charged when a flower bud opens or closes.
 
-Growth respiration represents the carbon cost of synthesizing new tissue. It is calculated each time new organs are created or existing organs grow:
+<b>Fruit:</b> the structural carbon of a mature fruit is its mature volume times fruit_density times fruit_carbon_percentage. It is charged along a dry-matter curve over the fruit's development period (fruit set to maturity) rather than with its volume: with \f$x\f$ the fraction of the period elapsed, the fraction of the mature carbon in place is a logistic curve \f$L(x) = 1/(1 + e^{-(x - m)/w})\f$ (\f$m\f$ = fruit_dry_matter_midpoint, \f$w\f$ = fruit_dry_matter_width) rescaled to run from 0 at set to 1 at maturity. Almond fruit reaches full size ~12 weeks after bloom and lays down ~65% of its final dry weight by ~500 degree-days (late April); the defaults put ~65% in place at 45% of the development period, so most fruit carbon is demanded early, when fruit drop is decided. fruit_growth_respiration_fraction is added on top. With fruit_late_fraction above 0, that share of the fruit's carbon follows a second logistic curve (fruit_late_midpoint, fruit_late_width) late in development, as for the kernel of a nut, and the remainder follows the first curve.
 
-**Leaf Construction:**
+Growth respiration of wood, roots and leaves is growth_respiration_fraction times their structural carbon.
+
+\subsection CarbTransport Transport and Storage
+
+The plant's carbohydrate is held in its shoots and its root system. The root system's storage capacity per unit dry mass is root_storage_ratio times the wood's, reflecting the high NSC concentration of tree roots. Each sub-step:
+
+1. <b>Transport.</b> Every compartment relaxes toward the plant's mean carbohydrate per unit of storage capacity, at carbon_mixing_rate:
 \f[
-C_{\text{leaf}} = \frac{0.1\,f_{\text{leaf,C}}}{M_C \times \text{SLA}} \times A_{\text{leaf}}
+\Delta N_i = \left(1 - e^{-k \Delta t}\right) \left( m_i \bar{c} - N_i \right), \qquad \bar{c} = \frac{\sum_j N_j}{\sum_j m_j}
 \f]
+where \f$N_i\f$ is the carbohydrate in compartment \f$i\f$ and \f$m_i\f$ its storage capacity (wood dry mass, or root dry mass times root_storage_ratio). The exchange sums to zero, so carbon is conserved. Setting carbon_mixing_rate to 0 leaves each shoot to live on its own carbon.
+2. <b>Deficits.</b> A compartment that spent more than it held (for example a shoot that has just been charged for new leaves and wood) imports like any active sink: it is brought up to the plant's mean fill, drawn from the other compartments in proportion to their holdings.
+3. <b>Storage capacity.</b> The plant stores at most storage_capacity (g C/g DW) per unit of storage capacity \f$m_i\f$. Carbohydrate above that, which the plant can neither spend nor store, leaves it below ground as root exudation and respiration, taken from every compartment in proportion to its holding, and is reported in PlantCarbonBudget::storage_overflow. \ref PlantArchitecture::getPlantCarbohydrateStorageFill() returns the plant's carbohydrate as a fraction of its capacity.
+4. <b>Sugar and starch.</b> Tissue holds carbohydrate as sugar up to a saturation concentration and stores the rest as starch. The saturation is sugar_saturation_warm at and above starch_temperature_warm, sugar_saturation_cold at and below starch_temperature_cold, and interpolated between, so starch is converted to sugar in winter. The pools relax toward this partition at starch_conversion_rate, and starch is hydrolysed immediately whenever sugar would otherwise go negative.
 
-where \f$f_{\text{leaf,C}}\f$ is the leaf carbon percentage, \f$M_C\f$ is the molecular weight of carbon (12 g/mol), and \f$A_{\text{leaf}}\f$ is leaf area (m²).
+\subsection CarbSurplus Surplus Carbohydrate
 
-**Stem Construction:**
-\f[
-C_{\text{stem}} = \frac{\rho_{\text{stem}} \times f_{\text{stem,struct,C}}}{M_C} \times \Delta V_{\text{stem}}
-\f]
-
-where \f$\rho_{\text{stem}}\f$ is stem density (g/m³), \f$f_{\text{stem,struct,C}}\f$ is the stem <i>structural</i> carbon percentage (<code>stem_structural_carbon_percentage</code> = <code>stem_carbon_percentage</code> - <code>stem_carbohydrate_percentage</code> \f$\approx\f$ 0.334, not the full <code>stem_carbon_percentage</code> of 0.457), and \f$\Delta V_{\text{stem}}\f$ is the change in stem volume (m³).
-
-**Flower Construction:**
-\f[
-C_{\text{flower}} = C_{\text{flower,total}} \times N_{\text{flowers}}
-\f]
-
-**Fruit Construction:**
-\f[
-C_{\text{fruit}} = \frac{\rho_{\text{fruit}} \times f_{\text{fruit,C}}}{M_C} \times \Delta V_{\text{fruit}}
-\f]
-
-**Root Allocation:**
-
-Root construction costs are added to the above-ground costs using the shoot-root ratio:
-\f[
-C_{\text{total}} = C_{\text{shoot}} \times \left(1 + \frac{1}{\text{shoot_root_ratio}}\right)
-\f]
-
-\subsubsection CarbRadialGrowth Radial Growth
-
-When the \ref ShootParameters::girth_area_factor parameter is non-zero, internodes increase in radius over time based on downstream leaf area. This radial growth requires carbon, which is subtracted from the carbohydrate pool. If the carbohydrate concentration is below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_growth_threshold</span>\endhtmlonly, radial growth is reduced proportionally to carbon availability.
-
-\subsection CarbTransfer Carbon Transfer Between Shoots
-
-Carbon can be transferred between shoots within a plant to redistribute resources from carbon-rich to carbon-limited shoots. The transfer mechanism is <b>bidirectional</b> and <b>gradient-driven</b>, allowing carbon to flow in either direction based on concentration differences. Importantly, both upward (parent-to-child) and downward (child-to-parent) transfers occur simultaneously during each timestep, with the net flow direction determined by the concentration gradient and the asymmetric conductance parameters.
-
-This shoot-to-shoot transfer mechanism represents vascular transport of mobile carbohydrates (primarily sucrose) through the phloem. The conductance parameters can be tuned to match species-specific transport characteristics and the asymmetry between source-to-sink (upward) and sink-to-source (downward) flows.
-
-\subsubsection CarbTransferUp Upward Transfer (Parent to Child)
-
-Parent shoots can export carbon to their child shoots when the parent's carbon concentration exceeds the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_transfer_threshold_up</span>\endhtmlonly. This transfer represents the flow of photosynthate from established shoots to developing distal branches. The amount of carbon transferred depends on:
-
-1. The concentration gradient between parent and child
-2. The volume of the receiving child shoot
-3. The amount of carbon available above the transfer threshold
-
-The transfer is calculated as:
-
-\f[
-\Delta C_{\text{transfer}} = \min\left(\Delta C_{\text{demand}}, C_{\text{available}} \times f_{\text{child}}\right)
-\f]
-
-where the demand is:
-
-\f[
-\Delta C_{\text{demand}} = k_{\text{up}} \times \Delta C \times V_{\text{transfer}} \times f_{\text{child}} \times \Delta t
-\f]
-
-and:
-- \f$k_{\text{up}}\f$ is the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_up</span>\endhtmlonly parameter (dimensionless, 0-1)
-- \f$\Delta C = C_{\text{parent}} - C_{\text{child}}\f$ is the concentration gradient (mol C/m³)
-- \f$V_{\text{transfer}} = \min(V_{\text{parent}}, V_{\text{child}})\f$ is the effective transfer volume (m³)
-- \f$f_{\text{child}} = V_{\text{child}} / \sum V_{\text{children}}\f$ is the volume fraction of this child among all children
-- \f$C_{\text{available}}\f$ is the parent's available carbon pool above the transfer threshold (mol C)
-- \f$\Delta t\f$ is the timestep (days)
-
-Key features of upward transfer:
-- Transfer only occurs if \f$C_{\text{parent}} > C_{\text{child}}\f$ (concentration gradient favors upward flow)
-- Carbon is allocated to multiple child shoots proportionally based on their volume
-- Larger child shoots receive more carbon than smaller ones
-- Transfer is limited to carbon above the transfer threshold (shoots retain minimum reserves)
-
-\subsubsection CarbTransferDown Downward Transfer (Child to Parent)
-
-Child shoots can export carbon to their parent shoot when the child's concentration exceeds both the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_transfer_threshold_down</span>\endhtmlonly and the parent's concentration. This transfer represents the mobilization of carbohydrates from productive distal branches back to the main stem, which is characteristic of mature branches with high photosynthetic capacity.
-
-The downward transfer is simpler than upward transfer, with each child shoot transferring independently to its parent:
-
-\f[
-\Delta C_{\text{transfer}} = \min\left(\Delta C_{\text{demand}}, C_{\text{available}}\right)
-\f]
-
-where:
-
-\f[
-\Delta C_{\text{demand}} = k_{\text{down}} \times (C_{\text{child}} - C_{\text{parent}}) \times V_{\text{child}} \times \Delta t
-\f]
-
-and:
-- \f$k_{\text{down}}\f$ is the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_down</span>\endhtmlonly parameter (dimensionless, 0-1)
-- \f$C_{\text{child}}\f$ and \f$C_{\text{parent}}\f$ are the carbon concentrations (mol C/m³)
-- \f$V_{\text{child}}\f$ is the volume of the child shoot (m³)
-- \f$C_{\text{available}}\f$ is the child's available carbon pool above the transfer threshold (mol C)
-
-Key features of downward transfer:
-- Transfer only occurs if \f$C_{\text{child}} > C_{\text{parent}}\f$ (concentration gradient favors downward flow)
-- Each child transfers independently based on its own concentration gradient
-- The default \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_down</span>\endhtmlonly (0.9) is typically 5× larger than \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_up</span>\endhtmlonly (0.18)
-- This asymmetry reflects the generally faster phloem transport from mature source leaves to sink tissues
-
-\subsubsection CarbTransferBidirectional Bidirectional Dynamics
-
-During each timestep, <b>both upward and downward transfers are evaluated and executed</b>. This means that carbon can simultaneously flow:
-- From a carbon-rich parent to its carbon-poor children (upward)
-- From carbon-rich children to their carbon-poor parent (downward)
-- In opposite directions in different parts of the same plant
-
-The net flow direction in any parent-child pair depends on:
-1. Their relative carbon concentrations
-2. Whether each shoot's concentration exceeds the transfer threshold
-3. The asymmetric conductance parameters
-
-This bidirectional mechanism allows the plant to dynamically redistribute carbon throughout its architecture in response to local carbon availability, mimicking the complex source-sink dynamics of real plant vascular systems. Photosynthetically productive regions naturally become sources that export carbon, while growing regions with high respiration costs become sinks that import carbon.
+Storage is an active sink that competes for surplus photosynthate, since storage refills in parallel with growth within weeks of leaf-out (Klein et al. 2016). Each step, the photosynthate left after maintenance respiration, vegetative growth and fruit is shared between storage, which demands storage_refill_rate times the plant's unfilled capacity per day, and radial growth, which demands its potential cost (see \ref CarbGirthMod). Each receives the remainder in proportion to its demand, up to that demand, and photosynthate beyond both is not fixed: it is reported as PlantCarbonBudget::photosynthesis_downregulation and withdrawn from net photosynthesis. Extra carbon therefore neither raises wood growth above its potential nor fills reserves past capacity; whatever still exceeds capacity after transport is released below ground (see \ref CarbTransport).
 
 \subsection CarbGrowthMod Dynamic Growth Modulation
 
-The carbohydrate model dynamically adjusts growth rates based on carbon availability, providing a mechanistic link between carbon supply and plant development.
-
 \subsubsection CarbPhylloMod Phyllochron Modulation
 
-The phyllochron (time between successive leaf emergences) can be increased above its minimum value when carbon becomes limiting. The instantaneous phyllochron is calculated as:
+The phyllochron (time between successive leaf emergences) is increased above its minimum when carbon becomes limiting:
 
 \f[
-\tau_{\text{phyl}} = \max\left(\tau_{\text{min}}, \frac{\tau_{\text{min}}}{r_{\text{carbon}} \times \Delta t}\right)
+\tau_{\text{phyl}} = \max\left(\tau_{\text{min}}, \frac{\tau_{\text{min}}}{r_{\text{carbon}} \times \Delta t}\right), \qquad r_{\text{carbon}} = \frac{C_{\text{pool}}}{C_{\text{threshold}} \times \rho_{\text{stem}} \times V_{\text{shoot}} / M_C}
 \f]
 
-where \f$\tau_{\text{min}}\f$ is the \htmlonly<span style="font-family: Courier, monospace; color: blue;">phyllochron_min</span>\endhtmlonly parameter from \ref ShootParameters, \f$\Delta t\f$ is the timestep (days), and \f$r_{\text{carbon}}\f$ is the carbon availability ratio:
+where \f$C_{\text{threshold}}\f$ is carbohydrate_growth_threshold. Note that the adjustment is timestep-dependent, with smaller timesteps resulting in stronger adjustment.
 
-\f[
-r_{\text{carbon}} = \frac{C_{\text{pool}}}{C_{\text{threshold}} \times \rho_{\text{stem}} \times V_{\text{shoot}} / M_C}
-\f]
+\subsubsection CarbElongMod Elongation and Leaf Expansion Modulation
 
-where \f$C_{\text{pool}}\f$ is the current carbon pool (mol C), \f$C_{\text{threshold}}\f$ is the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_phyllochron_threshold</span>\endhtmlonly (g C/g DW), \f$\rho_{\text{stem}}\f$ is the stem density (g/m³), \f$V_{\text{shoot}}\f$ is the shoot volume (m³), and \f$M_C\f$ is the molecular weight of carbon (12 g/mol).
-
-When carbon is abundant (ratio above 1.0), the phyllochron equals its minimum value (maximum growth rate). As carbon becomes limiting, the phyllochron increases, slowing the rate of leaf production. Note that the phyllochron adjustment is timestep-dependent, with smaller timesteps resulting in stronger adjustment.
-
-\subsubsection CarbElongMod Elongation Modulation
-
-Similarly, internode elongation is reduced when carbon is below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_growth_threshold</span>\endhtmlonly. However, this modulation is currently not explicitly implemented in the code - elongation continues at the specified rate, but the construction costs are still subtracted from the carbon pool.
+Internode elongation and leaf expansion slow with the same carbon availability ratio. Each shoot draws its potential elongation and leaf expansion rates when it is created, and the rates it grows at are those potentials times \f$\min(1, r_{\text{carbon}})\f$. A plant running short of carbohydrate therefore slows its own demand rather than growing on until its pools are exhausted.
 
 \subsubsection CarbGirthMod Radial Growth Modulation
 
-When carbon concentration falls below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_growth_threshold</span>\endhtmlonly, radial growth (girth increase) is slowed. The radial growth rate is scaled by the carbon availability ratio:
+Radial growth stops when a shoot's carbohydrate is at or below carbohydrate_growth_threshold. Each step closes a fraction \f$1 - e^{-r\,\Delta t}\f$ (\f$r\f$ = radial_growth_rate) of the gap to the girth target, so a jump in the target, such as the new leaf area of a spring flush, is laid down as a ring over weeks rather than at once. This growth is a sink-limited potential paid from photosynthate: it is multiplied by the cambium supply ratio, the share of the photosynthate left after maintenance, vegetative growth and fruit that radial growth receives in competition with storage (each in proportion to its demand, up to that demand), relative to its potential cost, averaged over fruit_drop_averaging_days. Fruit therefore outcompetes the cambium, and abundant carbon does not raise wood growth above its potential (free-air CO2 enrichment of mature trees raised photosynthesis but not stem growth; Koerner et al. 2005).
 
-\f[
-\frac{dr}{dt} = \frac{dr}{dt}\bigg|_{\text{max}} \times \max\left(0.05, r_{\text{carbon}}\right)
-\f]
+The pipe-model target grows only with new leaf area, so on its own it lets a mature tree with a steady canopy stop thickening. A tree must in fact lay down a new ring every year at constant leaf area, because its oldest sapwood stops conducting and becomes heartwood. With sapwood_area_per_leaf_area (\f$H\f$) and sapwood_functional_years (\f$n\f$) set, each internode owes in each season a ring of area
 
-where the carbon availability ratio \f$r_{\text{carbon}}\f$ is calculated as described above. Growth is never reduced below 5% of the maximum rate (minimum scaling factor of 0.05).
+\f[ \Delta A = \frac{H \, L_{peak}}{n} \f]
+
+where \f$L_{peak}\f$ is the highest leaf area currently borne above it during the season. The part not yet laid down closes at radial_growth_rate, as a uniform area added to each radius of the internode so that its taper is kept, and in each step the internode grows by the larger of this increment and its pipe-model increment. The trunk's ring therefore scales with the whole canopy and a twig's with its own leaves.
 
 \subsubsection CarbBudMod Vegetative Bud Break Modulation
 
-The probability that a vegetative bud will break and produce a new shoot can be reduced when carbon is limiting. If the carbon concentration is below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_vegetative_break_threshold</span>\endhtmlonly, the bud break probability is scaled linearly:
+When a shoot's carbohydrate concentration is below carbohydrate_growth_threshold, the shoot's vegetative_bud_break_probability_max is scaled down in proportion:
 
 \f[
-P_{\text{break}} = P_{\text{base}} \times \frac{C_{\text{conc}}}{C_{\text{threshold}}}
+P_{\text{max}} = P_{\text{max,shoot}} \times \min\left(1, \frac{C_{\text{conc}}}{C_{\text{threshold}}}\right)
 \f]
 
-where \f$P_{\text{base}}\f$ is the base bud break probability from \ref ShootParameters and \f$C_{\text{threshold}}\f$ is the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_vegetative_break_threshold</span>\endhtmlonly. This allows the plant to suppress branching when carbon reserves are low.
+The bud break probability along the shoot is then computed from this maximum, vegetative_bud_break_probability_min and the decay rate exactly as without the carbohydrate model.
 
-\subsection CarbAbortion Organ Abortion and Shoot Pruning
+\subsection CarbAbortion Organ Abortion and Shoot Death
 
-When carbon stress persists, the model can abort individual organs or prune entire shoots to reduce carbon demand and maintain plant viability. This represents a plant's ability to shed organs under resource limitation.
+\subsubsection CarbFruitDrop Carbon-Driven Fruit Drop
 
-\subsubsection CarbFlowerFruitAbort Flower and Fruit Abortion
+Fruit number is decided by carbon rather than set: a plant can set more fruit than it can feed and drops the excess, as almond does in its "June drop" 6-7 weeks after bloom (the main drop runs ~20-60 days after full bloom; Lordan et al. 2021). Fruit is built from current photosynthate after a short period funded from reserves (flowers and expanding leaves are built from stored carbon, fruit from current photosynthate; Hoch et al. 2013). Fruit up to fruit_reserve_funded_days after set grows at its potential, paid from the pools. Older fruit grows at its potential times the fruit supply ratio \f$\phi\f$: the photosynthesis credited for the step, less maintenance respiration, vegetative growth and reserve-funded fruit, relative to the older fruit's potential growth (both with growth respiration), averaged over fruit_drop_averaging_days (apple drop follows carbon deficits of more than ~4 days; Robinson & Lakso 2011) and capped at 1. Growth lost to a shortfall is not made up, so a fruit that falls behind stays smaller. When \f$\phi\f$ is below fruit_abscission_growth_ratio \f$\phi_a\f$, a fraction \f$(1 - \phi/\phi_a)\,\Delta t\,/\,\tau\f$ (\f$\tau\f$ = fruit_drop_averaging_days) of the older fruit up to fruit_drop_window_end days after set is dropped, most recently set first (apple fruitlets growing at under ~50-60% of the dominant fruit's rate abscise; Celton et al. 2014). The number dropped is reported in PlantCarbonBudget::fruit_dropped.
 
-If a shoot's carbon concentration falls below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_abortion_threshold</span>\endhtmlonly for longer than \htmlonly<span style="font-family: Courier, monospace; color: blue;">bud_death_threshold_days</span>\endhtmlonly, fruits and flowers are progressively aborted:
+\subsubsection CarbFlowerFruitAbort Flower and Fruit Abortion under Carbon Starvation
 
-1. The model identifies the oldest (earliest-created) flower or fruit on the shoot
-2. The organ is removed from the Context (geometry deleted)
-3. Construction carbon is returned to the shoot's carbohydrate pool
-4. If carbon concentration remains below threshold, the process repeats for the next oldest organ
+If a shoot's carbohydrate concentration stays below carbohydrate_growth_threshold for longer than carbohydrate_starvation_days, its flowers and fruit are aborted one at a time, at any stage, until the carbon they would still have needed would bring the shoot back above the threshold.
 
-This continues until either:
-- Carbon concentration rises above the threshold
-- All flowers and fruits are aborted
+\subsubsection CarbShootPrune Shoot Death
 
-\subsubsection CarbShootPrune Shoot Pruning
+A shoot left with no carbohydrate at all is removed using \ref PlantArchitecture::pruneBranch(); because deficits are made up from the rest of the plant, this happens only once the whole plant is exhausted. Branches that do not pay their way are shed at the end of the season (see \ref CarbBranchShedding).
 
-If carbon stress is more severe and persists longer, entire shoots can be pruned. When a shoot's carbon concentration falls below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_pruning_threshold</span>\endhtmlonly for longer than \htmlonly<span style="font-family: Courier, monospace; color: blue;">branch_death_threshold_days</span>\endhtmlonly, the entire shoot is removed using \ref PlantArchitecture::pruneBranch().
+\subsubsection CarbBranchShedding Branch Shedding by Carbon Starvation
 
-Note that the pruning threshold is typically much lower than the abortion threshold (default 0.01 vs 0.1 g C/g DW), and the time threshold is longer (default 5 vs 2 days). This ensures that pruning only occurs under severe, prolonged carbon stress.
+Self-pruning follows the branch autonomy of Sprugel et al. (1991, Annual Review of Ecology and Systematics 22:309-334): a branch lives on the carbon its own leaves fix, not on the tree's reserves. Each shoot records the net photosynthesis credited to its own leaves, the maintenance respiration charged to its own wood, and the construction of its own wood, leaves, flowers and fruit (with growth respiration). At the end of each season (the dormancy boundary), \ref PlantArchitecture::shedCarbonStarvedBranches() totals these records over every branch -- a shoot together with its descendants -- from the tips inward, and sheds a branch when
 
-\subsubsection CarbImmediateDeath Immediate Shoot Death
+\f[ A_{branch} < r \left( R_{m,branch} + G_{branch} \right) \f]
 
-In addition to time-based thresholds, shoots are immediately pruned if:
-1. **Negative carbon pool**: If respiration or growth costs drive the carbon pool negative
-2. **Zero productivity**: If the shoot has zero leaf area, zero child shoot volume, and is not dormant (i.e., cannot contribute to carbon balance)
+where \f$A_{branch}\f$ is the net photosynthesis of the branch's leaves and \f$R_{m,branch}\f$ the maintenance respiration of its wood and \f$G_{branch}\f$ its construction over the year since the last evaluation, and \f$r\f$ is branch_shedding_carbon_ratio. With \f$r = 1\f$ a branch is shed when it has had to import carbon from the rest of the tree; because fruit is part of \f$G_{branch}\f$, heavy cropping on poorly lit wood can kill it, as is observed for almond spurs. A shed sub-branch no longer counts toward the branch that carries it, so a shaded twig is removed while the limb bearing it survives on its other branches, and a limb survives only if what remains of it still pays its way. Only shoots of type "proleptic", "sylleptic" or "spur" that have been through at least one full season are judged; the trunk and scaffolds are never shed (see \ref PlantArchitecture::isStructuralShoot()). The records are then reset.
 
-These conditions indicate that the shoot has become a pure carbon sink with no prospect of recovery.
+Short shoots such as almond spurs can be given carbon-based dynamics through their shoot type. With ShootParameters::fruit_cost_share below 1, a shoot is charged only that share of its own fruit's cost and the branch bearing it the rest, since spur fruit also draws on the surrounding leaves. With ShootParameters::carbon_survival_scale set, a shoot survives with probability \f$1/(1+e^{-(z-z_{50})/s})\f$, where \f$z\f$ is the logarithm of its income over its costs, instead of being shed whenever \f$z<0\f$. With ShootParameters::return_bloom_scale set, a surviving shoot flowers in the next season with a probability that rises logistically with its vegetative carbon index and is cut by ShootParameters::return_bloom_bearing_factor if it bore fruit; a shoot that does not flower loses its flower buds at dormancy break. Bearing therefore depletes a spur and lowers its next-year flowering, giving it a season to recover. With the carbohydrate model enabled this replaces the shade-based branch shedding used otherwise; growth priority among sibling laterals is shade-based in both cases.
+
+Because the evaluation uses the photosynthesis each leaf actually received, it depends on the light environment supplied through the \c net_photosynthesis primitive data: a model that gives every leaf the same rate per unit area sheds branches only by their leaf area relative to their wood.
+
+\section CarbBudget Carbon Budget
+
+\ref PlantArchitecture::getPlantCarbonBudget() returns a \ref PlantCarbonBudget with every carbon flux of a plant summed over the most recent call to \ref PlantArchitecture::advanceTime(): net photosynthesis, wood and root maintenance respiration, wood, root, leaf and fruit structural growth, flower construction, growth respiration and the carbohydrate lost with branches shed for carbon starvation (all mol C). The change in \ref PlantArchitecture::getPlantTotalCarbohydratePool() over the call equals net photosynthesis minus the other terms, unless shoots were pruned during the call by other means (e.g. \ref PlantArchitecture::pruneBranch() or shoot death). \ref PlantArchitecture::getPlantRootCarbohydratePool() returns the root pool alone.
+
+~~~~~~
+plantarchitecture.advanceTime(plantID, 1.0);
+PlantCarbonBudget budget = plantarchitecture.getPlantCarbonBudget(plantID);
+float respiration = budget.wood_maintenance_respiration + budget.root_maintenance_respiration + budget.growth_respiration;
+~~~~~~
 
 \section CarbOutput Output Data
 
@@ -413,18 +306,12 @@ When the carbohydrate model is enabled, an optional output data field can be act
 plantarchitecture.optionalOutputObjectData("carbohydrate_concentration");
 ~~~~~~
 
-This creates object data labeled "carbohydrate_concentration" with type \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly on internode tube objects. The value represents the carbon concentration in units of mol C/m³:
+This creates object data labeled "carbohydrate_concentration" with type \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly on internode tube objects. The value is the shoot's carbohydrate (sugar + starch) per unit internode volume, in mol C/m³:
 
 \f[
 C_{\text{conc}} = \frac{C_{\text{pool}}}{V_{\text{shoot}}}
 \f]
 
 The concentration is constant along each shoot (all internodes in a shoot have the same value) and is zero for non-internode organs (leaves, petioles, flowers, fruit).
-
-This data can be used to:
-- Visualize carbon distribution across the plant architecture
-- Identify carbon-limited regions of the plant
-- Validate that carbon transfer is occurring as expected
-- Export for post-processing and analysis
 
 */

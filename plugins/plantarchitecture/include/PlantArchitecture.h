@@ -472,78 +472,176 @@ inline AxisRotation AxisRotation::operator-(const AxisRotation &a) const {
 
 enum BudState { BUD_DORMANT = 0, BUD_ACTIVE = 1, BUD_FLOWER_CLOSED = 2, BUD_FLOWER_OPEN = 3, BUD_FRUITING = 4, BUD_DEAD = 5 };
 
+//! Parameters of the carbohydrate model
+/**
+ * Defaults are for mature almond (Prunus dulcis), with peach values (Grossman & DeJong 1994a,b) where almond measurements
+ * are not available. Every carbohydrate concentration is expressed per gram of wood dry mass, as g C / g DW; 1 mg
+ * glucose-equivalent per g DW, the unit of most non-structural carbohydrate (NSC) assays, is 4.0e-4 g C / g DW.
+ */
 struct CarbohydrateParameters {
 
-    // -- Stem Growth Parameters -- //
-    //! mature internode (wood/stem) density (g m^-3)
+    // -- Wood -- //
+    //! Dry density of mature wood (g DW m^-3)
     float stem_density = 675000;
-    //! fraction of the dry weight of internode made up by carbon in mature shoot
-    float stem_carbon_percentage = 0.457; //DeJong & Walton 1989
-    //! mean fraction of the dry weight of internode composed of carbohydrates in mature shoot
-    float stem_carbohydrate_percentage = 1 - (1 / 1.14); //DeJong & Walton 1989
-    //! fraction of the dry weight of internode made up by structural carbon in mature shoot - Excludes fraction made up by carbohydrates
-    float stem_structural_carbon_percentage = stem_carbon_percentage - stem_carbohydrate_percentage;
-    //! age at which stem reaches physiological maturity (days)
+    //! Structural carbon of wood (g C / g DW): total wood carbon (0.457, peach current-year stem; Grossman & DeJong 1994a) less ~0.03 g C / g DW of non-structural carbohydrate
+    float stem_structural_carbon_percentage = 0.43f;
+    //! Age at which a new internode reaches its mature carbon density (days)
     float maturity_age = 120;
-    //! starting fraction of the final stem carbon density in new growth
+    //! Carbon density of new internode tissue as a fraction of the mature density
     float initial_density_ratio = 0.25;
-    //! ratio of shoot internode dry weight to root dry weight
-    float shoot_root_ratio = 3;
+    //! Ratio of woody shoot dry mass to root dry mass. Excavated 13-year-old almond: 5.2-6.6 (Muhammad et al. 2020); 7-year-old peach: ~3.
+    float shoot_root_ratio = 5;
 
-    // -- Leaf Growth Parameters -- //
+    // -- Leaves -- //
+    //! Carbon content of leaf dry matter (g C / g DW; Grossman & DeJong 1994a)
+    float leaf_carbon_percentage = 0.453;
+    //! Specific leaf area (m^2 / g DW). Almond leaf mass per area is 109-124 g/m^2 (Pica et al. 2022).
+    float SLA = 0.009f;
+    //! Fraction of a leaf's final dry mass per unit area that is in place when its blade expands. The rest is laid down as the leaf thickens over leaf_maturation_days, so leaf carbon is charged
+    //! partly with blade area and partly with leaf age. 1 charges the whole leaf with its area.
+    float leaf_mass_fraction_at_expansion = 1.f;
+    //! Days from a leaf's emergence over which its dry mass per unit area rises from leaf_mass_fraction_at_expansion to its final value (1/SLA)
+    float leaf_maturation_days = 60.f;
 
-    //! fraction of leaf dry weight made up by carbon
-    float leaf_total_carbon_percentage = 0.453; //DeJong & Walton 1989
-    //! specific leaf area - ratio of leaf area to leaf dry mass (m^2 / g DW)
-    float SLA = 9.2/10000/leaf_total_carbon_percentage*12.01; //AL Pica 2022
-    float leaf_carbohydrate_percentage = 1 - (1/1.13); //DeJong & Walton 1989
-    float leaf_carbon_percentage = leaf_total_carbon_percentage;
-    // -- Flower Growth Parameters -- //
-    //! carbon cost to produce a flower (mol C flower^-1)
+    // -- Flowers -- //
+    //! Carbon cost to produce a flower, including its growth respiration (mol C flower^-1)
     float total_flower_cost = 8.33e-4;
 
-    // -- Fruit Growth Parameters -- //
-    //! density of fruit (g m^-3)
+    // -- Fruit -- //
+    //! Dry mass per unit volume of the mature fruit (g DW m^-3)
     float fruit_density = 525000;
-    //! fraction of the dry weight of fruit made up by carbon
-    float fruit_carbon_percentage = 0.475; //DeJong & Walton 1989
+    //! Carbon content of fruit dry matter (g C / g DW; Grossman & DeJong 1994a)
+    float fruit_carbon_percentage = 0.475;
+    //! Growth respiration of fruit (mol C respired per mol C incorporated). Peach fruit is 0.18 (DeJong & Goudriaan 1989); the lipid-rich almond kernel raises the whole-fruit cost.
+    float fruit_growth_respiration_fraction = 0.3f;
+    //! Fraction of a fruit's development period (fruit set to maturity) at which half of its dry matter is in place. Fruit carbon is charged along this dry-matter curve rather than with fruit
+    //! volume. Almond fruit reaches full size ~12 weeks after bloom and holds ~65% of its final dry weight by ~500 degree-days after bloom (~late April; DeJong-lab ALMOND model), i.e. ~45% of a
+    //! ~150-day development period.
+    float fruit_dry_matter_midpoint = 0.4f;
+    //! Width of the logistic fruit dry-matter curve, as a fraction of the fruit development period
+    float fruit_dry_matter_width = 0.1f;
+    //! Fraction of a fruit's carbon that is laid down in a second, later phase with its own logistic curve (kernel fill in a nut). 0 leaves the single curve above. The almond kernel is about a
+    //! third of fruit dry weight but, being lipid-rich, close to half of its construction carbon.
+    float fruit_late_fraction = 0.f;
+    //! Fraction of the fruit development period at which half of the late-phase carbon is in place
+    float fruit_late_midpoint = 0.8f;
+    //! Width of the late-phase logistic curve, as a fraction of the fruit development period
+    float fruit_late_width = 0.06f;
 
-    // -- Respiration Parameters -- //
-    //! maintenance respiration rate of stem at 20C (mol C respired/mol C in pool/day)
-    float r_m_w_20 = 5.25164e-05; // DeJong & Goudriaan 1989
-    //! maintenance respiration rate of root at 20C (mol C respired/mol C in pool/day)
-    float r_m_r_20 = 5.25164e-03; // DeJong & Goudriaan 1989
-    //! fraction of wood composed of physiologically active tissue
-    float living_wood_fraction = 0.5;
-    //! growth respiration cost (fraction of total carbon used during growth that goes toward respiration rather than structure)
-    float growth_respiration_fraction = 0.211; //DeJong & Goudriaan 1989
+    // -- Respiration -- //
+    //! Maintenance respiration of mature wood (trunk and scaffolds) at 20 C (mol C respired / mol structural C / day). Peach trunk: 1.75e-4 (Grossman & DeJong 1994a).
+    float r_m_w_20 = 1.75e-4f;
+    //! Maintenance respiration at 20 C of wood older than one year but thinner than branch_radius_threshold (mol C / mol C / day). Peach branches: 1.8e-3 (Grossman & DeJong 1994a).
+    float r_m_w_branch_20 = 1.8e-3f;
+    //! Maintenance respiration at 20 C of wood younger than one year (mol C / mol C / day). Peach current-year stems: 5.2e-3 (Grossman & DeJong 1994a).
+    float r_m_w_current_20 = 5.2e-3f;
+    //! Internode radius below which wood older than one year respires at r_m_w_branch_20 rather than r_m_w_20 (m)
+    float branch_radius_threshold = 0.005f;
+    //! Maintenance respiration of roots at 20 C (mol C respired / mol structural C / day). Peach: 1.8e-3 (Grossman & DeJong 1994a).
+    float r_m_r_20 = 1.8e-3f;
+    //! Q10 of maintenance respiration. Peach stems and leaves: ~2.0 below 30 C (Grossman & DeJong 1994b).
+    float respiration_Q10 = 2.0f;
+    //! Growth respiration of wood, roots and leaves (mol C respired per mol C incorporated into structure; DeJong & Goudriaan 1989)
+    float growth_respiration_fraction = 0.211;
 
-    // -- Organ Abortion Thresholds -- //
-    //! carbohydrate concentration threshold to abort a flowering bud as a fraction of g C/ g DW in the stem
-    float carbohydrate_abortion_threshold = 0.1;
-    //! carbohydrate concentration threshold to prune a shoot as a fraction of g C/ g DW in the stem
-    float carbohydrate_pruning_threshold = 0.025;
-    //! threshold time (days) to abort a bud (bud is aborted when the carbohydrate concentration is below carbohydrate_abortion_threshold for more than this time)
-    float bud_death_threshold_days = 2;
-    //! threshold time (days) to abort a shoot (shoot is aborted when the carbohydrate concentration is below carbohydrate_abortion_threshold for more than this time)
-    float branch_death_threshold_days = 5;
+    // -- Storage and transport -- //
+    //! Carbohydrate storage capacity of roots per unit dry mass, relative to wood. Peach root-crown xylem holds ~1.5x the carbohydrate of trunk xylem (Da Silva et al. 2014), and the L-PEACH
+    //! storage capacities are in the same ratio. Excavated almond roots hold 36% of tree NSC in 13% of its biomass (Esparza et al. 2001).
+    float root_storage_ratio = 1.5f;
+    //! Rate (1/day) at which phloem transport evens out differences in carbohydrate concentration between shoots and roots. 0 leaves every shoot to live on its own carbon.
+    /**
+     * Phloem moves carbohydrate across a tree within a day, and measured almond twig, branch and trunk NSC concentrations are nearly identical (Tixier et al. 2020).
+     * A rate well above 1/day keeps an actively growing shoot, which is charged for its new leaves every day against a small wood volume, supplied from the
+     * rest of the plant; at slower rates such shoots sit persistently below the pruning threshold and die while the plant is well stocked.
+     */
+    float carbon_mixing_rate = 10.f;
+    //! Carbohydrate storage capacity of wood: the largest carbohydrate concentration it holds (g C / g DW). 0.05 is ~125 mg glucose-eq/g DW, within the 110-170 mg/g autumn maximum of almond
+    //! shoot wood (Tixier et al. 2020). The root system holds root_storage_ratio times as much per unit dry mass. Carbohydrate the plant cannot store or spend leaves it below ground (root exudation and
+    //! respiration) and is reported in PlantCarbonBudget::storage_overflow.
+    float storage_capacity = 0.05f;
+    //! Rate (1/day) at which storage takes up carbohydrate toward capacity. Storage is a sink that competes with radial growth for the photosynthate left after maintenance, vegetative
+    //! growth and fruit: it demands storage_refill_rate x (capacity - pool) per day, the two share the remainder in proportion to their demands, and photosynthate beyond both is forgone
+    //! (PlantCarbonBudget::photosynthesis_downregulation). Storage refills in parallel with growth within 2-6 weeks of leaf-out (Klein et al. 2016).
+    float storage_refill_rate = 0.03f;
 
-    // -- Phyllochron Adjustment Parameters -- //
-    //! carbohydrate concentration threshold to reduce phyllochron as a fraction of g C/ g DW in the stem
-    float carbohydrate_phyllochron_threshold = 0.05;
-    //! carbohydrate concentration threshold to reduce vegetative bud break probability as a fraction of g C/ g DW in the stem
-    float carbohydrate_vegetative_break_threshold = 0.05;
+    // -- Sugar-starch partitioning -- //
+    //! Sugar concentration (g C / g DW) held as soluble sugar in warm conditions; carbohydrate above it is stored as starch (~45 mg glucose/g DW)
+    float sugar_saturation_warm = 0.018f;
+    //! Sugar concentration (g C / g DW) held as soluble sugar in cold conditions, when starch is converted to sugar (~90 mg glucose/g DW)
+    float sugar_saturation_cold = 0.036f;
+    //! Temperature (C) at and above which sugar_saturation_warm applies
+    float starch_temperature_warm = 15.f;
+    //! Temperature (C) at and below which sugar_saturation_cold applies
+    float starch_temperature_cold = 5.f;
+    //! Rate (1/day) at which sugar and starch relax toward their temperature-dependent partitioning
+    float starch_conversion_rate = 0.2f;
 
-    //! carbohydrate concentration threshold for radial growth as a fraction of g C/ g DW in the stem
-    float carbohydrate_growth_threshold = 0.2;
+    // -- Starvation and fruit drop -- //
+    //! Days a shoot's carbohydrate stays below carbohydrate_growth_threshold before its flowers and fruit are aborted, one at a time until it recovers. A shoot whose carbohydrate is exhausted
+    //! dies.
+    float carbohydrate_starvation_days = 2;
+    //! Days after fruit set after which fruit no longer drops for lack of carbon. Almond drops most of its excess fruit ~20-60 days after full bloom (Lordan et al. 2021).
+    float fruit_drop_window_end = 63;
+    //! Days over which the fruit, cambium and storage supply ratios are averaged. Apple fruit drop responds to carbon deficits lasting more than ~4 days, not 1-2 days (Robinson & Lakso 2011).
+    float fruit_drop_averaging_days = 5;
+    //! Days after fruit set during which fruit grows at its full potential, funded from reserves. Older fruit is built from current photosynthate only: it grows at its potential times the
+    //! plant's fruit supply ratio, the photosynthesis left after maintenance, vegetative growth and reserve-funded fruit, relative to the older fruit's potential growth, averaged over
+    //! fruit_drop_averaging_days. Growth lost to a shortfall is not made up. Flowers and expanding leaves are built from stored carbon and fruit from current photosynthate (Hoch et al. 2013);
+    //! in sweet cherry reserves reach fruit until ~14 days after full bloom (Ayala & Lang 2015).
+    float fruit_reserve_funded_days = 14.f;
+    //! Fruit past its reserve-funded period drops when the fruit supply ratio falls below this value: a fraction (1 - ratio / this) x dt / fruit_drop_averaging_days of it per sub-step, most
+    //! recently set first, until fruit_drop_window_end days after set. Apple fruitlets growing at under ~50-60% of the dominant fruit's rate abscise (Celton et al. 2014).
+    float fruit_abscission_growth_ratio = 0.55f;
 
-    // -- Carbon Transfer Parameters -- //
-    //! carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of g C/ g DW in the stem
-    float starch_sequestration_ratio = 0.025;
-    float carbohydrate_transfer_threshold_down = 0.025;
-    float carbohydrate_transfer_threshold_up = 0.04;
-    float carbon_conductance_down = 0.95; //<= 1.0
-    float carbon_conductance_up = carbon_conductance_down * 0.5; // Conductance of carbon from parent to child shoots << conductance from child to parent
+    // -- Growth modulation -- //
+    //! Carbohydrate concentration (g C / g DW) below which a shoot is short of carbon: below it the phyllochron lengthens, internode elongation, leaf expansion and vegetative bud break slow in
+    //! proportion, and radial growth stops; a shoot that stays below it for carbohydrate_starvation_days aborts its flowers and fruit (~50 mg glucose/g DW)
+    float carbohydrate_growth_threshold = 0.02f;
+    //! Rate (1/day) at which an internode's radius approaches its girth target (the pipe-model target, or the sapwood ring): each sub-step closes a fraction 1 - exp(-radial_growth_rate x dt) of
+    //! the gap, so that the cambium lays down a ring over the season rather than at once. This growth is paid from photosynthate: it is multiplied by the cambium supply ratio, the share of the
+    //! photosynthate left after maintenance, vegetative growth and fruit that radial growth receives in competition with storage, relative to its potential, averaged over
+    //! fruit_drop_averaging_days. Fruit outcompetes the cambium, and extra carbon does not raise wood growth above its potential (FACE: Koerner et al. 2005). 0 stops radial growth, which is
+    //! how a caller confines it to a cambial season.
+    float radial_growth_rate = 0.025f;
+    //! Sapwood cross-sectional area per unit of leaf area it supplies (m^2 sapwood / m^2 leaf; the Huber value). Together with sapwood_functional_years, sets the ring each internode must lay down every
+    //! season to replace the sapwood that becomes heartwood: its potential ring area is sapwood_area_per_leaf_area x (the season's peak live leaf area above it) / sapwood_functional_years. A
+    //! mature tree thus keeps adding rings at constant leaf area, which the pipe-model girth target alone does not. Non-positive (the default) disables the ring.
+    float sapwood_area_per_leaf_area = 0.f;
+    //! Number of years an annual ring stays functional sapwood before it becomes heartwood (see sapwood_area_per_leaf_area)
+    float sapwood_functional_years = 0.f;
+    //! A branch -- a "proleptic" or "sylleptic" shoot with all of its descendants -- is shed at the end of a season when the net photosynthesis of its leaves over the preceding year is less than this multiple of the carbon it spent: the
+    //! maintenance respiration of its wood plus the construction (with growth respiration) of its wood, leaves, flowers and fruit. See PlantArchitecture::shedCarbonStarvedBranches().
+    float branch_shedding_carbon_ratio = 1.f;
+};
+
+//! Carbon fluxes of one plant, summed over the most recent call to PlantArchitecture::advanceTime() (mol C)
+struct PlantCarbonBudget {
+    //! Net leaf photosynthesis credited to the shoots
+    float net_photosynthesis = 0;
+    //! Maintenance respiration of the shoots' wood
+    float wood_maintenance_respiration = 0;
+    //! Maintenance respiration of the roots
+    float root_maintenance_respiration = 0;
+    //! Structural carbon built into wood
+    float wood_growth = 0;
+    //! Structural carbon built into roots
+    float root_growth = 0;
+    //! Structural carbon built into leaves
+    float leaf_growth = 0;
+    //! Structural carbon built into fruit
+    float fruit_growth = 0;
+    //! Carbon spent constructing flowers (including their growth respiration)
+    float flower_construction = 0;
+    //! Growth respiration of wood, roots, leaves and fruit
+    float growth_respiration = 0;
+    //! Carbohydrate (sugar and starch) lost with branches shed for carbon starvation
+    float shed_branch_carbohydrate = 0;
+    //! Carbohydrate above the plant's storage capacity, released below ground as root exudation and respiration
+    float storage_overflow = 0;
+    //! Net photosynthesis forgone because no sink could take it after storage and radial growth (not included in net_photosynthesis)
+    float photosynthesis_downregulation = 0;
+    //! Number of fruit dropped for lack of carbon (a count, not mol C)
+    float fruit_dropped = 0;
 };
 
 //! Parameters for the nitrogen model
@@ -631,6 +729,10 @@ struct FloralBud {
     // Scaling factor fraction of the fruit (if present), ranging from 0 to 1
     float current_fruit_scale_factor = 1;
     float previous_fruit_scale_factor = 0;
+    //! Fraction of the mature fruit's structural carbon charged to the carbohydrate model so far (0 = nothing charged yet)
+    float fruit_carbon_fraction_charged = 0;
+    //! Fraction of the mature fruit's structural carbon the fruit could have laid down so far: its potential, which fruit_carbon_fraction_charged falls behind when growth is carbon-limited
+    float fruit_potential_fraction = 0;
     //! Days for this bud's inflorescence to expand from its initial quarter size to full size, overriding the plant-level dd_to_fruit_maturity when positive.
     /**
      * The plant-level threshold is a fruit-ripening period, which is the right clock for a fruit but not for an inflorescence that finishes elongating before the fruit it subtends even sets. A maize tassel
@@ -1322,6 +1424,40 @@ struct ShootParameters {
     //! Decay rate (1/node) of the vegetative bud-break probability along the shoot; sign determines direction
     RandomParameter_float vegetative_bud_break_probability_decay_rate;
 
+    //! Season growth (m) below which no dormant lateral bud on a shoot of this type breaks. When vegetative_bud_break_vigour_saturation is greater than this, the position-dependent probability of a
+    //! dormant lateral bud breaking is multiplied by (L - threshold) / (saturation - threshold), limited to [0, 1], where L is the length the shoot grew in the season the bud formed
+    //! (Shoot::previous_season_extension_m), so that a weak shoot bears few or no laterals. In almond, proleptic laterals per node rise roughly linearly from none on shoots that grew under ~16 cm to
+    //! ~0.23 on shoots that grew ~1 m (Negron et al. 2013, J. Am. Soc. Hortic. Sci. 138:407).
+    float vegetative_bud_break_vigour_threshold = 0.f;
+    //! Season growth (m) at and above which the position-dependent bud-break probability applies in full (see vegetative_bud_break_vigour_threshold). Not greater than the threshold (the default)
+    //! disables the vigour factor.
+    float vegetative_bud_break_vigour_saturation = 0.f;
+    //! Vigour of a shoot of this type relative to the shoot bearing it. When positive, a shoot of this type that breaks from a dormant lateral bud grows at most lateral_vigour_ratio x (the length its
+    //! parent grew in the season the bud formed) per season, converted to a per-season node cap with its own internode length, so that each generation of laterals is weaker than the last (almond
+    //! proleptic laterals are about half as long as the shoot bearing them; Negron et al. 2015, Funct. Plant Biol. 42:325). Non-positive (the default) leaves the per-season node cap at the type's value.
+    float lateral_vigour_ratio = -1.f;
+
+    //! Share of the cost of the fruit a shoot of this type bears that is charged to the shoot itself when its carbon balance is judged at the season boundary (see
+    //! PlantArchitecture::shedCarbonStarvedBranches()); the rest is charged to the shoot bearing it. Almond spurs are only partly carbon-autonomous: their fruit also draws on the
+    //! surrounding leaves (Heerema et al. 2008, J. Hortic. Sci. Biotech. 83:274; Saa et al. 2017, Acta Physiol. Plant. 39:107). 1 (the default) charges the whole cost to the bearing shoot.
+    float fruit_cost_share = 1.f;
+    //! Carbon-dependent survival. When positive, a shoot of this type judged at the season boundary survives with probability 1 / (1 + exp(-(z - carbon_survival_midpoint) /
+    //! carbon_survival_scale)), where z = ln(net photosynthesis / (maintenance + growth, with fruit_cost_share of its fruit)), instead of
+    //! being shed whenever its photosynthesis falls short of its costs. Non-positive (the default) keeps that deterministic rule.
+    float carbon_survival_scale = 0.f;
+    //! Value of z at which half the shoots of this type survive (see carbon_survival_scale)
+    float carbon_survival_midpoint = 0.f;
+    //! Carbon-dependent return bloom. When positive, a shoot of this type flowers in the next season with probability return_bloom_max / (1 + exp(-(z_veg - return_bloom_midpoint) /
+    //! return_bloom_scale)), multiplied by return_bloom_bearing_factor if it bore fruit in the season just ended, where z_veg = ln(net photosynthesis / (maintenance + growth other than fruit)). A shoot that does not flower has all its flower buds die when it breaks dormancy. Non-positive (the default) leaves flowering to the flower bud-break probability.
+    float return_bloom_scale = 0.f;
+    //! Value of z_veg at which flowering is half of return_bloom_max (see return_bloom_scale)
+    float return_bloom_midpoint = 0.f;
+    //! Flowering probability of a shoot with ample carbon (see return_bloom_scale)
+    float return_bloom_max = 1.f;
+    //! Factor on the flowering probability of a shoot that bore fruit in the season just ended (see return_bloom_scale). In almond it stands for the suppression of return bloom by the fruit that
+    //! carbon does not explain: removing fruit early restores spur survival but not return bloom (Valdebenito et al. 2017, Sci. Hortic. 215:15; Saa et al. 2017).
+    float return_bloom_bearing_factor = 1.f;
+
     //! FLAG: description not found in specification table – please advise
     RandomParameter_int max_terminal_floral_buds;
     //! Probability that a phytomer will flower
@@ -1431,6 +1567,16 @@ struct ShootParameters {
         this->tortuosity_persistence_length = a.tortuosity_persistence_length;
         this->vegetative_bud_break_probability_min = a.vegetative_bud_break_probability_min;
         this->vegetative_bud_break_probability_decay_rate = a.vegetative_bud_break_probability_decay_rate;
+        this->vegetative_bud_break_vigour_threshold = a.vegetative_bud_break_vigour_threshold;
+        this->vegetative_bud_break_vigour_saturation = a.vegetative_bud_break_vigour_saturation;
+        this->lateral_vigour_ratio = a.lateral_vigour_ratio;
+        this->fruit_cost_share = a.fruit_cost_share;
+        this->carbon_survival_scale = a.carbon_survival_scale;
+        this->carbon_survival_midpoint = a.carbon_survival_midpoint;
+        this->return_bloom_scale = a.return_bloom_scale;
+        this->return_bloom_midpoint = a.return_bloom_midpoint;
+        this->return_bloom_max = a.return_bloom_max;
+        this->return_bloom_bearing_factor = a.return_bloom_bearing_factor;
         this->max_terminal_floral_buds = a.max_terminal_floral_buds;
         this->flower_bud_break_probability = a.flower_bud_break_probability;
         this->fruit_set_probability = a.fruit_set_probability;
@@ -2351,13 +2497,28 @@ public:
      */
     std::vector<float> current_petiole_scale_factor; // index is petiole within internode
 
-    float old_phytomer_volume = 0;
+    //! Structural carbon of this phytomer's internode already charged to the carbohydrate model (mol C)
+    float internode_carbon_charged_molC = 0;
+    //! Net photosynthesis of this phytomer's leaves accumulated by PlantArchitecture::accumulateHourlyLeafPhotosynthesis() since the last time step (mol C)
+    float cumulative_net_photosynthesis_molC = 0;
+    //! Structural carbon of this phytomer's leaves already charged to the carbohydrate model (mol C)
+    float leaf_carbon_charged_molC = 0;
 
     //! Leaf area borne at or above this phytomer, including on child shoots. Accumulated incrementally by \ref Shoot::propagateDownstreamLeafArea() as leaves are added, removed or rescaled.
     float downstream_leaf_area = 0;
 
     //! Inflorescence area borne at or above this phytomer, including on child shoots. Refreshed once per shoot per time step by \ref Shoot::refreshDownstreamInflorescenceArea().
     float downstream_inflorescence_area = 0;
+
+    //! Leaf area currently borne at or above this phytomer, including on child shoots (m^2). Unlike downstream_leaf_area it drops when leaves are shed. Refreshed once per time step by \ref
+    //! Shoot::refreshLiveDownstreamLeafArea() when the carbohydrate model's sapwood ring is enabled (CarbohydrateParameters::sapwood_area_per_leaf_area).
+    float live_downstream_leaf_area = 0;
+    //! Highest live_downstream_leaf_area reached during the current cambial season (m^2)
+    float ring_season_peak_leaf_area = 0;
+    //! Mean internode cross-sectional area when the current cambial season began for this internode (m^2)
+    float ring_season_start_area = 0;
+    //! Cambial season (PlantInstance::cambium_season_index) that ring_season_peak_leaf_area and ring_season_start_area belong to; -1 before the first
+    int ring_season_index = -1;
 
     std::vector<std::vector<VegetativeBud>> axillary_vegetative_buds; // first index is petiole within internode, second index is bud within petiole
     std::vector<std::vector<FloralBud>> floral_buds; // first index is petiole within internode, second index is bud within petiole
@@ -2454,11 +2615,18 @@ protected:
     void createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &fruit_base, const helios::vec3 &peduncle_axis, float pitch, float roll, float azimuth, float yaw_compound, float scale_factor, bool is_open_flower, float gravity_fraction);
 
     /**
-     * Calculate the total carbon cost (mol C) required for the construction of a phytomer's total leaf area.
-     * Carbon construction cost is calculated per area basis using the leaf carbon percentage and specific leaf area (SLA) of the plant instance.
-     * \return The total carbon construction cost of the phytomer's leaf area (mol C).
+     * Calculate the structural carbon (mol C) of the phytomer's current leaf area: leaf dry mass (area / SLA) times its carbon content. Growth respiration is not included.
+     * \return Structural carbon of the phytomer's leaves (mol C).
      */
     [[nodiscard]] float calculatePhytomerConstructionCosts() const;
+
+    /**
+     * Calculate the structural carbon (mol C) of the phytomer's internode: its volume times the wood carbon density, which rises from initial_density_ratio of the mature value at emergence
+     * to the mature value at maturity_age.
+     * \param[in] node_index Index of this phytomer within its shoot.
+     * \return Structural carbon of the internode (mol C).
+     */
+    [[nodiscard]] float calculateInternodeStructuralCarbon(uint node_index) const;
 
     /**
      * Calculate the total carbon cost (mol C) of constructing the flowers for a given FloralBud object.
@@ -2470,11 +2638,12 @@ protected:
     [[nodiscard]] float calculateFlowerConstructionCosts(const FloralBud &fbud) const;
 
     /**
-     * Calculate the carbohydrate construction cost of fruits (mol C) by comparing volume change between timesteps.
-     * \param[in] fbud References a FloralBud object that contains inflorescence object IDs.
-     * \return The total fruit carbon construction cost (mol C).
+     * Calculate the structural carbon (mol C) of a floral bud's fruit at full size. The fruit geometry is scaled uniformly, so the mature volume is the current volume divided by the cube of the
+     * scale factor, and dry mass follows volume at fruit_density.
+     * \param[in] fbud Floral bud carrying the fruit.
+     * \return Structural carbon of the mature fruit (mol C), 0 if the bud has no fruit geometry. Growth respiration is not included.
      */
-    [[nodiscard]] float calculateFruitConstructionCosts(const FloralBud &fbud) const;
+    [[nodiscard]] float calculateMatureFruitCarbon(const FloralBud &fbud) const;
 
     friend struct Shoot;
     friend class PlantArchitecture;
@@ -2574,6 +2743,12 @@ struct Shoot {
 
     [[nodiscard]] bool sampleVegetativeBudBreak_carb(uint node_index);
 
+    //! Factor on the probability that a dormant lateral bud breaks, from this shoot's growth in the season the bud formed
+    /**
+     * \return The vigour factor in [0, 1] (see ShootParameters::vegetative_bud_break_vigour_threshold), or a negative value if the vigour factor is not enabled for this shoot
+     */
+    [[nodiscard]] float vigourBudBreakFactor() const;
+
     //! Randomly sample whether the shoot should produce an epicormic shoot (water sprout) over timestep
     /**
      * \param[in] dt Time step in days
@@ -2660,6 +2835,14 @@ struct Shoot {
      */
     float refreshDownstreamInflorescenceArea();
 
+    //! Recompute the live leaf area borne at or above every node of this shoot and of all shoots above it
+    /**
+     * Sets Phytomer::live_downstream_leaf_area for each phytomer by a single sweep from the shoot tip downward, recursing into child shoots.
+     *
+     * \return Total live leaf area (m^2) supported by this shoot and everything above it
+     */
+    float refreshLiveDownstreamLeafArea();
+
     //! Get the inflorescence area borne at or above a given node, including on child shoots
     /**
      * Returns the value cached by \ref refreshDownstreamInflorescenceArea(), which must have been called for this shoot at some point since the inflorescence geometry last changed.
@@ -2694,6 +2877,9 @@ struct Shoot {
 
     uint current_node_number = 0;
     uint nodes_this_season = 0;
+    //! Length (m) of the internodes this shoot added in its last completed season, recorded when it goes dormant. Sets the vigour of the laterals that break from the buds formed in that season (see
+    //! ShootParameters::vegetative_bud_break_vigour_threshold and ShootParameters::lateral_vigour_ratio).
+    float previous_season_extension_m = 0;
 
     helios::vec3 base_position;
     AxisRotation base_rotation;
@@ -2741,6 +2927,17 @@ struct Shoot {
     float starch_pool_molC = 0;
     float total_carbohydrate_pool_molC = sugar_pool_molC + starch_pool_molC;
 
+    //! Net photosynthesis credited to this shoot's own leaves since the last end-of-season branch evaluation (mol C)
+    float season_net_photosynthesis_molC = 0;
+    //! Wood maintenance respiration charged to this shoot since the last end-of-season branch evaluation (mol C)
+    float season_maintenance_respiration_molC = 0;
+    //! Construction of this shoot's wood, leaves, flowers and fruit, with growth respiration, since the last end-of-season branch evaluation (mol C)
+    float season_growth_molC = 0;
+    //! The part of season_growth_molC spent on this shoot's fruit (mol C)
+    float season_fruit_cost_molC = 0;
+    //! Probability that this shoot flowers when it next breaks dormancy, set at the season boundary (see ShootParameters::return_bloom_scale)
+    float flowering_probability = 1;
+
     //! Per-leaf nitrogen tracking - maps leaf objID to nitrogen content per unit area (g N/m²)
     std::map<uint, float> leaf_nitrogen_gN_m2;
     //! Nitrogen (g N) each expanding leaf wanted this timestep but did not receive from uptake; filled by remobilization. Rebuilt every timestep.
@@ -2760,7 +2957,6 @@ struct Shoot {
     void breakDormancy();
     void makeDormant();
 
-    void mobilizeStarch();
 
     bool isdormant;
     uint dormancy_cycles = 0;
@@ -2825,6 +3021,10 @@ struct Shoot {
      * growth model, in the way phyllochron_instantaneous is modulated by the carbohydrate model.
      */
     float leaf_expansion_rate_instantaneous;
+    //! Internode elongation rate this shoot reaches when carbohydrate is not limiting, drawn when the shoot is created
+    float elongation_rate_potential;
+    //! Leaf expansion rate this shoot reaches when carbohydrate is not limiting, drawn when the shoot is created
+    float leaf_expansion_rate_potential;
 
     //! Growth-priority multiplier awarded by PlantArchitecture::updateGrowthPriority().
     /** Sibling laterals do not grow alike in a real tree: a few well-lit ones become dominant, keep extending
@@ -2908,6 +3108,9 @@ struct PlantInstance {
     //! keep as season_peak_shadow_grid. Reset to zero at dormancy onset.
     float season_peak_leaf_area = 0.f;
 
+    //! Number of completed seasons (incremented at dormancy onset); a sapwood ring is owed per internode per season (CarbohydrateParameters::sapwood_area_per_leaf_area)
+    int cambium_season_index = 0;
+
     //! Sparse shadow-propagation voxel grid, keyed by integer voxel coordinate, used by shade-based branch shedding. Each leaf
     //! deposits shadow into a pyramid of voxels below it, so branches deep inside the crown see a high accumulated shadow
     //! value while branches on the crown surface do not. Rebuilt once per advanceTime() sweep.
@@ -2969,10 +3172,38 @@ struct PlantInstance {
 
     CarbohydrateParameters carb_parameters;
 
-    //! maintenance respiration rate of stem (mol C respired/mol C in pool/day)
-    float stem_maintenance_respiration_rate = carb_parameters.r_m_w_20;
-    //! maintenance respiration rate of root (mol C respired/mol C in pool/day)
-    float root_maintenance_respiration_rate = carb_parameters.r_m_r_20;
+    //! Temperature factor applied to the 20 C maintenance respiration rates, set by PlantArchitecture::adjustPlantMaintenanceRespiration()
+    float respiration_temperature_factor = 1.f;
+    //! Temperature (C) most recently passed to PlantArchitecture::adjustPlantMaintenanceRespiration(); drives sugar-starch partitioning
+    float carbon_model_temperature_C = 20.f;
+    //! Soluble sugar held in the root system (mol C)
+    float root_sugar_pool_molC = 0;
+    //! Starch held in the root system (mol C)
+    float root_starch_pool_molC = 0;
+    //! Carbon fluxes over the most recent advanceTime() call
+    PlantCarbonBudget carbon_budget;
+    //! Calls to PlantArchitecture::accumulateHourlyLeafPhotosynthesis() since the carbohydrate model last credited photosynthesis
+    uint photosynthesis_accumulations = 0;
+    //! Leaf primitive-hours without "net_photosynthesis" data since the carbohydrate model last credited photosynthesis
+    uint leaf_primitive_hours_missing_photosynthesis = 0;
+    //! Net photosynthesis credited at the start of the current advanceTime() call, per day of the call (mol C / day)
+    float photosynthesis_supply_rate_molC_day = 0;
+    //! Fractional number of fruit owed to the drop rule but not yet removed
+    float fruit_drop_debt = 0;
+    //! Maintenance respiration of wood and roots charged in the current sub-step (mol C)
+    float step_maintenance_respiration_molC = 0;
+    //! Recent photosynthate available to fruit past its reserve-funded period and that fruit's potential growth: {supply (mol C), demand (mol C), duration (days)} per sub-step, oldest first
+    std::vector<std::array<float, 3>> fruit_assimilate_history;
+    //! Realized relative to potential growth of fruit past its reserve-funded period, averaged over fruit_drop_averaging_days (1 before any such fruit has grown)
+    float fruit_growth_supply_ratio = 1;
+    //! Structural carbon laid down by pipe-model radial growth in the current sub-step (mol C)
+    float step_girth_growth_molC = 0;
+    //! Structural carbon pipe-model radial growth would have laid down in the current sub-step with photosynthate unlimited (mol C)
+    float step_girth_potential_molC = 0;
+    //! Recent photosynthate allotted to pipe-model radial growth and its potential cost: {allotted (mol C), potential (mol C), duration (days)} per sub-step, oldest first
+    std::vector<std::array<float, 3>> cambium_supply_history;
+    //! Allotted relative to potential cost of pipe-model radial growth, averaged over fruit_drop_averaging_days (see CarbohydrateParameters::radial_growth_rate)
+    float cambium_supply_ratio = 1;
 
     // --- Nitrogen Model --- //
 
@@ -3416,6 +3647,24 @@ public:
      */
     [[nodiscard]] std::vector<std::string> listShootTypeLabels(uint plantID) const;
 
+    //! Get the parameters of a shoot type as held by an existing plant
+    /**
+     * A plant keeps its own copy of the shoot types it was built with, from which every new shoot on it is created; \ref getCurrentShootParameters() reads the plant model's definitions instead.
+     * \param[in] plantID ID of the plant
+     * \param[in] shoot_type_label Label of the shoot type
+     * \return The plant's parameters for that shoot type
+     */
+    [[nodiscard]] ShootParameters getPlantShootTypeParameters(uint plantID, const std::string &shoot_type_label) const;
+
+    //! Update the parameters of a shoot type on an existing plant, for the shoots it grows from now on
+    /**
+     * Shoots that already exist keep their own copies of the parameters and are not changed.
+     * \param[in] plantID ID of the plant
+     * \param[in] shoot_type_label Label of a shoot type the plant already has
+     * \param[in] params New parameters for that shoot type
+     */
+    void updatePlantShootTypeParameters(uint plantID, const std::string &shoot_type_label, const ShootParameters &params);
+
     //! Update the parameters of a single shoot type in the current plant model
     /**
      * \param[in] shoot_type_label User-defined label for the shoot type to be updated.
@@ -3554,20 +3803,19 @@ public:
      */
     void adjustFruitForObstacleCollision();
 
-    //! Accumulates hourly net photosynthesis for each leaf in the plant architecture
+    //! Accumulates one hour of net photosynthesis from the leaves of every plant
     /**
-     * This function iterates through all the plants in the architecture, handling both dormant and active shoots.
-     * It retrieves and processes the net hourly photosynthesis values for each leaf, calculates the hourly contribution in moles of carbon,
-     * and updates the cumulative net photosynthesis data.
-     *
-     * \note This function performs area-based calculations and updates context-specific data for each leaf primitive.
+     * Reads the primitive data "net_photosynthesis" (umol CO2 m^-2 s^-1) of every leaf primitive on a growing (non-dormant) shoot, multiplies it by the
+     * primitive's area and one hour, and adds the result (mol C) to the running total of the phytomer bearing the leaf. The next call to advanceTime()
+     * credits the totals to the shoots' carbohydrate pools and resets them. Call once per simulated hour, after the photosynthesis model has run.
      */
-    void accumulateHourlyLeafPhotosynthesis() const;
+    void accumulateHourlyLeafPhotosynthesis();
 
     //! Adjusts the plant's maintenance respiration rate based on the prevailing air temperature
     /**
      * This function iterates through all the plants in the architecture.
-     * It sets the plant's maintenance respiration rate for this timestep depending on the prevailing timeseries air temperature (K).
+     * It sets the plant's maintenance respiration rate for this timestep depending on the prevailing timeseries air temperature (K), using each plant's
+     * CarbohydrateParameters::respiration_Q10. The temperature also sets the sugar-starch partitioning of the carbohydrate pools.
      *
      * \note Respiration rate defaults to that which occurs at 20C if not specified.
      */
@@ -3932,14 +4180,19 @@ public:
 
     /**
      * \brief Initializes the carbohydrate pool for all shoots of all plant instances
-     * \param[in] carbohydrate_concentration_molC_m3 Concentration of carbohydrates in molC per cubic meter
+     * \param[in] carbohydrate_concentration_molC_m3 Concentration of carbohydrates in molC per cubic meter of wood
+     * \note See initializePlantCarbohydratePool().
      */
-    void initializeCarbohydratePool(float carbohydrate_concentration_molC_m3) const;
+    void initializeCarbohydratePool(float carbohydrate_concentration_molC_m3);
 
     /**
      * \brief Initializes the carbohydrate pool for a specific plant.
+     *
+     * Every shoot is given the concentration times its internode volume, and the root system is filled to the same fraction of its storage capacity
+     * (the concentration times the root volume times CarbohydrateParameters::root_storage_ratio). The plant's current structure is taken as already built:
+     * only growth after initialization is charged to the pools, so a plant can be grown with the carbohydrate model off and the model enabled afterwards.
      * \param[in] plantID Unique identifier of the plant.
-     * \param[in] carbohydrate_concentration_molC_m3 Initial carbohydrate concentration in moles of carbon per cubic meter.
+     * \param[in] carbohydrate_concentration_molC_m3 Initial carbohydrate concentration in moles of carbon per cubic meter of wood.
      * \note The plant with the specified ID must exist, and the carbohydrate concentration must be non-negative.
      */
     void initializePlantCarbohydratePool(uint plantID, float carbohydrate_concentration_molC_m3);
@@ -3950,9 +4203,41 @@ public:
      * \param[in] plantID Identifier for the plant whose shoot's carbohydrate pool is being initialized.
      * \param[in] shootID Identifier for the shoot of the plant.
      * \param[in] carbohydrate_concentration_molC_m3 Carbohydrate concentration in moles of carbon per cubic meter; must be non-negative.
-     * \note Throws an error if the plant or shoot ID does not exist, or if the carbohydrate concentration is negative.
+     * \note Throws an error if the plant or shoot ID does not exist, or if the carbohydrate concentration is negative. The shoot's current structure is taken as already built.
      */
     void initializeShootCarbohydratePool(uint plantID, uint shootID, float carbohydrate_concentration_molC_m3);
+
+    //! Get the non-structural carbohydrate (sugar + starch) held in a plant's root system
+    /**
+     * \param[in] plantID Identifier of the plant.
+     * \return Root carbohydrate pool (mol C).
+     */
+    [[nodiscard]] float getPlantRootCarbohydratePool(uint plantID) const;
+
+    //! Get the total non-structural carbohydrate (sugar + starch) of a plant: every living shoot plus the root system
+    /**
+     * \param[in] plantID Identifier of the plant.
+     * \return Whole-plant carbohydrate pool (mol C).
+     */
+    [[nodiscard]] float getPlantTotalCarbohydratePool(uint plantID) const;
+
+    //! Get a plant's non-structural carbohydrate as a fraction of its storage capacity
+    /**
+     * The storage capacity is CarbohydrateParameters::storage_capacity times the dry mass of every living shoot's wood, plus root_storage_ratio times as much per unit dry mass of roots.
+     * The fill never exceeds 1 after a time step, because carbohydrate above capacity is released below ground.
+     * \param[in] plantID Identifier of the plant.
+     * \return Whole-plant carbohydrate divided by storage capacity (0 for a plant with no wood).
+     */
+    [[nodiscard]] float getPlantCarbohydrateStorageFill(uint plantID) const;
+
+    //! Get a plant's carbon fluxes summed over the most recent call to advanceTime()
+    /**
+     * \param[in] plantID Identifier of the plant.
+     * \return Photosynthesis, respiration and construction fluxes (mol C). The change in getPlantTotalCarbohydratePool() over the call equals
+     * net photosynthesis minus the respiration, construction, storage_overflow and shed_branch_carbohydrate terms, unless shoots were pruned by other
+     * means during it. photosynthesis_downregulation (not part of net photosynthesis) and fruit_dropped (a count) are diagnostics.
+     */
+    [[nodiscard]] PlantCarbonBudget getPlantCarbonBudget(uint plantID) const;
 
     /**
      * \brief Adjusts the leaf scaling factor (length as a fraction of its maximal length) for a specific phytomer on a plant shoot.
@@ -4516,7 +4801,7 @@ public:
     /**
      * \brief Whether a shoot is structural wood -- the trunk or a scaffold -- rather than fine distal growth.
      *
-     * Determined by shoot type: every type other than "proleptic" and "sylleptic" is treated as structural. Branching
+     * Determined by shoot type: every type other than "proleptic", "sylleptic" and "spur" is treated as structural. Branching
      * order does not work here, because the order-0 axis runs the whole length of the trunk, so every lateral borne on it
      * is order 1 however small; on a grown almond that is over a hundred twigs against a handful of real scaffolds.
      *
@@ -4536,11 +4821,32 @@ public:
      * their tips receive and the leading fraction is promoted while the shaded remainder is suppressed,
      * changing both their node ceiling and their internode length. Promotion is cumulative across seasons, so
      * a branch that leads repeatedly compounds into a structural limb while its siblings remain twigs.
-     * Structural shoots are excluded -- see isStructuralShoot().
+     * Structural shoots (see isStructuralShoot()) and spurs are excluded.
      *
      * \param[in] plantID ID of the plant to update.
      */
     void updateGrowthPriority(uint plantID);
+
+    /**
+     * \brief Shed the branches that did not pay for their own upkeep over the past year (carbohydrate model).
+     *
+     * Self-pruning by carbon starvation, after the branch autonomy of Sprugel et al. (1991): a branch is judged by its own
+     * carbon balance, not by the tree's reserves. Each shoot records the net photosynthesis of its own leaves, the
+     * maintenance respiration of its own wood, and the construction of its own wood, leaves, flowers and fruit (with
+     * growth respiration) since the last evaluation. A branch -- a shoot together with every descendant that is not itself
+     * shed -- is shed when its leaves' net photosynthesis is less than CarbohydrateParameters::branch_shedding_carbon_ratio
+     * times the carbon it spent, i.e. when it has had to import carbon from the rest of the tree. Shoots are judged
+     * from the tips inward, so a shaded twig can be shed while the limb that carries it survives on its other branches,
+     * and a limb survives only if what remains of it still pays its way. Structural wood (see isStructuralShoot()) and
+     * shoots that have not yet been through a full season are never shed. The records are reset afterwards, and the
+     * carbohydrate held in shed branches is reported in PlantCarbonBudget::shed_branch_carbohydrate.
+     *
+     * With the carbohydrate model enabled this replaces the shade-based shedding at each dormancy boundary, so it only
+     * needs to be called directly to evaluate a plant at some other time.
+     *
+     * \param[in] plantID ID of the plant.
+     */
+    void shedCarbonStarvedBranches(uint plantID);
 
     /**
      * \brief Retrieves the IDs of all shoots belonging to a specific plant.
@@ -5695,7 +6001,23 @@ protected:
     // --- Plant Growth --- //
 
     void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
-    void incrementPhytomerInternodeGirth_carb(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
+    //! Increment an internode's girth toward its pipe-model target, limited by the shoot's carbohydrate (carbohydrate model enabled)
+    /**
+     * \param[in] plantID ID of the plant
+     * \param[in] shootID ID of the shoot
+     * \param[in] node_number Index of the internode within the shoot
+     * \param[in] dt Length of the sub-step (days)
+     * \param[in] update_context_geometry If true, the shoot's tube object radii are updated in the Context
+     * \param[in] shoot_length Length of the shoot (m), computed once per shoot per sub-step by the caller
+     * \param[in] shoot_volume Internode volume of the shoot (m^3), computed once per shoot per sub-step by the caller
+     */
+    void incrementPhytomerInternodeGirth_carb(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry, float shoot_length, float shoot_volume);
+
+    //! Mark every organ of a shoot as already paid for, so that the carbohydrate model charges only growth that happens from now on
+    /**
+     * \param[in] shoot Shoot whose internodes, leaves and fruit are marked as charged
+     */
+    void markShootConstructionCharged(Shoot &shoot) const;
 
     //! Rebuild the shadow-propagation voxel grid for a plant from its current leaf positions
     /** Each leaf stamps a downward-widening pyramid of shadow into the grid, following Palubicki et al. (2009). This is a
@@ -5748,20 +6070,22 @@ protected:
     /**
      * \param[in] plantID ID of the plant whose shoots are credited
      */
-    void accumulateShootPhotosynthesis(uint plantID) const;
+    void accumulateShootPhotosynthesis(uint plantID);
 
     //! Debit stem and root maintenance respiration from each shoot of a plant
     /**
      * \param[in] plantID ID of the plant whose shoots are debited
      * \param[in] dt Length of the sub-step (days)
      */
-    void subtractShootMaintenanceCarbon(uint plantID, float dt) const;
+    void subtractShootMaintenanceCarbon(uint plantID, float dt);
 
     //! Debit structural growth and growth respiration carbon from each shoot of a plant
     /**
+     * With CarbohydrateParameters::fruit_reserve_funded_days set, fruit past its reserve-funded period grows at its potential times the fruit supply ratio (see fruit_reserve_funded_days).
      * \param[in] plantID ID of the plant whose shoots are debited
+     * \param[in] dt Length of the sub-step (days)
      */
-    void subtractShootGrowthCarbon(uint plantID);
+    void subtractShootGrowthCarbon(uint plantID, float dt);
 
     //! Abort floral buds and prune shoots of a plant that cannot sustain their carbon balance
     /**
@@ -5769,18 +6093,44 @@ protected:
      * \param[in] dt Length of the sub-step (days)
      */
     void checkCarbonPool_abortOrgans(uint plantID, float dt);
-    //! Slow the phyllochron of each shoot of a plant according to its carbon status
+    //! Drop young fruit that current photosynthate cannot supply
     /**
+     * Fruit past its reserve-funded period and up to fruit_drop_window_end days after set drops while the fruit supply ratio is below fruit_abscission_growth_ratio.
+     * \param[in] plantID ID of the plant
+     * \param[in] dt Length of the sub-step (days)
+     */
+    void checkCarbonPool_dropFruit(uint plantID, float dt);
+    //! Dry mass (g DW) weighted by relative storage capacity: every living shoot's wood, plus root_storage_ratio times the root dry mass
+    [[nodiscard]] float plantStorageCapacityMass(uint plantID) const;
+    //! Slow the phyllochron, internode elongation and leaf expansion of each shoot of a plant according to its carbon status
+    /**
+     * Below CarbohydrateParameters::carbohydrate_growth_threshold, elongation and leaf expansion are scaled from the shoot's potential rates in
+     * proportion to its carbohydrate concentration, so that a plant running short of carbohydrate slows its demand.
      * \param[in] plantID ID of the plant to check
      * \param[in] dt Length of the sub-step (days)
      */
     void checkCarbonPool_adjustPhyllochron(uint plantID, float dt);
-    //! Sequester starch and move sugar between parent and child shoots of a plant
+    //! Move carbohydrate between a plant's shoots and roots and between sugar and starch
     /**
-     * \param[in] plantID ID of the plant to check
+     * Phloem transport relaxes every compartment (each living shoot and the root system) toward a common relative fill,
+     * the plant's carbohydrate per unit of storage capacity, at carbon_mixing_rate. Any compartment still in deficit is then
+     * brought up to that mean fill from the others. Carbohydrate above the plant's storage capacity is released below ground (PlantCarbonBudget::storage_overflow), and sugar
+     * and starch in each compartment relax toward a temperature-dependent partition.
+     * \param[in] plantID ID of the plant to redistribute
      * \param[in] dt Length of the sub-step (days)
      */
-    void checkCarbonPool_transferCarbon(uint plantID, float dt);
+    void checkCarbonPool_redistributeCarbon(uint plantID, float dt);
+
+    //! Share the photosynthate left after maintenance, vegetative growth and fruit between storage and radial growth, and forgo any beyond both
+    /**
+     * The remainder is the net photosynthesis credited for the sub-step less everything charged in it since budget_before, with the sub-step's radial growth added back. Storage demands
+     * storage_refill_rate x dt x (capacity - pool before the remainder) and radial growth its potential cost; each receives the remainder in proportion to its demand, up to that demand, which
+     * sets the cambium supply ratio for the following sub-steps. Photosynthate beyond both demands is withdrawn from the pools as forgone photosynthesis.
+     * \param[in] plantID ID of the plant
+     * \param[in] dt Length of the sub-step (days)
+     * \param[in] budget_before The plant's carbon budget at the start of the sub-step
+     */
+    void allocateSurplusCarbon(uint plantID, float dt, const PlantCarbonBudget &budget_before);
 
     bool carbon_model_enabled = false;
 

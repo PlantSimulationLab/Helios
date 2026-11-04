@@ -609,59 +609,20 @@ void Context::addTimeseriesData(const char *label, float value, const Date &date
     double date_value = floor(date.year * 366.25) + date.JulianDay();
     date_value += double(time.hour) / 24. + double(time.minute) / 1440. + double(time.second) / 86400.;
 
-    // Check if data label already exists
-    if (timeseries_data.find(label) == timeseries_data.end()) { // does not exist
-        timeseries_data[label].push_back(value);
-        timeseries_datevalue[label].push_back(date_value);
+    std::vector<float> &data = timeseries_data[label];
+    std::vector<double> &datevalues = timeseries_datevalue[label];
+
+    // The series is kept sorted by date/time, so both the insertion point and any existing point at the same date/time
+    // are found by binary search. Scanning the whole series on every insertion made loading a long record quadratic
+    // in its length.
+    const auto position = std::lower_bound(datevalues.begin(), datevalues.end(), date_value);
+    if (position != datevalues.end() && *position == date_value) {
+        std::cerr << "WARNING (Context::addTimeseriesData): Timeseries variable '" << label << "' already contains a data point at the specified date/time. Skipping duplicate timeseries date/time." << std::endl;
         return;
-    } else { // exists
-
-        uint N = getTimeseriesLength(label);
-
-        // check for a duplicate date/time anywhere in the (sorted) timeseries, including the first and last points
-        for (uint t = 0; t < N; t++) {
-            if (date_value == timeseries_datevalue[label].at(t)) {
-                std::cerr << "WARNING (Context::addTimeseriesData): Timeseries variable '" << label << "' already contains a data point at the specified date/time. Skipping duplicate timeseries date/time." << std::endl;
-                return;
-            }
-        }
-
-        auto it_data = timeseries_data[label].begin();
-        auto it_datevalue = timeseries_datevalue[label].begin();
-
-        if (N == 1) {
-            if (date_value < timeseries_datevalue[label].front()) {
-                timeseries_data[label].insert(it_data, value);
-                timeseries_datevalue[label].insert(it_datevalue, date_value);
-                return;
-            } else {
-                timeseries_data[label].insert(it_data + 1, value);
-                timeseries_datevalue[label].insert(it_datevalue + 1, date_value);
-                return;
-            }
-        } else {
-            if (date_value < timeseries_datevalue[label].front()) { // check if data should be inserted at beginning of timeseries
-                timeseries_data[label].insert(it_data, value);
-                timeseries_datevalue[label].insert(it_datevalue, date_value);
-                return;
-            } else if (date_value > timeseries_datevalue[label].back()) { // check if data should be inserted at end of timeseries
-                timeseries_data[label].push_back(value);
-                timeseries_datevalue[label].push_back(date_value);
-                return;
-            }
-
-            // data should be inserted somewhere in the middle of timeseries
-            for (uint t = 0; t < N - 1; t++) {
-                if (date_value > timeseries_datevalue[label].at(t) && date_value < timeseries_datevalue[label].at(t + 1)) {
-                    timeseries_data[label].insert(it_data + t + 1, value);
-                    timeseries_datevalue[label].insert(it_datevalue + t + 1, date_value);
-                    return;
-                }
-            }
-        }
     }
-
-    helios_runtime_error("ERROR (Context::addTimeseriesData): Failed to insert timeseries data for unknown reason.");
+    const auto offset = position - datevalues.begin();
+    data.insert(data.begin() + offset, value);
+    datevalues.insert(position, date_value);
 }
 
 void Context::updateTimeseriesData(const char *label, const Date &date, const Time &time, float new_value) {
@@ -673,11 +634,10 @@ void Context::updateTimeseriesData(const char *label, const Date &date, const Ti
     date_value += double(time.hour) / 24. + double(time.minute) / 1440. + double(time.second) / 86400.;
 
     const std::vector<double> &datevalues = timeseries_datevalue.at(label);
-    for (uint i = 0; i < datevalues.size(); i++) {
-        if (datevalues.at(i) == date_value) {
-            timeseries_data.at(label).at(i) = new_value;
-            return;
-        }
+    const auto position = std::lower_bound(datevalues.begin(), datevalues.end(), date_value);
+    if (position != datevalues.end() && *position == date_value) {
+        timeseries_data.at(label).at(position - datevalues.begin()) = new_value;
+        return;
     }
 
     helios_runtime_error("ERROR (Context::updateTimeseriesData): No timeseries data point exists at the specified date and time for variable `" + std::string(label) + "'.");
@@ -699,46 +659,40 @@ float Context::queryTimeseriesData(const char *label, const Date &date, const Ti
     double date_value = floor(date.year * 366.25) + date.JulianDay();
     date_value += double(time.hour) / 24. + double(time.minute) / 1440. + double(time.second) / 86400.;
 
-    double tmin = timeseries_datevalue.at(label).front();
-    double tmax = timeseries_datevalue.at(label).back();
+    const std::vector<float> &data = timeseries_data.at(label);
+    const std::vector<double> &datevalues = timeseries_datevalue.at(label);
 
-    if (date_value < tmin) {
-        std::cerr << "WARNING (queryTimeseriesData): Timeseries date and time is outside of the range of the data. Using the earliest data point in the timeseries." << std::endl;
-        return timeseries_data.at(label).front();
-    } else if (date_value > tmax) {
-        std::cerr << "WARNING (queryTimeseriesData): Timeseries date and time is outside of the range of the data. Using the latest data point in the timeseries." << std::endl;
-        return timeseries_data.at(label).back();
-    }
-
-    if (timeseries_datevalue.at(label).empty()) {
+    if (datevalues.empty()) {
         std::cerr << "WARNING (queryTimeseriesData): timeseries " << label << " does not contain any data." << std::endl;
         return 0;
-    } else if (timeseries_datevalue.at(label).size() == 1) {
-        return timeseries_data.at(label).front();
-    } else {
-        int i;
-        bool success = false;
-        for (i = 0; i < timeseries_data.at(label).size() - 1; i++) {
-            if (date_value >= timeseries_datevalue.at(label).at(i) && date_value <= timeseries_datevalue.at(label).at(i + 1)) {
-                success = true;
-                break;
-            }
-        }
-
-        if (!success) {
-            helios_runtime_error("ERROR (queryTimeseriesData): Failed to query timeseries data for unknown reason.");
-        }
-
-        double xminus = timeseries_data.at(label).at(i);
-        double xplus = timeseries_data.at(label).at(i + 1);
-
-        double tminus = timeseries_datevalue.at(label).at(i);
-        double tplus = timeseries_datevalue.at(label).at(i + 1);
-
-        // This form returns the stored value exactly at a sample time, and cannot go negative between non-negative samples
-        double fraction = (date_value - tminus) / (tplus - tminus);
-        return float((1.0 - fraction) * xminus + fraction * xplus);
     }
+
+    if (date_value < datevalues.front()) {
+        std::cerr << "WARNING (queryTimeseriesData): Timeseries date and time is outside of the range of the data. Using the earliest data point in the timeseries." << std::endl;
+        return data.front();
+    } else if (date_value > datevalues.back()) {
+        std::cerr << "WARNING (queryTimeseriesData): Timeseries date and time is outside of the range of the data. Using the latest data point in the timeseries." << std::endl;
+        return data.back();
+    }
+
+    if (datevalues.size() == 1) {
+        return data.front();
+    }
+
+    // Interval [i, i+1] bracketing the query, found by binary search in the sorted series. The query lies within the
+    // series, so the first point after it is at index 1 or later; a query at the last point uses the last interval.
+    const size_t first_after = std::upper_bound(datevalues.begin(), datevalues.end(), date_value) - datevalues.begin();
+    const size_t i = std::min(first_after, datevalues.size() - 1) - 1;
+
+    double xminus = data.at(i);
+    double xplus = data.at(i + 1);
+
+    double tminus = datevalues.at(i);
+    double tplus = datevalues.at(i + 1);
+
+    // This form returns the stored value exactly at a sample time, and cannot go negative between non-negative samples
+    double fraction = (date_value - tminus) / (tplus - tminus);
+    return float((1.0 - fraction) * xminus + fraction * xplus);
 }
 
 float Context::queryTimeseriesData(const char *label) const {

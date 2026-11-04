@@ -911,22 +911,15 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
         return;
     }
 
-    // Calculate carbon cost
-    if (plantarchitecture_ptr->carbon_model_enabled) {
-        if (state == BUD_FLOWER_CLOSED || (fbud.state == BUD_ACTIVE && state == BUD_FLOWER_OPEN)) {
-            // state went from active to closed flower or open flower
-            float flower_cost = calculateFlowerConstructionCosts(fbud);
-            plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->sugar_pool_molC -= flower_cost;
-        } else if (state == BUD_FRUITING) {
-            // adding a fruit
-            float fruit_cost = calculateFruitConstructionCosts(fbud);
-            fbud.previous_fruit_scale_factor = fbud.current_fruit_scale_factor;
-            if (plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->sugar_pool_molC > fruit_cost) {
-                plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(this->parent_shoot_ID)->sugar_pool_molC -= fruit_cost;
-            } else {
-                setFloralBudState(BUD_DEAD, fbud);
-            }
-        }
+    // A bud that has just formed flowers (active to closed, or active straight to open) is charged for them once the flower
+    // geometry below exists, since the cost is counted per flower object.
+    const bool charge_flower_construction = plantarchitecture_ptr->carbon_model_enabled && (state == BUD_FLOWER_CLOSED || (fbud.state == BUD_ACTIVE && state == BUD_FLOWER_OPEN));
+    if (plantarchitecture_ptr->carbon_model_enabled && state == BUD_FRUITING) {
+        // A new fruit has had none of its construction charged. The carbohydrate model charges its growth from here on,
+        // as the fruit scale factor rises (see PlantArchitecture::subtractShootGrowthCarbon()).
+        fbud.previous_fruit_scale_factor = fbud.current_fruit_scale_factor;
+        fbud.fruit_carbon_fraction_charged = 0.f;
+        fbud.fruit_potential_fraction = 0.f;
     }
 
     // Delete geometry from previous reproductive state (if present)
@@ -951,6 +944,14 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
         if (fbud.state == BUD_FRUITING) {
             setInflorescenceScaleFraction(fbud, 0.25);
         }
+    }
+
+    if (charge_flower_construction) {
+        const float flower_cost = calculateFlowerConstructionCosts(fbud);
+        PlantInstance &plant_instance = plantarchitecture_ptr->plant_instances.at(this->plantID);
+        plant_instance.shoot_tree.at(this->parent_shoot_ID)->sugar_pool_molC -= flower_cost;
+        plant_instance.shoot_tree.at(this->parent_shoot_ID)->season_growth_molC += flower_cost;
+        plant_instance.carbon_budget.flower_construction += flower_cost;
     }
 }
 
@@ -1629,10 +1630,19 @@ int Shoot::appendPhytomerInternal(float internode_radius, float internode_length
 void Shoot::breakDormancy() {
     isdormant = false;
 
+    // A shoot that has not recovered its carbon may not flower this season (ShootParameters::return_bloom_scale)
+    const bool flowers_this_season = flowering_probability >= 1.f || context_ptr->randu() < flowering_probability;
+
     int phytomer_ind = 0;
     for (auto &phytomer: phytomers) {
         for (auto &petiole: phytomer->floral_buds) {
             for (auto &fbud: petiole) {
+                if (!flowers_this_season) {
+                    if (fbud.state != BUD_DEAD) {
+                        phytomer->setFloralBudState(BUD_DEAD, fbud);
+                    }
+                    continue;
+                }
                 // A dead bud stays dead, terminal or not. The terminal cluster of this spring was added dormant when the shoot went dormant,
                 // so it is woken here with the rest; a dead terminal bud is either a past season's spent cluster, left behind on the shoot as
                 // it grew on, or one that was deliberately removed, and neither may flower again.
@@ -1672,6 +1682,14 @@ void Shoot::breakDormancy() {
 void Shoot::makeDormant() {
     isdormant = true;
     dormancy_cycles++;
+
+    // Length grown this season, which sets the vigour of the laterals that break from this season's buds
+    float season_extension = 0.f;
+    const size_t season_nodes = std::min(static_cast<size_t>(nodes_this_season), phytomers.size());
+    for (size_t p = phytomers.size() - season_nodes; p < phytomers.size(); p++) {
+        season_extension += phytomers.at(p)->getInternodeLength();
+    }
+    previous_season_extension_m = season_extension;
     nodes_this_season = 0;
 
     for (auto &phytomer: phytomers) {
@@ -2014,6 +2032,26 @@ float Shoot::refreshDownstreamInflorescenceArea() {
         }
 
         phytomers.at(p)->downstream_inflorescence_area = running_total;
+    }
+
+    return running_total;
+}
+
+float Shoot::refreshLiveDownstreamLeafArea() {
+    // Same single tip-to-base sweep as refreshDownstreamInflorescenceArea(), so that each subtree is visited once
+    if (isPruned()) {
+        return 0.f;
+    }
+
+    float running_total = 0;
+    for (int p = static_cast<int>(phytomers.size()) - 1; p >= 0; p--) {
+        running_total += phytomers.at(p)->getLeafArea();
+        if (childIDs.find(p) != childIDs.end()) {
+            for (int child_shoot_ID: childIDs.at(p)) {
+                running_total += plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree.at(child_shoot_ID)->refreshLiveDownstreamLeafArea();
+            }
+        }
+        phytomers.at(p)->live_downstream_leaf_area = running_total;
     }
 
     return running_total;
@@ -5599,6 +5637,8 @@ Shoot::Shoot(uint plant_ID, int shoot_ID, int parent_shoot_ID, uint parent_node,
     // the same way the elongation rate is, and so that a distributed leaf rate is drawn once rather than per timestep.
     const float leaf_expansion_rate_sampled = shoot_parameters.leaf_expansion_rate_max.val();
     leaf_expansion_rate_instantaneous = (leaf_expansion_rate_sampled < 0.f) ? elongation_rate_instantaneous : leaf_expansion_rate_sampled;
+    elongation_rate_potential = elongation_rate_instantaneous;
+    leaf_expansion_rate_potential = leaf_expansion_rate_instantaneous;
 
     if (parent_shoot_ID >= 0) {
         plant_architecture_ptr->plant_instances.at(plantID).shoot_tree.at(parent_shoot_ID)->childIDs[(int) parent_node_index].push_back(shoot_ID);
@@ -5695,6 +5735,16 @@ std::string Shoot::sampleChildShootType() const {
     return child_shoot_type_label;
 }
 
+float Shoot::vigourBudBreakFactor() const {
+    // Only buds that wait through dormancy were formed in the previous season, whose growth sets their vigour
+    const float threshold = shoot_parameters.vegetative_bud_break_vigour_threshold;
+    const float saturation = shoot_parameters.vegetative_bud_break_vigour_saturation;
+    if (!(saturation > threshold) || !shoot_parameters.growth_requires_dormancy) {
+        return -1.f;
+    }
+    return std::clamp((previous_season_extension_m - threshold) / (saturation - threshold), 0.f, 1.f);
+}
+
 bool Shoot::sampleVegetativeBudBreak(uint node_index) {
     if (node_index >= phytomers.size()) {
         helios_runtime_error("ERROR (PlantArchitecture::sampleVegetativeBudBreak): Invalid node index. Node index must be less than the number of phytomers on the shoot.");
@@ -5723,6 +5773,11 @@ bool Shoot::sampleVegetativeBudBreak(uint node_index) {
         } else {
             bud_break_probability = probability_max;
         }
+    }
+
+    const float vigour_factor = vigourBudBreakFactor();
+    if (vigour_factor >= 0.f) {
+        bud_break_probability *= vigour_factor;
     }
 
     bool bud_break = true;
@@ -7371,9 +7426,9 @@ bool PlantArchitecture::isStructuralShoot(uint plantID, uint shootID) const {
         helios_runtime_error("ERROR (PlantArchitecture::isStructuralShoot): Shoot with ID of " + std::to_string(shootID) + " does not exist on plant " + std::to_string(plantID) + ".");
     }
     const std::string &label = plant_instance.shoot_tree.at(shootID)->shoot_type_label;
-    // Fine distal wood is what the model grows freely and what self-pruning acts on; everything else -- the
+    // Fine distal wood and spurs are what the model grows freely and what self-pruning acts on; everything else -- the
     // base stem, the trunk, the scaffolds -- is structure laid down by training and is retained.
-    return label != "proleptic" && label != "sylleptic";
+    return label != "proleptic" && label != "sylleptic" && label != "spur";
 }
 
 void PlantArchitecture::updateGrowthPriority(uint plantID) {
@@ -7401,12 +7456,15 @@ void PlantArchitecture::updateGrowthPriority(uint plantID) {
     // the draw every season until it hits the priority cap -- a single scaffold twice the height of the rest,
     // shooting clear out of the crown. The scaffolds are set by the training of the tree, not by competition
     // between them, so they are not candidates for promotion or suppression.
+    //
+    // Spurs are excluded too. They are shed like other fine wood, but a spur is not a lateral that could grow into a limb; ranked
+    // with its long-shoot siblings it fills the bottom of the ranking, so more of the long shoots are promoted and fewer suppressed.
     std::map<int, std::vector<uint>> siblings_by_parent;
     for (const auto &shoot: shoot_tree) {
         if (shoot->parent_shoot_ID < 0 || shoot->phytomers.empty() || shoot->shoot_internode_vertices.empty()) {
             continue;
         }
-        if (isStructuralShoot(plantID, shoot->ID)) {
+        if (isStructuralShoot(plantID, shoot->ID) || shoot->shoot_type_label == "spur") {
             continue;
         }
         siblings_by_parent[shoot->parent_shoot_ID].push_back(shoot->ID);
@@ -8411,6 +8469,30 @@ std::vector<std::string> PlantArchitecture::listShootTypeLabels(uint plantID) co
     return labels;
 }
 
+ShootParameters PlantArchitecture::getPlantShootTypeParameters(uint plantID, const std::string &shoot_type_label) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantShootTypeParameters): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    const auto &shoot_types = plant_instances.at(plantID).shoot_types_snapshot;
+    if (shoot_types.find(shoot_type_label) == shoot_types.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantShootTypeParameters): Plant " + std::to_string(plantID) + " has no shoot type \"" + shoot_type_label + "\". See listShootTypeLabels().");
+    }
+    return shoot_types.at(shoot_type_label);
+}
+
+void PlantArchitecture::updatePlantShootTypeParameters(uint plantID, const std::string &shoot_type_label, const ShootParameters &params) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::updatePlantShootTypeParameters): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    auto &shoot_types = plant_instances.at(plantID).shoot_types_snapshot;
+    if (shoot_types.find(shoot_type_label) == shoot_types.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::updatePlantShootTypeParameters): Plant " + std::to_string(plantID) + " has no shoot type \"" + shoot_type_label + "\". See listShootTypeLabels().");
+    }
+    ShootParameters validated_params = params;
+    validateShootTypes(validated_params, shoot_types);
+    shoot_types.at(shoot_type_label) = validated_params;
+}
+
 void PlantArchitecture::harvestPlant(uint plantID) {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::harvestPlant): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -8507,10 +8589,6 @@ void PlantArchitecture::breakPlantDormancy(uint plantID) {
 
     for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
         shoot->breakDormancy();
-        if (carbon_model_enabled)
-        {
-            shoot->mobilizeStarch();
-        }
     }
 }
 
@@ -9918,8 +9996,8 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
         }
 
         copy.carb_parameters = source.carb_parameters;
-        copy.stem_maintenance_respiration_rate = source.stem_maintenance_respiration_rate;
-        copy.root_maintenance_respiration_rate = source.root_maintenance_respiration_rate;
+        copy.respiration_temperature_factor = source.respiration_temperature_factor;
+        copy.carbon_model_temperature_C = source.carbon_model_temperature_C;
         copy.nitrogen_parameters = source.nitrogen_parameters;
 
         // Attraction points are absolute world coordinates anchored to the plant's base (the library
@@ -10103,6 +10181,10 @@ void PlantArchitecture::setPlantCarbohydrateModelParameters(uint plantID, const 
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::setPlantCarbohydrateModelParameters): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
+    if (carb_parameters.sapwood_area_per_leaf_area > 0.f && !(carb_parameters.sapwood_functional_years > 0.f)) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantCarbohydrateModelParameters): CarbohydrateParameters::sapwood_functional_years must be positive when sapwood_area_per_leaf_area is set (got " +
+                             std::to_string(carb_parameters.sapwood_functional_years) + ").");
+    }
 
     plant_instances.at(plantID).carb_parameters = carb_parameters;
 }
@@ -10187,7 +10269,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
     // **** accumulate photosynthate **** //
     if (carbon_model_enabled) {
         for (uint plantID: plantIDs) {
+            plant_instances.at(plantID).carbon_budget = PlantCarbonBudget();
             accumulateShootPhotosynthesis(plantID);
+            plant_instances.at(plantID).photosynthesis_supply_rate_molC_day = plant_instances.at(plantID).carbon_budget.net_photosynthesis / time_step_days;
         }
     }
 
@@ -10279,18 +10363,16 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
             // Shadow-propagation grid (Palubicki et al. 2009), recomputed once per sweep. It drives shade-based branch shedding at the
             // season boundary, which reads the grid captured at the season's peak canopy: the point at which every branch has stood a
-            // full season in leaf. The carbon model handles branch mortality itself, so none of this is needed when it is active.
-            if (!carbon_model_enabled) {
-                updateShadowGrid(plantID);
+            // full season in leaf. It also drives growth priority, which runs with or without the carbohydrate model.
+            updateShadowGrid(plantID);
 
-                float current_leaf_area = sumPlantLeafArea(plantID);
-                if (current_leaf_area > plant_instance.season_peak_leaf_area) {
-                    plant_instance.season_peak_leaf_area = current_leaf_area;
-                    plant_instance.season_peak_shadow_grid = plant_instance.shadow_grid;
-                    plant_instance.season_peak_crown_depth_grid = plant_instance.crown_depth_grid;
-                    plant_instance.season_peak_shadow_grid_voxel_size = plant_instance.shadow_grid_voxel_size;
-                    captureSeasonPeakLeaves(plantID);
-                }
+            float current_leaf_area = sumPlantLeafArea(plantID);
+            if (current_leaf_area > plant_instance.season_peak_leaf_area) {
+                plant_instance.season_peak_leaf_area = current_leaf_area;
+                plant_instance.season_peak_shadow_grid = plant_instance.shadow_grid;
+                plant_instance.season_peak_crown_depth_grid = plant_instance.crown_depth_grid;
+                plant_instance.season_peak_shadow_grid_voxel_size = plant_instance.shadow_grid_voxel_size;
+                captureSeasonPeakLeaves(plantID);
             }
 
             // A non-positive dormancy period means no dormancy cycle is scheduled. Without this guard the
@@ -10302,18 +10384,21 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 plant_instance.time_since_dormancy = 0;
 
                 // Self-pruning. Evaluated here, at the season boundary, because this is the point at which a branch has
-                // completed a full season in leaf and the peak shadow grid still records the canopy it stood in. Under the
-                // carbon model, branch mortality is already handled by carbon starvation in CarbohydrateModel.
-                if (!carbon_model_enabled) {
+                // completed a full season in leaf and the peak shadow grid still records the canopy it stood in. With the
+                // carbohydrate model, a branch is instead shed when its own leaves did not pay for its upkeep and growth over the year.
+                if (carbon_model_enabled) {
+                    shedCarbonStarvedBranches(plantID);
+                } else {
                     shedShadedBranches(plantID);
-
-                    // Growth priority among the survivors. Ordered after shedding so that priority is only ever
-                    // awarded to branches that have actually been retained, and so that a shed branch does not
-                    // take a promotion with it.
-                    updateGrowthPriority(plantID);
                 }
 
+                // Growth priority among the survivors. Ordered after shedding so that priority is only ever
+                // awarded to branches that have actually been retained, and so that a shed branch does not
+                // take a promotion with it.
+                updateGrowthPriority(plantID);
+
                 plant_instance.season_peak_leaf_area = 0.f;
+                plant_instance.cambium_season_index++;
                 for (const auto &shoot: *shoot_tree) {
                     shoot->makeDormant();
                     shoot->phyllochron_counter = 0;
@@ -10327,6 +10412,14 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
             for (const auto &shoot: *shoot_tree) {
                 if (shoot->parent_shoot_ID < 0) {
                     shoot->refreshDownstreamInflorescenceArea();
+                }
+            }
+            // The carbohydrate model's sapwood ring is sized by the leaf area each internode supplies now, refreshed the same way
+            if (carbon_model_enabled && plant_instance.carb_parameters.sapwood_area_per_leaf_area > 0.f) {
+                for (const auto &shoot: *shoot_tree) {
+                    if (shoot->parent_shoot_ID < 0) {
+                        shoot->refreshLiveDownstreamLeafArea();
+                    }
                 }
             }
 
@@ -10349,10 +10442,6 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 if (shoot->isdormant && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
                     shoot->phyllochron_counter = 0;
                     shoot->breakDormancy();
-                    if (carbon_model_enabled)
-                    {
-                        shoot->mobilizeStarch();
-                    }
                 }
 
                 if (shoot->isdormant) {
@@ -10461,7 +10550,6 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                 // ****** GROWTH/SCALING OF CURRENT PHYTOMERS/FRUIT ****** //
 
-                int node_index = 0;
                 for (auto &phytomer: shoot->phytomers) {
                     // scale internode length
                     if (phytomer->current_internode_scale_factor < 1) {
@@ -10469,20 +10557,28 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                         float length_scale = fmin(1.f, (phytomer->getInternodeLength() + dL_internode) / phytomer->internode_length_max);
                         phytomer->setInternodeLengthScaleFraction(length_scale, false);
                     }
+                }
 
-                    // scale internode girth
-                    if (shoot->shoot_parameters.girth_area_factor.val() > 0.f) {
+                // scale internode girth
+                if (shoot->shoot_parameters.girth_area_factor.val() > 0.f) {
+                    // The carbohydrate model sizes radial growth against the shoot's length and volume. Evaluated once per
+                    // shoot rather than once per internode, which made the girth update quadratic in the node count.
+                    float shoot_length = 0.f;
+                    float shoot_volume = 0.f;
+                    if (carbon_model_enabled) {
+                        shoot_length = shoot->calculateShootLength();
+                        shoot_volume = shoot->calculateShootInternodeVolume();
+                    }
+                    for (uint node_index = 0; node_index < shoot->phytomers.size(); node_index++) {
                         if (carbon_model_enabled) {
-                            incrementPhytomerInternodeGirth_carb(plantID, shoot->ID, node_index, dt_max_days, false);
+                            incrementPhytomerInternodeGirth_carb(plantID, shoot->ID, node_index, dt_max_days, false, shoot_length, shoot_volume);
                         } else {
                             incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dt_max_days, false);
                         }
                     }
-
-                    node_index++;
                 }
 
-                node_index = 0;
+                int node_index = 0;
                 for (auto &phytomer: shoot->phytomers) {
                     // scale petiole/leaves
                     if (phytomer->hasLeaf()) {
@@ -10611,6 +10707,18 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                                 uint childID = addChildShoot(plantID, shoot->ID, node_index, 1, base_rotation, internode_radius, internode_length_max, 0.01, 0.01, 0, vbud.shoot_type_label, parent_petiole_index);
 
+                                // A lateral from a bud that waited through dormancy is weaker than the shoot bearing it (ShootParameters::lateral_vigour_ratio)
+                                if (new_shoot_parameters->lateral_vigour_ratio > 0.f && shoot->shoot_parameters.growth_requires_dormancy) {
+                                    if (!(internode_length_max > 0.f)) {
+                                        helios_runtime_error("ERROR (PlantArchitecture::advanceTime): A new \"" + vbud.shoot_type_label + "\" shoot has internode length " + std::to_string(internode_length_max) +
+                                                             " m, so its lateral_vigour_ratio cannot be converted to a node cap. Check the internode_length_max and internode_length_min of that shoot type.");
+                                    }
+                                    const float season_length = new_shoot_parameters->lateral_vigour_ratio * shoot->previous_season_extension_m;
+                                    const int vigour_cap = std::max(1, static_cast<int>(std::lround(season_length / internode_length_max)));
+                                    const auto &child = shoot_tree->at(childID);
+                                    child->growth_state.max_nodes_per_season_growth_cap = std::min(vigour_cap, child->getGrowthNodeCapPerSeason());
+                                }
+
                                 if (plant_instance.leaf_angle_tracking_enabled) {
                                     plant_instance.leaf_angle_tracker.pending_cohort.emplace_back(int(childID), 0u);
                                 }
@@ -10725,9 +10833,12 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
             // **** subtract maintenance carbon costs **** //
             if (carbon_model_enabled) {
+                const PlantCarbonBudget budget_before = plant_instances.at(plantID).carbon_budget;
                 subtractShootMaintenanceCarbon(plantID, dt_max_days);
-                subtractShootGrowthCarbon(plantID);
-                checkCarbonPool_transferCarbon(plantID, dt_max_days);
+                subtractShootGrowthCarbon(plantID, dt_max_days);
+                checkCarbonPool_dropFruit(plantID, dt_max_days);
+                allocateSurplusCarbon(plantID, dt_max_days, budget_before);
+                checkCarbonPool_redistributeCarbon(plantID, dt_max_days);
                 checkCarbonPool_adjustPhyllochron(plantID, dt_max_days);
                 checkCarbonPool_abortOrgans(plantID, dt_max_days);
             }

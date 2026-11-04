@@ -5294,6 +5294,60 @@ TEST_CASE("File path resolution priority") {
     }
 }
 
+TEST_CASE("Context timeseries insertion order, duplicates and queries") {
+    // Points may be added in any order and the series must come back sorted by date/time, with duplicates rejected
+    // wherever they fall and queries interpolating between the right neighbours. Exercised on a series long enough
+    // that insertions land at the front, the back and many interior positions.
+    Context ctx;
+    const Date date = make_Date(1, 6, 2024);
+    auto timeAt = [](int minute_of_day) { return make_Time(minute_of_day / 60, minute_of_day % 60, 0); };
+    auto valueAt = [](int minute_of_day) { return 10.f + 0.5f * float(minute_of_day); };
+
+    // Even minutes in reverse order (every insertion at the front), then odd minutes interleaved into the middle.
+    constexpr int N = 400;
+    for (int m = 2 * (N - 1); m >= 0; m -= 2) {
+        ctx.addTimeseriesData("x", valueAt(m), date, timeAt(m));
+    }
+    for (int m = 1; m < 2 * N; m += 2) {
+        ctx.addTimeseriesData("x", valueAt(m), date, timeAt(m));
+    }
+    DOCTEST_REQUIRE(ctx.getTimeseriesLength("x") == 2 * N);
+    for (uint i = 0; i < 2 * N; i++) {
+        DOCTEST_CAPTURE(i);
+        DOCTEST_CHECK(ctx.queryTimeseriesData("x", i) == doctest::Approx(valueAt(int(i))));
+        const Time t = ctx.queryTimeseriesTime("x", i);
+        DOCTEST_CHECK(t.hour * 60 + t.minute == int(i));
+    }
+
+    // Duplicates at the first, an interior and the last point are skipped without changing the series.
+    {
+        capture_cerr cerr_buffer;
+        ctx.addTimeseriesData("x", -1.f, date, timeAt(0));
+        ctx.addTimeseriesData("x", -1.f, date, timeAt(N));
+        ctx.addTimeseriesData("x", -1.f, date, timeAt(2 * N - 1));
+    }
+    DOCTEST_CHECK(ctx.getTimeseriesLength("x") == 2 * N);
+    DOCTEST_CHECK(ctx.queryTimeseriesData("x", 0) == doctest::Approx(valueAt(0)));
+    DOCTEST_CHECK(ctx.queryTimeseriesData("x", N) == doctest::Approx(valueAt(N)));
+    DOCTEST_CHECK(ctx.queryTimeseriesData("x", 2 * N - 1) == doctest::Approx(valueAt(2 * N - 1)));
+
+    // Queries at stored points return the stored value; between points they interpolate linearly.
+    DOCTEST_CHECK(ctx.queryTimeseriesData("x", date, timeAt(0)) == doctest::Approx(valueAt(0)));
+    DOCTEST_CHECK(ctx.queryTimeseriesData("x", date, timeAt(317)) == doctest::Approx(valueAt(317)));
+    DOCTEST_CHECK(ctx.queryTimeseriesData("x", date, timeAt(2 * N - 1)) == doctest::Approx(valueAt(2 * N - 1)));
+    DOCTEST_CHECK(ctx.queryTimeseriesData("x", date, make_Time(5, 17, 30)) == doctest::Approx(valueAt(317) + 0.25f));
+
+    // Updating an interior point changes only that point.
+    ctx.updateTimeseriesData("x", date, timeAt(501), 1234.5f);
+    DOCTEST_CHECK(ctx.queryTimeseriesData("x", 501) == doctest::Approx(1234.5f));
+    DOCTEST_CHECK(ctx.queryTimeseriesData("x", 500) == doctest::Approx(valueAt(500)));
+    DOCTEST_CHECK(ctx.queryTimeseriesData("x", 502) == doctest::Approx(valueAt(502)));
+    {
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_THROWS(ctx.updateTimeseriesData("x", date, make_Time(5, 17, 30), 0.f));
+    }
+}
+
 TEST_CASE("Context Timeseries File Loading") {
 
     SUBCASE("ISO-8601 UTC datetime") {

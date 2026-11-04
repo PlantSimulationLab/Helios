@@ -980,9 +980,20 @@ static uint buildAppleAndPruneABranch(PlantArchitecture &plantarchitecture, uint
 }
 
 //! Drives one day of photosynthesis, standing in for the Photosynthesis plug-in.
+//! Carbohydrate parameters for the bean tests. The defaults are for almond, whose leaves (~110 g/m^2) cost over three times
+//! as much carbon per unit area as a bean's (~33 g/m^2), so a bean seedling on almond parameters cannot pay for its leaves.
+static CarbohydrateParameters beanCarbohydrateParameters() {
+    CarbohydrateParameters params;
+    params.SLA = 0.03f; // m^2/g
+    // The tests start from very large pools so that no shoot starves; a capacity far above them keeps the storage
+    // capacity, its overflow and the sink feedback on photosynthesis out of tests of other mechanisms.
+    params.storage_capacity = 1e3f;
+    return params;
+}
+
 /**
  * The carbohydrate model reads "net_photosynthesis" (umol CO2 m-2 s-1) off leaf primitives and
- * integrates it hourly into "cumulative_net_photosynthesis" via accumulateHourlyLeafPhotosynthesis().
+ * integrates it hourly via accumulateHourlyLeafPhotosynthesis().
  * Setting the rate directly lets the plantarchitecture tests exercise the carbon balance without
  * depending on the photosynthesis plug-in.
  */
@@ -1075,15 +1086,19 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model grows a plant when carbo
     plantarchitecture.loadPlantModelFromLibrary("bean");
 
     const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, beanCarbohydrateParameters());
 
     // The initial pool is sized as concentration x internode volume, and a seedling's base stem has a
-    // very small volume while having to fund the construction of its much larger first shoot. The 1500
-    // mol C/m^3 used in the documentation's example leaves it unable to do so and the plant dies on the
-    // first day; this is comfortably above that threshold.
-    plantarchitecture.initializePlantCarbohydratePool(plantID, 1.5e4f);
+    // very small volume while having to fund the construction of its first leaves and shoot -- the role
+    // seed reserves play in a real seedling. The library bean expands its first leaves several times
+    // faster than their photosynthesis could pay for, so the stem is given roughly the carbon of a bean
+    // seed (~0.5 g dry mass, ~0.02 mol C).
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 2e6f);
 
+    // A healthy bean leaf assimilates 15-25 umol/m^2/s in full light. At 10 the seedling's leaf construction
+    // outruns its photosynthesis for its first two weeks and only just survives on its seed reserve.
     for (int day = 0; day < 20; day++) {
-        drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, 10.f, 12);
+        drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, 15.f, 12);
         DOCTEST_REQUIRE_NOTHROW(plantarchitecture.advanceTime(plantID, 1));
     }
 
@@ -1128,7 +1143,7 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model touches only the plants 
     // a plant built at a non-zero age with no carbon supplied starves during construction and is left
     // with only pruned shells whose pools are identically zero.
     constexpr uint seed = 12345;
-    constexpr float initial_concentration_molC_m3 = 1.5e4f;
+    constexpr float initial_concentration_molC_m3 = 2e6f; // a seed's worth of carbon for the seedling; see the test above
     constexpr int warmup_days = 3;
 
     // Builds A, warms it up, then builds B and advances B one day. Returns A's pools before and after B's
@@ -1141,6 +1156,7 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model touches only the plants 
         plantarchitecture.loadPlantModelFromLibrary("bean");
 
         plantA = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        plantarchitecture.setPlantCarbohydrateModelParameters(plantA, beanCarbohydrateParameters());
         plantarchitecture.initializePlantCarbohydratePool(plantA, initial_concentration_molC_m3);
         for (int day = 0; day < warmup_days; day++) {
             drivePhotosynthesisForOneDay(context, plantarchitecture, plantA, 10.f, 12);
@@ -1149,6 +1165,7 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model touches only the plants 
         poolsA_before_B = snapshotPlantCarbonPools(plantarchitecture, plantA);
 
         plantB = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(2, 0, 0), 0);
+        plantarchitecture.setPlantCarbohydrateModelParameters(plantB, beanCarbohydrateParameters());
         plantarchitecture.initializePlantCarbohydratePool(plantB, initial_concentration_molC_m3);
         drivePhotosynthesisForOneDay(context, plantarchitecture, plantB, 10.f, 12);
         plantarchitecture.advanceTime(plantB, 1);
@@ -1204,6 +1221,1195 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model touches only the plants 
         DOCTEST_CHECK(poolsA_after_both_advanced.at(shootID).first == doctest::Approx(entry.second.first).epsilon(1e-6));
         DOCTEST_CHECK(poolsA_after_both_advanced.at(shootID).second == doctest::Approx(entry.second.second).epsilon(1e-6));
     }
+}
+
+//! Carbohydrate parameters that isolate organ construction costs: no maintenance respiration, and wood so light that
+//! building stems and roots costs next to nothing. Leaf and fruit construction then account for essentially all of the
+//! carbon a growing plant spends.
+static CarbohydrateParameters constructionOnlyCarbohydrateParameters() {
+    CarbohydrateParameters params;
+    params.stem_density = 1000.f; // g/m^3, ~1/700 of real wood
+    params.r_m_w_20 = 0.f;
+    params.r_m_w_branch_20 = 0.f;
+    params.r_m_w_current_20 = 0.f;
+    params.r_m_r_20 = 0.f;
+    // Storage capacity is proportional to wood mass. With nearly weightless wood the capacity must be enormous for the
+    // large pools these tests start from not to overflow.
+    params.storage_capacity = 1e9f;
+    return params;
+}
+
+//! Structural carbon (mol C) of a fruit at full size: its current volume scaled up to the mature size, at the fruit density and carbon content.
+static float matureFruitCarbon(Context &context, const FloralBud &fbud, const CarbohydrateParameters &params) {
+    float volume = 0.f;
+    for (const uint objID: fbud.inflorescence_objIDs) {
+        if (context.doesObjectExist(objID)) {
+            volume += context.getPolymeshObjectVolume(objID);
+        }
+    }
+    return volume / std::pow(fbud.current_fruit_scale_factor, 3.f) * params.fruit_density * params.fruit_carbon_percentage / C_molecular_wt;
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges leaf expansion") {
+    // Phytomer::calculatePhytomerConstructionCosts() was never called, so leaves were built for free. Leaf-out is one of
+    // the largest carbon sinks of a deciduous tree's year, and without it the model could not produce the spring
+    // drawdown of reserves. With wood made nearly weightless and no respiration, the carbon a seedling spends over its
+    // first days is its leaf construction: leaf dry mass (area / SLA) times its carbon fraction, plus growth respiration.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    const CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+    plantarchitecture.enableCarbohydrateModel();
+
+    const float leaf_area_before = plantarchitecture.sumPlantLeafArea(plantID);
+    const float pool_before = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+    {
+        capture_cerr capture; // no photosynthesis is supplied, which the model warns about
+        plantarchitecture.advanceTime(plantID, 10);
+    }
+    const float leaf_area_gained = plantarchitecture.sumPlantLeafArea(plantID) - leaf_area_before;
+    const float carbon_spent = pool_before - plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+
+    DOCTEST_REQUIRE(leaf_area_gained > 0.f);
+    const float leaf_structural_carbon = leaf_area_gained / params.SLA * params.leaf_carbon_percentage / C_molecular_wt;
+    const float expected_leaf_cost = leaf_structural_carbon * (1.f + params.growth_respiration_fraction);
+    DOCTEST_CHECK(carbon_spent >= 0.95f * expected_leaf_cost);
+    DOCTEST_CHECK(carbon_spent <= 1.10f * expected_leaf_cost);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges leaf mass as the leaf matures") {
+    // A leaf reaches its full area before its full thickness. With leaf_mass_fraction_at_expansion below 1, only that fraction of
+    // the leaf's final mass is charged with its area, and the rest as the leaf ages over leaf_maturation_days. With nearly
+    // weightless wood and no respiration, the carbon a seedling spends is its leaf construction, so a seedling whose leaves
+    // never mature in the time simulated spends that fraction of what one charged in full does, and one whose leaves mature
+    // quickly spends more than that but no more than the full cost.
+    auto carbonSpent = [](float mass_fraction_at_expansion, float maturation_days) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
+        params.leaf_mass_fraction_at_expansion = mass_fraction_at_expansion;
+        params.leaf_maturation_days = maturation_days;
+        plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+        plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+        plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+        plantarchitecture.enableCarbohydrateModel();
+        const float pool_before = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+        {
+            capture_cerr capture; // no photosynthesis is supplied, which the model warns about
+            plantarchitecture.advanceTime(plantID, 10);
+        }
+        return pool_before - plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+    };
+
+    const float spent_charged_in_full = carbonSpent(1.f, 60.f);
+    const float spent_never_maturing = carbonSpent(0.5f, 1e6f);
+    const float spent_maturing_quickly = carbonSpent(0.5f, 3.f);
+    DOCTEST_REQUIRE(spent_charged_in_full > 0.f);
+    DOCTEST_CHECK(spent_never_maturing == doctest::Approx(0.5f * spent_charged_in_full).epsilon(0.05));
+    DOCTEST_CHECK(spent_maturing_quickly > 1.2f * spent_never_maturing);
+    DOCTEST_CHECK(spent_maturing_quickly <= 1.01f * spent_charged_in_full);
+
+    // The fraction must be usable as a multiplier and the period as a divisor
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    CarbohydrateParameters invalid = constructionOnlyCarbohydrateParameters();
+    invalid.leaf_mass_fraction_at_expansion = 0.f;
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, invalid);
+    plantarchitecture.enableCarbohydrateModel();
+    capture_cerr capture;
+    DOCTEST_CHECK_THROWS(plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges flower construction") {
+    // Flower construction was charged from the bud's inflorescence objects before the flower geometry was built, so the
+    // list was empty and every flower was free. Each flower that opens or forms must be charged total_flower_cost once: the
+    // carbon charged over a bean's flowering must be positive and at least the cost of the most flowers present at once.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+    const CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+    plantarchitecture.enableCarbohydrateModel();
+
+    float flower_carbon_charged = 0.f;
+    size_t most_flowers = 0;
+    for (int day = 0; day < 40; day++) {
+        drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, 10.f, 12);
+        plantarchitecture.advanceTime(plantID, 1);
+        flower_carbon_charged += plantarchitecture.getPlantCarbonBudget(plantID).flower_construction; // the budget covers one advanceTime() call
+        size_t flowers = 0;
+        for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+                for (const auto &petiole: phytomer->floral_buds) {
+                    for (const auto &fbud: petiole) {
+                        if (fbud.state == BUD_FLOWER_CLOSED || fbud.state == BUD_FLOWER_OPEN) {
+                            flowers += fbud.inflorescence_objIDs.size();
+                        }
+                    }
+                }
+            }
+        }
+        most_flowers = std::max(most_flowers, flowers);
+    }
+    DOCTEST_REQUIRE(most_flowers > 0);
+    DOCTEST_CHECK(flower_carbon_charged > 0.f);
+    DOCTEST_CHECK(flower_carbon_charged >= 0.999f * params.total_flower_cost * float(most_flowers));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges fruit growth") {
+    // Fruit carbon used to be charged once, at fruit set, from the volume of the flower being replaced; the fruit's growth
+    // to full size afterwards was never charged. In a bearing tree fruit takes a large share of the year's dry matter.
+    // A bean built just after its first pods set (~day 70) carries pods that keep growing for weeks. With weightless wood
+    // and no respiration, the carbon spent must cover at least the structural carbon of the leaf area and pod volume gained.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 75);
+
+    const CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+    plantarchitecture.enableCarbohydrateModel();
+
+    // Fruit carbon is charged along each fruit's dry-matter curve; record how much of each fruit had been charged
+    std::map<const FloralBud *, float> charged_before;
+    auto forEachFruit = [&](const std::function<void(const FloralBud &)> &visit) {
+        for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+                for (const auto &petiole: phytomer->floral_buds) {
+                    for (const auto &fbud: petiole) {
+                        if (fbud.state == BUD_FRUITING) {
+                            visit(fbud);
+                        }
+                    }
+                }
+            }
+        }
+    };
+    forEachFruit([&](const FloralBud &fbud) { charged_before[&fbud] = fbud.fruit_carbon_fraction_charged; });
+
+    const float leaf_area_before = plantarchitecture.sumPlantLeafArea(plantID);
+    const float pool_before = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+    {
+        capture_cerr capture;
+        plantarchitecture.advanceTime(plantID, 15);
+    }
+    const float leaf_area_gained = std::max(0.f, plantarchitecture.sumPlantLeafArea(plantID) - leaf_area_before);
+    const float carbon_spent = pool_before - plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+
+    float fruit_structural_carbon = 0.f;
+    forEachFruit([&](const FloralBud &fbud) {
+        const auto before = charged_before.find(&fbud);
+        fruit_structural_carbon += matureFruitCarbon(context, fbud, params) * (fbud.fruit_carbon_fraction_charged - (before == charged_before.end() ? 0.f : before->second));
+    });
+    DOCTEST_REQUIRE(fruit_structural_carbon > 0.f);
+    const float leaf_structural_carbon = leaf_area_gained / params.SLA * params.leaf_carbon_percentage / C_molecular_wt;
+    DOCTEST_CHECK(carbon_spent >= 0.95f * (fruit_structural_carbon + leaf_structural_carbon));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate pool initialization does not charge standing wood") {
+    // A plant grown with the carbohydrate model off has no record of what its phytomers already cost, so the first
+    // carbon step charged the entire standing wood volume as new growth. Initializing the pools marks the existing
+    // structure as paid for; one day later the plant must have spent only that day's wood growth, a small fraction of
+    // its standing structural carbon. Leaves are made nearly free so that the day's leaf expansion does not mask the wood.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+
+    CarbohydrateParameters params;
+    params.r_m_w_20 = 0.f;
+    params.r_m_w_branch_20 = 0.f;
+    params.r_m_w_current_20 = 0.f;
+    params.r_m_r_20 = 0.f;
+    params.SLA = 1e6f;
+    params.storage_capacity = 1e3f; // the pool below is far above real storage capacity; keep overflow out of the day's spending
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e6f);
+    plantarchitecture.enableCarbohydrateModel();
+
+    float standing_structural_carbon = 0.f;
+    for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        standing_structural_carbon += plantarchitecture.getPlantShoot(plantID, shootID)->calculateShootInternodeVolume() * params.stem_density * params.stem_structural_carbon_percentage / C_molecular_wt;
+    }
+    DOCTEST_REQUIRE(standing_structural_carbon > 0.f);
+
+    const float pool_before = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+    {
+        capture_cerr capture;
+        plantarchitecture.advanceTime(plantID, 1);
+    }
+    const float carbon_spent = pool_before - plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+    DOCTEST_CHECK(carbon_spent < 0.2f * standing_structural_carbon);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model keeps sugar non-negative while starch remains") {
+    // Respiration and growth are drawn from the sugar pool. Starch was released only at dormancy break, so a dormant
+    // shoot respiring through the winter drove its sugar pool negative while still holding starch -- an impossible state
+    // that the model never corrected. A dormant young almond (no growth, so only respiration acts) is respired for ten
+    // weeks, slowly enough that its sugar runs out well before its starch; on every day, any shoot still holding starch
+    // must hold non-negative sugar.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_REQUIRE(plantarchitecture.isPlantDormant(plantID));
+
+    CarbohydrateParameters params;
+    params.r_m_w_20 = 0.004f;
+    params.r_m_w_branch_20 = 0.004f;
+    params.r_m_w_current_20 = 0.004f;
+    params.r_m_r_20 = 0.f;
+    // Starvation pruning is switched off so that a shoot is removed only when its whole pool is exhausted; this test is
+    // about how the pool is split between sugar and starch on the way down.
+    params.carbohydrate_growth_threshold = 0.f;
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 6000.f);
+    plantarchitecture.enableCarbohydrateModel();
+
+    bool starch_ever_held = false;
+    for (int day = 0; day < 70; day++) {
+        {
+            capture_cerr capture;
+            plantarchitecture.advanceTime(plantID, 1);
+        }
+        for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            if (plantarchitecture.isShootPruned(plantID, shootID)) {
+                continue;
+            }
+            const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+            if (shoot->starch_pool_molC > 0.f) {
+                starch_ever_held = true;
+                DOCTEST_CAPTURE(day);
+                DOCTEST_CAPTURE(shootID);
+                DOCTEST_CHECK(shoot->sugar_pool_molC >= 0.f);
+            }
+        }
+    }
+    DOCTEST_CHECK(starch_ever_held);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model credits exactly the photosynthesis accumulated from the leaves") {
+    // accumulateHourlyLeafPhotosynthesis() integrates each leaf's net_photosynthesis over an hour, and advanceTime()
+    // credits the sum to the shoots. With a uniform rate on every leaf primitive, the day's credit must equal the rate
+    // times the leaf area times the hours accumulated -- and a second call to advanceTime() with no accumulation in
+    // between must credit nothing.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, beanCarbohydrateParameters());
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e6f);
+    plantarchitecture.enableCarbohydrateModel();
+
+    float leaf_area = 0.f;
+    for (const uint objID: plantarchitecture.getPlantLeafObjectIDs(plantID)) {
+        for (const uint UUID: context.getObjectPrimitiveUUIDs(objID)) {
+            leaf_area += context.getPrimitiveArea(UUID);
+        }
+    }
+    DOCTEST_REQUIRE(leaf_area > 0.f);
+
+    constexpr float assimilation_rate_umol = 12.f;
+    constexpr int hours = 10;
+    drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, assimilation_rate_umol, hours);
+    plantarchitecture.advanceTime(plantID, 1);
+    const float expected_molC = assimilation_rate_umol * 1e-6f * 3600.f * float(hours) * leaf_area;
+    DOCTEST_CHECK(plantarchitecture.getPlantCarbonBudget(plantID).net_photosynthesis == doctest::Approx(expected_molC).epsilon(1e-4));
+
+    std::string warning_output;
+    {
+        capture_cerr capture;
+        plantarchitecture.advanceTime(plantID, 1);
+        warning_output = capture.get_captured_output();
+    }
+    DOCTEST_CHECK(plantarchitecture.getPlantCarbonBudget(plantID).net_photosynthesis == doctest::Approx(0.f));
+    DOCTEST_CHECK(warning_output.find("no photosynthesis was accumulated") != std::string::npos);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate budget closes") {
+    // Every mol of carbon that enters or leaves the pools must appear in the plant's carbon budget: the change in the
+    // whole-plant pool over a day equals net photosynthesis minus respiration and construction. A fruiting bean with
+    // photosynthesis supplied exercises every term (wood, root, leaf, fruit and flower construction, growth and
+    // maintenance respiration). The pool is kept large so that no shoot is pruned, which would remove carbon unaccounted.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 60);
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, beanCarbohydrateParameters());
+    plantarchitecture.adjustPlantMaintenanceRespiration(298.15f);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e6f);
+    plantarchitecture.enableCarbohydrateModel();
+
+    PlantCarbonBudget budget_sum;
+    for (int day = 0; day < 20; day++) {
+        DOCTEST_CAPTURE(day);
+        drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, 10.f, 12);
+        const float pool_before = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+        plantarchitecture.advanceTime(plantID, 1);
+        const float pool_change = plantarchitecture.getPlantTotalCarbohydratePool(plantID) - pool_before;
+
+        const PlantCarbonBudget budget = plantarchitecture.getPlantCarbonBudget(plantID);
+        const float expected_change = budget.net_photosynthesis - budget.wood_maintenance_respiration - budget.root_maintenance_respiration - budget.wood_growth - budget.root_growth - budget.leaf_growth - budget.fruit_growth -
+                                      budget.flower_construction - budget.growth_respiration - budget.storage_overflow - budget.shed_branch_carbohydrate;
+        DOCTEST_CHECK(pool_change == doctest::Approx(expected_change).epsilon(1e-3).scale(pool_before));
+
+        budget_sum.net_photosynthesis += budget.net_photosynthesis;
+        budget_sum.leaf_growth += budget.leaf_growth;
+        budget_sum.fruit_growth += budget.fruit_growth;
+        budget_sum.wood_maintenance_respiration += budget.wood_maintenance_respiration;
+    }
+    for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        DOCTEST_CHECK(!plantarchitecture.isShootPruned(plantID, shootID));
+    }
+    // The scene must actually exercise the terms being balanced.
+    DOCTEST_CHECK(budget_sum.net_photosynthesis > 0.f);
+    DOCTEST_CHECK(budget_sum.leaf_growth > 0.f);
+    DOCTEST_CHECK(budget_sum.fruit_growth > 0.f);
+    DOCTEST_CHECK(budget_sum.wood_maintenance_respiration > 0.f);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model records each shoot's photosynthesis, wood respiration and growth for the season") {
+    // shedCarbonStarvedBranches() judges each branch by the photosynthesis credited to its own leaves, the maintenance
+    // respiration charged to its own wood and the construction charged to it. Summed over the shoots, those records must
+    // equal the plant's budget (growth respiration of the roots is paid from the root pool, not by the shoots).
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, beanCarbohydrateParameters());
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e6f);
+    plantarchitecture.enableCarbohydrateModel();
+
+    PlantCarbonBudget budget_sum;
+    for (int day = 0; day < 3; day++) {
+        drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, 10.f, 12);
+        plantarchitecture.advanceTime(plantID, 1);
+        const PlantCarbonBudget budget = plantarchitecture.getPlantCarbonBudget(plantID);
+        budget_sum.net_photosynthesis += budget.net_photosynthesis;
+        budget_sum.wood_maintenance_respiration += budget.wood_maintenance_respiration;
+        budget_sum.wood_growth += budget.wood_growth;
+        budget_sum.leaf_growth += budget.leaf_growth;
+        budget_sum.fruit_growth += budget.fruit_growth;
+        budget_sum.flower_construction += budget.flower_construction;
+        budget_sum.root_growth += budget.root_growth;
+        budget_sum.growth_respiration += budget.growth_respiration;
+    }
+
+    double recorded_photosynthesis = 0;
+    double recorded_respiration = 0;
+    double recorded_growth = 0;
+    for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        recorded_photosynthesis += shoot->season_net_photosynthesis_molC;
+        recorded_respiration += shoot->season_maintenance_respiration_molC;
+        recorded_growth += shoot->season_growth_molC;
+    }
+    const float root_growth_respiration = budget_sum.root_growth * beanCarbohydrateParameters().growth_respiration_fraction;
+    const float shoot_growth = budget_sum.wood_growth + budget_sum.leaf_growth + budget_sum.fruit_growth + budget_sum.flower_construction + budget_sum.growth_respiration - root_growth_respiration;
+    DOCTEST_REQUIRE(budget_sum.net_photosynthesis > 0.f);
+    DOCTEST_REQUIRE(budget_sum.wood_maintenance_respiration > 0.f);
+    DOCTEST_REQUIRE(shoot_growth > 0.f);
+    DOCTEST_CHECK(recorded_photosynthesis == doctest::Approx(budget_sum.net_photosynthesis).epsilon(1e-4));
+    DOCTEST_CHECK(recorded_respiration == doctest::Approx(budget_sum.wood_maintenance_respiration).epsilon(1e-4));
+    DOCTEST_CHECK(recorded_growth == doctest::Approx(shoot_growth).epsilon(1e-4));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges fruit carbon along the fruit dry-matter curve") {
+    // Almond fruit lays down most of its dry matter while young (full size ~12 weeks after bloom), so fruit carbon follows a
+    // logistic dry-matter curve over the development period rather than the fruit's volume. Each fruit's charged fraction must
+    // equal that curve at its age. The bean's 30-day development period is set explicitly.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 75);
+    constexpr float fruit_development_days = 30.f;
+    plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, fruit_development_days, 1000);
+    // Every fruit funded from reserves, so it grows at its potential along the curve whatever the photosynthesis
+    CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
+    params.fruit_reserve_funded_days = 1e6f;
+    params.fruit_drop_window_end = 2e6f;
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+    plantarchitecture.enableCarbohydrateModel();
+    for (int day = 0; day < 8; day++) {
+        drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, 10.f, 12);
+        plantarchitecture.advanceTime(plantID, 1);
+    }
+
+    auto logistic = [&](float x) { return 1.f / (1.f + std::exp(-(x - params.fruit_dry_matter_midpoint) / params.fruit_dry_matter_width)); };
+    auto dry_matter_fraction = [&](float x) { return (logistic(x) - logistic(0.f)) / (logistic(1.f) - logistic(0.f)); };
+    int fruit_checked = 0;
+    bool partly_developed_fruit = false;
+    for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+            for (const auto &petiole: phytomer->floral_buds) {
+                for (const auto &fbud: petiole) {
+                    if (fbud.state != BUD_FRUITING) {
+                        continue;
+                    }
+                    const float development = std::clamp(fbud.time_counter / fruit_development_days, 0.f, 1.f);
+                    DOCTEST_CHECK(fbud.fruit_carbon_fraction_charged == doctest::Approx(dry_matter_fraction(development)).epsilon(1e-4));
+                    partly_developed_fruit = partly_developed_fruit || (development > 0.f && development < 1.f);
+                    fruit_checked++;
+                }
+            }
+        }
+    }
+    DOCTEST_REQUIRE(fruit_checked > 0);
+    DOCTEST_CHECK(partly_developed_fruit);
+    // The default curve front-loads fruit carbon: ~65% of it by 45% of the development period
+    DOCTEST_CHECK(dry_matter_fraction(0.45f) == doctest::Approx(0.65f).epsilon(0.05));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges a late phase of fruit carbon separately") {
+    // A nut lays down its hull and shell first and fills its kernel later. With fruit_late_fraction set, that share of the
+    // fruit's carbon follows a second logistic curve late in development, and each fruit's charged fraction must equal the
+    // weighted sum of the two curves at its age.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 75);
+    constexpr float fruit_development_days = 30.f;
+    plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, fruit_development_days, 1000);
+    CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
+    params.fruit_late_fraction = 0.45f;
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+    plantarchitecture.enableCarbohydrateModel();
+    for (int day = 0; day < 8; day++) {
+        drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, 10.f, 12);
+        plantarchitecture.advanceTime(plantID, 1);
+    }
+
+    auto rescaledLogistic = [](float x, float midpoint, float width) {
+        auto logistic = [&](float position) { return 1.f / (1.f + std::exp(-(position - midpoint) / width)); };
+        return (logistic(x) - logistic(0.f)) / (logistic(1.f) - logistic(0.f));
+    };
+    auto early_phase = [&](float x) { return rescaledLogistic(x, params.fruit_dry_matter_midpoint, params.fruit_dry_matter_width); };
+    auto both_phases = [&](float x) { return (1.f - params.fruit_late_fraction) * early_phase(x) + params.fruit_late_fraction * rescaledLogistic(x, params.fruit_late_midpoint, params.fruit_late_width); };
+    int fruit_checked = 0;
+    bool partly_developed_fruit = false;
+    for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+            for (const auto &petiole: phytomer->floral_buds) {
+                for (const auto &fbud: petiole) {
+                    if (fbud.state != BUD_FRUITING) {
+                        continue;
+                    }
+                    const float development = std::clamp(fbud.time_counter / fruit_development_days, 0.f, 1.f);
+                    DOCTEST_CHECK(fbud.fruit_carbon_fraction_charged == doctest::Approx(both_phases(development)).epsilon(1e-4));
+                    partly_developed_fruit = partly_developed_fruit || (development > 0.f && development < 1.f);
+                    fruit_checked++;
+                }
+            }
+        }
+    }
+    DOCTEST_REQUIRE(fruit_checked > 0);
+    DOCTEST_CHECK(partly_developed_fruit);
+    // The late phase holds carbon back: at 60% of development the early curve alone is nearly complete, the two-phase curve is not,
+    // and both are complete at maturity
+    DOCTEST_CHECK(early_phase(0.6f) > 0.85f);
+    DOCTEST_CHECK(both_phases(0.6f) < 0.6f);
+    DOCTEST_CHECK(both_phases(1.f) == doctest::Approx(1.f));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture builds fruit from current photosynthate after its reserve-funded period") {
+    // Fruit is built from current photosynthate, after a short period funded from reserves. With fruit_reserve_funded_days
+    // set, fruit past that period grows at its potential only while there is photosynthate left for it, falls behind its
+    // potential (for good) when there is none, and drops; fruit still within the period grows at its potential regardless.
+    constexpr float fruit_development_days = 30.f;
+    constexpr float reserve_funded_days = 2.f;
+    struct FruitState {
+        float days_since_set;
+        float charged;
+        float potential;
+    };
+    // Fruit within its reserve-funded period is checked every day, since fruit is set only on some days
+    int reserve_funded_fruit_checked = 0;
+    auto grow = [&](float assimilation_rate_umol, float &fruit_dropped) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 75);
+        plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, fruit_development_days, 1000);
+        CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
+        params.fruit_reserve_funded_days = reserve_funded_days;
+        plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+        plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+        plantarchitecture.enableCarbohydrateModel();
+        fruit_dropped = 0.f;
+        for (int day = 0; day < 8; day++) {
+            drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, assimilation_rate_umol, 12);
+            plantarchitecture.advanceTime(plantID, 1);
+            fruit_dropped += plantarchitecture.getPlantCarbonBudget(plantID).fruit_dropped; // the budget covers one advanceTime() call
+            for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+                for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+                    for (const auto &petiole: phytomer->floral_buds) {
+                        for (const auto &fbud: petiole) {
+                            if (fbud.state == BUD_FRUITING && fbud.time_counter <= reserve_funded_days) {
+                                DOCTEST_CHECK(fbud.fruit_carbon_fraction_charged == doctest::Approx(fbud.fruit_potential_fraction).epsilon(1e-4));
+                                reserve_funded_fruit_checked++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        std::vector<FruitState> fruit;
+        for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+                for (const auto &petiole: phytomer->floral_buds) {
+                    for (const auto &fbud: petiole) {
+                        if (fbud.state == BUD_FRUITING) {
+                            fruit.push_back({fbud.time_counter, fbud.fruit_carbon_fraction_charged, fbud.fruit_potential_fraction});
+                        }
+                    }
+                }
+            }
+        }
+        return fruit;
+    };
+
+    float dropped_with_photosynthate;
+    const std::vector<FruitState> fed = grow(1000.f, dropped_with_photosynthate);
+    DOCTEST_REQUIRE(!fed.empty());
+    for (const auto &fruit: fed) {
+        DOCTEST_CHECK(fruit.charged == doctest::Approx(fruit.potential).epsilon(1e-4));
+    }
+    DOCTEST_CHECK(dropped_with_photosynthate == 0.f);
+
+    float dropped_without_photosynthate;
+    const std::vector<FruitState> starved = grow(0.f, dropped_without_photosynthate);
+    DOCTEST_REQUIRE(!starved.empty());
+    bool fruit_behind_potential = false;
+    for (const auto &fruit: starved) {
+        DOCTEST_CHECK(fruit.charged <= fruit.potential + 1e-5f);
+        if (fruit.days_since_set > reserve_funded_days) {
+            fruit_behind_potential = fruit_behind_potential || fruit.charged < fruit.potential - 0.01f;
+        }
+    }
+    DOCTEST_CHECK(fruit_behind_potential);
+    DOCTEST_CHECK(reserve_funded_fruit_checked > 0);
+    DOCTEST_CHECK(dropped_without_photosynthate > 0.f);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture storage takes up surplus photosynthate toward capacity and the rest is forgone") {
+    // Storage is a sink: of the photosynthate left after maintenance and growth it takes storage_refill_rate x (capacity -
+    // pool) per day, radial growth takes its potential, and the rest is not fixed at all. Over one day of ample photosynthesis
+    // the pool must rise by the storage demand alone, the excess must be reported
+    // as forgone photosynthesis rather than overflow, and the budget must close.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+    CarbohydrateParameters params = beanCarbohydrateParameters();
+    params.storage_capacity = 0.05f;
+    params.storage_refill_rate = 0.1f;
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+    const float capacity_concentration = params.storage_capacity * params.stem_density / C_molecular_wt; // mol C per m^3 of wood
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 0.3f * capacity_concentration);
+    plantarchitecture.enableCarbohydrateModel();
+
+    const float pool_before = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+    const float capacity = pool_before / plantarchitecture.getPlantCarbohydrateStorageFill(plantID);
+    DOCTEST_REQUIRE(pool_before < 0.5f * capacity);
+    drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, 100.f, 12);
+    plantarchitecture.advanceTime(plantID, 1);
+    const float pool_after = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+    const PlantCarbonBudget budget = plantarchitecture.getPlantCarbonBudget(plantID);
+
+    DOCTEST_CHECK(budget.photosynthesis_downregulation > 0.f);
+    DOCTEST_CHECK(budget.storage_overflow == 0.f);
+    // The capacity grows slightly with the day's wood growth, hence the tolerance
+    DOCTEST_CHECK(pool_after - pool_before == doctest::Approx((capacity - pool_before) * (1.f - std::exp(-params.storage_refill_rate))).epsilon(0.05));
+    const float expected_change = budget.net_photosynthesis - budget.wood_maintenance_respiration - budget.root_maintenance_respiration - budget.wood_growth - budget.root_growth - budget.leaf_growth - budget.fruit_growth -
+                                  budget.flower_construction - budget.growth_respiration - budget.storage_overflow - budget.shed_branch_carbohydrate;
+    DOCTEST_CHECK(pool_after - pool_before == doctest::Approx(expected_change).epsilon(1e-3).scale(pool_before));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model releases carbohydrate above storage capacity below ground") {
+    // A bean started far above its storage capacity must end the day at capacity, with the excess reported as overflow,
+    // and the carbon budget must still close.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+    CarbohydrateParameters params = beanCarbohydrateParameters();
+    params.storage_capacity = 0.05f;
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e6f);
+    plantarchitecture.enableCarbohydrateModel();
+    DOCTEST_REQUIRE(plantarchitecture.getPlantCarbohydrateStorageFill(plantID) > 2.f);
+
+    drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, 10.f, 12);
+    const float pool_before = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+    plantarchitecture.advanceTime(plantID, 1);
+    const float pool_change = plantarchitecture.getPlantTotalCarbohydratePool(plantID) - pool_before;
+    const PlantCarbonBudget budget = plantarchitecture.getPlantCarbonBudget(plantID);
+
+    DOCTEST_CHECK(budget.storage_overflow > 0.f);
+    DOCTEST_CHECK(plantarchitecture.getPlantCarbohydrateStorageFill(plantID) <= doctest::Approx(1.f).epsilon(1e-4));
+    const float expected_change = budget.net_photosynthesis - budget.wood_maintenance_respiration - budget.root_maintenance_respiration - budget.wood_growth - budget.root_growth - budget.leaf_growth - budget.fruit_growth -
+                                  budget.flower_construction - budget.growth_respiration - budget.storage_overflow - budget.shed_branch_carbohydrate;
+    DOCTEST_CHECK(pool_change == doctest::Approx(expected_change).epsilon(1e-3).scale(pool_before));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture sheds branches whose leaves do not pay for their wood") {
+    // A young almond with one season behind it has laterals that are eligible for shedding. Each shoot's season record is
+    // set by hand: every shoot pays its way except (a) a leaf-bearing twig that cannot cover its respiration, which must be
+    // shed; (b) a limb whose own leaves are too few but whose child pays for the whole branch, which must survive together
+    // with the child; (c) a shoot in its first season, which must be spared; (d) a scaffold, which is structural and never
+    // shed; and (e) a twig that covers its respiration but not its growth, which must be shed.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond_independence");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e5f);
+
+    const std::vector<uint> shootIDs = plantarchitecture.getAllShootIDs(plantID);
+    auto shoot = [&](uint shootID) { return plantarchitecture.getPlantShoot(plantID, shootID); };
+    auto isEligible = [&](uint shootID) { return shoot(shootID)->parent_shoot_ID >= 0 && shoot(shootID)->dormancy_cycles >= 1 && !plantarchitecture.isStructuralShoot(plantID, shootID) && !shoot(shootID)->isPruned(); };
+    auto childrenOf = [&](uint shootID) {
+        std::vector<uint> children;
+        for (const uint candidate: shootIDs) {
+            if (shoot(candidate)->parent_shoot_ID == int(shootID) && !shoot(candidate)->isPruned()) {
+                children.push_back(candidate);
+            }
+        }
+        return children;
+    };
+
+    for (const uint shootID: shootIDs) {
+        shoot(shootID)->season_net_photosynthesis_molC = 1.f;
+        shoot(shootID)->season_maintenance_respiration_molC = 0.1f;
+        shoot(shootID)->season_growth_molC = 0.f;
+    }
+
+    int twig = -1, growing_twig = -1, limb = -1, limb_child = -1, young = -1, scaffold = -1;
+    for (const uint shootID: shootIDs) {
+        const std::vector<uint> children = childrenOf(shootID);
+        if (twig < 0 && isEligible(shootID) && children.empty()) {
+            twig = int(shootID);
+        } else if (growing_twig < 0 && isEligible(shootID) && children.empty()) {
+            growing_twig = int(shootID);
+        } else if (limb < 0 && isEligible(shootID) && children.size() == 1 && childrenOf(children.front()).empty()) {
+            limb = int(shootID);
+            limb_child = int(children.front());
+        } else if (young < 0 && !shoot(shootID)->isPruned() && shoot(shootID)->parent_shoot_ID >= 0 && shoot(shootID)->dormancy_cycles == 0 && !plantarchitecture.isStructuralShoot(plantID, shootID) && children.empty()) {
+            young = int(shootID);
+        } else if (scaffold < 0 && !shoot(shootID)->isPruned() && shoot(shootID)->parent_shoot_ID >= 0 && plantarchitecture.isStructuralShoot(plantID, shootID)) {
+            scaffold = int(shootID);
+        }
+    }
+    DOCTEST_REQUIRE(twig >= 0);
+    DOCTEST_REQUIRE(growing_twig >= 0);
+    DOCTEST_REQUIRE(limb >= 0);
+    DOCTEST_REQUIRE(young >= 0);
+    DOCTEST_REQUIRE(scaffold >= 0);
+
+    shoot(twig)->season_net_photosynthesis_molC = 0.05f; // respiration 0.1: starved
+    shoot(limb)->season_net_photosynthesis_molC = 0.05f; // starved on its own leaves ...
+    shoot(limb_child)->season_net_photosynthesis_molC = 5.f; // ... but carried by its child
+    shoot(young)->season_net_photosynthesis_molC = 0.f;
+    shoot(scaffold)->season_net_photosynthesis_molC = -1.f;
+    shoot(growing_twig)->season_net_photosynthesis_molC = 0.5f; // covers respiration (0.1) ...
+    shoot(growing_twig)->season_growth_molC = 1.f; // ... but not its growth
+
+    size_t pruned_before = 0;
+    for (const uint shootID: shootIDs) {
+        pruned_before += shoot(shootID)->isPruned();
+    }
+
+    plantarchitecture.shedCarbonStarvedBranches(plantID);
+
+    DOCTEST_CHECK(shoot(twig)->isPruned());
+    DOCTEST_CHECK(shoot(growing_twig)->isPruned());
+    DOCTEST_CHECK(!shoot(limb)->isPruned());
+    DOCTEST_CHECK(!shoot(limb_child)->isPruned());
+    DOCTEST_CHECK(!shoot(young)->isPruned());
+    DOCTEST_CHECK(!shoot(scaffold)->isPruned());
+    size_t pruned_after = 0;
+    for (const uint shootID: shootIDs) {
+        pruned_after += shoot(shootID)->isPruned();
+        DOCTEST_CHECK(shoot(shootID)->season_net_photosynthesis_molC == 0.f);
+        DOCTEST_CHECK(shoot(shootID)->season_maintenance_respiration_molC == 0.f);
+        DOCTEST_CHECK(shoot(shootID)->season_growth_molC == 0.f);
+    }
+    DOCTEST_CHECK(pruned_after == pruned_before + 2); // only the two twigs
+    DOCTEST_CHECK(plantarchitecture.getPlantCarbonBudget(plantID).shed_branch_carbohydrate > 0.f);
+}
+
+//! A dormant young almond, which neither grows nor photosynthesizes, with respiration switched off: its pools change only
+//! by redistribution between shoots, roots, sugar and starch. The library builds the tree at age 0, so its full-size trunk
+//! would otherwise go on maturing (and be charged for its rising carbon density) through dormancy; new wood is therefore
+//! given its mature density from the start.
+static uint buildDormantAlmondWithoutRespiration(PlantArchitecture &plantarchitecture, CarbohydrateParameters params) {
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_REQUIRE(plantarchitecture.isPlantDormant(plantID));
+    params.initial_density_ratio = 1.f;
+    params.r_m_w_20 = 0.f;
+    params.r_m_w_branch_20 = 0.f;
+    params.r_m_w_current_20 = 0.f;
+    params.r_m_r_20 = 0.f;
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.enableCarbohydrateModel();
+    return plantID;
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate redistribution evens out shoot pools and conserves carbon") {
+    // Phloem transport moves carbohydrate from well-stocked to depleted compartments. Starting the shoots at very
+    // different concentrations, a dormant plant with no sources or sinks must conserve its total pool while every
+    // shoot converges to the same concentration and the roots to root_storage_ratio times that. With the mixing rate
+    // set to zero the shoots must keep their own concentrations.
+    auto shootConcentrationsAfterTenDays = [](float mixing_rate, float &pool_before, float &pool_after, float &root_to_wood_concentration) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        CarbohydrateParameters params;
+        params.carbon_mixing_rate = mixing_rate;
+        const uint plantID = buildDormantAlmondWithoutRespiration(plantarchitecture, params);
+        plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+        plantarchitecture.initializePlantCarbohydratePool(plantID, 2000.f);
+        const std::vector<uint> shootIDs = plantarchitecture.getAllShootIDs(plantID);
+        DOCTEST_REQUIRE(shootIDs.size() > 2);
+        for (uint i = 0; i < shootIDs.size(); i++) {
+            plantarchitecture.initializeShootCarbohydratePool(plantID, shootIDs.at(i), 500.f + 1000.f * float(i));
+        }
+
+        pool_before = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+        {
+            capture_cerr capture;
+            plantarchitecture.advanceTime(plantID, 10);
+        }
+        pool_after = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+
+        std::vector<float> concentrations;
+        float wood_pool = 0.f;
+        float wood_volume = 0.f;
+        for (const uint shootID: shootIDs) {
+            const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+            const float volume = shoot->calculateShootInternodeVolume();
+            concentrations.push_back((shoot->sugar_pool_molC + shoot->starch_pool_molC) / volume);
+            wood_pool += shoot->sugar_pool_molC + shoot->starch_pool_molC;
+            wood_volume += volume;
+        }
+        const float root_volume = wood_volume / params.shoot_root_ratio;
+        root_to_wood_concentration = (plantarchitecture.getPlantRootCarbohydratePool(plantID) / root_volume) / (wood_pool / wood_volume);
+        return concentrations;
+    };
+
+    float pool_before, pool_after, root_to_wood;
+    const std::vector<float> mixed = shootConcentrationsAfterTenDays(1.f, pool_before, pool_after, root_to_wood);
+    DOCTEST_CHECK(pool_after == doctest::Approx(pool_before).epsilon(1e-4));
+    for (float concentration: mixed) {
+        DOCTEST_CHECK(concentration == doctest::Approx(mixed.front()).epsilon(1e-3));
+    }
+    DOCTEST_CHECK(root_to_wood == doctest::Approx(CarbohydrateParameters().root_storage_ratio).epsilon(1e-3));
+
+    const std::vector<float> isolated = shootConcentrationsAfterTenDays(0.f, pool_before, pool_after, root_to_wood);
+    DOCTEST_CHECK(pool_after == doctest::Approx(pool_before).epsilon(1e-4));
+    DOCTEST_CHECK(isolated.back() > 2.f * isolated.front());
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model does not prune an overspent shoot while the plant has carbon") {
+    // A shoot that has just been charged for new leaves and wood can owe more than it holds. Redistribution made the
+    // deficit good but left the shoot at exactly zero, and the instant-death check then pruned every shoot at zero --
+    // so each new shoot of a well-stocked tree was cut off on the day it appeared. An overspent shoot must instead be
+    // refilled from the rest of the plant, like any active sink, and survive with a positive pool.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    const uint plantID = buildDormantAlmondWithoutRespiration(plantarchitecture, CarbohydrateParameters());
+    plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 2000.f);
+
+    const std::vector<uint> shootIDs = plantarchitecture.getAllShootIDs(plantID);
+    DOCTEST_REQUIRE(shootIDs.size() > 2);
+    const uint overspent_shootID = shootIDs.at(1);
+    const auto &overspent_shoot = plantarchitecture.getPlantShoot(plantID, overspent_shootID);
+    overspent_shoot->sugar_pool_molC = -2.f * overspent_shoot->sugar_pool_molC;
+
+    const float pool_before = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+    DOCTEST_REQUIRE(pool_before > 0.f);
+    {
+        capture_cerr capture;
+        plantarchitecture.advanceTime(plantID, 1);
+    }
+
+    DOCTEST_CHECK(!plantarchitecture.isShootPruned(plantID, overspent_shootID));
+    DOCTEST_CHECK(overspent_shoot->sugar_pool_molC + overspent_shoot->starch_pool_molC > 0.f);
+    DOCTEST_CHECK(plantarchitecture.getPlantTotalCarbohydratePool(plantID) == doctest::Approx(pool_before).epsilon(1e-4));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate shortage slows leaf expansion") {
+    // Only the phyllochron responded to the carbohydrate pool: leaves and internodes kept expanding at their full rate
+    // however little carbohydrate was left, so a plant that ran short could not slow its demand and starved outright.
+    // Below carbohydrate_growth_threshold, leaf expansion must slow in proportion to the pool. Two young almonds
+    // just past bud break, identical except for their pool, are advanced a day (the carbon step sets the rates used by
+    // the following step), then expand the leaves they carry for one more day; the phyllochron effect is excluded by
+    // measuring only those leaves. Leaves are made nearly free so that neither plant exhausts its pool.
+    constexpr float stocked_concentration = 1e5f; // mol C/m^3, far above the threshold
+    auto existingLeafAreaGained = [](float concentration_molC_m3) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("almond");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 91);
+        CarbohydrateParameters params;
+        params.SLA = 1e6f;
+        params.initial_density_ratio = 1.f; // the library tree's young trunk would otherwise be charged for maturing
+        params.r_m_w_20 = 0.f;
+        params.r_m_w_branch_20 = 0.f;
+        params.r_m_w_current_20 = 0.f;
+        params.r_m_r_20 = 0.f;
+        plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+        plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+        plantarchitecture.initializePlantCarbohydratePool(plantID, concentration_molC_m3);
+        plantarchitecture.enableCarbohydrateModel();
+        {
+            capture_cerr capture;
+            plantarchitecture.advanceTime(plantID, 1);
+        }
+
+        const std::vector<uint> leaves = plantarchitecture.getPlantLeafObjectIDs(plantID);
+        DOCTEST_REQUIRE(!leaves.empty());
+        auto areaOf = [&]() {
+            float area = 0.f;
+            for (uint objID: leaves) {
+                if (context.doesObjectExist(objID)) {
+                    area += context.getObjectArea(objID);
+                }
+            }
+            return area;
+        };
+        const float area_before = areaOf();
+        {
+            capture_cerr capture;
+            plantarchitecture.advanceTime(plantID, 1);
+        }
+        DOCTEST_REQUIRE(!plantarchitecture.isShootPruned(plantID, 0));
+        return areaOf() - area_before;
+    };
+
+    const float threshold_concentration = CarbohydrateParameters().carbohydrate_growth_threshold * CarbohydrateParameters().stem_density / C_molecular_wt;
+    const float gained_stocked = existingLeafAreaGained(stocked_concentration);
+    const float gained_short = existingLeafAreaGained(0.3f * threshold_concentration);
+    DOCTEST_REQUIRE(gained_stocked > 0.f);
+    DOCTEST_CHECK(gained_short < 0.6f * gained_stocked);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture radial growth approaches its pipe-model target at radial_growth_rate") {
+    // A fraction 1 - exp(-radial_growth_rate x dt) of the gap to the girth target closes per day, so a jump in the target
+    // (new leaf area each spring) is laid down over weeks. Two well-stocked beans, identical but for the rate, grow for one
+    // day; the trunk base's radial increment must be in the ratio of the two closing fractions.
+    auto trunkRadiusIncrement = [](float radial_growth_rate) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+        CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
+        params.radial_growth_rate = radial_growth_rate;
+        plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+        plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+        plantarchitecture.enableCarbohydrateModel();
+        auto trunkBaseRadius = [&]() {
+            const auto &radii = plantarchitecture.getPlantShoot(plantID, 0)->shoot_internode_radii.at(0);
+            return std::accumulate(radii.begin(), radii.end(), 0.f) / float(radii.size());
+        };
+        const float radius_before = trunkBaseRadius();
+        drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, 10.f, 12);
+        plantarchitecture.advanceTime(plantID, 1);
+        return trunkBaseRadius() - radius_before;
+    };
+
+    constexpr float slow_rate = 0.05f;
+    constexpr float fast_rate = 0.2f;
+    const float increment_slow = trunkRadiusIncrement(slow_rate);
+    const float increment_fast = trunkRadiusIncrement(fast_rate);
+    DOCTEST_REQUIRE(increment_fast > 0.f);
+    DOCTEST_CHECK(increment_slow / increment_fast == doctest::Approx((1.f - std::exp(-slow_rate)) / (1.f - std::exp(-fast_rate))).epsilon(0.1));
+    DOCTEST_CHECK(trunkRadiusIncrement(0.f) == 0.f); // a rate of 0 stops radial growth, as a caller's cambial season does
+
+    CarbohydrateParameters invalid;
+    invalid.radial_growth_rate = -1.f;
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, invalid);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+    plantarchitecture.enableCarbohydrateModel();
+    DOCTEST_CHECK_THROWS(plantarchitecture.advanceTime(plantID, 1));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture lays down a sapwood ring sized by the live leaf area each internode supplies") {
+    // The pipe-model girth target grows only with new leaf area, so at constant leaf area a mature stem stopped thickening. With
+    // sapwood_area_per_leaf_area set, each internode owes a ring of area Huber x (peak live leaf area above it) / functional years
+    // each season, closing at radial_growth_rate. A well-stocked bean grows one day with a ring far larger than its pipe-model gap;
+    // the trunk base must add (1 - exp(-rate)) of the ring owed on the leaf area it supplies.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+    CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
+    constexpr float rate = 0.05f;
+    params.radial_growth_rate = rate;
+    params.sapwood_area_per_leaf_area = 0.05f;
+    params.sapwood_functional_years = 2.f;
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+    plantarchitecture.enableCarbohydrateModel();
+
+    auto trunkBaseArea = [&]() {
+        const auto &radii = plantarchitecture.getPlantShoot(plantID, 0)->shoot_internode_radii.at(0);
+        const float mean_radius = std::accumulate(radii.begin(), radii.end(), 0.f) / float(radii.size());
+        return PI_F * mean_radius * mean_radius;
+    };
+    const float area_before = trunkBaseArea();
+    drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, 10.f, 12);
+    plantarchitecture.advanceTime(plantID, 1);
+
+    const auto trunk_base = plantarchitecture.getPlantShoot(plantID, 0)->phytomers.at(0);
+    const float supplied_leaf_area = trunk_base->live_downstream_leaf_area;
+    DOCTEST_REQUIRE(supplied_leaf_area > 0.f);
+    DOCTEST_CHECK(supplied_leaf_area == doctest::Approx(plantarchitecture.sumPlantLeafArea(plantID)).epsilon(0.2));
+    const float ring_owed = params.sapwood_area_per_leaf_area * supplied_leaf_area / params.sapwood_functional_years;
+    DOCTEST_REQUIRE(ring_owed > 10.f * area_before); // the ring, not the pipe-model gap, sets this day's growth
+    DOCTEST_CHECK(trunkBaseArea() - area_before == doctest::Approx((1.f - std::exp(-rate)) * ring_owed).epsilon(0.02));
+
+    // Parameters are validated when set
+    CarbohydrateParameters invalid = params;
+    invalid.sapwood_functional_years = 0.f;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantCarbohydrateModelParameters(plantID, invalid));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture pays rate-limited radial growth from photosynthate, in competition with storage") {
+    // Girth growth is paid from the photosynthate left after maintenance,
+    // vegetative growth and fruit, not from reserves. A well-stocked bean with no photosynthesis must stop thickening after the
+    // first day (its supply ratio is then averaged from zero allotments), while one with ample photosynthesis keeps
+    // thickening, and the budget must still close.
+    struct Result {
+        float last_day_increment;
+        float pool_change_error;
+    };
+    auto grow = [](float assimilation_rate_umol) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+        CarbohydrateParameters params = beanCarbohydrateParameters();
+        params.storage_capacity = 0.05f;
+        params.storage_refill_rate = 0.03f;
+        params.radial_growth_rate = 0.05f;
+        params.carbohydrate_growth_threshold = 0.f;
+        // Leaves nearly free and no maintenance, so that the starved plant does not run out of carbohydrate and lose shoots
+        params.SLA = 1e6f;
+        params.r_m_w_20 = 0.f;
+        params.r_m_w_branch_20 = 0.f;
+        params.r_m_w_current_20 = 0.f;
+        params.r_m_r_20 = 0.f;
+        plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+        plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+        const float capacity_concentration = params.storage_capacity * params.stem_density / C_molecular_wt; // mol C per m^3 of wood
+        plantarchitecture.initializePlantCarbohydratePool(plantID, 0.9f * capacity_concentration);
+        plantarchitecture.enableCarbohydrateModel();
+        auto trunkBaseRadius = [&]() {
+            const auto &radii = plantarchitecture.getPlantShoot(plantID, 0)->shoot_internode_radii.at(0);
+            return std::accumulate(radii.begin(), radii.end(), 0.f) / float(radii.size());
+        };
+        Result result{0.f, 0.f};
+        for (int day = 0; day < 3; day++) {
+            DOCTEST_CAPTURE(assimilation_rate_umol);
+            DOCTEST_CAPTURE(day);
+            const float radius_before = trunkBaseRadius();
+            const float pool_before = plantarchitecture.getPlantTotalCarbohydratePool(plantID);
+            {
+                capture_cerr capture; // with no photosynthesis the model warns that none was supplied
+                drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, assimilation_rate_umol, 12);
+                plantarchitecture.advanceTime(plantID, 1);
+            }
+            DOCTEST_REQUIRE(!plantarchitecture.isShootPruned(plantID, 0));
+            result.last_day_increment = trunkBaseRadius() - radius_before;
+            const PlantCarbonBudget budget = plantarchitecture.getPlantCarbonBudget(plantID);
+            const float expected_change = budget.net_photosynthesis - budget.wood_maintenance_respiration - budget.root_maintenance_respiration - budget.wood_growth - budget.root_growth - budget.leaf_growth -
+                                          budget.fruit_growth - budget.flower_construction - budget.growth_respiration - budget.storage_overflow - budget.shed_branch_carbohydrate;
+            result.pool_change_error = std::max(result.pool_change_error, std::fabs(plantarchitecture.getPlantTotalCarbohydratePool(plantID) - pool_before - expected_change) / pool_before);
+        }
+        return result;
+    };
+
+    const Result fed = grow(30.f);
+    const Result starved = grow(0.f);
+    DOCTEST_REQUIRE(fed.last_day_increment > 0.f);
+    DOCTEST_CHECK(starved.last_day_increment < 0.01f * fed.last_day_increment);
+    DOCTEST_CHECK(fed.pool_change_error < 1e-3f);
+    DOCTEST_CHECK(starved.pool_change_error < 1e-3f);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate shortage stops radial growth") {
+    // Radial growth was never slowed below 5% of its rate however low the carbohydrate pool, so at leaf-out, when the
+    // pipe model's girth targets jump with the new leaf area and reserves are at their lowest, a whole woody frame went
+    // on thickening on reserves. Below carbohydrate_growth_threshold radial growth must stop. A young almond at the
+    // start of its third season, with leaves made nearly free and respiration off so that its pool stays below the
+    // threshold, must not thicken any internode it already had.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 820);
+    CarbohydrateParameters params;
+    params.SLA = 1e6f;
+    params.initial_density_ratio = 1.f;
+    params.r_m_w_20 = 0.f;
+    params.r_m_w_branch_20 = 0.f;
+    params.r_m_w_current_20 = 0.f;
+    params.r_m_r_20 = 0.f;
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+    const float threshold_concentration = params.carbohydrate_growth_threshold * params.stem_density / C_molecular_wt;
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 0.5f * threshold_concentration);
+    plantarchitecture.enableCarbohydrateModel();
+
+    std::map<std::pair<uint, uint>, float> radii_before;
+    for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        for (uint node = 0; node < shoot->shoot_internode_radii.size(); node++) {
+            radii_before[{shootID, node}] = shoot->shoot_internode_radii.at(node).back();
+        }
+    }
+    DOCTEST_REQUIRE(!radii_before.empty());
+
+    {
+        capture_cerr capture;
+        plantarchitecture.advanceTime(plantID, 5);
+    }
+
+    DOCTEST_REQUIRE(!plantarchitecture.isShootPruned(plantID, 0));
+    DOCTEST_REQUIRE(plantarchitecture.sumPlantLeafArea(plantID) > 0.f);
+    uint thickened = 0;
+    for (const auto &[key, radius_before]: radii_before) {
+        if (plantarchitecture.isShootPruned(plantID, key.first)) {
+            continue;
+        }
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, key.first);
+        if (shoot->shoot_internode_radii.at(key.second).back() > radius_before * (1.f + 1e-5f)) {
+            thickened++;
+        }
+    }
+    DOCTEST_CHECK(thickened == 0);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate sugar-starch partition follows temperature") {
+    // Tissue holds carbohydrate as sugar up to a saturation concentration that rises in the cold, storing the rest as
+    // starch; over winter starch is converted to sugar. At 100 mg glucose/g DW (0.04 g C/g DW) the sugar share settles
+    // at sugar_saturation_warm / 0.04 when warm and sugar_saturation_cold / 0.04 when cold.
+    constexpr float carbohydrate_gC_gDW = 0.04f;
+    auto shootSugarFraction = [&](float temperature_C) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        CarbohydrateParameters params;
+        const uint plantID = buildDormantAlmondWithoutRespiration(plantarchitecture, params);
+        plantarchitecture.adjustPlantMaintenanceRespiration(temperature_C + 273.15f);
+        plantarchitecture.initializePlantCarbohydratePool(plantID, carbohydrate_gC_gDW * params.stem_density / C_molecular_wt);
+        {
+            capture_cerr capture;
+            plantarchitecture.advanceTime(plantID, 60);
+        }
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, 0);
+        return shoot->sugar_pool_molC / (shoot->sugar_pool_molC + shoot->starch_pool_molC);
+    };
+
+    const CarbohydrateParameters defaults;
+    DOCTEST_CHECK(shootSugarFraction(25.f) == doctest::Approx(defaults.sugar_saturation_warm / carbohydrate_gC_gDW).epsilon(0.01));
+    DOCTEST_CHECK(shootSugarFraction(0.f) == doctest::Approx(defaults.sugar_saturation_cold / carbohydrate_gC_gDW).epsilon(0.01));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate maintenance respiration follows its Q10") {
+    // adjustPlantMaintenanceRespiration() used a hard-coded Q10 of 1.8. It now reads CarbohydrateParameters::respiration_Q10:
+    // a day at 30 C must cost Q10 times a day at 20 C.
+    auto oneDayOfRespiration = [](float temperature_C, float Q10) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("almond");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        CarbohydrateParameters params;
+        params.respiration_Q10 = Q10;
+        plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+        plantarchitecture.adjustPlantMaintenanceRespiration(temperature_C + 273.15f);
+        plantarchitecture.initializePlantCarbohydratePool(plantID, 2000.f);
+        plantarchitecture.enableCarbohydrateModel();
+        {
+            capture_cerr capture;
+            plantarchitecture.advanceTime(plantID, 1);
+        }
+        const PlantCarbonBudget budget = plantarchitecture.getPlantCarbonBudget(plantID);
+        return budget.wood_maintenance_respiration + budget.root_maintenance_respiration;
+    };
+
+    const float respiration_20C = oneDayOfRespiration(20.f, 2.5f);
+    DOCTEST_REQUIRE(respiration_20C > 0.f);
+    DOCTEST_CHECK(oneDayOfRespiration(30.f, 2.5f) == doctest::Approx(2.5f * respiration_20C).epsilon(1e-4));
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture shoot topology accessors") {
@@ -6512,19 +7718,336 @@ DOCTEST_TEST_CASE("PlantArchitecture structural wood is identified by shoot type
     DOCTEST_CHECK(scaffold_type_count <= 8);
 
     // isStructuralShoot() must agree with the shoot type: it accepts the trunk and the scaffolds, and rejects
-    // the proleptic and sylleptic twigs.
+    // the proleptic and sylleptic twigs and the spurs.
     for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
         const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
         if (shoot->phytomers.empty()) {
             continue;
         }
         bool structural = plantarchitecture.isStructuralShoot(plantID, shootID);
-        if (shoot->shoot_type_label == "proleptic" || shoot->shoot_type_label == "sylleptic") {
+        if (shoot->shoot_type_label == "proleptic" || shoot->shoot_type_label == "sylleptic" || shoot->shoot_type_label == "spur") {
             DOCTEST_CHECK(!structural);
         } else {
             DOCTEST_CHECK(structural);
         }
     }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture records the length a shoot grew in the season when it goes dormant") {
+    // The vigour of the laterals that break from a season's buds is set by how far the shoot grew that season, so the
+    // length of the internodes added in the season is recorded at dormancy, before the season's node count is reset.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    const uint shootID = plantarchitecture.addBaseStemShoot(plantID, 5, make_AxisRotation(0, 0, 0), 0.01f, 0.05f, 1.f, 1.f, 0, "proleptic");
+    const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    shoot->nodes_this_season = 2;
+    const float expected_extension = shoot->phytomers.at(3)->getInternodeLength() + shoot->phytomers.at(4)->getInternodeLength();
+    DOCTEST_REQUIRE(expected_extension > 0.f);
+    shoot->makeDormant();
+    DOCTEST_CHECK(shoot->previous_season_extension_m == doctest::Approx(expected_extension).epsilon(1e-5));
+    DOCTEST_CHECK(shoot->nodes_this_season == 0);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture scales dormant lateral bud break by the shoot's season growth") {
+    // With vegetative_bud_break_vigour_saturation above vegetative_bud_break_vigour_threshold, the position-dependent probability
+    // that a dormant bud breaks is multiplied by (season growth - threshold) / (saturation - threshold), limited to [0, 1],
+    // both with and without the carbohydrate model.
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    const uint shootID = plantarchitecture.addBaseStemShoot(plantID, 5, make_AxisRotation(0, 0, 0), 0.01f, 0.05f, 1.f, 1.f, 0, "proleptic");
+    const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    DOCTEST_REQUIRE(shoot->shoot_parameters.growth_requires_dormancy);
+    DOCTEST_CHECK(shoot->vigourBudBreakFactor() < 0.f); // disabled by default
+    shoot->sugar_pool_molC = 1e6f; // no carbohydrate shortage
+
+    constexpr uint apical_node = 4;
+    auto breakFraction = [&](bool carbohydrate_model) {
+        constexpr int samples = 8000;
+        int breaks = 0;
+        for (int i = 0; i < samples; i++) {
+            breaks += (carbohydrate_model ? shoot->sampleVegetativeBudBreak_carb(apical_node) : shoot->sampleVegetativeBudBreak(apical_node)) ? 1 : 0;
+        }
+        return float(breaks) / float(samples);
+    };
+    const float position_fraction = breakFraction(false);
+    DOCTEST_REQUIRE(position_fraction > 0.1f);
+
+    shoot->shoot_parameters.vegetative_bud_break_vigour_threshold = 0.16f;
+    shoot->shoot_parameters.vegetative_bud_break_vigour_saturation = 1.04f;
+
+    shoot->previous_season_extension_m = 0.60f; // half way
+    DOCTEST_CHECK(shoot->vigourBudBreakFactor() == doctest::Approx(0.5f));
+    DOCTEST_CHECK(breakFraction(false) == doctest::Approx(0.5f * position_fraction).epsilon(0.12));
+    DOCTEST_CHECK(breakFraction(true) == doctest::Approx(0.5f * position_fraction).epsilon(0.12));
+
+    shoot->previous_season_extension_m = 0.10f; // below the threshold
+    DOCTEST_CHECK(shoot->vigourBudBreakFactor() == 0.f);
+    DOCTEST_CHECK(breakFraction(false) == 0.f);
+
+    shoot->previous_season_extension_m = 1.5f; // above saturation: the position-dependent probability in full
+    DOCTEST_CHECK(shoot->vigourBudBreakFactor() == 1.f);
+    DOCTEST_CHECK(breakFraction(false) == doctest::Approx(position_fraction).epsilon(0.12));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture makes laterals weaker than the shoot bearing them with lateral_vigour_ratio") {
+    // A proleptic lateral took its type's full per-season node cap whatever its parent had grown. With lateral_vigour_ratio
+    // set on the plant's proleptic type after the tree is built, every new proleptic lateral from a dormant bud is capped at
+    // ratio x (its parent's season growth) / (its internode length); a tiny ratio caps every one of them at one node.
+    auto newLateralCaps = [](float lateral_vigour_ratio) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("almond");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 400);
+        const size_t shoots_before = plantarchitecture.getAllShootIDs(plantID).size();
+        if (lateral_vigour_ratio > 0.f) {
+            ShootParameters proleptic = plantarchitecture.getPlantShootTypeParameters(plantID, "proleptic");
+            proleptic.lateral_vigour_ratio = lateral_vigour_ratio;
+            plantarchitecture.updatePlantShootTypeParameters(plantID, "proleptic", proleptic);
+            DOCTEST_CHECK(plantarchitecture.getPlantShootTypeParameters(plantID, "proleptic").lateral_vigour_ratio == lateral_vigour_ratio);
+        }
+        plantarchitecture.advanceTime(plantID, 365);
+        std::vector<int> caps;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+            if (shootID < shoots_before || shoot->shoot_type_label != "proleptic" || shoot->parent_shoot_ID < 0) {
+                continue;
+            }
+            if (plantarchitecture.getPlantShoot(plantID, shoot->parent_shoot_ID)->shoot_parameters.growth_requires_dormancy) {
+                caps.push_back(shoot->getGrowthNodeCapPerSeason());
+            }
+        }
+        return caps;
+    };
+
+    const std::vector<int> default_caps = newLateralCaps(-1.f);
+    DOCTEST_REQUIRE(!default_caps.empty());
+    DOCTEST_CHECK(*std::max_element(default_caps.begin(), default_caps.end()) > 1);
+    const std::vector<int> weak_caps = newLateralCaps(1e-4f);
+    DOCTEST_REQUIRE(!weak_caps.empty());
+    DOCTEST_CHECK(*std::max_element(weak_caps.begin(), weak_caps.end()) == 1);
+
+    // The type must exist on the plant
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK_THROWS(plantarchitecture.updatePlantShootTypeParameters(plantID, "no_such_type", ShootParameters()));
+}
+
+// A trunk carrying long shoots, each bearing spurs, all past their first season, for judging spur carbon balances by hand
+struct SpurTestPlant {
+    uint plantID = 0;
+    std::vector<uint> branches;
+    std::vector<uint> spurs;
+};
+static SpurTestPlant buildSpurTestPlant(PlantArchitecture &plantarchitecture, uint branch_count, uint spurs_per_branch) {
+    SpurTestPlant plant;
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    plant.plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    const uint trunkID = plantarchitecture.addBaseStemShoot(plant.plantID, branch_count + 1, make_AxisRotation(0, 0, 0), 0.02f, 0.05f, 1.f, 1.f, 0, "trunk");
+    for (uint b = 0; b < branch_count; b++) {
+        const uint branchID = plantarchitecture.addChildShoot(plant.plantID, trunkID, b + 1, spurs_per_branch + 1, make_AxisRotation(0.5f, 0, 0), 0.005f, 0.03f, 1.f, 1.f, 0, "proleptic");
+        plant.branches.push_back(branchID);
+        for (uint s = 0; s < spurs_per_branch; s++) {
+            plant.spurs.push_back(plantarchitecture.addChildShoot(plant.plantID, branchID, s + 1, 1, make_AxisRotation(0.8f, 0, 0), 0.003f, 0.003f, 1.f, 1.f, 0, "spur"));
+        }
+    }
+    plantarchitecture.initializePlantCarbohydratePool(plant.plantID, 100.f);
+    for (uint shootID: plantarchitecture.getAllShootIDs(plant.plantID)) {
+        const auto &shoot = plantarchitecture.getPlantShoot(plant.plantID, shootID);
+        shoot->dormancy_cycles = 1;
+        shoot->season_net_photosynthesis_molC = 100.f; // every shoot pays its way unless a test sets otherwise
+        shoot->season_maintenance_respiration_molC = 0.1f;
+        shoot->season_growth_molC = 0.f;
+    }
+    return plant;
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture charges a shoot only its fruit_cost_share of its fruit and the bearing branch the rest") {
+    // A spur whose leaves cannot pay for its whole fruit is shed when charged all of it, but survives when charged a quarter.
+    // The other three quarters then fall on the branch bearing it: a branch that can pay for its own wood but not for that as
+    // well is then shed (taking the spur with it).
+    auto judge = [](float fruit_cost_share, float branch_photosynthesis) {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        const SpurTestPlant plant = buildSpurTestPlant(plantarchitecture, 1, 1);
+        const auto &branch = plantarchitecture.getPlantShoot(plant.plantID, plant.branches.front());
+        const auto &spur = plantarchitecture.getPlantShoot(plant.plantID, plant.spurs.front());
+        spur->shoot_parameters.fruit_cost_share = fruit_cost_share;
+        spur->season_net_photosynthesis_molC = 0.1f;
+        spur->season_maintenance_respiration_molC = 0.01f;
+        spur->season_fruit_cost_molC = 0.27f;
+        spur->season_growth_molC = 0.02f + spur->season_fruit_cost_molC;
+        branch->season_net_photosynthesis_molC = branch_photosynthesis;
+        branch->season_maintenance_respiration_molC = 0.5f;
+        branch->season_growth_molC = 0.3f;
+        plantarchitecture.shedCarbonStarvedBranches(plant.plantID);
+        return std::make_pair(plantarchitecture.isShootPruned(plant.plantID, plant.branches.front()), plantarchitecture.isShootPruned(plant.plantID, plant.spurs.front()));
+    };
+    // A well-funded branch: only the spur's own balance decides
+    const auto [rich_branch_shed_full, spur_shed_full] = judge(1.f, 100.f);
+    DOCTEST_CHECK(spur_shed_full); // 0.1 against 0.30
+    DOCTEST_CHECK(!rich_branch_shed_full);
+    const auto [rich_branch_shed_share, spur_shed_share] = judge(0.25f, 100.f);
+    DOCTEST_CHECK(!spur_shed_share); // 0.1 against 0.0975
+    DOCTEST_CHECK(!rich_branch_shed_share);
+    // A marginal branch: pays for its own wood, not for the fruit cost passed on to it
+    const auto [branch_shed_full, ignored_full] = judge(1.f, 0.95f);
+    DOCTEST_CHECK(!branch_shed_full); // 0.95 against 0.80 (the spur was shed and no longer counts)
+    const auto [branch_shed_share, ignored_share] = judge(0.25f, 0.95f);
+    DOCTEST_CHECK(branch_shed_share); // 1.05 against 0.80 + 0.2025 + 0.0975
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    const SpurTestPlant plant = buildSpurTestPlant(plantarchitecture, 1, 1);
+    plantarchitecture.getPlantShoot(plant.plantID, plant.spurs.front())->shoot_parameters.fruit_cost_share = 1.5f;
+    DOCTEST_CHECK_THROWS(plantarchitecture.shedCarbonStarvedBranches(plant.plantID));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture sheds spurs with a carbon-dependent probability and sets their return bloom") {
+    // With carbon_survival_scale set, a spur survives with probability logistic((z - midpoint) / scale), z = ln(income /
+    // costs); survivors get a flowering probability from their vegetative carbon index, cut by return_bloom_bearing_factor if
+    // they bore fruit.
+    constexpr float midpoint = -0.34f;
+    constexpr float scale = 0.44f;
+    struct Outcome {
+        float survival;
+        std::vector<float> flowering;
+    };
+    auto judge = [&](bool bearing) {
+        Context context;
+        context.seedRandomGenerator(3);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        const SpurTestPlant plant = buildSpurTestPlant(plantarchitecture, 4, 50);
+        for (uint spurID: plant.spurs) {
+            const auto &spur = plantarchitecture.getPlantShoot(plant.plantID, spurID);
+            ShootParameters &parameters = spur->shoot_parameters;
+            parameters.carbon_survival_midpoint = midpoint;
+            parameters.carbon_survival_scale = scale;
+            parameters.return_bloom_max = 0.9f;
+            parameters.return_bloom_midpoint = 0.f;
+            parameters.return_bloom_scale = 0.3f;
+            parameters.return_bloom_bearing_factor = 0.5f;
+            spur->season_maintenance_respiration_molC = 0.1f;
+            spur->season_fruit_cost_molC = bearing ? 0.05f : 0.f;
+            spur->season_growth_molC = 0.1f + spur->season_fruit_cost_molC;
+            spur->season_net_photosynthesis_molC = std::exp(midpoint) * (0.2f + spur->season_fruit_cost_molC); // z = midpoint
+        }
+        plantarchitecture.shedCarbonStarvedBranches(plant.plantID);
+        Outcome outcome{0.f, {}};
+        for (uint spurID: plant.spurs) {
+            if (!plantarchitecture.isShootPruned(plant.plantID, spurID)) {
+                const auto &spur = plantarchitecture.getPlantShoot(plant.plantID, spurID);
+                outcome.survival += 1.f / float(plant.spurs.size());
+                outcome.flowering.push_back(spur->flowering_probability);
+            }
+        }
+        return outcome;
+    };
+
+    const Outcome at_midpoint = judge(false);
+    DOCTEST_CHECK(at_midpoint.survival == doctest::Approx(0.5f).epsilon(0.25));
+    DOCTEST_REQUIRE(!at_midpoint.flowering.empty());
+    // Vegetative index ln(income / 0.2) = midpoint here
+    const float expected_flowering = 0.9f / (1.f + std::exp(-midpoint / 0.3f));
+    DOCTEST_CHECK(at_midpoint.flowering.front() == doctest::Approx(expected_flowering));
+
+    const Outcome bore = judge(true);
+    DOCTEST_REQUIRE(!bore.flowering.empty());
+    // Vegetative index ln(income / 0.2), the income being exp(midpoint) x 0.25 here; then the bearing factor
+    const float expected_bearing_flowering = 0.5f * 0.9f / (1.f + std::exp(-(midpoint + std::log(0.25f / 0.2f)) / 0.3f));
+    DOCTEST_CHECK(bore.flowering.front() == doctest::Approx(expected_bearing_flowering));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture kills the flower buds of a shoot that does not flower this season") {
+    // At dormancy break, a shoot flowers with its flowering_probability; one that does not loses all its flower buds.
+    auto liveFlowerBuds = [](float flowering_probability) {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("almond");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 300);
+        size_t live = 0;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+            if (shoot->isPruned()) {
+                continue;
+            }
+            shoot->flowering_probability = flowering_probability;
+            shoot->breakDormancy();
+            for (const auto &phytomer: shoot->phytomers) {
+                for (const auto &petiole: phytomer->floral_buds) {
+                    for (const auto &fbud: petiole) {
+                        live += fbud.state != BUD_DEAD ? 1 : 0;
+                    }
+                }
+            }
+        }
+        return live;
+    };
+    DOCTEST_REQUIRE(liveFlowerBuds(1.f) > 0);
+    DOCTEST_CHECK(liveFlowerBuds(0.f) == 0);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture does not treat almond spurs as structural wood") {
+    // Every shoot type other than proleptic and sylleptic was treated as structural, so the spur type added to the almond
+    // model was exempt from shade- and carbon-driven shedding like the trunk and scaffolds, and a spur could only be lost
+    // with the branch that bore it.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    const uint trunkID = plantarchitecture.addBaseStemShoot(plantID, 3, make_AxisRotation(0, 0, 0), 0.01f, 0.05f, 1.f, 1.f, 0, "trunk");
+    const uint spurID = plantarchitecture.addChildShoot(plantID, trunkID, 1, 1, make_AxisRotation(0.5f, 0, 0), 0.003f, 0.003f, 1.f, 1.f, 0, "spur");
+    DOCTEST_CHECK(plantarchitecture.isStructuralShoot(plantID, trunkID));
+    DOCTEST_CHECK(!plantarchitecture.isStructuralShoot(plantID, spurID));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture keeps spurs out of growth priority") {
+    // Growth priority ranks a parent's laterals by light and promotes the best-lit, which is how a few laterals grow into limbs.
+    // A spur is not a candidate. Once spurs were no longer treated as structural wood they entered the ranking; shaded spurs
+    // filled its bottom, so more long shoots were promoted and fewer suppressed, and the library almond grew ~25% more leaf area
+    // in five years with the carbohydrate model off.
+    Context context;
+    context.seedRandomGenerator(1);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 3 * 365);
+
+    size_t spurs = 0;
+    size_t reprioritized_spurs = 0;
+    size_t reprioritized_long_shoots = 0;
+    for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        if (shoot->isPruned()) {
+            continue;
+        }
+        if (shoot->shoot_type_label == "spur") {
+            spurs++;
+            reprioritized_spurs += shoot->growth_priority != 1.f ? 1 : 0;
+        } else if (shoot->shoot_type_label == "proleptic") {
+            reprioritized_long_shoots += shoot->growth_priority != 1.f ? 1 : 0;
+        }
+    }
+    // The scene must exercise the rule: spurs exist, and growth priority has acted on their long-shoot siblings
+    DOCTEST_REQUIRE(spurs > 0);
+    DOCTEST_REQUIRE(reprioritized_long_shoots > 0);
+    DOCTEST_CHECK(reprioritized_spurs == 0);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture pruneBranch clears child references on the pruned nodes") {
@@ -17024,6 +18547,60 @@ DOCTEST_TEST_CASE("PlantArchitecture carbon-model bud break follows the shoot, n
     const std::vector<BudState> states_silenced = budStatesAfterDormancyBreak(true);
     DOCTEST_REQUIRE(states_silenced.size() == states_untouched.size());
     for (const BudState state: states_silenced) {
+        DOCTEST_CHECK(state == BUD_DEAD);
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbon-model bud break uses the shoot's pool and probability maximum") {
+    // Two defects in Shoot::sampleVegetativeBudBreak_carb():
+    //  - it read Shoot::total_carbohydrate_pool_molC, which is only refreshed inside the organ-abortion check, so right
+    //    after the pools were initialized a well-stocked shoot looked empty and its buds could not break; and
+    //  - it replaced the shoot's vegetative_bud_break_probability_max with 1, so a shoot type whose buds should never
+    //    reach certainty -- or never break at all -- broke them anyway once carbon was plentiful.
+    // With a decay rate the apical bud's probability is the maximum. A well-stocked shoot with maximum 1 must break its
+    // apical bud; with maximum 0 it must break none.
+    auto budStatesAfterDormancyBreak = [](float probability_max) -> std::vector<BudState> {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.enableCarbohydrateModel();
+
+        defineMeasuredAndGrowthShootTypes(context, plantarchitecture);
+
+        std::vector<vec3> node_positions;
+        std::vector<float> node_radii;
+        measuredWoodPath(4, node_positions, node_radii);
+
+        const uint plantID = plantarchitecture.addPlantInstance(node_positions.front(), 0.f);
+        const uint shootID = plantarchitecture.addShootFromNodePositions(plantID, -1, 0, node_positions, node_radii, "measured_wood", "measured_wood");
+        plantarchitecture.initializePlantCarbohydratePool(plantID, 1e6f);
+
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        shoot->shoot_parameters.vegetative_bud_break_probability_min = 0.f;
+        shoot->shoot_parameters.vegetative_bud_break_probability_max = probability_max;
+        shoot->shoot_parameters.vegetative_bud_break_probability_decay_rate = 0.5f;
+
+        plantarchitecture.breakPlantDormancy(plantID);
+
+        std::vector<BudState> states;
+        for (const auto &phytomer: shoot->phytomers) {
+            for (const auto &petiole: phytomer->axillary_vegetative_buds) {
+                for (const auto &vbud: petiole) {
+                    states.push_back(vbud.state);
+                }
+            }
+        }
+        return states;
+    };
+
+    const std::vector<BudState> states_certain = budStatesAfterDormancyBreak(1.f);
+    DOCTEST_REQUIRE(!states_certain.empty());
+    DOCTEST_CHECK(states_certain.back() == BUD_ACTIVE);
+
+    const std::vector<BudState> states_never = budStatesAfterDormancyBreak(0.f);
+    DOCTEST_REQUIRE(states_never.size() == states_certain.size());
+    for (const BudState state: states_never) {
         DOCTEST_CHECK(state == BUD_DEAD);
     }
 }

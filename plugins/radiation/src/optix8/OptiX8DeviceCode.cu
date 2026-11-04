@@ -374,7 +374,8 @@ extern "C" __global__ void __intersection__patch() {
         if (hit.x < mnx || hit.x > mxx || hit.y < mny || hit.y > mxy ||
             hit.z < mnz || hit.z > mxz) return;
 
-        optixReportIntersection(fmaxf(t, t_min), 0, uuid, 0u, __float_as_uint(t), __float_as_uint(0.f));
+        // OptiX does not take -0 as a hit distance (the trace ends in an undefined state), which fmaxf() may return for a hit at zero distance
+        optixReportIntersection(fabsf(fmaxf(t, t_min)), 0, uuid, 0u, __float_as_uint(t), __float_as_uint(0.f));
         return;
     }
 
@@ -401,7 +402,10 @@ extern "C" __global__ void __intersection__patch() {
         // Patch centroid is the translation column of T
         float3 patch_origin = make_float3(T[3], T[7], T[11]);
         float  t = dot(patch_origin - ray_origin, normal) / nd;
-        if (t < t_min || t > t_max) return;
+        // A hit at zero distance (t_min is 0 on a ray's first segment) is not a hit, as in the OptiX 6.5 and Vulkan backends. It
+        // would also be reported as -0 for a ray launched in the plane of the surface, which OptiX does not take as a hit distance:
+        // the trace ended in an undefined state, running the direct rays' miss program for a diffuse ray.
+        if (t <= t_min || t > t_max) return;
 
         // Project hit point into patch-local 2D coordinates
         float3 hit_local = ray_origin + t * ray_direction - patch_origin;
@@ -474,7 +478,10 @@ extern "C" __global__ void __intersection__patch() {
 
         float e3 = a * p - b * r + d * s;
         float t  = e3 * inv_denom;
-        if (t < t_min || t > t_max) return;
+        // A hit at zero distance (t_min is 0 on a ray's first segment) is not a hit, as in the OptiX 6.5 and Vulkan backends. It
+        // would also be reported as -0 for a ray launched in the plane of the surface, which OptiX does not take as a hit distance:
+        // the trace ended in an undefined state, running the direct rays' miss program for a diffuse ray.
+        if (t <= t_min || t > t_max) return;
 
         // Texture mask check (using barycentric UV)
         const int32_t msk_id = params.mask_IDs[pos];
