@@ -724,6 +724,9 @@ uint Context::copyPrimitive(uint UUID) {
     Primitive *new_prim = getPrimitivePointer_private(currentUUID);
     new_prim->context_ptr = this;
     new_prim->materialID = primitives.at(UUID)->materialID;
+    new_prim->color_texture_ID = primitives.at(UUID)->color_texture_ID;
+    new_prim->spectral_class_map_ID = primitives.at(UUID)->spectral_class_map_ID;
+    new_prim->spectral_palette_ID = primitives.at(UUID)->spectral_palette_ID;
     // Increment material reference count (another primitive now uses this material)
     materials[new_prim->materialID].reference_count++;
 
@@ -1041,24 +1044,18 @@ void Primitive::setColor(const helios::RGBcolor &newcolor) {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::setColor): Primitive not associated with a Context. Use Context::setPrimitiveColor() instead.");
     }
-    // Copy-on-write: create new material if shared
-    if (context_ptr->isMaterialShared(materialID)) {
-        materialID = context_ptr->copyMaterialForPrimitive(UUID);
-    }
-    context_ptr->materials.at(materialID).color = make_RGBAcolor(newcolor, 1.f);
-    markDirty();
+    // Other primitives may obtain this primitive's material by its label, so it is not edited in place
+    const Material &material = context_ptr->materials.at(materialID);
+    context_ptr->setPrimitiveAppearance(this, make_RGBAcolor(newcolor, 1.f), material.texture_file, material.texture_color_overridden);
 }
 
 void Primitive::setColor(const helios::RGBAcolor &newcolor) {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::setColor): Primitive not associated with a Context. Use Context::setPrimitiveColor() instead.");
     }
-    // Copy-on-write: create new material if shared
-    if (context_ptr->isMaterialShared(materialID)) {
-        materialID = context_ptr->copyMaterialForPrimitive(UUID);
-    }
-    context_ptr->materials.at(materialID).color = newcolor;
-    markDirty();
+    // Other primitives may obtain this primitive's material by its label, so it is not edited in place
+    const Material &material = context_ptr->materials.at(materialID);
+    context_ptr->setPrimitiveAppearance(this, newcolor, material.texture_file, material.texture_color_overridden);
 }
 
 bool Primitive::hasTexture() const {
@@ -1081,12 +1078,9 @@ void Primitive::setTextureFile(const char *texture) {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::setTextureFile): Primitive not associated with a Context. Use Context::setPrimitiveTextureFile() instead.");
     }
-    // Copy-on-write: create new material if shared
-    if (context_ptr->isMaterialShared(materialID)) {
-        materialID = context_ptr->copyMaterialForPrimitive(UUID);
-    }
-    context_ptr->materials.at(materialID).texture_file = texture;
-    markShapeModified();
+    // Other primitives may obtain this primitive's material by its label, so it is not edited in place
+    const Material &material = context_ptr->materials.at(materialID);
+    context_ptr->setPrimitiveAppearance(this, material.color, texture, material.texture_color_overridden);
 }
 
 std::vector<vec2> Primitive::getTextureUV() {
@@ -1102,24 +1096,18 @@ void Primitive::overrideTextureColor() {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::overrideTextureColor): Primitive not associated with a Context. Use Context::overridePrimitiveTextureColor() instead.");
     }
-    // Copy-on-write: create new material if shared
-    if (context_ptr->isMaterialShared(materialID)) {
-        materialID = context_ptr->copyMaterialForPrimitive(UUID);
-    }
-    context_ptr->materials.at(materialID).texture_color_overridden = true;
-    markDirty();
+    // Other primitives may obtain this primitive's material by its label, so it is not edited in place
+    const Material &material = context_ptr->materials.at(materialID);
+    context_ptr->setPrimitiveAppearance(this, material.color, material.texture_file, true);
 }
 
 void Primitive::useTextureColor() {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::useTextureColor): Primitive not associated with a Context. Use Context::usePrimitiveTextureColor() instead.");
     }
-    // Copy-on-write: create new material if shared
-    if (context_ptr->isMaterialShared(materialID)) {
-        materialID = context_ptr->copyMaterialForPrimitive(UUID);
-    }
-    context_ptr->materials.at(materialID).texture_color_overridden = false;
-    markDirty();
+    // Other primitives may obtain this primitive's material by its label, so it is not edited in place
+    const Material &material = context_ptr->materials.at(materialID);
+    context_ptr->setPrimitiveAppearance(this, material.color, material.texture_file, false);
 }
 
 bool Primitive::isTextureColorOverridden() const {

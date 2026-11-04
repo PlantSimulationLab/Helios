@@ -299,14 +299,20 @@ void PlantArchitecture::accumulateLeafNitrogen(float dt) {
             }
         }
 
-        // What the pool cannot give the expanding leaves is recorded for remobilizeNitrogen() to supply.
+        // What the pool cannot give a leaf, expanding or mature, is recorded for remobilizeNitrogen() to supply from
+        // older leaves.
         const float expanding_fraction_supplied = supplyLeafDemand(plant, expanding_leaves, expanding_demand_gN);
         if (expanding_fraction_supplied < 1.f) {
             for (const LeafNitrogenDemand &leaf: expanding_leaves) {
                 leaf.shoot->leaf_N_unmet_demand_gN[leaf.leaf_objID] = (1.f - expanding_fraction_supplied) * leaf.demand_gN;
             }
         }
-        supplyLeafDemand(plant, mature_leaves, mature_demand_gN);
+        const float mature_fraction_supplied = supplyLeafDemand(plant, mature_leaves, mature_demand_gN);
+        if (mature_fraction_supplied < 1.f) {
+            for (const LeafNitrogenDemand &leaf: mature_leaves) {
+                leaf.shoot->leaf_N_unmet_demand_gN[leaf.leaf_objID] = (1.f - mature_fraction_supplied) * leaf.demand_gN;
+            }
+        }
     }
 }
 
@@ -316,34 +322,12 @@ void PlantArchitecture::remobilizeNitrogen(float dt) {
     for (auto &[plantID, plant]: plant_instances) {
         const NitrogenParameters &N_params = plant.nitrogen_parameters;
 
-        // Remobilization answers a shortfall: what uptake could not give the expanding leaves this step, and fruit
-        // growth the pool could not cover. A plant that is not short of nitrogen remobilizes nothing. It is not
-        // gated on a leaf reaching a fixed fraction of its lifespan: under nitrogen limitation mature leaves export
-        // to expanding ones during vegetative growth (Masclaux-Daubresse et al. 2010), and that fraction of a
-        // lifespan most library plants leave effectively infinite would otherwise never be reached.
-        std::vector<LeafNitrogenDemand> sinks;
-        float leaf_unmet_gN = 0;
-        for (auto &shoot: plant.shoot_tree) {
-            for (const auto &[leaf_objID, unmet_gN]: shoot->leaf_N_unmet_demand_gN) {
-                if (unmet_gN <= 0 || !context_ptr->doesObjectExist(leaf_objID)) {
-                    continue;
-                }
-                const float leaf_area = getLeafBladeArea(leaf_objID);
-                if (leaf_area <= 0) {
-                    continue;
-                }
-                sinks.push_back({shoot.get(), leaf_objID, leaf_area, unmet_gN});
-                leaf_unmet_gN += unmet_gN;
-            }
-        }
-
-        const float fruit_unmet_gN = plant.unmet_fruit_N_demand_gN;
-        plant.unmet_fruit_N_demand_gN = 0;
-        const float total_unmet_gN = leaf_unmet_gN + fruit_unmet_gN;
-        if (total_unmet_gN <= 0) {
-            continue;
-        }
-
+        // Remobilization answers a shortfall: what uptake could not give the leaves this step, and fruit growth the
+        // pool could not cover. A plant that is not short of nitrogen remobilizes nothing. It is not gated on a leaf
+        // reaching a fixed fraction of its lifespan: under nitrogen limitation mature leaves export to younger ones
+        // during vegetative growth (Masclaux-Daubresse et al. 2010), and that fraction of a lifespan most library
+        // plants leave effectively infinite would otherwise never be reached.
+        //
         // Mature leaves are the sources, oldest first -- the leaves a shortage yellows first. Release is first-order
         // in time: each can give up at most leaf_remobilization_rate * dt of its nitrogen above the minimum this
         // step, so the amount moved follows elapsed time rather than the number of steps taken.
@@ -354,50 +338,110 @@ void PlantArchitecture::remobilizeNitrogen(float dt) {
             float age;
             float available_gN;
         };
+        struct MatureLeafNitrogenSink {
+            Shoot *shoot;
+            uint leaf_objID;
+            float area;
+            float age;
+            float demand_gN;
+        };
         const float release_fraction = std::clamp(N_params.leaf_remobilization_rate * dt, 0.f, 1.f);
         std::vector<LeafNitrogenSource> sources;
+        std::vector<LeafNitrogenDemand> expanding_sinks;
+        std::vector<MatureLeafNitrogenSink> mature_sinks;
+        float expanding_unmet_gN = 0;
+        float mature_unmet_gN = 0;
         for (auto &shoot: plant.shoot_tree) {
             for (auto &phytomer: shoot->phytomers) {
                 for (uint petiole_idx = 0; petiole_idx < phytomer->leaf_objIDs.size(); petiole_idx++) {
-                    if (leavesStillExpanding(*phytomer, petiole_idx)) {
-                        continue;
-                    }
+                    const bool expanding = leavesStillExpanding(*phytomer, petiole_idx);
                     for (uint leaf_objID: phytomer->leaf_objIDs.at(petiole_idx)) {
-                        const auto leaf_N = shoot->leaf_nitrogen_gN_m2.find(leaf_objID);
-                        if (leaf_N == shoot->leaf_nitrogen_gN_m2.end() || !context_ptr->doesObjectExist(leaf_objID)) {
+                        if (!context_ptr->doesObjectExist(leaf_objID)) {
                             continue;
                         }
                         const float leaf_area = getLeafBladeArea(leaf_objID);
+                        if (leaf_area <= 0) {
+                            continue;
+                        }
+
+                        const auto unmet = shoot->leaf_N_unmet_demand_gN.find(leaf_objID);
+                        if (unmet != shoot->leaf_N_unmet_demand_gN.end() && unmet->second > 0) {
+                            if (expanding) {
+                                expanding_sinks.push_back({shoot.get(), leaf_objID, leaf_area, unmet->second});
+                                expanding_unmet_gN += unmet->second;
+                            } else {
+                                mature_sinks.push_back({shoot.get(), leaf_objID, leaf_area, phytomer->age, unmet->second});
+                                mature_unmet_gN += unmet->second;
+                            }
+                        }
+
+                        if (expanding) {
+                            continue;
+                        }
+                        const auto leaf_N = shoot->leaf_nitrogen_gN_m2.find(leaf_objID);
+                        if (leaf_N == shoot->leaf_nitrogen_gN_m2.end()) {
+                            continue;
+                        }
                         const float available_gN = release_fraction * std::max(0.0f, leaf_N->second - N_params.minimum_leaf_N_area) * leaf_area;
-                        if (leaf_area > 0 && available_gN > 0) {
+                        if (available_gN > 0) {
                             sources.push_back({shoot.get(), leaf_objID, leaf_area, phytomer->age, available_gN});
                         }
                     }
                 }
             }
         }
-        std::stable_sort(sources.begin(), sources.end(), [](const LeafNitrogenSource &a, const LeafNitrogenSource &b) { return a.age > b.age; });
 
-        float remaining_gN = total_unmet_gN;
-        float collected_gN = 0;
-        for (const LeafNitrogenSource &source: sources) {
-            if (remaining_gN <= 0) {
-                break;
-            }
-            const float withdrawn_gN = std::min(source.available_gN, remaining_gN);
-            source.shoot->leaf_nitrogen_gN_m2[source.leaf_objID] -= withdrawn_gN / source.area;
-            collected_gN += withdrawn_gN;
-            remaining_gN -= withdrawn_gN;
-        }
-        if (collected_gN <= 0) {
+        const float fruit_unmet_gN = plant.unmet_fruit_N_demand_gN;
+        plant.unmet_fruit_N_demand_gN = 0;
+        if (expanding_unmet_gN + fruit_unmet_gN + mature_unmet_gN <= 0 || sources.empty()) {
             continue;
         }
+        std::stable_sort(sources.begin(), sources.end(), [](const LeafNitrogenSource &a, const LeafNitrogenSource &b) { return a.age > b.age; });
 
-        // Delivered in proportion to unmet demand, which was already capped at max_N_accumulation_rate * dt per leaf.
-        // The fruit's share leaves the leaves with the fruit; fruit nitrogen is not tracked as a pool.
-        const float delivered_fraction = collected_gN / total_unmet_gN;
-        for (const LeafNitrogenDemand &sink: sinks) {
-            sink.shoot->leaf_nitrogen_gN_m2[sink.leaf_objID] += delivered_fraction * sink.demand_gN / sink.area;
+        // Expanding leaves and fruit are served first, from any mature leaf. What is collected is delivered in
+        // proportion to unmet demand, which was already capped at max_N_accumulation_rate * dt per leaf. The fruit's
+        // share leaves the leaves with the fruit; fruit nitrogen is not tracked as a pool.
+        const float growing_unmet_gN = expanding_unmet_gN + fruit_unmet_gN;
+        if (growing_unmet_gN > 0) {
+            float remaining_gN = growing_unmet_gN;
+            float collected_gN = 0;
+            for (LeafNitrogenSource &source: sources) {
+                if (remaining_gN <= 0) {
+                    break;
+                }
+                const float withdrawn_gN = std::min(source.available_gN, remaining_gN);
+                source.shoot->leaf_nitrogen_gN_m2[source.leaf_objID] -= withdrawn_gN / source.area;
+                source.available_gN -= withdrawn_gN;
+                collected_gN += withdrawn_gN;
+                remaining_gN -= withdrawn_gN;
+            }
+            const float delivered_fraction = collected_gN / growing_unmet_gN;
+            for (const LeafNitrogenDemand &sink: expanding_sinks) {
+                sink.shoot->leaf_nitrogen_gN_m2[sink.leaf_objID] += delivered_fraction * sink.demand_gN / sink.area;
+            }
+        }
+
+        // A fully expanded leaf below target -- typically one that expanded while the plant had nothing to give it,
+        // and was diluted by its own growth -- keeps drawing on what the sources have left, youngest leaf first, and
+        // only from leaves older than itself. Nitrogen therefore moves up the canopy, toward the young leaves where
+        // nitrogen per area is highest in the field (Bertheloot et al. 2008), and never back down, as it would if
+        // every starved leaf could take from every other.
+        std::stable_sort(mature_sinks.begin(), mature_sinks.end(), [](const MatureLeafNitrogenSink &a, const MatureLeafNitrogenSink &b) { return a.age < b.age; });
+        for (const MatureLeafNitrogenSink &sink: mature_sinks) {
+            float remaining_gN = sink.demand_gN;
+            for (LeafNitrogenSource &source: sources) {
+                if (remaining_gN <= 0 || source.age <= sink.age) {
+                    break; // sources are oldest first, so none of the rest is older than this sink
+                }
+                const float withdrawn_gN = std::min(source.available_gN, remaining_gN);
+                if (withdrawn_gN <= 0) {
+                    continue;
+                }
+                source.shoot->leaf_nitrogen_gN_m2[source.leaf_objID] -= withdrawn_gN / source.area;
+                source.available_gN -= withdrawn_gN;
+                sink.shoot->leaf_nitrogen_gN_m2[sink.leaf_objID] += withdrawn_gN / sink.area;
+                remaining_gN -= withdrawn_gN;
+            }
         }
     }
 }

@@ -1626,6 +1626,17 @@ void Context::regenerateTileObjectSubpatches(uint ObjID, const int2 &new_subdiv)
     Patch *first_patch = getPatchPointer_private(UUIDs_old.front());
     const bool textured = first_patch->hasTexture();
 
+    // An untextured sub-patch maps its whole class map, so copying it to more (or fewer) sub-patches would repeat it a different number of times
+    if (!textured) {
+        for (uint UUID: UUIDs_old) {
+            if (doesPrimitiveExist(UUID) && getPrimitivePointer_private(UUID)->spectral_class_map_ID != 0) {
+                helios_runtime_error(
+                        "ERROR (Context::setTileObjectSubdivisionCount): Tile object " + std::to_string(ObjID) + " has no texture and its sub-patch " + std::to_string(UUID) +
+                        " has a spectral texture, which each sub-patch maps whole. Subdividing it again would repeat the class map on every new sub-patch. Remove the spectral textures with Context::clearPrimitiveSpectralTexture() first and assign them again afterwards, or give the tile a texture.");
+            }
+        }
+    }
+
     // Build a canonical unit-tile template with the requested subdivision count. The tile's texture repeat
     // count must be carried through, otherwise the template is built with the default repeat of 1x1 and a
     // single copy of the texture ends up stretched across the whole tile. The requested (uncorrected)
@@ -1667,20 +1678,26 @@ void Context::regenerateTileObjectSubpatches(uint ObjID, const int2 &new_subdiv)
             break;
         }
     }
-    if (any_old_has_data) {
-        for (size_t k = 0; k < UUIDs_new.size(); k++) {
-            const vec3 canonical_center = getPatchCenter(template_UUIDs.at(k)); // canonical space (z=0)
-            const float u = canonical_center.x + 0.5f; // -> [0,1)
-            const float v = canonical_center.y + 0.5f;
-            int old_i = static_cast<int>(std::floor(u * scast<float>(old_subdiv.x)));
-            int old_j = static_cast<int>(std::floor(v * scast<float>(old_subdiv.y)));
-            old_i = std::max(0, std::min(old_subdiv.x - 1, old_i));
-            old_j = std::max(0, std::min(old_subdiv.y - 1, old_j));
-            const size_t old_index = scast<size_t>(old_j) * scast<size_t>(old_subdiv.x) + scast<size_t>(old_i); // row-major, matches addTileObject
-            if (old_index < UUIDs_old.size() && doesPrimitiveExist(UUIDs_old.at(old_index))) {
-                copyPrimitiveData(UUIDs_old.at(old_index), UUIDs_new.at(k));
-            }
+    // A tile that has lost a sub-patch no longer lines up with its grid, so its first sub-patch's material is used for all of the new ones
+    const bool old_grid_is_complete = UUIDs_old.size() == scast<size_t>(old_subdiv.x) * scast<size_t>(old_subdiv.y);
+    for (size_t k = 0; k < UUIDs_new.size(); k++) {
+        const vec3 canonical_center = getPatchCenter(template_UUIDs.at(k)); // canonical space (z=0)
+        const float u = canonical_center.x + 0.5f; // -> [0,1)
+        const float v = canonical_center.y + 0.5f;
+        int old_i = static_cast<int>(std::floor(u * scast<float>(old_subdiv.x)));
+        int old_j = static_cast<int>(std::floor(v * scast<float>(old_subdiv.y)));
+        old_i = std::max(0, std::min(old_subdiv.x - 1, old_i));
+        old_j = std::max(0, std::min(old_subdiv.y - 1, old_j));
+        const size_t old_index = scast<size_t>(old_j) * scast<size_t>(old_subdiv.x) + scast<size_t>(old_i); // row-major, matches addTileObject
+        if (any_old_has_data && old_index < UUIDs_old.size() && doesPrimitiveExist(UUIDs_old.at(old_index))) {
+            copyPrimitiveData(UUIDs_old.at(old_index), UUIDs_new.at(k));
         }
+        // The template was built with an automatic material, which would lose a material given to the tile after it was created, along with the data and texture color override it carries
+        const uint old_material_source = old_grid_is_complete ? UUIDs_old.at(old_index) : UUIDs_old.front();
+        setPrimitiveMaterial(getPrimitivePointer_private(UUIDs_new.at(k)), getPrimitivePointer_private(old_material_source)->materialID);
+        getPrimitivePointer_private(UUIDs_new.at(k))->color_texture_ID = getPrimitivePointer_private(old_material_source)->color_texture_ID;
+        getPrimitivePointer_private(UUIDs_new.at(k))->spectral_class_map_ID = getPrimitivePointer_private(old_material_source)->spectral_class_map_ID;
+        getPrimitivePointer_private(UUIDs_new.at(k))->spectral_palette_ID = getPrimitivePointer_private(old_material_source)->spectral_palette_ID;
     }
 
     tile->setPrimitiveUUIDs(UUIDs_new);
@@ -3328,8 +3345,324 @@ void Context::setPrimitiveTextureFile(uint UUID, const std::string &texturefile)
         addTexture(texturefile.c_str());
     }
     Primitive *primitive = getPrimitivePointer_private(UUID);
+    // The texture it already has is not a change: its color texture and spectral texture, which were matched to it, are kept
+    if (getPrimitiveTextureFile(UUID) == texturefile) {
+        return;
+    }
+    // Recomputes the solid fraction when the texture changes
     primitive->setTextureFile(texturefile.c_str());
-    updatePrimitiveSolidFraction(primitive);
+}
+
+void Context::validateColorTexture(const std::string &shape_texture_file, const std::string &color_texture_file) {
+    if (validated_color_textures.find({shape_texture_file, color_texture_file}) != validated_color_textures.end()) {
+        return;
+    }
+
+    addTexture(shape_texture_file.c_str());
+    addTexture(color_texture_file.c_str());
+    const Texture &shape_texture = textures.at(shape_texture_file);
+    const Texture &color_texture = textures.at(color_texture_file);
+
+    const std::string prefix = "ERROR (Context::validateColorTexture): The image '" + color_texture_file + "' cannot give color to primitives whose shape comes from the texture '" + shape_texture_file + "' because ";
+    const int2 shape_size = shape_texture.getImageResolution();
+    const int2 color_size = color_texture.getImageResolution();
+    if (shape_size.x != color_size.x || shape_size.y != color_size.y) {
+        helios_runtime_error(prefix + "their resolutions differ (" + std::to_string(color_size.x) + "x" + std::to_string(color_size.y) + " and " + std::to_string(shape_size.x) + "x" + std::to_string(shape_size.y) + "). Give it the same resolution.");
+    }
+    if (shape_texture.hasTransparencyChannel() != color_texture.hasTransparencyChannel()) {
+        helios_runtime_error(prefix + "only one of them has a transparency channel. Save both in a format with the same transparency, for example PNG.");
+    }
+    if (shape_texture.hasTransparencyChannel() && *shape_texture.getTransparencyData() != *color_texture.getTransparencyData()) {
+        helios_runtime_error(prefix + "their transparency differs, so they have different outlines. Give it exactly the same transparency channel. To change a primitive's shape, change its texture instead.");
+    }
+
+    validated_color_textures.emplace(shape_texture_file, color_texture_file);
+}
+
+void Context::setPrimitiveColorTexture(uint UUID, const std::string &color_texture_file) {
+    setPrimitiveColorTexture(std::vector<uint>{UUID}, color_texture_file);
+}
+
+void Context::setPrimitiveColorTexture(const std::vector<uint> &UUIDs, const std::string &color_texture_file) {
+    uint color_texture_ID = 0;
+    if (!color_texture_file.empty()) {
+        const auto existing_ID = color_texture_IDs.find(color_texture_file);
+        if (existing_ID != color_texture_IDs.end()) {
+            color_texture_ID = existing_ID->second;
+        } else {
+            color_texture_ID = uint(color_texture_files.size());
+        }
+    }
+
+    // Everything is checked before anything is changed, so that a rejected image leaves all of the primitives as they were
+    for (uint UUID: UUIDs) {
+        if (color_texture_file.empty()) {
+            break;
+        }
+        const std::string shape_texture_file = getPrimitivePointer_private(UUID)->getTextureFile();
+        if (shape_texture_file.empty()) {
+            helios_runtime_error("ERROR (Context::setPrimitiveColorTexture): Primitive " + std::to_string(UUID) + " has no texture, so there is no shape for the image '" + color_texture_file + "' to match. Give the primitive a texture, or use Context::setPrimitiveTextureFile() or a material to give it this image as its texture.");
+        }
+        validateColorTexture(shape_texture_file, color_texture_file);
+    }
+
+    if (color_texture_ID == color_texture_files.size()) {
+        color_texture_files.push_back(color_texture_file);
+        color_texture_IDs[color_texture_file] = color_texture_ID;
+    }
+    for (uint UUID: UUIDs) {
+        Primitive *primitive = getPrimitivePointer_private(UUID);
+        if (primitive->color_texture_ID != color_texture_ID) {
+            primitive->color_texture_ID = color_texture_ID;
+            primitive->markDirty();
+        }
+    }
+}
+
+std::string Context::getPrimitiveColorTextureFile(uint UUID) const {
+    const Primitive *primitive = getPrimitivePointer_private(UUID);
+    if (primitive->color_texture_ID != 0) {
+        return color_texture_files.at(primitive->color_texture_ID);
+    }
+    return primitive->getTextureFile();
+}
+
+void Context::addSpectralPalette(const std::string &label, const std::vector<SpectralTextureClass> &classes) {
+    const std::string prefix = "ERROR (Context::addSpectralPalette): ";
+    if (label.empty()) {
+        helios_runtime_error(prefix + "A spectral palette needs a label.");
+    }
+    if (classes.empty()) {
+        helios_runtime_error(prefix + "Spectral palette '" + label + "' has no classes. Give it the spectra of at least one class.");
+    }
+    if (classes.size() > std::numeric_limits<uint16_t>::max()) {
+        helios_runtime_error(prefix + "Spectral palette '" + label + "' has " + std::to_string(classes.size()) + " classes, but a class map can hold at most " + std::to_string(std::numeric_limits<uint16_t>::max()) + ".");
+    }
+    for (size_t i = 0; i < classes.size(); i++) {
+        if (classes.at(i).reflectivity_spectrum.empty()) {
+            helios_runtime_error(prefix + "Class " + std::to_string(i + 1) + " of spectral palette '" + label + "' has no reflectivity spectrum label. Name the global data that holds its reflectivity spectrum.");
+        }
+    }
+
+    const auto existing_ID = spectral_palette_IDs.find(label);
+    if (existing_ID != spectral_palette_IDs.end()) {
+        if (spectral_palettes.at(existing_ID->second).classes != classes) {
+            helios_runtime_error(prefix + "A spectral palette named '" + label + "' already exists with different classes. Register these classes under a new label, and use Context::setPrimitiveSpectralPalette() to switch primitives to it.");
+        }
+        return;
+    }
+    spectral_palette_IDs[label] = uint(spectral_palettes.size());
+    spectral_palettes.push_back({label, classes});
+}
+
+bool Context::doesSpectralPaletteExist(const std::string &label) const {
+    return spectral_palette_IDs.find(label) != spectral_palette_IDs.end();
+}
+
+const std::vector<SpectralTextureClass> &Context::getSpectralPalette(const std::string &label) const {
+    const auto existing_ID = spectral_palette_IDs.find(label);
+    if (existing_ID == spectral_palette_IDs.end()) {
+        helios_runtime_error("ERROR (Context::getSpectralPalette): No spectral palette named '" + label + "' has been registered. Register it with Context::addSpectralPalette().");
+    }
+    return spectral_palettes.at(existing_ID->second).classes;
+}
+
+uint Context::addSpectralClassMap(const std::string &class_map_file) {
+    const auto existing_ID = spectral_class_map_IDs.find(class_map_file);
+    if (existing_ID != spectral_class_map_IDs.end()) {
+        return existing_ID->second;
+    }
+
+    SpectralClassMap class_map;
+    class_map.file = class_map_file;
+    uint width = 0;
+    uint height = 0;
+    readPNGSingleChannel(resolveFilePath(class_map_file).string(), width, height, class_map.classes);
+    class_map.resolution = make_int2(int(width), int(height));
+    for (uint16_t texel_class: class_map.classes) {
+        class_map.largest_class = std::max(class_map.largest_class, texel_class);
+        class_map.has_class_zero = class_map.has_class_zero || texel_class == 0;
+    }
+
+    const uint class_map_ID = uint(spectral_texture_class_maps.size());
+    spectral_texture_class_maps.push_back(std::move(class_map));
+    spectral_class_map_IDs[class_map_file] = class_map_ID;
+    return class_map_ID;
+}
+
+void Context::validateSpectralClassMap(uint UUID, uint class_map_ID) {
+    const SpectralClassMap &class_map = spectral_texture_class_maps.at(class_map_ID);
+    const Primitive *primitive = getPrimitivePointer_private(UUID);
+    const std::string prefix = "ERROR (Context::setPrimitiveSpectralTexture): The class map '" + class_map.file + "' cannot be given to primitive " + std::to_string(UUID) + " because ";
+
+    const PrimitiveType type = primitive->getType();
+    if (type != PRIMITIVE_TYPE_PATCH && type != PRIMITIVE_TYPE_TRIANGLE) {
+        helios_runtime_error(prefix + "it is not a patch or a triangle. Only patches and triangles can have a spectral texture.");
+    }
+
+    const std::string &texture_file = primitive->getTextureFile();
+    if (texture_file.empty()) {
+        if (type == PRIMITIVE_TYPE_TRIANGLE) {
+            helios_runtime_error(prefix + "it is a triangle without a texture, so it has no (u,v) coordinates to lay the class map over. Give it a texture with (u,v) coordinates.");
+        }
+        if (class_map.has_class_zero) {
+            helios_runtime_error(
+                    prefix +
+                    "the primitive has no texture and so is opaque everywhere, but the class map contains class 0, which marks transparent texels. Give the primitive a texture whose transparency matches the class map, or remove class 0 from the class map.");
+        }
+        return;
+    }
+
+    if (validated_spectral_class_maps.find({texture_file, class_map.file}) != validated_spectral_class_maps.end()) {
+        return;
+    }
+
+    addTexture(texture_file.c_str());
+    const Texture &texture = textures.at(texture_file);
+    const std::string texture_prefix = "ERROR (Context::setPrimitiveSpectralTexture): The class map '" + class_map.file + "' cannot be laid over primitives whose shape comes from the texture '" + texture_file + "' because ";
+    const int2 texture_size = texture.getImageResolution();
+    if (texture_size.x != class_map.resolution.x || texture_size.y != class_map.resolution.y) {
+        helios_runtime_error(texture_prefix + "their resolutions differ (" + std::to_string(class_map.resolution.x) + "x" + std::to_string(class_map.resolution.y) + " and " + std::to_string(texture_size.x) + "x" + std::to_string(texture_size.y) +
+                             "). Give the class map the resolution of the texture.");
+    }
+    if (!texture.hasTransparencyChannel()) {
+        if (class_map.has_class_zero) {
+            helios_runtime_error(texture_prefix + "the texture has no transparency channel and so is opaque everywhere, but the class map contains class 0, which marks transparent texels. Give every texel of the class map a class of 1 or more.");
+        }
+    } else {
+        // Both are stored row by row from the top of the image
+        const std::vector<std::vector<bool>> &opaque = *texture.getTransparencyData();
+        for (int row = 0; row < class_map.resolution.y; row++) {
+            for (int column = 0; column < class_map.resolution.x; column++) {
+                const uint16_t texel_class = class_map.classes.at(size_t(row) * class_map.resolution.x + column);
+                const bool texel_is_opaque = opaque.at(row).at(column);
+                if (texel_is_opaque == (texel_class == 0)) {
+                    const std::string texel = "the texel in column " + std::to_string(column) + " and row " + std::to_string(row) + " (counted from the top left, starting at 0)";
+                    if (texel_is_opaque) {
+                        helios_runtime_error(texture_prefix + texel + " is opaque in the texture but has class 0, which marks transparent texels. Class 0 must mark exactly the transparent texels of the texture.");
+                    }
+                    helios_runtime_error(texture_prefix + texel + " is transparent in the texture but has class " + std::to_string(texel_class) + ". Class 0 must mark exactly the transparent texels of the texture.");
+                }
+            }
+        }
+    }
+
+    validated_spectral_class_maps.emplace(texture_file, class_map.file);
+}
+
+void Context::setPrimitiveSpectralTexture(uint UUID, const std::string &class_map_file, const std::string &palette_label) {
+    setPrimitiveSpectralTexture(std::vector<uint>{UUID}, class_map_file, palette_label);
+}
+
+void Context::setPrimitiveSpectralTexture(const std::vector<uint> &UUIDs, const std::string &class_map_file, const std::string &palette_label) {
+    const std::string prefix = "ERROR (Context::setPrimitiveSpectralTexture): ";
+    if (class_map_file.empty()) {
+        helios_runtime_error(prefix + "No class map was given. To remove a spectral texture, use Context::clearPrimitiveSpectralTexture().");
+    }
+    const auto palette_ID = spectral_palette_IDs.find(palette_label);
+    if (palette_ID == spectral_palette_IDs.end()) {
+        helios_runtime_error(prefix + "No spectral palette named '" + palette_label + "' has been registered. Register it with Context::addSpectralPalette().");
+    }
+
+    // Everything is checked before anything is changed, so that a rejected class map leaves all of the primitives as they were
+    const uint class_map_ID = addSpectralClassMap(class_map_file);
+    const SpectralClassMap &class_map = spectral_texture_class_maps.at(class_map_ID);
+    const size_t palette_size = spectral_palettes.at(palette_ID->second).classes.size();
+    if (class_map.largest_class > palette_size) {
+        helios_runtime_error(prefix + "The class map '" + class_map_file + "' contains class " + std::to_string(class_map.largest_class) + ", but spectral palette '" + palette_label + "' has only " + std::to_string(palette_size) +
+                             " classes. Give the palette an entry for every class in the class map.");
+    }
+    for (uint UUID: UUIDs) {
+        validateSpectralClassMap(UUID, class_map_ID);
+    }
+
+    for (uint UUID: UUIDs) {
+        Primitive *primitive = getPrimitivePointer_private(UUID);
+        if (primitive->spectral_class_map_ID != class_map_ID) {
+            primitive->spectral_class_map_ID = class_map_ID;
+            primitive->spectral_palette_ID = palette_ID->second;
+            primitive->markShapeModified();
+        } else if (primitive->spectral_palette_ID != palette_ID->second) {
+            primitive->spectral_palette_ID = palette_ID->second;
+            primitive->markDirty();
+        }
+    }
+}
+
+void Context::setPrimitiveSpectralPalette(uint UUID, const std::string &palette_label) {
+    setPrimitiveSpectralPalette(std::vector<uint>{UUID}, palette_label);
+}
+
+void Context::setPrimitiveSpectralPalette(const std::vector<uint> &UUIDs, const std::string &palette_label) {
+    const std::string prefix = "ERROR (Context::setPrimitiveSpectralPalette): ";
+    const auto palette_ID = spectral_palette_IDs.find(palette_label);
+    if (palette_ID == spectral_palette_IDs.end()) {
+        helios_runtime_error(prefix + "No spectral palette named '" + palette_label + "' has been registered. Register it with Context::addSpectralPalette().");
+    }
+    const size_t palette_size = spectral_palettes.at(palette_ID->second).classes.size();
+
+    // Everything is checked before anything is changed
+    for (uint UUID: UUIDs) {
+        const Primitive *primitive = getPrimitivePointer_private(UUID);
+        if (primitive->spectral_class_map_ID == 0) {
+            helios_runtime_error(prefix + "Primitive " + std::to_string(UUID) + " has no spectral texture, so there is no class map for the palette to apply to. Give it one with Context::setPrimitiveSpectralTexture().");
+        }
+        const SpectralClassMap &class_map = spectral_texture_class_maps.at(primitive->spectral_class_map_ID);
+        if (class_map.largest_class > palette_size) {
+            helios_runtime_error(prefix + "The class map '" + class_map.file + "' of primitive " + std::to_string(UUID) + " contains class " + std::to_string(class_map.largest_class) + ", but spectral palette '" + palette_label + "' has only " +
+                                 std::to_string(palette_size) + " classes. Give the palette an entry for every class in the class map.");
+        }
+    }
+
+    for (uint UUID: UUIDs) {
+        Primitive *primitive = getPrimitivePointer_private(UUID);
+        if (primitive->spectral_palette_ID != palette_ID->second) {
+            primitive->spectral_palette_ID = palette_ID->second;
+            primitive->markDirty();
+        }
+    }
+}
+
+void Context::clearPrimitiveSpectralTexture(uint UUID) {
+    clearPrimitiveSpectralTexture(std::vector<uint>{UUID});
+}
+
+void Context::clearPrimitiveSpectralTexture(const std::vector<uint> &UUIDs) {
+    for (uint UUID: UUIDs) {
+        if (!doesPrimitiveExist(UUID)) {
+            helios_runtime_error("ERROR (Context::clearPrimitiveSpectralTexture): Primitive " + std::to_string(UUID) + " does not exist. No spectral textures were removed.");
+        }
+    }
+    for (uint UUID: UUIDs) {
+        Primitive *primitive = getPrimitivePointer_private(UUID);
+        if (primitive->spectral_class_map_ID != 0) {
+            primitive->spectral_class_map_ID = 0;
+            primitive->spectral_palette_ID = 0;
+            primitive->markShapeModified();
+        }
+    }
+}
+
+bool Context::primitiveHasSpectralTexture(uint UUID) const {
+    return getPrimitivePointer_private(UUID)->spectral_class_map_ID != 0;
+}
+
+std::string Context::getPrimitiveSpectralTextureFile(uint UUID) const {
+    return spectral_texture_class_maps.at(getPrimitivePointer_private(UUID)->spectral_class_map_ID).file;
+}
+
+std::string Context::getPrimitiveSpectralPalette(uint UUID) const {
+    return spectral_palettes.at(getPrimitivePointer_private(UUID)->spectral_palette_ID).label;
+}
+
+const std::vector<uint16_t> &Context::getSpectralTextureClassMap(const std::string &class_map_file, helios::int2 &resolution) const {
+    const auto class_map_ID = spectral_class_map_IDs.find(class_map_file);
+    if (class_map_ID == spectral_class_map_IDs.end()) {
+        helios_runtime_error("ERROR (Context::getSpectralTextureClassMap): The class map '" + class_map_file + "' has not been read. Give it to a primitive with Context::setPrimitiveSpectralTexture() first.");
+    }
+    const SpectralClassMap &class_map = spectral_texture_class_maps.at(class_map_ID->second);
+    resolution = class_map.resolution;
+    return class_map.classes;
 }
 
 helios::int2 Context::getPrimitiveTextureSize(uint UUID) const {
@@ -3726,6 +4059,11 @@ bool Context::isMaterialShared(uint materialID) const {
 }
 
 void Context::updatePrimitiveSolidFraction(Primitive *primitive) {
+    // An image giving the primitive its color, and a class map giving its spectra, were matched to the texture this primitive no longer has
+    primitive->color_texture_ID = 0;
+    primitive->spectral_class_map_ID = 0;
+    primitive->spectral_palette_ID = 0;
+
     const std::string &texture_file = materials.at(primitive->materialID).texture_file;
     if (texture_file.empty()) {
         primitive->setSolidFraction(1.f);
@@ -3816,6 +4154,44 @@ uint Context::copyMaterialForPrimitive(uint primitiveUUID) {
     return newMaterialID;
 }
 
+void Context::setPrimitiveAppearance(Primitive *primitive, const RGBAcolor &color, const std::string &texture_file, bool texture_color_overridden) {
+    const Material &current_material = materials.at(primitive->materialID);
+    const bool is_automatic = current_material.label.rfind("__auto_", 0) == 0 || current_material.label == DEFAULT_MATERIAL_LABEL;
+
+    // An automatic material is found again by the label that hashes its appearance, so it is never edited: the primitive moves to the automatic material of its new
+    // appearance. One carrying material data is copied instead, so that the data stays with the primitive.
+    if (is_automatic && current_material.material_data_types.empty()) {
+        const std::string label = generateMaterialLabel(color, texture_file, texture_color_overridden);
+        uint materialID;
+        if (doesMaterialExist(label)) {
+            materialID = getMaterialIDFromLabel(label);
+        } else {
+            materialID = addMaterial_internal(label, color, texture_file);
+            materials.at(materialID).texture_color_overridden = texture_color_overridden;
+        }
+        setPrimitiveMaterial(primitive, materialID);
+        return;
+    }
+
+    // A named material belongs to its label, so it is edited when this primitive is its only user, and copied when other primitives share it. A material renamed
+    // from an automatic one is the material a plug-in gives the organs it creates later (PlantArchitecture names its organ materials this way), so it is copied
+    // as an automatic material is, and the organs created afterward do not take on the edit.
+    const bool renamed_from_automatic = materials_renamed_from_automatic.count(primitive->materialID) > 0;
+    if (is_automatic || renamed_from_automatic || isMaterialShared(primitive->materialID)) {
+        copyMaterialForPrimitive(primitive->UUID);
+    }
+    Material &material = materials.at(primitive->materialID);
+    const bool texture_changed = material.texture_file != texture_file;
+    material.color = color;
+    material.texture_file = texture_file;
+    material.texture_color_overridden = texture_color_overridden;
+    if (texture_changed) {
+        updatePrimitiveSolidFraction(primitive);
+    } else {
+        primitive->markDirty();
+    }
+}
+
 void Context::renameMaterial(const std::string &old_label, const std::string &new_label) {
     if (material_label_to_id.find(old_label) == material_label_to_id.end()) {
         helios_runtime_error("ERROR (Context::renameMaterial): Material with label '" + old_label + "' does not exist.");
@@ -3832,10 +4208,12 @@ void Context::renameMaterial(const std::string &old_label, const std::string &ne
 
     uint materialID = material_label_to_id.at(old_label);
     materials.at(materialID).label = new_label;
-    // Keep auto-generated labels in the lookup map so that future primitives with the same
-    // hash-based label will find and reuse the existing material (preserving deduplication).
-    if (old_label.substr(0, 7) != "__auto_") {
-        material_label_to_id.erase(old_label);
+    // The material now belongs to its new label only. An automatic material is found by the label that hashes its appearance, so keeping that label would give
+    // the renamed material to every primitive created later with the same appearance, whoever creates it; a primitive created later gets an automatic material of
+    // its own, and the caller that named the material assigns it to the primitives it wants to share it.
+    material_label_to_id.erase(old_label);
+    if (old_label.substr(0, 7) == "__auto_") {
+        materials_renamed_from_automatic.insert(materialID);
     }
     material_label_to_id[new_label] = materialID;
 }
@@ -3997,6 +4375,7 @@ void Context::deleteMaterial(const std::string &material_label) {
     // Remove the material
     materials.erase(materialID);
     material_label_to_id.erase(material_label);
+    materials_renamed_from_automatic.erase(materialID);
 }
 
 bool Context::doesMaterialDataExist(const std::string &material_label, const char *data_label) const {

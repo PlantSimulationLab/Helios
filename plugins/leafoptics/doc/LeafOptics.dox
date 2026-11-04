@@ -333,7 +333,7 @@ The method populates all nine parameters in the \ref LeafOpticsProperties struct
 
 \subsection LOLibrarySpecies Available Species
 
-The library contains parameters fitted to measured leaf spectra using the `fit_prospect_visrobust.py` script with robust optimization. Most species are fitted to LOPEX93 spectral library samples; "common_bean" and "cowpea" are fitted to spectra from the GEMINI field experiments. All species use PROSPECT-D mode (see \ref LOModes).
+The library contains parameters fitted to measured leaf spectra using robust optimization. Most species are fitted to LOPEX93 spectral library samples; "common_bean" and "cowpea" are fitted to spectra from the GEMINI field experiments. All species use PROSPECT-D mode (see \ref LOModes).
 
 <table>
  <tr><th>Species Label</th><th>Scientific Name</th><th>N</th><th>Cab<br>(µg/cm²)</th><th>Car<br>(µg/cm²)</th><th>Ant<br>(µg/cm²)</th><th>Cbrown</th><th>Cw<br>(g/cm²)</th><th>Cm<br>(g/cm²)</th><th>R²</th><th>Source</th></tr>
@@ -539,6 +539,28 @@ The method assigns primitive data using the same labels as \ref LeafOptics::setP
 - The method always overwrites existing primitive data for the parameters listed above.
 - Both overloads are available: \ref LeafOptics::getPropertiesFromSpectrum(const std::vector<uint>&) for multiple primitives and \ref LeafOptics::getPropertiesFromSpectrum(uint) for a single primitive.
 
+\section LOObjectData Leaf Optics Selected by Object Data
+
+\ref LeafOptics::runFromObjectData() gives each leaf the spectra for the value of one of its object data. It is intended for leaves that pass through stages, such as the stages of appearance that the PlantArchitecture plug-in writes as "leaf_texture_stage" object data when leaves change color as they age (see the PlantArchitecture documentation on changing leaf textures as leaves age). One set of \ref LeafOpticsProperties is given for each value, starting from 0:
+
+~~~~~~{.cpp}
+LeafOptics leafoptics(&context);
+
+std::vector<LeafOpticsProperties> stage_properties(3);
+stage_properties.at(0) = ...;  // the green leaf
+stage_properties.at(1) = ...;  // the yellowing leaf
+stage_properties.at(2) = ...;  // the senesced leaf
+
+leafoptics.runFromObjectData(leaf_UUIDs, "leaf_texture_stage", stage_properties, "leaf_stage");
+~~~~~~
+
+Each primitive is assigned the spectra of its object's value, labelled from the given label and the value, for example "leaf_reflectivity_leaf_stage_2" and "leaf_transmissivity_leaf_stage_2". Calling the method again after the object data has changed, such as after each time step, moves primitives to the spectra of their new value and gives new primitives their spectra. Each spectrum is recalculated on every call, which takes little time since there is one spectrum per value rather than per leaf.
+
+Some things to keep in mind:
+- The object data must be of type int or uint, and every value present must have properties. Every primitive must belong to an object with the object data. Otherwise an error is raised and no primitive is given spectra.
+- Primitives given spectra by this method cannot also be given spectra by the \ref LONitrogenAuto "nitrogen-based mode" of the same LeafOptics, or the other way around, since each would overwrite the other's. An error is raised instead.
+- LeafOptics does not provide properties for stages of senescence, which differ between species. During senescence, chlorophyll is generally lost faster than carotenoids, which is why leaves turn yellow, and brown pigments accumulate later.
+
 \section LONitrogenAuto Nitrogen-Based Automatic Leaf Optics
 
 The LeafOptics plugin supports automatic computation of leaf optical properties from leaf nitrogen concentration. This enables seamless integration with the PlantArchitecture nitrogen model, where chlorophyll and carotenoid content are derived from nitrogen data while limiting computational overhead through adaptive spectrum binning.
@@ -642,7 +664,7 @@ The behavior of \ref LeafOptics::run(const std::vector<uint>&, const LeafOpticsP
 **First call (initialization):**
 1. Groups primitives by parent object ID
 2. Reads "leaf_nitrogen_gN_m2" from each object (throws error if missing)
-3. Creates adaptive spectrum bins based on nitrogen distribution using quantiles
+3. Creates spectrum bins spaced evenly across the range of nitrogen values (see \ref LONitrogenBinning)
 4. Generates PROSPECT spectra for each bin (stored as "leaf_reflectivity_Nauto_0", etc.)
 5. Assigns each object to its nearest bin
 
@@ -684,7 +706,7 @@ To prevent oscillation at bin boundaries, a leaf is reassigned only when:
 
 Additionally, moving to a new bin requires a significant improvement in fit (at least half of `min_reassignment_change` closer to the new bin center than the old). This hysteresis prevents frequent reassignments when nitrogen values hover near bin boundaries.
 
-The relative test is disabled by default because, with evenly spaced bins, it holds a leaf at high nitrogen several bins away from the one that represents it: at a 30 % threshold a leaf that filled from 2.2 to 2.5 g N/m\f$^2\f$ kept the 2.2 spectrum for the rest of a simulation. It governs drift *within* the established bin range only; nitrogen moving outside that range rebuilds the bins as described in \ref LONitrogenBinning.
+The relative test is disabled by default because, with evenly spaced bins, it can hold a leaf at high nitrogen several bins away from the one that represents it. It governs drift *within* the established bin range only; nitrogen moving outside that range rebuilds the bins as described in \ref LONitrogenBinning.
 
 \subsection LONitrogenPFT Parameter Values by Plant Functional Type
 

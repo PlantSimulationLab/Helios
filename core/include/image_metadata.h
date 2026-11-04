@@ -121,7 +121,7 @@ namespace helios {
         double yaw_deg = 0.0;
         //! Camera pitch in degrees, +down convention (Camera:Pitch).
         double pitch_deg = 0.0;
-        //! Camera roll in degrees about the optical axis (Camera:Roll). v1: always 0 — no up-vector in RadiationCamera.
+        //! Camera roll in degrees about the optical axis (Camera:Roll). Always 0, since RadiationCamera has no up-vector.
         double roll_deg = 0.0;
     };
 

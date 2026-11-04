@@ -1978,6 +1978,154 @@ void helios::writePNG(const std::string &filename, uint width, uint height, cons
     png_destroy_write_struct(&png, &info);
 }
 
+namespace {
+    // libpng reports an error by calling the error function, which must not return. The message is kept outside the caller's stack frame, whose
+    // local variables are indeterminate after the longjmp back to its setjmp.
+    thread_local char single_channel_png_error[256];
+
+    void singleChannelPNGError(png_structp png_ptr, png_const_charp message) {
+        std::snprintf(single_channel_png_error, sizeof(single_channel_png_error), "%s", message);
+        png_longjmp(png_ptr, 1);
+    }
+
+    // Warnings (for example about an unusual color profile) do not affect the pixel values, so they are not printed
+    void singleChannelPNGWarning(png_structp, png_const_charp) {
+    }
+} // namespace
+
+void helios::readPNGSingleChannel(const std::string &filename, uint &width, uint &height, std::vector<uint16_t> &pixel_values) {
+    const std::string prefix = "ERROR (readPNGSingleChannel): ";
+    std::string extension = getFileExtension(filename);
+    std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return std::tolower(c); });
+    if (extension != ".png") {
+        helios_runtime_error(prefix + "File " + filename + " is not PNG format. Save it as an 8-bit or 16-bit grayscale PNG.");
+    }
+
+    std::unique_ptr<FILE, int (*)(FILE *)> fp(fopen(filename.c_str(), "rb"), fclose);
+    if (!fp) {
+        helios_runtime_error(prefix + "File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
+    }
+
+    single_channel_png_error[0] = '\0';
+    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, singleChannelPNGError, singleChannelPNGWarning);
+    png_infop info_ptr = png_ptr != nullptr ? png_create_info_struct(png_ptr) : nullptr;
+    if (png_ptr == nullptr || info_ptr == nullptr) {
+        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+        helios_runtime_error(prefix + "Failed to create the PNG structures for " + filename + ".");
+    }
+
+    std::string error;
+    std::vector<std::vector<png_byte>> rows;
+    std::vector<png_bytep> row_pointers;
+    png_byte bit_depth = 0;
+    // libpng reports errors by longjmp, so nothing with a destructor is created between setjmp and the reads
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        error = "File " + filename + " could not be read as a PNG image (" + std::string(single_channel_png_error) + ").";
+    } else {
+        png_init_io(png_ptr, fp.get());
+        png_read_info(png_ptr, info_ptr);
+        bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+        const png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+        if (color_type == PNG_COLOR_TYPE_PALETTE) {
+            error = "File " + filename + " is an indexed-color PNG, whose pixel values are indices into a color table and are expanded to colors when read. Save it as an 8-bit or 16-bit grayscale PNG with the same values.";
+        } else if (color_type != PNG_COLOR_TYPE_GRAY) {
+            error = "File " + filename + " has more than one channel (color or transparency). Save it as an 8-bit or 16-bit grayscale PNG without transparency.";
+        } else if (bit_depth != 8 && bit_depth != 16) {
+            error = "File " + filename + " has a bit depth of " + std::to_string(bit_depth) + ". Save it with a bit depth of 8 or 16.";
+        } else if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+            error = "File " + filename + " marks one gray value as transparent. Save it without transparency.";
+        } else {
+            png_set_interlace_handling(png_ptr);
+            png_read_update_info(png_ptr, info_ptr);
+            width = png_get_image_width(png_ptr, info_ptr);
+            height = png_get_image_height(png_ptr, info_ptr);
+            rows.assign(height, std::vector<png_byte>(png_get_rowbytes(png_ptr, info_ptr)));
+            row_pointers.resize(height);
+            for (uint y = 0; y < height; y++) {
+                row_pointers[y] = rows[y].data();
+            }
+            png_read_image(png_ptr, row_pointers.data());
+        }
+    }
+    png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+    if (!error.empty()) {
+        helios_runtime_error(prefix + error);
+    }
+
+    // 16-bit samples are stored most significant byte first
+    pixel_values.resize(size_t(width) * height);
+    for (uint y = 0; y < height; y++) {
+        for (uint x = 0; x < width; x++) {
+            pixel_values[size_t(y) * width + x] = bit_depth == 16 ? uint16_t((rows[y][2 * x] << 8) | rows[y][2 * x + 1]) : rows[y][x];
+        }
+    }
+}
+
+void helios::writePNGSingleChannel(const std::string &filename, uint width, uint height, const std::vector<uint16_t> &pixel_values, uint bit_depth) {
+    const std::string prefix = "ERROR (writePNGSingleChannel): ";
+    if (bit_depth != 8 && bit_depth != 16) {
+        helios_runtime_error(prefix + "The bit depth must be 8 or 16, but " + std::to_string(bit_depth) + " was given.");
+    }
+    if (pixel_values.size() != size_t(width) * height) {
+        helios_runtime_error(prefix + "There are " + std::to_string(pixel_values.size()) + " pixel values for a " + std::to_string(width) + "x" + std::to_string(height) + " image, which needs " + std::to_string(size_t(width) * height) + ".");
+    }
+    if (bit_depth == 8) {
+        const auto largest = std::max_element(pixel_values.begin(), pixel_values.end());
+        if (largest != pixel_values.end() && *largest > 255) {
+            helios_runtime_error(prefix + "The value " + std::to_string(*largest) + " does not fit in an 8-bit image. Use a bit depth of 16.");
+        }
+    }
+
+    const size_t bytes_per_pixel = bit_depth / 8;
+    std::vector<std::vector<png_byte>> rows(height, std::vector<png_byte>(width * bytes_per_pixel));
+    for (uint y = 0; y < height; y++) {
+        for (uint x = 0; x < width; x++) {
+            const uint16_t value = pixel_values[size_t(y) * width + x];
+            if (bit_depth == 16) {
+                rows[y][2 * x] = png_byte(value >> 8); // most significant byte first
+                rows[y][2 * x + 1] = png_byte(value & 0xFF);
+            } else {
+                rows[y][x] = png_byte(value);
+            }
+        }
+    }
+    std::vector<png_bytep> row_pointers(height);
+    for (uint y = 0; y < height; y++) {
+        row_pointers[y] = rows[y].data();
+    }
+
+    FILE *fp = fopen(filename.c_str(), "wb");
+    if (fp == nullptr) {
+        helios_runtime_error(prefix + "File " + filename + " could not be opened for writing. Check that the directory exists and that you have permission to write to it.");
+    }
+    single_channel_png_error[0] = '\0';
+    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, singleChannelPNGError, singleChannelPNGWarning);
+    png_infop info_ptr = png_ptr != nullptr ? png_create_info_struct(png_ptr) : nullptr;
+    if (png_ptr == nullptr || info_ptr == nullptr) {
+        png_destroy_write_struct(&png_ptr, &info_ptr);
+        fclose(fp);
+        std::filesystem::remove(filename);
+        helios_runtime_error(prefix + "Failed to create the PNG structures for " + filename + ".");
+    }
+    bool failed = false;
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        failed = true;
+    } else {
+        png_init_io(png_ptr, fp);
+        png_set_IHDR(png_ptr, info_ptr, width, height, int(bit_depth), PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+        png_write_info(png_ptr, info_ptr);
+        png_write_image(png_ptr, row_pointers.data());
+        png_write_end(png_ptr, nullptr);
+    }
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+    // A failed write (including a failed flush when the file is closed) would leave a truncated image behind
+    const bool closed = fclose(fp) == 0;
+    if (failed || !closed) {
+        std::filesystem::remove(filename);
+        helios_runtime_error(prefix + "Writing " + filename + " failed" + (failed ? " (" + std::string(single_channel_png_error) + ")" : " when the file was closed") + ". Check that there is space on the disk.");
+    }
+}
+
 void helios::writePNG(const std::string &filename, uint width, uint height, const std::vector<unsigned char> &pixel_data) {
 
     // Convert pixel_data array into RGBcolor vector

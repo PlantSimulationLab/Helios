@@ -106,11 +106,11 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  <b>Note:</b> This limitation only affects the Vulkan backend on Linux NVIDIA systems. The OptiX backend is unaffected. Reusing RadiationModel instances is recommended practice regardless, as it avoids repeated GPU resource allocation overhead.
 
- <b>Backend probing does not contribute to this budget.</b> Each backend's hardware probe runs at most once per process and its result is cached, so \ref RadiationModel::isGPUBackendAvailable() and repeated RadiationModel construction no longer cost one extra instance create/destroy cycle apiece. Only the instance owned by a live RadiationModel counts against the driver's limit. One consequence of the caching: if the first probe in a process fails, that verdict is latched for the lifetime of the process — a driver that becomes usable later is not picked up until the program restarts.
+ <b>Backend probing does not contribute to this budget.</b> Each backend's hardware probe runs at most once per process and its result is cached, so \ref RadiationModel::isGPUBackendAvailable() and repeated RadiationModel construction do not use up additional instance create/destroy cycles. Only the instance owned by a live RadiationModel counts against the driver's limit. One consequence of the caching: if the first probe in a process fails, that verdict is latched for the lifetime of the process — a driver that becomes usable later is not picked up until the program restarts.
 
  \subsection RadDisableGPU Disabling GPU Backends
 
- Setting the environment variable <tt>HELIOS_NO_GPU</tt> to any value other than <tt>0</tt> makes every backend probe report failure, so a GPU-equipped machine behaves exactly as one with no compatible hardware: \ref RadiationModel::isGPUBackendAvailable() returns <tt>false</tt> and constructing a RadiationModel throws. This is intended for reproducing headless CI behavior locally. Requesting a backend by name rather than through automatic selection bypasses the veto.
+ Setting the environment variable <tt>HELIOS_NO_GPU</tt> to any value other than <tt>0</tt> makes every backend probe report failure, so a GPU-equipped machine behaves exactly as one with no compatible hardware: \ref RadiationModel::isGPUBackendAvailable() returns <tt>false</tt> and constructing a RadiationModel throws. This is useful for testing how a program behaves on a machine without a compatible GPU. Requesting a backend by name rather than through automatic selection bypasses the veto.
 
  <b>References:</b>
  - <a href="https://forums.developer.nvidia.com/t/issue-with-repeated-instance-creation-in-one-process/176978">NVIDIA Developer Forums: Instance Creation Issue</a>
@@ -437,6 +437,25 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  where \f$c\f$ runs over every source with a flux in the band and the band's diffuse radiation, \f$F_c\f$ is its band flux, and \f$\rho_c\f$ is the reflectivity weighted by its spectrum alone (the diffuse radiation is weighted by the spectrum set with \ref RadiationModel::setDiffuseSpectrum(), except in emission-enabled bands, where that spectrum does not apply; a source or diffuse flux without a spectrum is spectrally flat over the band). This is the same as weighting by \f$W_\lambda = \sum_c F_c \hat{I}_{c,\lambda}\f$, where \f$\hat{I}_{c,\lambda}\f$ is each spectrum normalized to integrate to 1 over the band. It is an approximation that is uniform over the scene: a shaded leaf that sees mostly scattered light gets the same properties for that light as a sunlit one. If a band receives no source or diffuse radiation at all (e.g., an emission-only longwave band), the unweighted band average \f$\int\rho_\lambda d\lambda / (\lambda_{max}-\lambda_{min})\f$ is used. The weighting is recomputed on every call to \ref RadiationModel::runBand(), so changes to source or diffuse fluxes are picked up.
 
+ \subsection RadSpectralTexture Spectral Textures
+
+ A primitive with a spectral texture (\ref helios::Context::setPrimitiveSpectralTexture( uint, const std::string &, const std::string & ); see \ref SpectralTexture in the user guide) takes its reflectivity and transmissivity from the class of its class map at each point, instead of from the primitive data "reflectivity_spectrum" and "transmissivity_spectrum", which it ignores. Each class's spectra are weighted exactly as a primitive's are (\ref RadProps), so a class has the same values a primitive with those spectra would have. A palette's spectra are loaded like a primitive's, from the Context's global data or the plug-in's spectral libraries, and a spectrum that cannot be found raises an error.
+
+ Every ray leaving a primitive takes the reflectivity and transmissivity of the class at the point it leaves from. (A ray that the sampling of a texture mask fails to place on an opaque texel within its limited number of attempts leaves from a transparent one and uses the primitive's mean values described below.) The flux a primitive absorbs is therefore the average over its surface of \f$(1-\rho-\tau)\f$ times the radiation arriving there, so a leaf whose sunlit half is green and whose shaded half is brown absorbs as such. The radiation the primitive reflects and transmits is still one flux per face, which leaves it evenly over the primitive. The class at a texture coordinate is found the same way as the texel of a transparency mask, so for a W-pixel-wide class map, column i covers \f$i/(W-1) \le u < (i+1)/(W-1)\f$, and the last column is reached only at \f$u = 1\f$.
+
+ Radiation cameras (\ref RadCam) see each pixel of such a primitive in the outgoing radiation of the class at the point the pixel's ray hits: what that class reflects of the radiation reaching the face the camera sees, plus what it transmits of the radiation reaching the other face, weighted by the camera's spectral response for each radiation source and for the diffuse and scattered radiation. The radiation reaching each face is that of the primitive as a whole, so the pattern within a primitive comes from its classes and not from shadows falling across it. With camera flux smoothing (\ref RadiationModel::enableCameraFluxSmoothing()), the radiation reaching each face from each source and from the diffuse and scattered radiation, and what the face emits, are averaged onto the vertices the primitive shares with its neighbours (over the neighbours that also have a spectral texture), and the class at each pixel applies its own reflectivity and transmissivity to the values interpolated there, so the light varies smoothly across the facets while the classes stay sharp. In a band with thermal emission, where every class must have the same spectra (below), cameras see the primitive's own outgoing radiation, smoothed if smoothing is enabled. In a band with chlorophyll fluorescence (\ref RadiationModel::addSIFCamera()), each class sends out the fluorescence the primitive emits plus what the class itself reflects and transmits. The class each camera pixel sees is also recorded, and can be written as segmentation masks by class (\ref RadCamSegmentation).
+
+ The reflectivity and transmissivity of the primitive itself, as reported by the optional output primitive data "reflectivity" and "transmissivity" (\ref RadiationModel::optionalOutputPrimitiveData()), are the means of its classes weighted by the area each covers on the primitive.
+
+ Each class must conserve energy on its own: an error is raised if the reflectivity and transmissivity of a class that a primitive covers sum to more than 1, even if their mean does not. As for a primitive's own spectra, a class's spectrum that does not overlap a band with wavelength bounds raises an error when the band is run, and in a band without wavelength bounds every class takes the default reflectivity and transmissivity of 0.
+
+ In a band with thermal emission (\ref RadEmission) a primitive has one emissivity, so rays use the primitive's own values there rather than its classes'. Its classes must then agree in that band, or the primitive can be given constant "reflectivity_[band]" and "transmissivity_[band]" data for it, which (in such a band only) override its palette as they would a primitive's spectra. A band of chlorophyll fluorescence (\ref RadiationModel::addSIFCamera()) is treated like a band without emission: rays use the classes, which may differ, and the fluorescence each face emits is added to what it reflects and transmits.
+
+ Not yet supported, and raising an error if combined with a spectral texture:
+ - Primitive data "reflectivity_[band]" or "transmissivity_[band]" in a band without thermal emission (including a fluorescence band), which would set one value for the whole primitive.
+ - Translucent covers (\ref RadGlass) and specular surface layers (\ref RadSurfaceLayer).
+ - Classes whose reflectivity or transmissivity differ in a band with thermal emission, unless the primitive has constant values for that band.
+
  \subsection RadGlass Translucent Cover Materials (Glass/Plastic)
 
  Greenhouse and shadehouse covers (glass, polyethylene film, polycarbonate, acrylic) are translucent
@@ -529,13 +548,20 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  By default every surface reflects, transmits and emits diffusely (a Lambertian surface), with the same reflectivity, transmissivity and emissivity at every angle. Real leaves and many other surfaces have a thin, smooth outer layer, such as a leaf's waxy cuticle, that reflects light at its surface before it enters, and more of it at grazing angles: a shiny leaf looks brighter from an oblique angle, and its emissivity falls off toward grazing angles. A primitive can be given such a specular surface layer by setting the float data "specular_roughness" (the GGX microfacet roughness \f$\alpha\f$, from 0.05 for a glossy surface to 1 for a very rough one) and optionally "specular_n" (the layer's refractive index, default 1.5):
 
  ~~~~~~{.cpp}
- context.addMaterial("bean_leaf");
- context.setMaterialData("bean_leaf", "specular_roughness", 0.3f);
- context.setMaterialData("bean_leaf", "specular_n", 1.45f);
- context.assignMaterialToObject(leaf_objIDs, "bean_leaf");
+ std::vector<uint> leaf_objIDs = plantarchitecture.getPlantLeafObjectIDs(plantID);
+ std::vector<uint> leaf_UUIDs = context.filterPrimitivesByData(context.getObjectPrimitiveUUIDs(leaf_objIDs), "object_label", "leaf");
+
+ std::set<std::string> leaf_materials;
+ for (uint UUID : leaf_UUIDs) {
+     leaf_materials.insert(context.getPrimitiveMaterialLabel(UUID));
+ }
+ for (const std::string &material : leaf_materials) {
+     context.setMaterialData(material, "specular_roughness", 0.3f);
+     context.setMaterialData(material, "specular_n", 1.45f);
+ }
  ~~~~~~
 
- The parameters are usually the same for all the leaves of a plant, so they are best set on a material (Context::setMaterialData()), which every leaf shares. They can also be set as primitive data; when both are present the material's value is used, as for other material data. They cannot be set on the automatically generated materials Helios gives primitives of the same color or texture, whose labels begin with "__", since every primitive of that color would then get them. The PlantArchitecture plug-in gives the leaves of each plant type a named material such as "bean_mainstem_leaf".
+ The parameters are usually the same for all the leaves of a plant, so they are best set on a material (Context::setMaterialData()), which every leaf shares. They can also be set as primitive data; when both are present the material's value is used, as for other material data. They cannot be set on the automatically generated materials Helios gives primitives of the same color or texture, whose labels begin with "__", since every primitive of that color would then get them. The PlantArchitecture plug-in gives the leaves of each shoot type a named material that holds their texture, such as "tomato_mainstem_leaf", with a numbered suffix when a shoot type has more than one leaf texture, as for "bean_trifoliate_leaf" and "bean_trifoliate_leaf_1". The example above sets the parameters on those existing materials. Do not assign textured leaves a new material with Context::assignMaterialToObject() to hold these parameters: a primitive's texture comes from its material, so a material without the texture removes the leaf's shape and makes each facet a solid surface, which increases the leaf area.
 
  The layer reflects a fraction \f$a(\mu)\f$ of the radiation arriving at an angle whose cosine is \f$\mu\f$: the directional albedo of a dielectric interface (Fresnel reflectance) with a GGX distribution of microfacet orientations. For \f$n = 1.5\f$ it is 0.04 at normal incidence and rises toward grazing angles. The rest enters the body, which reflects, transmits and absorbs it diffusely. The reflectivity and transmissivity given for the primitive (reflectivity_*, reflectivity_spectrum, etc.) are the totals at normal incidence, as an integrating-sphere measurement or a leaf optical model such as PROSPECT reports them, so the body's reflectivity \f$\rho_b\f$ and transmissivity \f$\tau_b\f$ follow from them:
  \f[ \rho = a(1) + \rho_b\,(1 - a(1)),\qquad \tau = \tau_b\,(1 - a(1)). \f]
@@ -694,7 +720,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  radiationmodel.setDiffuseRadiationFlux("PAR",200.f); //set the flux
  ~~~~~~
 
- The diffuse flux is the flux incident on a horizontal surface above all geometry, and the sky that supplies it fills the upper hemisphere only. A ray that leaves all geometry heading below the horizon (e.g., past the edge of a finite ground, or from the underside of an isolated object with nothing beneath it) receives no ambient radiation. Near the edges of a finite domain, surfaces therefore see a dark void below them where the ground would otherwise continue; to remove this edge effect, use periodic boundary conditions (see \ref RadPeriodic). Versions of Helios before 1.3.92 instead filled the full sphere with sky radiation, so that rays leaving below the horizon received the same ambient radiation as rays leaving upward. That behavior can be restored with \ref RadiationModel::enableBelowHorizonDiffuseRadiation() "enableBelowHorizonDiffuseRadiation()"; it applies to all bands and to radiation cameras.
+ The diffuse flux is the flux incident on a horizontal surface above all geometry, and the sky that supplies it fills the upper hemisphere only. A ray that leaves all geometry heading below the horizon (e.g., past the edge of a finite ground, or from the underside of an isolated object with nothing beneath it) receives no ambient radiation. Near the edges of a finite domain, surfaces therefore see a dark void below them where the ground would otherwise continue; to remove this edge effect, use periodic boundary conditions (see \ref RadPeriodic). To fill the full sphere with sky radiation instead, so that rays leaving below the horizon receive the same ambient radiation as rays leaving upward, call \ref RadiationModel::enableBelowHorizonDiffuseRadiation() "enableBelowHorizonDiffuseRadiation()"; it applies to all bands and to radiation cameras.
 
  Alternatively, diffuse flux can be computed automatically from a spectral distribution by setting the diffuse spectrum:
 
@@ -1618,13 +1644,15 @@ The above example assumes that we have already added some geometry to the Contex
 
  In addition to regular camera images, the radiation model can generate segmentation masks in COCO JSON format for machine learning applications. Segmentation masks identify and outline objects within camera images, providing pixel-level annotations that can be used for training object detection and segmentation models.
 
- Two methods are available for writing segmentation masks:
+ Three methods are available for writing segmentation masks:
 
  1\. \ref RadiationModel::writeImageSegmentationMasks() - Creates segmentation masks based on primitive data labels.
 
  2\. \ref RadiationModel::writeImageSegmentationMasks_ObjectData() - Creates segmentation masks based on object data labels.
 
- Both methods take the following arguments: 1) a string denoting the camera label, 2) a string denoting the primitive/object data label to use for segmentation, 3) an integer object class ID for COCO annotations, 4) a string denoting the JSON output filename (can include a relative path), 5) a string denoting the image file corresponding to these labels, 6) an optional vector of strings specifying primitive or object data labels whose mean values will be calculated for each mask and written as attributes (defaults to empty vector), and 7) an optional boolean flag to append to existing JSON files (defaults to false for new files).
+ 3\. \ref RadiationModel::writeImageSegmentationMasksBySpectralClass() - Creates segmentation masks for the classes of spectral textures (\ref RadSpectralTexture), described below.
+
+ The first two methods take the following arguments: 1) a string denoting the camera label, 2) a string denoting the primitive/object data label to use for segmentation, 3) an integer object class ID for COCO annotations, 4) a string denoting the JSON output filename (can include a relative path), 5) a string denoting the image file corresponding to these labels, 6) an optional vector of strings specifying primitive or object data labels whose mean values will be calculated for each mask and written as attributes (defaults to empty vector), and 7) an optional boolean flag to append to existing JSON files (defaults to false for new files).
 
  The segmentation masks are generated using boundary tracing algorithms that identify connected regions of pixels with the same data label values. Each connected region becomes a separate annotation in the COCO JSON output, with precise polygon boundaries traced around it. Note that one label value can produce more than one annotation: an object partially hidden behind something closer to the camera is visible as several separate regions, and each is annotated in its own right.
 
@@ -1643,6 +1671,13 @@ The above example assumes that we have already added some geometry to the Contex
  // Append both to create combined annotations
  radiationmodel.writeImageSegmentationMasks("visible", "ground", 0, "combined_masks.json", image_file, {}, false);
  radiationmodel.writeImageSegmentationMasks("visible", "bunny", 1, "combined_masks.json", image_file, {}, true);
+ ~~~~~~
+
+ Masks can also follow the classes of spectral textures, which vary within a primitive. Whenever \ref RadiationModel::runBand() renders a camera's pixel labels ("camera_[camera]_pixel_UUID") and some primitive has a spectral texture, it also records the class each camera pixel sees as the global data "camera_[camera]_pixel_spectral_class" (one value per pixel, 0 where the pixel sees no primitive with a spectral texture, mirrored left-to-right relative to the written image as "camera_[camera]_pixel_UUID" is). \ref RadiationModel::writeImageSegmentationMasksBySpectralClass() takes the camera label and the category name of each class to annotate, keyed by class value, and writes one annotation for each connected region of pixels of one class, whose COCO category ID is the class value. A class spanning several primitives, such as the lesions of a leaf, gives one mask for each region it forms in the image, however many primitives it covers. The JSON file name, image file, attribute labels and append flag are as for the other two methods.
+
+ ~~~~~~{.cpp}
+ // Class 1 of the leaves' class map is healthy lamina and class 2 is lesion (image_file as in the example above)
+ radiationmodel.writeImageSegmentationMasksBySpectralClass("visible", {{1, "lamina"}, {2, "lesion"}}, "lesion_masks.json", image_file);
  ~~~~~~
 
  Below is example code of writing an RGB image (3 spectral bands).

@@ -1133,7 +1133,42 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   <tr><td>Texture Color Override</td><td>\ref helios::Context::isPrimitiveTextureColorOverridden( uint ) const</td></tr>
   <tr><td>Solid Fraction</td><td>\ref helios::Context::getPrimitiveSolidFraction( uint ) const</td></tr>
   </table>
-	
+
+ \subsection SpectralTexture Spectral Textures
+
+ A spectral texture gives a primitive optical properties that vary across its surface, such as the veins, lesions and yellowing margin of a leaf. It has two parts:
+
+ - A <b>class map</b>: a single-channel 8-bit or 16-bit grayscale PNG whose pixel values are integer classes. It is laid over the primitive with the same (u,v) coordinates as its texture. Class 0 marks transparent texels.
+ - A <b>spectral palette</b>: a list giving, for classes 1, 2, ..., the labels of the global data that hold the class's reflectivity and transmissivity spectra (\ref helios::SpectralTextureClass).
+
+ The class map must agree with the primitive's shape. For a texture with a transparency channel, it has the texture's resolution and class 0 marks exactly the texture's transparent pixels. A pixel counts as opaque if its alpha is at least 250 (of 255), as for every texture mask in Helios, so partly transparent pixels at a leaf's edge must be class 0. For a texture without one, it has the texture's resolution and no class 0. A patch without a texture maps the whole class map, which may have any resolution but no class 0. A mismatch raises an error that names the first texel that disagrees.
+
+ ~~~~~~{.cpp}
+  Context context;
+
+  // Spectra of the healthy leaf blade (class 1) and of a necrotic lesion (class 2), which transmits nothing
+  context.addSpectralPalette("grape_lesions", {{"grape_lamina_reflectivity", "grape_lamina_transmissivity", "measured"},
+                                               {"grape_necrosis_reflectivity", "", "PROSPECT-D fit"}});
+
+  uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.1, 0.1), nullrotation, "GrapeLeaf.png");
+  context.setPrimitiveSpectralTexture(UUID, "GrapeLeaf_classes.png", "grape_lesions");
+ ~~~~~~
+
+ Changing a primitive's class map changes its shape as far as plug-ins are concerned, whereas changing only its palette with \ref helios::Context::setPrimitiveSpectralPalette() does not. Keeping one class map per leaf and switching palettes is therefore the cheap way to change optical properties over time. For example, a senescing leaf's class map can record where each change begins, and each stage is a palette. A primitive's spectral texture is copied with it, and removed if its texture changes. A tile without a texture whose sub-patches have spectral textures cannot be subdivided again, since each sub-patch maps the whole class map. Palettes and spectral textures are written by \ref helios::Context::writeXML() and read by \ref helios::Context::loadXML().
+
+ \note The radiation model uses spectral textures for the radiation that primitives absorb, reflect and transmit, and radiation cameras see the class at each pixel (see \ref RadSpectralTexture).
+
+ <table>
+  <tr><th>Property</th><th>Function</th></tr>
+  <tr><td>Register a palette</td><td>\ref helios::Context::addSpectralPalette()</td></tr>
+  <tr><td>Assign a class map and palette</td><td>\ref helios::Context::setPrimitiveSpectralTexture( uint, const std::string &, const std::string & )</td></tr>
+  <tr><td>Change only the palette</td><td>\ref helios::Context::setPrimitiveSpectralPalette( uint, const std::string & )</td></tr>
+  <tr><td>Remove</td><td>\ref helios::Context::clearPrimitiveSpectralTexture( uint )</td></tr>
+  <tr><td>Class map file</td><td>\ref helios::Context::getPrimitiveSpectralTextureFile( uint ) const</td></tr>
+  <tr><td>Palette</td><td>\ref helios::Context::getPrimitiveSpectralPalette( uint ) const</td></tr>
+  <tr><td>Classes of a class map</td><td>\ref helios::Context::getSpectralTextureClassMap()</td></tr>
+  </table>
+
  \subsection Compound Compound Geometry
 
  The Context has functions to rapidly generate various shapes, which consist of many primitives. These functions simply add the primitives needed to make the specified geometry, and return a vector of UUIDs corresponding to each of the primitives. The important distinction between these functions and those to add "Objects" (described below) is that Objects retain information about the overall 3D object such as the radius of the sphere.
@@ -1452,7 +1487,7 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
  Mesh topology is written to and read from the Helios XML format, so a polymesh that has been through \ref helios::Context::writeXML() and \ref helios::Context::loadXML() keeps its face set, its
  per-vertex normals and their provenance, and its texture coordinates. Faces reference their member primitive by position within the object rather than by UUID, since primitive UUIDs are reallocated on
  load. Topology is written only when the file contains every primitive the face set refers to, so a partial write made with \ref helios::Context::writeXML() over a subset of UUIDs, or one that omits
- hidden primitives, reloads as an unconnected mesh rather than one whose faces point at primitives that are not there. Files written before this was supported carry no topology and still reload as a
+ hidden primitives, reloads as an unconnected mesh rather than one whose faces point at primitives that are not there. Files that carry no topology reload as a
  triangle soup.
 
  Any object type that knows which of its facets meet at a given vertex can report that, whether or not it stores a face table. \ref helios::Context::doesObjectHaveSharedVertexTopology() asks whether an
@@ -2068,7 +2103,7 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   connectivity of the file, and 'nx', 'ny' and 'nz' vertex properties are read as per-vertex normals when present. See \ref OBJmeshtopology for how to query the resulting mesh.
 
   \ref helios::Context::writePLY() likewise writes polymesh geometry against its shared vertices, and emits 'nx', 'ny' and 'nz' properties when every vertex being written carries a normal, so a closed mesh
-  written to PLY reloads as a closed mesh rather than as a triangle soup. Geometry that is not part of a polymesh with retained connectivity is written as independent primitives exactly as before.
+  written to PLY reloads as a closed mesh rather than as a triangle soup. Geometry that is not part of a polymesh with retained connectivity is written as independent primitives.
 
   Different applications may utilize different coordinate axes in .ply files. In computer graphics applications, it is common to define the y-axis as the up direction. Helios uses a z-up coordinate system. By default \ref helios::Context::loadPLY() assumes that the coordinate system used when creating the .ply file is y-up. There is an optional argument \ref helios::Context::loadPLY() that can allow you to easily define the up-axis.
 
@@ -2121,7 +2156,7 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
 
   \ref helios::Context::writeOBJ() writes geometry belonging to a polymesh against its shared vertices, so the connectivity is preserved on output rather than being expanded into three independent
   vertices per triangle. Passing write_normals=true additionally writes the per-vertex normals, so a smooth mesh survives a load-write-load round trip rather than being flattened to one normal per facet.
-  Geometry that is not part of a polymesh with retained connectivity is written as independent primitives exactly as before.
+  Geometry that is not part of a polymesh with retained connectivity is written as independent primitives.
 
   Example code is given below to load an OBJ model at the origin with no scaling (height=0) or rotation (rotation='nullrotation') applied and default up axis of "z".
 
@@ -2337,7 +2372,7 @@ The NVIDIA OptiX library is used for ray-tracing calculations in the radiation m
 | &lt; 560 | OptiX 6.5 (legacy) | CUDA 9.0+ |
 | Any (or no NVIDIA GPU) | Vulkan compute backend | None |
 
-\note NVIDIA drivers 590.x and later dropped support for OptiX 6.5. If you have a modern GPU and driver, Helios automatically uses OptiX 8.1, which supports all current and future NVIDIA drivers. The driver 590+ incompatibility that existed in earlier Helios versions is fully resolved.
+\note NVIDIA drivers 590.x and later dropped support for OptiX 6.5. If you have a modern GPU and driver, Helios automatically uses OptiX 8.1, which supports all current and future NVIDIA drivers.
 
 <b>Legacy GPUs (compute capability 3.5):</b> If you are using a GPU with compute capability &lt; 5.0, you can force the OptiX 6.5 legacy backend by setting <tt>-DOPTIX_VERSION_LEGACY=ON</tt>. There are two ways to do this:
 

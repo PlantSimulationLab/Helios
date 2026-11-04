@@ -187,6 +187,12 @@ namespace helios {
         destroyBuffer(transmissivity_cam_buffer);
         destroyBuffer(white_reference_cam_buffer);
         destroyBuffer(surface_layer_buffer);
+        destroyBuffer(spectral_palette_buffer);
+        destroyBuffer(spectral_class_map_buffer);
+        destroyBuffer(spectral_incident_buffer);
+        destroyBuffer(spectral_camera_flux_buffer);
+        destroyBuffer(camera_pixel_class_buffer);
+        destroyBuffer(spectral_vertex_buffer);
         destroyBuffer(radiation_specular_buffer);
         destroyBuffer(diffuse_flux_buffer);
         destroyBuffer(diffuse_peak_dir_buffer);
@@ -649,6 +655,16 @@ namespace helios {
             }
         }
 
+        // Spectral texture class maps, packed as described in shaders/common/spectral_texture.glsl
+        {
+            const std::vector<uint32_t> packed = packSpectralClassMaps(geometry);
+            if (spectral_class_map_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(spectral_class_map_buffer);
+            }
+            spectral_class_map_buffer = createBuffer(packed.size() * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(spectral_class_map_buffer, packed.data(), packed.size() * sizeof(uint32_t));
+        }
+
         // Upload periodic boundary bbox data
         {
             bbox_count = geometry.bbox_count;
@@ -722,6 +738,17 @@ namespace helios {
             }
             surface_layer_buffer = createBuffer(packed.size() * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
             uploadBufferData(surface_layer_buffer, packed.data(), packed.size() * sizeof(uint32_t));
+            descriptors_dirty = true;
+        }
+        // Spectral texture palettes, packed as described in shaders/common/spectral_texture.glsl
+        {
+            palette_entry_count = materials.num_palette_entries;
+            const std::vector<uint32_t> packed = packSpectralPalettes(materials);
+            if (spectral_palette_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(spectral_palette_buffer);
+            }
+            spectral_palette_buffer = createBuffer(packed.size() * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(spectral_palette_buffer, packed.data(), packed.size() * sizeof(uint32_t));
             descriptors_dirty = true;
         }
         camera_count = materials.num_cameras;
@@ -1922,8 +1949,8 @@ namespace helios {
 
         vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
 
-        // Buffer memory barriers for pixel label and depth buffers
-        VkBufferMemoryBarrier barriers[2];
+        // Buffer memory barriers for pixel label, depth and spectral class buffers
+        VkBufferMemoryBarrier barriers[3];
 
         barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
         barriers[0].pNext = nullptr;
@@ -1945,7 +1972,10 @@ namespace helios {
         barriers[1].offset = 0;
         barriers[1].size = VK_WHOLE_SIZE;
 
-        vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 2, barriers, 0, nullptr);
+        barriers[2] = barriers[1];
+        barriers[2].buffer = camera_pixel_class_buffer.buffer;
+
+        vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 3, barriers, 0, nullptr);
 
         vkEndCommandBuffer(compute_command_buffer);
 
@@ -2146,6 +2176,17 @@ namespace helios {
             std::memcpy(results.scatter_buff_bottom_cam.data(), mapped, camera_buffer_bytes);
             vmaUnmapMemory(device->getAllocator(), camera_scatter_bottom_buffer.allocation);
             requireFiniteResults(results.scatter_buff_bottom_cam, "camera_scatter_bottom", launch_band_count);
+        }
+
+        results.spectral_incident.clear();
+        if (camera_count > 0 && spectral_incident_count > 0 && spectral_incident_buffer.size == spectral_incident_count * sizeof(float)) {
+            void *mapped;
+            results.spectral_incident.resize(spectral_incident_count);
+            requireMapSucceeded(vmaMapMemory(device->getAllocator(), spectral_incident_buffer.allocation, &mapped), "spectral_incident");
+            vmaInvalidateAllocation(device->getAllocator(), spectral_incident_buffer.allocation, 0, VK_WHOLE_SIZE);
+            std::memcpy(results.spectral_incident.data(), mapped, spectral_incident_count * sizeof(float));
+            vmaUnmapMemory(device->getAllocator(), spectral_incident_buffer.allocation);
+            requireFiniteResults(results.spectral_incident, "spectral_incident", launch_band_count);
         }
     }
 
@@ -2431,6 +2472,30 @@ namespace helios {
         // Zero both buffers
         zeroBuffer(camera_pixel_label_buffer);
         zeroBuffer(camera_pixel_depth_buffer);
+
+        // The class of the spectral texture seen in each pixel, written only where a primitive has a spectral texture
+        if (palette_entry_count > 0) {
+            if (camera_pixel_class_buffer.buffer == VK_NULL_HANDLE || camera_pixel_class_buffer.size != label_size) {
+                if (camera_pixel_class_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(camera_pixel_class_buffer);
+                }
+                VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                camera_pixel_class_buffer = createBuffer(label_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+                descriptors_dirty = true;
+            }
+            zeroBuffer(camera_pixel_class_buffer);
+        }
+    }
+
+    void VulkanComputeBackend::getCameraPixelSpectralClasses(std::vector<uint> &pixel_classes, const helios::int2 &resolution) {
+        const size_t total_pixels = size_t(resolution.x) * size_t(resolution.y);
+        // Recorded only when some primitive has a spectral texture, in a buffer sized by zeroCameraPixelBuffers() for this resolution
+        if (palette_entry_count == 0 || total_pixels == 0 || camera_pixel_class_buffer.buffer == VK_NULL_HANDLE || camera_pixel_class_buffer.size != total_pixels * sizeof(uint32_t)) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::getCameraPixelSpectralClasses): No classes of spectral textures were recorded for a " + std::to_string(resolution.x) + " x " + std::to_string(resolution.y) +
+                                 " camera. They are recorded by the pixel-label launch when some primitive has a spectral texture.");
+        }
+        pixel_classes.resize(total_pixels);
+        downloadBufferData(camera_pixel_class_buffer, pixel_classes.data(), total_pixels * sizeof(uint));
     }
 
     void VulkanComputeBackend::copyScatterToRadiation() {
@@ -2655,6 +2720,44 @@ namespace helios {
         // Zero both buffers
         zeroBuffer(camera_scatter_top_buffer);
         zeroBuffer(camera_scatter_bottom_buffer);
+
+        // The radiation reaching primitives with a spectral texture, which cameras need to see their classes: [face][source slot][primitive][band]
+        spectral_incident_count = palette_entry_count > 0 ? 2 * (source_count + 1) * primitive_count * launch_band_count_param : 0;
+        if (spectral_incident_count > 0) {
+            const size_t incident_bytes = spectral_incident_count * sizeof(float);
+            if (spectral_incident_buffer.buffer == VK_NULL_HANDLE || spectral_incident_buffer.size != incident_bytes) {
+                if (spectral_incident_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(spectral_incident_buffer);
+                }
+                VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                spectral_incident_buffer = createBuffer(incident_bytes, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+                descriptors_dirty = true;
+            }
+            zeroBuffer(spectral_incident_buffer);
+        }
+    }
+
+    void VulkanComputeBackend::uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) {
+        if (!class_flux_offset.empty() && class_flux_offset.size() != primitive_count) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::uploadSpectralCameraFlux): There are " + std::to_string(class_flux_offset.size()) + " class-flux offsets for " + std::to_string(primitive_count) + " primitives.");
+        }
+        const std::vector<uint32_t> packed = packSpectralCameraFlux(class_flux_offset, class_flux, launch_band_count);
+        if (spectral_camera_flux_buffer.buffer != VK_NULL_HANDLE) {
+            destroyBuffer(spectral_camera_flux_buffer);
+        }
+        spectral_camera_flux_buffer = createBuffer(packed.size() * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        uploadBufferData(spectral_camera_flux_buffer, packed.data(), packed.size() * sizeof(uint32_t));
+        descriptors_dirty = true;
+    }
+
+    void VulkanComputeBackend::uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) {
+        const std::vector<uint32_t> packed = packSpectralVertexIncident(vertex_values, layer_count, launch_band_count, camera);
+        if (spectral_vertex_buffer.buffer != VK_NULL_HANDLE) {
+            destroyBuffer(spectral_vertex_buffer);
+        }
+        spectral_vertex_buffer = createBuffer(packed.size() * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        uploadBufferData(spectral_vertex_buffer, packed.data(), packed.size() * sizeof(uint32_t));
+        descriptors_dirty = true;
     }
 
     void VulkanComputeBackend::uploadSourceFluxes(const std::vector<float> &fluxes) {
@@ -3040,6 +3143,7 @@ namespace helios {
                 {16, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // UV IDs (int)
                 {17, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Bbox vertices (periodic boundary)
                 {18, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Camera flux smoothing topology
+                {19, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Spectral texture class maps (packed)
         };
 
         VkDescriptorSetLayoutCreateInfo layout_info{};
@@ -3069,6 +3173,7 @@ namespace helios {
                 {15, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Transmissivity (camera-weighted)
                 {16, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // White reference weights (camera-weighted reflectivity of a white surface)
                 {17, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Specular surface layers (packed)
+                {18, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Spectral texture palettes (packed)
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(material_bindings.size());
@@ -3096,6 +3201,10 @@ namespace helios {
                 {13, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // white_reference_top
                 {14, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // white_reference_bottom
                 {15, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_in_top
+                {16, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Radiation reaching primitives with a spectral texture
+                {17, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Camera-weighted outgoing radiation of each spectral-texture class (packed)
+                {18, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_pixel_class
+                {19, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Smoothing-vertex radiation of primitives with a spectral texture (packed)
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(result_bindings.size());
@@ -3139,8 +3248,11 @@ namespace helios {
 
         // ========== Create Descriptor Pool ==========
 
+        // One descriptor for each binding of each set
+        const uint32_t storage_buffer_count = uint32_t(geometry_bindings.size() + material_bindings.size() + result_bindings.size() + sky_bindings.size() + debug_bindings.size());
+
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 72}, // All sets: 17 geo + 17 mat + 15 result + 9 sky + 1 debug + margin
+                {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, storage_buffer_count},
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
@@ -3235,6 +3347,22 @@ namespace helios {
         // Binding 17: a zeroed header means no primitive has a surface layer
         surface_layer_buffer = createBuffer(4 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(surface_layer_buffer);
+        // Material binding 18 and geometry binding 19: a zeroed header means no primitive has a spectral texture
+        spectral_palette_buffer = createBuffer(16 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(spectral_palette_buffer);
+        spectral_class_map_buffer = createBuffer(4 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(spectral_class_map_buffer);
+        // Results bindings 16 and 17: not written to (the shaders test the camera count and palette size) and a zeroed header
+        spectral_incident_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        zeroBuffer(spectral_incident_buffer);
+        spectral_camera_flux_buffer = createBuffer(4 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(spectral_camera_flux_buffer);
+        // Results binding 18: only written where a primitive has a spectral texture
+        camera_pixel_class_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        zeroBuffer(camera_pixel_class_buffer);
+        // Results binding 19: a header of zeros (no layers) until uploadSpectralVertexIncident()
+        spectral_vertex_buffer = createBuffer(4 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(spectral_vertex_buffer);
         radiation_specular_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(radiation_specular_buffer);
 
@@ -3903,6 +4031,23 @@ namespace helios {
             descriptor_writes.push_back(write);
         }
 
+        VkDescriptorBufferInfo class_map_info{};
+        class_map_info.buffer = spectral_class_map_buffer.buffer;
+        class_map_info.offset = 0;
+        class_map_info.range = VK_WHOLE_SIZE;
+
+        if (spectral_class_map_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 19;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &class_map_info;
+            descriptor_writes.push_back(write);
+        }
+
         // ========== Set 1: Material/Source Buffers ==========
 
         VkDescriptorBufferInfo source_pos_info{};
@@ -4176,6 +4321,24 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &surface_layer_info;
+            descriptor_writes.push_back(write);
+        }
+
+        // Spectral texture palettes: binding 18.
+        VkDescriptorBufferInfo palette_info{};
+        palette_info.buffer = spectral_palette_buffer.buffer;
+        palette_info.offset = 0;
+        palette_info.range = VK_WHOLE_SIZE;
+
+        if (spectral_palette_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_materials;
+            write.dstBinding = 18;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &palette_info;
             descriptor_writes.push_back(write);
         }
 
@@ -4453,6 +4616,70 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &radiation_in_top_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo spectral_incident_info{};
+        spectral_incident_info.buffer = spectral_incident_buffer.buffer;
+        spectral_incident_info.offset = 0;
+        spectral_incident_info.range = VK_WHOLE_SIZE;
+        if (spectral_incident_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 16;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &spectral_incident_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo spectral_camera_flux_info{};
+        spectral_camera_flux_info.buffer = spectral_camera_flux_buffer.buffer;
+        spectral_camera_flux_info.offset = 0;
+        spectral_camera_flux_info.range = VK_WHOLE_SIZE;
+        if (spectral_camera_flux_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 17;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &spectral_camera_flux_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo camera_pixel_class_info{};
+        camera_pixel_class_info.buffer = camera_pixel_class_buffer.buffer;
+        camera_pixel_class_info.offset = 0;
+        camera_pixel_class_info.range = VK_WHOLE_SIZE;
+        if (camera_pixel_class_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 18;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &camera_pixel_class_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo spectral_vertex_info{};
+        spectral_vertex_info.buffer = spectral_vertex_buffer.buffer;
+        spectral_vertex_info.offset = 0;
+        spectral_vertex_info.range = VK_WHOLE_SIZE;
+        if (spectral_vertex_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 19;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &spectral_vertex_info;
             descriptor_writes.push_back(write);
         }
 

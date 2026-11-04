@@ -733,11 +733,11 @@ public:
      * @brief Check if the GPU ray tracing backend is available
      *
      * Attempts to initialize the GPU backend (Vulkan or OptiX). If initialization
-     * succeeds, the backend is functional. If it fails (e.g., no GPU, no driver,
-     * CI runner without hardware), returns false.
+     * succeeds, the backend is functional. If it fails (e.g., no GPU or no driver),
+     * returns false.
      *
      * Also returns false if the environment variable HELIOS_NO_GPU is set to a
-     * non-zero value, allowing local simulation of headless CI environments.
+     * non-zero value.
      *
      * The probe runs at most once per process and the result is cached, so this is
      * cheap to call repeatedly and never re-enters the GPU driver. A driver that
@@ -815,7 +815,7 @@ public:
     //! Apply the diffuse (ambient) sky radiation to rays that leave the domain below the horizon
     /**
      * By default, the diffuse sky only fills the upper hemisphere: a ray that leaves all geometry heading downward (e.g., past the edge of a finite ground, or from the underside of an isolated object) receives no ambient radiation. Calling this
-     * function restores the behavior of Helios versions before 1.3.92, in which the sky filled the full sphere and such rays received the same ambient radiation as rays leaving upward. This applies to all bands, and to camera rays.
+     * function makes the sky fill the full sphere, so that such rays receive the same ambient radiation as rays leaving upward. This applies to all bands, and to camera rays.
      * \note To avoid edge effects from a finite ground (where the domain edges are dark from below), use \ref RadiationModel::enforcePeriodicBoundary() "enforcePeriodicBoundary()" rather than this function.
      */
     void enableBelowHorizonDiffuseRadiation();
@@ -2037,6 +2037,22 @@ public:
     void writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
                                                 const std::vector<std::string> &data_attribute_labels = {}, bool append_file = false);
 
+    //! Write segmentation masks in COCO JSON format for the classes of spectral textures seen by a camera
+    /**
+     * Each connected region of pixels that see one class of a spectral texture (Context::setPrimitiveSpectralTexture()) becomes one annotation, whose COCO category ID is the class value, so that for
+     * example the lesions of a leaf's class map become masks however many leaves they span. The class seen in each pixel is recorded as the global data
+     * "camera_[camera]_pixel_spectral_class" whenever runBand() renders the camera (as for "camera_[camera]_pixel_UUID") and some primitive has a spectral texture. Classes have the same meaning in every palette of a class map, so the masks do not
+     * depend on which palette is in use.
+     * \param[in] cameralabel Label of target camera
+     * \param[in] class_names Category name of each class to annotate, keyed by class value (1 or more). Classes not listed are not annotated.
+     * \param[in] json_filename Name of the output JSON file. Can include a relative path. If no extension is provided, ".json" will be added.
+     * \param[in] image_file Name of the image file corresponding to these labels
+     * \param[in] data_attribute_labels [optional] Primitive or object data labels whose mean within each mask is written as attributes, as for writeImageSegmentationMasks(). By default, none.
+     * \param[in] append_file [optional] If true, the data will be appended to the existing COCO JSON file. If false, a new file will be created. By default, it is false.
+     */
+    void writeImageSegmentationMasksBySpectralClass(const std::string &cameralabel, const std::map<uint, std::string> &class_names, const std::string &json_filename, const std::string &image_file,
+                                                    const std::vector<std::string> &data_attribute_labels = {}, bool append_file = false);
+
 private:
     // Helper functions for camera metadata export
     std::string detectLightingType() const;
@@ -2556,7 +2572,7 @@ protected:
 
     /* Backend abstraction layer */
 
-    //! Ray tracing backend (will replace direct OptiX usage)
+    //! Ray tracing backend
     std::unique_ptr<helios::RayTracingBackend> backend;
 
     //! Backend-agnostic geometry data (built from Context, uploaded to backend)
@@ -2564,6 +2580,25 @@ protected:
 
     //! Backend-agnostic material data (built from Context, uploaded to backend)
     helios::RayTracingMaterial material_data;
+
+    //! For each primitive position with a spectral texture, the fraction of its opaque area in each class of its class map (class, fraction), as the backends sample the class map; empty for a primitive without one. Built with the geometry, since it
+    //! depends only on the class map and the (u,v) coordinates.
+    std::vector<std::vector<std::pair<uint16_t, float>>> spectral_class_fractions;
+
+    //! File of each class map in geometry_data.class_map_sizes, to check that a primitive's class map is the one its geometry was built with
+    std::vector<std::string> spectral_class_map_files;
+
+    //! Outgoing radiation of each class of each primitive with a spectral texture, as one camera sees it
+    /**
+     * \param[in] spectral_incident Radiation reaching each face of each primitive, per [face][source slot][primitive][launch band], accumulated over the launches
+     * \param[in] emitted_flux Radiation emitted by each face of each primitive, per [face][primitive][launch band], which every class of the primitive sends out
+     * \param[in] camera Index of the camera, whose camera-weighted palette values are used
+     * \param[in] band_launch_flag Which global bands are launched
+     * \param[out] class_flux_offset First class-flux slot of each primitive, or UINT32_MAX (see RayTracingBackend::uploadSpectralCameraFlux())
+     * \param[out] class_flux Outgoing radiation per [face][class-flux slot][launch band]
+     */
+    void computeSpectralCameraFlux(const std::vector<float> &spectral_incident, const std::vector<float> &emitted_flux, uint camera, const std::vector<char> &band_launch_flag, std::vector<uint32_t> &class_flux_offset,
+                                   std::vector<float> &class_flux) const;
 
     //! Per band label, the first reason the last updateRadiativeProperties() could not weight a primitive's reflectivity/transmissivity spectrum in that band
     /**
@@ -2662,6 +2697,17 @@ protected:
      * \param[out] vertex_flux_bottom Area-weighted mean bottom-face radiation at each shared vertex, indexed [vertex][band].
      */
     void accumulateCameraFluxAtVertices(const std::vector<float> &flux_top, const std::vector<float> &flux_bottom, size_t band_count, std::vector<float> &vertex_flux_top, std::vector<float> &vertex_flux_bottom) const;
+
+    //! Average the radiation reaching and leaving the faces of primitives with a spectral texture onto the shared vertices, for camera flux smoothing
+    /**
+     * Each vertex takes the area-weighted mean over the primitives with a spectral texture that meet there, so that the zeros recorded for the others do not dilute it.
+     * \param[in] spectral_incident Radiation reaching each face, per [face][source slot][primitive][band] (see RayTracingResults::spectral_incident).
+     * \param[in] spectral_emitted Radiation emitted by each face, per [face][primitive][band].
+     * \param[in] slot_count Number of source slots.
+     * \param[in] band_count Number of bands in the current launch.
+     * \param[out] vertex_values Values per [face][layer][vertex][band], where layers 0 to slot_count - 1 are the source slots and layer slot_count the emitted radiation (see RayTracingBackend::uploadSpectralVertexIncident()).
+     */
+    void accumulateSpectralIncidentAtVertices(const std::vector<float> &spectral_incident, const std::vector<float> &spectral_emitted, size_t slot_count, size_t band_count, std::vector<float> &vertex_values) const;
 
     //! Sum a camera's white reference over the surfaces its pixels see, for its "auto" white balance
     /**

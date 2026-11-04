@@ -1837,6 +1837,118 @@ TEST_CASE("Texture and material changes reach the primitives using them") {
         DOCTEST_CHECK(ctx.getPrimitiveArea(deleted_user) == doctest::Approx(1.f));
     }
 
+    SUBCASE("An object reports the texture its primitives currently use") {
+        Context ctx;
+        ctx.addMaterial("diamond");
+        ctx.setMaterialTexture("diamond", diamond_texture);
+        ctx.addMaterial("colored");
+        ctx.setMaterialColor("colored", make_RGBAcolor(1, 0, 0, 1));
+
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2), disk_texture);
+        DOCTEST_CHECK(ctx.getObjectTextureFile(tile) == disk_texture);
+
+        ctx.assignMaterialToObject(tile, "diamond");
+        DOCTEST_CHECK(ctx.getObjectTextureFile(tile) == diamond_texture);
+        uint tile_copy = ctx.copyObject(tile);
+        DOCTEST_CHECK(ctx.getObjectTextureFile(tile_copy) == diamond_texture);
+
+        ctx.assignMaterialToObject(tile, "colored");
+        DOCTEST_CHECK(!ctx.objectHasTexture(tile));
+        DOCTEST_CHECK(ctx.getObjectTextureFile(tile).empty());
+
+        // The primitives of a polymesh are textured individually, and its object has to report that too
+        uint triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), diamond_texture, make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+        uint polymesh = ctx.addPolymeshObject({triangle});
+        DOCTEST_CHECK(ctx.objectHasTexture(polymesh));
+        DOCTEST_CHECK(ctx.getObjectTextureFile(polymesh) == diamond_texture);
+    }
+
+    SUBCASE("Changing the subdivision of a tile keeps the material given to it after it was created") {
+        Context ctx;
+        ctx.addMaterial("diamond");
+        ctx.setMaterialTexture("diamond", diamond_texture);
+        ctx.setMaterialData("diamond", "specular_roughness", 0.3f);
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2), disk_texture);
+        ctx.assignMaterialToObject(tile, "diamond");
+
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
+
+        float tile_area = 0.f;
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile)) {
+            DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == "diamond");
+            DOCTEST_CHECK(ctx.getPrimitiveTextureFile(UUID) == diamond_texture);
+            tile_area += ctx.getPrimitiveArea(UUID);
+        }
+        DOCTEST_CHECK(std::fabs(tile_area - 0.5f) < 0.02f);
+    }
+
+    SUBCASE("Changing the subdivision of a colored tile given a textured material keeps the texture") {
+        Context ctx;
+        ctx.addMaterial("disk");
+        ctx.setMaterialTexture("disk", disk_texture);
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2), RGB::red);
+        ctx.assignMaterialToObject(tile, "disk");
+
+        DOCTEST_CHECK_NOTHROW(ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4)));
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile)) {
+            DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == "disk");
+        }
+    }
+
+    SUBCASE("Changing the subdivision of a textured tile given a colored material stays colored") {
+        Context ctx;
+        ctx.addMaterial("colored");
+        ctx.setMaterialColor("colored", make_RGBAcolor(0, 1, 0, 0.5f));
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2), disk_texture);
+        ctx.assignMaterialToObject(tile, "colored");
+
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
+
+        float tile_area = 0.f;
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile)) {
+            DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == "colored");
+            DOCTEST_CHECK(ctx.getPrimitiveTextureFile(UUID).empty());
+            tile_area += ctx.getPrimitiveArea(UUID);
+        }
+        DOCTEST_CHECK(tile_area == doctest::Approx(1.f));
+    }
+
+    SUBCASE("Changing the subdivision of a tile keeps the material of each part of it") {
+        Context ctx;
+        ctx.addMaterial("left");
+        ctx.setMaterialColor("left", make_RGBAcolor(1, 0, 0, 1));
+        ctx.addMaterial("right");
+        ctx.setMaterialColor("right", make_RGBAcolor(0, 1, 0, 1));
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 1), RGB::black);
+        const std::vector<uint> UUIDs = ctx.getObjectPrimitiveUUIDs(tile);
+        ctx.assignMaterialToPrimitive(UUIDs.at(0), "left");
+        ctx.assignMaterialToPrimitive(UUIDs.at(1), "right");
+
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 1));
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile)) {
+            DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == (ctx.getPatchCenter(UUID).x < 0.f ? "left" : "right"));
+        }
+    }
+
+    SUBCASE("Changing the subdivision of a tile that lost a sub-patch keeps its material") {
+        // The remaining sub-patches no longer line up with the subdivision grid, so a new sub-patch cannot be matched to the old one in its cell
+        Context ctx;
+        ctx.addMaterial("diamond");
+        ctx.setMaterialTexture("diamond", diamond_texture);
+        uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2), diamond_texture);
+        ctx.assignMaterialToObject(tile, "diamond");
+        ctx.deletePrimitive(ctx.getObjectPrimitiveUUIDs(tile).back());
+        DOCTEST_REQUIRE(ctx.getObjectPrimitiveUUIDs(tile).size() == 3);
+
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
+
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile)) {
+            DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == "diamond");
+        }
+    }
+
     SUBCASE("A textured primitive keeps its opaque area through writeXML and loadXML") {
         const std::string filename = (std::filesystem::temp_directory_path() / "helios_test_textured_material_area.xml").string();
 
@@ -1859,6 +1971,494 @@ TEST_CASE("Texture and material changes reach the primitives using them") {
             DOCTEST_CHECK(std::fabs(ctx2.getPrimitiveArea(loaded_UUIDs.at(i)) - ctx.getPrimitiveArea(UUIDs.at(i))) < 1e-4f);
         }
     }
+}
+
+TEST_CASE("Primitive color texture") {
+    // A copy of the disk texture in another color, with exactly the same transparency
+    const std::string shape_texture = "lib/images/disk_texture.png";
+    uint width = 0;
+    uint height = 0;
+    std::vector<RGBAcolor> pixels;
+    helios::readPNG(shape_texture, width, height, pixels);
+    for (RGBAcolor &pixel: pixels) {
+        pixel = make_RGBAcolor(1.f, 1.f, 0.f, pixel.a);
+    }
+    const std::string color_texture = (std::filesystem::temp_directory_path() / "helios_test_color_texture.png").string();
+    helios::writePNG(color_texture, width, height, pixels);
+
+    SUBCASE("It changes how a primitive looks and nothing else") {
+        Context ctx;
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        const uint bystander = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        const std::string material = ctx.getPrimitiveMaterialLabel(patch);
+        const float area = ctx.getPrimitiveArea(patch);
+
+        DOCTEST_CHECK(ctx.getPrimitiveColorTextureFile(patch) == shape_texture);
+
+        ctx.markGeometryClean();
+        const uint64_t shape_revision = ctx.getShapeRevision();
+        ctx.setPrimitiveColorTexture(patch, color_texture);
+
+        DOCTEST_CHECK(ctx.getPrimitiveColorTextureFile(patch) == color_texture);
+        DOCTEST_CHECK(ctx.getPrimitiveTextureFile(patch) == shape_texture);
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(patch) == material);
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(bystander) == material);
+        DOCTEST_CHECK(ctx.getPrimitiveArea(patch) == area);
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(patch));
+        DOCTEST_CHECK(!ctx.isPrimitiveDirty(bystander));
+        DOCTEST_CHECK(ctx.getPrimitiveColorTextureFile(bystander) == shape_texture);
+        DOCTEST_CHECK(ctx.getShapeRevision() == shape_revision);
+
+        // Setting what it already has is not a change
+        ctx.markGeometryClean();
+        ctx.setPrimitiveColorTexture(patch, color_texture);
+        DOCTEST_CHECK(!ctx.isPrimitiveDirty(patch));
+
+        ctx.setPrimitiveColorTexture(patch, "");
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(patch));
+        DOCTEST_CHECK(ctx.getPrimitiveColorTextureFile(patch) == shape_texture);
+    }
+
+    SUBCASE("An image that does not match the shape is rejected and changes nothing") {
+        Context ctx;
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        const uint other_patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/diamond_texture.png");
+        const uint untextured = ctx.addPatch();
+
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveColorTexture(patch, "lib/images/diamond_texture.png")); // a different resolution and outline
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveColorTexture(patch, "lib/images/solid.jpg")); // no transparency channel
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveColorTexture(patch, "lib/images/missing.png"));
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveColorTexture(untextured, color_texture)); // no shape to match
+        DOCTEST_CHECK(ctx.getPrimitiveColorTextureFile(patch) == shape_texture);
+
+        // One bad primitive leaves the others as they were
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveColorTexture(std::vector<uint>{patch, other_patch}, color_texture));
+        DOCTEST_CHECK(ctx.getPrimitiveColorTextureFile(patch) == shape_texture);
+
+        // The same resolution with a different outline
+        std::vector<RGBAcolor> different_outline = pixels;
+        different_outline.at(different_outline.size() / 2 + width / 2).a = 1.f - different_outline.at(different_outline.size() / 2 + width / 2).a;
+        const std::string different_outline_texture = (std::filesystem::temp_directory_path() / "helios_test_color_texture_outline.png").string();
+        helios::writePNG(different_outline_texture, width, height, different_outline);
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveColorTexture(patch, different_outline_texture));
+        std::filesystem::remove(different_outline_texture);
+    }
+
+    SUBCASE("It follows a primitive that is copied and leaves when the shape changes") {
+        Context ctx;
+        ctx.addMaterial("same_texture");
+        ctx.setMaterialTexture("same_texture", shape_texture);
+        ctx.addMaterial("other_texture");
+        ctx.setMaterialTexture("other_texture", "lib/images/diamond_texture.png");
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        ctx.setPrimitiveColorTexture(patch, color_texture);
+
+        DOCTEST_CHECK(ctx.getPrimitiveColorTextureFile(ctx.copyPrimitive(patch)) == color_texture);
+
+        ctx.assignMaterialToPrimitive(patch, "same_texture");
+        DOCTEST_CHECK(ctx.getPrimitiveColorTextureFile(patch) == color_texture);
+
+        ctx.assignMaterialToPrimitive(patch, "other_texture");
+        DOCTEST_CHECK(ctx.getPrimitiveColorTextureFile(patch) == "lib/images/diamond_texture.png");
+
+        const uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2), shape_texture.c_str());
+        ctx.setPrimitiveColorTexture(ctx.getObjectPrimitiveUUIDs(tile), color_texture);
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile)) {
+            DOCTEST_CHECK(ctx.getPrimitiveColorTextureFile(UUID) == color_texture);
+            DOCTEST_CHECK(ctx.getPrimitiveTextureFile(UUID) == shape_texture);
+        }
+    }
+
+    SUBCASE("It survives writeXML and loadXML") {
+        const std::string filename = (std::filesystem::temp_directory_path() / "helios_test_color_texture.xml").string();
+        Context ctx;
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        const uint triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), shape_texture.c_str(), make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+        const uint plain_patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        ctx.setPrimitiveColorTexture(std::vector<uint>{patch, triangle}, color_texture);
+        ctx.writeXML(filename.c_str(), {patch, triangle, plain_patch}, true);
+
+        Context ctx2;
+        const std::vector<uint> loaded_UUIDs = ctx2.loadXML(filename.c_str(), true);
+        std::filesystem::remove(filename);
+
+        DOCTEST_REQUIRE(loaded_UUIDs.size() == 3);
+        DOCTEST_CHECK(ctx2.getPrimitiveColorTextureFile(loaded_UUIDs.at(0)) == color_texture);
+        DOCTEST_CHECK(ctx2.getPrimitiveColorTextureFile(loaded_UUIDs.at(1)) == shape_texture);
+        DOCTEST_CHECK(ctx2.getPrimitiveColorTextureFile(loaded_UUIDs.at(2)) == color_texture);
+        DOCTEST_CHECK(ctx2.getPrimitiveTextureFile(loaded_UUIDs.at(0)) == shape_texture);
+    }
+
+    std::filesystem::remove(color_texture);
+}
+
+TEST_CASE("Primitive spectral texture") {
+    // A class map for the disk texture: transparent texels are class 0, the opaque left half class 1 and the opaque right half class 2
+    const std::string shape_texture = "lib/images/disk_texture.png";
+    std::vector<std::vector<bool>> opaque;
+    {
+        Context ctx;
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        opaque = *ctx.getPrimitiveTextureTransparencyData(patch);
+    }
+    const uint height = uint(opaque.size());
+    const uint width = uint(opaque.front().size());
+    auto makeClassMap = [&](const std::function<uint16_t(uint x, uint y)> &class_at) {
+        std::vector<uint16_t> classes(size_t(width) * height);
+        for (uint y = 0; y < height; y++) {
+            for (uint x = 0; x < width; x++) {
+                classes.at(size_t(y) * width + x) = class_at(x, y);
+            }
+        }
+        return classes;
+    };
+    const std::vector<uint16_t> two_halves = makeClassMap([&](uint x, uint y) { return uint16_t(opaque.at(y).at(x) ? (x < width / 2 ? 1 : 2) : 0); });
+    const std::string class_map = (std::filesystem::temp_directory_path() / "helios_test_class_map.png").string();
+    helios::writePNGSingleChannel(class_map, width, height, two_halves, 8);
+
+    const std::vector<SpectralTextureClass> two_classes = {{"lamina_reflectivity", "lamina_transmissivity", "measured"}, {"lesion_reflectivity", "", "assumed"}};
+    const std::vector<SpectralTextureClass> three_classes = {{"a_reflectivity", "a_transmissivity", ""}, {"b_reflectivity", "b_transmissivity", ""}, {"c_reflectivity", "c_transmissivity", ""}};
+    const std::vector<SpectralTextureClass> one_class = {{"a_reflectivity", "a_transmissivity", ""}};
+
+    SUBCASE("Palettes are registered once under a label") {
+        Context ctx;
+        DOCTEST_CHECK(!ctx.doesSpectralPaletteExist("leaf"));
+        ctx.addSpectralPalette("leaf", two_classes);
+        DOCTEST_CHECK(ctx.doesSpectralPaletteExist("leaf"));
+        DOCTEST_CHECK(ctx.getSpectralPalette("leaf") == two_classes);
+
+        // Registering the same classes again is not a change; different classes under the same label are rejected
+        DOCTEST_CHECK_NOTHROW(ctx.addSpectralPalette("leaf", two_classes));
+        DOCTEST_CHECK_THROWS(ctx.addSpectralPalette("leaf", three_classes));
+        DOCTEST_CHECK(ctx.getSpectralPalette("leaf") == two_classes);
+
+        DOCTEST_CHECK_THROWS(ctx.addSpectralPalette("", two_classes));
+        DOCTEST_CHECK_THROWS(ctx.addSpectralPalette("empty", {}));
+        DOCTEST_CHECK_THROWS(ctx.addSpectralPalette("no_reflectivity", {{"", "a_transmissivity", ""}}));
+        DOCTEST_CHECK(!ctx.doesSpectralPaletteExist("empty"));
+        DOCTEST_CHECK_THROWS(static_cast<void>(ctx.getSpectralPalette("missing")));
+
+        // A palette returned by reference stays where it is while more are registered, such as one palette per senescence stage built from the first
+        const std::vector<SpectralTextureClass> *first = &ctx.getSpectralPalette("leaf");
+        for (int stage = 0; stage < 100; stage++) {
+            ctx.addSpectralPalette("stage_" + std::to_string(stage), ctx.getSpectralPalette("leaf"));
+        }
+        DOCTEST_CHECK(&ctx.getSpectralPalette("leaf") == first);
+        DOCTEST_CHECK(*first == two_classes);
+    }
+
+    SUBCASE("Assigning a class map is a change of shape that leaves the material and area alone") {
+        Context ctx;
+        ctx.addSpectralPalette("leaf", two_classes);
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        const uint bystander = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        const std::string material = ctx.getPrimitiveMaterialLabel(patch);
+        const float area = ctx.getPrimitiveArea(patch);
+
+        DOCTEST_CHECK(!ctx.primitiveHasSpectralTexture(patch));
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralTextureFile(patch).empty());
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralPalette(patch).empty());
+
+        ctx.markGeometryClean();
+        const uint64_t shape_revision = ctx.getShapeRevision();
+        ctx.setPrimitiveSpectralTexture(patch, class_map, "leaf");
+
+        DOCTEST_CHECK(ctx.primitiveHasSpectralTexture(patch));
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralTextureFile(patch) == class_map);
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralPalette(patch) == "leaf");
+        DOCTEST_CHECK(ctx.getPrimitiveTextureFile(patch) == shape_texture);
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(patch) == material);
+        DOCTEST_CHECK(ctx.getPrimitiveArea(patch) == area);
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(patch));
+        DOCTEST_CHECK(!ctx.isPrimitiveDirty(bystander));
+        DOCTEST_CHECK(!ctx.primitiveHasSpectralTexture(bystander));
+        DOCTEST_CHECK(ctx.getShapeRevision() != shape_revision);
+
+        // The class map is held row by row from the top of the image, as it is stored in the file
+        int2 resolution;
+        const std::vector<uint16_t> &stored = ctx.getSpectralTextureClassMap(class_map, resolution);
+        DOCTEST_CHECK(resolution.x == int(width));
+        DOCTEST_CHECK(resolution.y == int(height));
+        DOCTEST_CHECK(stored == two_halves);
+
+        // Assigning what it already has is not a change
+        ctx.markGeometryClean();
+        const uint64_t assigned_revision = ctx.getShapeRevision();
+        ctx.setPrimitiveSpectralTexture(patch, class_map, "leaf");
+        DOCTEST_CHECK(!ctx.isPrimitiveDirty(patch));
+        DOCTEST_CHECK(ctx.getShapeRevision() == assigned_revision);
+
+        // A list with a primitive that does not exist is rejected before anything is removed
+        DOCTEST_CHECK_THROWS(ctx.clearPrimitiveSpectralTexture(std::vector<uint>{patch, 99999}));
+        DOCTEST_CHECK(ctx.primitiveHasSpectralTexture(patch));
+
+        ctx.clearPrimitiveSpectralTexture(patch);
+        DOCTEST_CHECK(!ctx.primitiveHasSpectralTexture(patch));
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralTextureFile(patch).empty());
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralPalette(patch).empty());
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(patch));
+        DOCTEST_CHECK(ctx.getShapeRevision() != assigned_revision);
+
+        DOCTEST_CHECK_THROWS(static_cast<void>(ctx.getSpectralTextureClassMap("never_assigned.png", resolution)));
+    }
+
+    SUBCASE("Changing only the palette is not a change of shape") {
+        Context ctx;
+        ctx.addSpectralPalette("young", two_classes);
+        ctx.addSpectralPalette("old", three_classes);
+        ctx.addSpectralPalette("too_small", one_class);
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        const uint untextured = ctx.addPatch();
+        ctx.setPrimitiveSpectralTexture(patch, class_map, "young");
+
+        ctx.markGeometryClean();
+        const uint64_t shape_revision = ctx.getShapeRevision();
+        ctx.setPrimitiveSpectralPalette(patch, "old");
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralPalette(patch) == "old");
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralTextureFile(patch) == class_map);
+        DOCTEST_CHECK(ctx.isPrimitiveDirty(patch));
+        DOCTEST_CHECK(ctx.getShapeRevision() == shape_revision);
+
+        // A palette with fewer classes than the class map uses, an unknown palette, and a primitive with no class map are rejected
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralPalette(patch, "too_small"));
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralPalette(patch, "missing"));
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralPalette(untextured, "old"));
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralPalette(std::vector<uint>{patch, untextured}, "young"));
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralPalette(patch) == "old");
+    }
+
+    SUBCASE("A class map that does not match the primitive is rejected and changes nothing") {
+        Context ctx;
+        ctx.addSpectralPalette("leaf", two_classes);
+        ctx.addSpectralPalette("too_small", one_class);
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        const uint other_patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/diamond_texture.png");
+
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(patch, class_map, "missing"));
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(patch, class_map, "too_small")); // class 2 has no palette entry
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(patch, "lib/images/missing.png", "leaf"));
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(patch, shape_texture, "leaf")); // RGBA, not a single-channel class map
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(other_patch, class_map, "leaf")); // a different resolution
+
+        // Class 0 marks exactly the transparent texels of the primitive's texture
+        const std::string opaque_texel_is_zero = (std::filesystem::temp_directory_path() / "helios_test_class_map_zero.png").string();
+        std::vector<uint16_t> classes = two_halves;
+        classes.at(size_t(height / 2) * width + width / 2) = 0; // the centre of the disk is opaque
+        helios::writePNGSingleChannel(opaque_texel_is_zero, width, height, classes, 8);
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(patch, opaque_texel_is_zero, "leaf"));
+        std::filesystem::remove(opaque_texel_is_zero);
+
+        const std::string transparent_texel_has_class = (std::filesystem::temp_directory_path() / "helios_test_class_map_corner.png").string();
+        classes = two_halves;
+        DOCTEST_REQUIRE(!opaque.at(0).at(0)); // the corner of the disk texture is transparent
+        classes.at(0) = 1;
+        helios::writePNGSingleChannel(transparent_texel_has_class, width, height, classes, 8);
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(patch, transparent_texel_has_class, "leaf"));
+        std::filesystem::remove(transparent_texel_has_class);
+
+        DOCTEST_CHECK(!ctx.primitiveHasSpectralTexture(patch));
+
+        // One bad primitive leaves the others as they were
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(std::vector<uint>{patch, other_patch}, class_map, "leaf"));
+        DOCTEST_CHECK(!ctx.primitiveHasSpectralTexture(patch));
+    }
+
+    SUBCASE("The class map is compared with the texture's mask the right way up") {
+        // A 4x3 texture whose top-left texel alone is transparent. The class map must have class 0 there, and not at the bottom-left,
+        // top-right or bottom-right texel, which a flipped or mirrored comparison would accept.
+        const uint mask_width = 4;
+        const uint mask_height = 3;
+        std::vector<RGBAcolor> pixels(mask_width * mask_height, make_RGBAcolor(0.2f, 0.6f, 0.2f, 1.f));
+        pixels.at(0).a = 0.f; // row 0 (the top of the image), column 0
+        const std::string asymmetric_texture = (std::filesystem::temp_directory_path() / "helios_test_asymmetric_texture.png").string();
+        helios::writePNG(asymmetric_texture, mask_width, mask_height, pixels);
+
+        Context ctx;
+        ctx.addSpectralPalette("leaf", two_classes);
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, asymmetric_texture.c_str());
+
+        auto classMapWithZeroAt = [&](uint zero_index, const std::string &name) {
+            std::vector<uint16_t> classes(mask_width * mask_height, 1);
+            classes.at(zero_index) = 0;
+            const std::string file = (std::filesystem::temp_directory_path() / name).string();
+            helios::writePNGSingleChannel(file, mask_width, mask_height, classes, 8);
+            return file;
+        };
+        const std::string top_left = classMapWithZeroAt(0, "helios_test_class_map_top_left.png");
+        const std::string top_right = classMapWithZeroAt(mask_width - 1, "helios_test_class_map_top_right.png");
+        const std::string bottom_left = classMapWithZeroAt((mask_height - 1) * mask_width, "helios_test_class_map_bottom_left.png");
+        const std::string bottom_right = classMapWithZeroAt(mask_height * mask_width - 1, "helios_test_class_map_bottom_right.png");
+
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(patch, top_right, "leaf"));
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(patch, bottom_left, "leaf"));
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(patch, bottom_right, "leaf"));
+        DOCTEST_CHECK_NOTHROW(ctx.setPrimitiveSpectralTexture(patch, top_left, "leaf"));
+
+        // The class map is kept as it is stored in the file: the first value is the top-left texel
+        int2 resolution;
+        DOCTEST_CHECK(ctx.getSpectralTextureClassMap(top_left, resolution).front() == 0);
+
+        for (const std::string &file: {asymmetric_texture, top_left, top_right, bottom_left, bottom_right}) {
+            std::filesystem::remove(file);
+        }
+    }
+
+    SUBCASE("A primitive without a transparency mask needs a class map with no class 0") {
+        Context ctx;
+        ctx.addSpectralPalette("leaf", two_classes);
+        const uint untextured_patch = ctx.addPatch();
+        const uint untextured_triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0));
+        const uint voxel = ctx.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
+
+        const std::string all_opaque = (std::filesystem::temp_directory_path() / "helios_test_class_map_opaque.png").string();
+        helios::writePNGSingleChannel(all_opaque, 3, 2, {1, 1, 2, 2, 1, 1}, 8);
+
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(untextured_patch, class_map, "leaf")); // has transparent texels
+        DOCTEST_CHECK_NOTHROW(ctx.setPrimitiveSpectralTexture(untextured_patch, all_opaque, "leaf")); // any resolution
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralTextureFile(untextured_patch) == all_opaque);
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(untextured_triangle, all_opaque, "leaf")); // no (u,v) coordinates
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(voxel, all_opaque, "leaf"));
+
+        // A texture without a transparency channel is opaque everywhere, and must match the class map's resolution
+        const uint jpeg_patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/solid.jpg");
+        const uint jpeg_width = uint(ctx.getPrimitiveTextureSize(jpeg_patch).x);
+        const uint jpeg_height = uint(ctx.getPrimitiveTextureSize(jpeg_patch).y);
+        DOCTEST_REQUIRE(!ctx.primitiveTextureHasTransparencyChannel(jpeg_patch));
+        const std::string jpeg_class_map = (std::filesystem::temp_directory_path() / "helios_test_class_map_jpeg.png").string();
+        std::vector<uint16_t> jpeg_classes(size_t(jpeg_width) * jpeg_height, 2);
+        helios::writePNGSingleChannel(jpeg_class_map, jpeg_width, jpeg_height, jpeg_classes, 8);
+        DOCTEST_CHECK_NOTHROW(ctx.setPrimitiveSpectralTexture(jpeg_patch, jpeg_class_map, "leaf"));
+        jpeg_classes.at(0) = 0;
+        const std::string jpeg_class_map_zero = (std::filesystem::temp_directory_path() / "helios_test_class_map_jpeg_zero.png").string();
+        helios::writePNGSingleChannel(jpeg_class_map_zero, jpeg_width, jpeg_height, jpeg_classes, 8);
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralTexture(jpeg_patch, jpeg_class_map_zero, "leaf"));
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralTextureFile(jpeg_patch) == jpeg_class_map);
+
+        std::filesystem::remove(all_opaque);
+        std::filesystem::remove(jpeg_class_map);
+        std::filesystem::remove(jpeg_class_map_zero);
+    }
+
+    SUBCASE("It follows a primitive that is copied and leaves when the texture changes") {
+        Context ctx;
+        ctx.addSpectralPalette("leaf", two_classes);
+        ctx.addMaterial("same_texture");
+        ctx.setMaterialTexture("same_texture", shape_texture);
+        ctx.addMaterial("other_texture");
+        ctx.setMaterialTexture("other_texture", "lib/images/diamond_texture.png");
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        ctx.setPrimitiveSpectralTexture(patch, class_map, "leaf");
+
+        const uint copy = ctx.copyPrimitive(patch);
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralTextureFile(copy) == class_map);
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralPalette(copy) == "leaf");
+
+        ctx.assignMaterialToPrimitive(patch, "same_texture");
+        DOCTEST_CHECK(ctx.getPrimitiveSpectralTextureFile(patch) == class_map);
+
+        ctx.assignMaterialToPrimitive(patch, "other_texture");
+        DOCTEST_CHECK(!ctx.primitiveHasSpectralTexture(patch));
+        DOCTEST_CHECK(ctx.primitiveHasSpectralTexture(copy));
+
+        // Giving it the texture it already has changes nothing; a different texture removes the class map matched to the old one
+        ctx.setPrimitiveTextureFile(copy, ctx.getPrimitiveTextureFile(copy));
+        DOCTEST_CHECK(ctx.primitiveHasSpectralTexture(copy));
+        ctx.setPrimitiveTextureFile(copy, "lib/images/diamond_texture.png");
+        DOCTEST_CHECK(!ctx.primitiveHasSpectralTexture(copy));
+    }
+
+    SUBCASE("It follows the sub-patches of a tile that is subdivided again or copied") {
+        Context ctx;
+        ctx.addSpectralPalette("leaf", two_classes);
+        const uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2), shape_texture.c_str());
+        ctx.setPrimitiveSpectralTexture(ctx.getObjectPrimitiveUUIDs(tile), class_map, "leaf");
+        ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile)) {
+            DOCTEST_CHECK(ctx.getPrimitiveSpectralTextureFile(UUID) == class_map);
+            DOCTEST_CHECK(ctx.getPrimitiveSpectralPalette(UUID) == "leaf");
+        }
+
+        const uint tile_copy = ctx.copyObject(tile);
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile_copy)) {
+            DOCTEST_CHECK(ctx.getPrimitiveSpectralTextureFile(UUID) == class_map);
+        }
+
+        // Each sub-patch of a tile without a texture maps its whole class map, so subdividing it again would repeat the class map a different number of times
+        const std::string all_opaque = (std::filesystem::temp_directory_path() / "helios_test_class_map_tile.png").string();
+        helios::writePNGSingleChannel(all_opaque, 2, 2, {1, 2, 2, 1}, 8);
+        const uint plain_tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2));
+        ctx.setPrimitiveSpectralTexture(ctx.getObjectPrimitiveUUIDs(plain_tile), all_opaque, "leaf");
+        DOCTEST_CHECK_THROWS(ctx.setTileObjectSubdivisionCount({plain_tile}, make_int2(4, 4)));
+        DOCTEST_CHECK(ctx.getObjectPrimitiveUUIDs(plain_tile).size() == 4);
+        ctx.clearPrimitiveSpectralTexture(ctx.getObjectPrimitiveUUIDs(plain_tile));
+        DOCTEST_CHECK_NOTHROW(ctx.setTileObjectSubdivisionCount({plain_tile}, make_int2(4, 4)));
+        std::filesystem::remove(all_opaque);
+    }
+
+    SUBCASE("Labels, provenance and file names with XML special characters survive writeXML and loadXML") {
+        const std::string filename = (std::filesystem::temp_directory_path() / "helios_test_spectral_texture_special.xml").string();
+        // '<', '>' and '"' are not allowed in Windows file names, so the file name uses the XML special characters that are; the labels above cover the rest.
+        const std::string special_class_map = (std::filesystem::temp_directory_path() / "helios_test_R&D_'class' map.png").string();
+        std::filesystem::copy_file(class_map, special_class_map, std::filesystem::copy_options::overwrite_existing);
+        const std::vector<SpectralTextureClass> special_classes = {{"rho \"lamina\" & <vein>", "tau\tlamina", "measured\nthen fitted\r"}, {"lesion", "", ""}};
+
+        Context ctx;
+        ctx.addSpectralPalette("leaf & \"lesions\"", special_classes);
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        ctx.setPrimitiveSpectralTexture(patch, special_class_map, "leaf & \"lesions\"");
+        ctx.writeXML(filename.c_str(), {patch}, true);
+
+        Context ctx2;
+        const std::vector<uint> loaded_UUIDs = ctx2.loadXML(filename.c_str(), true);
+        DOCTEST_REQUIRE(loaded_UUIDs.size() == 1);
+        DOCTEST_CHECK(ctx2.getSpectralPalette("leaf & \"lesions\"") == special_classes);
+        DOCTEST_CHECK(ctx2.getPrimitiveSpectralTextureFile(loaded_UUIDs.front()) == special_class_map);
+
+        // Loading the file into the Context that wrote it finds the same palette, which is not a conflict
+        DOCTEST_CHECK_NOTHROW(ctx.loadXML(filename.c_str(), true));
+
+        std::filesystem::remove(filename);
+        std::filesystem::remove(special_class_map);
+    }
+
+    SUBCASE("It survives writeXML and loadXML") {
+        const std::string filename = (std::filesystem::temp_directory_path() / "helios_test_spectral_texture.xml").string();
+        Context ctx;
+        ctx.addSpectralPalette("leaf", two_classes);
+        ctx.addSpectralPalette("unused", three_classes);
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        const uint triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), shape_texture.c_str(), make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+        const uint plain_patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        ctx.setPrimitiveSpectralTexture(std::vector<uint>{patch, triangle}, class_map, "leaf");
+        ctx.writeXML(filename.c_str(), {patch, triangle, plain_patch}, true);
+
+        Context ctx2;
+        const std::vector<uint> loaded_UUIDs = ctx2.loadXML(filename.c_str(), true);
+
+        DOCTEST_REQUIRE(loaded_UUIDs.size() == 3);
+        DOCTEST_CHECK(ctx2.doesSpectralPaletteExist("leaf"));
+        DOCTEST_CHECK(ctx2.getSpectralPalette("leaf") == two_classes);
+        DOCTEST_CHECK(!ctx2.doesSpectralPaletteExist("unused")); // only the palettes of the written primitives are written
+        size_t textured_count = 0;
+        for (uint UUID: loaded_UUIDs) {
+            if (ctx2.primitiveHasSpectralTexture(UUID)) {
+                textured_count++;
+                DOCTEST_CHECK(ctx2.getPrimitiveSpectralTextureFile(UUID) == class_map);
+                DOCTEST_CHECK(ctx2.getPrimitiveSpectralPalette(UUID) == "leaf");
+            }
+        }
+        DOCTEST_CHECK(textured_count == 2);
+
+        // A palette in the file that conflicts with one already in the Context is rejected
+        Context ctx3;
+        ctx3.addSpectralPalette("leaf", three_classes);
+        DOCTEST_CHECK_THROWS(ctx3.loadXML(filename.c_str(), true));
+
+        std::filesystem::remove(filename);
+    }
+
+    std::filesystem::remove(class_map);
 }
 
 TEST_CASE("Triangle Management") {
@@ -4747,8 +5347,8 @@ TEST_CASE("File path resolution priority") {
         // Rename the auto-generated material
         ctx.renameMaterial(auto_label, "bean_trifoliate_leaf");
         DOCTEST_CHECK(ctx.doesMaterialExist("bean_trifoliate_leaf"));
-        // Auto-label is retained as a lookup alias for deduplication
-        DOCTEST_CHECK(ctx.doesMaterialExist(auto_label));
+        // The material now belongs to its new label only
+        DOCTEST_CHECK(!ctx.doesMaterialExist(auto_label));
 
         // Primitive should now report the new display label
         DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == "bean_trifoliate_leaf");
@@ -4757,9 +5357,12 @@ TEST_CASE("File path resolution priority") {
         std::string tex = ctx.getMaterialTexture("bean_trifoliate_leaf");
         DOCTEST_CHECK(tex == "lib/images/disk_texture.png");
 
-        // Deduplication: a new triangle with the same texture should reuse the renamed material
+        // A new triangle with the same texture gets an automatic material of its own, not the renamed one: a named material is
+        // shared only with the primitives it is assigned to
         uint UUID2 = ctx.addTriangle(make_vec3(2, 0, 0), make_vec3(3, 0, 0), make_vec3(2, 1, 0), "lib/images/disk_texture.png", make_vec2(0, 0), make_vec2(1, 0), make_vec2(0, 1));
-        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID2) == "bean_trifoliate_leaf");
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID2).substr(0, 7) == "__auto_");
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID2) == auto_label);
+        DOCTEST_CHECK(ctx.getPrimitivesUsingMaterial("bean_trifoliate_leaf") == std::vector<uint>{UUID});
 
         // Rename a user-created (non-auto) material — old label should NOT be retained
         ctx.addMaterial("old_name");
@@ -4922,6 +5525,194 @@ TEST_CASE("File path resolution priority") {
         ctx.setPrimitiveColor(p1, make_RGBcolor(0, 0, 1));
         DOCTEST_CHECK(ctx.getPrimitiveColor(p1) == make_RGBcolor(0, 0, 1));
         DOCTEST_CHECK(ctx.getPrimitiveColor(p2) == make_RGBcolor(0, 1, 0));
+    }
+
+    SUBCASE("Material System - Changing the texture of a primitive does not change primitives created later") {
+        // Regression test. When the primitive was the only user of its automatic material, the material was edited in place but kept the label that hashes its
+        // original appearance, so the next primitive created with the original texture was given the edited material.
+        Context reference_ctx;
+        uint reference = reference_ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/disk_texture.png");
+        const float disk_area = reference_ctx.getPrimitiveArea(reference);
+        const std::vector<std::vector<bool>> disk_mask = *reference_ctx.getPrimitiveTextureTransparencyData(reference);
+
+        Context ctx;
+        uint first = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/disk_texture.png");
+        ctx.setPrimitiveTextureFile(first, "lib/images/diamond_texture.png");
+        uint second = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/disk_texture.png");
+
+        DOCTEST_CHECK(ctx.getPrimitiveTextureFile(first) == "lib/images/diamond_texture.png");
+        DOCTEST_CHECK(ctx.getPrimitiveTextureFile(second) == "lib/images/disk_texture.png");
+        DOCTEST_CHECK(ctx.getPrimitiveArea(second) == doctest::Approx(disk_area).epsilon(1e-5));
+        DOCTEST_CHECK(*ctx.getPrimitiveTextureTransparencyData(second) == disk_mask);
+        DOCTEST_CHECK(ctx.getPrimitiveArea(first) != doctest::Approx(disk_area).epsilon(1e-3));
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialID(first) != ctx.getPrimitiveMaterialID(second));
+        DOCTEST_CHECK(ctx.getMaterial(ctx.getPrimitiveMaterialID(first)).reference_count == 1);
+        DOCTEST_CHECK(ctx.getMaterial(ctx.getPrimitiveMaterialID(second)).reference_count == 1);
+    }
+
+    SUBCASE("Material System - Changing the RGB color of a primitive does not change primitives created later") {
+        Context ctx;
+        uint first = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, RGB::red);
+        ctx.setPrimitiveColor(first, RGB::blue);
+        uint second = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, RGB::red);
+
+        DOCTEST_CHECK(ctx.getPrimitiveColor(first) == RGB::blue);
+        DOCTEST_CHECK(ctx.getPrimitiveColor(second) == RGB::red);
+    }
+
+    SUBCASE("Material System - Changing the RGBA color of a primitive does not change primitives created later") {
+        Context ctx;
+        const RGBAcolor translucent_red = make_RGBAcolor(1, 0, 0, 0.5f);
+        uint first = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, translucent_red);
+        ctx.setPrimitiveColor(first, make_RGBAcolor(0, 0, 1, 0.25f));
+        uint second = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, translucent_red);
+
+        DOCTEST_CHECK(ctx.getPrimitiveColorRGBA(first) == make_RGBAcolor(0, 0, 1, 0.25f));
+        DOCTEST_CHECK(ctx.getPrimitiveColorRGBA(second) == translucent_red);
+    }
+
+    SUBCASE("Material System - Overriding the texture color of a primitive does not change primitives created later") {
+        Context ctx;
+        uint first = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/disk_texture.png");
+        ctx.overridePrimitiveTextureColor(first);
+        uint second = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/disk_texture.png");
+
+        DOCTEST_CHECK(ctx.isPrimitiveTextureColorOverridden(first));
+        DOCTEST_CHECK(!ctx.isPrimitiveTextureColorOverridden(second));
+    }
+
+    SUBCASE("Material System - Primitive-level edits of a named material") {
+        // A named material belongs to its label: editing its only user edits the material, so material data set on the label afterwards still reaches the primitive
+        Context ctx;
+        ctx.addMaterial("named_mat");
+        ctx.setMaterialTexture("named_mat", "lib/images/disk_texture.png");
+
+        uint first = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        ctx.assignMaterialToPrimitive(first, "named_mat");
+        ctx.setPrimitiveColor(first, RGB::blue);
+        ctx.overridePrimitiveTextureColor(first);
+        ctx.setMaterialData("named_mat", "test_value", 2.5f);
+
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(first) == "named_mat");
+        DOCTEST_CHECK(ctx.getMaterialColor("named_mat") == make_RGBAcolor(RGB::blue, 1.f));
+        DOCTEST_CHECK(ctx.isMaterialTextureColorOverridden("named_mat"));
+        DOCTEST_CHECK(ctx.getMaterial(ctx.getPrimitiveMaterialID(first)).doesMaterialDataExist("test_value"));
+
+        // Once the material is shared, editing one primitive copies it and leaves the other primitive unchanged
+        uint second = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        ctx.assignMaterialToPrimitive(second, "named_mat");
+        ctx.setPrimitiveColor(second, RGB::red);
+
+        DOCTEST_CHECK(ctx.getPrimitiveColor(first) == RGB::blue);
+        DOCTEST_CHECK(ctx.getPrimitiveColor(second) == RGB::red);
+        DOCTEST_CHECK(ctx.getMaterialColor("named_mat") == make_RGBAcolor(RGB::blue, 1.f));
+        DOCTEST_CHECK(ctx.getMaterial(ctx.getPrimitiveMaterialID(second)).doesMaterialDataExist("test_value"));
+        DOCTEST_CHECK(ctx.getPrimitivesUsingMaterial("named_mat") == std::vector<uint>{first});
+    }
+
+    SUBCASE("Material System - Primitive-level edits do not change a renamed automatic material") {
+        // Regression test. A material renamed from an automatic one is the one a plug-in gives the organs it creates later (PlantArchitecture names leaf
+        // materials this way and assigns them to the leaves it grows). Editing its only user changed it in place, so the organs created afterward took on the edit.
+        Context ctx;
+        uint first = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/disk_texture.png");
+        ctx.renameMaterial(ctx.getPrimitiveMaterialLabel(first), "leaf");
+        ctx.setMaterialData("leaf", "test_value", 2.5f);
+        ctx.setPrimitiveTextureFile(first, "lib/images/diamond_texture.png");
+        uint second = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/disk_texture.png");
+        ctx.assignMaterialToPrimitive(second, "leaf");  // as the plug-in does for an organ it creates later
+
+        DOCTEST_CHECK(ctx.getMaterialTexture("leaf") == "lib/images/disk_texture.png");
+        DOCTEST_CHECK(ctx.getPrimitiveTextureFile(second) == "lib/images/disk_texture.png");
+        DOCTEST_CHECK(ctx.getPrimitiveTextureFile(first) == "lib/images/diamond_texture.png");
+        // The edited primitive keeps the data of the material it was copied from
+        DOCTEST_CHECK(ctx.getMaterial(ctx.getPrimitiveMaterialID(first)).doesMaterialDataExist("test_value"));
+        DOCTEST_CHECK(ctx.getPrimitivesUsingMaterial("leaf") == std::vector<uint>{second});
+
+        // The same holds for a color edit
+        uint third = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, RGB::red);
+        ctx.renameMaterial(ctx.getPrimitiveMaterialLabel(third), "fruit");
+        ctx.setPrimitiveColor(third, RGB::blue);
+        DOCTEST_CHECK(ctx.getPrimitiveColor(third) == RGB::blue);
+        DOCTEST_CHECK(ctx.getMaterialColor("fruit") == make_RGBAcolor(RGB::red, 1.f));
+    }
+
+    SUBCASE("Material System - a renamed automatic material is not given to unrelated primitives") {
+        // Regression test. A material renamed from an automatic one kept its automatic label as a lookup alias, so any primitive created later with the same
+        // color or texture was given the named material, whoever created it. A black patch added by another plug-in was given a plant organ's material, and with
+        // it that material's two-sided flag, which takes precedence over the patch's own "twosided_flag" primitive data.
+        Context ctx;
+        uint organ = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        ctx.renameMaterial(ctx.getPrimitiveMaterialLabel(organ), "peduncle");
+        ctx.setMaterialTwosidedFlag("peduncle", 1);
+        uint unrelated = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        ctx.setPrimitiveData(unrelated, "twosided_flag", uint(0));
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(unrelated) != "peduncle");
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(unrelated) == 0u);
+        DOCTEST_CHECK(ctx.getPrimitivesUsingMaterial("peduncle") == std::vector<uint>{organ});
+
+        // Deleting the renamed material leaves nothing behind under its automatic label: a later patch of the same color gets a working material
+        {
+            capture_cerr capture;  // warning about deleting a material in use
+            ctx.deleteMaterial("peduncle");
+        }
+        uint later = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1), nullrotation, RGB::black);
+        DOCTEST_CHECK(ctx.doesMaterialExist(ctx.getPrimitiveMaterialLabel(later)));
+        DOCTEST_CHECK(ctx.getPrimitiveColor(later) == RGB::black);
+    }
+
+    SUBCASE("Material System - Primitive-level edits do not change the default material") {
+        Context ctx;
+        ctx.addMaterial("temp_mat");
+        uint first = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        ctx.assignMaterialToPrimitive(first, "temp_mat");
+        {
+            capture_cerr capture; // warning about deleting a material in use
+            ctx.deleteMaterial("temp_mat");
+        }
+        const uint default_ID = ctx.getPrimitiveMaterialID(first);
+        const RGBAcolor default_color = ctx.getMaterial(default_ID).color;
+
+        ctx.setPrimitiveColor(first, make_RGBcolor(0.2f, 0.4f, 0.6f));
+
+        DOCTEST_CHECK(ctx.getPrimitiveColor(first) == make_RGBcolor(0.2f, 0.4f, 0.6f));
+        DOCTEST_CHECK(ctx.getMaterial(default_ID).color == default_color);
+    }
+
+    SUBCASE("Material System - Primitives recolored alike share one material") {
+        Context ctx;
+        uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, RGB::red);
+        uint p2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1), nullrotation, RGB::red);
+        uint p3 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1), nullrotation, RGB::red);
+        const uint red_ID = ctx.getPrimitiveMaterialID(p1);
+        DOCTEST_CHECK(ctx.getMaterial(red_ID).reference_count == 3);
+
+        ctx.setPrimitiveColor(std::vector<uint>{p1, p2}, RGB::blue);
+        const uint blue_ID = ctx.getPrimitiveMaterialID(p1);
+
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialID(p2) == blue_ID);
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialID(p3) == red_ID);
+        DOCTEST_CHECK(ctx.getMaterial(blue_ID).reference_count == 2);
+        DOCTEST_CHECK(ctx.getMaterial(red_ID).reference_count == 1);
+        DOCTEST_CHECK(ctx.getPrimitiveColor(p3) == RGB::red);
+
+        // A primitive created blue joins the same material
+        uint p4 = ctx.addPatch(make_vec3(3, 0, 0), make_vec2(1, 1), nullrotation, RGB::blue);
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialID(p4) == blue_ID);
+        DOCTEST_CHECK(ctx.getMaterial(blue_ID).reference_count == 3);
+    }
+
+    SUBCASE("Material System - Recoloring keeps the data of an automatic material") {
+        Context ctx;
+        uint first = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, RGB::red);
+        const std::string auto_label = ctx.getPrimitiveMaterialLabel(first);
+        ctx.setMaterialData(auto_label, "test_value", 2.5f);
+
+        ctx.setPrimitiveColor(first, RGB::blue);
+
+        DOCTEST_CHECK(ctx.getPrimitiveColor(first) == RGB::blue);
+        DOCTEST_CHECK(ctx.getMaterial(ctx.getPrimitiveMaterialID(first)).doesMaterialDataExist("test_value"));
+        uint second = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, RGB::red);
+        DOCTEST_CHECK(ctx.getPrimitiveColor(second) == RGB::red);
     }
 
     SUBCASE("Material System - XML Round-Trip") {
@@ -5284,13 +6075,17 @@ TEST_CASE("File path resolution priority") {
 
         std::string mat1 = context.getPrimitiveMaterialLabel(uuid);
 
-        // Modify color - should NOT create new material since it's not shared
+        // Modify color - the primitive moves to the automatic material of its new color rather than receiving a per-primitive copy
         context.setPrimitiveColor(uuid, RGB::magenta);
 
         std::string mat2 = context.getPrimitiveMaterialLabel(uuid);
+        DOCTEST_CHECK(mat2.substr(0, 7) == "__auto_");
+        DOCTEST_CHECK(mat2 != mat1);
 
-        // Material should be same (no copy needed, just modified in place)
-        DOCTEST_CHECK(mat1 == mat2);
+        // The cyan material is left unchanged, and a primitive created magenta joins the same material
+        DOCTEST_CHECK(context.getMaterialColor(mat1) == make_RGBAcolor(RGB::cyan, 1.f));
+        uint magenta_uuid = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), RGB::magenta);
+        DOCTEST_CHECK(context.getPrimitiveMaterialLabel(magenta_uuid) == mat2);
     }
 }
 

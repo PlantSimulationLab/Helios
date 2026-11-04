@@ -636,6 +636,7 @@ set(SHADER_COMMON_INCLUDES
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/sky_distribution.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/glass_cover.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/surface_layer.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/spectral_texture.glsl
 )
 
 # Shader source files

@@ -84,8 +84,12 @@ if(UNIX AND NOT APPLE)
 	endif()
 endif()
 
-#X11      
-find_package(X11 REQUIRED)
+#X11 -- not on macOS, where GLFW uses Cocoa and nothing calls Xlib. Finding it there links
+# whatever X11 the build machine has (Homebrew's libX11/libXext), and a packaged app then has
+# to bundle those libraries, which are built for the build machine's macOS version.
+if(NOT APPLE)
+	find_package(X11 REQUIRED)
+endif()
 if(X11_FOUND)
 	include_directories(${X11_INCLUDE_DIRS})
 	target_link_libraries( visualizer PRIVATE ${X11_LIBRARIES} )

@@ -177,7 +177,7 @@ fmc.setMesophyllConductance_gm(0.4f);           // constant gm = 0.4 mol/m^2/s/b
 fmc.setMesophyllConductance_gm(0.4f, 49.8f);    // Arrhenius with dHa = 49.8 kJ/mol
 ~~~~~~
 
-The default value is \f$g_m = +\infty\f$, which short-circuits the solver to the legacy \f$C_c \equiv C_i\f$ path and reproduces the original Farquhar model behavior bit-for-bit. This means existing code and parameter libraries that do not set \f$g_m\f$ are unaffected.
+The default value is \f$g_m = +\infty\f$, which gives \f$C_c \equiv C_i\f$ (no mesophyll diffusion limitation), so parameter sets that do not specify \f$g_m\f$ follow the standard Farquhar model.
 
 
 \subsection FvCBtemperature Temperature response of model parameters

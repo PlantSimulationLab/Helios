@@ -1179,6 +1179,129 @@ DOCTEST_TEST_CASE("Nitrogen Mode - First Call Creates Bins") {
     DOCTEST_CHECK(refl_label.find("leaf_reflectivity_Nauto_") == 0);
 }
 
+//! Make a leaf object of four primitives whose object data selects its spectra, and return its primitives
+static std::vector<uint> addLeafWithStage(Context &context, float x, uint stage) {
+    const uint objID = context.addTileObject(make_vec3(x, 0, 0), make_vec2(0.1f, 0.1f), make_SphericalCoord(0, 0), make_int2(2, 2));
+    context.setObjectData(objID, "leaf_texture_stage", stage);
+    return context.getObjectPrimitiveUUIDs(objID);
+}
+
+//! Mean of a spectrum between two wavelengths in nm
+static float meanSpectrum(const std::vector<vec2> &spectrum, float lower, float upper) {
+    float sum = 0.f;
+    int count = 0;
+    for (const vec2 &point: spectrum) {
+        if (point.x >= lower && point.x <= upper) {
+            sum += point.y;
+            count++;
+        }
+    }
+    return sum / float(count);
+}
+
+DOCTEST_TEST_CASE("Object Data Mode - Each Value Gets Its Own Spectra") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    const std::vector<uint> green_leaf = addLeafWithStage(context_test, 0, 0);
+    const std::vector<uint> senesced_leaf = addLeafWithStage(context_test, 1, 1);
+    std::vector<uint> all_UUIDs = green_leaf;
+    all_UUIDs.insert(all_UUIDs.end(), senesced_leaf.begin(), senesced_leaf.end());
+
+    // A green leaf, and one that has lost most of its chlorophyll
+    std::vector<LeafOpticsProperties> properties(2);
+    properties.at(0).chlorophyllcontent = 40.f;
+    properties.at(1).chlorophyllcontent = 5.f;
+
+    leafoptics.runFromObjectData(all_UUIDs, "leaf_texture_stage", properties, "leaf_stage");
+
+    for (uint UUID: green_leaf) {
+        std::string label;
+        context_test.getPrimitiveData(UUID, "reflectivity_spectrum", label);
+        DOCTEST_CHECK(label == "leaf_reflectivity_leaf_stage_0");
+        context_test.getPrimitiveData(UUID, "transmissivity_spectrum", label);
+        DOCTEST_CHECK(label == "leaf_transmissivity_leaf_stage_0");
+    }
+    for (uint UUID: senesced_leaf) {
+        std::string label;
+        context_test.getPrimitiveData(UUID, "reflectivity_spectrum", label);
+        DOCTEST_CHECK(label == "leaf_reflectivity_leaf_stage_1");
+    }
+
+    // Chlorophyll absorbs red light, so the leaf that lost it reflects much more red
+    std::vector<vec2> green_reflectivity;
+    std::vector<vec2> senesced_reflectivity;
+    context_test.getGlobalData("leaf_reflectivity_leaf_stage_0", green_reflectivity);
+    context_test.getGlobalData("leaf_reflectivity_leaf_stage_1", senesced_reflectivity);
+    DOCTEST_CHECK(meanSpectrum(senesced_reflectivity, 640.f, 680.f) > 2.f * meanSpectrum(green_reflectivity, 640.f, 680.f));
+
+    // A leaf whose value changes gets the spectra for its new value
+    context_test.setObjectData(context_test.getPrimitiveParentObjectID(green_leaf.front()), "leaf_texture_stage", uint(1));
+    leafoptics.runFromObjectData(all_UUIDs, "leaf_texture_stage", properties, "leaf_stage");
+    std::string label;
+    context_test.getPrimitiveData(green_leaf.front(), "reflectivity_spectrum", label);
+    DOCTEST_CHECK(label == "leaf_reflectivity_leaf_stage_1");
+
+    // Object data of type int is accepted too
+    const uint int_leaf_object = context_test.addTileObject(make_vec3(2, 0, 0), make_vec2(0.1f, 0.1f), make_SphericalCoord(0, 0), make_int2(1, 1));
+    context_test.setObjectData(int_leaf_object, "int_stage", int(1));
+    DOCTEST_CHECK_NOTHROW(leafoptics.runFromObjectData(context_test.getObjectPrimitiveUUIDs(int_leaf_object), "int_stage", properties, "int_stage"));
+    context_test.getPrimitiveData(context_test.getObjectPrimitiveUUIDs(int_leaf_object).front(), "reflectivity_spectrum", label);
+    DOCTEST_CHECK(label == "leaf_reflectivity_int_stage_1");
+}
+
+DOCTEST_TEST_CASE("Object Data Mode - Invalid Requests Raise an Error and Change Nothing") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    const std::vector<uint> leaf = addLeafWithStage(context_test, 0, 0);
+    const std::vector<uint> late_leaf = addLeafWithStage(context_test, 1, 3);
+    const std::vector<LeafOpticsProperties> properties(2);
+
+    DOCTEST_CHECK_THROWS(leafoptics.runFromObjectData(leaf, "leaf_texture_stage", {}, "leaf_stage")); // no properties
+    DOCTEST_CHECK_THROWS(leafoptics.runFromObjectData(leaf, "leaf_texture_stage", properties, "")); // no label
+    DOCTEST_CHECK_THROWS(leafoptics.runFromObjectData(leaf, "missing_label", properties, "leaf_stage")); // no such object data
+
+    // A value with no properties, passed together with a valid leaf: neither is given spectra
+    std::vector<uint> both = leaf;
+    both.insert(both.end(), late_leaf.begin(), late_leaf.end());
+    DOCTEST_CHECK_THROWS(leafoptics.runFromObjectData(both, "leaf_texture_stage", properties, "leaf_stage"));
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(leaf.front(), "reflectivity_spectrum"));
+
+    // Object data that is not a whole number
+    const uint float_leaf_object = context_test.addTileObject(make_vec3(2, 0, 0), make_vec2(0.1f, 0.1f), make_SphericalCoord(0, 0), make_int2(1, 1));
+    context_test.setObjectData(float_leaf_object, "float_stage", 1.f);
+    DOCTEST_CHECK_THROWS(leafoptics.runFromObjectData(context_test.getObjectPrimitiveUUIDs(float_leaf_object), "float_stage", properties, "leaf_stage"));
+}
+
+DOCTEST_TEST_CASE("Object Data Mode - A Primitive Cannot Also Use Nitrogen Mode") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    const std::vector<uint> staged_leaf = addLeafWithStage(context_test, 0, 0);
+    const std::vector<uint> nitrogen_leaf = addLeafWithStage(context_test, 1, 0);
+    context_test.setObjectData(context_test.getPrimitiveParentObjectID(staged_leaf.front()), "leaf_nitrogen_gN_m2", 1.5f);
+    context_test.setObjectData(context_test.getPrimitiveParentObjectID(nitrogen_leaf.front()), "leaf_nitrogen_gN_m2", 1.5f);
+    const std::vector<LeafOpticsProperties> properties(1);
+
+    leafoptics.runFromObjectData(staged_leaf, "leaf_texture_stage", properties, "leaf_stage");
+    leafoptics.run(nitrogen_leaf, LeafOpticsProperties_Nauto());
+
+    // Each mode would overwrite the spectra the other assigned
+    DOCTEST_CHECK_THROWS(leafoptics.run(staged_leaf, LeafOpticsProperties_Nauto()));
+    DOCTEST_CHECK_THROWS(leafoptics.runFromObjectData(nitrogen_leaf, "leaf_texture_stage", properties, "leaf_stage"));
+
+    // Each leaf keeps the spectra of its own mode
+    std::string label;
+    context_test.getPrimitiveData(staged_leaf.front(), "reflectivity_spectrum", label);
+    DOCTEST_CHECK(label == "leaf_reflectivity_leaf_stage_0");
+    context_test.getPrimitiveData(nitrogen_leaf.front(), "reflectivity_spectrum", label);
+    DOCTEST_CHECK(label.find("leaf_reflectivity_Nauto_") == 0);
+}
+
 DOCTEST_TEST_CASE("Nitrogen Mode - Subsequent Call Reuses Bins") {
     Context context_test;
     LeafOptics leafoptics(&context_test);

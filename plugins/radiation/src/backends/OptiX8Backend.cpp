@@ -468,6 +468,24 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
         upload(d_uv_IDs,       geometry.uv_IDs.data(),              geometry.uv_IDs.size()      * sizeof(int32_t));
     }
 
+    // ---- Spectral texture class maps ----
+    {
+        std::vector<uint32_t> class_map_offsets;
+        uint32_t cumulative = 0;
+        for (const auto &sz : geometry.class_map_sizes) {
+            class_map_offsets.push_back(cumulative);
+            cumulative += static_cast<uint32_t>(sz.x) * static_cast<uint32_t>(sz.y);
+        }
+        freeCUdeviceptr(d_class_map_data);
+        freeCUdeviceptr(d_class_map_offsets);
+        freeCUdeviceptr(d_class_map_sizes);
+        freeCUdeviceptr(d_class_map_IDs);
+        upload(d_class_map_data,    geometry.class_map_data.data(),  geometry.class_map_data.size()  * sizeof(uint16_t));
+        upload(d_class_map_offsets, class_map_offsets.data(),        class_map_offsets.size()        * sizeof(uint32_t));
+        upload(d_class_map_sizes,   geometry.class_map_sizes.data(), geometry.class_map_sizes.size() * sizeof(helios::int2));
+        upload(d_class_map_IDs,     geometry.class_map_IDs.data(),   geometry.class_map_IDs.size()   * sizeof(int32_t));
+    }
+
     // Update h_params device pointers
     const uint32_t Nprims = static_cast<uint32_t>(geometry.primitive_count);
     h_params.transform_matrix         = reinterpret_cast<float *>(d_transform_matrix);
@@ -508,6 +526,10 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     h_params.mask_IDs                 = reinterpret_cast<int32_t *>(d_mask_IDs);
     h_params.uv_data                  = reinterpret_cast<float2 *>(d_uv_data);
     h_params.uv_IDs                   = reinterpret_cast<int32_t *>(d_uv_IDs);
+    h_params.class_map_data           = reinterpret_cast<uint16_t *>(d_class_map_data);
+    h_params.class_map_offsets        = reinterpret_cast<uint32_t *>(d_class_map_offsets);
+    h_params.class_map_sizes          = reinterpret_cast<int32_t *>(d_class_map_sizes);
+    h_params.class_map_IDs            = reinterpret_cast<int32_t *>(d_class_map_IDs);
 
     // Store counts
     current_primitive_count = geometry.primitive_count;
@@ -580,6 +602,19 @@ void OptiX8Backend::updateMaterials(const RayTracingMaterial &materials) {
     if (!materials.white_reference_cam.empty())
         upload(d_white_reference_cam, materials.white_reference_cam.data(), materials.white_reference_cam.size() * sizeof(float));
 
+    // Spectral texture palettes. The per-primitive offsets and band flags are always uploaded so that the device can test them; the
+    // tables are empty when no primitive has a spectral texture, and every offset is then UINT32_MAX.
+    if (materials.palette_offset.size() != current_primitive_count || materials.palette_band_active.size() != materials.num_bands) {
+        helios_runtime_error("ERROR (OptiX8Backend::updateMaterials): The spectral texture palette offsets (" + std::to_string(materials.palette_offset.size()) + ") or band flags (" +
+                             std::to_string(materials.palette_band_active.size()) + ") do not match the " + std::to_string(current_primitive_count) + " primitives and " + std::to_string(materials.num_bands) + " bands.");
+    }
+    upload(d_palette_offset,      materials.palette_offset.data(),      materials.palette_offset.size()      * sizeof(uint32_t));
+    upload(d_palette_band_active, materials.palette_band_active.data(), materials.palette_band_active.size() * sizeof(uint32_t));
+    upload(d_palette_rho,         materials.palette_reflectivity.data(),       materials.palette_reflectivity.size()       * sizeof(float));
+    upload(d_palette_tau,         materials.palette_transmissivity.data(),     materials.palette_transmissivity.size()     * sizeof(float));
+    upload(d_palette_rho_cam,     materials.palette_reflectivity_cam.data(),   materials.palette_reflectivity_cam.size()   * sizeof(float));
+    upload(d_palette_tau_cam,     materials.palette_transmissivity_cam.data(), materials.palette_transmissivity_cam.size() * sizeof(float));
+
     // Translucent cover (glass/plastic) buffers. Only uploaded if any primitive uses the glass model;
     // otherwise the device pointers stay null and the any-hit programs early-return (no overhead).
     bool any_glass = false;
@@ -632,6 +667,13 @@ void OptiX8Backend::updateMaterials(const RayTracingMaterial &materials) {
     h_params.rho_cam              = reinterpret_cast<float *>(d_rho_cam);
     h_params.tau_cam              = reinterpret_cast<float *>(d_tau_cam);
     h_params.white_reference_cam  = reinterpret_cast<float *>(d_white_reference_cam);
+    h_params.palette_offset       = reinterpret_cast<uint32_t *>(d_palette_offset);
+    h_params.palette_band_active  = reinterpret_cast<uint32_t *>(d_palette_band_active);
+    h_params.palette_rho          = reinterpret_cast<float *>(d_palette_rho);
+    h_params.palette_tau          = reinterpret_cast<float *>(d_palette_tau);
+    h_params.palette_rho_cam      = reinterpret_cast<float *>(d_palette_rho_cam);
+    h_params.palette_tau_cam      = reinterpret_cast<float *>(d_palette_tau_cam);
+    h_params.Npalette_entries     = static_cast<uint32_t>(materials.num_palette_entries);
     h_params.glass_n              = reinterpret_cast<float *>(d_glass_n);
     h_params.glass_KL             = reinterpret_cast<float *>(d_glass_KL);
     h_params.is_glass             = reinterpret_cast<int8_t *>(d_is_glass);
@@ -1152,7 +1194,57 @@ void OptiX8Backend::getRadiationResults(RayTracingResults &results) {
             results.scatter_buff_top_cam    = downloadFloat(d_scatter_buff_top_cam,    cam_total);
             results.scatter_buff_bottom_cam = downloadFloat(d_scatter_buff_bottom_cam, cam_total);
         }
+        if (d_spectral_incident && spectral_incident_count > 0) {
+            results.spectral_incident = downloadFloat(d_spectral_incident, spectral_incident_count);
+        }
     }
+}
+
+void OptiX8Backend::uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) {
+    freeCUdeviceptr(d_class_flux_offset);
+    freeCUdeviceptr(d_class_flux);
+    h_params.class_flux_offset = nullptr;
+    h_params.class_flux        = nullptr;
+    h_params.class_flux_slots  = 0;
+    if (class_flux_offset.empty()) {
+        return;
+    }
+    if (class_flux_offset.size() != current_primitive_count) {
+        helios_runtime_error("ERROR (OptiX8Backend::uploadSpectralCameraFlux): There are " + std::to_string(class_flux_offset.size()) + " class-flux offsets for " + std::to_string(current_primitive_count) + " primitives.");
+    }
+    const size_t bytes_offset = class_flux_offset.size() * sizeof(uint32_t);
+    reallocDevice(d_class_flux_offset, bytes_offset);
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_class_flux_offset), class_flux_offset.data(), bytes_offset, cudaMemcpyHostToDevice));
+    if (!class_flux.empty()) {
+        reallocDevice(d_class_flux, class_flux.size() * sizeof(float));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_class_flux), class_flux.data(), class_flux.size() * sizeof(float), cudaMemcpyHostToDevice));
+    }
+    if (current_launch_band_count == 0 || class_flux.size() % (2 * current_launch_band_count) != 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::uploadSpectralCameraFlux): The class flux has " + std::to_string(class_flux.size()) + " values, which is not two faces of " + std::to_string(current_launch_band_count) + " launch bands per class.");
+    }
+    h_params.class_flux_offset = reinterpret_cast<uint32_t *>(d_class_flux_offset);
+    h_params.class_flux        = reinterpret_cast<float *>(d_class_flux);
+    h_params.class_flux_slots  = static_cast<uint32_t>(class_flux.size() / (2 * current_launch_band_count));
+}
+
+void OptiX8Backend::uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) {
+    freeCUdeviceptr(d_vertex_spectral);
+    h_params.vertex_spectral        = nullptr;
+    h_params.vertex_spectral_layers = 0;
+    h_params.vertex_spectral_count  = 0;
+    h_params.vertex_spectral_camera = camera;
+    if (vertex_values.empty() || layer_count == 0) {
+        return;
+    }
+    if (current_launch_band_count == 0 || vertex_values.size() % (2 * size_t(layer_count) * current_launch_band_count) != 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::uploadSpectralVertexIncident): " + std::to_string(vertex_values.size()) + " vertex values are not two faces of " + std::to_string(layer_count) + " layers of " +
+                             std::to_string(current_launch_band_count) + " launch bands for a whole number of vertices.");
+    }
+    reallocDevice(d_vertex_spectral, vertex_values.size() * sizeof(float));
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_vertex_spectral), vertex_values.data(), vertex_values.size() * sizeof(float), cudaMemcpyHostToDevice));
+    h_params.vertex_spectral        = reinterpret_cast<float *>(d_vertex_spectral);
+    h_params.vertex_spectral_layers = layer_count;
+    h_params.vertex_spectral_count  = static_cast<uint32_t>(vertex_values.size() / (2 * size_t(layer_count) * current_launch_band_count));
 }
 
 void OptiX8Backend::getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) {
@@ -1300,6 +1392,27 @@ void OptiX8Backend::zeroCameraPixelBuffers(const helios::int2 &resolution) {
 
     h_params.camera_pixel_label = reinterpret_cast<uint32_t *>(d_camera_pixel_label);
     h_params.camera_pixel_depth = reinterpret_cast<float *>(d_camera_pixel_depth);
+
+    // The class of the spectral texture seen in each pixel, recorded only when some primitive has a spectral texture
+    if (h_params.Npalette_entries > 0) {
+        reallocDevice(d_camera_pixel_class, Npixels * sizeof(uint32_t));
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_camera_pixel_class), 0, Npixels * sizeof(uint32_t)));
+        camera_pixel_class_count = Npixels;
+    } else {
+        freeCUdeviceptr(d_camera_pixel_class);
+        camera_pixel_class_count = 0;
+    }
+    h_params.camera_pixel_class = reinterpret_cast<uint32_t *>(d_camera_pixel_class);
+}
+
+void OptiX8Backend::getCameraPixelSpectralClasses(std::vector<uint> &pixel_classes, const helios::int2 &resolution) {
+    const size_t Npixels = (size_t)resolution.x * resolution.y;
+    if (!d_camera_pixel_class || camera_pixel_class_count != Npixels || Npixels == 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::getCameraPixelSpectralClasses): No classes of spectral textures were recorded for a " + std::to_string(resolution.x) + " x " + std::to_string(resolution.y) +
+                             " camera. They are recorded by the pixel-label launch when some primitive has a spectral texture.");
+    }
+    const std::vector<uint32_t> classes = downloadUInt32(d_camera_pixel_class, Npixels);
+    pixel_classes.assign(classes.begin(), classes.end());
 }
 
 void OptiX8Backend::copyScatterToRadiation() {
@@ -1368,6 +1481,17 @@ void OptiX8Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
     h_params.scatter_buff_bottom_cam = reinterpret_cast<float *>(d_scatter_buff_bottom_cam);
     current_launch_band_count        = launch_band_count;
     camera_scatter_buffer_bytes      = bytes;
+
+    // The radiation reaching primitives with a spectral texture, which cameras need to see their classes: [face][source slot][prim][band]
+    if (h_params.Npalette_entries > 0) {
+        spectral_incident_count = 2 * (current_source_count + 1) * Nprims * launch_band_count;
+        reallocDevice(d_spectral_incident, spectral_incident_count * sizeof(float));
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_spectral_incident), 0, spectral_incident_count * sizeof(float)));
+    } else {
+        freeCUdeviceptr(d_spectral_incident);
+        spectral_incident_count = 0;
+    }
+    h_params.spectral_incident = reinterpret_cast<float *>(d_spectral_incident);
 }
 
 void OptiX8Backend::requireCameraScatterBuffersSized(const char *caller, size_t launch_band_count) const {
@@ -1478,6 +1602,10 @@ void OptiX8Backend::freeGeometryBuffers() {
     freeCUdeviceptr(d_mask_IDs);
     freeCUdeviceptr(d_uv_data);
     freeCUdeviceptr(d_uv_IDs);
+    freeCUdeviceptr(d_class_map_data);
+    freeCUdeviceptr(d_class_map_offsets);
+    freeCUdeviceptr(d_class_map_sizes);
+    freeCUdeviceptr(d_class_map_IDs);
     freeCUdeviceptr(d_aabbs);
     freeCUdeviceptr(d_gas_output);
     gas_handle = 0;
@@ -1495,6 +1623,28 @@ void OptiX8Backend::freeMaterialBuffers() {
     freeCUdeviceptr(d_surface_model);
     freeCUdeviceptr(d_surface_model_band_table);
     freeCUdeviceptr(d_surface_layer_tables);
+    freeCUdeviceptr(d_palette_offset);
+    freeCUdeviceptr(d_palette_band_active);
+    freeCUdeviceptr(d_palette_rho);
+    freeCUdeviceptr(d_palette_tau);
+    freeCUdeviceptr(d_palette_rho_cam);
+    freeCUdeviceptr(d_palette_tau_cam);
+    freeCUdeviceptr(d_spectral_incident);
+    spectral_incident_count = 0;
+    freeCUdeviceptr(d_class_flux_offset);
+    freeCUdeviceptr(d_class_flux);
+    freeCUdeviceptr(d_camera_pixel_class);
+    camera_pixel_class_count = 0;
+    h_params.camera_pixel_class = nullptr;
+    freeCUdeviceptr(d_vertex_spectral);
+    h_params.vertex_spectral = nullptr;
+    h_params.vertex_spectral_layers = 0;
+    h_params.vertex_spectral_count = 0;
+    // Reallocated by zeroCameraScatterBuffers() and uploadSpectralCameraFlux() only when there are cameras, so they must not keep pointing at the freed memory
+    h_params.spectral_incident = nullptr;
+    h_params.class_flux_offset = nullptr;
+    h_params.class_flux        = nullptr;
+    h_params.class_flux_slots  = 0;
 }
 
 void OptiX8Backend::reallocDevice(CUdeviceptr &ptr, size_t bytes) {

@@ -128,6 +128,10 @@ uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions, co
 void GrapevinePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
 void GrapevinePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 
+//! Maize tassel fruit prototype with resolved spikelets and anthers, shaped by the plant's tassel build parameters (see \ref MaizeTassel)
+/**
+ * The geometry is in meters, so the fruit_prototype_scale that goes with it is 1. The subdivisions argument is not used.
+ */
 uint MaizeTasselPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
 uint MaizeEarPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
 void MaizePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
@@ -150,7 +154,8 @@ uint RedbudFruitPrototype(helios::Context *context_ptr, uint subdivisions, const
 void RedbudPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
 void RedbudPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 
-uint RiceSpikePrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
+uint RicePaniclePrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
+uint RiceFloweringPaniclePrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters);
 void RicePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
 
 void ButterLettucePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);

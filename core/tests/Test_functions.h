@@ -1932,6 +1932,81 @@ TEST_CASE("EXIF writer byte layout") {
     }
 }
 
+TEST_CASE("Single-channel PNG images keep their integer values") {
+    const std::string filename = (std::filesystem::temp_directory_path() / "helios_test_single_channel.png").string();
+    const uint width = 3;
+    const uint height = 2;
+
+    SUBCASE("8-bit") {
+        const std::vector<uint16_t> values = {0, 1, 2, 3, 254, 255};
+        helios::writePNGSingleChannel(filename, width, height, values, 8);
+        uint read_width = 0;
+        uint read_height = 0;
+        std::vector<uint16_t> read_values;
+        helios::readPNGSingleChannel(filename, read_width, read_height, read_values);
+        DOCTEST_CHECK(read_width == width);
+        DOCTEST_CHECK(read_height == height);
+        DOCTEST_CHECK(read_values == values);
+    }
+
+    SUBCASE("16-bit") {
+        const std::vector<uint16_t> values = {0, 1, 255, 256, 300, 65535};
+        helios::writePNGSingleChannel(filename, width, height, values, 16);
+        uint read_width = 0;
+        uint read_height = 0;
+        std::vector<uint16_t> read_values;
+        helios::readPNGSingleChannel(filename, read_width, read_height, read_values);
+        DOCTEST_CHECK(read_values == values);
+    }
+
+    SUBCASE("16-bit values are stored most significant byte first, as the PNG format requires") {
+        // A 3x2 16-bit grayscale PNG holding 0, 1, 255, 256, 300, 65535, assembled byte by byte without libpng (signature, IHDR, zlib-compressed IDAT, IEND)
+        const std::vector<unsigned char> png_bytes = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x02, 0x10, 0x00,
+                                                      0x00, 0x00, 0x00, 0xe8, 0x8f, 0xe5, 0x85, 0x00, 0x00, 0x00, 0x15, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x60, 0x60, 0x60, 0x60, 0x64, 0xf8, 0x0f, 0xc4,
+                                                      0x8c, 0x3a, 0xff, 0xff, 0x03, 0x00, 0x0b, 0x9b, 0x03, 0x2d, 0xcc, 0xde, 0x1d, 0xeb, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82};
+        {
+            std::ofstream file(filename, std::ios::binary);
+            file.write(reinterpret_cast<const char *>(png_bytes.data()), std::streamsize(png_bytes.size()));
+        }
+        uint read_width = 0;
+        uint read_height = 0;
+        std::vector<uint16_t> read_values;
+        helios::readPNGSingleChannel(filename, read_width, read_height, read_values);
+        DOCTEST_CHECK(read_width == 3);
+        DOCTEST_CHECK(read_height == 2);
+        DOCTEST_CHECK(read_values == std::vector<uint16_t>{0, 1, 255, 256, 300, 65535});
+
+        // A truncated image is rejected with libpng's reason in the message (rather than printed by libpng's default handler)
+        {
+            std::ofstream file(filename, std::ios::binary);
+            file.write(reinterpret_cast<const char *>(png_bytes.data()), 50);
+        }
+        std::string message;
+        try {
+            helios::readPNGSingleChannel(filename, read_width, read_height, read_values);
+        } catch (const std::runtime_error &error) {
+            message = error.what();
+        }
+        DOCTEST_CHECK(message.find("could not be read as a PNG image (") != std::string::npos);
+        DOCTEST_CHECK(message.find("()") == std::string::npos);
+    }
+
+    SUBCASE("Values that do not fit, wrong sizes and color images are rejected") {
+        DOCTEST_CHECK_THROWS(helios::writePNGSingleChannel(filename, width, height, {0, 1, 2, 3, 4, 256}, 8));
+        DOCTEST_CHECK_THROWS(helios::writePNGSingleChannel(filename, width, height, {0, 1, 2}, 8));
+        DOCTEST_CHECK_THROWS(helios::writePNGSingleChannel(filename, width, height, {0, 1, 2, 3, 4, 5}, 12));
+
+        uint read_width = 0;
+        uint read_height = 0;
+        std::vector<uint16_t> read_values;
+        DOCTEST_CHECK_THROWS(helios::readPNGSingleChannel("lib/images/disk_texture.png", read_width, read_height, read_values)); // RGBA
+        DOCTEST_CHECK_THROWS(helios::readPNGSingleChannel("lib/images/missing.png", read_width, read_height, read_values));
+        DOCTEST_CHECK_THROWS(helios::readPNGSingleChannel("lib/images/solid.jpg", read_width, read_height, read_values));
+    }
+
+    std::filesystem::remove(filename);
+}
+
 TEST_CASE("writeJPEG with metadata embeds EXIF and XMP markers") {
     using helios::ImageEXIFData;
 

@@ -311,7 +311,7 @@ and:
 Key features of downward transfer:
 - Transfer only occurs if \f$C_{\text{child}} > C_{\text{parent}}\f$ (concentration gradient favors downward flow)
 - Each child transfers independently based on its own concentration gradient
-- The default \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_down</span>\endhtmlonly (0.9) is typically 5× larger than \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_up</span>\endhtmlonly (0.18)
+- The default \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_down</span>\endhtmlonly (0.95) is 2× larger than \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbon_conductance_up</span>\endhtmlonly (0.475)
 - This asymmetry reflects the generally faster phloem transport from mature source leaves to sink tissues
 
 \subsubsection CarbTransferBidirectional Bidirectional Dynamics
@@ -395,7 +395,7 @@ This continues until either:
 
 If carbon stress is more severe and persists longer, entire shoots can be pruned. When a shoot's carbon concentration falls below the \htmlonly<span style="font-family: Courier, monospace; color: blue;">carbohydrate_pruning_threshold</span>\endhtmlonly for longer than \htmlonly<span style="font-family: Courier, monospace; color: blue;">branch_death_threshold_days</span>\endhtmlonly, the entire shoot is removed using \ref PlantArchitecture::pruneBranch().
 
-Note that the pruning threshold is typically much lower than the abortion threshold (default 0.01 vs 0.1 g C/g DW), and the time threshold is longer (default 5 vs 2 days). This ensures that pruning only occurs under severe, prolonged carbon stress.
+Note that the pruning threshold is typically much lower than the abortion threshold (default 0.025 vs 0.1 g C/g DW), and the time threshold is longer (default 5 vs 2 days). This ensures that pruning only occurs under severe, prolonged carbon stress.
 
 \subsubsection CarbImmediateDeath Immediate Shoot Death
 

@@ -2202,7 +2202,7 @@ private:
     //! Check that a Context has been given to the Visualizer and return it, for the methods that annotate Context primitives
     [[nodiscard]] helios::Context *getContextForAnnotation(const std::string &caller) const;
 
-    // Offscreen rendering support for CI testing
+    // Offscreen rendering support
     uint offscreenFramebufferID = 0;
     uint offscreenColorTexture = 0;
     uint offscreenDepthTexture = 0;
@@ -2210,8 +2210,7 @@ private:
     //! Multisampled framebuffer that headless rendering draws into, resolved into offscreenFramebufferID
     /**
      * Windowed rendering gets anti-aliasing from the GLFW window's own multisampled default
-     * framebuffer, but the offscreen framebuffer used in headless mode is single-sampled, so every
-     * headless image -- which is what saved figures are made from -- came out fully aliased. These
+     * framebuffer, but the offscreen framebuffer used in headless mode is single-sampled. These
      * attachments give headless rendering the same anti-aliasing: geometry is drawn into the
      * multisampled framebuffer and blit-resolved into the single-sampled color texture before
      * readback. Zero when anti-aliasing is disabled, in which case rendering targets
@@ -2601,7 +2600,7 @@ private:
 
     //! Whether the colorbar range was set explicitly by the user
     /**
-     * Distinguishes an explicit range from an unset one. Inferring this from `colorbar_min == 0 && colorbar_max == 0` made a legitimate setColorbarRange(0, 0) indistinguishable from "never set", so it was silently replaced by the auto-detected data range.
+     * Distinguishes an explicit range, including setColorbarRange(0, 0), from an unset one, which is auto-detected from the data.
      */
     bool colorbar_range_set = false;
     std::vector<float> colorbar_ticks;

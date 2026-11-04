@@ -116,8 +116,7 @@ struct LeafOpticsProperties_Nauto {
 
     //! Relative nitrogen change threshold for reassignment (0 disables it)
     /** Leaf must change by this fraction of its bin centre to be considered for reassignment. Off by default: with bins evenly spaced a
-     * relative threshold holds leaves at high nitrogen several bins away from the one that represents them -- at 30 % a leaf that filled
-     * from 2.2 to 2.5 g/m2 kept the 2.2 spectrum for the rest of the run. */
+     * relative threshold can hold leaves at high nitrogen several bins away from the one that represents them. */
     float reassignment_threshold = 0.0f;
 
     //! Minimum absolute nitrogen change for reassignment (g/m2)
@@ -240,6 +239,18 @@ public:
      */
     void run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_Nauto &params);
 
+    //! Give each leaf the spectra for the value of one of its object data
+    /**
+     * Groups the primitives by parent object and reads a whole-number object data value from each object, such as the "leaf_texture_stage" that PlantArchitecture writes for leaves that change appearance as they age. Each primitive gets the spectra calculated from the properties at that index, labelled as for run(const std::vector<uint> &, const LeafOpticsProperties &, const std::string &) with the label <code>label_value</code>, such as "leaf_reflectivity_leaf_stage_2".
+     * Call it again after the object data changes, such as after each time step, to give primitives the spectra for their new value and to give new primitives their spectra.
+     * \param[in] UUIDs Primitive UUIDs of leaf surfaces. Every one must belong to an object with the object data.
+     * \param[in] object_data_label Label of the object data, which must be of type int or uint.
+     * \param[in] properties PROSPECT properties for each value of the object data, starting from 0. Every value present must have an entry.
+     * \param[in] label Label from which the labels of the spectra are made.
+     * \note A primitive cannot be given spectra both by this method and by run(const std::vector<uint> &, const LeafOpticsProperties_Nauto &), which would overwrite each other's spectra, so an error is raised if a primitive given spectra by one is passed to the other.
+     */
+    void runFromObjectData(const std::vector<uint> &UUIDs, const std::string &object_data_label, const std::vector<LeafOpticsProperties> &properties, const std::string &label);
+
     //! Update nitrogen-based spectra for currently tracked primitives
     /**
      * Efficient update method for when nitrogen values have changed but the primitive set is
@@ -332,6 +343,9 @@ private:
 
     //! Reverse lookup from primitive UUID to parent object ID
     std::map<uint, uint> primitive_to_object;
+
+    //! Primitives given spectra by runFromObjectData(), so that run() with LeafOpticsProperties_Nauto does not also give them spectra
+    std::set<uint> object_data_mode_UUIDs;
 
     // === Nitrogen mode helper methods ===
 

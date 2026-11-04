@@ -303,7 +303,7 @@ void Visualizer::buildContextGeometry_private() {
         helios::PrimitiveType ptype = context->getPrimitiveType(UUID);
 
         const std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
-        const std::string texture_file = context->getPrimitiveTextureFile(UUID);
+        const std::string texture_file = context->getPrimitiveColorTextureFile(UUID);
 
         RGBAcolor color;
         float colorValue;
@@ -602,7 +602,7 @@ uint64_t Visualizer::computeContextPrimitiveFingerprint(uint UUID) const {
     hash_bytes(&texture_color_overridden, sizeof(texture_color_overridden));
 
     // A different texture file or texture coordinates change what is drawn without moving or recoloring the primitive.
-    const std::string texture_file = context->getPrimitiveTextureFile(UUID);
+    const std::string texture_file = context->getPrimitiveColorTextureFile(UUID);
     hash_bytes(texture_file.data(), texture_file.size());
     if (!texture_file.empty()) {
         const std::vector<helios::vec2> uvs = context->getPrimitiveTextureUV(UUID);

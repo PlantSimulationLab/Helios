@@ -634,7 +634,7 @@ struct FloralBud {
     //! Days for this bud's inflorescence to expand from its initial quarter size to full size, overriding the plant-level dd_to_fruit_maturity when positive.
     /**
      * The plant-level threshold is a fruit-ripening period, which is the right clock for a fruit but not for an inflorescence that finishes elongating before the fruit it subtends even sets. A maize tassel
-     * is fully expanded at VT, some two months ahead of the ear it shares a plant with, so the two cannot be driven from one number. Left at -1, the bud follows the plant-level value as before.
+     * is fully expanded at VT, some two months ahead of the ear it shares a plant with, so the two cannot be driven from one number. Left at -1, the bud follows the plant-level value.
      */
     float dd_to_inflorescence_maturity = -1;
 
@@ -660,8 +660,7 @@ public:
 
     //! Copy constructor
     /**
-     * Written out rather than defaulted only so that copying the deprecated buckle members does not warn: an implicitly-generated copy constructor names them at the point the structure is defined, which
-     * makes every file that merely copies a LeafPrototype report a deprecation it had nothing to do with. Copies every member, as the implicit one did.
+     * Copies every member. Written out rather than defaulted so that copying a LeafPrototype does not raise a deprecation warning for its deprecated buckle members.
      */
     LeafPrototype(const LeafPrototype &a) {
         duplicate(a);
@@ -684,6 +683,46 @@ public:
      *\note Key is the index of the compound leaf (=0 is the tip leaf, <0 increases down left side of the leaflet, >0 increases down the right side of the leaflet), value is the texture file.
      */
     std::map<int, std::string> leaf_texture_file;
+
+    //! Sets of image texture files for the leaf, from which the unique prototypes draw so that leaves vary across a plant and can change as they age
+    /**
+     * Key is the index of the compound leaf, as for \ref LeafPrototype::leaf_texture_file, and a single entry applies to every leaflet. Value is a list of texture variants, each of which is a list of the images a leaf of that variant passes through as it ages, starting from the youngest.
+     * Unique prototype k uses variant (k modulo the number of variants), so \ref LeafPrototype::unique_prototypes must be at least the number of variants. Each leaf draws a unique prototype at random and keeps that prototype's variant.
+     * Every variant must have the same number of images, and if there is more than one, \ref LeafPrototype::leaf_texture_stage_ages gives when each one begins. Variants may have different outlines, but the images of one variant must match in resolution and transparency (see Context::validateColorTexture()).
+     * If this is set, \ref LeafPrototype::leaf_texture_file is ignored. A leaf rebuilt without a unique prototype, as by Phytomer::setPetioleLeafGeometry(), uses the first variant.
+     *\note Only available with the default \ref LeafPrototype::prototype_function and without \ref LeafPrototype::OBJ_model_file.
+     */
+    std::map<int, std::vector<std::vector<std::string>>> leaf_texture_series;
+
+    //! Age of a leaf in days at which it begins each image of its variant in \ref LeafPrototype::leaf_texture_series
+    /**
+     * Has one value per image, starting at 0 and strictly increasing. Required if the variants have more than one image.
+     */
+    std::vector<float> leaf_texture_stage_ages;
+
+    //! Which unique prototype is being built, which selects its variant in \ref LeafPrototype::leaf_texture_series. Set by the plug-in immediately before it calls the prototype function.
+    uint texture_series_selector = 0;
+
+    //! Check that \ref LeafPrototype::leaf_texture_series can be used by this prototype, and raise an error explaining how to correct it if not
+    /**
+     * \param[in] shoot_type_label Label of the shoot type the prototype belongs to, for the error message.
+     */
+    void validateTextureSeries(const std::string &shoot_type_label) const;
+
+    //! Get the images a leaflet passes through as it ages, from \ref LeafPrototype::leaf_texture_series
+    /**
+     * \param[in] compound_leaf_index Index of the leaflet within the compound leaf.
+     * \param[in] prototype_index Which of the unique prototypes the leaflet was built from.
+     * \return The variant's images, starting from the youngest.
+     */
+    [[nodiscard]] const std::vector<std::string> &getTextureSeriesVariant(int compound_leaf_index, uint prototype_index) const;
+
+    //! Get which image of a variant in \ref LeafPrototype::leaf_texture_series a leaf of the given age uses
+    /**
+     * \param[in] age Age of the leaf in days.
+     * \return Index of the image, which is 0 if \ref LeafPrototype::leaf_texture_stage_ages is empty.
+     */
+    [[nodiscard]] uint getTextureStageAtAge(float age) const;
 
     // Ratio of leaf width to leaf length
     RandomParameter_float leaf_aspect_ratio;
@@ -718,7 +757,7 @@ public:
     //! How much floppier the blade becomes over its lifetime, as a multiple of its flexibility when it first reaches full size
     /**
      * A blade does not stop bending when it stops growing. Once elongation ceases the leaf loses the active straightening that accompanies growth, while its tissue goes on stiffening and shrinking
-     * irreversibly, so the bend accrued during development keeps accumulating with no further change in size. Measurements on maize find self-weight accounts for only about a third of the curvature of a
+     * irreversibly, so the bend accrued during development keeps accumulating with no further change in size. Self-weight accounts for only part of the curvature of a
      * mature blade, so a leaf whose droop follows from its size alone stays too straight, and its oldest leaves - the ones that should be arching over hardest - stay the straightest of all.
      *
      * This is the timescale of the softening: the blade holds its shape for about twice this many days while its tissue matures, then softens over a window of similar length, then stops changing again. Zero disables the effect, which is the default.
@@ -803,6 +842,9 @@ public:
 
     void duplicate(const LeafPrototype &a) {
         this->leaf_texture_file = a.leaf_texture_file;
+        this->leaf_texture_series = a.leaf_texture_series;
+        this->leaf_texture_stage_ages = a.leaf_texture_stage_ages;
+        this->texture_series_selector = a.texture_series_selector;
         this->OBJ_model_file = a.OBJ_model_file;
         this->leaf_aspect_ratio = a.leaf_aspect_ratio;
         this->midrib_fold_fraction = a.midrib_fold_fraction;
@@ -835,6 +877,9 @@ public:
     LeafPrototype &operator=(const LeafPrototype &a) {
         if (this != &a) {
             this->leaf_texture_file = a.leaf_texture_file;
+            this->leaf_texture_series = a.leaf_texture_series;
+            this->leaf_texture_stage_ages = a.leaf_texture_stage_ages;
+            this->texture_series_selector = a.texture_series_selector;
             this->OBJ_model_file = a.OBJ_model_file;
             this->leaf_aspect_ratio = a.leaf_aspect_ratio;
             this->midrib_fold_fraction = a.midrib_fold_fraction;
@@ -1112,9 +1157,9 @@ private:
         FruitPrototypeFunction fruit_prototype_function = nullptr;
         //! Fraction (0‒1) of gravitational influence used to bend peduncles under fruit load
         RandomParameter_float fruit_gravity_factor_fraction;
-        //! Number of distinct prototype meshes to cache for this inflorescence; FLAG: confirm intended meaning
+        //! Number of distinct prototype meshes to cache for this inflorescence
         uint unique_prototypes;
-        //! Days for the inflorescence to expand from its initial quarter size to full size. A non-positive value defers to the plant-level fruit-maturity threshold, which is the default.
+        //! Days for the inflorescence to expand from its initial quarter size to full size. Zero means it is already full size when it forms, and a negative value defers to the plant-level fruit-maturity threshold, which is the default.
         /**
          * Set this where the inflorescence finishes elongating on a different schedule from the fruit the plant carries, since \ref PlantArchitecture::setPlantPhenologicalThresholds() supplies only one
          * fruit-ripening period for the whole plant. A maize tassel is fully expanded at VT and never grows afterward, roughly two months ahead of the ear's grain fill, so driving it from the plant-level
@@ -1296,15 +1341,13 @@ struct ShootParameters {
      * form as \ref elongation_rate_max, so a value of 0.1 expands a leaf from nothing to full size in ten days
      * regardless of how large that leaf is.
      *
-     * Leaves and internodes need not grow on the same schedule: a measured tomato seedling finishes expanding its
-     * leaves well before its internodes stop elongating, and fitting a single rate to both makes one of the two
-     * wrong. Setting this parameter decouples them. The internode is unaffected and keeps growing at
+     * Leaves and internodes need not grow on the same schedule; leaves often finish expanding well before
+     * internodes stop elongating. Setting this parameter decouples them. The internode is unaffected and keeps growing at
      * \ref elongation_rate_max.
      *
      * Any negative value -- the default, \ref leaf_expansion_rate_unset -- means the species does not distinguish
      * the two, and leaves expand at the shoot's own \ref elongation_rate_max. This is the behavior of every shoot
-     * type that does not set the parameter, including every model in the plant library, so leaving it alone
-     * reproduces the historical single-rate growth exactly. Zero is a real rate meaning "leaves never expand", and
+     * type that does not set the parameter, including every model in the plant library. Zero is a real rate meaning "leaves never expand", and
      * is therefore distinct from the unset sentinel.
      */
     RandomParameter_float leaf_expansion_rate_max;
@@ -1322,7 +1365,7 @@ struct ShootParameters {
     //! Decay rate (1/node) of the vegetative bud-break probability along the shoot; sign determines direction
     RandomParameter_float vegetative_bud_break_probability_decay_rate;
 
-    //! FLAG: description not found in specification table – please advise
+    //! Maximum number of floral buds at the shoot apex (0 means the shoot forms no terminal floral buds)
     RandomParameter_int max_terminal_floral_buds;
     //! Probability that a phytomer will flower
     RandomParameter_float flower_bud_break_probability;
@@ -1388,16 +1431,9 @@ struct ShootParameters {
     void inheritCustomFunctionsFrom(const ShootParameters &source);
 
     //! Assignment operator
-    /** This used to call resample() on every non-constant shoot-level random parameter after copying it.
-     * Assignment is not a modelling event and must not advance the random stream: every shoot type shares the one Context
-     * generator, and defineShootType() assigns into the shoot_types map, so re-defining a shoot type with
-     * the values it already held displaced every subsequent draw and produced a materially different plant.
-     * Measured on identical parameters, zero / one / two no-op parameter overrides gave calibration
-     * objectives of 6.714 / 7.215 / 6.388 -- a spread as large as the effects being measured.
-     *
-     * Resampling on copy was also wrong on its own terms. A ShootParameters holds the DISTRIBUTION for a
-     * shoot type; the per-shoot draw belongs where a shoot is actually created, which is where the Shoot
-     * constructor already samples it.
+    /** Shoot-level random parameters are copied without being resampled, so assignment does not advance the random stream.
+     * A ShootParameters holds the DISTRIBUTION for a shoot type; the per-shoot draw is made where a shoot is created, by the
+     * Shoot constructor.
      *
      * The nested PhytomerParameters sub-structures and LeafPrototype are different: their assignment
      * operators do resample, because the Phytomer constructor relies on that assignment to re-randomize
@@ -1466,10 +1502,9 @@ protected:
  * do not fit that description. The first is per-shoot state that the growth model itself writes as a
  * plant develops. The second arises when a shoot's geometry is measured rather than generated: the
  * values needed to *build* the measured shape and the values that should govern how it grows *next* are
- * then different values, and a reconstruction had to express them as two hand-synchronised shoot types.
+ * then different values.
  *
- * Both live here instead. Every field carries an "unset" sentinel meaning "defer to the shoot type", so
- * a shoot that never touches this structure behaves exactly as it did before it existed.
+ * Both live here. Every field carries an "unset" sentinel meaning "defer to the shoot type".
  *
  * \note ShootParameters::girth_area_factor is deliberately NOT overridden here. A reconstruction sets it
  * near zero on the build type precisely to preserve measured radii, and the pipe model only ever
@@ -1764,10 +1799,9 @@ public:
 
     //! Set the current petiole length as a fraction of its fully-elongated length, leaving the leaves it carries at the size they are.
     /**
-     * A petiole is a stem segment rather than part of the blade, and it goes on extending after the blade it carries has finished expanding: measured tomato petioles are still lengthening at two weeks, by
-     * which time the blade has stopped. PlantArchitecture::advanceTime() therefore drives the petiole with the shoot's Shoot::elongation_rate_instantaneous -- the rate its internodes elongate at -- and the
-     * blade with Shoot::leaf_expansion_rate_instantaneous. A shoot type that leaves ShootParameters::leaf_expansion_rate_max unset has one rate for both, and the petiole and blade then advance together
-     * exactly as they did before the two were separated.
+     * A petiole is a stem segment rather than part of the blade, and it goes on extending after the blade it carries has finished expanding.
+     * PlantArchitecture::advanceTime() therefore drives the petiole with the shoot's Shoot::elongation_rate_instantaneous -- the rate its internodes elongate at -- and the
+     * blade with Shoot::leaf_expansion_rate_instantaneous. A shoot type that leaves ShootParameters::leaf_expansion_rate_max unset has one rate for both, and the petiole and blade then advance together.
      *
      * The centerline, the radii and the undeformed rest shape are scaled about the petiole base, and every leaf is re-seated at the arclength fraction along the centerline where it already sat, so the
      * leaves ride out along the petiole as it lengthens without changing size. The bend applied by \ref bendPetioleUnderLeafWeight() is recomputed for the new length.
@@ -1815,6 +1849,71 @@ public:
      * \param[in] leaf_count New number of leaves on the petiole; must be at least one.
      */
     void setPetioleLeafCount(uint petiole_index, uint leaf_count);
+
+    //! Regenerate a petiole from its own pitch, curvature and length, leaning toward a given direction, and rebuild its leaves on it.
+    /**
+     * The petiole is generated by the rules the phytomer constructor uses: it leaves the internode tip at pitch_degrees off the internode axis, toward outward_direction projected onto the plane
+     * perpendicular to that axis, and turns by curvature degrees per meter of its length about the same axis the pitch is taken about. The resulting path is prescribed with
+     * setPetioleNodePositions(), so it is held as given and not bent or rescaled afterwards, and the petiole's leaves are then rebuilt on it procedurally as setPetioleLeafCount() rebuilds them.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] outward_direction Direction the petiole leans toward, in world coordinates; any vector that is not parallel to the internode axis.
+     * \param[in] pitch_degrees Angle between the petiole's base and the internode axis, in degrees.
+     * \param[in] curvature Change in the petiole's direction along its length, in degrees per meter; negative bends it down, as the shoot parameter petiole.curvature does.
+     * \param[in] length Length of the petiole in meters; must be greater than zero.
+     */
+    void setPetioleShape(uint petiole_index, const helios::vec3 &outward_direction, float pitch_degrees, float curvature, float length);
+
+    //! Rebuild the leaflets of one petiole with their own count, spacing and sizes.
+    /**
+     * Sets this phytomer's own leaflet_offset, leaflet_scale and prototype_scale and rebuilds leaf_count leaves on the petiole from them, as setPetioleLeafCount() does. Other phytomers, and the shoot
+     * type, are unchanged. A leaflet_offset that would place the outermost leaflets beyond the petiole's base is refused rather than reduced, as the constructor would silently reduce it.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_count Number of leaves on the petiole; must be at least one.
+     * \param[in] leaflet_offset Spacing between lateral leaflet pairs as a fraction of the petiole length; zero or greater.
+     * \param[in] leaflet_scale Size of each lateral pair relative to the pair nearer the tip; greater than zero.
+     * \param[in] prototype_scale Fully-elongated size of the terminal leaflet in meters; greater than zero.
+     */
+    void setPetioleLeaflets(uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale);
+
+    //! Rebuild the leaflets of one petiole turned by their own pitch, yaw and roll.
+    /**
+     * Sets this phytomer's own leaf.pitch, leaf.yaw and leaf.roll, the angles every leaflet on a petiole is turned by relative to it (the shoot parameters of the same names), and rebuilds the petiole's
+     * leaves with them. The values are the phytomer's, so a later rebuild of another of its petioles uses them too; the other petioles are not rebuilt here.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] pitch_degrees Leaflet pitch in degrees.
+     * \param[in] yaw_degrees Leaflet yaw in degrees.
+     * \param[in] roll_degrees Leaflet roll in degrees.
+     */
+    void setPetioleLeafletAngles(uint petiole_index, float pitch_degrees, float yaw_degrees, float roll_degrees);
+
+    //! Rebuild the leaflets of one petiole with their own blade shape.
+    /**
+     * Sets this phytomer's own copy of the leaf prototype's leaf_aspect_ratio, longitudinal_curvature, lateral_curvature and midrib_fold_fraction, and rebuilds the petiole's leaves from it. The prototype is
+     * otherwise the shoot type's: one shape for every phytomer, drawn per unique prototype. The values are the phytomer's, so a later rebuild of another of its petioles uses them too.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] aspect_ratio Ratio of blade width to length; greater than zero.
+     * \param[in] longitudinal_curvature Curvature along the blade's length (+ up, - down).
+     * \param[in] lateral_curvature Curvature across the blade's width (+ up, - down).
+     * \param[in] midrib_fold_fraction Fold along the midrib, from 0 (flat) to 1 (folded shut).
+     */
+    void setPetioleLeafShape(uint petiole_index, float aspect_ratio, float longitudinal_curvature, float lateral_curvature, float midrib_fold_fraction);
+
+    //! Rebuild the leaflets of one petiole with each turned by its own offset from the leaf's angles.
+    /**
+     * Every leaflet on a petiole is otherwise turned by the same leaf.pitch, leaf.yaw and leaf.roll, mirrored from one side of the petiole to the other, so the two members of a pair are always mirror images.
+     * Scanned compound leaves are not: their pairs' members differ by a median of about 13 degrees in yaw and 12 in pitch. This gives each leaflet its own offset, added to the leaf's angles, and rebuilds
+     * the petiole's leaves with them. Yaw is taken in the leaf's mirrored sense, so a positive yaw offset swings a lateral further toward the tip whichever side it is on; on the terminal leaflet, which has
+     * no yaw of its own, it turns the leaflet in the petiole plane. The offsets are kept on the phytomer and reapplied by every later rebuild of the petiole with the same number of leaves, and cleared by one
+     * with a different number.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] pitch_offsets_degrees Pitch offset of each leaflet in degrees, in the petiole's leaf order; one per leaflet.
+     * \param[in] yaw_offsets_degrees Yaw offset of each leaflet in degrees; one per leaflet.
+     * \param[in] roll_offsets_degrees Roll offset of each leaflet in degrees; one per leaflet.
+     */
+    void setPetioleLeafletAngleOffsets(uint petiole_index, const std::vector<float> &pitch_offsets_degrees, const std::vector<float> &yaw_offsets_degrees, const std::vector<float> &roll_offsets_degrees);
+
+    //! Delete a petiole's leaves and build leaf_count new ones from this phytomer's leaf parameters (the shared body of setPetioleLeafCount(), setPetioleShape() and setPetioleLeaflets()).
+    void rebuildPetioleLeaves(uint petiole_index, uint leaf_count);
 
     //! Set the fully-elongated (maximum) leaf prototype scale. Value is uniformly applied for all leaves/leaflets in the petiole.
     /**
@@ -2025,8 +2124,8 @@ private:
     //! Pin this petiole's leaf and petiole growth fractions at 1, which is what exempts it from the rescaling in PlantArchitecture::advanceTime().
     /**
      * A leaf's rendered size is leaf_size_max multiplied by current_leaf_scale_factor, so pinning the fraction on a petiole that is still expanding would leave the bookkeeping overstating every leaf on it while
-     * the geometry stayed where it was. The fraction being replaced is therefore folded into leaf_size_max first, leaving the product - and so the rendered geometry - unchanged. See scaleLeafPrototypeScale() for
-     * what breaking that invariant cost when it was last broken. The petiole's own fraction is pinned the same way, by folding it into \ref petiole_length_max so that the petiole's present length becomes the
+     * the geometry stayed where it was. The fraction being replaced is therefore folded into leaf_size_max first, leaving the product - and so the rendered geometry - unchanged.
+     * The petiole's own fraction is pinned the same way, by folding it into \ref petiole_length_max so that the petiole's present length becomes the
      * length it is considered fully elongated at; both fractions have to be pinned, since either one still below 1 would have advanceTime() go on rescaling the measured geometry.
      *
      * Idempotent: a second call finds fractions of 1 and folds nothing.
@@ -2118,9 +2217,7 @@ public:
     /**
      * A phytomer carrying a petiole takes its direction by rotating the previous phytomer's actual petiole by its own
      * internode_phyllotactic_angle, so its azimuth accumulates without this. A phytomer with no petiole has nothing to
-     * rotate from, and its ghost direction is built from this stored sum instead. Recomputing it as the phytomer's index
-     * times its own freshly drawn angle agreed with the sum only for a constant angle; with a spread it multiplied each
-     * draw's error by the index.
+     * rotate from, and its ghost direction is built from this stored sum instead.
      */
     float internode_phyllotactic_azimuth = 0;
 
@@ -2199,8 +2296,8 @@ public:
     //! Apply the full rotation chain that orients one leaf on its petiole
     /**
      * Rolls, pitches and yaws the leaf, turns it to the azimuth of the petiole it hangs from, and applies the curvature-aware blade-up correction, then records the three angles in \ref leaf_rotation. Called
-     * both when a phytomer is first built and when one is rebuilt by PlantArchitecture::readPlantStructureXML(), so that a restored leaf is oriented identically to a grown one; the two used to carry separate
-     * copies of this chain that had drifted apart. Samples nothing, so the caller owns the random draws and their order.
+     * both when a phytomer is first built and when one is rebuilt by PlantArchitecture::readPlantStructureXML(), so that a restored leaf is oriented identically to a grown one.
+     * Samples nothing, so the caller owns the random draws and their order.
      * \param[in] objID_leaf Object ID of the leaf to orient. It must already be scaled and still be at the origin.
      * \param[in] petiole_index Index of the petiole within the internode.
      * \param[in] leaf_index Index of the leaf within the petiole.
@@ -2241,9 +2338,12 @@ public:
      * then continues the petiole without a step at every age; only per-leaf random draws of size can put the two slightly apart.
      * \param[in] leaves_per_petiole Number of leaflets on the petiole.
      * \param[in] ind_from_tip Leaflet position counted from the tip (0 is the terminal leaflet).
+     * \param[in] prototype_index Which of the unique prototypes is being built, which selects its variant in LeafPrototype::leaf_texture_series. A leaf that is not one of the unique prototypes uses the default, and so the first variant.
+     * \param[in] leaflet_size The size this leaflet will be given, in meters, when it is not the shoot type's (a leaflet rebuilt on one phytomer); with petiole_radius, its petiolule is sized from these. Negative means the shoot type's.
+     * \param[in] petiole_radius The radius of the petiole where this leaflet attaches, in meters, when it is not the shoot type's. Negative means the shoot type's.
      * \return Object ID of the new leaflet.
      */
-    uint buildLeafPrototype(int leaves_per_petiole, float ind_from_tip);
+    uint buildLeafPrototype(int leaves_per_petiole, float ind_from_tip, uint prototype_index = 0, float leaflet_size = -1.f, float petiole_radius = -1.f);
 
     //! Draw a leaf object's petiolule with the petiole's material
     /**
@@ -2277,8 +2377,22 @@ public:
     //! Which cached prototype each leaf was copied from, so its undeformed rest shape can be found again. Indexed as <code>leaf_objIDs</code>; -1 for a leaf that does not droop.
     std::vector<std::vector<int>> leaf_prototype_index;
 
+    //! Which image of LeafPrototype::leaf_texture_series the leaves of this phytomer currently use. The largest uint means that none has been applied yet, so that the next update applies one to every leaf.
+    uint leaf_texture_stage = std::numeric_limits<uint>::max();
+
+    //! Give the leaves of this phytomer the image of LeafPrototype::leaf_texture_series for their age, if it has changed
+    /**
+     * All of a phytomer's leaves have the same age, so they change together. Only the color of a leaf changes (see Context::setPrimitiveColorTexture()), so its area and its shape are not affected.
+     * Also writes the "leaf_texture_stage" object data of the leaves if it has been enabled with PlantArchitecture::optionalOutputObjectData(), which is 0 for a shoot type without stages.
+     */
+    void updateLeafTextureStage();
+
     //! Whether each leaf's pose was prescribed by setPetioleLeafGeometry() rather than generated. Indexed as <code>leaf_objIDs</code>. Recorded by PlantArchitecture::writePlantStructureXML() so that the pose is restored.
     std::vector<std::vector<bool>> leaf_pose_prescribed;
+
+    //! Each leaflet's own (pitch, yaw, roll) offset from the leaf's angles, in degrees, set by setPetioleLeafletAngleOffsets(). First index is petiole within internode, second leaf within petiole; empty for a
+    //! petiole whose leaflets have none.
+    std::vector<std::vector<helios::vec3>> leaflet_angle_offsets;
 
     //! Where a leaf being steered toward a prescribed leaf angle distribution is headed, and how far along it is. Indexed as <code>leaf_objIDs</code>.
     /**
@@ -2743,7 +2857,7 @@ struct Shoot {
 
     //! Per-leaf nitrogen tracking - maps leaf objID to nitrogen content per unit area (g N/m²)
     std::map<uint, float> leaf_nitrogen_gN_m2;
-    //! Nitrogen (g N) each expanding leaf wanted this timestep but did not receive from uptake; filled by remobilization. Rebuilt every timestep.
+    //! Nitrogen (g N) each leaf below target, expanding or mature, wanted this timestep but did not receive from uptake; filled by remobilization. Rebuilt every timestep.
     std::map<uint, float> leaf_N_unmet_demand_gN;
     //! Leaf area (m²) at which each leaf's nitrogen per area was last stated, so that growth dilutes it rather than creating nitrogen
     std::map<uint, float> leaf_N_area_basis_m2;
@@ -2775,7 +2889,7 @@ struct Shoot {
     float curvature_perturbation = 0;
     //! Ornstein-Uhlenbeck tortuosity curvature state (deg/m) applied about the axis perpendicular to both the shoot axis and the bending axis
     /**
-     * Retains its historical name for XML schema compatibility. It is no longer a rotation about the global vertical: together with
+     * The name is kept for XML schema compatibility; this is not a rotation about the global vertical. Together with
      * curvature_perturbation it forms the two orthogonal components of an isotropic curvature perturbation in the shoot frame.
      */
     float yaw_perturbation = 0;
@@ -2830,7 +2944,7 @@ struct Shoot {
     /** Sibling laterals do not grow alike in a real tree: a few well-lit ones become dominant, keep extending
      * for years and thicken into structural limbs, while the rest stay short twigs. This factor scales the
      * shoot's node ceiling and internode length so that the model can express that divergence. 1 is the
-     * undifferentiated default, so a plant that never calls updateGrowthPriority() behaves exactly as before.
+     * undifferentiated default, used by any plant that never calls updateGrowthPriority().
      */
     float growth_priority = 1.f;
 
@@ -2896,6 +3010,8 @@ struct PlantInstance {
     float dd_to_dormancy = 1e6; //!< effectively "never", keeping the dormancy predicate false
     float max_leaf_lifespan = 1e6;
     bool is_evergreen = false;
+    //! The earliest image of LeafPrototype::leaf_texture_series that any leaf of the plant uses, whatever its age (see PlantArchitecture::setPlantMinimumLeafTextureStage())
+    uint minimum_leaf_texture_stage = 0;
 
     float max_age = 999;
 
@@ -3092,6 +3208,30 @@ struct PlantInstance {
     float attraction_obstacle_reduction_factor = 0.5f;
 };
 
+//! Options for PlantArchitecture::generateLeafTextureStages()
+struct LeafTextureStageOptions {
+    //! Colors a leaf passes through after its original color, in order, keeping the leaf's own veins and shading. Not used if senesced_textures is given.
+    /**
+     * \note The defaults are for appearance. They are not calibrated to measurements of any species.
+     */
+    std::vector<helios::RGBcolor> senescence_colors = {helios::make_RGBcolor(0.76f, 0.66f, 0.18f), helios::make_RGBcolor(0.36f, 0.22f, 0.10f)};
+
+    //! Images a leaf passes through after its original image, in order, each with the same resolution as the leaf texture. If given, these are used in place of senescence_colors.
+    std::vector<std::string> senesced_textures;
+
+    //! Image giving when each pixel turns, with the same resolution as the leaf texture: black pixels turn first and white pixels last. If empty, a leaf turns from its margin inward with patches given by patchiness.
+    std::string onset_map;
+
+    //! Fraction of the generated order of turning that is random patches rather than distance from the leaf's margin, between 0 and 1. Not used if onset_map is given.
+    float patchiness = 0.3f;
+
+    //! Fraction of the leaf's aging over which any one pixel changes color, greater than 0 and at most 1. Smaller values give sharper fronts between changed and unchanged areas of the leaf.
+    float transition_width = 0.25f;
+
+    //! Selects the random patches, so that different variants of a leaf can turn in different patterns
+    uint noise_seed = 0;
+};
+
 //! Parameters for USD articulated rigid body export for IsaacSim
 struct USDExportParameters {
     //! Young's modulus (Pa) for joint stiffness calculation: K = E*I/L
@@ -3100,7 +3240,7 @@ struct USDExportParameters {
     float wood_density = 800.f;
     //! Damping time constant (s) for the joints between stem, petiole and peduncle segments. Damping = time constant * K
     float damping_time_constant = 0.02f;
-    //! Cap on each joint's own natural frequency, as a multiple of the physics step rate, enforced by adding joint armature. Lower is more stable; simulations collapsed at 64.
+    //! Cap on each joint's own natural frequency, as a multiple of the physics step rate, enforced by adding joint armature. Lower is more stable.
     float armature_stability_ratio = 8.f;
     //! Physics step rate (Hz) the simulation is expected to run at, used to size the joint armature
     float physics_steps_per_second = 60.f;
@@ -3512,6 +3652,21 @@ public:
      * \param[in] plantID Identifier of the plant whose phenology is to be disabled.
      */
     void disablePlantPhenology(uint plantID);
+
+    //! Make every leaf of a plant use at least a given image of LeafPrototype::leaf_texture_series, whatever its age
+    /**
+     * A leaf normally moves through its images according to its own age. This is for changes that do not follow leaf age, such as a whole canopy turning color in autumn or senescing at the end of a crop's season. A leaf older than the stage for its age stays on the image for its age, and a shoot type with fewer images uses its last one.
+     * \param[in] plantID Identifier of the plant.
+     * \param[in] stage Index of the image. Setting it back to 0 returns every leaf to the image for its age.
+     */
+    void setPlantMinimumLeafTextureStage(uint plantID, uint stage);
+
+    //! Get the image of LeafPrototype::leaf_texture_series that every leaf of a plant uses at minimum
+    /**
+     * \param[in] plantID Identifier of the plant.
+     * \return Index of the image given by setPlantMinimumLeafTextureStage(), which is 0 by default.
+     */
+    [[nodiscard]] uint getPlantMinimumLeafTextureStage(uint plantID) const;
 
     //! Advance plant growth by a specified time interval for all plants
     /**
@@ -4049,6 +4204,77 @@ public:
      */
     void setPetioleLeafCount(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count);
 
+    //! Regenerate one petiole of an existing phytomer from its own pitch, curvature, length and lean, and rebuild its leaves on it.
+    /**
+     * A shoot type gives every phytomer the same distribution of petiole pitch and curvature. A plant built leaf by leaf from measurements, or fitted one leaf at a time, needs each petiole to have its own.
+     * This generates the petiole by the phytomer constructor's rules from the values given, prescribes it with setPetioleNodePositions() (so it is held as given from then on), and rebuilds the petiole's
+     * leaves on it with the phytomer's leaf parameters. See Phytomer::setPetioleShape() for the conventions.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot within the plant.
+     * \param[in] node_index Index of the phytomer along the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] outward_direction Direction the petiole leans toward, in world coordinates; any vector that is not parallel to the internode axis.
+     * \param[in] pitch_degrees Angle between the petiole's base and the internode axis, in degrees.
+     * \param[in] curvature Change in the petiole's direction along its length, in degrees per meter.
+     * \param[in] length Length of the petiole in meters; must be greater than zero.
+     */
+    void setPetioleShape(uint plantID, uint shootID, uint node_index, uint petiole_index, const helios::vec3 &outward_direction, float pitch_degrees, float curvature, float length);
+
+    //! Rebuild the leaflets of one petiole of an existing phytomer with their own count, spacing and sizes.
+    /**
+     * The per-phytomer counterpart of the shoot parameters leaf.leaves_per_petiole, leaf.leaflet_offset, leaf.leaflet_scale and leaf.prototype_scale. See Phytomer::setPetioleLeaflets().
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot within the plant.
+     * \param[in] node_index Index of the phytomer along the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_count Number of leaves on the petiole; must be at least one.
+     * \param[in] leaflet_offset Spacing between lateral leaflet pairs as a fraction of the petiole length; zero or greater.
+     * \param[in] leaflet_scale Size of each lateral pair relative to the pair nearer the tip; greater than zero.
+     * \param[in] prototype_scale Fully-elongated size of the terminal leaflet in meters; greater than zero.
+     */
+    void setPetioleLeaflets(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale);
+
+    //! Rebuild the leaflets of one petiole of an existing phytomer turned by their own pitch, yaw and roll.
+    /**
+     * The per-phytomer counterpart of the shoot parameters leaf.pitch, leaf.yaw and leaf.roll. See Phytomer::setPetioleLeafletAngles().
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot within the plant.
+     * \param[in] node_index Index of the phytomer along the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] pitch_degrees Leaflet pitch in degrees.
+     * \param[in] yaw_degrees Leaflet yaw in degrees.
+     * \param[in] roll_degrees Leaflet roll in degrees.
+     */
+    void setPetioleLeafletAngles(uint plantID, uint shootID, uint node_index, uint petiole_index, float pitch_degrees, float yaw_degrees, float roll_degrees);
+
+    //! Rebuild the leaflets of one petiole of an existing phytomer with their own blade shape.
+    /**
+     * The per-phytomer counterpart of the leaf prototype's leaf_aspect_ratio, longitudinal_curvature, lateral_curvature and midrib_fold_fraction. See Phytomer::setPetioleLeafShape().
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot within the plant.
+     * \param[in] node_index Index of the phytomer along the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] aspect_ratio Ratio of blade width to length; greater than zero.
+     * \param[in] longitudinal_curvature Curvature along the blade's length (+ up, - down).
+     * \param[in] lateral_curvature Curvature across the blade's width (+ up, - down).
+     * \param[in] midrib_fold_fraction Fold along the midrib, from 0 (flat) to 1 (folded shut).
+     */
+    void setPetioleLeafShape(uint plantID, uint shootID, uint node_index, uint petiole_index, float aspect_ratio, float longitudinal_curvature, float lateral_curvature, float midrib_fold_fraction);
+
+    //! Rebuild the leaflets of one petiole of an existing phytomer with each turned by its own offset from the leaf's angles.
+    /**
+     * See Phytomer::setPetioleLeafletAngleOffsets(). Every leaflet of a leaf is otherwise turned by one set of angles, mirrored across the petiole.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot within the plant.
+     * \param[in] node_index Index of the phytomer along the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] pitch_offsets_degrees Pitch offset of each leaflet in degrees, in the petiole's leaf order; one per leaflet.
+     * \param[in] yaw_offsets_degrees Yaw offset of each leaflet in degrees, in the leaf's mirrored sense; one per leaflet.
+     * \param[in] roll_offsets_degrees Roll offset of each leaflet in degrees; one per leaflet.
+     */
+    void setPetioleLeafletAngleOffsets(uint plantID, uint shootID, uint node_index, uint petiole_index, const std::vector<float> &pitch_offsets_degrees, const std::vector<float> &yaw_offsets_degrees,
+                                       const std::vector<float> &roll_offsets_degrees);
+
     /**
      * \brief Sets the base position of a plant with the specified ID, moving the plant if it has already been built.
      *
@@ -4518,7 +4744,7 @@ public:
      *
      * Determined by shoot type: every type other than "proleptic" and "sylleptic" is treated as structural. Branching
      * order does not work here, because the order-0 axis runs the whole length of the trunk, so every lateral borne on it
-     * is order 1 however small; on a grown almond that is over a hundred twigs against a handful of real scaffolds.
+     * is order 1 however small.
      *
      * \note A species whose fine shoots use other type names has all of its wood treated as structural, and so is never
      * shed or reprioritised.
@@ -5079,18 +5305,19 @@ public:
     void setPlantNitrogenParameters(const std::vector<uint> &plantIDs, const NitrogenParameters &params);
 
     /**
-     * \brief Initialize nitrogen pools for all plants based on current leaf biomass
-     * \param[in] initial_leaf_N_concentration Initial leaf nitrogen concentration (g N/g DW)
+     * \brief Initialize nitrogen pools for all plants, setting the nitrogen content per unit area of every existing leaf and emptying the root and available pools
+     * \param[in] initial_leaf_N_area Initial leaf nitrogen content per unit leaf area (g N/m²) given to every existing leaf
+     * \throws helios_runtime_error if initial_leaf_N_area is negative
      */
-    void initializeNitrogenPools(float initial_leaf_N_concentration);
+    void initializeNitrogenPools(float initial_leaf_N_area);
 
     /**
-     * \brief Initialize nitrogen pools for a specific plant
+     * \brief Initialize nitrogen pools for a specific plant, setting the nitrogen content per unit area of every existing leaf and emptying the root and available pools
      * \param[in] plantID Plant ID to initialize
-     * \param[in] initial_leaf_N_concentration Initial leaf nitrogen concentration (g N/g DW)
-     * \throws helios_runtime_error if plant does not exist
+     * \param[in] initial_leaf_N_area Initial leaf nitrogen content per unit leaf area (g N/m²) given to every existing leaf
+     * \throws helios_runtime_error if plant does not exist or initial_leaf_N_area is negative
      */
-    void initializePlantNitrogenPools(uint plantID, float initial_leaf_N_concentration);
+    void initializePlantNitrogenPools(uint plantID, float initial_leaf_N_area);
 
     /**
      * \brief Add nitrogen to a single plant (immediate application to root and available pools)
@@ -5264,6 +5491,17 @@ public:
 
     //! Re-enable standard output from this plug-in
     void enableMessages();
+
+    //! Generate images of a leaf at successive stages of aging, for use in LeafPrototype::leaf_texture_series
+    /**
+     * Each pixel of the leaf changes color at its own point in the aging, so that color spreads across the leaf as an aging front rather than fading in everywhere at once. The images have exactly the transparency of the leaf texture, as LeafPrototype::leaf_texture_series requires.
+     * \param[in] leaf_texture Path to the image of the young leaf, which can be a simple file name as for LeafPrototype::leaf_texture_file.
+     * \param[in] output_directory Directory to write the images to, which is created if it does not exist. Images named after the leaf texture are overwritten, so give different directories for different options.
+     * \param[in] stage_count Number of stages, including the leaf texture as the first, which must be at least 2.
+     * \param[in] options How the leaf ages.
+     * \return Paths to the image for each stage, starting with the leaf texture itself. These are PNG files if the leaf texture has transparency and JPEG files if not.
+     */
+    static std::vector<std::string> generateLeafTextureStages(const std::string &leaf_texture, const std::string &output_directory, uint stage_count, const LeafTextureStageOptions &options = LeafTextureStageOptions());
 
     //! Resolve an asset file path for the plantarchitecture plugin
     /**
@@ -5457,6 +5695,9 @@ protected:
     // the plant, and addPlantInstance() attaches both maps to the plant the builder creates.
     std::map<std::string, float> current_build_parameters;
     std::map<std::string, BuildParameterDistribution> current_organ_build_parameters;
+    // Name of the library model being built by buildPlantInstanceFromLibrary(), set only for the duration of that call, given by addPlantInstance() to the plant it creates so that the organs built
+    // during the build are named for the model ("custom" otherwise).
+    std::string current_build_plant_name;
 
     // Function pointer maps for plant model registration
     std::map<std::string, std::function<void()>> shoot_initializers;
@@ -5469,8 +5710,8 @@ protected:
      * Populated by \ref registerPlantModel(). The x-component is the Beta distribution parameter mu and the
      * y-component is nu, in the parameterization of \ref helios::sample_Beta_distribution().
      *
-     * A model absent from this map declares no measured distribution, and its plants are built exactly as they
-     * were before this map existed. Absence is the "unset" representation deliberately: a numeric sentinel
+     * A model absent from this map declares no measured distribution, and its plants are not steered.
+     * Absence is the "unset" representation deliberately: a numeric sentinel
      * stored against every model would switch leaf angle distribution tracking on for species that have no
      * distribution to track, which is observable through \ref isPlantLeafAngleDistributionTrackingEnabled(),
      * \ref duplicatePlantInstance() and \ref writePlantStructureXML().
@@ -5534,6 +5775,16 @@ protected:
      */
     void recordLeafPrototypeRestGeometry(const LeafPrototype &prototype_params, int leaves_per_petiole, int prototype_index, uint objID_leaf, float leaf_flexibility);
 
+    //! Give every leaf of a plant the image of LeafPrototype::leaf_texture_series for its age
+    /**
+     * \param[in] plantID Identifier of the plant.
+     * \param[in] reapply If true, the image is applied to every leaf even where the phytomer's stage has not changed, as is needed when its leaves have been replaced.
+     */
+    void updatePlantLeafTextureStages(uint plantID, bool reapply = false);
+
+    //! Write the "leaf_texture_stage" object data of every existing leaf, after it has been enabled with optionalOutputObjectData()
+    void refreshLeafTextureStageOutput();
+
     //! Look up one cached leaf blade prototype, to be copied for a leaf
     /**
      * Fails with an explicit error rather than indexing the cache out of range when the requested blade was never cached, which means the caller is asking for a leaflet count or a prototype index the set
@@ -5554,6 +5805,22 @@ protected:
     std::map<std::pair<FlowerPrototypeFunction, std::map<std::string, BuildParameterDistribution>>, std::vector<uint>> unique_closed_flower_prototype_objIDs;
     // Key is the prototype function pointer and the plant's organ build parameter distributions; value index is the unique fruit prototype
     std::map<std::pair<FruitPrototypeFunction, std::map<std::string, BuildParameterDistribution>>, std::vector<uint>> unique_fruit_prototype_objIDs;
+
+    //! A material named for organs by nameOrganMaterials(), with the appearance of the automatic material it was named from
+    struct OrganMaterial {
+        std::string label;
+        helios::RGBAcolor color;
+        std::string texture_file;
+        bool texture_color_overridden = false;
+    };
+    //! Material named for each automatic material label and organ material base name, given to the organs of that kind and appearance created later (see nameOrganMaterials())
+    std::map<std::pair<std::string, std::string>, OrganMaterial> organ_material_labels;
+
+    //! Give an organ's automatic materials descriptive labels starting with desired_base_name, sharing the material already named for organs of the same kind and appearance
+    void nameOrganMaterials(uint objID, const std::string &desired_base_name);
+
+    //! Give the automatic materials of several organs descriptive labels (see nameOrganMaterials(uint, const std::string &))
+    void nameOrganMaterials(const std::vector<uint> &objIDs, const std::string &desired_base_name);
 
     //! Draw one value of each organ build parameter of a plant, for building one flower or fruit prototype
     /**

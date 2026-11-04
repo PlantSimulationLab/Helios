@@ -133,6 +133,8 @@ layout(set = 3, binding = 8) readonly buffer BandEmissionFlagBuffer  { uint  ban
 #include "common/sky_distribution.glsl"
 #include "common/glass_cover.glsl"
 #include "common/surface_layer.glsl"
+#include "common/texture_mask.glsl"
+#include "common/spectral_texture.glsl"
 
 // PI is defined in sky_distribution.glsl
 
@@ -274,6 +276,9 @@ void shade_camera_hit(uint pixel_index, vec3 ray_origin, vec3 ray_dir, float clo
     // Determine which face was hit
     bool face = dot(normal, ray_dir) < 0.0; // true = hit top face
 
+    // A primitive with a spectral texture is seen in the outgoing radiation of the class at the hit point
+    uint hit_class_slot = spectral_camera_class_slot(hit_prim, prim_types_buf.types[hit_prim], hit_uv);
+
     // Normal of the face the camera sees, for the specular term
     vec3 viewed_normal = face ? normal : -normal;
 
@@ -375,6 +380,14 @@ void shade_camera_hit(uint pixel_index, vec3 ray_origin, vec3 ray_dir, float clo
             surface_strength = radiation_out_top[buf_idx] * strength;
         } else {
             surface_strength = radiation_out_bottom[buf_idx] * strength;
+        }
+        // The class's own outgoing radiation: flat over the facet, or with camera flux smoothing, interpolated from the facet's vertices
+        if (hit_class_slot != NO_PALETTE_ENTRY && spectral_palette_applies(0u, band_map_buf.map[b])) {
+            if (smooth_v0 >= 0 && spectral_vertex_on()) {
+                surface_strength = spectral_smoothed_class_flux(hit_prim, hit_class_slot, use_top_face, b, band_map_buf.map[b], ivec4(smooth_v0, smooth_v1, smooth_v2, smooth_v3), vec4(smooth_w0, smooth_w1, smooth_w2, smooth_w3)) * strength;
+            } else {
+                surface_strength = spectral_class_flux(hit_class_slot, use_top_face, b) * strength;
+            }
         }
         // A surface with a layer sends out its two components, in proportions that depend on the viewing angle. Smoothing applies
         // to the first; the second, the layer's reflection, is that of the facet.

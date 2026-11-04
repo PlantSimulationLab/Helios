@@ -1569,6 +1569,23 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         }
     }
 
+    //-------------- SPECTRAL PALETTES ---------------//
+    // Read before the primitives, whose spectral textures name them
+    for (pugi::xml_node palette_node = helios.child("spectral_palette"); palette_node; palette_node = palette_node.next_sibling("spectral_palette")) {
+        const std::string palette_label = palette_node.attribute("label").value();
+        std::vector<SpectralTextureClass> classes;
+        for (pugi::xml_node class_node = palette_node.child("class"); class_node; class_node = class_node.next_sibling("class")) {
+            const std::string class_ID_text = class_node.attribute("id").value();
+            int class_ID = 0;
+            if (!parse_int(class_ID_text.c_str(), class_ID) || class_ID != int(classes.size()) + 1) {
+                helios_runtime_error("ERROR (Context::loadXML): The classes of spectral palette '" + palette_label + "' must be numbered 1, 2, ... in order by their \"id\" attribute, but class " + std::to_string(classes.size() + 1) +
+                                     " has the id \"" + class_ID_text + "\".");
+            }
+            classes.push_back({class_node.attribute("reflectivity").value(), class_node.attribute("transmissivity").value(), class_node.attribute("provenance").value()});
+        }
+        addSpectralPalette(palette_label, classes);
+    }
+
     //-------------- PATCHES ---------------//
     for (pugi::xml_node p = helios.child("patch"); p; p = p.next_sibling("patch")) {
         // * Patch Object ID * //
@@ -1675,6 +1692,16 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         // Assign material if using material format
         if (has_material && !material_label_from_xml.empty()) {
             assignMaterialToPrimitive(ID, material_label_from_xml);
+        }
+
+        // Applied after the material, since changing a primitive's texture removes this image
+        const std::string patch_color_texture = trim_whitespace(p.child("color_texture").child_value());
+        if (!patch_color_texture.empty()) {
+            setPrimitiveColorTexture(ID, patch_color_texture);
+        }
+        const pugi::xml_node patch_spectral_texture = p.child("spectral_texture");
+        if (!patch_spectral_texture.empty()) {
+            setPrimitiveSpectralTexture(ID, trim_whitespace(patch_spectral_texture.child_value()), patch_spectral_texture.attribute("palette").value());
         }
 
         if (objID > 0) {
@@ -1801,6 +1828,16 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         // Assign material if using material format
         if (has_material_tri && !material_label_from_xml_tri.empty()) {
             assignMaterialToPrimitive(ID, material_label_from_xml_tri);
+        }
+
+        // Applied after the material, since changing a primitive's texture removes this image
+        const std::string triangle_color_texture = trim_whitespace(tri.child("color_texture").child_value());
+        if (!triangle_color_texture.empty()) {
+            setPrimitiveColorTexture(ID, triangle_color_texture);
+        }
+        const pugi::xml_node triangle_spectral_texture = tri.child("spectral_texture");
+        if (!triangle_spectral_texture.empty()) {
+            setPrimitiveSpectralTexture(ID, trim_whitespace(triangle_spectral_texture.child_value()), triangle_spectral_texture.attribute("palette").value());
         }
 
         if (objID > 0) {
@@ -3285,6 +3322,58 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
         outfile << "   </materials>\n" << std::endl;
     }
 
+    // -- spectral palettes -- //
+
+    // Only the palettes of the primitives being written, as for materials
+    auto escapeXML = [](const std::string &text) {
+        std::string escaped;
+        for (char c: text) {
+            switch (c) {
+                case '&':
+                    escaped += "&amp;";
+                    break;
+                case '<':
+                    escaped += "&lt;";
+                    break;
+                case '>':
+                    escaped += "&gt;";
+                    break;
+                case '"':
+                    escaped += "&quot;";
+                    break;
+                // An XML parser replaces these with spaces in an attribute value unless they are written as character references
+                case '\t':
+                    escaped += "&#9;";
+                    break;
+                case '\n':
+                    escaped += "&#10;";
+                    break;
+                case '\r':
+                    escaped += "&#13;";
+                    break;
+                default:
+                    escaped += c;
+            }
+        }
+        return escaped;
+    };
+    std::set<uint> spectral_palette_IDs_used;
+    for (uint UUID: UUIDs) {
+        if (doesPrimitiveExist(UUID) && getPrimitivePointer_private(UUID)->spectral_palette_ID != 0) {
+            spectral_palette_IDs_used.insert(getPrimitivePointer_private(UUID)->spectral_palette_ID);
+        }
+    }
+    for (uint palette_ID: spectral_palette_IDs_used) {
+        const SpectralPalette &palette = spectral_palettes.at(palette_ID);
+        outfile << "   <spectral_palette label=\"" << escapeXML(palette.label) << "\">" << std::endl;
+        for (size_t i = 0; i < palette.classes.size(); i++) {
+            const SpectralTextureClass &spectral_class = palette.classes.at(i);
+            outfile << "\t<class id=\"" << i + 1 << "\" reflectivity=\"" << escapeXML(spectral_class.reflectivity_spectrum) << "\" transmissivity=\"" << escapeXML(spectral_class.transmissivity_spectrum) << "\" provenance=\""
+                    << escapeXML(spectral_class.provenance) << "\"/>" << std::endl;
+        }
+        outfile << "   </spectral_palette>\n" << std::endl;
+    }
+
     // -- time/date -- //
 
     Date date = getDate();
@@ -3360,6 +3449,14 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
         // Write material label (v3 format)
         if (materials.find(prim->materialID) != materials.end()) {
             outfile << "\t<material>" << materials.at(prim->materialID).label << "</material>" << std::endl;
+        }
+
+        if (prim->color_texture_ID != 0) {
+            outfile << "\t<color_texture>" << color_texture_files.at(prim->color_texture_ID) << "</color_texture>" << std::endl;
+        }
+
+        if (prim->spectral_class_map_ID != 0) {
+            outfile << "\t<spectral_texture palette=\"" << escapeXML(spectral_palettes.at(prim->spectral_palette_ID).label) << "\">" << escapeXML(spectral_texture_class_maps.at(prim->spectral_class_map_ID).file) << "</spectral_texture>" << std::endl;
         }
 
         if (!pdata.empty()) {
@@ -5388,7 +5485,7 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
         std::vector<vec3> vertices = prim_ptr->getVertices();
         PrimitiveType type = prim_ptr->getType();
         RGBcolor C = prim_ptr->getColor();
-        std::string texturefile = prim_ptr->getTextureFile();
+        std::string texturefile = getPrimitiveColorTextureFile(p);
         bool texture_color_overridden = prim_ptr->isTextureColorOverridden();
 
         std::string obj_label = "default";
