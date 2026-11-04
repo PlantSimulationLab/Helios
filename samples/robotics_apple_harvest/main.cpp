@@ -31,11 +31,26 @@ namespace {
                 const float *o = observations.data() + i * observation_size;
                 float *a = actions.data() + i * action_size;
                 if (scripted) {
-                    // Head for the fruit and grip it, and once gripped pull straight out of the cup's face, away from the fruit's center, so as not to peel the seal
+                    // Line the cup up with the fruit, 8 cm short of it, then push straight in until the lip seals, and once gripped pull straight out of the
+                    // cup. The cup points horizontally away from the turret, so it is lined up when the fruit is on the horizontal line from the turret
+                    // through the cup, at the cup's height. As scripted_actions() in harvest_env.py.
                     const bool gripped = o[16] > 0.5f;
-                    const float toward_fruit = std::max(std::sqrt(o[0] * o[0] + o[1] * o[1] + o[2] * o[2]), 1e-6f);
-                    for (int k = 0; k < 3; k++) {
-                        a[k] = gripped ? -o[k] / toward_fruit : 8.f * o[k];
+                    if (gripped) {
+                        const float toward_fruit = std::max(std::sqrt(o[0] * o[0] + o[1] * o[1] + o[2] * o[2]), 1e-6f);
+                        for (int k = 0; k < 3; k++) {
+                            a[k] = -o[k] / toward_fruit;
+                        }
+                    } else {
+                        const float turret_x = o[4] - 0.15f + o[0], turret_y = o[5] + o[1];
+                        const float turret_distance = std::max(std::sqrt(turret_x * turret_x + turret_y * turret_y), 1e-6f);
+                        const float line_x = turret_x / turret_distance, line_y = turret_y / turret_distance;
+                        const float along = o[0] * line_x + o[1] * line_y;
+                        const float sideways_x = o[0] - along * line_x, sideways_y = o[1] - along * line_y;
+                        const bool lined_up = std::sqrt(sideways_x * sideways_x + sideways_y * sideways_y + o[2] * o[2]) < 0.004f;
+                        const float wanted_along = lined_up ? 0.f : std::max(along, 0.08f);
+                        a[0] = 8.f * (sideways_x + (along - wanted_along) * line_x);
+                        a[1] = 8.f * (sideways_y + (along - wanted_along) * line_y);
+                        a[2] = 8.f * o[2];
                     }
                     a[3] = 1.f;
                 } else {

@@ -34,11 +34,24 @@
   </link>
   <joint name="wrist" type="revolute"><origin xyz="0.6 0 0"/><parent link="forearm"/><child link="wrist_link"/><axis xyz="0 -1 0"/><limit lower="-2.2" upper="2.2" effort="60" velocity="3"/></joint>
 
-  <!-- The tool: a neck ending in a vacuum cup, whose face is at x = 0.32 -->
+  <!-- The tool: a neck ending in a vacuum cup, whose mouth is at x = 0.32: the bottom of the cup, 1.8 cm behind the mouth, and its lip, 5 cm across, as
+       12 spheres. The cup's wall between them does not collide. -->
   <link name="tool">
     <inertial><origin xyz="0.14 0 0"/><mass value="0.6"/><inertia ixx="0.0005" iyy="0.002" izz="0.002" ixy="0" ixz="0" iyz="0"/></inertial>
     <collision name="neck"><origin xyz="0.14 0 0" rpy="0 1.5708 0"/><geometry><cylinder radius="0.018" length="0.28"/></geometry></collision>
-    <collision name="cup"><origin xyz="0.3 0 0"/><geometry><sphere radius="0.02"/></geometry></collision>
+    <collision name="cup"><origin xyz="0.29 0 0"/><geometry><sphere radius="0.012"/></geometry></collision>
+    <collision name="lip0"><origin xyz="0.32 0.02500 0.00000"/><geometry><sphere radius="0.004"/></geometry></collision>
+    <collision name="lip1"><origin xyz="0.32 0.02165 0.01250"/><geometry><sphere radius="0.004"/></geometry></collision>
+    <collision name="lip2"><origin xyz="0.32 0.01250 0.02165"/><geometry><sphere radius="0.004"/></geometry></collision>
+    <collision name="lip3"><origin xyz="0.32 0.00000 0.02500"/><geometry><sphere radius="0.004"/></geometry></collision>
+    <collision name="lip4"><origin xyz="0.32 -0.01250 0.02165"/><geometry><sphere radius="0.004"/></geometry></collision>
+    <collision name="lip5"><origin xyz="0.32 -0.02165 0.01250"/><geometry><sphere radius="0.004"/></geometry></collision>
+    <collision name="lip6"><origin xyz="0.32 -0.02500 0.00000"/><geometry><sphere radius="0.004"/></geometry></collision>
+    <collision name="lip7"><origin xyz="0.32 -0.02165 -0.01250"/><geometry><sphere radius="0.004"/></geometry></collision>
+    <collision name="lip8"><origin xyz="0.32 -0.01250 -0.02165"/><geometry><sphere radius="0.004"/></geometry></collision>
+    <collision name="lip9"><origin xyz="0.32 -0.00000 -0.02500"/><geometry><sphere radius="0.004"/></geometry></collision>
+    <collision name="lip10"><origin xyz="0.32 0.01250 -0.02165"/><geometry><sphere radius="0.004"/></geometry></collision>
+    <collision name="lip11"><origin xyz="0.32 0.02165 -0.01250"/><geometry><sphere radius="0.004"/></geometry></collision>
   </link>
   <joint name="roll" type="revolute"><parent link="wrist_link"/><child link="tool"/><axis xyz="1 0 0"/><limit lower="-3" upper="3" effort="30" velocity="3"/></joint>
 </robot>
