@@ -44,6 +44,7 @@ def helios_library():
     lib.harvest_env_enable_movie_camera.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
     lib.harvest_env_render_movie_frame.argtypes = [ctypes.c_void_p, ctypes.c_int, floats, floats, floats, floats, ctypes.POINTER(ctypes.c_ubyte)]
     lib.harvest_env_render_wrist_frame.argtypes = [ctypes.c_void_p, ctypes.c_int, floats, floats, ctypes.POINTER(ctypes.c_ubyte)]
+    lib.harvest_env_set_follow_through.argtypes = [ctypes.c_void_p, ctypes.c_int]
     return lib
 
 
@@ -86,6 +87,7 @@ class Recorder:
         episode["detach_force"] = float(record.detach_force)
         episode["final_grip_force"] = float(record.final_grip_force)
         episode["peak_contact_force"] = float(record.peak_contact_force)
+        episode["detach_step"] = int(record.steps)  # the control step at which the episode was decided; later steps are follow-through
         self.finished[i].append(episode)
         self.current[i] = None
 
@@ -96,6 +98,7 @@ def record_helios(args, choose):
     lib = helios_library()
     # Without leaves, as in training and evaluation
     env = harvest_env.AppleHarvestVecEnv([args.tree], instances_per_tree=args.instances, threads=args.instances, seed=args.seed, leaves=False)
+    lib.harvest_env_set_follow_through(env._env, args.follow_through)
     names = helios_link_names(lib, env._env)
     link_count = len(names)
     poses = np.zeros((link_count, 7), np.float32)
@@ -136,20 +139,29 @@ def record_isaac(args, choose):
     import isaac_harvest_env as ihe
     from harvest_scene import ROBOT_JOINTS
 
-    env = ihe.IsaacHarvestVecEnv([args.tree], instances_per_tree=args.instances, seed=args.seed, trees_directory=os.path.abspath(args.trees))
+    env = ihe.IsaacHarvestVecEnv([args.tree], instances_per_tree=args.instances, seed=args.seed, trees_directory=os.path.abspath(args.trees), fruit_hold=args.fruit_hold)
+    env.follow_through_steps = args.follow_through
     tv = env.tree_views[0]
     view = tv["view"]
     body_names = list(view.shared_metatype.link_names)
+    articulation_bodies = len(body_names)
     rows = tv["rows"].cpu().numpy()  # simulation of each row of the tree view
+    if env.soft:
+        # Candidate fruit are bodies of their own, outside the tree's articulation
+        body_names += [c["link"] for c in env.trees[0]["description"]["candidates"]]
+        fruit_rows = tv["fruit_rows"].cpu().numpy()  # (view rows, candidates) rows of the fruit view
     owners = env.trees[0]["owners"]
     recorder = Recorder(env.num_envs)
     in_step = [False]
 
     def snapshot():
         """Per simulation: body poses (bodies, 7: x y z qx qy qz qw) relative to its origin, robot joints in m and degrees as Helios gives them."""
-        transforms = view.get_link_transforms().view(view.count, len(body_names), 7).cpu().numpy().copy()
+        transforms = view.get_link_transforms().view(view.count, articulation_bodies, 7).cpu().numpy().copy()
         bodies = np.zeros((env.num_envs, len(body_names), 7), np.float32)
-        bodies[rows] = transforms
+        bodies[rows, :articulation_bodies] = transforms
+        if env.soft:
+            fruit = tv["fruits"].get_transforms().view(-1, 7).cpu().numpy()
+            bodies[rows, articulation_bodies:] = fruit[fruit_rows]
         bodies[:, :, :3] -= env.env_origins[:, None, :]
         dofs = env.robots.get_dof_positions().view(env.robots.count, -1)[env.robot_order][:, env.dof_order].cpu().numpy().astype(np.float64)
         dofs[:, 1:] = np.degrees(dofs[:, 1:])
@@ -202,6 +214,8 @@ def main():
     parser.add_argument("--episodes", type=int, default=6, help="episodes per simulation")
     parser.add_argument("--seed", type=int, default=2000)
     parser.add_argument("--trees", default="isaac_trees", help="directory of trees exported for IsaacSim")
+    parser.add_argument("--fruit-hold", choices=["rigid", "soft"], default="soft", help="how IsaacSim holds candidate fruit; only a soft hold can release a fruit to be carried away")
+    parser.add_argument("--follow-through", type=int, default=25, help="control steps (25 per second) a success goes on for, with the cup carrying the fruit away; 0 to end at detachment")
     parser.add_argument("--output", required=True, help=".npz file")
     args, _ = parser.parse_known_args()
 
@@ -222,8 +236,10 @@ def main():
         arrays[f"joints_{k}"] = np.stack(e["joints"])
         arrays[f"gripped_{k}"] = np.array(e["gripped"])
         arrays[f"target_{k}"] = e["target"]
-        summary.append({key: e[key] for key in ("outcome", "detach_force", "final_grip_force", "peak_contact_force")})
-    meta.update({"tree": args.tree, "policy": os.path.basename(args.policy), "episodes": summary})
+        summary.append({key: e[key] for key in ("outcome", "detach_force", "final_grip_force", "peak_contact_force", "detach_step")})
+    meta.update({"tree": args.tree, "policy": os.path.basename(args.policy), "episodes": summary, "follow_through": args.follow_through})
+    if args.simulator == "isaac":
+        meta["fruit_hold"] = args.fruit_hold
     np.savez_compressed(args.output, meta=json.dumps(meta), **arrays)
     print(f"saved {len(episodes)} episodes to {args.output}", flush=True)
     if args.simulator == "isaac":

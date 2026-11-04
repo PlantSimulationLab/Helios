@@ -105,6 +105,11 @@ int harvest_env_render_movie_frame(void *env, int index, const float *link_poses
 //! movie camera's image size. Returns 0 and prints the reason on failure.
 int harvest_env_render_wrist_frame(void *env, int index, const float *link_poses, const float *robot_joints, unsigned char *image);
 
+//! For showing: after a success, go on for this many control steps (0 by default), with the cup backing straight away from the tree whatever the action,
+//! carrying the freed fruit while the grip holds. The episode then ends as a success, with the reward and record it had when the fruit detached. Not for
+//! training or evaluation, since the extra steps take time and teach nothing.
+void harvest_env_set_follow_through(void *env, int control_steps);
+
 //! Get the record of a simulation's last finished episode
 void harvest_env_last_episode(const void *env, int index, HarvestEpisodeRecord *record);
 

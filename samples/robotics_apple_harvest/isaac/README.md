@@ -35,6 +35,12 @@ each half shows what the wrist camera of `harvest_env_enable_camera()` would see
 not use it: they are given exact positions of the fruit and wood, which stand in for perception. It needs `imageio-ffmpeg` in IsaacSim's
 Python.
 
+Episodes end when the fruit detaches, so for the movie a success goes on for a second (`--follow-through 25`), with the cup backing straight
+away from the tree, whatever the policy would do, carrying the freed fruit (`harvest_env_set_follow_through()` in Helios,
+`follow_through_steps` here). Nothing from those steps counts: the episode's reward and record are those it had when the fruit detached.
+IsaacSim can only free a fruit on a soft hold, by switching its joint off in USD, which PhysX follows while simulating; a rigid hold is a
+locked articulation joint, which the tensor API cannot release. So IsaacSim is recorded with `--fruit-hold soft`.
+
 ```bash
 C:/isaacsim/python.bat ../isaac/movie_record.py --simulator helios --policy apple_policy_helios_seed0 --tree 301 --output helios_301.npz
 C:/isaacsim/python.bat ../isaac/movie_record.py --simulator isaac --policy apple_policy_helios_seed0 --tree 301 --output isaac_301.npz

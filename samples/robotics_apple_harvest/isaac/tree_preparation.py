@@ -213,6 +213,7 @@ def prepare_tree(json_path, usd_path, output_path, fruit_hold="rigid"):
             frame0 = (np.array(joint_api.GetLocalPos0Attr().Get(), dtype=float), joint_api.GetLocalRot0Attr().Get())
             frame1 = (anchor, joint_api.GetLocalRot1Attr().Get())
             soft_holds[names[i]] = dict(
+                joint=joint.GetPath().pathString[len(plant_path):],  # below the tree's root prim, for releasing the fruit
                 carrier=joint_api.GetBody0Rel().GetTargets()[0].name,
                 local_pos0=frame0[0].tolist(),
                 local_rot0=[frame0[1].GetReal(), *frame0[1].GetImaginary()],

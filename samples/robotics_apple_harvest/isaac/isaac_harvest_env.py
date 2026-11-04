@@ -120,6 +120,11 @@ class IsaacHarvestVecEnv(VecEnv):
         self._episode_lengths = np.zeros(count, np.int64)
         self._actions = None
         self.last = [EpisodeRecord() for _ in range(count)]
+        # For showing, as harvest_env_set_follow_through(): control steps a success goes on for, with the cup carrying the freed fruit away
+        self.follow_through_steps = 0
+        self.follow_remaining = np.zeros(count, dtype=int)
+        self.released = np.zeros(count, dtype=bool)
+        self.detached_record = [None] * count
 
     # ----------------------------------------------------------------------------------------------------------- building
 
@@ -510,6 +515,34 @@ class IsaacHarvestVecEnv(VecEnv):
         o[:, 20:23] = wood
         return o
 
+    def _set_hold_enabled(self, envs, enabled):
+        """Release the target fruit of the simulations listed from its stem, or hold it again, by switching its soft hold's joint off or on in
+        USD, which PhysX follows while simulating. A rigid hold is a locked articulation joint, which the tensor API cannot release."""
+        if not self.soft:
+            raise RuntimeError("Only a soft fruit hold can release its fruit: create the environment with fruit_hold='soft' to show a fruit carried away")
+        for e in envs:
+            tree = self.trees[self.env_tree[e]]
+            link = tree["description"]["candidates"][int(self.target_np[e])]["link"]
+            path = f"{self.env_paths[e]}/Tree{tree['soft_holds'][link]['joint']}"
+            prim = self.stage.GetPrimAtPath(path)
+            if not prim:
+                raise RuntimeError(f"no joint at {path}; prepare the tree again so that its sidecar lists the joint of each soft hold")
+            prim.GetAttribute("physics:jointEnabled").Set(bool(enabled))
+            self.released[e] = not enabled
+
+    def _episode_record(self, i, load_np, grip_np, pull):
+        record = EpisodeRecord()
+        record.detach_force = float(self.detach_force_np[i])
+        record.final_stem_load = float(load_np[i])
+        record.final_grip_force = float(grip_np[i])
+        record.pull_x, record.pull_y, record.pull_z = (float(v) for v in pull[i])
+        record.peak_contact_force = float(self.current_peak_contact[i])
+        record.peak_wood_motion = float(self.current_peak_wood[i])
+        record.peak_tool_speed = float(self.current_peak_speed[i])
+        record.steps_to_grip = int(self.steps_to_grip[i])
+        record.steps = int(self.control_step[i])
+        return record
+
     def _reset(self, envs):
         """Start new episodes in the simulations listed: the settled tree, a random fruit and detach force, the arm tucked at a random place along the row."""
         torch = self.torch
@@ -518,6 +551,11 @@ class IsaacHarvestVecEnv(VecEnv):
             return
         envs = np.asarray(envs)
         envs_t = torch.tensor(envs, device=self.device)
+        # Fruit carried away hang on their stems again before the trees are put back
+        released = [int(e) for e in envs if self.released[e]]
+        if released:
+            self._set_hold_enabled(released, True)
+        self.follow_remaining[envs] = 0
         for e in envs:
             tree = self.trees[self.env_tree[e]]
             random = self.random[e]
@@ -643,6 +681,12 @@ class IsaacHarvestVecEnv(VecEnv):
         task = self.task
         n = self.num_envs
         actions = self._actions
+        # A success that goes on for showing backs the cup straight away from the tree, whatever the action
+        following = self.follow_remaining > 0
+        if following.any():
+            actions = actions.copy()
+            actions[following] = [-1.0, 0.0, 0.0, 1.0]
+        following_t = torch.tensor(following, device=self.device)
         dt_control = task["physics_steps_per_control"] * task["physics_timestep"]
 
         # Move the tool target, and solve for the arm with the cup pointing away from the robot's turret
@@ -677,7 +721,7 @@ class IsaacHarvestVecEnv(VecEnv):
 
         distance_before_grip = self._surface_distance(state)
         gripped_now = (~self.gripped) & torch.tensor(actions[:, 3] > 0, device=self.device) & (distance_before_grip < task["grip_reach"])
-        self.grip_rest_length = torch.where(gripped_now, distance_before_grip + self.target_radius, self.grip_rest_length)
+        self.grip_rest_length = torch.where(gripped_now, self.target_radius, self.grip_rest_length)
         self.grip_seconds = torch.where(gripped_now, torch.zeros_like(self.grip_seconds), self.grip_seconds)
         self.gripped = self.gripped | gripped_now
         gripped_now_np = gripped_now.cpu().numpy()
@@ -685,7 +729,7 @@ class IsaacHarvestVecEnv(VecEnv):
 
         # Simulate, with the stem failing when the load on it passes the force for this fruit
         outcome = torch.zeros(n, dtype=torch.long, device=self.device)
-        running = torch.ones(n, dtype=torch.bool, device=self.device)
+        running = ~following_t
         load = torch.zeros(n, device=self.device)
         peak_contact = torch.zeros(n, device=self.device)
         final_grip = torch.zeros(n, device=self.device)
@@ -695,6 +739,8 @@ class IsaacHarvestVecEnv(VecEnv):
             self._apply_grip(state, physics_dt)
             grip_force = self.grip_force
             self.physics_step()
+            # A fruit carried away falls if the grip lets go
+            self.gripped = self.gripped & ~(following_t & (grip_force > task["grip_limit"]))
             step_load = self._stem_load()
             contact = self._contact_force()
             detached = running & (step_load > self.detach_force)
@@ -711,7 +757,7 @@ class IsaacHarvestVecEnv(VecEnv):
 
         self.control_step += 1
         outcome_np = outcome.cpu().numpy()
-        outcome_np[(outcome_np == RUNNING) & (self.control_step >= task["max_control_steps"])] = TIMEOUT
+        outcome_np[(outcome_np == RUNNING) & ~following & (self.control_step >= task["max_control_steps"])] = TIMEOUT
 
         # Reward: approach the fruit, grip it, load the stem, and detach it, without pushing on the tree
         state = self._gather_state()
@@ -726,6 +772,7 @@ class IsaacHarvestVecEnv(VecEnv):
         reward -= 0.02 * np.minimum(peak_np, task["protective_stop_force"])
         reward += np.where(outcome_np == SUCCESS, 10.0, 0.0)
         reward -= np.where(np.isin(outcome_np, [SLIPPED, KNOCKED_OFF, COLLISION]), 2.0, 0.0)
+        reward[following] = 0.0
         self.previous_distance = distance
         self.previous_load = load_np
 
@@ -736,6 +783,20 @@ class IsaacHarvestVecEnv(VecEnv):
         self.current_peak_wood = np.maximum(self.current_peak_wood, wood_motion)
         contact_now = self._contact_force()
 
+        # Successes go on for showing, with the record they have now, and end when their steps run out
+        pull = self.pull_direction.cpu().numpy()
+        grip_np = final_grip.cpu().numpy()
+        starting = np.flatnonzero((outcome_np == SUCCESS) & (self.follow_through_steps > 0))
+        if starting.size:
+            for i in starting:
+                self.detached_record[i] = self._episode_record(i, load_np, grip_np, pull)
+            self._set_hold_enabled(starting, False)
+            self.follow_remaining[starting] = self.follow_through_steps
+            outcome_np[starting] = RUNNING
+        self.follow_remaining[following] -= 1
+        ending = following & (self.follow_remaining == 0)
+        outcome_np[ending] = SUCCESS
+
         observations = self._observe(state, contact_now)
         dones = outcome_np != RUNNING
         infos = [{} for _ in range(n)]
@@ -743,20 +804,8 @@ class IsaacHarvestVecEnv(VecEnv):
         self._episode_lengths += 1
         finished = np.flatnonzero(dones)
         if finished.size:
-            pull = self.pull_direction.cpu().numpy()
-            grip_np = final_grip.cpu().numpy()
             for i in finished:
-                record = EpisodeRecord()
-                record.detach_force = float(self.detach_force_np[i])
-                record.final_stem_load = float(load_np[i])
-                record.final_grip_force = float(grip_np[i])
-                record.pull_x, record.pull_y, record.pull_z = (float(v) for v in pull[i])
-                record.peak_contact_force = float(self.current_peak_contact[i])
-                record.peak_wood_motion = float(self.current_peak_wood[i])
-                record.peak_tool_speed = float(self.current_peak_speed[i])
-                record.steps_to_grip = int(self.steps_to_grip[i])
-                record.steps = int(self.control_step[i])
-                self.last[i] = record
+                self.last[i] = self.detached_record[i] if ending[i] else self._episode_record(i, load_np, grip_np, pull)
                 infos[i] = {
                     "terminal_observation": observations[i].copy(),
                     "outcome": int(outcome_np[i]),

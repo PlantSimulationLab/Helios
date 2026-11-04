@@ -42,7 +42,8 @@ Each tree settles under gravity for 20 s when it is built, which takes about 7 s
 - The policy is given exact positions of the fruit and wood, which stand in for perception.
 - Leaves are removed unless asked for. With `--leaves`, they hide things from the camera but are fixed to the wood and collide with nothing, so the arm passes through them. Only the 8 reachable fruit nearest the robot on each tree are targeted.
 - Wood is rigid except for 8 internodes behind each candidate fruit. Fully flexible wood is about 37x slower.
-- The cup grips anything within 3 cm, and is a spring that can only pull.
+- The cup grips a fruit whose surface is within 5 mm of its face (it has to touch it, give or take a compliant lip), and then is a spring
+  that can only pull, with its rest length holding the fruit on the face. It seals at once, whatever angle it meets the fruit at.
 - The fruit detaches when the load on its stem passes a force drawn from 14 to 28 N, whichever way it is pulled. Real apples are reported to
   detach more easily with bending and twisting than with a straight pull, so the direction the policy chooses to pull in means nothing yet.
 - The 50 N protective stop was chosen for this task, not taken from a particular robot.

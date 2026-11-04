@@ -136,6 +136,8 @@ def label_panel(image, title, subtitle, episode_number, frame, episode, ended):
     if ended:
         text, color = OUTCOME_TEXT[episode["outcome"]]
         chip(draw, (18, 100), text, color + (235,))
+    elif episode["outcome"] == "success" and frame > episode.get("detach_step", len(episode["poses"])):
+        chip(draw, (18, 100), "Detached, carrying it away", OUTCOME_TEXT["success"][1] + (225,), 22)
     else:
         gripped = bool(episode["gripped"][min(frame, len(episode["gripped"]) - 1)])
         chip(draw, (18, 100), "Gripping, pulling" if gripped else "Approaching", ((40, 110, 200) if gripped else (90, 96, 110)) + (225,), 22)
@@ -171,6 +173,7 @@ def main():
     parser.add_argument("--helios", required=True)
     parser.add_argument("--isaac", required=True)
     parser.add_argument("--pairs", type=int, default=6, help="episodes shown from each simulator, side by side")
+    parser.add_argument("--closing", action="append", default=[], help="a line of the closing card (heading, results, footnote); repeat for each line, none for no card")
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)
     parser.add_argument("--hold", type=float, default=1.2, help="seconds the end of each episode is held")
@@ -258,13 +261,14 @@ def main():
             frames += 1
 
     size = (args.width, args.height)
-    emit(card(size, [("Apple harvesting robot, two physics engines", 46, True), (f"The same tree and the same policy (trained in {trained_in}), simulated in Helios (MuJoCo) and Isaac Sim (PhysX)", 24, False), ("Episodes are not paired: each simulator draws its own fruit, force to detach and start position", 22, False), ("Both sides drawn by the Helios visualizer from each simulator's recorded poses  ·  real time", 20, False), ("Leaves are drawn for context; neither simulator simulates them", 20, False), ("The policy is given exact positions of the fruit and wood, not images; the inset shows what a wrist camera would see", 20, False)]), int(4.0 * FPS))
+    emit(card(size, [("Apple harvesting robot, two physics engines", 46, True), (f"The same tree and the same policy (trained in {trained_in}), simulated in Helios (MuJoCo) and Isaac Sim (PhysX)", 24, False), ("Episodes are not paired: each simulator draws its own fruit, force to detach and start position", 22, False), ("Both sides drawn by the Helios visualizer from each simulator's recorded poses  ·  real time", 20, False), ("Leaves are drawn for context; neither simulator simulates them", 20, False), ("The policy is given exact positions of the fruit and wood, not images; the inset shows what a wrist camera would see", 20, False), ("The cup must touch the apple to grip it; after a detachment it backs away with the apple for 1 s, whatever the policy would do", 20, False)]), int(4.0 * FPS))
     for k in range(pairs):
         length = max(len(helios_episodes[k]["poses"]), len(isaac_episodes[k]["poses"]))
         for frame in range(length + int(args.hold * FPS)):
             emit(compose(k, frame))
         print(f"pair {k + 1}/{pairs}: {helios_episodes[k]['outcome']} / {isaac_episodes[k]['outcome']}", flush=True)
-    emit(card(size, [("Over 240 episodes on 12 trees never used in training", 34, True), ("Policy trained in Helios:  79.2% success in Helios,  75.0% in Isaac Sim", 26, False), ("Policy trained in Isaac Sim:  75.4% in Helios,  75.4% in Isaac Sim", 26, False), ("Differences are within the 95% intervals  ·  details in doc/isaac_comparison_report.md", 22, False)]), int(4.5 * FPS))
+    if args.closing:
+        emit(card(size, [(args.closing[0], 34, True)] + [(line, 26, False) for line in args.closing[1:-1]] + [(args.closing[-1], 22, False)]), int(4.5 * FPS))
     writer.close()
     lib.harvest_env_destroy(env)
     print(f"wrote {args.output}: {frames} frames, {frames / FPS:.1f} s", flush=True)

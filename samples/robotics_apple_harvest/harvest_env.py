@@ -15,7 +15,14 @@ OUTCOME_NAMES = {SUCCESS: "success", TIMEOUT: "timeout", SLIPPED: "slipped", KNO
 
 # macOS, Linux, and Windows, where CMake puts the DLL beside the executable
 _library_names = ["lib/libapple_harvest_env.dylib", "lib/libapple_harvest_env.so", "apple_harvest_env.dll"]
-_library_name = next((name for name in _library_names if os.path.exists(name)), None)
+# HARVEST_ENV_LIBRARY names another build of the library, e.g. a copy kept to evaluate policies trained on an earlier version of the task.
+# It is still run from the build directory, which holds the assets.
+_library_name = os.environ.get("HARVEST_ENV_LIBRARY")
+if _library_name is not None:
+    if not os.path.exists(_library_name):
+        raise FileNotFoundError(f"HARVEST_ENV_LIBRARY is {_library_name}, which does not exist.")
+else:
+    _library_name = next((name for name in _library_names if os.path.exists(name)), None)
 if _library_name is None:
     raise FileNotFoundError(f"None of {_library_names} was found. Run from the sample's build directory after building it.")
 _lib = ctypes.CDLL(os.path.abspath(_library_name))

@@ -21,8 +21,9 @@ namespace {
     const float max_target_lead = 0.08f; // m the commanded tool position can lead the actual one, so the target cannot wind up while the arm is blocked
     const int max_control_steps = 250; // 10 s
 
-    // Gripper: an ideal vacuum cup. It grips a fruit within reach of its face, and then acts as a spring that can only pull, reacting on the arm.
-    const float grip_reach = 0.03f; // m between the cup's face and the fruit's surface
+    // Gripper: an ideal vacuum cup. It grips a fruit its face touches, and then acts as a spring that can only pull, reacting on the arm. The spring's
+    // rest length holds the fruit against the face, so the cup carries a fruit on its face rather than at a distance.
+    const float grip_reach = 0.005f; // m between the cup's face and the fruit's surface, about how far a compliant lip reaches to seal on contact
     const float grip_stiffness = 2000.f; // N/m
     const float grip_damping = 20.f; // N*s/m
     const float grip_ramp_seconds = 0.1f; // the grip builds up over this time, as a vacuum does
@@ -295,6 +296,10 @@ namespace {
         // How the simulation looked when its last episode ended, for showing it (see captureDisplayState())
         std::vector<float> last_link_poses;
         std::vector<float> last_robot_joints;
+        // For showing: control steps a success goes on for, with the cup carrying the freed fruit away (see harvest_env_set_follow_through())
+        int follow_through_steps = 0;
+        int follow_through_remaining = 0; // nonzero while a success goes on
+        HarvestEpisodeRecord detached_record{}; // the record of an episode that goes on, as it was when the fruit detached
     };
 
     vec3 toVec3(const mjtNum *p) {
@@ -507,6 +512,7 @@ namespace {
         slot.gripped = false;
         slot.grip_seconds = 0.f;
         slot.grip_force = 0.f;
+        slot.follow_through_remaining = 0;
         slot.previous_load = 0.f;
         slot.control_step = 0;
         slot.tool_target = tree.robot->getToolPosition(slot.instance);
@@ -568,7 +574,53 @@ namespace {
         data->xfrc_applied[6 * tool_body + 5] = torque.z;
     }
 
+    // A control step after the fruit detached, with the cup backing straight away from the tree whatever the action, carrying the fruit for as long as the
+    // grip holds. The episode is a success either way, and ends when the steps run out, with the record it had when the fruit detached.
+    void stepFollowThrough(Slot &slot, float *observation, float &reward, int &outcome, float *terminal_observation) {
+        Tree &tree = *slot.tree;
+        Robot &robot = *tree.robot;
+        const float dt = float(physics_steps_per_control) * tree.engine.getTimestep();
+        const vec3 tool = robot.getToolPosition(slot.instance);
+        slot.tool_target = slot.tool_target + dt * max_tool_speed * make_vec3(-1, 0, 0);
+        vec3 lead = slot.tool_target - tool;
+        if (lead.magnitude() > max_target_lead) {
+            slot.tool_target = tool + lead / lead.magnitude() * max_target_lead;
+        }
+        const std::vector<float> joints = robot.getJointPositions(slot.instance);
+        vec3 pointing = slot.tool_target - make_vec3(robot_base.x + 0.15f, joints[0], slot.tool_target.z);
+        pointing.z = 0.f;
+        if (pointing.magnitude() > 0.05f) {
+            pointing.normalize();
+            RobotInverseKinematicsResult pose = robot.solveInverseKinematics(slot.tool_target, pointing, {"roll"}, slot.instance);
+            if (pose.converged) {
+                robot.setJointTargets(pose.joint_positions, slot.instance);
+            }
+        }
+        for (uint s = 0; s < physics_steps_per_control; s++) {
+            applyGrip(slot, tree.engine.getTimestep());
+            tree.engine.step(1, slot.instance);
+            if (slot.grip_force > grip_limit) {
+                slot.gripped = false; // the fruit falls
+            }
+        }
+        reward = 0.f;
+        outcome = HARVEST_RUNNING;
+        slot.follow_through_remaining--;
+        if (slot.follow_through_remaining == 0) {
+            outcome = HARVEST_SUCCESS;
+            slot.last = slot.detached_record;
+            captureDisplayState(slot, slot.last_link_poses, slot.last_robot_joints);
+            writeObservation(slot, terminal_observation);
+            resetSlot(slot);
+        }
+        writeObservation(slot, observation);
+    }
+
     void stepSlot(Slot &slot, const float *action, float *observation, float &reward, int &outcome, float *terminal_observation) {
+        if (slot.follow_through_remaining > 0) {
+            stepFollowThrough(slot, observation, reward, outcome, terminal_observation);
+            return;
+        }
         Tree &tree = *slot.tree;
         PhysicsEngine &engine = tree.engine;
         Robot &robot = *tree.robot;
@@ -599,7 +651,7 @@ namespace {
         const bool gripped_now = !slot.gripped && action[3] > 0.f && distance_before_grip < grip_reach;
         if (gripped_now) {
             slot.gripped = true;
-            slot.grip_rest_length = distance_before_grip + slot.target->radius;
+            slot.grip_rest_length = slot.target->radius;
             slot.grip_seconds = 0.f;
             slot.current.steps_to_grip = slot.control_step;
         }
@@ -661,6 +713,12 @@ namespace {
         slot.current.pull_y = slot.pull_direction.y;
         slot.current.pull_z = slot.pull_direction.z;
 
+        if (outcome == HARVEST_SUCCESS && slot.follow_through_steps > 0) {
+            // The episode goes on for showing; its reward and record are those of the success
+            slot.detached_record = slot.current;
+            slot.follow_through_remaining = slot.follow_through_steps;
+            outcome = HARVEST_RUNNING;
+        }
         if (outcome != HARVEST_RUNNING) {
             slot.last = slot.current;
             captureDisplayState(slot, slot.last_link_poses, slot.last_robot_joints);
@@ -1077,6 +1135,12 @@ int harvest_env_render_wrist_frame(void *env, int index, const float *link_poses
     } catch (const std::exception &error) {
         std::cerr << error.what() << std::endl;
         return 0;
+    }
+}
+
+void harvest_env_set_follow_through(void *env, int control_steps) {
+    for (Slot &slot: static_cast<Environment *>(env)->slots) {
+        slot.follow_through_steps = std::max(0, control_steps);
     }
 }
 
