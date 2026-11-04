@@ -1,4 +1,5 @@
-"""A side-by-side movie of episodes recorded by movie_record.py in Helios (MuJoCo) and IsaacSim (PhysX).
+"""A side-by-side movie of episodes recorded by movie_record.py in Helios (MuJoCo) and IsaacSim (PhysX), or, without --isaac, a movie of
+Helios's episodes alone, for versions of the task that IsaacSim does not have.
 
 Both sides are drawn the same way, by the Helios visualizer, from each simulator's recorded poses: the tree with its real geometry, and the arm
 as its collision shapes. Leaves are drawn for context; neither simulator simulates them (they ride rigidly on their wood, as in training). An inset
@@ -6,6 +7,7 @@ in each panel shows what the wrist camera of harvest_env_enable_camera() would s
 
 From the sample's build directory, with IsaacSim's Python (for numpy, Pillow and imageio-ffmpeg):
     C:/isaacsim/python.bat ../isaac/movie_render.py --helios helios_301.npz --isaac isaac_301.npz --output harvester.mp4 --still harvester.png
+    C:/isaacsim/python.bat ../isaac/movie_render.py --helios helios_301.npz --output harvester_helios.mp4
 """
 
 import argparse
@@ -171,8 +173,9 @@ def card(size, lines):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--helios", required=True)
-    parser.add_argument("--isaac", required=True)
-    parser.add_argument("--pairs", type=int, default=6, help="episodes shown from each simulator, side by side")
+    parser.add_argument("--isaac", default="", help="IsaacSim's recording, shown beside Helios's; without it, Helios's episodes fill the frame")
+    parser.add_argument("--pairs", type=int, default=6, help="episodes shown from each simulator")
+    parser.add_argument("--grip-line", default="The cup must touch the apple to grip it; after a detachment it backs away with the apple for 1 s, whatever the policy would do", help="the title card's line describing the grip")
     parser.add_argument("--closing", action="append", default=[], help="a line of the closing card (heading, results, footnote); repeat for each line, none for no card")
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)
@@ -184,13 +187,17 @@ def main():
     args, _ = parser.parse_known_args()
 
     helios_meta, helios_episodes = load(args.helios)
-    isaac_meta, isaac_episodes = load(args.isaac)
-    if helios_meta["tree"] != isaac_meta["tree"]:
-        raise ValueError(f"the recordings are of different trees ({helios_meta['tree']} and {isaac_meta['tree']})")
+    side_by_side = bool(args.isaac)
+    if side_by_side:
+        isaac_meta, isaac_episodes = load(args.isaac)
+        if helios_meta["tree"] != isaac_meta["tree"]:
+            raise ValueError(f"the recordings are of different trees ({helios_meta['tree']} and {isaac_meta['tree']})")
+    else:
+        isaac_episodes = helios_episodes
     tree = helios_meta["tree"]
 
     lib = helios_library()
-    panel = (args.width // 2, args.height)
+    panel = (args.width // 2, args.height) if side_by_side else (args.width, args.height)
     seeds = (ctypes.c_int * 1)(tree)
     env = lib.harvest_env_create_for_movie(seeds, 1, 1, 1, 0, 0 if args.no_leaves else 1, 1)
     if not env or not lib.harvest_env_enable_movie_camera(env, panel[0], panel[1]):
@@ -199,8 +206,11 @@ def main():
     rest = np.zeros((len(names), 7), np.float32)
     lib.harvest_env_rest_link_poses(env, 0, as_floats(rest))
     to_helios = HeliosPoses(helios_meta, names)
-    to_isaac = IsaacPoses(isaac_meta, names, rest)
-    print(f"{len(names)} links drawn; {len(to_helios.target)} posed from Helios, {len(to_isaac.links)} from IsaacSim, the rest carried by their parents", flush=True)
+    if side_by_side:
+        to_isaac = IsaacPoses(isaac_meta, names, rest)
+        print(f"{len(names)} links drawn; {len(to_helios.target)} posed from Helios, {len(to_isaac.links)} from IsaacSim, the rest carried by their parents", flush=True)
+    else:
+        print(f"{len(names)} links drawn; {len(to_helios.target)} posed from Helios, the rest carried by their parents", flush=True)
 
     image = np.zeros((panel[1], panel[0], 3), np.uint8)
 
@@ -231,6 +241,8 @@ def main():
         return label_panel(picture, title, subtitle, k + 1, frame, episode, frame >= last)
 
     def compose(k, frame):
+        if not side_by_side:
+            return side(helios_episodes, to_helios, "MuJoCo  (Helios)", k, frame)
         canvas = Image.new("RGB", (args.width, args.height))
         canvas.paste(side(helios_episodes, to_helios, "MuJoCo  (Helios)", k, frame), (0, 0))
         canvas.paste(side(isaac_episodes, to_isaac, "PhysX  (Isaac Sim)", k, frame), (panel[0], 0))
@@ -261,12 +273,17 @@ def main():
             frames += 1
 
     size = (args.width, args.height)
-    emit(card(size, [("Apple harvesting robot, two physics engines", 46, True), (f"The same tree and the same policy (trained in {trained_in}), simulated in Helios (MuJoCo) and Isaac Sim (PhysX)", 24, False), ("Episodes are not paired: each simulator draws its own fruit, force to detach and start position", 22, False), ("Both sides drawn by the Helios visualizer from each simulator's recorded poses  ·  real time", 20, False), ("Leaves are drawn for context; neither simulator simulates them", 20, False), ("The policy is given exact positions of the fruit and wood, not images; the inset shows what a wrist camera would see", 20, False), ("The cup must touch the apple to grip it; after a detachment it backs away with the apple for 1 s, whatever the policy would do", 20, False)]), int(4.0 * FPS))
+    if side_by_side:
+        title_lines = [("Apple harvesting robot, two physics engines", 46, True), (f"The same tree and the same policy (trained in {trained_in}), simulated in Helios (MuJoCo) and Isaac Sim (PhysX)", 24, False), ("Episodes are not paired: each simulator draws its own fruit, force to detach and start position", 22, False), ("Both sides drawn by the Helios visualizer from each simulator's recorded poses  ·  real time", 20, False), ("Leaves are drawn for context; neither simulator simulates them", 20, False)]
+    else:
+        title_lines = [("Apple harvesting robot in Helios", 46, True), (f"Tree {tree}, never used in training, and a policy trained in {trained_in}, simulated in Helios (MuJoCo)", 24, False), ("Drawn by the Helios visualizer  ·  real time", 20, False), ("Leaves are drawn for context; they are not simulated", 20, False)]
+    title_lines += [("The policy is given exact positions of the fruit and wood, not images; the inset shows what a wrist camera would see", 20, False), (args.grip_line, 20, False)]
+    emit(card(size, title_lines), int(4.0 * FPS))
     for k in range(pairs):
         length = max(len(helios_episodes[k]["poses"]), len(isaac_episodes[k]["poses"]))
         for frame in range(length + int(args.hold * FPS)):
             emit(compose(k, frame))
-        print(f"pair {k + 1}/{pairs}: {helios_episodes[k]['outcome']} / {isaac_episodes[k]['outcome']}", flush=True)
+        print(f"episode {k + 1}/{pairs}: {helios_episodes[k]['outcome']}" + (f" / {isaac_episodes[k]['outcome']}" if side_by_side else ""), flush=True)
     if args.closing:
         emit(card(size, [(args.closing[0], 34, True)] + [(line, 26, False) for line in args.closing[1:-1]] + [(args.closing[-1], 22, False)]), int(4.5 * FPS))
     writer.close()
