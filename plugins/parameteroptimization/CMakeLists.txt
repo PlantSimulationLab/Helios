@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(helios)
 
-add_library(parameteroptimization STATIC "src/ParameterOptimization.cpp" "tests/selfTest.cpp")
+add_library(parameteroptimization STATIC "src/ParameterOptimization.cpp" "src/TPESampler.cpp" "tests/selfTest.cpp")
 
 target_include_directories(parameteroptimization PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 
@@ -15,8 +15,8 @@ target_include_directories(parameteroptimization PUBLIC "${CMAKE_CURRENT_SOURCE_
 #
 # L-BFGS (NLOPT_LD_LBFGS) is implemented entirely by the Luksan code, so turning this OFF
 # removes L-BFGS; ParameterOptimization then reports that explicitly rather than failing
-# obscurely. BOBYQA (MIT) and SLSQP (BSD-3) are unaffected, as are the four algorithms
-# that need no NLopt at all (GA, Bayesian Optimization, CMA-ES, Adam).
+# obscurely. BOBYQA (MIT) and SLSQP (BSD-3) are unaffected, as are the five algorithms
+# that need no NLopt at all (GA, Bayesian Optimization, CMA-ES, TPE, Adam).
 #
 # Defaults to ON so existing builds are unchanged.
 option(HELIOS_NLOPT_LUKSAN "Enable NLopt's LGPL Luksan solvers (provides L-BFGS). Set OFF for an MIT-licensed NLopt build without L-BFGS." ON)
@@ -97,7 +97,7 @@ else()
             message(STATUS "[ParameterOptimization] L-BFGS disabled (Luksan solvers unavailable) — use Adam or BOBYQA")
         endif()
     else()
-        message(STATUS "[ParameterOptimization] NLopt not found — L-BFGS, BOBYQA, SLSQP disabled (GA/BO/CMA-ES/Adam still available)")
+        message(STATUS "[ParameterOptimization] NLopt not found — L-BFGS, BOBYQA, SLSQP disabled (GA/BO/CMA-ES/TPE/Adam still available)")
     endif()
 endif()
 

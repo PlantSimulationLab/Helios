@@ -571,7 +571,7 @@ private:
     //! face normal per primitive and is consumed as a faceID-indexed texture buffer. This array is
     //! bound as a vertex attribute so that it interpolates across the primitive, which is what
     //! makes smooth shading possible. Defaults to the face normal replicated across the vertices,
-    //! so that a primitive with no authored vertex normals shades exactly as it did before.
+    //! so that a primitive with no authored vertex normals shades with its flat face normal.
     std::unordered_map<VisualizerGeometryType, std::vector<float>> vertex_normal_data;
     std::unordered_map<VisualizerGeometryType, std::vector<float>> uv_data;
     std::unordered_map<VisualizerGeometryType, std::vector<float>> color_data;

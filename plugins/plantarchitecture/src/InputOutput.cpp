@@ -20,35 +20,6 @@ SPDX-License-Identifier: LGPL-2.1-or-later
 
 using namespace helios;
 
-static void renameAutoMaterial(helios::Context *context_ptr, uint objID, const std::string &desired_base_name) {
-    std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID);
-    if (UUIDs.empty()) return;
-
-    std::string current_label = context_ptr->getPrimitiveMaterialLabel(UUIDs.front());
-    if (current_label.substr(0, 7) != "__auto_") return;
-
-    if (!context_ptr->doesMaterialExist(desired_base_name)) {
-        context_ptr->renameMaterial(current_label, desired_base_name);
-    } else {
-        uint existing_id = context_ptr->getMaterialIDFromLabel(desired_base_name);
-        uint current_id = context_ptr->getMaterialIDFromLabel(current_label);
-        if (existing_id == current_id) return;
-
-        int suffix = 1;
-        std::string candidate;
-        do {
-            candidate = desired_base_name + "_" + std::to_string(suffix++);
-        } while (context_ptr->doesMaterialExist(candidate));
-        context_ptr->renameMaterial(current_label, candidate);
-    }
-}
-
-static void renameAutoMaterial(helios::Context *context_ptr, const std::vector<uint> &objIDs, const std::string &desired_base_name) {
-    for (uint objID : objIDs) {
-        renameAutoMaterial(context_ptr, objID, desired_base_name);
-    }
-}
-
 // Helper function for calculating leaf base positions in compound leaves
 static float clampOffset(int count_per_axis, float offset) {
     if (count_per_axis > 2) {
@@ -583,6 +554,9 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
     output_xml << "\t\t<dd_to_dormancy> " << plant_instances.at(plantID).dd_to_dormancy << " </dd_to_dormancy>" << std::endl;
     output_xml << "\t\t<max_leaf_lifespan> " << plant_instances.at(plantID).max_leaf_lifespan << " </max_leaf_lifespan>" << std::endl;
     output_xml << "\t\t<is_evergreen> " << plant_instances.at(plantID).is_evergreen << " </is_evergreen>" << std::endl;
+    if (plant_instances.at(plantID).minimum_leaf_texture_stage > 0) {
+        output_xml << "\t\t<minimum_leaf_texture_stage> " << plant_instances.at(plantID).minimum_leaf_texture_stage << " </minimum_leaf_texture_stage>" << std::endl;
+    }
 
     // Maximum age, beyond which advanceTime() stops growing the plant. Like the thresholds above it is
     // not derivable from the shoot structure, so without this tag a plant written and read back would
@@ -1312,6 +1286,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
             }
 
             setPlantPhenologicalThresholds(plantID, dd_to_dormancy_break, dd_to_flower_initiation, dd_to_flower_opening, dd_to_fruit_set, dd_to_fruit_maturity, dd_to_dormancy, max_leaf_lifespan, is_evergreen);
+        }
+
+        if (plant.child("minimum_leaf_texture_stage")) {
+            node_string = "minimum_leaf_texture_stage";
+            plant_instances.at(plantID).minimum_leaf_texture_stage = uint(parse_xml_tag_float(plant.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
         }
 
         // Checked independently of the thresholds above, so that a file carrying only max_age still
@@ -2705,7 +2684,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         if (context_ptr->doesObjectExist(phytomer_ptr->petiole_objIDs[p])) {
                             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(phytomer_ptr->petiole_objIDs[p]), "object_label", "petiole");
                             std::string petiole_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_petiole";
-                            renameAutoMaterial(context_ptr, phytomer_ptr->petiole_objIDs[p], petiole_material_name);
+                            nameOrganMaterials(phytomer_ptr->petiole_objIDs[p], petiole_material_name);
                         }
 
                         // A measured centerline is re-imposed over the reconstruction above, exactly as setPetioleNodePositions() imposed it on the saved plant.
@@ -2896,7 +2875,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         for (int prototype = 0; prototype < phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes; prototype++) {
                             for (int leaf = 0; leaf < leaves_per_petiole; leaf++) {
                                 float ind_from_tip = float(leaf) - float(leaves_per_petiole - 1) / 2.f;
-                                uint objID_leaf = phytomer_ptr->buildLeafPrototype(leaves_per_petiole, ind_from_tip);
+                                uint objID_leaf = phytomer_ptr->buildLeafPrototype(leaves_per_petiole, ind_from_tip, uint(prototype));
                                 if (phytomer_ptr->phytomer_parameters.leaf.prototype.prototype_function == GenericLeafPrototype) {
                                     // A petiolule arrives already labelled "petiolule". Labelling the whole object "leaf" would overwrite that, and the filter below - which gives the
                                     // petiolule the petiole's material, and which downstream code uses to give it the petiole's optical properties rather than the blade's - would then match nothing.
@@ -2919,7 +2898,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                 // the grown plant had them.
                                 this->recordLeafPrototypeRestGeometry(phytomer_ptr->phytomer_parameters.leaf.prototype, leaves_per_petiole, prototype, objID_leaf, phytomer_ptr->leaf_flexibility);
                                 std::string leaf_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_leaf";
-                                renameAutoMaterial(context_ptr, objID_leaf, leaf_material_name);
+                                nameOrganMaterials(objID_leaf, leaf_material_name);
                                 phytomer_ptr->assignPetioluleMaterial(objID_leaf);
                                 context_ptr->hideObject(objID_leaf);
                             }
@@ -2993,7 +2972,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             objID_leaf = phytomer_ptr->buildLeafPrototype(leaves_per_petiole, ind_from_tip);
                             if (phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes > 0) {
                                 phytomer_ptr->labelLeafPrototype(objID_leaf);
-                                renameAutoMaterial(context_ptr, objID_leaf, plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_leaf");
+                                nameOrganMaterials(objID_leaf, plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_leaf");
                             }
                         }
 
@@ -3323,7 +3302,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             fbud.peduncle_objIDs.push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices_computed, peduncle_radii_computed, colors));
                                             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(fbud.peduncle_objIDs.back()), "object_label", "peduncle");
                                             std::string peduncle_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_peduncle";
-                                            renameAutoMaterial(context_ptr, fbud.peduncle_objIDs.back(), peduncle_material_name);
+                                            nameOrganMaterials(fbud.peduncle_objIDs.back(), peduncle_material_name);
                                         }
                                     }
 
@@ -3511,7 +3490,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             fbud.peduncle_objIDs.push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices_computed, peduncle_radii_computed, colors));
                                             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(fbud.peduncle_objIDs.back()), "object_label", "peduncle");
                                             std::string peduncle_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_peduncle";
-                                            renameAutoMaterial(context_ptr, fbud.peduncle_objIDs.back(), peduncle_material_name);
+                                            nameOrganMaterials(fbud.peduncle_objIDs.back(), peduncle_material_name);
                                         }
                                     }
 
@@ -3631,6 +3610,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
     if (!quiet) {
         std::cout << "done." << std::endl;
     }
+
+    // The leaves were rebuilt with the first image of their series after their phytomers had recorded a stage, and the ages that select the current one have been restored by now
+    for (uint plantID: plantIDs) {
+        updatePlantLeafTextureStages(plantID, true);
+    }
+
     return plantIDs;
 }
 
@@ -3824,7 +3809,7 @@ int getMaterialFromContextObject(Context *context_ptr, uint objID, ArticulationD
     if (UUIDs.empty()) {
         return -1;
     }
-    std::string texture_file = context_ptr->getPrimitiveTextureFile(UUIDs[0]);
+    std::string texture_file = context_ptr->getPrimitiveColorTextureFile(UUIDs[0]);
     RGBcolor color = context_ptr->getPrimitiveColor(UUIDs[0]);
     return getOrCreateMaterial(data, texture_file, color);
 }
@@ -3903,7 +3888,7 @@ void buildTubeSegmentVisualMesh(Context *context_ptr, uint tube_objID, int segme
         }
 
         if (texture_file.empty()) {
-            texture_file = context_ptr->getPrimitiveTextureFile(UUID);
+            texture_file = context_ptr->getPrimitiveColorTextureFile(UUID);
             color = context_ptr->getPrimitiveColor(UUID);
         }
     }
@@ -3950,7 +3935,7 @@ vec3 buildMeshFromContextObject(Context *context_ptr, uint objID, ArticulationDa
 
         // Get texture and color from first primitive
         if (texture_file.empty()) {
-            texture_file = context_ptr->getPrimitiveTextureFile(UUID);
+            texture_file = context_ptr->getPrimitiveColorTextureFile(UUID);
             color = context_ptr->getPrimitiveColor(UUID);
         }
     }

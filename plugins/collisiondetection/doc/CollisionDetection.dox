@@ -292,7 +292,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  std::vector<std::vector<uint>> touching = collision.findPrimitivesNearCapsules(arm, 0.01f);
  ~~~~~~
 
- The BVH prunes everything out of reach, so a query costs little more than the primitives near the capsules: on a canopy of four 1000-day apple trees (520,000 primitives), the smallest gap from 50 capsules takes a few hundredths of a millisecond, and with the BVH built, finding everything within 2 cm of them about 0.1 ms. Only triangles and patches are supported, and texture transparency is ignored: a primitive counts as its full polygon, so a leaf with a transparency-masked texture is treated as its whole rectangle.
+ The BVH prunes everything out of reach, so a query costs little more than the primitives near the capsules. Only triangles and patches are supported, and texture transparency is ignored: a primitive counts as its full polygon, so a leaf with a transparency-masked texture is treated as its whole rectangle.
 
  \section CDExamples Example Applications
 
@@ -480,7 +480,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \section slicing Primitive Slicing Operations
 
- The CollisionDetection plugin provides primitive slicing capabilities for subdividing geometry along planar boundaries or regular grids. This functionality was integrated from the VoxelIntersection plugin and allows for precise spatial discretization of primitives.
+ The CollisionDetection plugin provides primitive slicing capabilities for subdividing geometry along planar boundaries or regular grids. This allows for precise spatial discretization of primitives.
 
  \subsection slicing_single Single Primitive Slicing
 
@@ -602,7 +602,5 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  CollisionDetection collisiondetection(&context);
  collisiondetection.slicePrimitivesUsingGrid(uuids, center, size, divisions);
  ~~~~~~
-
- **Performance Note**: The OpenMP implementation may have different performance characteristics compared to the GPU version. If performance is critical for large datasets, benchmark and consider future GPU optimization.
 
 */

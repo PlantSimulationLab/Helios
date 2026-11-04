@@ -4884,6 +4884,49 @@ DOCTEST_TEST_CASE("Visualizer re-uploads displayed primitives whose material was
     DOCTEST_CHECK(VisualizerTestHelper::getGeometryColor(visualizer, colored_UUID).g == doctest::Approx(1.f));
 }
 
+DOCTEST_TEST_CASE("Visualizer draws a primitive with its color texture") {
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    // A copy of the texture in another color, with exactly the same transparency
+    const std::string shape_texture = "plugins/visualizer/textures/AlmondLeaf.png";
+    uint width = 0;
+    uint height = 0;
+    std::vector<RGBAcolor> pixels;
+    helios::readPNG(shape_texture, width, height, pixels);
+    for (RGBAcolor &pixel: pixels) {
+        pixel = make_RGBAcolor(1.f, 1.f, 0.f, pixel.a);
+    }
+    const std::string color_texture = (std::filesystem::temp_directory_path() / "helios_test_visualizer_color_texture.png").string();
+    helios::writePNG(color_texture, width, height, pixels);
+
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    const int texture_before = VisualizerTestHelper::getGeometryTextureID(visualizer, UUID);
+    DOCTEST_REQUIRE(texture_before >= 0);
+
+    context.markGeometryClean();
+    context.setPrimitiveColorTexture(UUID, color_texture);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    const int texture_with_color = VisualizerTestHelper::getGeometryTextureID(visualizer, UUID);
+    DOCTEST_CHECK(texture_with_color >= 0);
+    DOCTEST_CHECK(texture_with_color != texture_before);
+
+    context.markGeometryClean();
+    context.setPrimitiveColorTexture(UUID, "");
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    DOCTEST_CHECK(VisualizerTestHelper::getGeometryTextureID(visualizer, UUID) == texture_before);
+
+    std::filesystem::remove(color_texture);
+}
+
 DOCTEST_TEST_CASE("Visualizer recoloring keeps a Context texture color override") {
     // A textured primitive whose Context material overrides the texture color is drawn in its own color, masked by the
     // texture's alpha. Recoloring the displayed scene - here prompted by a colorbar range change - must apply the rule

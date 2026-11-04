@@ -464,7 +464,7 @@ public:
     //! Set mesophyll conductance gm (mol CO2 / m^2 / s / bar) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response.
     /**
      * \param[in] gm Value of gm.
-     * \note Default is std::numeric_limits<float>::infinity(), which reduces Cc to Ci (legacy behavior with no mesophyll diffusion limitation).
+     * \note Default is std::numeric_limits<float>::infinity(), which reduces Cc to Ci (no mesophyll diffusion limitation).
      */
     void setMesophyllConductance_gm(float gm) {
         this->gmTempResponse = PhotosyntheticTemperatureResponseParameters(gm);
@@ -536,7 +536,7 @@ private:
     PhotosyntheticTemperatureResponseParameters RdTempResponse = PhotosyntheticTemperatureResponseParameters(1.5);
     PhotosyntheticTemperatureResponseParameters alphaTempResponse = PhotosyntheticTemperatureResponseParameters(0.5);
     PhotosyntheticTemperatureResponseParameters thetaTempResponse = PhotosyntheticTemperatureResponseParameters(0.f);
-    //! Mesophyll conductance gm (mol CO2 / m^2 / s / bar). Default = +infinity, meaning Cc ≡ Ci (no mesophyll diffusion limitation — legacy behavior).
+    //! Mesophyll conductance gm (mol CO2 / m^2 / s / bar). Default = +infinity, meaning Cc ≡ Ci (no mesophyll diffusion limitation).
     PhotosyntheticTemperatureResponseParameters gmTempResponse = PhotosyntheticTemperatureResponseParameters(std::numeric_limits<float>::infinity());
 
 

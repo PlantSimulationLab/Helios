@@ -509,8 +509,8 @@ RT_PROGRAM void closest_hit_diffuse() {
 
             // Use BufferIndexer for material properties: [source][primitive][band]
             size_t radprop_ind_global = mat_indexer(prd.source_ID, origin_position, b_global);
-            float t_rho = rho[radprop_ind_global];
-            float t_tau = tau[radprop_ind_global];
+            float t_rho = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValue(5, prd.source_ID, prd.palette_entry, b_global) : rho[radprop_ind_global];
+            float t_tau = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValue(6, prd.source_ID, prd.palette_entry, b_global) : tau[radprop_ind_global];
 
             // A surface layer reflects layer_albedo of what arrives; the body absorbs and scatters the rest
             const int layer = surfaceLayerTable(origin_position, b_global);
@@ -546,6 +546,11 @@ RT_PROGRAM void closest_hit_diffuse() {
                     atomicFloatAdd(&scatter_buff_top[ind_origin], body_strength * t_tau); // transmission
                 }
             }
+            // What reaches a primitive with a spectral texture, from which each camera computes the outgoing radiation of its classes
+            if (spectral_incident_enabled != 0u && spectral_palette[spectral_palette[3] + origin_position] != 0xFFFFFFFFu && body_strength != 0) {
+                const uint face_slot = (prd.face ? 0u : Nsources + 1u) + prd.source_ID;
+                atomicFloatAdd(&spectral_incident[(size_t) face_slot * Nprimitives * Nbands_launch + ind_origin], body_strength);
+            }
             if (Ncameras > 0) {
                 // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
                 // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
@@ -554,8 +559,8 @@ RT_PROGRAM void closest_hit_diffuse() {
                 for (unsigned int cam = 0; cam < Ncameras; cam++) {
                     // Use BufferIndexer for camera material: [source][primitive][band][camera]
                     size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
-                    float t_rho_cam = rho_cam[indc];
-                    float t_tau_cam = tau_cam[indc];
+                    float t_rho_cam = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValueCam(7, prd.source_ID, prd.palette_entry, b_global, cam) : rho_cam[indc];
+                    float t_tau_cam = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValueCam(8, prd.source_ID, prd.palette_entry, b_global, cam) : tau_cam[indc];
                     size_t ind_cam = cam * cam_scatter_stride + ind_origin;
                     if ((t_rho_cam > 0 || t_tau_cam > 0) && body_strength != 0) {
                         if (prd.face) { // reflection from top, transmission from bottom
@@ -762,6 +767,8 @@ RT_PROGRAM void closest_hit_camera() {
             if (smoothing_vertex_indices.size() > 4 * hit_position + 3 && vertex_radiation_out_top.size() > 0) {
                 smooth_v0 = smoothing_vertex_indices[4 * hit_position + 0];
             }
+            int smooth_vertices[4] = {-1, -1, -1, -1};
+            float smooth_weights[4] = {0.f, 0.f, 0.f, 0.f};
 
             if (smooth_v0 >= 0) {
                 const int smooth_v1 = smoothing_vertex_indices[4 * hit_position + 1];
@@ -780,6 +787,12 @@ RT_PROGRAM void closest_hit_camera() {
                     w1 = surface_u * (1.f - surface_v);
                     w2 = surface_u * surface_v;
                     w3 = (1.f - surface_u) * surface_v;
+                }
+                const int vertices[4] = {smooth_v0, smooth_v1, smooth_v2, smooth_v3};
+                const float weights[4] = {w0, w1, w2, w3};
+                for (int c = 0; c < 4; c++) {
+                    smooth_vertices[c] = vertices[c];
+                    smooth_weights[c] = weights[c];
                 }
 
                 float outgoing_flux;
@@ -800,6 +813,16 @@ RT_PROGRAM void closest_hit_camera() {
                 strength = radiation_out_top[ind_hit] * prd.strength;
             } else {
                 strength = radiation_out_bottom[ind_hit] * prd.strength;
+            }
+            // A primitive with a spectral texture is seen in the outgoing radiation of the class at the hit point: flat over the facet, or with
+            // camera flux smoothing, interpolated from the facet's vertices
+            const uint hit_class_slot = d_spectralCameraClassSlot(hit_position, primitive_type[hit_position], surface_u, surface_v, uvID[hit_position]);
+            if (hit_class_slot != 0xFFFFFFFFu && d_spectralPaletteApplies(0u, globalBandIndex(b))) {
+                if (smooth_v0 >= 0 && spectral_vertex[0] != 0u) {
+                    strength = d_spectralSmoothedClassFlux(hit_position, hit_class_slot, use_top_face, b, globalBandIndex(b), smooth_vertices, smooth_weights) * prd.strength;
+                } else {
+                    strength = d_spectralClassFlux(hit_class_slot, use_top_face, b) * prd.strength;
+                }
             }
             // A surface with a layer sends out its two components, in proportions that depend on the viewing angle. Smoothing
             // applies to the first; the second, the layer's reflection, is that of the facet.
@@ -884,6 +907,14 @@ RT_PROGRAM void closest_hit_pixel_label() {
 
         // Note: We are reserving a value of 0 for the sky, so we will store UUID+1
         camera_pixel_label[origin_UUID] = UUID + 1;
+
+        // The class of the spectral texture at the hit point, found as closest_hit_camera finds it
+        if (spectral_palette[0] != 0u && spectral_palette[spectral_palette[3] + hit_position] != 0xFFFFFFFFu) {
+            const uint ptype = primitive_type[hit_position];
+            const optix::float3 sp = ptype == 1 ? optix::make_float3(surface_v, surface_u + surface_v, 0.f) : optix::make_float3(surface_u - 0.5f, surface_v - 0.5f, 0.f);
+            const uint entry = d_spectralPaletteEntry(hit_position, d_originTextureUV(ptype, sp, uvID[hit_position]));
+            camera_pixel_class[origin_UUID] = entry == 0xFFFFFFFFu ? 0u : entry - spectral_palette[spectral_palette[3] + hit_position] + 1u;
+        }
 
         float depth = prd.strength + t_hit;
         float3 camera_direction3 = d_rotatePoint(make_float3(1, 0, 0), -0.5 * M_PI + camera_direction.x, 0.5f * M_PI - camera_direction.y);
@@ -994,8 +1025,8 @@ RT_PROGRAM void miss_direct() {
 
         // Use BufferIndexer: [source][primitive][band]
         size_t radprop_ind_global = mat_indexer(prd.source_ID, origin_position, b_global);
-        float t_rho = rho[radprop_ind_global];
-        float t_tau = tau[radprop_ind_global];
+        float t_rho = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValue(5, prd.source_ID, prd.palette_entry, b_global) : rho[radprop_ind_global];
+        float t_tau = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValue(6, prd.source_ID, prd.palette_entry, b_global) : tau[radprop_ind_global];
 
         // Use BufferIndexer: [source][band]
         size_t flux_idx = source_flux_indexer(prd.source_ID, b);
@@ -1045,6 +1076,11 @@ RT_PROGRAM void miss_direct() {
                     atomicFloatAdd(&scatter_buff_top[ind_origin], body_strength * t_tau); // transmission
                 }
             }
+            // What reaches a primitive with a spectral texture, from which each camera computes the outgoing radiation of its classes
+            if (spectral_incident_enabled != 0u && spectral_palette[spectral_palette[3] + origin_position] != 0xFFFFFFFFu && body_strength != 0) {
+                const uint face_slot = (prd.face ? 0u : Nsources + 1u) + prd.source_ID;
+                atomicFloatAdd(&spectral_incident[(size_t) face_slot * Nprimitives * Nbands_launch + ind_origin], body_strength);
+            }
             if (Ncameras > 0) {
                 // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
                 // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
@@ -1053,8 +1089,8 @@ RT_PROGRAM void miss_direct() {
                 for (unsigned int cam = 0; cam < Ncameras; cam++) {
                     // Use BufferIndexer: [source][primitive][band][camera]
                     size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
-                    float t_rho_cam = rho_cam[indc];
-                    float t_tau_cam = tau_cam[indc];
+                    float t_rho_cam = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValueCam(7, prd.source_ID, prd.palette_entry, b_global, cam) : rho_cam[indc];
+                    float t_tau_cam = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValueCam(8, prd.source_ID, prd.palette_entry, b_global, cam) : tau_cam[indc];
                     size_t ind_cam = cam * cam_scatter_stride + ind_origin;
                     if ((t_rho_cam > 0 || t_tau_cam > 0) && body_strength > 0) {
                         if (prd.face) { // reflection from top, transmission from bottom
@@ -1151,8 +1187,8 @@ RT_PROGRAM void miss_diffuse() {
 
             // Use BufferIndexer: [source][primitive][band]
             size_t radprop_ind_global = mat_indexer(prd.source_ID, origin_position, b_global);
-            float t_rho = rho[radprop_ind_global];
-            float t_tau = tau[radprop_ind_global];
+            float t_rho = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValue(5, prd.source_ID, prd.palette_entry, b_global) : rho[radprop_ind_global];
+            float t_tau = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValue(6, prd.source_ID, prd.palette_entry, b_global) : tau[radprop_ind_global];
 
             // Attenuation from any translucent covers (glass/plastic) the sky ray passed through, per band.
             float cover_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? prd.cover_transmittance[b] : 1.f;
@@ -1189,6 +1225,11 @@ RT_PROGRAM void miss_diffuse() {
                         atomicFloatAdd(&scatter_buff_top[ind_origin], body_strength * t_tau); // transmission
                     }
                 }
+                // What reaches a primitive with a spectral texture, from which each camera computes the outgoing radiation of its classes
+                if (spectral_incident_enabled != 0u && spectral_palette[spectral_palette[3] + origin_position] != 0xFFFFFFFFu && body_strength != 0) {
+                    const uint face_slot = (prd.face ? 0u : Nsources + 1u) + prd.source_ID;
+                    atomicFloatAdd(&spectral_incident[(size_t) face_slot * Nprimitives * Nbands_launch + ind_origin], body_strength);
+                }
                 if (Ncameras > 0) {
                     // Camera-weighted scatter, accumulated once per camera into that camera's [primitive][band]
                     // block. This launch runs once per dispatch, not once per camera, so camera_ID is not
@@ -1197,8 +1238,8 @@ RT_PROGRAM void miss_diffuse() {
                     for (unsigned int cam = 0; cam < Ncameras; cam++) {
                         // Use BufferIndexer: [source][primitive][band][camera]
                         size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, cam);
-                        float t_rho_cam = rho_cam[indc];
-                        float t_tau_cam = tau_cam[indc];
+                        float t_rho_cam = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValueCam(7, prd.source_ID, prd.palette_entry, b_global, cam) : rho_cam[indc];
+                        float t_tau_cam = d_spectralPaletteApplies(prd.palette_entry, b_global) ? d_spectralPaletteValueCam(8, prd.source_ID, prd.palette_entry, b_global, cam) : tau_cam[indc];
                         size_t ind_cam = cam * cam_scatter_stride + ind_origin;
                         if ((t_rho_cam > 0 || t_tau_cam > 0) && prd.strength > 0) {
                             if (prd.face) { // reflection from top, transmission from bottom

@@ -327,6 +327,21 @@ void OptiX6Backend::initialize() {
     addBuffer("surface_model", surface_model_RTbuffer, surface_model_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("surface_model_band_table", surface_model_band_table_RTbuffer, surface_model_band_table_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("surface_layer_tables", surface_layer_tables_RTbuffer, surface_layer_tables_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+    // Spectral texture class maps and palettes; a zero header means no primitive has a spectral texture
+    addBuffer("spectral_class_maps", spectral_class_maps_RTbuffer, spectral_class_maps_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
+    addBuffer("spectral_palette", spectral_palette_RTbuffer, spectral_palette_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
+    initializeBuffer1Dui(spectral_class_maps_RTbuffer, std::vector<uint>(2, 0u));
+    initializeBuffer1Dui(spectral_palette_RTbuffer, std::vector<uint>(9, 0u));
+    addBuffer("spectral_incident", spectral_incident_RTbuffer, spectral_incident_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
+    zeroBuffer1D(spectral_incident_RTbuffer, 1);
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "spectral_incident_enabled", &spectral_incident_enabled_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet1ui(spectral_incident_enabled_RTvariable, 0u));
+    addBuffer("spectral_camera_flux", spectral_camera_flux_RTbuffer, spectral_camera_flux_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
+    initializeBuffer1Dui(spectral_camera_flux_RTbuffer, std::vector<uint>(3, 0u));
+    addBuffer("spectral_vertex", spectral_vertex_RTbuffer, spectral_vertex_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
+    initializeBuffer1Dui(spectral_vertex_RTbuffer, std::vector<uint>(4, 0u));
+    addBuffer("camera_pixel_class", camera_pixel_class_RTbuffer, camera_pixel_class_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_UNSIGNED_INT, 1);
+    zeroBuffer1D(camera_pixel_class_RTbuffer, 1);
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "surface_layer_enabled", &surface_layer_enabled_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1ui(surface_layer_enabled_RTvariable, 0));
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "surface_layer_table_size", &surface_layer_table_size_RTvariable));
@@ -985,6 +1000,25 @@ void OptiX6Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
             zeroBuffer1D(scatter_buff_bottom_cam_RTbuffer, buffer_size);
         }
     }
+
+    // The radiation reaching primitives with a spectral texture, which cameras need to see their classes: [face][source slot][primitive][band]
+    spectral_launch_band_count = launch_band_count;
+    spectral_incident_count = (current_camera_count > 0 && palette_entry_count > 0) ? 2 * (current_source_count + 1) * current_primitive_count * launch_band_count : 0;
+    if (spectral_incident_count > 0) {
+        zeroBuffer1D(spectral_incident_RTbuffer, spectral_incident_count);
+    }
+    RT_CHECK_ERROR(rtVariableSet1ui(spectral_incident_enabled_RTvariable, spectral_incident_count > 0 ? 1u : 0u));
+}
+
+void OptiX6Backend::uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) {
+    if (!class_flux_offset.empty() && class_flux_offset.size() != current_primitive_count) {
+        helios_runtime_error("ERROR (OptiX6Backend::uploadSpectralCameraFlux): There are " + std::to_string(class_flux_offset.size()) + " class-flux offsets for " + std::to_string(current_primitive_count) + " primitives.");
+    }
+    initializeBuffer1Dui(spectral_camera_flux_RTbuffer, packSpectralCameraFlux(class_flux_offset, class_flux, spectral_launch_band_count));
+}
+
+void OptiX6Backend::uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) {
+    initializeBuffer1Dui(spectral_vertex_RTbuffer, packSpectralVertexIncident(vertex_values, layer_count, spectral_launch_band_count, camera));
 }
 
 void OptiX6Backend::zeroCameraPixelBuffers(const helios::int2 &resolution) {
@@ -998,6 +1032,21 @@ void OptiX6Backend::zeroCameraPixelBuffers(const helios::int2 &resolution) {
         zeroBuffer1D(camera_pixel_label_RTbuffer, total_pixels);
         zeroBuffer1D(camera_pixel_depth_RTbuffer, total_pixels);
     }
+
+    // The class of the spectral texture seen in each pixel, written only where a primitive has a spectral texture
+    camera_pixel_class_count = (palette_entry_count > 0) ? total_pixels : 0;
+    if (camera_pixel_class_count > 0) {
+        zeroBuffer1D(camera_pixel_class_RTbuffer, camera_pixel_class_count);
+    }
+}
+
+void OptiX6Backend::getCameraPixelSpectralClasses(std::vector<uint> &pixel_classes, const helios::int2 &resolution) {
+    const size_t total_pixels = size_t(resolution.x) * size_t(resolution.y);
+    if (camera_pixel_class_count == 0 || camera_pixel_class_count != total_pixels) {
+        helios_runtime_error("ERROR (OptiX6Backend::getCameraPixelSpectralClasses): No classes of spectral textures were recorded for a " + std::to_string(resolution.x) + " x " + std::to_string(resolution.y) +
+                             " camera. They are recorded by the pixel-label launch when some primitive has a spectral texture.");
+    }
+    pixel_classes = getOptiXbufferData_ui(camera_pixel_class_RTbuffer);
 }
 
 void OptiX6Backend::copyScatterToRadiation() {
@@ -1750,6 +1799,9 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry &geometry) {
     if (!geometry.uv_IDs.empty()) {
         initializeBuffer1Di(uvID_RTbuffer, geometry.uv_IDs);
     }
+
+    // Spectral texture class maps
+    initializeBuffer1Dui(spectral_class_maps_RTbuffer, packSpectralClassMaps(geometry));
 }
 
 void OptiX6Backend::materialsToBuffers(const RayTracingMaterial &materials) {
@@ -1824,6 +1876,12 @@ void OptiX6Backend::materialsToBuffers(const RayTracingMaterial &materials) {
     }
     RT_CHECK_ERROR(rtVariableSet1ui(surface_layer_enabled_RTvariable, materials.surface_layer_enabled ? 1u : 0u));
     RT_CHECK_ERROR(rtVariableSet1ui(surface_layer_table_size_RTvariable, materials.surface_layer_table_size));
+
+    // Spectral texture palettes. The radiation reaching their primitives is booked only once zeroCameraScatterBuffers() has sized its buffer.
+    initializeBuffer1Dui(spectral_palette_RTbuffer, packSpectralPalettes(materials));
+    palette_entry_count = materials.num_palette_entries;
+    spectral_incident_count = 0;
+    RT_CHECK_ERROR(rtVariableSet1ui(spectral_incident_enabled_RTvariable, 0u));
 }
 
 void OptiX6Backend::sourcesToBuffers(const std::vector<RayTracingSource> &sources) {
@@ -1945,6 +2003,10 @@ void OptiX6Backend::buffersToResults(RayTracingResults &results) {
     if (current_camera_count > 0) {
         results.scatter_buff_top_cam = getOptiXbufferData(scatter_buff_top_cam_RTbuffer);
         results.scatter_buff_bottom_cam = getOptiXbufferData(scatter_buff_bottom_cam_RTbuffer);
+    }
+    results.spectral_incident.clear();
+    if (spectral_incident_count > 0) {
+        results.spectral_incident = getOptiXbufferData(spectral_incident_RTbuffer);
     }
 
     results.radiation_specular = getOptiXbufferData(radiation_specular_RTbuffer);

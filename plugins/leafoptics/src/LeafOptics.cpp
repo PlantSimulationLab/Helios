@@ -1103,7 +1103,62 @@ void LeafOptics::assignSpectrumToPrimitives(const std::vector<uint> &UUIDs, uint
     }
 }
 
+void LeafOptics::runFromObjectData(const std::vector<uint> &UUIDs, const std::string &object_data_label, const std::vector<LeafOpticsProperties> &properties, const std::string &label) {
+    if (properties.empty()) {
+        helios_runtime_error("ERROR (LeafOptics::runFromObjectData): No properties were given. Give one set of properties for each value of the object data '" + object_data_label + "', starting from 0.");
+    }
+    if (label.empty()) {
+        helios_runtime_error("ERROR (LeafOptics::runFromObjectData): The label is empty. Give a label to name the spectra by.");
+    }
+    if (UUIDs.empty()) {
+        if (message_flag) {
+            std::cout << "LeafOptics: Empty UUID list provided to runFromObjectData, nothing to do." << std::endl;
+        }
+        return;
+    }
+    for (uint UUID: UUIDs) {
+        if (primitive_to_object.find(UUID) != primitive_to_object.end()) {
+            helios_runtime_error("ERROR (LeafOptics::runFromObjectData): Primitive " + std::to_string(UUID) + " is given spectra by the nitrogen-based mode of this LeafOptics, which would overwrite the spectra given here. Use only one of the two for a primitive.");
+        }
+    }
+
+    // Every primitive is checked before any spectra are assigned, so that an error leaves all of them as they were
+    std::map<uint, std::vector<uint>> primitives_by_value;
+    for (const auto &[objID, object_UUIDs]: groupPrimitivesByObject(UUIDs)) {
+        if (!context->doesObjectDataExist(objID, object_data_label.c_str())) {
+            helios_runtime_error("ERROR (LeafOptics::runFromObjectData): Object " + std::to_string(objID) + " does not have '" + object_data_label + "' object data. For \"leaf_texture_stage\", enable it with PlantArchitecture::optionalOutputObjectData().");
+        }
+        int value = 0;
+        const HeliosDataType type = context->getObjectDataType(object_data_label.c_str());
+        if (type == HELIOS_TYPE_UINT) {
+            uint uint_value = 0;
+            context->getObjectData(objID, object_data_label.c_str(), uint_value);
+            value = int(uint_value);
+        } else if (type == HELIOS_TYPE_INT) {
+            context->getObjectData(objID, object_data_label.c_str(), value);
+        } else {
+            helios_runtime_error("ERROR (LeafOptics::runFromObjectData): Object data '" + object_data_label + "' is not of type int or uint, so it cannot select from a list of properties.");
+        }
+        if (value < 0 || value >= int(properties.size())) {
+            helios_runtime_error("ERROR (LeafOptics::runFromObjectData): Object " + std::to_string(objID) + " has '" + object_data_label + "' of " + std::to_string(value) + ", but properties were given only for values 0 to " + std::to_string(properties.size() - 1) +
+                                 ". Give one set of properties for each value.");
+        }
+        std::vector<uint> &group = primitives_by_value[uint(value)];
+        group.insert(group.end(), object_UUIDs.begin(), object_UUIDs.end());
+    }
+
+    for (const auto &[value, value_UUIDs]: primitives_by_value) {
+        run(value_UUIDs, properties.at(value), label + "_" + std::to_string(value));
+        object_data_mode_UUIDs.insert(value_UUIDs.begin(), value_UUIDs.end());
+    }
+}
+
 void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_Nauto &params) {
+    for (uint UUID: UUIDs) {
+        if (object_data_mode_UUIDs.find(UUID) != object_data_mode_UUIDs.end()) {
+            helios_runtime_error("ERROR (LeafOptics::run): Primitive " + std::to_string(UUID) + " is given spectra by runFromObjectData() of this LeafOptics, which would overwrite the spectra given here. Use only one of the two for a primitive.");
+        }
+    }
     if (UUIDs.empty()) {
         if (message_flag) {
             std::cout << "LeafOptics: Empty UUID list provided to nitrogen mode, nothing to do." << std::endl;

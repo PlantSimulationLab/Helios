@@ -42,7 +42,7 @@
 
  - <b>Object detection</b>: a rectangular bounding box around each object, in the normalized format used by YOLO.
  - <b>Semantic segmentation</b>: a single image-sized mask giving the class of each pixel.
- - <b>Instance segmentation</b>: a separate mask per object, giving the un-occluded extent of that object.
+ - <b>Instance segmentation</b>: a separate mask per object, giving the visible extent of that object.
 
  \section SAConstructor SyntheticAnnotation Class Constructor
 
@@ -137,7 +137,7 @@
  <tr><td>Instance segmentation <td>\ref SyntheticAnnotation::enableInstanceSegmentation() "enableInstanceSegmentation()" <td>\ref SyntheticAnnotation::disableInstanceSegmentation() "disableInstanceSegmentation()"
  </table>
 
- Instance segmentation renders each object separately, so its cost grows with the number of objects. Disabling it is worthwhile when only bounding boxes are needed.
+ All annotations are derived from the same rendering, so disabling instance segmentation does not save a rendering pass; it only skips tracing and writing the masks.
 
  \ref SyntheticAnnotation::setMinimumLabelPixels(int labelminpixels) "setMinimumLabelPixels()" sets how many pixels an object must cover to be written out at all; the default is 10. Raising it excludes objects that are almost entirely occluded and would otherwise contribute near-empty labels to the training data.
 

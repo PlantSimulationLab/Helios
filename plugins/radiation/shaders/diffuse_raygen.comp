@@ -265,6 +265,7 @@ layout(set = 3, binding = 4) readonly buffer SkyRadianceParamsBuffer {
 #include "common/sky_distribution.glsl"
 #include "common/texture_mask.glsl"
 #include "common/surface_layer.glsl"
+#include "common/spectral_texture.glsl"
 
 // Direct flux reaching primitives with a surface layer [source * primitive * band], for their reflection lobe of it
 layout(set = 2, binding = 10) readonly buffer RadiationSpecularBuffer {
@@ -512,6 +513,9 @@ void main() {
                 // If all attempts hit transparent texels, launch from the last sample rather than drop the ray and its energy
             }
 
+            // The class of a spectral texture at the launch point, whose reflectivity and transmissivity the rays from it use
+            uint origin_palette_entry = spectral_palette_entry(prim_idx, spectral_origin_texel_uv(prim_idx, prim_type, sp_local));
+
             // Transform to world space
             vec3 ray_origin = transform_point(transform, sp_local);
 
@@ -643,8 +647,9 @@ void main() {
                 uint global_b = band_map_buf.map[band];
                 uint global_idx = index_prim_band(prim_idx, band, pc.band_count);
                 uint mat_idx = (pc.source_count * pc.primitive_count + prim_idx) * pc.material_band_count + global_b; // diffuse/scatter slot
-                float rho = reflectivity_buf.reflectivity[mat_idx];
-                float tau = transmissivity_buf.transmissivity[mat_idx];
+                bool use_palette = spectral_palette_applies(origin_palette_entry, global_b);
+                float rho = use_palette ? spectral_palette_rho(pc.source_count, origin_palette_entry, global_b) : reflectivity_buf.reflectivity[mat_idx];
+                float tau = use_palette ? spectral_palette_tau(pc.source_count, origin_palette_entry, global_b) : transmissivity_buf.transmissivity[mat_idx];
                 float absorption_factor = 1.0 - rho - tau;
 
                 // A translucent cover absorbs alpha(theta) and reflects rho(theta) back out of the launch face. The
@@ -809,10 +814,21 @@ void main() {
                 // push constant, so control flow stays uniform and the subgroup reductions are reached
                 // by every active invocation.
                 uint cam_scatter_stride = pc.primitive_count * pc.band_count;
+
+                // What reaches a primitive with a spectral texture, from which each camera computes the outgoing radiation of its classes.
+                // The condition is the same for every invocation, so the subgroupAdd is reached by all of them.
+                if (pc.camera_count > 0u && palette_buf.words[0] != 0u) {
+                    float incident_sum = subgroupAdd(camera_energy);
+                    if (subgroupElect() && incident_sum != 0.0 && spectral_texture_on(prim_idx)) {
+                        uint face_slot = (pc.launch_face == 1 ? 0u : pc.source_count + 1u) + pc.source_count;
+                        atomicAdd(spectral_incident_buf.values[face_slot * cam_scatter_stride + global_idx], incident_sum);
+                    }
+                }
+
                 for (uint cam = 0u; cam < pc.camera_count; cam++) {
                     uint cam_mat_idx = mat_idx * pc.camera_count + cam;
-                    float rho_cam = reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
-                    float tau_cam = transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
+                    float rho_cam = use_palette ? spectral_palette_rho_cam(pc.source_count, origin_palette_entry, global_b, cam) : reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
+                    float tau_cam = use_palette ? spectral_palette_tau_cam(pc.source_count, origin_palette_entry, global_b, cam) : transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
                     if (layer >= 0) {
                         rho_cam *= body_fraction;
                         tau_cam *= body_fraction;

@@ -31,7 +31,7 @@
  * The CollisionDetection class provides efficient algorithms for:
  * 1. Primitive/CompoundObject collision detection using BVH acceleration
  * 2. Cone intersection queries from arbitrary points
- * 3. Grid-based intersection queries (replacing voxel primitives)
+ * 3. Grid-based intersection queries
  * 4. Layout optimization to minimize collisions
  */
 class CollisionDetection {
@@ -532,7 +532,6 @@ public:
      *
      * This method extends performGridRayIntersection to handle individual voxels with specific centers and sizes.
      * Uses ray-AABB intersection with path_length = t_max - max(0, t_min) for each intersection.
-     * Performance target: 1M rays × 100 voxels in <2 seconds with OpenMP parallelization.
      */
     std::vector<std::vector<HitResult>> calculateVoxelPathLengths(const helios::vec3 &scan_origin, const std::vector<helios::vec3> &ray_directions, const std::vector<helios::vec3> &voxel_centers, const std::vector<helios::vec3> &voxel_sizes);
 
@@ -1033,8 +1032,8 @@ public:
      * When the pointed-to int is non-zero, the parallel ray loop in castRaysSoA()
      * skips its remaining work (each thread short-circuits its assigned chunk), so
      * a long synthetic scan can be aborted mid-trace. The flag is owned by the
-     * caller (e.g. a ctypes int shared with Python, written under the GIL while
-     * this trace runs GIL-free) and must outlive the trace. It is a single-word
+     * caller, may be written from another thread while this trace runs, and must
+     * outlive the trace. It is a single-word
      * 0->1 monotonic flag, read via volatile so the loop re-reads it each tick;
      * pass nullptr to clear. The per-ray read is effectively free.
      */

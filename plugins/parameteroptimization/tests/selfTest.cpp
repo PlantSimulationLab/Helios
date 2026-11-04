@@ -17,6 +17,8 @@
  */
 
 #include "ParameterOptimization.h"
+#include "TPESampler.h"
+#include "TPEGoldenData.h"
 #include <iomanip>
 
 #define DOCTEST_CONFIG_IMPLEMENT
@@ -3044,7 +3046,7 @@ DOCTEST_TEST_CASE("ParameterOptimization default algorithm continuous derivative
     DOCTEST_CHECK(converged);
 }
 
-// Test: No setAlgorithm + INTEGER param → GA default
+// Test: No setAlgorithm + INTEGER param → TPE default
 DOCTEST_TEST_CASE("ParameterOptimization default algorithm discrete derivative-free") {
     ParametersToOptimize params = {
         {"x", {0.f, -5.f, 5.f, ParameterType::INTEGER}},
@@ -3058,11 +3060,56 @@ DOCTEST_TEST_CASE("ParameterOptimization default algorithm discrete derivative-f
 
     bool converged = retry(3, [&]() {
         ParameterOptimization popt;
-        // No setAlgorithm — should pick GA for discrete params
+        // No setAlgorithm — should pick TPE for discrete params
         auto result = popt.run(obj, params);
         return result.fitness < 2.0f;
     });
     DOCTEST_CHECK(converged);
+}
+
+// Test: The discrete defaults are identified by their evaluation counts, as TPE spends exactly max_evaluations
+DOCTEST_TEST_CASE("ParameterOptimization default algorithm discrete selects TPE") {
+    ParametersToOptimize params = {
+        {"n", {0.f, -5.f, 5.f, ParameterType::INTEGER}},
+        {"c", {1.f, 0.f, 0.f, ParameterType::CATEGORICAL, {1.f, 2.f, 3.f}}},
+        {"x", {0.f, -5.f, 5.f}}
+    };
+    size_t eval_count = 0;
+    ObjectiveFunction objective = [&eval_count](const ParametersToOptimize &p) {
+        eval_count++;
+        return p.at("n").value * p.at("n").value + p.at("c").value + p.at("x").value * p.at("x").value;
+    };
+
+    ParameterOptimization popt;
+    const auto derivative_free_result = popt.run(objective, params);
+    DOCTEST_CHECK(eval_count == TPE{}.max_evaluations);
+    DOCTEST_CHECK(std::isfinite(derivative_free_result.fitness));
+
+    // The gradient is ignored, since no gradient-based algorithm supports discrete parameters
+    eval_count = 0;
+    GradientFunction unused_gradient = [](const ParametersToOptimize &) -> ParameterGradient { return {{"n", 0.f}, {"c", 0.f}, {"x", 0.f}}; };
+    ParameterOptimization popt_gradient;
+    const auto gradient_result = popt_gradient.run(objective, params, unused_gradient);
+    DOCTEST_CHECK(eval_count == TPE{}.max_evaluations);
+    DOCTEST_CHECK(std::isfinite(gradient_result.fitness));
+}
+
+// Test: Above 50 parameters the default budget of TPE is too small to be useful, so GA remains the default
+DOCTEST_TEST_CASE("ParameterOptimization default algorithm many discrete parameters selects GA") {
+    ParametersToOptimize params;
+    for (int i = 0; i < 51; i++) {
+        params["n" + std::to_string(i)] = {0.f, -5.f, 5.f, ParameterType::INTEGER};
+    }
+    size_t eval_count = 0;
+    auto objective = [&eval_count](const ParametersToOptimize &p) {
+        eval_count++;
+        return p.at("n0").value * p.at("n0").value;
+    };
+
+    ParameterOptimization popt;
+    const auto result = popt.run(objective, params);
+    DOCTEST_CHECK(eval_count > TPE{}.max_evaluations);
+    DOCTEST_CHECK(std::isfinite(result.fitness));
 }
 
 // Test: No setAlgorithm + gradient provided + continuous → Adam default
@@ -3185,4 +3232,480 @@ DOCTEST_TEST_CASE("ParameterOptimization makeFDGradient matches makeFDGradientSo
 
     DOCTEST_CHECK(g1.at("x") == doctest::Approx(g2.at("x")).epsilon(1e-6f));
     DOCTEST_CHECK(g1.at("y") == doctest::Approx(g2.at("y")).epsilon(1e-6f));
+}
+
+// ============================================================================
+// TPE Tests: conformance to Optuna v5.0.0 (values from TPEGoldenData.h)
+// ============================================================================
+
+// Compare against a golden value, with a tolerance relative to its magnitude. Golden values come from another
+// platform's libm, so an exact comparison would not be portable.
+static bool closeToGolden(double value, double golden, double tolerance = 1e-10) {
+    if (std::isinf(golden)) {
+        return value == golden;
+    }
+    return std::abs(value - golden) <= tolerance * std::max(1.0, std::abs(golden));
+}
+
+// Compare a value that can be far smaller than 1, for which closeToGolden() would accept zero. The absolute term
+// allows for results formed by a subtraction from 1, which cannot resolve differences smaller than about 1e-16.
+static bool closeToSmallGolden(double value, double golden, double absolute_tolerance) {
+    return std::abs(value - golden) <= 1e-10 * std::abs(golden) + absolute_tolerance;
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE truncated normal routines match Optuna") {
+    const double two_units_in_last_place_of_one = 4.5e-16;
+    for (const auto &row: tpe_golden::log_ndtr) {
+        DOCTEST_CAPTURE(row[0]);
+        // Above a = 6 the result is computed directly from erfc, and so holds its relative accuracy
+        DOCTEST_CHECK(closeToSmallGolden(helios_tpe::logNdtr(row[0]), row[1], row[0] > 6.0 ? 0.0 : two_units_in_last_place_of_one));
+    }
+    for (const auto &row: tpe_golden::log_gauss_mass) {
+        DOCTEST_CAPTURE(row[0]);
+        DOCTEST_CAPTURE(row[1]);
+        DOCTEST_CHECK(closeToSmallGolden(helios_tpe::logGaussMass(row[0], row[1]), row[2], two_units_in_last_place_of_one));
+    }
+    for (const auto &row: tpe_golden::ndtri_exp) {
+        DOCTEST_CAPTURE(row[0]);
+        DOCTEST_CHECK(closeToGolden(helios_tpe::ndtriExp(row[0]), row[1], 1e-7));
+    }
+    for (const auto &row: tpe_golden::truncnorm_ppf) {
+        DOCTEST_CAPTURE(row[0]);
+        DOCTEST_CAPTURE(row[1]);
+        DOCTEST_CAPTURE(row[2]);
+        DOCTEST_CHECK(closeToGolden(helios_tpe::truncnormPpf(row[0], row[1], row[2]), row[3], 1e-7));
+    }
+    for (const auto &row: tpe_golden::truncnorm_logpdf) {
+        DOCTEST_CAPTURE(row[0]);
+        DOCTEST_CHECK(closeToGolden(helios_tpe::truncnormLogPdf(row[0], row[1], row[2], row[3], row[4]), row[5]));
+    }
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE percent point function stays within bounds when the quantile rounds to the end of the distribution") {
+    // Rounding can make the log of the CDF exactly zero or slightly positive, where the inverse would otherwise give NaN
+    const double largest_quantile = 1.0 - std::pow(2.0, -53.0);
+    size_t n_outside_bounds = 0;
+    std::string first_outside_bounds;
+    const auto checkWithinBounds = [&](double value, double a, double b) {
+        if (!(value >= a && value <= b)) {
+            if (n_outside_bounds == 0) {
+                std::ostringstream description;
+                description << std::setprecision(17) << "value=" << value << " a=" << a << " b=" << b;
+                first_outside_bounds = description.str();
+            }
+            n_outside_bounds++;
+        }
+    };
+    for (int i = 1; i <= 2000; i++) {
+        for (int j = 1; j <= 100; j++) {
+            const double a = -0.0005 * i;
+            const double b = a + 0.2 * j;
+            checkWithinBounds(helios_tpe::truncnormPpf(largest_quantile, a, b), a, b);
+            checkWithinBounds(helios_tpe::truncnormPpf(1.0 - largest_quantile, -b, -a), -b, -a);
+        }
+    }
+    DOCTEST_CAPTURE(first_outside_bounds);
+    DOCTEST_CHECK(n_outside_bounds == 0);
+
+    DOCTEST_CHECK(helios_tpe::ndtriExp(0.0) == std::numeric_limits<double>::infinity());
+    DOCTEST_CHECK(helios_tpe::ndtriExp(1e-16) == std::numeric_limits<double>::infinity());
+    DOCTEST_CHECK(helios_tpe::ndtriExp(-std::numeric_limits<double>::infinity()) == -std::numeric_limits<double>::infinity());
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE selects the highest finite acquisition") {
+    const double infinity = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    DOCTEST_CHECK(helios_tpe::selectBestCandidate({1.0, 3.0, 2.0}, {0.0, 0.0, 0.0}) == 1);
+    DOCTEST_CHECK(helios_tpe::selectBestCandidate({3.0, 3.0}, {0.0, 0.0}) == 0);
+    DOCTEST_CHECK(helios_tpe::selectBestCandidate({nan, 1.0}, {0.0, 0.0}) == 1);
+    DOCTEST_CHECK(helios_tpe::selectBestCandidate({-infinity, 1.0}, {-infinity, 0.0}) == 1);
+    DOCTEST_CHECK(helios_tpe::selectBestCandidate({-infinity, -infinity}, {0.0, 0.0}) == 0);
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE orders ties as NumPy does") {
+    DOCTEST_REQUIRE(tpe_golden::argsort_values.size() == tpe_golden::argsort_order.size());
+    for (size_t row = 0; row < tpe_golden::argsort_values.size(); row++) {
+        DOCTEST_CAPTURE(row);
+        const std::vector<size_t> order = helios_tpe::numpyArgsort(tpe_golden::argsort_values[row]);
+        DOCTEST_REQUIRE(order.size() == tpe_golden::argsort_order[row].size());
+        bool order_matches = true;
+        for (size_t i = 0; i < order.size(); i++) {
+            order_matches = order_matches && static_cast<double>(order[i]) == tpe_golden::argsort_order[row][i];
+        }
+        DOCTEST_CHECK(order_matches);
+    }
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE gamma and weights match Optuna") {
+    for (const auto &row: tpe_golden::default_gamma) {
+        DOCTEST_CAPTURE(row[0]);
+        DOCTEST_CHECK(helios_tpe::defaultGamma(static_cast<size_t>(row[0])) == static_cast<size_t>(row[1]));
+    }
+    for (const auto &golden: tpe_golden::default_weights) {
+        const std::vector<double> weights = helios_tpe::defaultWeights(golden.size());
+        DOCTEST_REQUIRE(weights.size() == golden.size());
+        for (size_t i = 0; i < golden.size(); i++) {
+            DOCTEST_CAPTURE(golden.size());
+            DOCTEST_CAPTURE(i);
+            DOCTEST_CHECK(closeToGolden(weights[i], golden[i]));
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE Parzen estimator matches Optuna") {
+    for (const auto &golden: tpe_golden::estimator_cases) {
+        DOCTEST_CAPTURE(golden.name);
+        const helios_tpe::ParzenEstimator estimator(golden.observations, golden.dimensions);
+
+        DOCTEST_REQUIRE(estimator.getWeights().size() == golden.weights.size());
+        for (size_t k = 0; k < golden.weights.size(); k++) {
+            DOCTEST_CHECK(closeToGolden(estimator.getWeights()[k], golden.weights[k]));
+        }
+
+        for (size_t d = 0; d < golden.dimensions.size(); d++) {
+            DOCTEST_CAPTURE(d);
+            if (golden.dimensions[d].kind == helios_tpe::DimensionKind::CATEGORICAL) {
+                const auto &category_weights = estimator.getCategoricalWeights(d);
+                DOCTEST_REQUIRE(category_weights.size() == golden.category_weights[d].size());
+                for (size_t k = 0; k < category_weights.size(); k++) {
+                    for (size_t c = 0; c < category_weights[k].size(); c++) {
+                        DOCTEST_CHECK(closeToGolden(category_weights[k][c], golden.category_weights[d][k][c]));
+                    }
+                }
+            } else {
+                DOCTEST_REQUIRE(estimator.getMus(d).size() == golden.mus[d].size());
+                DOCTEST_REQUIRE(estimator.getSigmas(d).size() == golden.sigmas[d].size());
+                for (size_t k = 0; k < golden.mus[d].size(); k++) {
+                    DOCTEST_CHECK(closeToGolden(estimator.getMus(d)[k], golden.mus[d][k]));
+                    DOCTEST_CHECK(closeToGolden(estimator.getSigmas(d)[k], golden.sigmas[d][k]));
+                }
+            }
+        }
+
+        // A seeded sample covers the order in which the random numbers are consumed as well as the distributions
+        helios_tpe::UniformStream stream(golden.sample_seed);
+        const auto samples = estimator.sample(stream, golden.samples.size());
+        for (size_t i = 0; i < samples.size(); i++) {
+            for (size_t d = 0; d < samples[i].size(); d++) {
+                DOCTEST_CAPTURE(i);
+                DOCTEST_CAPTURE(d);
+                DOCTEST_CHECK(closeToGolden(samples[i][d], golden.samples[i][d], 1e-7));
+            }
+        }
+
+        // Evaluated at Optuna's sample points, so that a sampling difference cannot also be reported as a density difference
+        const auto log_pdf = estimator.logPdf(golden.samples);
+        for (size_t i = 0; i < log_pdf.size(); i++) {
+            DOCTEST_CAPTURE(i);
+            DOCTEST_CHECK(closeToGolden(log_pdf[i], golden.log_pdf[i]));
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE study reproduces Optuna trials") {
+    for (const auto &golden: tpe_golden::trajectory_cases) {
+        DOCTEST_CAPTURE(golden.name);
+
+        std::vector<std::string> names;
+        for (const auto &[name, parameter]: golden.parameters) {
+            names.push_back(name);
+        }
+        std::sort(names.begin(), names.end());
+
+        std::vector<std::vector<double>> evaluated;
+        auto objective = [&](const ParametersToOptimize &p) {
+            std::vector<double> row;
+            double sum = 0.0;
+            for (size_t d = 0; d < names.size(); d++) {
+                const double value = p.at(names[d]).value;
+                row.push_back(value);
+                sum += (value - golden.centers[d]) * (value - golden.centers[d]);
+            }
+            evaluated.push_back(row);
+            return static_cast<float>(sum);
+        };
+
+        TPE tpe;
+        tpe.max_evaluations = golden.evaluated.size();
+        tpe.random_seed = golden.seed;
+        ParameterOptimization popt;
+        popt.setAlgorithm(tpe);
+        const auto result = popt.run(objective, golden.parameters);
+        DOCTEST_CHECK(std::isfinite(result.fitness));
+
+        DOCTEST_REQUIRE(evaluated.size() == golden.evaluated.size());
+        for (size_t trial = 0; trial < evaluated.size(); trial++) {
+            for (size_t d = 0; d < names.size(); d++) {
+                DOCTEST_CAPTURE(trial);
+                DOCTEST_CAPTURE(d);
+                const auto &parameter = golden.parameters.at(names[d]);
+                const double range = parameter.type == ParameterType::CATEGORICAL ? 1.0 : parameter.max - parameter.min;
+                DOCTEST_CHECK(std::abs(evaluated[trial][d] - golden.evaluated[trial][d]) <= 1e-5 * range);
+            }
+        }
+    }
+}
+
+// ============================================================================
+// TPE Tests: behavior through ParameterOptimization
+// ============================================================================
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE runs exactly max_evaluations through each run overload") {
+    ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}, {"y", {0.f, -5.f, 5.f}}};
+    int eval_count = 0;
+    ObjectiveFunction objective = [&eval_count](const ParametersToOptimize &p) {
+        eval_count++;
+        return p.at("x").value * p.at("x").value + p.at("y").value * p.at("y").value;
+    };
+
+    TPE tpe;
+    tpe.max_evaluations = 37;
+    tpe.random_seed = 1;
+    ParameterOptimization popt;
+    popt.setAlgorithm(tpe);
+
+    const auto derivative_free_result = popt.run(objective, params);
+    DOCTEST_CHECK(eval_count == 37);
+    DOCTEST_CHECK(std::isfinite(derivative_free_result.fitness));
+
+    eval_count = 0;
+    GradientFunction unused_gradient = [](const ParametersToOptimize &) -> ParameterGradient { return {{"x", 0.f}, {"y", 0.f}}; };
+    const auto gradient_result = popt.run(objective, params, unused_gradient);
+    DOCTEST_CHECK(eval_count == 37);
+    DOCTEST_CHECK(std::isfinite(gradient_result.fitness));
+
+    std::vector<Constraint> constraints;
+    DOCTEST_CHECK_THROWS_AS(popt.run(objective, params, unused_gradient, constraints), std::runtime_error);
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE respects parameter types and bounds") {
+    const std::vector<float> categories = {5.f, 12.f, 20.f};
+    ParametersToOptimize params = {{"x", {0.f, -1.5f, 2.5f}}, {"n", {1.f, -3.f, 4.f, ParameterType::INTEGER}}, {"c", {5.f, 0.f, 0.f, ParameterType::CATEGORICAL, categories}}, {"fixed", {7.f, 0.f, 0.f, ParameterType::CATEGORICAL, {7.f}}}};
+
+    std::set<float> integers_seen;
+    std::set<float> categories_seen;
+    bool all_valid = true;
+    auto objective = [&](const ParametersToOptimize &p) {
+        const float x = p.at("x").value, n = p.at("n").value, c = p.at("c").value;
+        all_valid = all_valid && x >= -1.5f && x <= 2.5f && n >= -3.f && n <= 4.f && std::round(n) == n && p.at("fixed").value == 7.f;
+        all_valid = all_valid && std::find(categories.begin(), categories.end(), c) != categories.end();
+        integers_seen.insert(n);
+        categories_seen.insert(c);
+        return (x - 1.f) * (x - 1.f) + (n - 2.f) * (n - 2.f) + (c == 12.f ? 0.f : 3.f);
+    };
+
+    TPE tpe;
+    tpe.max_evaluations = 150;
+    tpe.random_seed = 42;
+    ParameterOptimization popt;
+    popt.setAlgorithm(tpe);
+    const auto result = popt.run(objective, params);
+
+    DOCTEST_CHECK(all_valid);
+    DOCTEST_CHECK(integers_seen.size() > 1);
+    DOCTEST_CHECK(categories_seen.size() == categories.size());
+    DOCTEST_CHECK(result.parameters.at("n").value == std::round(result.parameters.at("n").value));
+    DOCTEST_CHECK(result.parameters.at("fixed").value == 7.f);
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE same seed reproduces the same evaluations") {
+    ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}, {"n", {1.f, 0.f, 9.f, ParameterType::INTEGER}}, {"c", {1.f, 0.f, 0.f, ParameterType::CATEGORICAL, {1.f, 2.f, 3.f}}}};
+    const auto runWithSeed = [&params](unsigned int seed) {
+        std::vector<std::array<float, 3>> evaluated;
+        auto objective = [&evaluated](const ParametersToOptimize &p) {
+            evaluated.push_back({p.at("x").value, p.at("n").value, p.at("c").value});
+            return std::abs(p.at("x").value - 1.f) + std::abs(p.at("n").value - 3.f) + p.at("c").value;
+        };
+        TPE tpe;
+        tpe.max_evaluations = 40;
+        tpe.random_seed = seed;
+        ParameterOptimization popt;
+        popt.setAlgorithm(tpe);
+        const auto result = popt.run(objective, params);
+        DOCTEST_CHECK(std::isfinite(result.fitness));
+        return evaluated;
+    };
+
+    DOCTEST_CHECK(runWithSeed(9) == runWithSeed(9));
+    DOCTEST_CHECK(runWithSeed(9) != runWithSeed(10));
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE rejects invalid settings and NaN objectives") {
+    ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}};
+    auto objective = [](const ParametersToOptimize &p) { return p.at("x").value; };
+
+    const auto runWithSettings = [&](const TPE &tpe) {
+        ParameterOptimization popt;
+        popt.setAlgorithm(tpe);
+        return popt.run(objective, params);
+    };
+
+    TPE no_evaluations;
+    no_evaluations.max_evaluations = 0;
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(runWithSettings(no_evaluations)), std::runtime_error);
+
+    TPE no_startup;
+    no_startup.n_startup_trials = 0;
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(runWithSettings(no_startup)), std::runtime_error);
+
+    TPE no_candidates;
+    no_candidates.n_ei_candidates = 0;
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(runWithSettings(no_candidates)), std::runtime_error);
+
+    ParameterOptimization popt_nan;
+    popt_nan.setAlgorithm(TPE{});
+    auto nan_objective = [](const ParametersToOptimize &) { return std::numeric_limits<float>::quiet_NaN(); };
+    std::string message;
+    try {
+        static_cast<void>(popt_nan.run(nan_objective, params));
+    } catch (const std::runtime_error &error) {
+        message = error.what();
+    }
+    DOCTEST_CHECK(message.find("NaN") != std::string::npos);
+    DOCTEST_CHECK(message.find("x=") != std::string::npos);
+
+    ParametersToOptimize single_categories = {{"c", {1.f, 0.f, 0.f, ParameterType::CATEGORICAL, {1.f}}}};
+    ParameterOptimization popt_fixed;
+    popt_fixed.setAlgorithm(TPE{});
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(popt_fixed.run(objective, single_categories)), std::runtime_error);
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE rejects read_input_from_file") {
+    ParametersToOptimize params = {{"n", {0.f, -5.f, 5.f, ParameterType::INTEGER}}};
+    auto objective = [](const ParametersToOptimize &p) { return p.at("n").value * p.at("n").value; };
+
+    const auto messageFromRun = [&](ParameterOptimization &popt) {
+        std::string message;
+        popt.read_input_from_file = "warm_start.csv";
+        try {
+            static_cast<void>(popt.run(objective, params));
+        } catch (const std::runtime_error &error) {
+            message = error.what();
+        }
+        return message;
+    };
+
+    ParameterOptimization popt_default;
+    DOCTEST_CHECK(messageFromRun(popt_default).find("read_input_from_file") != std::string::npos);
+
+    ParameterOptimization popt_explicit;
+    popt_explicit.setAlgorithm(TPE{});
+    DOCTEST_CHECK(messageFromRun(popt_explicit).find("read_input_from_file") != std::string::npos);
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization rejects infinite bounds") {
+    const float infinity = std::numeric_limits<float>::infinity();
+    int eval_count = 0;
+    auto objective = [&eval_count](const ParametersToOptimize &) {
+        eval_count++;
+        return 0.f;
+    };
+
+    ParameterOptimization popt_tpe;
+    popt_tpe.setAlgorithm(TPE{});
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(popt_tpe.run(objective, {{"x", {0.f, -infinity, 10.f}}})), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(popt_tpe.run(objective, {{"x", {0.f, -10.f, infinity}}})), std::runtime_error);
+
+    ParameterOptimization popt_cmaes;
+    popt_cmaes.setAlgorithm(CMAES{});
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(popt_cmaes.run(objective, {{"x", {0.f, -infinity, 10.f}}})), std::runtime_error);
+    DOCTEST_CHECK(eval_count == 0);
+
+    // The bounds of a categorical parameter are ignored
+    ParametersToOptimize categorical = {{"c", {1.f, -infinity, infinity, ParameterType::CATEGORICAL, {1.f, 2.f}}}};
+    ParameterOptimization popt_categorical;
+    TPE tpe;
+    tpe.max_evaluations = 3;
+    popt_categorical.setAlgorithm(tpe);
+    const auto result = popt_categorical.run(objective, categorical);
+    DOCTEST_CHECK(result.fitness == 0.f);
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE returns valid parameters when every evaluation is infinite") {
+    ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}};
+    auto objective = [](const ParametersToOptimize &) { return std::numeric_limits<float>::infinity(); };
+
+    TPE tpe;
+    tpe.max_evaluations = 20;
+    tpe.random_seed = 3;
+    ParameterOptimization popt;
+    popt.setAlgorithm(tpe);
+    const auto result = popt.run(objective, params);
+
+    DOCTEST_REQUIRE(result.parameters.count("x") == 1);
+    DOCTEST_CHECK(result.parameters.at("x").value >= -5.f);
+    DOCTEST_CHECK(result.parameters.at("x").value <= 5.f);
+    DOCTEST_CHECK(std::isinf(result.fitness));
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE beats random search") {
+    // TPE with more startup trials than evaluations is random search. The optimum is away from the
+    // center of the range, where the prior kernel would otherwise give TPE an unearned advantage.
+    ParametersToOptimize params;
+    const std::vector<std::string> names = {"a", "b", "c", "d", "e"};
+    for (const std::string &name: names) {
+        params[name] = {0.f, -5.f, 5.f};
+    }
+    auto objective = [&names](const ParametersToOptimize &p) {
+        float sum = 0.f;
+        for (const std::string &name: names) {
+            sum += (p.at(name).value - 2.7f) * (p.at(name).value - 2.7f);
+        }
+        return sum;
+    };
+
+    const int n_seeds = 20;
+    const size_t budget = 150;
+    double mean_log_tpe = 0.0;
+    double mean_log_random = 0.0;
+    for (int seed = 1; seed <= n_seeds; seed++) {
+        TPE tpe;
+        tpe.max_evaluations = budget;
+        tpe.random_seed = seed;
+        ParameterOptimization popt_tpe;
+        popt_tpe.setAlgorithm(tpe);
+        mean_log_tpe += std::log10(popt_tpe.run(objective, params).fitness) / n_seeds;
+
+        TPE random_search = tpe;
+        random_search.n_startup_trials = budget;
+        ParameterOptimization popt_random;
+        popt_random.setAlgorithm(random_search);
+        mean_log_random += std::log10(popt_random.run(objective, params).fitness) / n_seeds;
+    }
+
+    DOCTEST_CAPTURE(mean_log_tpe);
+    DOCTEST_CAPTURE(mean_log_random);
+    DOCTEST_CHECK(mean_log_tpe < mean_log_random - 0.3);
+}
+
+DOCTEST_TEST_CASE("ParameterOptimization TPE writes progress and result files") {
+    const std::string result_file = "tpe_test_result.csv";
+    const std::string progress_file = "tpe_test_progress.csv";
+    ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}};
+    auto objective = [](const ParametersToOptimize &p) { return p.at("x").value * p.at("x").value; };
+
+    TPE tpe;
+    tpe.max_evaluations = 15;
+    tpe.random_seed = 2;
+    ParameterOptimization popt;
+    popt.setAlgorithm(tpe);
+    popt.write_result_to_file = result_file;
+    popt.write_progress_to_file = progress_file;
+    const auto result = popt.run(objective, params);
+    DOCTEST_CHECK(std::isfinite(result.fitness));
+
+    const auto countLines = [](const std::string &file) {
+        std::ifstream input(file);
+        size_t lines = 0;
+        std::string line;
+        while (std::getline(input, line)) {
+            lines++;
+        }
+        return lines;
+    };
+    DOCTEST_CHECK(countLines(result_file) == 2);
+    DOCTEST_CHECK(countLines(progress_file) == 16);
+
+    std::remove(result_file.c_str());
+    std::remove(progress_file.c_str());
 }

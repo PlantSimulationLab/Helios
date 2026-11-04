@@ -38,6 +38,7 @@ constexpr float PI_F = 3.14159265358979323846f;
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <deque>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -931,6 +932,27 @@ namespace helios {
      * \note The length of pixel_data must be width*height*4 (or if it is width*height*3, the last channel is assumed opaque).
      */
     void writePNG(const std::string &filename, uint width, uint height, const std::vector<unsigned char> &pixel_data);
+
+    //! Read a single-channel (grayscale) PNG image whose pixel values are integers, such as a class map
+    /**
+     * The values are returned exactly as stored, without scaling to [0,1], so that each pixel can be used as an index.
+     * \param[in] filename Name of the PNG image file, which must be 8-bit or 16-bit grayscale without transparency.
+     * \param[out] width Image width in pixels
+     * \param[out] height Image height in pixels
+     * \param[out] pixel_values Value of each pixel, row by row from the top of the image (index at pixel_values[row*width+column])
+     * \note Color, indexed-color and grayscale-with-alpha images are rejected rather than converted, since converting them would change the values.
+     */
+    void readPNGSingleChannel(const std::string &filename, uint &width, uint &height, std::vector<uint16_t> &pixel_values);
+
+    //! Write a single-channel (grayscale) PNG image whose pixel values are integers, such as a class map
+    /**
+     * \param[in] filename Name of the PNG image file
+     * \param[in] width Image width in pixels
+     * \param[in] height Image height in pixels
+     * \param[in] pixel_values Value of each pixel, row by row from the top of the image (index at pixel_values[row*width+column])
+     * \param[in] bit_depth 8 or 16. Every value must fit, so values above 255 need a bit depth of 16.
+     */
+    void writePNGSingleChannel(const std::string &filename, uint width, uint height, const std::vector<uint16_t> &pixel_values, uint bit_depth);
 
     //! Function to read a JPEG image file into pixel data array
     /**

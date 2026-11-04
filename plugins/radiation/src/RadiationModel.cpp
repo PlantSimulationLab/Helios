@@ -1514,7 +1514,27 @@ float RadiationModel::getDiffuseFlux(const std::string &band_label) const {
     return 0.f;
 }
 
+namespace {
+    // Delete the model primitives that still exist. The user may have deleted some of them through the Context already.
+    void deleteModelPrimitives(helios::Context *context, const std::vector<uint> &UUIDs) {
+        std::vector<uint> existing;
+        existing.reserve(UUIDs.size());
+        for (uint UUID: UUIDs) {
+            if (context->doesPrimitiveExist(UUID)) {
+                existing.push_back(UUID);
+            }
+        }
+        context->deletePrimitive(existing);
+    }
+} // namespace
+
 void RadiationModel::enableLightModelVisualization() {
+    // rebuild from scratch so that calling this twice does not leave a duplicate set of models behind
+    for (auto &UUIDs: source_model_UUIDs) {
+        deleteModelPrimitives(context, UUIDs.second);
+    }
+    source_model_UUIDs.clear();
+
     islightvisualizationenabled = true;
 
     // build the geometry of any existing sources at this point
@@ -1526,11 +1546,17 @@ void RadiationModel::enableLightModelVisualization() {
 void RadiationModel::disableLightModelVisualization() {
     islightvisualizationenabled = false;
     for (auto &UUIDs: source_model_UUIDs) {
-        context->deletePrimitive(UUIDs.second);
+        deleteModelPrimitives(context, UUIDs.second);
     }
+    source_model_UUIDs.clear();
 }
 
 void RadiationModel::enableCameraModelVisualization() {
+    for (auto &UUIDs: camera_model_UUIDs) {
+        deleteModelPrimitives(context, UUIDs.second);
+    }
+    camera_model_UUIDs.clear();
+
     iscameravisualizationenabled = true;
 
     // build the geometry of any existing cameras at this point
@@ -1542,8 +1568,9 @@ void RadiationModel::enableCameraModelVisualization() {
 void RadiationModel::disableCameraModelVisualization() {
     iscameravisualizationenabled = false;
     for (auto &UUIDs: camera_model_UUIDs) {
-        context->deletePrimitive(UUIDs.second);
+        deleteModelPrimitives(context, UUIDs.second);
     }
+    camera_model_UUIDs.clear();
 }
 
 void RadiationModel::buildLightModelGeometry(uint sourceID) {
@@ -1552,19 +1579,19 @@ void RadiationModel::buildLightModelGeometry(uint sourceID) {
 
     RadiationSource source = radiation_sources.at(sourceID);
     if (source.source_type == RADIATION_SOURCE_TYPE_SPHERE) {
-        source_model_UUIDs[sourceID] = context->loadOBJ("SphereLightSource.obj", true);
+        source_model_UUIDs[sourceID] = context->loadOBJ("plugins/radiation/camera_light_models/SphereLightSource.obj", true);
     } else if (source.source_type == RADIATION_SOURCE_TYPE_SUN_SPHERE) {
-        source_model_UUIDs[sourceID] = context->loadOBJ("SphereLightSource.obj", true);
+        source_model_UUIDs[sourceID] = context->loadOBJ("plugins/radiation/camera_light_models/SphereLightSource.obj", true);
     } else if (source.source_type == RADIATION_SOURCE_TYPE_DISK) {
-        source_model_UUIDs[sourceID] = context->loadOBJ("DiskLightSource.obj", true);
+        source_model_UUIDs[sourceID] = context->loadOBJ("plugins/radiation/camera_light_models/DiskLightSource.obj", true);
         context->scalePrimitive(source_model_UUIDs.at(sourceID), make_vec3(source.source_width.x, source.source_width.y, 0.05f * source.source_width.x));
-        std::vector<uint> UUIDs_arrow = context->loadOBJ("Arrow.obj", true);
+        std::vector<uint> UUIDs_arrow = context->loadOBJ("plugins/radiation/camera_light_models/Arrow.obj", true);
         source_model_UUIDs.at(sourceID).insert(source_model_UUIDs.at(sourceID).begin(), UUIDs_arrow.begin(), UUIDs_arrow.end());
         context->scalePrimitive(UUIDs_arrow, make_vec3(1, 1, 1) * 0.25f * source.source_width.x);
     } else if (source.source_type == RADIATION_SOURCE_TYPE_RECTANGLE) {
-        source_model_UUIDs[sourceID] = context->loadOBJ("RectangularLightSource.obj", true);
+        source_model_UUIDs[sourceID] = context->loadOBJ("plugins/radiation/camera_light_models/RectangularLightSource.obj", true);
         context->scalePrimitive(source_model_UUIDs.at(sourceID), make_vec3(source.source_width.x, source.source_width.y, fmin(0.05f * (source.source_width.x + source.source_width.y), 0.5f * fmin(source.source_width.x, source.source_width.y))));
-        std::vector<uint> UUIDs_arrow = context->loadOBJ("Arrow.obj", true);
+        std::vector<uint> UUIDs_arrow = context->loadOBJ("plugins/radiation/camera_light_models/Arrow.obj", true);
         source_model_UUIDs.at(sourceID).insert(source_model_UUIDs.at(sourceID).begin(), UUIDs_arrow.begin(), UUIDs_arrow.end());
         context->scalePrimitive(UUIDs_arrow, make_vec3(1, 1, 1) * 0.15f * (source.source_width.x + source.source_width.y));
     } else {
@@ -1601,7 +1628,7 @@ void RadiationModel::buildCameraModelGeometry(const std::string &cameralabel) {
     vec3 viewvec = camera.lookat - camera.position;
     SphericalCoord viewsph = cart2sphere(viewvec);
 
-    camera_model_UUIDs[cameralabel] = context->loadOBJ("Camera.obj", true);
+    camera_model_UUIDs[cameralabel] = context->loadOBJ("plugins/radiation/camera_light_models/Camera.obj", true);
 
     context->rotatePrimitive(camera_model_UUIDs.at(cameralabel), viewsph.elevation, "x");
     context->rotatePrimitive(camera_model_UUIDs.at(cameralabel), -viewsph.azimuth, "z");
@@ -2449,6 +2476,61 @@ void RadiationModel::accumulateCameraFluxAtVertices(const std::vector<float> &fl
     }
 }
 
+void RadiationModel::accumulateSpectralIncidentAtVertices(const std::vector<float> &spectral_incident, const std::vector<float> &spectral_emitted, size_t slot_count, size_t band_count, std::vector<float> &vertex_values) const {
+    const size_t primitive_count = context_UUIDs.size();
+    const size_t layer_count = slot_count + 1;
+    vertex_values.assign(2 * layer_count * smoothing_vertex_count * band_count, 0.f);
+    if (smoothing_vertex_count == 0) {
+        return;
+    }
+    if (smoothing_vertex_indices.size() != 4 * primitive_count || smoothing_primitive_area.size() != primitive_count || material_data.palette_offset.size() != primitive_count) {
+        helios_runtime_error("ERROR (RadiationModel::accumulateSpectralIncidentAtVertices): The camera flux smoothing topology or the spectral textures describe a different number of primitives than the geometry's " +
+                             std::to_string(primitive_count) + ". Call updateGeometry() after changing the geometry.");
+    }
+    if (spectral_incident.size() != 2 * slot_count * primitive_count * band_count || spectral_emitted.size() != 2 * primitive_count * band_count) {
+        helios_runtime_error("ERROR (RadiationModel::accumulateSpectralIncidentAtVertices): The radiation reaching and leaving primitives with a spectral texture has " + std::to_string(spectral_incident.size()) + " and " +
+                             std::to_string(spectral_emitted.size()) + " values, but " + std::to_string(2 * slot_count * primitive_count * band_count) + " and " + std::to_string(2 * primitive_count * band_count) + " are required.");
+    }
+    auto value = [&](size_t face, size_t layer, size_t position, size_t band) {
+        return layer < slot_count ? spectral_incident[((face * slot_count + layer) * primitive_count + position) * band_count + band] : spectral_emitted[(face * primitive_count + position) * band_count + band];
+    };
+    std::vector<float> textured_area(smoothing_vertex_count, 0.f);
+    for (size_t position = 0; position < primitive_count; position++) {
+        const float facet_area = smoothing_primitive_area.at(position);
+        if (smoothing_vertex_indices.at(4 * position) < 0 || material_data.palette_offset.at(position) == UINT32_MAX || facet_area <= 0.f) {
+            continue; // takes no part in smoothing, or has no spectral texture
+        }
+        for (size_t c = 0; c < 4; c++) {
+            const int vertex = smoothing_vertex_indices.at(4 * position + c);
+            if (vertex < 0) {
+                continue; // a triangle, which has only three corners
+            }
+            textured_area.at(size_t(vertex)) += facet_area;
+            for (size_t face = 0; face < 2; face++) {
+                for (size_t layer = 0; layer < layer_count; layer++) {
+                    float *destination = &vertex_values[((face * layer_count + layer) * smoothing_vertex_count + size_t(vertex)) * band_count];
+                    for (size_t band = 0; band < band_count; band++) {
+                        destination[band] += facet_area * value(face, layer, position, band);
+                    }
+                }
+            }
+        }
+    }
+    for (size_t face = 0; face < 2; face++) {
+        for (size_t layer = 0; layer < layer_count; layer++) {
+            for (size_t vertex = 0; vertex < smoothing_vertex_count; vertex++) {
+                if (textured_area[vertex] <= 0.f) {
+                    continue; // no primitive with a spectral texture meets here, so no camera reads the slot
+                }
+                float *destination = &vertex_values[((face * layer_count + layer) * smoothing_vertex_count + vertex) * band_count];
+                for (size_t band = 0; band < band_count; band++) {
+                    destination[band] /= textured_area[vertex];
+                }
+            }
+        }
+    }
+}
+
 void RadiationModel::sumCameraWhiteReference(RadiationCamera &camera, uint camera_index, const std::vector<std::string> &band_labels, const std::vector<float> &white_reference_top_cam,
                                              const std::vector<float> &white_reference_bottom_cam) const {
     const size_t Nprimitives = context_UUIDs.size();
@@ -2928,6 +3010,11 @@ void RadiationModel::updateRadiativeProperties() {
 
         uint UUID = context_UUIDs.at(u);
 
+        // A primitive with a spectral texture takes its spectra from its palette (collected below), and its own spectrum data are not used
+        if (context->primitiveHasSpectralTexture(UUID)) {
+            continue;
+        }
+
         if (context->doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
             if (context->getPrimitiveDataType("reflectivity_spectrum") == HELIOS_TYPE_STRING) {
                 std::string spectrum_label;
@@ -2952,6 +3039,46 @@ void RadiationModel::updateRadiativeProperties() {
                 }
             }
         }
+    }
+
+    // The palettes of primitives with a spectral texture, laid end to end (see RayTracingMaterial::palette_offset). Their spectra are
+    // integrated with those of the primitives, so a class has exactly the values a primitive with the same spectra has.
+    std::map<std::string, uint32_t> palette_first_entry;
+    std::vector<const helios::SpectralTextureClass *> palette_entries;
+    std::vector<uint32_t> primitive_palette_offset(Nprimitives, UINT32_MAX);
+    auto loadPaletteSpectrum = [&](const std::string &spectrum_label, const std::string &palette_label, std::map<std::string, std::vector<helios::vec2>> &spectra) {
+        if (spectrum_label.empty() || spectra.find(spectrum_label) != spectra.end()) {
+            return;
+        }
+        try {
+            spectra.emplace(spectrum_label, loadSpectralData(spectrum_label));
+        } catch (const std::runtime_error &error) {
+            helios_runtime_error("ERROR (RadiationModel::runBand): Spectral palette '" + palette_label + "' of a primitive's spectral texture names the spectrum '" + spectrum_label + "', which could not be used: " + error.what());
+        }
+    };
+    for (size_t u = 0; u < Nprimitives; u++) {
+        const uint UUID = context_UUIDs.at(u);
+        if (!context->primitiveHasSpectralTexture(UUID)) {
+            continue;
+        }
+        // The class map is part of the geometry. A geometry built from a list of primitives is not rebuilt automatically, so it can be out of date.
+        const std::string class_map_file = context->getPrimitiveSpectralTextureFile(UUID);
+        const int class_map_ID = geometry_data.class_map_IDs.at(u);
+        if (class_map_ID < 0 || spectral_class_map_files.at(class_map_ID) != class_map_file) {
+            helios_runtime_error("ERROR (RadiationModel::runBand): Primitive UUID " + std::to_string(UUID) + " has a spectral texture (class map '" + class_map_file +
+                                 "') that it did not have when the radiation model's geometry was built. Call RadiationModel::updateGeometry() again after giving primitives spectral textures.");
+        }
+        const std::string palette_label = context->getPrimitiveSpectralPalette(UUID);
+        auto palette_it = palette_first_entry.find(palette_label);
+        if (palette_it == palette_first_entry.end()) {
+            palette_it = palette_first_entry.emplace(palette_label, uint32_t(palette_entries.size())).first;
+            for (const helios::SpectralTextureClass &spectral_class: context->getSpectralPalette(palette_label)) {
+                palette_entries.push_back(&spectral_class);
+                loadPaletteSpectrum(spectral_class.reflectivity_spectrum, palette_label, surface_spectra_rho);
+                loadPaletteSpectrum(spectral_class.transmissivity_spectrum, palette_label, surface_spectra_tau);
+            }
+        }
+        primitive_palette_offset.at(u) = palette_it->second;
     }
 
     // second, calculate unique values of rho and tau for every band and weighting contributor: rho_unique[label][band][contributor] and
@@ -3066,6 +3193,82 @@ void RadiationModel::updateRadiativeProperties() {
         computeUniqueValues(spectrum.first, spectrum.second, "transmissivity", tau_default, false, tau_unique.at(spectrum.first), tau_cam_unique.at(spectrum.first), tau_band_error.at(spectrum.first));
     }
 
+    // Palette tables: the value of each class in each slot and band, from the same unique values the primitives use, clamped to [0, 1]
+    // as a primitive's are. A class without a transmissivity spectrum transmits nothing.
+    const size_t Nentries = palette_entries.size();
+    material_data.num_palette_entries = Nentries;
+    material_data.palette_offset = primitive_palette_offset;
+    material_data.palette_reflectivity.assign((size_t) Nslots * Nentries * Nbands, 0.f);
+    material_data.palette_transmissivity.assign((size_t) Nslots * Nentries * Nbands, 0.f);
+    material_data.palette_reflectivity_cam.assign((size_t) Nslots * Nentries * Nbands * Ncameras, 0.f);
+    material_data.palette_transmissivity_cam.assign((size_t) Nslots * Nentries * Nbands * Ncameras, 0.f);
+    MaterialPropertyIndexer palette_idx(Nslots, Nentries, Nbands);
+    CameraMaterialIndexer palette_cam_idx(Nslots, Nentries, Nbands, Ncameras);
+    material_data.palette_band_active.assign(Nbands, 1);
+    {
+        uint b = 0;
+        for (const auto &band: band_labels) {
+            // A band with emission uses each primitive's emissivity, so its rays use the primitive's own (mean) values; the classes must then agree in it (checked below)
+            if (radiation_bands.at(band).emissionFlag && sif_emission_bands.count(band) == 0) {
+                material_data.palette_band_active.at(b) = 0;
+            }
+            for (size_t entry = 0; entry < Nentries; entry++) {
+                const helios::SpectralTextureClass &spectral_class = *palette_entries.at(entry);
+                for (const auto *property: {&spectral_class.reflectivity_spectrum, &spectral_class.transmissivity_spectrum}) {
+                    const bool is_rho = property == &spectral_class.reflectivity_spectrum;
+                    const std::string &label = *property;
+                    if (label.empty()) {
+                        continue;
+                    }
+                    for (uint slot = 0; slot < Nslots; slot++) {
+                        const uint unique_index = slot == diffuse_slot ? unique_diffuse_index : slot;
+                        float value = (is_rho ? rho_unique : tau_unique).at(label).at(b).at(unique_index);
+                        if (value < 0.f || value > 1.f) {
+                            warnings.addWarning(is_rho ? "reflectivity_palette_clamped" : "transmissivity_palette_clamped",
+                                                std::string(is_rho ? "Reflectivity" : "Transmissivity") + " of spectrum '" + label + "' in a spectral palette must be between 0 and 1. Clamping it for band " + band + ".");
+                            value = std::clamp(value, 0.f, 1.f);
+                        }
+                        (is_rho ? material_data.palette_reflectivity : material_data.palette_transmissivity)[palette_idx(slot, entry, b)] = value;
+                        for (uint cam = 0; cam < Ncameras; cam++) {
+                            (is_rho ? material_data.palette_reflectivity_cam : material_data.palette_transmissivity_cam)[palette_cam_idx(slot, entry, b, cam)] = (is_rho ? rho_cam_unique : tau_cam_unique).at(label).at(b).at(unique_index).at(cam);
+                        }
+                    }
+                }
+            }
+            b++;
+        }
+    }
+
+    // Area-weighted mean over the classes of primitive u's class map of a palette table, held as the primitive's own value. With one
+    // class the class's value is used as it is, so that it is bit-identical to a primitive given the same spectra.
+    auto paletteMean = [&](size_t u, const std::function<float(size_t entry)> &entry_value) -> float {
+        const std::vector<std::pair<uint16_t, float>> &fractions = spectral_class_fractions.at(u);
+        if (fractions.size() == 1) {
+            return entry_value(primitive_palette_offset.at(u) + fractions.front().first - 1);
+        }
+        double mean = 0;
+        for (const auto &fraction: fractions) {
+            mean += double(fraction.second) * entry_value(primitive_palette_offset.at(u) + fraction.first - 1);
+        }
+        return float(mean);
+    };
+
+    // Spectral weighting errors of the classes primitive u covers, recorded as for a primitive's own spectra (runBand() raises them only if the band is run)
+    auto recordPaletteBandErrors = [&](size_t u, uint b, const std::string &band, bool is_rho) {
+        for (const auto &fraction: spectral_class_fractions.at(u)) {
+            const helios::SpectralTextureClass &spectral_class = *palette_entries.at(primitive_palette_offset.at(u) + fraction.first - 1);
+            const std::string &label = is_rho ? spectral_class.reflectivity_spectrum : spectral_class.transmissivity_spectrum;
+            if (label.empty()) {
+                continue;
+            }
+            const std::string &band_error = (is_rho ? rho_band_error : tau_band_error).at(label).at(b);
+            const std::string &error = !band_error.empty() ? band_error : band_weighting_error.at(b);
+            if (!error.empty()) {
+                spectral_weighting_errors.emplace(band, error);
+            }
+        }
+    };
+
     for (size_t u = 0; u < Nprimitives; u++) {
 
         uint UUID = context_UUIDs.at(u);
@@ -3075,6 +3278,13 @@ void RadiationModel::updateRadiativeProperties() {
         if (type == helios::PRIMITIVE_TYPE_VOXEL) {
 
         } else { // other than voxels
+
+            // A primitive with a spectral texture takes its spectra from its palette, ahead of its own spectrum data
+            const bool has_spectral_texture = primitive_palette_offset.at(u) != UINT32_MAX;
+            auto rejectConstantProperty = [&](const std::string &label) {
+                helios_runtime_error("ERROR (RadiationModel::runBand): Primitive UUID " + std::to_string(UUID) + " has a spectral texture and also the primitive data '" + label + "', which would set one value for the whole primitive. Remove '" +
+                                     label + "', or remove the spectral texture with Context::clearPrimitiveSpectralTexture().");
+            };
 
             // Reflectivity
 
@@ -3095,12 +3305,20 @@ void RadiationModel::updateRadiativeProperties() {
                 float rho_s = rho_default;
                 const bool has_band_rho = context->doesPrimitiveDataExist(UUID, prop.c_str());
                 if (has_band_rho) {
+                    // Where the palette applies, a constant would hide the texture. Elsewhere (bands with emission) rays use the primitive's own values, which a constant may set.
+                    if (has_spectral_texture && material_data.palette_band_active.at(b) != 0) {
+                        rejectConstantProperty(prop);
+                    }
                     context->getPrimitiveData(UUID, prop.c_str(), rho_s);
+                }
+                const bool rho_from_palette = has_spectral_texture && !has_band_rho;
+                if (rho_from_palette) {
+                    recordPaletteBandErrors(u, b, band, true);
                 }
 
                 // A value set for the band (whatever its value, including 0), or no spectrum, applies to every slot; otherwise the spectrum's weighted values are used
                 const bool use_constant_rho = has_band_rho || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str()) || rho_unique.find(spectrum_label) == rho_unique.end();
-                if (!use_constant_rho) {
+                if (!use_constant_rho && !has_spectral_texture) {
                     // Recorded rather than raised here: runBand() raises it only if this band is run
                     const std::string &error = !rho_band_error.at(spectrum_label).at(b).empty() ? rho_band_error.at(spectrum_label).at(b) : band_weighting_error.at(b);
                     if (!error.empty()) {
@@ -3112,7 +3330,12 @@ void RadiationModel::updateRadiativeProperties() {
                     float &rho_val = material_data.reflectivity[mat_idx(slot, u, b)];
                     const uint unique_index = slot == diffuse_slot ? unique_diffuse_index : slot;
 
-                    if (use_constant_rho) {
+                    if (rho_from_palette) {
+                        rho_val = paletteMean(u, [&](size_t entry) { return material_data.palette_reflectivity[palette_idx(slot, entry, b)]; });
+                        for (uint cam = 0; cam < Ncameras; cam++) {
+                            material_data.reflectivity_cam[cam_idx(slot, u, b, cam)] = paletteMean(u, [&](size_t entry) { return material_data.palette_reflectivity_cam[palette_cam_idx(slot, entry, b, cam)]; });
+                        }
+                    } else if (use_constant_rho) {
                         rho_val = rho_s;
 
                         // cameras: a constant reflectivity is flat across the band, so each camera sees it weighted by its
@@ -3168,11 +3391,18 @@ void RadiationModel::updateRadiativeProperties() {
                 float tau_s = tau_default;
                 const bool has_band_tau = context->doesPrimitiveDataExist(UUID, prop.c_str());
                 if (has_band_tau) {
+                    if (has_spectral_texture && material_data.palette_band_active.at(b) != 0) {
+                        rejectConstantProperty(prop);
+                    }
                     context->getPrimitiveData(UUID, prop.c_str(), tau_s);
+                }
+                const bool tau_from_palette = has_spectral_texture && !has_band_tau;
+                if (tau_from_palette) {
+                    recordPaletteBandErrors(u, b, band, false);
                 }
 
                 const bool use_constant_tau = has_band_tau || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str()) || tau_unique.find(spectrum_label) == tau_unique.end();
-                if (!use_constant_tau) {
+                if (!use_constant_tau && !has_spectral_texture) {
                     // Recorded rather than raised here: runBand() raises it only if this band is run
                     const std::string &error = !tau_band_error.at(spectrum_label).at(b).empty() ? tau_band_error.at(spectrum_label).at(b) : band_weighting_error.at(b);
                     if (!error.empty()) {
@@ -3184,7 +3414,12 @@ void RadiationModel::updateRadiativeProperties() {
                     float &tau_val = material_data.transmissivity[mat_idx(slot, u, b)];
                     const uint unique_index = slot == diffuse_slot ? unique_diffuse_index : slot;
 
-                    if (use_constant_tau) {
+                    if (tau_from_palette) {
+                        tau_val = paletteMean(u, [&](size_t entry) { return material_data.palette_transmissivity[palette_idx(slot, entry, b)]; });
+                        for (uint cam = 0; cam < Ncameras; cam++) {
+                            material_data.transmissivity_cam[cam_idx(slot, u, b, cam)] = paletteMean(u, [&](size_t entry) { return material_data.palette_transmissivity_cam[palette_cam_idx(slot, entry, b, cam)]; });
+                        }
+                    } else if (use_constant_tau) {
                         tau_val = tau_s;
 
                         // cameras: a constant transmissivity is flat across the band (see reflectivity above)
@@ -3232,6 +3467,9 @@ void RadiationModel::updateRadiativeProperties() {
                 if (!context->doesPrimitiveDataExist(UUID, prop.c_str()) || context->getPrimitiveDataType(prop.c_str()) != HELIOS_TYPE_FLOAT) {
                     b++;
                     continue;
+                }
+                if (has_spectral_texture) {
+                    rejectConstantProperty(prop);
                 }
 
                 float n_s = 0.f;
@@ -3298,6 +3536,38 @@ void RadiationModel::updateRadiativeProperties() {
                 assert(doesBandExist(band));
 
                 const bool is_sif_band = sif_emission_bands.count(band) > 0;
+
+                if (has_spectral_texture) {
+                    const std::vector<std::pair<uint16_t, float>> &fractions = spectral_class_fractions.at(u);
+                    const size_t first_entry = primitive_palette_offset.at(u) + fractions.front().first - 1;
+                    const bool palette_applies = material_data.palette_band_active.at(b) != 0;
+                    const bool rho_from_palette = !context->doesPrimitiveDataExist(UUID, ("reflectivity_" + band).c_str());
+                    const bool tau_from_palette = !context->doesPrimitiveDataExist(UUID, ("transmissivity_" + band).c_str());
+                    for (const auto &fraction: fractions) {
+                        const size_t entry = primitive_palette_offset.at(u) + fraction.first - 1;
+                        for (uint slot = 0; slot < Nslots; slot++) {
+                            const float class_rho = material_data.palette_reflectivity[palette_idx(slot, entry, b)];
+                            const float class_tau = material_data.palette_transmissivity[palette_idx(slot, entry, b)];
+                            // Rays use each class's own values where the palette applies, so each class must conserve energy, not only their mean
+                            if (palette_applies && class_rho + class_tau > 1.f) {
+                                helios_runtime_error("ERROR (RadiationModel): reflectivity and transmissivity must sum to less than or equal to 1 to ensure energy conservation. Primitive #" + std::to_string(UUID) +
+                                                     " has a spectral texture whose class " + std::to_string(fraction.first) + " has rho=" + std::to_string(class_rho) + " and tau=" + std::to_string(class_tau) + " in band " + band +
+                                                     ". Correct the spectra of that class in its palette.");
+                            }
+                            // In a band with emission, a primitive emits with one emissivity, which must agree with its reflectivity and transmissivity everywhere
+                            // on it, so the classes must not differ in whatever the primitive takes from its palette there (rays then use the primitive's own values)
+                            if (!palette_applies && !is_sif_band &&
+                                ((rho_from_palette && class_rho != material_data.palette_reflectivity[palette_idx(slot, first_entry, b)]) ||
+                                 (tau_from_palette && class_tau != material_data.palette_transmissivity[palette_idx(slot, first_entry, b)]))) {
+                                helios_runtime_error(
+                                        "ERROR (RadiationModel::runBand): Primitive UUID " + std::to_string(UUID) + " has a spectral texture whose classes " + std::to_string(fractions.front().first) + " and " + std::to_string(fraction.first) +
+                                        " have different reflectivity or transmissivity in band " + band +
+                                        ", which has emission. A spectral texture cannot yet vary in a band with emission, since each primitive has one emissivity. Disable emission for the band (RadiationModel::disableEmission()), give the classes the same spectra in it, or give the primitive constant \"reflectivity_" +
+                                        band + "\" and \"transmissivity_" + band + "\" data for the band.");
+                            }
+                        }
+                    }
+                }
 
                 for (uint slot = 0; slot < Nslots; slot++) {
                     float &rho_val = material_data.reflectivity[mat_idx(slot, u, b)];
@@ -3434,6 +3704,12 @@ void RadiationModel::updateSurfaceLayers(helios::WarningAggregator &warnings) {
         float roughness;
         if (!readParameter(UUID, "specular_roughness", roughness)) {
             continue;
+        }
+        // The layer's body values would have to be derived for each class of the palette
+        if (material_data.palette_offset.at(u) != UINT32_MAX) {
+            helios_runtime_error(
+                    "ERROR (RadiationModel): Primitive #" + std::to_string(UUID) +
+                    " has a spectral texture and a specular surface layer (specular_roughness), which cannot yet be combined. Remove 'specular_roughness' from the primitive and its material, or remove the spectral texture with Context::clearPrimitiveSpectralTexture().");
         }
         // Below this roughness the reflection lobe is so narrow that the rays gathering it are too noisy to be useful
         if (!(roughness >= 0.05f && roughness <= 1.f)) {
@@ -4255,7 +4531,15 @@ void RadiationModel::runBand(const std::string &label) {
  * The accumulators hold one [primitive][band] block per camera. A download of any other size means the backend's camera-scatter buffers are out of step with the
  * current camera set, and adding it element by element would read or write out of bounds, so it is an error.
  */
-static void accumulateCameraScatter(const helios::RayTracingResults &launch_results, std::vector<float> &scatter_top_cam, std::vector<float> &scatter_bottom_cam) {
+static void accumulateCameraScatter(const helios::RayTracingResults &launch_results, std::vector<float> &scatter_top_cam, std::vector<float> &scatter_bottom_cam, std::vector<float> &spectral_incident) {
+    // The radiation reaching primitives with a spectral texture, from which cameras compute the outgoing radiation of each class
+    if (launch_results.spectral_incident.size() != spectral_incident.size()) {
+        helios_runtime_error("ERROR (RadiationModel::runBand): The ray-tracing backend returned " + std::to_string(launch_results.spectral_incident.size()) + " values of the radiation reaching primitives with a spectral texture, but " +
+                             std::to_string(spectral_incident.size()) + " are required.");
+    }
+    for (size_t i = 0; i < spectral_incident.size(); i++) {
+        spectral_incident[i] += launch_results.spectral_incident[i];
+    }
     if (launch_results.scatter_buff_top_cam.size() != scatter_top_cam.size() || launch_results.scatter_buff_bottom_cam.size() != scatter_bottom_cam.size()) {
         helios_runtime_error("ERROR (RadiationModel::runBand): The ray-tracing backend returned " + std::to_string(launch_results.scatter_buff_top_cam.size()) +
                              " camera-weighted scatter values, but the current cameras, primitives and launched bands require " + std::to_string(scatter_top_cam.size()) +
@@ -4892,6 +5176,14 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         scatter_top_cam.resize(outgoing_components * Ncameras * camera_scatter_stride, 0.0f);
         scatter_bottom_cam.resize(outgoing_components * Ncameras * camera_scatter_stride, 0.0f);
     }
+    // The radiation reaching primitives with a spectral texture, per [face][source slot][primitive][band] (see RayTracingResults::spectral_incident)
+    std::vector<float> spectral_incident;
+    // The radiation each face emits, per [face][primitive][band]: a camera sees it from every class of a primitive with a spectral texture
+    std::vector<float> spectral_emitted;
+    if (Ncameras > 0 && material_data.num_palette_entries > 0) {
+        spectral_incident.resize(2 * (Nsources + 1) * camera_scatter_stride, 0.0f);
+        spectral_emitted.resize(2 * camera_scatter_stride, 0.0f);
+    }
 
     if (scatteringenabled && rundirect) {
         // Get scattered energy from direct rays for primary diffuse/emission
@@ -4902,7 +5194,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
         // Accumulate camera scatter from direct rays
         if (Ncameras > 0) {
-            accumulateCameraScatter(scatter_results, scatter_top_cam, scatter_bottom_cam);
+            accumulateCameraScatter(scatter_results, scatter_top_cam, scatter_bottom_cam, spectral_incident);
             // Zero GPU camera scatter buffers to prevent double-counting on next iteration
             backend->zeroCameraScatterBuffers(Nbands_launch);
         }
@@ -5090,6 +5382,11 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                             out_bottom *= (1.f - mean_albedo) / (1.f - normal_albedo);
                         }
 
+                        if (!spectral_emitted.empty()) {
+                            spectral_emitted.at(ind) += out_top;
+                            spectral_emitted.at(camera_scatter_stride + ind) += out_bottom;
+                        }
+
                         if (reference_power == 0.f) {
                             flux_top.at(ind) += out_top;
                             flux_bottom.at(ind) += out_bottom;
@@ -5218,7 +5515,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         if (Ncameras > 0) {
             helios::RayTracingResults primary_results;
             backend->getRadiationResults(primary_results);
-            accumulateCameraScatter(primary_results, scatter_top_cam, scatter_bottom_cam);
+            accumulateCameraScatter(primary_results, scatter_top_cam, scatter_bottom_cam, spectral_incident);
             // Zero GPU camera scatter buffers to prevent double-counting on next iteration
             backend->zeroCameraScatterBuffers(Nbands_launch);
         }
@@ -5427,7 +5724,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             if (Ncameras > 0) {
                 helios::RayTracingResults post_launch;
                 backend->getRadiationResults(post_launch);
-                accumulateCameraScatter(post_launch, scatter_top_cam, scatter_bottom_cam);
+                accumulateCameraScatter(post_launch, scatter_top_cam, scatter_bottom_cam, spectral_incident);
                 // Zero GPU camera scatter buffers to prevent double-counting on next iteration
                 backend->zeroCameraScatterBuffers(Nbands_launch);
             }
@@ -5520,6 +5817,14 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                                      ". The backend's white reference buffers were not sized for the current camera set.");
             }
 
+            // With camera flux smoothing, the radiation reaching and leaving each face of a primitive with a spectral texture, averaged onto the
+            // shared vertices, so that cameras see each class shaded smoothly across the facets. The same for every camera.
+            const bool smooth_spectral_textures = cameraflux_smoothing_enabled && smoothing_vertex_count > 0 && !spectral_incident.empty();
+            std::vector<float> spectral_vertex_values;
+            if (smooth_spectral_textures) {
+                accumulateSpectralIncidentAtVertices(spectral_incident, spectral_emitted, Nsources + 1, Nbands_launch, spectral_vertex_values);
+            }
+
             uint cam = 0;
             for (auto &camera: cameras) {
 
@@ -5554,6 +5859,9 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 // integrates. Cameras read radiation_out during hits, and what a camera integrates is the scattered
                 // radiance weighted by its own spectral response with the emitted flux folded in, which is a different
                 // quantity both from the primitive's band-weighted outgoing flux and from another camera's slice.
+                // Cleared first, so that a camera never reads the class radiation of an earlier dispatch
+                backend->uploadSpectralCameraFlux({}, {});
+                backend->uploadSpectralVertexIncident({}, 0, cam);
                 if (scatteringenabled) {
                     // Each component of this camera's slice, laid out as the outgoing buffers are: [component][primitive][band]
                     std::vector<float> camera_scatter_top, camera_scatter_bottom;
@@ -5563,6 +5871,17 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                         camera_scatter_bottom.insert(camera_scatter_bottom.end(), scatter_bottom_cam.begin() + std::ptrdiff_t(begin), scatter_bottom_cam.begin() + std::ptrdiff_t(begin + camera_scatter_stride));
                     }
                     backend->uploadRadiationOut(camera_scatter_top, camera_scatter_bottom);
+
+                    // A primitive with a spectral texture is seen in the outgoing radiation of the class it is hit at, rather than its own
+                    std::vector<uint32_t> class_flux_offset;
+                    std::vector<float> class_flux;
+                    if (!spectral_incident.empty()) {
+                        computeSpectralCameraFlux(spectral_incident, spectral_emitted, cam, band_launch_flag, class_flux_offset, class_flux);
+                    }
+                    backend->uploadSpectralCameraFlux(class_flux_offset, class_flux);
+                    if (smooth_spectral_textures) {
+                        backend->uploadSpectralVertexIncident(spectral_vertex_values, uint32_t(Nsources + 2), cam);
+                    }
 
                     // Resample the same field this camera is about to read onto the shared mesh vertices.
                     if (cameraflux_smoothing_enabled && smoothing_vertex_count > 0) {
@@ -5723,6 +6042,16 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
                 data_label = "camera_" + camera_label + "_pixel_depth";
                 context->setGlobalData(data_label.c_str(), camera.second.pixel_depth);
+
+                // The class of the spectral texture seen in each pixel, for segmentation masks by class (writeImageSegmentationMasksBySpectralClass())
+                data_label = "camera_" + camera_label + "_pixel_spectral_class";
+                if (material_data.num_palette_entries > 0) {
+                    std::vector<uint> pixel_classes;
+                    backend->getCameraPixelSpectralClasses(pixel_classes, camera.second.resolution);
+                    context->setGlobalData(data_label.c_str(), pixel_classes);
+                } else if (context->doesGlobalDataExist(data_label.c_str())) {
+                    context->clearGlobalData(data_label.c_str());
+                }
 
                 sumCameraWhiteReference(camera.second, cam, band_labels, white_reference_top_cam, white_reference_bottom_cam);
 
@@ -7347,8 +7676,160 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
     }
 }
 
+void RadiationModel::computeSpectralCameraFlux(const std::vector<float> &spectral_incident, const std::vector<float> &emitted_flux, uint camera, const std::vector<char> &band_launch_flag, std::vector<uint32_t> &class_flux_offset,
+                                               std::vector<float> &class_flux) const {
+    const size_t Nprimitives = context_UUIDs.size();
+    const size_t Nslots = radiation_sources.size() + 1;
+    const size_t Nentries = material_data.num_palette_entries;
+    const size_t Ncameras = material_data.num_cameras;
+    const size_t Nbands_global = band_launch_flag.size();
+    std::vector<size_t> global_band;
+    for (size_t b_global = 0; b_global < Nbands_global; b_global++) {
+        if (band_launch_flag.at(b_global)) {
+            global_band.push_back(b_global);
+        }
+    }
+    const size_t Nbands_launch = global_band.size();
+    if (spectral_incident.size() != 2 * Nslots * Nprimitives * Nbands_launch) {
+        helios_runtime_error("ERROR (RadiationModel::runBand): The radiation reaching primitives with a spectral texture has " + std::to_string(spectral_incident.size()) + " values, but " + std::to_string(2 * Nslots * Nprimitives * Nbands_launch) +
+                             " are required.");
+    }
+    if (emitted_flux.size() != 2 * Nprimitives * Nbands_launch) {
+        helios_runtime_error("ERROR (RadiationModel::runBand): The radiation emitted by primitives with a spectral texture has " + std::to_string(emitted_flux.size()) + " values, but " + std::to_string(2 * Nprimitives * Nbands_launch) +
+                             " are required.");
+    }
+
+    // Each primitive with a spectral texture has one class-flux slot for each class of its palette
+    class_flux_offset.assign(Nprimitives, UINT32_MAX);
+    std::vector<uint32_t> palette_size(Nprimitives, 0);
+    uint32_t class_flux_slots = 0;
+    for (size_t u = 0; u < Nprimitives; u++) {
+        if (material_data.palette_offset.at(u) == UINT32_MAX) {
+            continue;
+        }
+        palette_size.at(u) = uint32_t(context->getSpectralPalette(context->getPrimitiveSpectralPalette(context_UUIDs.at(u))).size());
+        class_flux_offset.at(u) = class_flux_slots;
+        class_flux_slots += palette_size.at(u);
+    }
+
+    // A class seen on face F sends out what F emits (the same for every class: in a band where the palette applies, only fluorescence),
+    // plus what it reflects of the radiation reaching F and transmits of the radiation reaching the other face G, weighted by this camera's
+    // response for the slot each arrived in: the camera-weighted scatter a primitive with the class's spectra would accumulate
+    CameraMaterialIndexer palette_cam_idx(Nslots, Nentries, Nbands_global, Ncameras);
+    auto incident = [&](size_t face, size_t slot, size_t u, size_t b) { return spectral_incident[((face * Nslots + slot) * Nprimitives + u) * Nbands_launch + b]; };
+    class_flux.assign(2 * size_t(class_flux_slots) * Nbands_launch, 0.f);
+    for (size_t u = 0; u < Nprimitives; u++) {
+        for (uint32_t k = 0; k < palette_size.at(u); k++) {
+            const size_t entry = material_data.palette_offset.at(u) + k;
+            const size_t class_slot = class_flux_offset.at(u) + k;
+            for (size_t b = 0; b < Nbands_launch; b++) {
+                double top = emitted_flux[u * Nbands_launch + b];
+                double bottom = emitted_flux[(Nprimitives + u) * Nbands_launch + b];
+                for (size_t slot = 0; slot < Nslots; slot++) {
+                    const double rho_cam = material_data.palette_reflectivity_cam.at(palette_cam_idx(slot, entry, global_band.at(b), camera));
+                    const double tau_cam = material_data.palette_transmissivity_cam.at(palette_cam_idx(slot, entry, global_band.at(b), camera));
+                    top += rho_cam * incident(0, slot, u, b) + tau_cam * incident(1, slot, u, b);
+                    bottom += rho_cam * incident(1, slot, u, b) + tau_cam * incident(0, slot, u, b);
+                }
+                class_flux.at(class_slot * Nbands_launch + b) = float(top);
+                class_flux.at((size_t(class_flux_slots) + class_slot) * Nbands_launch + b) = float(bottom);
+            }
+        }
+    }
+}
+
+namespace {
+
+    struct TextureCoordinate {
+        double u;
+        double v;
+    };
+
+    // Area of the part of a convex polygon inside the rectangle u0 <= u <= u1, v0 <= v <= v1, by Sutherland-Hodgman clipping
+    double clippedPolygonArea(const std::vector<TextureCoordinate> &polygon, double u0, double u1, double v0, double v1) {
+        std::vector<TextureCoordinate> clipped = polygon;
+        auto clip = [&clipped](auto inside, auto intersect) {
+            std::vector<TextureCoordinate> output;
+            for (size_t i = 0; i < clipped.size(); i++) {
+                const TextureCoordinate &current = clipped[i];
+                const TextureCoordinate &previous = clipped[(i + clipped.size() - 1) % clipped.size()];
+                if (inside(current)) {
+                    if (!inside(previous)) {
+                        output.push_back(intersect(previous, current));
+                    }
+                    output.push_back(current);
+                } else if (inside(previous)) {
+                    output.push_back(intersect(previous, current));
+                }
+            }
+            clipped = output;
+        };
+        auto at_u = [](double edge) { return [edge](const TextureCoordinate &a, const TextureCoordinate &b) { return TextureCoordinate{edge, a.v + (b.v - a.v) * (edge - a.u) / (b.u - a.u)}; }; };
+        auto at_v = [](double edge) { return [edge](const TextureCoordinate &a, const TextureCoordinate &b) { return TextureCoordinate{a.u + (b.u - a.u) * (edge - a.v) / (b.v - a.v), edge}; }; };
+        clip([u0](const TextureCoordinate &p) { return p.u >= u0; }, at_u(u0));
+        clip([u1](const TextureCoordinate &p) { return p.u <= u1; }, at_u(u1));
+        clip([v0](const TextureCoordinate &p) { return p.v >= v0; }, at_v(v0));
+        clip([v1](const TextureCoordinate &p) { return p.v <= v1; }, at_v(v1));
+        double twice_area = 0;
+        for (size_t i = 0; i < clipped.size(); i++) {
+            const TextureCoordinate &a = clipped[i];
+            const TextureCoordinate &b = clipped[(i + 1) % clipped.size()];
+            twice_area += a.u * b.v - b.u * a.v;
+        }
+        return 0.5 * std::fabs(twice_area);
+    }
+
+    // Fraction of a primitive's (u,v) polygon in each class of a class map, leaving out class 0 (transparent texels). The backends
+    // take the texel of texture coordinate (u,v) to be column floor((W-1) u) and row floor((H-1) (1-v)) from the top, clamped to the
+    // image, as for texture masks, so column i covers i/(W-1) <= u < (i+1)/(W-1) and the last column only u >= 1. Each texel's cell is
+    // clipped against the polygon. Returns (class, fraction) for each class with a nonzero area, or nothing if no opaque texel is covered.
+    std::vector<std::pair<uint16_t, float>> classAreaFractions(const std::vector<uint16_t> &classes, const helios::int2 &resolution, const std::vector<helios::vec2> &uv) {
+        const int width = resolution.x;
+        const int height = resolution.y;
+        std::vector<TextureCoordinate> polygon;
+        double u_min = 1e30, u_max = -1e30, v_min = 1e30, v_max = -1e30;
+        for (const helios::vec2 &corner: uv) {
+            polygon.push_back({corner.x, corner.y});
+            u_min = std::min(u_min, double(corner.x));
+            u_max = std::max(u_max, double(corner.x));
+            v_min = std::min(v_min, double(corner.y));
+            v_max = std::max(v_max, double(corner.y));
+        }
+        const double infinity = std::numeric_limits<double>::infinity();
+        auto column_of = [width](double u) { return width == 1 ? 0 : std::clamp(int(std::floor((width - 1) * u)), 0, width - 1); };
+        auto row_of = [height](double v) { return height == 1 ? 0 : std::clamp(int(std::floor((height - 1) * (1.0 - v))), 0, height - 1); };
+
+        std::map<uint16_t, double> class_area;
+        double total_area = 0;
+        for (int row = row_of(v_max); row <= row_of(v_min); row++) {
+            const double v_low = (height == 1 || row == height - 1) ? -infinity : 1.0 - double(row + 1) / double(height - 1);
+            const double v_high = (height == 1 || row == 0) ? infinity : 1.0 - double(row) / double(height - 1);
+            for (int column = column_of(u_min); column <= column_of(u_max); column++) {
+                const uint16_t texel_class = classes.at(size_t(row) * width + column);
+                if (texel_class == 0) {
+                    continue;
+                }
+                const double u_low = (width == 1 || column == 0) ? -infinity : double(column) / double(width - 1);
+                const double u_high = (width == 1 || column == width - 1) ? infinity : double(column + 1) / double(width - 1);
+                const double area = clippedPolygonArea(polygon, std::max(u_low, u_min), std::min(u_high, u_max), std::max(v_low, v_min), std::min(v_high, v_max));
+                if (area > 0) {
+                    class_area[texel_class] += area;
+                    total_area += area;
+                }
+            }
+        }
+
+        std::vector<std::pair<uint16_t, float>> fractions;
+        for (const auto &entry: class_area) {
+            fractions.emplace_back(entry.first, float(entry.second / total_area));
+        }
+        return fractions;
+    }
+
+} // namespace
+
 void RadiationModel::buildTextureData() {
-    // Extract texture mask and UV data for all primitives with transparency textures
+    // Extract texture mask and UV data for all primitives with transparency textures, and the class maps of primitives with spectral textures
 
     size_t Nobjects = geometry_data.primitive_count;
 
@@ -7356,55 +7837,63 @@ void RadiationModel::buildTextureData() {
     geometry_data.mask_data.clear();
     geometry_data.mask_sizes.clear();
     geometry_data.uv_data.clear();
+    geometry_data.class_map_data.clear();
+    geometry_data.class_map_sizes.clear();
 
     // Initialize with -1 (no texture)
     geometry_data.mask_IDs.clear();
     geometry_data.mask_IDs.resize(Nobjects, -1);
     geometry_data.uv_IDs.clear();
     geometry_data.uv_IDs.resize(Nobjects, -1);
+    geometry_data.class_map_IDs.clear();
+    geometry_data.class_map_IDs.resize(Nobjects, -1);
+    spectral_class_fractions.assign(Nobjects, {});
+    spectral_class_map_files.clear();
 
     // Cache to avoid duplicate mask data for primitives using the same texture file
     std::map<std::string, int> texture_to_mask_idx;
+    // The same for class maps, and for the class fractions of primitives that share a class map and (u,v) coordinates (such as the leaves of one plant)
+    std::map<std::string, int> class_map_to_idx;
+    std::map<std::pair<int, std::vector<float>>, std::vector<std::pair<uint16_t, float>>> class_fraction_cache;
 
     for (size_t prim_idx = 0; prim_idx < Nobjects; prim_idx++) {
         uint UUID = geometry_data.primitive_UUIDs[prim_idx];
 
-        // Check if primitive has a texture file
+        const bool has_spectral_texture = context->primitiveHasSpectralTexture(UUID);
         std::string texture_file = context->getPrimitiveTextureFile(UUID);
-        if (texture_file.empty()) {
-            continue; // No texture - mask_ID stays -1
-        }
+        const bool has_mask = !texture_file.empty() && context->primitiveTextureHasTransparencyChannel(UUID);
 
-        // Check if texture has transparency channel (alpha)
-        if (!context->primitiveTextureHasTransparencyChannel(UUID)) {
-            continue; // No transparency - mask_ID stays -1 (e.g., JPEG files)
-        }
+        if (has_mask) {
+            // Check cache for existing mask from same texture file
+            int mask_idx;
+            auto cache_it = texture_to_mask_idx.find(texture_file);
+            if (cache_it != texture_to_mask_idx.end()) {
+                // Reuse existing mask
+                mask_idx = cache_it->second;
+            } else {
+                // New texture - extract mask data
+                const std::vector<std::vector<bool>> *trans_data = context->getPrimitiveTextureTransparencyData(UUID);
+                helios::int2 tex_size = context->getPrimitiveTextureSize(UUID);
 
-        // Check cache for existing mask from same texture file
-        int mask_idx;
-        auto cache_it = texture_to_mask_idx.find(texture_file);
-        if (cache_it != texture_to_mask_idx.end()) {
-            // Reuse existing mask
-            mask_idx = cache_it->second;
-        } else {
-            // New texture - extract mask data
-            const std::vector<std::vector<bool>> *trans_data = context->getPrimitiveTextureTransparencyData(UUID);
-            helios::int2 tex_size = context->getPrimitiveTextureSize(UUID);
+                mask_idx = static_cast<int>(geometry_data.mask_sizes.size());
+                texture_to_mask_idx[texture_file] = mask_idx;
 
-            mask_idx = static_cast<int>(geometry_data.mask_sizes.size());
-            texture_to_mask_idx[texture_file] = mask_idx;
-
-            // Flatten 2D bool array to 1D (row-major: [y][x])
-            // Backend expects: for each mask m, iterate [y][x] order
-            for (int y = 0; y < tex_size.y; y++) {
-                for (int x = 0; x < tex_size.x; x++) {
-                    geometry_data.mask_data.push_back((*trans_data)[y][x]);
+                // Flatten 2D bool array to 1D (row-major: [y][x])
+                // Backend expects: for each mask m, iterate [y][x] order
+                for (int y = 0; y < tex_size.y; y++) {
+                    for (int x = 0; x < tex_size.x; x++) {
+                        geometry_data.mask_data.push_back((*trans_data)[y][x]);
+                    }
                 }
+                geometry_data.mask_sizes.push_back(tex_size);
             }
-            geometry_data.mask_sizes.push_back(tex_size);
+
+            geometry_data.mask_IDs[prim_idx] = mask_idx;
         }
 
-        geometry_data.mask_IDs[prim_idx] = mask_idx;
+        if (!has_mask && !has_spectral_texture) {
+            continue; // No mask or class map - mask_ID and class_map_ID stay -1
+        }
 
         // Extract UV coordinates for this primitive
         // uv_IDs stores the position index (not offset), used to access uvdata[vertex][position] in CUDA
@@ -7425,6 +7914,44 @@ void RadiationModel::buildTextureData() {
             }
         }
         // If uvs is empty, uv_ID stays -1 and CUDA will use default UV mapping
+
+        if (has_spectral_texture) {
+            const std::string class_map_file = context->getPrimitiveSpectralTextureFile(UUID);
+            helios::int2 class_map_size;
+            const std::vector<uint16_t> &classes = context->getSpectralTextureClassMap(class_map_file, class_map_size);
+            int class_map_idx;
+            auto cache_it = class_map_to_idx.find(class_map_file);
+            if (cache_it != class_map_to_idx.end()) {
+                class_map_idx = cache_it->second;
+            } else {
+                class_map_idx = static_cast<int>(geometry_data.class_map_sizes.size());
+                class_map_to_idx[class_map_file] = class_map_idx;
+                geometry_data.class_map_data.insert(geometry_data.class_map_data.end(), classes.begin(), classes.end());
+                geometry_data.class_map_sizes.push_back(class_map_size);
+                spectral_class_map_files.push_back(class_map_file);
+            }
+            geometry_data.class_map_IDs[prim_idx] = class_map_idx;
+
+            // A patch without (u,v) coordinates maps the whole image, as the backends assume
+            if (uvs.empty()) {
+                uvs = {helios::make_vec2(0, 0), helios::make_vec2(1, 0), helios::make_vec2(1, 1), helios::make_vec2(0, 1)};
+            }
+            std::vector<float> uv_key;
+            for (const helios::vec2 &uv: uvs) {
+                uv_key.push_back(uv.x);
+                uv_key.push_back(uv.y);
+            }
+            auto fraction_it = class_fraction_cache.find({class_map_idx, uv_key});
+            if (fraction_it == class_fraction_cache.end()) {
+                fraction_it = class_fraction_cache.emplace(std::make_pair(class_map_idx, uv_key), classAreaFractions(classes, class_map_size, uvs)).first;
+            }
+            if (fraction_it->second.empty()) {
+                helios_runtime_error(
+                        "ERROR (RadiationModel::updateGeometry): Primitive UUID " + std::to_string(UUID) + " has a spectral texture whose class map '" + class_map_file +
+                        "' has only class 0 (transparent texels) within the primitive's (u,v) coordinates, as the radiation model samples it, so the primitive has no class to take its reflectivity and transmissivity from. Check its (u,v) coordinates, or remove the primitive.");
+            }
+            spectral_class_fractions[prim_idx] = fraction_it->second;
+        }
     }
 }
 

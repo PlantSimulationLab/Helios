@@ -167,10 +167,10 @@ public:
     //! Disable calculation and writing of object mask (full image) for semantic segmentation
     void disableSemanticSegmentation();
 
-    //! Enable calculation and writing of un-occluded object masks for each object (instance segmentation)
+    //! Enable calculation and writing of masks of the visible extent of each object (instance segmentation)
     void enableInstanceSegmentation();
 
-    //! Disable calculation and writing of un-occluded object masks for each object (instance segmentation)
+    //! Disable calculation and writing of masks of the visible extent of each object (instance segmentation)
     void disableInstanceSegmentation();
 
     //! Render the RGB image and generate all enabled annotations

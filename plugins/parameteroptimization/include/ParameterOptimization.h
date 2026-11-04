@@ -225,6 +225,17 @@ struct CMAES {
     static CMAES exploit();
 };
 
+//! Tree-structured Parzen Estimator settings (port of Optuna's TPESampler)
+/** Models the best trials and the remaining trials as separate kernel densities, and evaluates the
+ *  candidate most likely to belong to the best group. Supports FLOAT, INTEGER and CATEGORICAL parameters.
+ */
+struct TPE {
+    size_t max_evaluations = 100; //!< Total number of function evaluations
+    size_t n_startup_trials = 10; //!< Number of initial evaluations sampled uniformly at random. Must be at least 1.
+    size_t n_ei_candidates = 24; //!< Candidates scored per evaluation (higher = more exploitation)
+    unsigned int random_seed = 0; //!< RNG seed for reproducibility (0 = nondeterministic seed from std::random_device)
+};
+
 //! L-BFGS gradient-based optimization settings (requires NLopt at build time)
 struct LBFGS {
     int max_iterations = 200;        //!< Maximum number of optimizer iterations
@@ -297,6 +308,12 @@ public:
      */
     void setAlgorithm(const CMAES &algorithm);
 
+    //! Select Tree-structured Parzen Estimator optimization.
+    /**
+     * \param[in] algorithm TPE hyperparameters
+     */
+    void setAlgorithm(const TPE &algorithm);
+
     //! Select L-BFGS gradient-based optimization. Requires NLopt at build time.
     /**
      * \param[in] algorithm LBFGS hyperparameters
@@ -335,7 +352,7 @@ public:
      * \param[in] gradient   Gradient function returning df/d(param) for each parameter.
      *                        Can be assembled from multiple sources via makeGradientFunction().
      *
-     * Gradient-free algorithms (GA, BO, CMA-ES, BOBYQA) accept this overload but ignore the gradient.
+     * Gradient-free algorithms (GA, BO, CMA-ES, TPE, BOBYQA) accept this overload but ignore the gradient.
      * Gradient-based algorithms (LBFGS, Adam, SLSQP) require this overload.
      */
     Result run(ObjectiveFunction objective, const ParametersToOptimize &parameters, GradientFunction gradient);
@@ -380,7 +397,7 @@ public:
 
     //! Runs visualization tests that output population data for plotting algorithm performance.
     /**
-     * Tests all three optimization methods (GA, BO, CMA-ES) on standard benchmark functions
+     * Tests the global optimization methods (GA, BO, CMA-ES, TPE) on standard benchmark functions
      * and outputs iteration-by-iteration population data to CSV files for visualization.
      *
      * \param[in] output_dir Directory path where output CSV files will be written
@@ -389,7 +406,7 @@ public:
     static int selfTestVisualized(const std::string &output_dir = ".");
 
 private:
-    std::variant<GeneticAlgorithm, BayesianOptimization, CMAES, LBFGS, Adam, BOBYQA, SLSQP> algorithm_;
+    std::variant<GeneticAlgorithm, BayesianOptimization, CMAES, TPE, LBFGS, Adam, BOBYQA, SLSQP> algorithm_;
     bool algorithm_set_ = false; //!< True if setAlgorithm() was called explicitly
     bool message_flag = false;
     std::vector<float> fitness_over_time;

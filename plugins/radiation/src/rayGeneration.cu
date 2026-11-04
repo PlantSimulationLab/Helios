@@ -130,6 +130,9 @@ RT_PROGRAM void direct_raygen() {
                 normal = normalize(cross(v1 - v0, v2 - v0));
             }
 
+            // The class of a spectral texture at the launch point, whose reflectivity and transmissivity the rays from it use
+            prd.palette_entry = d_spectralPaletteEntry(objID, d_originTextureUV(ptype, sp, puvID));
+
             // translate the ray to the location of the primitive
 
             float3 ray_origin = sp;
@@ -430,6 +433,8 @@ RT_PROGRAM void diffuse_raygen() {
 
             prd.origin_UUID = UUID;
             prd.source_ID = Nsources; // diffuse/scatter material slot, weighted by the band's combined incident spectrum
+            // The class of a spectral texture at the launch point, whose reflectivity and transmissivity the rays from it use
+            prd.palette_entry = d_spectralPaletteEntry(objID, d_originTextureUV(ptype, sp, puvID));
             prd.hit_periodic_boundary = false;
             initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
 
@@ -636,6 +641,7 @@ RT_PROGRAM void camera_raygen() {
     prd.strength = 1.f / float(launch_dim.x);
 
     prd.origin_UUID = origin_ID;
+    prd.palette_entry = 0xFFFFFFFFu; // camera rays leave no primitive
     prd.face = 1;
     prd.source_ID = 0;
     prd.hit_periodic_boundary = false;
@@ -725,6 +731,7 @@ RT_PROGRAM void pixel_label_raygen() {
     prd.strength = advanceToPeriodicFaces(ray_origin, ray_direction); // distance travelled before any translucent covers passed
 
     prd.origin_UUID = origin_ID;
+    prd.palette_entry = 0xFFFFFFFFu; // camera rays leave no primitive
     prd.face = 1;
     prd.source_ID = 0;
     prd.hit_periodic_boundary = false;

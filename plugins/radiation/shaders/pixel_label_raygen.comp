@@ -85,6 +85,7 @@ layout(set = 1, binding = 13) readonly buffer GlassKLBuffer { float glass_KL[]; 
 // ========== Descriptor Set 2: Result Buffers ==========
 layout(set = 2, binding = 6) buffer CameraPixelLabelBuffer { uint camera_pixel_label[]; };
 layout(set = 2, binding = 7) buffer CameraPixelDepthBuffer { float camera_pixel_depth[]; };
+layout(set = 2, binding = 18) buffer CameraPixelClassBuffer { uint camera_pixel_class[]; };
 
 // ========== Include common shader utilities ==========
 #include "common/random.glsl"
@@ -92,6 +93,8 @@ layout(set = 2, binding = 7) buffer CameraPixelDepthBuffer { float camera_pixel_
 #include "common/bvh_traversal.glsl"
 #include "common/periodic_boundary.glsl"
 #include "common/glass_cover.glsl"
+#include "common/texture_mask.glsl"
+#include "common/spectral_texture.glsl"
 
 #ifndef PI
 const float PI = 3.14159265359;
@@ -149,13 +152,14 @@ void main() {
         accumulated_depth = advance_to_periodic_faces(ray_origin, ray_dir, pc.periodic_flags & 1u, (pc.periodic_flags >> 1) & 1u, pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax);
     }
     float closest_t;
+    vec2 hit_uv = vec2(0.0);
 
     // Trace segment by segment: the ray is re-traced after wrapping through a periodic boundary and after passing a
     // translucent cover, so the label and depth are those of the first surface behind any covers.
     int wraps = 0;
     float segment_t_min = 1e-5;
     for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
-        hit_prim = traverse_cwbvh(ray_origin, ray_dir, segment_t_min, UINT_MAX, closest_t);
+        hit_prim = traverse_cwbvh(ray_origin, ray_dir, segment_t_min, UINT_MAX, closest_t, hit_uv);
 
         if (pc.bbox_count != 0) {
             vec3 wrapped_origin;
@@ -193,6 +197,14 @@ void main() {
     if (hit_prim != UINT_MAX) {
         // Hit: Store UUID+1 (0 reserved for sky)
         camera_pixel_label[pixel_index] = prim_uuids_buf.uuids[hit_prim] + 1u;
+
+        // The class of the spectral texture at the hit point, found as the camera shader finds it
+        if (spectral_texture_on(hit_prim)) {
+            uint prim_type = prim_types_buf.types[hit_prim];
+            vec3 sp = prim_type == 1u ? vec3(hit_uv.y, hit_uv.x + hit_uv.y, 0.0) : vec3(hit_uv.x - 0.5, hit_uv.y - 0.5, 0.0);
+            uint entry = spectral_palette_entry(hit_prim, spectral_origin_texel_uv(hit_prim, prim_type, sp));
+            camera_pixel_class[pixel_index] = entry == NO_PALETTE_ENTRY ? 0u : entry - palette_buf.words[palette_buf.words[3] + hit_prim] + 1u;
+        }
 
         // Compute depth projected along camera view direction
         float total_depth = accumulated_depth + closest_t;

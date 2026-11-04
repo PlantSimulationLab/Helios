@@ -17,6 +17,7 @@ SPDX-License-Identifier: LGPL-2.1-or-later
 */
 
 #include "ParameterOptimization.h"
+#include "TPESampler.h"
 #include <numeric>
 
 #ifdef HELIOS_HAVE_NLOPT
@@ -61,6 +62,9 @@ static void validateParameters(const ParametersToOptimize &parameters) {
         }
         if (std::isnan(param.min) || std::isnan(param.max) || std::isnan(param.value)) {
             helios_runtime_error("ERROR (ParameterOptimization): Parameter '" + name + "' contains NaN values.");
+        }
+        if (param.type != ParameterType::CATEGORICAL && (std::isinf(param.min) || std::isinf(param.max))) {
+            helios_runtime_error("ERROR (ParameterOptimization): Parameter '" + name + "' has an infinite bound. Set finite min and max values.");
         }
         if (param.type == ParameterType::CATEGORICAL) {
             if (param.categories.empty()) {
@@ -2724,6 +2728,155 @@ static ParameterOptimization::Result runCMAES(std::function<float(const Paramete
     return best;
 }
 
+// Tree-structured Parzen Estimator (see TPESampler.h)
+static ParameterOptimization::Result runTPE(std::function<float(const ParametersToOptimize &)> simulation, const ParametersToOptimize &parameters, const TPE &tpe, bool print_progress, const std::string &write_progress_to_file,
+                                            const std::string &write_result_to_file, const std::string &read_input_from_file, std::ofstream &outProgress, bool message_flag) {
+
+    validateParameters(parameters);
+
+    if (!read_input_from_file.empty()) {
+        helios_runtime_error("ERROR (ParameterOptimization): TPE cannot start from a previous result, but read_input_from_file is set to '" + read_input_from_file +
+                             "'. TPE is the default algorithm for INTEGER and CATEGORICAL parameters. To warm-start, clear read_input_from_file or select GA with setAlgorithm(GeneticAlgorithm{}).");
+    }
+    if (tpe.max_evaluations == 0) {
+        helios_runtime_error("ERROR (ParameterOptimization): TPE max_evaluations must be at least 1.");
+    }
+    if (tpe.n_startup_trials == 0) {
+        helios_runtime_error("ERROR (ParameterOptimization): TPE n_startup_trials must be at least 1, since the model cannot be fitted before any evaluations exist.");
+    }
+    if (tpe.n_ei_candidates == 0) {
+        helios_runtime_error("ERROR (ParameterOptimization): TPE n_ei_candidates must be at least 1.");
+    }
+
+    helios::Timer timer;
+    timer.tic();
+
+    // Parameters in consistent order. A category list with a single entry leaves nothing to search, so it is held fixed.
+    ParametersToOptimize trial_parameters = parameters;
+    std::vector<std::string> param_names;
+    std::vector<helios_tpe::SearchDimension> dimensions;
+    for (const auto &[name, _]: parameters) {
+        param_names.push_back(name);
+    }
+    std::sort(param_names.begin(), param_names.end());
+    std::vector<std::string> searched_names;
+    for (const std::string &name: param_names) {
+        const ParameterToOptimize &param = parameters.at(name);
+        helios_tpe::SearchDimension dimension;
+        if (param.type == ParameterType::CATEGORICAL) {
+            if (param.categories.size() == 1) {
+                trial_parameters.at(name).value = param.categories.front();
+                continue;
+            }
+            dimension.kind = helios_tpe::DimensionKind::CATEGORICAL;
+            dimension.n_choices = param.categories.size();
+        } else {
+            dimension.kind = param.type == ParameterType::INTEGER ? helios_tpe::DimensionKind::INTEGER : helios_tpe::DimensionKind::CONTINUOUS;
+            dimension.low = param.min;
+            dimension.high = param.max;
+        }
+        dimensions.push_back(dimension);
+        searched_names.push_back(name);
+    }
+    if (dimensions.empty()) {
+        helios_runtime_error("ERROR (ParameterOptimization): TPE has nothing to optimize, since every parameter is CATEGORICAL with a single category.");
+    }
+
+    if (print_progress) {
+        std::cout << "\n========================================\n";
+        std::cout << "Beginning TPE Optimization\n";
+        std::cout << "========================================\n";
+        std::cout << "Parameters to optimize: " << dimensions.size() << "\n";
+        std::cout << "Max evaluations: " << tpe.max_evaluations << "\n";
+        std::cout << "Startup trials: " << tpe.n_startup_trials << "\n";
+        std::cout << "Candidates per evaluation: " << tpe.n_ei_candidates << "\n";
+        std::cout << "========================================\n\n";
+    }
+
+    const unsigned int seed = tpe.random_seed != 0 ? tpe.random_seed : std::random_device{}();
+    helios_tpe::TPESampler sampler(dimensions, tpe.n_startup_trials, tpe.n_ei_candidates, seed);
+
+    ParameterOptimization::Result best;
+    std::vector<float> fitness_history;
+
+    for (size_t evaluation = 0; evaluation < tpe.max_evaluations; ++evaluation) {
+        const std::vector<double> point = sampler.ask();
+
+        for (size_t d = 0; d < searched_names.size(); ++d) {
+            ParameterToOptimize &param = trial_parameters.at(searched_names[d]);
+            if (param.type == ParameterType::CATEGORICAL) {
+                param.value = param.categories.at(static_cast<size_t>(point[d]));
+            } else {
+                param.value = std::min(std::max(static_cast<float>(point[d]), param.min), param.max);
+            }
+        }
+
+        const float fitness = simulation(trial_parameters);
+
+        if (std::isnan(fitness)) {
+            std::ostringstream parameter_values;
+            for (const std::string &name: param_names) {
+                parameter_values << " " << name << "=" << trial_parameters.at(name).value;
+            }
+            helios_runtime_error("ERROR (ParameterOptimization): The objective returned NaN on evaluation " + std::to_string(evaluation + 1) + " with parameters:" + parameter_values.str() +
+                                 ". TPE cannot rank a NaN result. Fix the objective, or return a large penalty value for parameter combinations that have no valid result.");
+        }
+
+        sampler.tell(point, fitness);
+
+        if (evaluation == 0 || fitness < best.fitness) {
+            best.fitness = fitness;
+            best.parameters = trial_parameters;
+        }
+        fitness_history.push_back(best.fitness);
+
+        const int display_freq = computeDisplayFrequency(static_cast<int>(evaluation) + 1, static_cast<int>(tpe.max_evaluations));
+        if (print_progress && (evaluation == 0 || (evaluation + 1) % display_freq == 0 || evaluation + 1 == tpe.max_evaluations)) {
+            displayOptimizationGraph(fitness_history, static_cast<int>(evaluation) + 1, static_cast<int>(tpe.max_evaluations), timer.toc("mute"), evaluation == 0);
+        }
+
+        if (!write_progress_to_file.empty() && outProgress.is_open()) {
+            for (const auto &[name, param]: best.parameters) {
+                outProgress << evaluation + 1 << "," << best.fitness << "," << name << "," << param.value << "," << param.min << "," << param.max << "\n";
+            }
+        }
+    }
+
+    // Write final result to file if requested
+    if (!write_result_to_file.empty()) {
+        std::ofstream out(write_result_to_file);
+        if (out.is_open()) {
+            out << "parameter,value,min,max\n";
+            for (const auto &[name, param]: best.parameters) {
+                out << name << "," << param.value << "," << param.min << "," << param.max << "\n";
+            }
+            out.close();
+            if (message_flag) {
+                std::cout << "Best parameters written to: " << write_result_to_file << "\n";
+            }
+        } else {
+            helios_runtime_error("ERROR (ParameterOptimization): Failed to write to result file '" + write_result_to_file + "'.");
+        }
+    }
+
+    // Print final summary
+    if (print_progress) {
+        double total_time = timer.toc("mute");
+        std::cout << "\n========================================\n";
+        std::cout << "TPE Optimization Complete\n";
+        std::cout << "========================================\n";
+        std::cout << "Total time: " << std::fixed << std::setprecision(2) << total_time << " s\n";
+        std::cout << "Best fitness: " << std::setprecision(6) << best.fitness << "\n";
+        std::cout << "\nBest parameters:\n";
+        for (const auto &[name, param]: best.parameters) {
+            std::cout << "  " << name << ": " << param.value << "\n";
+        }
+        std::cout << "========================================\n";
+    }
+
+    return best;
+}
+
 // Preset factory methods for GeneticAlgorithm
 GeneticAlgorithm GeneticAlgorithm::explore() {
     GeneticAlgorithm ga;
@@ -2798,6 +2951,10 @@ void ParameterOptimization::setAlgorithm(const CMAES &algorithm) {
     algorithm_ = algorithm; algorithm_set_ = true;
 }
 
+void ParameterOptimization::setAlgorithm(const TPE &algorithm) {
+    algorithm_ = algorithm; algorithm_set_ = true;
+}
+
 void ParameterOptimization::setAlgorithm(const LBFGS &algorithm) {
     algorithm_ = algorithm; algorithm_set_ = true;
 }
@@ -2834,18 +2991,14 @@ void ParameterOptimization::selectDefaultAlgorithm(const ParametersToOptimize &p
                                  "Use GA with a penalty term in the objective function instead (see documentation for details).");
         }
         algorithm_ = SLSQP{};
-    } else if (has_gradient) {
-        if (has_discrete) {
-            algorithm_ = GeneticAlgorithm{};  // only option for discrete; gradient is ignored
-        } else {
-            algorithm_ = Adam{};
-        }
+    } else if (has_gradient && !has_discrete) {
+        algorithm_ = Adam{};
+    } else if (n > 50) {
+        algorithm_ = GeneticAlgorithm{}; // The default budget of TPE is too small for this many parameters
+    } else if (has_discrete) {
+        algorithm_ = TPE{}; // Any gradient is ignored, since no gradient-based algorithm supports discrete parameters
     } else {
-        if (has_discrete || n > 50) {
-            algorithm_ = GeneticAlgorithm{};
-        } else {
-            algorithm_ = CMAES{};
-        }
+        algorithm_ = CMAES{};
     }
 }
 
@@ -2894,6 +3047,8 @@ ParameterOptimization::Result ParameterOptimization::run(std::function<float(con
                     return runBayesianOptimization(simulation, parameters, algo, print_progress, write_progress_to_file, outProgress, message_flag);
                 } else if constexpr (std::is_same_v<T, CMAES>) {
                     return runCMAES(simulation, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
+                } else if constexpr (std::is_same_v<T, TPE>) {
+                    return runTPE(simulation, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, read_input_from_file, outProgress, message_flag);
                 } else {
                     return runGeneticAlgorithm(simulation, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, read_input_from_file, outProgress, message_flag);
                 }
@@ -2930,6 +3085,8 @@ ParameterOptimization::Result ParameterOptimization::run(ObjectiveFunction objec
                     return runBayesianOptimization(objective, parameters, algo, print_progress, write_progress_to_file, outProgress, message_flag);
                 } else if constexpr (std::is_same_v<T, CMAES>) {
                     return runCMAES(objective, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
+                } else if constexpr (std::is_same_v<T, TPE>) {
+                    return runTPE(objective, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, read_input_from_file, outProgress, message_flag);
                 } else {
                     return runGeneticAlgorithm(objective, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, read_input_from_file, outProgress, message_flag);
                 }
@@ -3073,8 +3230,8 @@ int ParameterOptimization::selfTestVisualized(const std::string &output_dir) {
     // Algorithm configurations
     struct AlgoConfig {
         std::string name;
-        std::function<void(ParameterOptimization &, const std::variant<GeneticAlgorithm, BayesianOptimization, CMAES> &)> setup;
-        std::variant<GeneticAlgorithm, BayesianOptimization, CMAES> algo_variant;
+        std::function<void(ParameterOptimization &, const std::variant<GeneticAlgorithm, BayesianOptimization, CMAES, TPE> &)> setup;
+        std::variant<GeneticAlgorithm, BayesianOptimization, CMAES, TPE> algo_variant;
     };
 
     std::vector<AlgoConfig> algorithms;
@@ -3110,6 +3267,14 @@ int ParameterOptimization::selfTestVisualized(const std::string &output_dir) {
         cmaes.sigma = 0.5f;
 
         algorithms.push_back({"CMAES", [](ParameterOptimization &opt, const auto &variant) { opt.setAlgorithm(std::get<CMAES>(variant)); }, cmaes});
+    }
+
+    // TPE configuration
+    {
+        TPE tpe;
+        tpe.max_evaluations = 300;
+
+        algorithms.push_back({"TPE", [](ParameterOptimization &opt, const auto &variant) { opt.setAlgorithm(std::get<TPE>(variant)); }, tpe});
     }
 
     // Run tests writing both population evaluations and best-per-generation

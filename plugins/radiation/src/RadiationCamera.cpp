@@ -530,7 +530,7 @@ void RadiationModel::updateCameraParameters(const std::string &camera_label, con
                 context->clearGlobalData(global_data_label.c_str());
             }
         }
-        for (const std::string &buffer_suffix: {"_pixel_UUID", "_pixel_depth"}) {
+        for (const std::string &buffer_suffix: {"_pixel_UUID", "_pixel_depth", "_pixel_spectral_class"}) {
             std::string global_data_label = "camera_" + camera_label + buffer_suffix;
             if (context->doesGlobalDataExist(global_data_label.c_str())) {
                 context->clearGlobalData(global_data_label.c_str());
@@ -1659,6 +1659,36 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
     const int2 camera_resolution = cameras.at(cameralabel).resolution;
     annotation::writeLabelSegmentationMasks(context, getImageOrientedPixelUUIDs(context, cameralabel, camera_resolution), camera_resolution, object_data_label, object_class_ID, json_filename, image_file, data_attribute_labels, append_file, true,
                                             "RadiationModel::writeImageSegmentationMasks_ObjectData");
+}
+
+void RadiationModel::writeImageSegmentationMasksBySpectralClass(const std::string &cameralabel, const std::map<uint, std::string> &class_names, const std::string &json_filename, const std::string &image_file,
+                                                                const std::vector<std::string> &data_attribute_labels, bool append_file) {
+    const std::string caller = "RadiationModel::writeImageSegmentationMasksBySpectralClass";
+    if (cameras.find(cameralabel) == cameras.end()) {
+        helios_runtime_error("ERROR (" + caller + "): Camera '" + cameralabel + "' does not exist.");
+    }
+    const std::string class_label = "camera_" + cameralabel + "_pixel_spectral_class";
+    const std::string UUID_label = "camera_" + cameralabel + "_pixel_UUID";
+    if (!context->doesGlobalDataExist(class_label.c_str()) || !context->doesGlobalDataExist(UUID_label.c_str())) {
+        helios_runtime_error(
+                "ERROR (" + caller + "): The classes of spectral textures seen by camera '" + cameralabel +
+                "' were not recorded. RadiationModel::runBand() records them when it renders the camera (which needs a scattering depth above 0 in some band) and some primitive in the radiation model's geometry has a spectral texture (Context::setPrimitiveSpectralTexture()).");
+    }
+
+    // The class buffer is stored mirrored left-to-right relative to the written image, as the pixel-to-primitive map is (see getImageOrientedPixelUUIDs())
+    const int2 camera_resolution = cameras.at(cameralabel).resolution;
+    std::vector<uint> stored_classes;
+    context->getGlobalData(class_label.c_str(), stored_classes);
+    if (stored_classes.size() != size_t(camera_resolution.x) * size_t(camera_resolution.y)) {
+        helios_runtime_error("ERROR (" + caller + "): The classes recorded for camera '" + cameralabel + "' do not match its resolution. Run the radiation model again for this camera.");
+    }
+    std::vector<uint> pixel_classes(stored_classes.size());
+    for (int j = 0; j < camera_resolution.y; j++) {
+        for (int i = 0; i < camera_resolution.x; i++) {
+            pixel_classes.at(size_t(j) * camera_resolution.x + i) = stored_classes.at(size_t(j) * camera_resolution.x + (camera_resolution.x - i - 1));
+        }
+    }
+    annotation::writeClassMapSegmentationMasks(context, pixel_classes, getImageOrientedPixelUUIDs(context, cameralabel, camera_resolution), camera_resolution, class_names, json_filename, image_file, data_attribute_labels, append_file, caller);
 }
 
 void RadiationModel::setPadValue(const std::string &cameralabel, const std::vector<std::string> &bandlabels, const std::vector<float> &padvalues) {

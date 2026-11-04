@@ -1949,9 +1949,7 @@ namespace helios {
          *
          * \note Called by both parameterized constructors, and again by Context::setLocation().
          *       The second call is not redundant: the fields are public, so a caller can hold a
-         *       valid Location and assign a nonsense value to a member afterwards. The ISO-8601
-         *       branch of Context::loadTabularTimeseriesData() does exactly that with UTC_offset,
-         *       from a value read out of an external file, which no constructor can intercept.
+         *       valid Location and assign an invalid value to a member afterwards.
          *
          * \note UTC_offset spans -14 to +12 rather than -12 to +12 because Helios counts the offset
          *       positive moving West: the real-world span of UTC-12 through UTC+14 (Kiribati keeps

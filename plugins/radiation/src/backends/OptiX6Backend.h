@@ -112,6 +112,9 @@ namespace helios {
         void copyScatterToRadiation() override;
         void uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) override;
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) override;
+        void uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) override;
+        void getCameraPixelSpectralClasses(std::vector<uint> &pixel_classes, const helios::int2 &resolution) override;
+        void uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) override;
         void zeroCameraScatterBuffers(size_t launch_band_count) override;
         void uploadSourceFluxes(const std::vector<float> &fluxes) override;
         void uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) override;
@@ -250,6 +253,23 @@ namespace helios {
         RTvariable surface_model_band_table_RTvariable;
         RTbuffer surface_layer_tables_RTbuffer; //!< Surface-layer directional albedo tables
         RTvariable surface_layer_tables_RTvariable;
+        RTbuffer spectral_class_maps_RTbuffer; //!< Spectral texture class maps, packed (see helios::packSpectralClassMaps())
+        RTvariable spectral_class_maps_RTvariable;
+        RTbuffer spectral_palette_RTbuffer; //!< Spectral texture palettes, packed (see helios::packSpectralPalettes())
+        RTvariable spectral_palette_RTvariable;
+        RTbuffer spectral_incident_RTbuffer; //!< Radiation reaching primitives with a spectral texture (see RayTracingResults::spectral_incident)
+        RTvariable spectral_incident_RTvariable;
+        RTvariable spectral_incident_enabled_RTvariable; //!< 1 when spectral_incident is sized for the current launch and is to be booked
+        size_t spectral_incident_count = 0;
+        size_t spectral_launch_band_count = 0; //!< Launch band count of the last zeroCameraScatterBuffers(), which the class flux is laid out by
+        RTbuffer spectral_camera_flux_RTbuffer; //!< Camera-weighted outgoing radiation of each class, packed (see helios::packSpectralCameraFlux())
+        RTvariable spectral_camera_flux_RTvariable;
+        RTbuffer spectral_vertex_RTbuffer; //!< Smoothing-vertex radiation of primitives with a spectral texture, packed (see helios::packSpectralVertexIncident())
+        RTvariable spectral_vertex_RTvariable;
+        size_t palette_entry_count = 0; //!< Number of palette entries of the last materials uploaded
+        RTbuffer camera_pixel_class_RTbuffer; //!< Class of the spectral texture seen in each pixel
+        RTvariable camera_pixel_class_RTvariable;
+        size_t camera_pixel_class_count = 0;
         RTvariable surface_layer_enabled_RTvariable;
         RTvariable surface_layer_table_size_RTvariable;
 

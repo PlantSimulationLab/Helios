@@ -174,6 +174,18 @@ namespace helios {
         virtual void getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) = 0;
 
         /**
+         * @brief Get the class of the spectral texture seen in each pixel by the last pixel-label launch
+         *
+         * @param[out] pixel_classes Class of the spectral texture of the primitive seen in each pixel (as pixel_labels of getCameraResults()), or 0 where the
+         * pixel sees no primitive with a spectral texture
+         * @param[in] resolution Camera resolution (width, height)
+         *
+         * Recorded by zeroCameraPixelBuffers() and the pixel-label launch only when some primitive has a spectral texture; it is an error to call this otherwise, or
+         * for a resolution other than that of the last pixel-label launch.
+         */
+        virtual void getCameraPixelSpectralClasses(std::vector<uint> &pixel_classes, const helios::int2 &resolution) = 0;
+
+        /**
          * @brief Get each camera's white reference, accumulated by every direct and diffuse launch since zeroRadiationBuffers()
          *
          * @param[out] white_reference_top White reference of the top face of every primitive [camera][primitive][launch band]
@@ -278,6 +290,32 @@ namespace helios {
         virtual void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) = 0;
 
         /**
+         * @brief Upload the outgoing radiation of each class of each primitive with a spectral texture, for one camera
+         *
+         * @param[in] class_flux_offset First class-flux slot of each primitive [Nprims], or UINT32_MAX for a primitive without a spectral texture; class k of
+         * primitive p is slot class_flux_offset[p] + k - 1
+         * @param[in] class_flux Camera-weighted outgoing radiation per [face (top, then bottom)][class-flux slot][launch band]
+         *
+         * Read by the camera hit program in place of radiation_out for a primitive with a spectral texture, at the class of the texel it hits, in bands where
+         * the palette applies (RayTracingMaterial::palette_band_active). Empty vectors remove it, so that cameras read radiation_out for every primitive.
+         */
+        virtual void uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) = 0;
+
+        /**
+         * @brief Upload the radiation reaching and leaving the faces of primitives with a spectral texture, averaged onto the vertices of camera flux smoothing
+         *
+         * With camera flux smoothing, a camera hit on a primitive with a spectral texture sees the class at the hit point in the radiation interpolated from the
+         * facet's vertices: what the facet's face emits, plus the class's camera-weighted reflectivity and transmissivity for each source slot times the radiation
+         * reaching the same and the opposite face (see RadiationModel::accumulateSpectralIncidentAtVertices()).
+         *
+         * @param[in] vertex_values Values per [face (top, bottom)][layer][smoothing vertex][launch band]: layers 0 to layer_count - 2 are the source slots of
+         * RayTracingResults::spectral_incident and the last is the emitted radiation. Empty for none, which clears any earlier upload.
+         * @param[in] layer_count Number of layers (source slots plus one), or 0 for none
+         * @param[in] camera Index of the camera about to be traced, whose camera-weighted palette values the device uses
+         */
+        virtual void uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) = 0;
+
+        /**
          * @brief Zero camera scatter buffers (scatter_buff_top_cam, scatter_buff_bottom_cam)
          *
          * @param[in] launch_band_count Number of bands being launched in current iteration
@@ -332,11 +370,6 @@ namespace helios {
          * @param geometry Geometry to validate
          * @throws helios_runtime_error if validation fails with detailed error message
          * @note Compiled out in release builds (#ifndef NDEBUG) - zero cost
-         *
-         * This validation prevents historical bugs like:
-         * - primitive_IDs sized by Nobjects instead of Nprimitives (commit 53ca9687d)
-         * - Wrong primitive_positions size
-         * - Inconsistent type-specific buffer sizes
          */
         void validateGeometryBeforeUpload(const RayTracingGeometry &geometry) const {
 #ifndef NDEBUG

@@ -45,7 +45,7 @@
  </tr>
 </table>
 
-<b>Important:</b> As of version 1.3.61, the Energy Balance plugin no longer requires CUDA. The plugin uses a three-tier execution hierarchy:
+<b>Important:</b> The Energy Balance plugin does not require CUDA. The plugin uses a three-tier execution hierarchy:
 
 <ol>
 <li><b>GPU (CUDA):</b> Used when CUDA is compiled and GPU hardware is detected. Optional.</li>
@@ -55,7 +55,7 @@
 
 <b>Performance Note:</b> Benchmarks show the OpenMP CPU implementation is actually faster than the GPU implementation for typical workloads (< 1M primitives). OpenMP is strongly recommended for production use.
 
-\subsection EBCUDAOptional CUDA is Now Optional
+\subsection EBCUDAOptional CUDA is Optional
 
 The Energy Balance plugin can be built and used in multiple configurations:
 
@@ -70,7 +70,7 @@ For help choosing the correct CUDA toolkit version for your system (if using CUD
 
 Useful OS-specific information for installing CUDA can be found here: \ref DependentSoftware
 
-<b>Note:</b> The GPU timeout registry setting (previously required for Windows) is no longer necessary when using the default CPU implementation.
+<b>Note:</b> The Windows GPU timeout registry setting is not needed when using the default CPU implementation.
 
 
 \section EBissues Known Issues

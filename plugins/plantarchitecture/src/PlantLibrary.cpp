@@ -478,6 +478,12 @@ void PlantArchitecture::initializePlantModelRegistrations() {
     registerPlantModelBuildParameters("sorghum", {sorghum_tiller_count}, SorghumPanicleParameters::buildParameterDeclarations(),
                                       [](const std::map<std::string, float> &parameters) { static_cast<void>(SorghumPanicleParameters::fromBuildParameters(parameters)); });
 
+    registerPlantModelBuildParameters("maize", {}, MaizeTasselParameters::buildParameterDeclarations(),
+                                      [](const std::map<std::string, float> &parameters) { static_cast<void>(MaizeTasselParameters::fromBuildParameters(parameters)); });
+
+    registerPlantModelBuildParameters("rice", {rice_tiller_count}, RicePanicleParameters::buildParameterDeclarations(),
+                                      [](const std::map<std::string, float> &parameters) { static_cast<void>(RicePanicleParameters::fromBuildParameters(parameters)); });
+
     registerPlantModelBuildParameters("wheat", {wheat_tiller_count});
 }
 
@@ -629,36 +635,23 @@ uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_p
     struct BuildParameterScope {
         std::map<std::string, float> &build_parameters;
         std::map<std::string, BuildParameterDistribution> &organ_build_parameters;
+        std::string &plant_name;
         ~BuildParameterScope() {
             build_parameters.clear();
             organ_build_parameters.clear();
+            plant_name.clear();
         }
-    } build_parameter_scope{current_build_parameters, current_organ_build_parameters};
+    } build_parameter_scope{current_build_parameters, current_organ_build_parameters, current_build_plant_name};
     current_build_parameters = plant_build_parameters;
     current_organ_build_parameters = organ_build_parameters;
+    // The plant is named for the model from the start, so the organs built during the build get materials named for it.
+    current_build_plant_name = current_plant_model;
 
     // Call the builder function
     uint plantID = builder_it->second(base_position);
 
 
     plant_instances.at(plantID).plant_name = current_plant_model;
-
-    // Rename organ materials that were created with the temporary "custom" plant name during the
-    // build (geometry is constructed before plant_name is set, so renameAutoMaterial() in
-    // PlantArchitecture.cpp tags them "custom_<organ>"). Rewrite the "custom_" prefix to the model
-    // name so materials get descriptive labels like "bean_trifoliate_leaf".
-    if (current_plant_model != "custom") {
-        std::vector<std::string> material_labels = context_ptr->listMaterials();
-        std::string old_prefix = "custom_";
-        for (const auto &label: material_labels) {
-            if (label.substr(0, old_prefix.size()) == old_prefix) {
-                std::string new_label = current_plant_model + "_" + label.substr(old_prefix.size());
-                if (!context_ptr->doesMaterialExist(new_label)) {
-                    context_ptr->renameMaterial(label, new_label);
-                }
-            }
-        }
-    }
 
     // Update plant_name object data if enabled (geometry was built with temporary "custom" name)
     if (output_object_data.at("plant_name")) {
@@ -4386,27 +4379,21 @@ void PlantArchitecture::initializeMaizeShoots() {
     phytomer_parameters_maize.peduncle.length = 0.14f;
     phytomer_parameters_maize.peduncle.radius = 0.004;
     phytomer_parameters_maize.peduncle.curvature = 0;
-    phytomer_parameters_maize.peduncle.color = phytomer_parameters_maize.internode.color;
-    phytomer_parameters_maize.peduncle.radial_subdivisions = 6;
-    phytomer_parameters_maize.peduncle.length_segments = 2;
+    // The peduncle runs from the culm into the tassel axis. Its color is that of the axis and is blended from the culm color at its base (Phytomer::getPeduncleNodeColors()), so it meets both without a step; the
+    // extra length segments keep the blend from showing as bands.
+    phytomer_parameters_maize.peduncle.color = MaizeTasselParameters().branch_color;
+    phytomer_parameters_maize.peduncle.radial_subdivisions = 10;
+    phytomer_parameters_maize.peduncle.length_segments = 8;
 
-    // The tassel is assembled from one copy of MaizeTassel.obj per primary branch, distributed along the terminal peduncle. Modern commercial hybrids carry 10-12 primary branches: Gage et al. (2018,
-    // Genetics 210:1125) measured 12.0 in the 1930s BSSSC0 population against about 10.2 in ex-PVP lines from the 1980s-90s, the reduction in branch number being one of the clearer architectural signatures
-    // of hybrid breeding. Eleven sits in the middle of that.
-    phytomer_parameters_maize.inflorescence.flowers_per_peduncle = 11;
-    phytomer_parameters_maize.inflorescence.pitch.uniformDistribution(0, 30);
+    // The tassel is a single object continuing the peduncle. Its prototype is built in meters, so it is used at unit scale, and its size and form are set by MaizeTasselParameters. The ear, which is assigned in
+    // MaizePhytomerCreationFunction, sets its own scale and tilt.
+    phytomer_parameters_maize.inflorescence.flowers_per_peduncle = 1;
+    phytomer_parameters_maize.inflorescence.pitch = 0;
     phytomer_parameters_maize.inflorescence.roll = 0;
-
-    // Spreads the branches over the upper 90% of the peduncle, which is the branch zone. The bound that matters is not clampOffset() -- its denominator is derived for compound leaves, where the index is
-    // divided by petioles_per_internode, and is roughly twice too loose for an inflorescence, where that divisor is 1. The real constraint is that the lowest branch attaches at
-    // frac = 1 - (flowers_per_peduncle - 1.5) * flower_offset, which must stay positive or interpolateTube() trips its assert in a debug build and silently returns the peduncle base in a release one. At
-    // eleven branches that caps the offset at 0.105; 0.095 leaves the lowest branch at frac 0.098.
-    phytomer_parameters_maize.inflorescence.flower_offset = 0.095;
-
-    // Primary branch length near 20 cm, the modal value over 180 three-dimensionally scanned tassels (Zhang et al. 2023, Plant Methods 19:76). The prototype is 1.027 units along its own axis, so the scale
-    // is the target length divided by that.
-    phytomer_parameters_maize.inflorescence.fruit_prototype_scale = 0.195;
+    phytomer_parameters_maize.inflorescence.fruit_prototype_scale = 1;
     phytomer_parameters_maize.inflorescence.fruit_prototype_function = MaizeTasselPrototype;
+    // Tassels on neighbouring plants of one genotype differ in branch number and layout; a few prototypes keep a plot from repeating one tassel.
+    phytomer_parameters_maize.inflorescence.unique_prototypes = 3;
 
     // The tassel finishes elongating at VT and does not grow afterward: "the tassel is at maximum size" at that stage (Abendroth et al. 2011, Iowa State PMR 1009), and VT "begins approximately 2-3 days
     // before silk emergence" (Ritchie, Hanway & Benson, How a Corn Plant Develops, Iowa State Special Report 48, p.11). Without a period of its own the tassel inherits dd_to_fruit_maturity, which is the
@@ -5134,13 +5121,22 @@ void PlantArchitecture::initializeRiceShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "SorghumLeaf.png";
-    leaf_prototype.leaf_aspect_ratio = 0.06f;
-    leaf_prototype.midrib_fold_fraction = 0.3f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.2, 0);
-    leaf_prototype.lateral_curvature = -0.3;
+    // Each leaf passes through three images as it ages: green, yellowing from the tip, and straw-colored. Lower leaves die back after heading while the upper leaves live longest (Yoshida 1981). The ages are read from photographs.
+    leaf_prototype.leaf_texture_series[0] = {{"RiceLeaf_A_0.png", "RiceLeaf_A_1.png", "RiceLeaf_A_2.png"}, {"RiceLeaf_B_0.png", "RiceLeaf_B_1.png", "RiceLeaf_B_2.png"}};
+    leaf_prototype.leaf_texture_stage_ages = {0.f, 55.f, 72.f};
+    // The longest blade is 1.7 cm wide on 43 cm, and the flag leaf comes out 1.3 cm by 33 cm, within the flag leaf widths of 1.24 cm in Nipponbare and 1.82 cm in 93-11 (PMC4115278).
+    leaf_prototype.leaf_aspect_ratio = 0.04f;
+    leaf_prototype.midrib_fold_fraction = 0.15f;
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.06, -0.02);
+    leaf_prototype.longitudinal_curvature_exponent = 3.f;
+    leaf_prototype.flexibility_taper = 150.f;
+    leaf_prototype.flexibility_aging = 11.f;
+    leaf_prototype.flexibility_aging_max = 5.f;
+    leaf_prototype.lateral_curvature = -0.2f;
+    leaf_prototype.petiole_roll = 0.f;
     leaf_prototype.wave_period = 0.1f;
-    leaf_prototype.wave_amplitude = 0.1f;
+    leaf_prototype.wave_amplitude = 0.02f;
+    leaf_prototype.flexibility.uniformDistribution(1.0, 1.6);
     leaf_prototype.subdivisions = 20;
     leaf_prototype.unique_prototypes = 10;
 
@@ -5149,39 +5145,52 @@ void PlantArchitecture::initializeRiceShoots() {
     PhytomerParameters phytomer_parameters_rice(context_ptr->getRandomGenerator());
 
     phytomer_parameters_rice.internode.pitch = 0;
-    phytomer_parameters_rice.internode.phyllotactic_angle.uniformDistribution(67, 77);
-    phytomer_parameters_rice.internode.radius_initial = 0.001;
-    phytomer_parameters_rice.internode.color = make_RGBcolor(0.27, 0.31, 0.16);
-    phytomer_parameters_rice.internode.length_segments = 1;
-    phytomer_parameters_rice.internode.radial_subdivisions = 6;
+    // Rice is distichous, as grasses are: successive leaves stand on opposite sides of the culm.
+    phytomer_parameters_rice.internode.phyllotactic_angle.uniformDistribution(170, 190);
+    // A culm is 2-6 mm across (Yoshida 1981), and 4.3-5.6 mm at the lower internodes of two cultivars (PMC12748189). Here it also stands for the sheaths wrapping it, and girth_area_factor gives the main stem, which bears
+    // the whole plant at its base, about 8 mm there.
+    phytomer_parameters_rice.internode.radius_initial = 0.002;
+    phytomer_parameters_rice.internode.color = make_RGBcolor(0.25, 0.42, 0.16);
+    phytomer_parameters_rice.internode.length_segments = 3;
+    phytomer_parameters_rice.internode.radial_subdivisions = 8;
     phytomer_parameters_rice.internode.max_floral_buds_per_petiole = 0;
-    phytomer_parameters_rice.internode.max_vegetative_buds_per_petiole = 0;
+    // Every leaf axil carries a bud a tiller can grow from. RicePhytomerCreationFunction() keeps those at the tillering positions the plant was built with and kills the rest.
+    phytomer_parameters_rice.internode.max_vegetative_buds_per_petiole = 1;
 
     // A grass leaf has no petiole: the blade sits on the culm, and its pitch below is its angle off the culm.
     phytomer_parameters_rice.petiole.petioles_per_internode = 1;
     phytomer_parameters_rice.petiole.length = 0;
 
     phytomer_parameters_rice.leaf.leaves_per_petiole = 1;
-    phytomer_parameters_rice.leaf.pitch.uniformDistribution(-40, 0);
+    // The upper leaves are set separately by RicePhytomerCreationFunction(). The angle of the lower leaves is read from photographs.
+    phytomer_parameters_rice.leaf.pitch.uniformDistribution(-28, -14);
     phytomer_parameters_rice.leaf.yaw = 0;
-    phytomer_parameters_rice.leaf.roll = 0;
-    phytomer_parameters_rice.leaf.prototype_scale = 0.15;
+    phytomer_parameters_rice.leaf.roll.uniformDistribution(-10, 10);
+    // Length of the longest blade, the second leaf: 42.7 cm in Nipponbare (SPO1 study, 2023), and a maximum of 42.8 cm in Watanabe et al. (2005, Annals of Botany 95:1131).
+    phytomer_parameters_rice.leaf.prototype_scale = 0.43;
     phytomer_parameters_rice.leaf.prototype = leaf_prototype;
 
-    phytomer_parameters_rice.peduncle.pitch = 0;
-    phytomer_parameters_rice.peduncle.length.uniformDistribution(0.14, 0.18);
-    phytomer_parameters_rice.peduncle.radius = 0.0005;
-    phytomer_parameters_rice.peduncle.color = phytomer_parameters_rice.internode.color;
-    phytomer_parameters_rice.peduncle.curvature.uniformDistribution(-800, -50);
-    phytomer_parameters_rice.peduncle.radial_subdivisions = 6;
+    // The peduncle here is the part above the flag leaf collar, up to the panicle base; the rest of the uppermost internode, 23-28 cm in the lines of PMC12211781, is hidden inside the flag leaf sheath. No exsertion
+    // was found for a target cultivar, so the length is read from photographs. It carries no roll, since the panicle prototype relies on it to keep the side it bends toward.
+    phytomer_parameters_rice.peduncle.length.uniformDistribution(0.04, 0.09);
+    phytomer_parameters_rice.peduncle.radius = 0.0011;
+    phytomer_parameters_rice.peduncle.pitch.uniformDistribution(3, 10);
+    phytomer_parameters_rice.peduncle.color = RicePanicleParameters().branch_color;
+    phytomer_parameters_rice.peduncle.curvature = 0;
+    phytomer_parameters_rice.peduncle.radial_subdivisions = 8;
     phytomer_parameters_rice.peduncle.length_segments = 8;
 
-    phytomer_parameters_rice.inflorescence.flowers_per_peduncle = 60;
-    phytomer_parameters_rice.inflorescence.pitch.uniformDistribution(20, 25);
+    phytomer_parameters_rice.inflorescence.flowers_per_peduncle = 1;
+    phytomer_parameters_rice.inflorescence.pitch = 0;
     phytomer_parameters_rice.inflorescence.roll = 0;
-    phytomer_parameters_rice.inflorescence.fruit_prototype_scale = 0.008;
-    phytomer_parameters_rice.inflorescence.flower_offset = 0.012;
-    phytomer_parameters_rice.inflorescence.fruit_prototype_function = RiceSpikePrototype;
+    // The panicle prototypes are built in meters, so they are used at unit scale. Their size and form are set by RicePanicleParameters.
+    phytomer_parameters_rice.inflorescence.flower_prototype_scale = 1;
+    phytomer_parameters_rice.inflorescence.flower_prototype_function = RiceFloweringPaniclePrototype;
+    phytomer_parameters_rice.inflorescence.fruit_prototype_scale = 1;
+    phytomer_parameters_rice.inflorescence.fruit_prototype_function = RicePaniclePrototype;
+    // The panicle is at full length by heading, so the ripening panicle takes over from the flowering one at full size.
+    phytomer_parameters_rice.inflorescence.inflorescence_maturity_period = 0;
+    phytomer_parameters_rice.inflorescence.unique_prototypes = 3;
 
     phytomer_parameters_rice.phytomer_creation_function = RicePhytomerCreationFunction;
 
@@ -5189,23 +5198,41 @@ void PlantArchitecture::initializeRiceShoots() {
 
     ShootParameters shoot_parameters_mainstem(context_ptr->getRandomGenerator());
     shoot_parameters_mainstem.phytomer_parameters = phytomer_parameters_rice;
-    shoot_parameters_mainstem.vegetative_bud_break_probability_min = 0;
+    // Buds are not thinned at random: RicePhytomerCreationFunction() chooses which leaf axils tiller.
+    shoot_parameters_mainstem.vegetative_bud_break_probability_min = 1;
+    // A tiller emerges from the axil of leaf n as leaf n+3 appears, 3 phyllochrons later (Yoshida 1981).
+    shoot_parameters_mainstem.vegetative_bud_break_time = 18;
     shoot_parameters_mainstem.flower_bud_break_probability = 1;
-    shoot_parameters_mainstem.phyllochron_min = 2;
-    shoot_parameters_mainstem.elongation_rate_max = 0.1;
-    shoot_parameters_mainstem.girth_area_factor = 5.f;
-    shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-1000, -400);
-    shoot_parameters_mainstem.internode_length_max = 0.0075;
+    // 4-5 days before panicle initiation and 7-8 days after (Yoshida 1981). The model has one rate, which puts the 14 leaves out by about day 84.
+    shoot_parameters_mainstem.phyllochron_min = 6;
+    shoot_parameters_mainstem.elongation_rate_max = 0.05;
+    shoot_parameters_mainstem.leaf_expansion_rate_max = 0.1;
+    shoot_parameters_mainstem.girth_area_factor = 0.8f;
+    shoot_parameters_mainstem.gravitropic_curvature.uniformDistribution(-300, -100);
+    // Set for each phytomer by RicePhytomerCreationFunction()
+    shoot_parameters_mainstem.internode_length_max = 0.05;
     shoot_parameters_mainstem.internode_length_decay_rate = 0;
     shoot_parameters_mainstem.flowers_require_dormancy = false;
     shoot_parameters_mainstem.growth_requires_dormancy = false;
     shoot_parameters_mainstem.determinate_shoot_growth = false;
     shoot_parameters_mainstem.fruit_set_probability = 1.0;
-    shoot_parameters_mainstem.defineChildShootTypes({"mainstem"}, {1.0});
-    shoot_parameters_mainstem.max_nodes = 30;
-    shoot_parameters_mainstem.max_terminal_floral_buds = 5;
+    shoot_parameters_mainstem.defineChildShootTypes({"tiller"}, {1.0});
+    // Generally 10-18 main-stem leaves, with 13 on IR747B2-6 and 15 on Tainan 3 (Yoshida 1981).
+    shoot_parameters_mainstem.max_nodes = 14;
+    shoot_parameters_mainstem.max_terminal_floral_buds = 1;
+
+    // A tiller is a culm like the main stem, ending in a panicle. Its leaf number is set from its position by RicePhytomerCreationFunction().
+    ShootParameters shoot_parameters_tiller = shoot_parameters_mainstem;
+    shoot_parameters_tiller.defineChildShootTypes({"tiller"}, {1.0});
+    // The tiller starts out from the crown at a wide angle and is quickly turned upward, which spreads the bases of the culms over a clump rather than fanning them from one point. The gravitropic response weakens
+    // rapidly near vertical, so it leaves the culm leaning: tiller angles of 1.8-34.4 degrees are reported, mostly 2-16, with indica means of 10.5-11.7 (Dong et al. 2016, PLoS Genetics, PMC5096673).
+    shoot_parameters_tiller.insertion_angle_tip.uniformDistribution(20, 32);
+    shoot_parameters_tiller.base_yaw.uniformDistribution(-30, 30);
+    shoot_parameters_tiller.base_roll.uniformDistribution(-20, 20);
+    shoot_parameters_tiller.gravitropic_curvature.uniformDistribution(4000, 6000);
 
     defineShootType("mainstem", shoot_parameters_mainstem);
+    defineShootType("tiller", shoot_parameters_tiller);
 }
 
 uint PlantArchitecture::buildRicePlant(const helios::vec3 &base_position) {
@@ -5215,13 +5242,18 @@ uint PlantArchitecture::buildRicePlant(const helios::vec3 &base_position) {
         initializeRiceShoots();
     }
 
-    uint plantID = addPlantInstance(base_position, 0);
+    // Read here so that an invalid value fails when the plant is built. The tillers themselves are placed by RicePhytomerCreationFunction() as the plant grows.
+    static_cast<void>(riceTillerCount(current_build_parameters));
 
-    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(context_ptr->randu(0.f, 0.1f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.001, 0.0075, 0.01, 0.01, 0, "mainstem");
+    uint plantID = addPlantInstance(base_position - make_vec3(0, 0, 0.01), 0);
+
+    // The base stem is built upright, since a tilt here makes the two ranks of a distichous grass converge (see buildSorghumPlant()).
+    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(0.f, context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)), 0.002, shoot_types.at("mainstem").internode_length_max.val(), 0.01, 0.01, 0, "mainstem");
 
     breakPlantDormancy(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 4, 10, 1000);
+    // The panicle emerges a few days after the flag leaf, a panicle flowers over 7-10 days, and grain fills in about 30 days (Yoshida 1981).
+    setPlantPhenologicalThresholds(plantID, 0, 4, 3, 7, 30, 1000);
 
     plant_instances.at(plantID).max_age = 365;
 

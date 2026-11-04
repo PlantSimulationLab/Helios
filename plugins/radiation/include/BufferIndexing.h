@@ -287,9 +287,6 @@ using SpecularRadiationIndexer = BufferIndexer4D;
  * bool two_sided = twosided_flag[position];
  * int2 subdivs = object_subdivisions[position];
  * @endcode
- *
- * Historical bugs prevented (commit 0ec2dc25a):
- * - 20+ instances of direct UUID indexing: twosided_flag[UUID], objectID[UUID]
  */
 class UUIDLookupHelper {
 private:
@@ -356,11 +353,6 @@ public:
  *     launch_index, camera_pixel_offset, camera_resolution_full);
  * size_t idx = pixel.toFlatIndex(camera_resolution_full);
  * @endcode
- *
- * Historical bugs prevented:
- * - Forgetting camera_pixel_offset in tiled rendering
- * - Swapping x/y coordinates
- * - Using camera_resolution instead of camera_resolution_full
  */
 struct PixelCoordinate {
     uint x; ///< Global x-coordinate (column index)
@@ -451,10 +443,6 @@ struct PixelCoordinate {
  *     }
  * }
  * @endcode
- *
- * Historical bugs prevented (commit 53ca9687d):
- * - Swapped indices: UUID = base + ii * NY + jj (should be jj * NX + ii)
- * - Wrong subdivision counts from parent inheritance
  */
 class SubpatchUUIDCalculator {
 private:
