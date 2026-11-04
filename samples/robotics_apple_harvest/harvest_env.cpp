@@ -21,13 +21,17 @@ namespace {
     const float max_target_lead = 0.08f; // m the commanded tool position can lead the actual one, so the target cannot wind up while the arm is blocked
     const int max_control_steps = 250; // 10 s
 
-    // Gripper: an ideal vacuum cup. It grips a fruit its face touches, and then acts as a spring that can only pull, reacting on the arm. The spring's
-    // rest length holds the fruit against the face, so the cup carries a fruit on its face rather than at a distance.
+    // Gripper: an ideal vacuum cup. It grips a fruit its face touches, where it touches it, and then holds the fruit on its face: springs hold the fruit's
+    // center where it was when the seal formed (moved onto the face) and its orientation as it was then, both relative to the cup, reacting on the arm.
+    // The seal breaks when the fruit pulls away from the face, slides along it, or twists or peels it, too hard. The limits on sliding and peeling were
+    // chosen for this task: suction cups hold less sideways than straight out, and least of all against peeling.
     const float grip_reach = 0.005f; // m between the cup's face and the fruit's surface, about how far a compliant lip reaches to seal on contact
     const float grip_stiffness = 2000.f; // N/m
     const float grip_damping = 20.f; // N*s/m
     const float grip_ramp_seconds = 0.1f; // the grip builds up over this time, as a vacuum does
-    const float grip_limit = 40.f; // N above which the cup loses its seal
+    const float grip_limit = 40.f; // N of pull straight out of the face above which the cup loses its seal
+    const float grip_shear_limit = 20.f; // N along the face: friction of 0.5 on the face, pressed on by the vacuum
+    const float grip_moment_limit = 1.f; // N m about the face's center, from twisting and from loads that peel the cup: about the full pull at the rim of a 5 cm cup
 
     // Force to detach a fruit, drawn for each episode. OrchardBench uses 14 to 23 N, and 28.3 N detached 95% of apples in a straight pull in a Michigan State thesis.
     const float min_detach_force = 14.f; // N
@@ -283,7 +287,12 @@ namespace {
         const Candidate *target = nullptr;
         float detach_force = 0.f;
         bool gripped = false;
-        float grip_rest_length = 0.f;
+        // Where the cup holds the fruit, in the tool body's frame: the fruit's center, the direction from the cup's face to it, and its orientation
+        mjtNum grip_center[3] = {0, 0, 0};
+        mjtNum grip_normal[3] = {0, 0, 0};
+        mjtNum grip_orientation[4] = {1, 0, 0, 0};
+        float grip_shear = 0.f; // N, the load along the face in the last physics step
+        float grip_moment = 0.f; // N m, the load's moment about the face's center in the last physics step
         float grip_seconds = 0.f;
         float grip_force = 0.f;
         float previous_load = 0.f;
@@ -309,6 +318,16 @@ namespace {
     float surfaceDistance(const Slot &slot) {
         const mjData *data = slot.tree->engine.getMuJoCoData(slot.instance);
         return (toVec3(data->xipos + 3 * slot.target->body_ID) - slot.tree->robot->getToolPosition(slot.instance)).magnitude() - slot.target->radius;
+    }
+
+    // The load on the cup's seal in the last physics step, as a fraction of what breaks it: the largest of the pull, the load along the face and the moment,
+    // each over its limit
+    float sealLoad(const Slot &slot) {
+        return std::max({slot.grip_force / grip_limit, slot.grip_shear / grip_shear_limit, slot.grip_moment / grip_moment_limit});
+    }
+
+    bool sealBroken(const Slot &slot) {
+        return sealLoad(slot) > 1.f;
     }
 
     // From a point to the nearest surface of the wood
@@ -485,7 +504,7 @@ namespace {
             observation[i++] = deg2rad(joints[j]);
         }
         observation[i++] = slot.gripped ? 1.f : 0.f;
-        observation[i++] = slot.grip_force / grip_limit;
+        observation[i++] = sealLoad(slot); // how near the seal is to breaking
         observation[i++] = contact / 10.f;
         observation[i++] = float(slot.control_step) / float(max_control_steps);
         observation[i++] = wood.x;
@@ -523,55 +542,91 @@ namespace {
         slot.current.steps_to_grip = -1;
     }
 
-    // The force of the grip on the fruit, applied to the fruit and, in reaction, to the arm at the cup's face
+    // Seal the cup on the fruit where they touch: the fruit is to be held with its surface on the face, along the line from the face to its center
+    void startGrip(Slot &slot) {
+        Tree &tree = *slot.tree;
+        const mjData *data = tree.engine.getMuJoCoData(slot.instance);
+        const int fruit_body = slot.target->body_ID;
+        const int tool_body = tree.tool_body_ID;
+        const vec3 face = tree.robot->getToolPosition(slot.instance);
+        vec3 normal = toVec3(data->xipos + 3 * fruit_body) - face;
+        normal.normalize();
+        const vec3 center = face + slot.target->radius * normal;
+        const mjtNum center_from_tool[3] = {center.x - data->xpos[3 * tool_body], center.y - data->xpos[3 * tool_body + 1], center.z - data->xpos[3 * tool_body + 2]};
+        const mjtNum normal_world[3] = {normal.x, normal.y, normal.z};
+        mju_mulMatTVec3(slot.grip_center, data->xmat + 9 * tool_body, center_from_tool);
+        mju_mulMatTVec3(slot.grip_normal, data->xmat + 9 * tool_body, normal_world);
+        mjtNum tool_inverse[4];
+        mju_negQuat(tool_inverse, data->xquat + 4 * tool_body);
+        mju_mulQuat(slot.grip_orientation, tool_inverse, data->xquat + 4 * fruit_body);
+        slot.gripped = true;
+        slot.grip_seconds = 0.f;
+    }
+
+    // The force and torque of the grip on the fruit, applied to the fruit and, in reaction, to the arm. The rotational springs have the time constants of the
+    // linear ones for this fruit's inertia.
     void applyGrip(Slot &slot, float dt) {
         Tree &tree = *slot.tree;
+        const mjModel *model = tree.engine.getMuJoCoModel();
         mjData *data = tree.engine.getMuJoCoData(slot.instance);
         const int fruit_body = slot.target->body_ID;
         const int tool_body = tree.tool_body_ID;
         mju_zero(data->xfrc_applied + 6 * fruit_body, 6);
         mju_zero(data->xfrc_applied + 6 * tool_body, 6);
         slot.grip_force = 0.f;
+        slot.grip_shear = 0.f;
+        slot.grip_moment = 0.f;
         if (!slot.gripped) {
             return;
         }
         slot.grip_seconds += dt;
         const float ramp = std::min(1.f, slot.grip_seconds / grip_ramp_seconds);
-        const vec3 tool = tree.robot->getToolPosition(slot.instance);
-        const vec3 fruit = toVec3(data->xipos + 3 * fruit_body);
-        vec3 toward_tool = tool - fruit;
-        const float distance = toward_tool.magnitude();
-        if (distance < 1e-6f) {
-            return;
-        }
-        toward_tool = toward_tool / distance;
-        slot.pull_direction = toward_tool;
-        const float stretch = distance - slot.grip_rest_length;
-        if (stretch <= 0.f) {
-            return;
-        }
+
+        // Where the fruit should be, and how fast that point moves with the tool
+        mjtNum offset[3], normal_world[3];
+        mju_mulMatVec3(offset, data->xmat + 9 * tool_body, slot.grip_center);
+        mju_mulMatVec3(normal_world, data->xmat + 9 * tool_body, slot.grip_normal);
+        const vec3 held = toVec3(data->xpos + 3 * tool_body) + toVec3(offset);
+        const vec3 normal = toVec3(normal_world);
         mjtNum velocity_fruit[6], velocity_tool[6];
-        mj_objectVelocity(tree.engine.getMuJoCoModel(), data, mjOBJ_BODY, fruit_body, velocity_fruit, 0);
-        mj_objectVelocity(tree.engine.getMuJoCoModel(), data, mjOBJ_BODY, tool_body, velocity_tool, 0);
-        const vec3 separating_velocity = toVec3(velocity_tool + 3) - toVec3(velocity_fruit + 3);
-        const float force = std::max(0.f, ramp * (grip_stiffness * stretch + grip_damping * (separating_velocity * toward_tool)));
-        slot.grip_force = force;
+        mj_objectVelocity(model, data, mjOBJ_BODY, fruit_body, velocity_fruit, 0);
+        mj_objectVelocity(model, data, mjOBJ_BODY, tool_body, velocity_tool, 0);
+        const vec3 tool_center = toVec3(data->xipos + 3 * tool_body);
+        const vec3 tool_spin = toVec3(velocity_tool);
+        const vec3 held_velocity = toVec3(velocity_tool + 3) + cross(tool_spin, held - tool_center);
+        const vec3 fruit = toVec3(data->xipos + 3 * fruit_body);
+        const vec3 on_fruit = ramp * (grip_stiffness * (held - fruit) + grip_damping * (held_velocity - toVec3(velocity_fruit + 3)));
 
-        const vec3 on_fruit = force * toward_tool;
-        data->xfrc_applied[6 * fruit_body] = on_fruit.x;
-        data->xfrc_applied[6 * fruit_body + 1] = on_fruit.y;
-        data->xfrc_applied[6 * fruit_body + 2] = on_fruit.z;
+        // The orientation the fruit should have, and the rotation from where it is to there
+        mjtNum held_orientation[4], fruit_inverse[4], error[4], error_rotation[3];
+        mju_mulQuat(held_orientation, data->xquat + 4 * tool_body, slot.grip_orientation);
+        mju_negQuat(fruit_inverse, data->xquat + 4 * fruit_body);
+        mju_mulQuat(error, held_orientation, fruit_inverse);
+        mju_quat2Vel(error_rotation, error, 1.0);
+        const float mass = float(model->body_mass[fruit_body]);
+        const float inertia = float(model->body_inertia[3 * fruit_body] + model->body_inertia[3 * fruit_body + 1] + model->body_inertia[3 * fruit_body + 2]) / 3.f;
+        const vec3 torque_on_fruit = ramp * (inertia / mass) * (grip_stiffness * toVec3(error_rotation) + grip_damping * (tool_spin - toVec3(velocity_fruit)));
 
-        // The reaction acts at the cup's face rather than the tool's center of mass, so it also carries a torque
-        const vec3 arm = tool - toVec3(data->xipos + 3 * tool_body);
+        // The load on the seal: pulling the fruit toward the face is a pull out of it, the rest is along it, and the moment is about the face's center
+        const float pull = std::max(0.f, -(on_fruit * normal));
+        const vec3 along_face = on_fruit - (on_fruit * normal) * normal;
+        const vec3 face_center = held - slot.target->radius * normal;
+        slot.grip_force = pull;
+        slot.grip_shear = along_face.magnitude();
+        slot.grip_moment = (torque_on_fruit + cross(held - face_center, on_fruit)).magnitude();
+        if (on_fruit.magnitude() > 1e-6f) {
+            slot.pull_direction = on_fruit / on_fruit.magnitude();
+        }
+
+        const float fruit_load[6] = {on_fruit.x, on_fruit.y, on_fruit.z, torque_on_fruit.x, torque_on_fruit.y, torque_on_fruit.z};
+        // The reaction acts where the fruit is held rather than at the tool's center of mass, so it also carries a torque
         const vec3 on_tool = -1.f * on_fruit;
-        const vec3 torque = cross(arm, on_tool);
-        data->xfrc_applied[6 * tool_body] = on_tool.x;
-        data->xfrc_applied[6 * tool_body + 1] = on_tool.y;
-        data->xfrc_applied[6 * tool_body + 2] = on_tool.z;
-        data->xfrc_applied[6 * tool_body + 3] = torque.x;
-        data->xfrc_applied[6 * tool_body + 4] = torque.y;
-        data->xfrc_applied[6 * tool_body + 5] = torque.z;
+        const vec3 torque_on_tool = cross(held - tool_center, on_tool) - torque_on_fruit;
+        const float tool_load[6] = {on_tool.x, on_tool.y, on_tool.z, torque_on_tool.x, torque_on_tool.y, torque_on_tool.z};
+        for (int k = 0; k < 6; k++) {
+            data->xfrc_applied[6 * fruit_body + k] = fruit_load[k];
+            data->xfrc_applied[6 * tool_body + k] = tool_load[k];
+        }
     }
 
     // A control step after the fruit detached, with the cup backing straight away from the tree whatever the action, carrying the fruit for as long as the
@@ -599,7 +654,7 @@ namespace {
         for (uint s = 0; s < physics_steps_per_control; s++) {
             applyGrip(slot, tree.engine.getTimestep());
             tree.engine.step(1, slot.instance);
-            if (slot.grip_force > grip_limit) {
+            if (sealBroken(slot)) {
                 slot.gripped = false; // the fruit falls
             }
         }
@@ -650,9 +705,7 @@ namespace {
         const float distance_before_grip = surfaceDistance(slot);
         const bool gripped_now = !slot.gripped && action[3] > 0.f && distance_before_grip < grip_reach;
         if (gripped_now) {
-            slot.gripped = true;
-            slot.grip_rest_length = slot.target->radius;
-            slot.grip_seconds = 0.f;
+            startGrip(slot);
             slot.current.steps_to_grip = slot.control_step;
         }
 
@@ -668,7 +721,7 @@ namespace {
             if (load > slot.detach_force) {
                 engine.detachLink(tree.plant, slot.target->link, slot.instance);
                 outcome = slot.gripped ? HARVEST_SUCCESS : HARVEST_KNOCKED_OFF;
-            } else if (slot.grip_force > grip_limit) {
+            } else if (sealBroken(slot)) {
                 outcome = HARVEST_SLIPPED;
             } else if (engine.getExternalContactForce(tree.plant, slot.instance).magnitude() > protective_stop_force) {
                 outcome = HARVEST_COLLISION;

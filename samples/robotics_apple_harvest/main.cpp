@@ -31,11 +31,12 @@ namespace {
                 const float *o = observations.data() + i * observation_size;
                 float *a = actions.data() + i * action_size;
                 if (scripted) {
-                    // Head for the fruit and grip it, and once gripped back straight away from the tree
+                    // Head for the fruit and grip it, and once gripped pull straight out of the cup's face, away from the fruit's center, so as not to peel the seal
                     const bool gripped = o[16] > 0.5f;
-                    a[0] = gripped ? -1.f : 8.f * o[0];
-                    a[1] = gripped ? 0.f : 8.f * o[1];
-                    a[2] = gripped ? 0.f : 8.f * o[2];
+                    const float toward_fruit = std::max(std::sqrt(o[0] * o[0] + o[1] * o[1] + o[2] * o[2]), 1e-6f);
+                    for (int k = 0; k < 3; k++) {
+                        a[k] = gripped ? -o[k] / toward_fruit : 8.f * o[k];
+                    }
                     a[3] = 1.f;
                 } else {
                     for (int k = 0; k < action_size; k++) {

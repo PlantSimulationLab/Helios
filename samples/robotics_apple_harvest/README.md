@@ -21,7 +21,8 @@ PyTorch brings its own OpenMP runtime and two in one process can give wrong resu
 ## The task
 
 **Observations (23):** fruit position relative to the cup, distance to the fruit's surface, cup position, cup velocity, joint
-positions, whether it is gripping, grip force, contact force on the tree, time, and the offset to the nearest wood.
+positions, whether it is gripping, the load on the cup's seal as a fraction of what breaks it, contact force on the tree, time, and the
+offset to the nearest wood.
 
 **Actions (4):** cup velocity (x, y, z), up to 0.3 m/s, and whether to grip. Inverse kinematics turns the velocity into joint targets at 25 Hz.
 
@@ -42,8 +43,28 @@ Each tree settles under gravity for 20 s when it is built, which takes about 7 s
 - The policy is given exact positions of the fruit and wood, which stand in for perception.
 - Leaves are removed unless asked for. With `--leaves`, they hide things from the camera but are fixed to the wood and collide with nothing, so the arm passes through them. Only the 8 reachable fruit nearest the robot on each tree are targeted.
 - Wood is rigid except for 8 internodes behind each candidate fruit. Fully flexible wood is about 37x slower.
-- The cup grips a fruit whose surface is within 5 mm of its face (it has to touch it, give or take a compliant lip), and then is a spring
-  that can only pull, with its rest length holding the fruit on the face. It seals at once, whatever angle it meets the fruit at.
+- The cup grips a fruit whose surface is within 5 mm of its face (it has to touch it, give or take a compliant lip), where it touches it,
+  and seals at once, whatever angle it meets the fruit at. Springs then hold the fruit on the face, in position and orientation relative to
+  the cup, so it moves with the cup rather than swinging from it. The seal breaks when the pull out of the face passes 40 N, the load
+  along it 20 N, or the moment about its center 1 N m (twisting, and loads that peel the cup). The last two were chosen for this task:
+  friction of 0.5 under the vacuum, and the full pull at the rim of a 5 cm cup. Pulling away from the stem at an angle to the face peels
+  the cup, so where the cup seals on the fruit matters.
 - The fruit detaches when the load on its stem passes a force drawn from 14 to 28 N, whichever way it is pulled. Real apples are reported to
   detach more easily with bending and twisting than with a straight pull, so the direction the policy chooses to pull in means nothing yet.
 - The 50 N protective stop was chosen for this task, not taken from a particular robot.
+
+## Results as the task changes
+
+Success over 240 episodes (2 simulations of each of trees 301-312, never used in training, 10 episodes each), with the policy trained by
+`train.py` (seed 0, 500,000 steps) for that version of the task. The comparison with IsaacSim is in `isaac/` and
+`doc/isaac_comparison_report.md`.
+
+| Grip | Scripted | Trained policy | Main failures of the policy |
+|---|---|---|---|
+| Grips within 3 cm, pulls toward the fruit's center | 66.7% | 79.2% | collision |
+| Must touch the fruit (5 mm), pulls toward its center | 57.9% | 69.2% | timeout 15%, collision 16% |
+| Must touch, holds the fruit on the face, seal limits on pull, sliding and peeling | 45.0% | 52.1% | slipped 23%, collision 15% |
+
+With the last grip the policy pulls mostly downward (mean direction -0.34, -0.09, -0.75), where the earlier ones pulled toward the robot,
+and detaches fruit with a pull out of the face of only half the force to detach: the rest of the load goes along the face or into the
+moment on the seal.

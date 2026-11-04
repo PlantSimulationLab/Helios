@@ -83,6 +83,12 @@ inside PhysX's GPU solve that hardly grows with the number of trees, so the GPU 
 
 ## Known differences from the Helios environment
 
+- **The grip is the earlier one.** Helios's cup now holds the fruit on its face in position and orientation, with limits on the load
+  along the face and the moment on the seal, and observes the seal's load as a fraction of what breaks it. This port still has the
+  grip of commit c63f6a035: a spring that only pulls, from the cup's face toward the fruit's center, which holds the fruit within 5 mm
+  of the face but lets it swing about it, with only the 40 N pull limit, and observes the pull over 40 N. Policies trained on one grip
+  should not be evaluated on the other. The port is to be brought up to date at the next comparison.
+
 - **The fruit's hold is rigid by default.** MuJoCo's detachable weld is a soft constraint with a 4 ms time constant; by default here it
   is a locked joint. When the cup pushes the fruit just after gripping, the stem load spikes to 2-5x the force to detach in PhysX, and
   rarely past 1.2x in MuJoCo, so PhysX counts more such pushes as successes (18 against 6 of 240 episodes, scripted controller on
