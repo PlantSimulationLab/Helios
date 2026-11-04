@@ -11009,10 +11009,7 @@ void PlantArchitecture::setPlantCarbohydrateModelParameters(uint plantID, const 
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::setPlantCarbohydrateModelParameters): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
-    if (carb_parameters.sapwood_area_per_leaf_area > 0.f && !(carb_parameters.sapwood_functional_years > 0.f)) {
-        helios_runtime_error("ERROR (PlantArchitecture::setPlantCarbohydrateModelParameters): CarbohydrateParameters::sapwood_functional_years must be positive when sapwood_area_per_leaf_area is set (got " +
-                             std::to_string(carb_parameters.sapwood_functional_years) + ").");
-    }
+    validateCarbonSubmodel(carb_parameters, "setPlantCarbohydrateModelParameters");
 
     plant_instances.at(plantID).carb_parameters = carb_parameters;
 }
@@ -11097,6 +11094,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
     // **** accumulate photosynthate **** //
     if (carbon_model_enabled) {
         for (uint plantID: plantIDs) {
+            validateCarbonSubmodel(plant_instances.at(plantID).carb_parameters, "advanceTime");
             plant_instances.at(plantID).carbon_budget = PlantCarbonBudget();
             accumulateShootPhotosynthesis(plantID);
             plant_instances.at(plantID).photosynthesis_supply_rate_molC_day = plant_instances.at(plantID).carbon_budget.net_photosynthesis / time_step_days;
@@ -11213,8 +11211,8 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                 // Self-pruning. Evaluated here, at the season boundary, because this is the point at which a branch has
                 // completed a full season in leaf and the peak shadow grid still records the canopy it stood in. With the
-                // carbohydrate model, a branch is instead shed when its own leaves did not pay for its upkeep and growth over the year.
-                if (carbon_model_enabled) {
+                // carbohydrate model's tree sub-model, a branch is instead shed when its own leaves did not pay for its upkeep and growth over the year.
+                if (carbon_model_enabled && plant_instance.carb_parameters.submodel == CARBON_SUBMODEL_TREE) {
                     shedCarbonStarvedBranches(plantID);
                 } else {
                     shedShadedBranches(plantID);
@@ -11243,7 +11241,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 }
             }
             // The carbohydrate model's sapwood ring is sized by the leaf area each internode supplies now, refreshed the same way
-            if (carbon_model_enabled && plant_instance.carb_parameters.sapwood_area_per_leaf_area > 0.f) {
+            if (carbon_model_enabled && plant_instance.carb_parameters.submodel == CARBON_SUBMODEL_TREE && plant_instance.carb_parameters.wood.sapwood_area_per_leaf_area > 0.f) {
                 for (const auto &shoot: *shoot_tree) {
                     if (shoot->parent_shoot_ID < 0) {
                         shoot->refreshLiveDownstreamLeafArea();
@@ -11390,16 +11388,17 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                 // scale internode girth
                 if (shoot->shoot_parameters.girth_area_factor.val() > 0.f) {
-                    // The carbohydrate model sizes radial growth against the shoot's length and volume. Evaluated once per
+                    // The carbohydrate model's tree sub-model sizes radial growth against the shoot's length and volume. Evaluated once per
                     // shoot rather than once per internode, which made the girth update quadratic in the node count.
+                    const bool carbon_cambium = carbon_model_enabled && plant_instance.carb_parameters.submodel == CARBON_SUBMODEL_TREE;
                     float shoot_length = 0.f;
                     float shoot_volume = 0.f;
-                    if (carbon_model_enabled) {
+                    if (carbon_cambium) {
                         shoot_length = shoot->calculateShootLength();
                         shoot_volume = shoot->calculateShootInternodeVolume();
                     }
                     for (uint node_index = 0; node_index < shoot->phytomers.size(); node_index++) {
-                        if (carbon_model_enabled) {
+                        if (carbon_cambium) {
                             incrementPhytomerInternodeGirth_carb(plantID, shoot->ID, node_index, dt_max_days, false, shoot_length, shoot_volume);
                         } else {
                             incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dt_max_days, false);
@@ -11665,7 +11664,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 const PlantCarbonBudget budget_before = plant_instances.at(plantID).carbon_budget;
                 subtractShootMaintenanceCarbon(plantID, dt_max_days);
                 subtractShootGrowthCarbon(plantID, dt_max_days);
-                checkCarbonPool_dropFruit(plantID, dt_max_days);
+                if (plant_instance.carb_parameters.submodel == CARBON_SUBMODEL_TREE) {
+                    checkCarbonPool_dropFruit(plantID, dt_max_days);
+                }
                 allocateSurplusCarbon(plantID, dt_max_days, budget_before);
                 checkCarbonPool_redistributeCarbon(plantID, dt_max_days);
                 checkCarbonPool_adjustPhyllochron(plantID, dt_max_days);

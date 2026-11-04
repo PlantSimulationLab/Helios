@@ -8,14 +8,25 @@ The carbohydrate model is an optional feature in the PlantArchitecture plugin th
 
 Key features of the carbohydrate model include:
 - Photosynthate accumulation from leaf-level photosynthesis
-- Maintenance respiration of wood (by age and size class) and roots, with a Q10 temperature response
-- Construction and growth respiration of wood, roots, leaves, flowers and fruit
+- Maintenance respiration of stem tissue (by age and size class) and roots, with a Q10 temperature response
+- Construction and growth respiration of stem, roots, leaves, flowers and fruit
 - A root carbohydrate reserve
 - Phloem transport that evens out carbohydrate between shoots and roots
 - Temperature-dependent partitioning between sugar and starch
 - Dynamic modulation of phyllochron, internode elongation, leaf expansion, vegetative bud break and radial growth
 - Organ abortion (flowers, fruits, shoots) under carbon stress
 - A per-plant carbon budget reporting every flux
+
+\section CarbSubmodels Carbon Sub-models
+
+Crops differ less in their carbon accounting than in a few mechanisms: how the number and capacity of reproductive sinks are set, what competes for surplus photosynthate, where reserves are held and whether they carry over between seasons, and how shoots are judged. The carbohydrate model is therefore organized as a shared accounting on which a crop-specific <b>sub-model</b> runs those mechanisms. The shared part -- carbohydrate pools in every shoot and in the root system, photosynthate credited from the leaves, maintenance respiration, the construction of stem, root, leaf and flower tissue, phloem transport, finite storage, sugar-starch partitioning, carbon-limited growth and starvation -- is described in \ref CarbMechanisms. The sub-model is chosen per plant with CarbohydrateParameters::submodel:
+
+| Sub-model | Mechanisms | Parameters |
+| ------ | ------ | ------ |
+| CARBON_SUBMODEL_TREE (default) | A volumetric fruit sink set in number and then dropped for lack of carbon (\ref CarbFruitDrop); a cambium that lays down pipe-model wood and sapwood rings from photosynthate, in competition with storage (\ref CarbGirthMod); branches judged on their own carbon balance at the end of each season (\ref CarbBranchShedding). | CarbohydrateParameters::fruit (\ref CarbonFruitParameters), CarbohydrateParameters::wood (\ref CarbonWoodParameters) |
+| CARBON_SUBMODEL_GRASS | Tillers, a culm reserve and a grain sink whose number is set in a critical period around flowering. Not yet implemented: selecting it raises an error. | - |
+
+A sub-model's mechanisms take part in the carbon balance at fixed points of each sub-step: after the shared stem, leaf and root growth has been charged, the sub-model charges its reproductive sink; after that it may drop or abort organs; and the sinks it builds from current photosynthate (the cambium, in the tree sub-model) bid for the surplus against storage (\ref CarbSurplus). Within a time step the sequence is the same for every sub-model.
 
 \section CarbEnable Enabling the Carbohydrate Model
 
@@ -40,16 +51,20 @@ The behavior of the carbohydrate model is controlled by the parameters in the \r
 
 \subsection CarbParamTable Parameter Descriptions
 
-<b>Default values are for mature almond trees (*Prunus dulcis*)</b>, with peach values where almond measurements are not available. All carbohydrate concentration thresholds are expressed per gram of wood dry mass (g C / g DW). Most NSC assays report mg of glucose equivalents per g DW; 1 mg glucose/g DW = 4.0e-4 g C/g DW.
+<b>Default values are for mature almond trees (*Prunus dulcis*)</b>, with peach values where almond measurements are not available. All carbohydrate concentration thresholds are expressed per gram of stem dry mass (g C / g DW). Most NSC assays report mg of glucose equivalents per g DW; 1 mg glucose/g DW = 4.0e-4 g C/g DW.
+
+The parameters shared by every sub-model are members of \ref CarbohydrateParameters. The parameters of each sub-model's own mechanisms are grouped in nested structures, listed in \ref CarbSubmodelParamTable.
 
 | Category | Parameter | Default Value | Units | Description |
 | ------| ------ | ------ | ------ | ------ |
-| **Wood** |||||
-|| stem_density | 675000 | g/m³ | Dry density of mature wood. |
-|| stem_structural_carbon_percentage | 0.43 | g C/g DW | Structural carbon of wood: total wood carbon (0.457) less its NSC. |
+| **Sub-model** |||||
+|| submodel | CARBON_SUBMODEL_TREE | - | The \ref CarbonSubmodel the plant runs on (see \ref CarbSubmodels). |
+| **Stem** |||||
+|| stem_density | 675000 | g/m³ | Dry density of mature stem tissue (almond wood). |
+|| stem_structural_carbon_percentage | 0.43 | g C/g DW | Structural carbon of stem tissue: total wood carbon (0.457) less its NSC. |
 || initial_density_ratio | 0.25 | - | Carbon density of new internode tissue as a fraction of the mature density. |
 || maturity_age | 120 | days | Age at which an internode reaches its mature carbon density. |
-|| shoot_root_ratio | 5 | - | Ratio of woody shoot dry mass to root dry mass. |
+|| shoot_root_ratio | 5 | - | Ratio of shoot (stem) dry mass to root dry mass. |
 | **Leaves** |||||
 || leaf_carbon_percentage | 0.453 | g C/g DW | Carbon content of leaf dry matter. |
 || SLA | 0.009 | m²/g | Specific leaf area (almond leaf mass per area 109-124 g/m²). |
@@ -57,15 +72,6 @@ The behavior of the carbohydrate model is controlled by the parameters in the \r
 || leaf_maturation_days | 60 | days | Days from leaf emergence over which leaf dry mass per unit area rises to its final value (1/SLA). |
 | **Flowers** |||||
 || total_flower_cost | 8.33e-4 | mol C | Carbon cost to construct a single flower. |
-| **Fruit** |||||
-|| fruit_density | 525000 | g/m³ | Dry mass per unit volume of the mature fruit. |
-|| fruit_carbon_percentage | 0.475 | g C/g DW | Carbon content of fruit dry matter. |
-|| fruit_growth_respiration_fraction | 0.3 | mol C/mol C | Growth respiration of fruit per unit of structural carbon. |
-|| fruit_dry_matter_midpoint | 0.4 | - | Fraction of the fruit development period at which half of the fruit's dry matter is in place. |
-|| fruit_dry_matter_width | 0.1 | - | Width of the logistic fruit dry-matter curve, as a fraction of the development period. |
-|| fruit_late_fraction | 0 | - | Fraction of fruit carbon laid down in a second, later phase with its own logistic curve (kernel fill in a nut). 0 keeps the single curve. |
-|| fruit_late_midpoint | 0.8 | - | Fraction of the development period at which half of the late-phase carbon is in place. |
-|| fruit_late_width | 0.06 | - | Width of the late-phase logistic curve, as a fraction of the development period. |
 | **Respiration** |||||
 || r_m_w_20 | 1.75e-4 | mol C/mol C/day | Maintenance respiration of mature wood (trunk, scaffolds) at 20 °C. |
 || r_m_w_branch_20 | 1.8e-3 | mol C/mol C/day | Maintenance respiration at 20 °C of wood over one year old and thinner than branch_radius_threshold. |
@@ -85,18 +91,34 @@ The behavior of the carbohydrate model is controlled by the parameters in the \r
 || starch_temperature_warm | 15 | °C | Temperature at and above which sugar_saturation_warm applies. |
 || starch_temperature_cold | 5 | °C | Temperature at and below which sugar_saturation_cold applies. |
 || starch_conversion_rate | 0.2 | 1/day | Rate at which sugar and starch relax toward their partition. |
-| **Starvation and fruit drop** |||||
+| **Starvation and growth modulation** |||||
 || carbohydrate_starvation_days | 2 | days | Days below carbohydrate_growth_threshold before a shoot's flowers and fruit are aborted. |
-|| fruit_drop_window_end | 63 | days | Days after fruit set after which fruit no longer drops for lack of carbon. |
-|| fruit_drop_averaging_days | 5 | days | Period over which carbon supply and demand are averaged for fruit drop. |
-|| fruit_reserve_funded_days | 14 | days | Days after fruit set during which fruit grows at its potential from reserves; older fruit is built from current photosynthate. |
-|| fruit_abscission_growth_ratio | 0.55 | - | Fruit drops when its realized growth falls below this fraction of its potential. |
-|| branch_shedding_carbon_ratio | 1 | - | A branch is shed at the end of a season when its leaves' net photosynthesis over the year is below this multiple of the carbon it spent (wood maintenance plus construction). |
-| **Growth modulation** |||||
 || carbohydrate_growth_threshold | 0.02 | g C/g DW | Concentration below which a shoot is short of carbon: the phyllochron lengthens, elongation, leaf expansion and bud break slow, radial growth stops, and after carbohydrate_starvation_days its flowers and fruit are aborted. |
+|| supply_averaging_days | 5 | days | Period over which the supply ratios of sinks built from current photosynthate (fruit, cambium) are averaged. |
+
+\subsection CarbSubmodelParamTable Sub-model Parameters
+
+<b>Tree sub-model (CARBON_SUBMODEL_TREE)</b>. The volumetric fruit sink is parameterized by \ref CarbonFruitParameters, held in CarbohydrateParameters::fruit; the cambium and branch shedding by \ref CarbonWoodParameters, held in CarbohydrateParameters::wood.
+
+| Structure | Parameter | Default Value | Units | Description |
+| ------| ------ | ------ | ------ | ------ |
+| **fruit** |||||
+|| density | 525000 | g/m³ | Dry mass per unit volume of the mature fruit. |
+|| carbon_percentage | 0.475 | g C/g DW | Carbon content of fruit dry matter. |
+|| growth_respiration_fraction | 0.3 | mol C/mol C | Growth respiration of fruit per unit of structural carbon. |
+|| dry_matter_midpoint | 0.4 | - | Fraction of the fruit development period at which half of the fruit's dry matter is in place. |
+|| dry_matter_width | 0.1 | - | Width of the logistic fruit dry-matter curve, as a fraction of the development period. |
+|| late_fraction | 0 | - | Fraction of fruit carbon laid down in a second, later phase with its own logistic curve (kernel fill in a nut). 0 keeps the single curve. |
+|| late_midpoint | 0.8 | - | Fraction of the development period at which half of the late-phase carbon is in place. |
+|| late_width | 0.06 | - | Width of the late-phase logistic curve, as a fraction of the development period. |
+|| reserve_funded_days | 14 | days | Days after fruit set during which fruit grows at its potential from reserves; older fruit is built from current photosynthate. |
+|| drop_window_end | 63 | days | Days after fruit set after which fruit no longer drops for lack of carbon. |
+|| abscission_growth_ratio | 0.55 | - | Fruit drops when its realized growth falls below this fraction of its potential. |
+| **wood** |||||
 || radial_growth_rate | 0.025 | 1/day | Rate at which an internode's radius approaches its girth target, paid from photosynthate in competition with storage. 0 stops radial growth. |
 || sapwood_area_per_leaf_area | 0 | m<sup>2</sup> m<sup>-2</sup> | Sapwood area per unit of leaf area it supplies (Huber value). Sets the ring each internode must lay down per season to replace sapwood that becomes heartwood. Non-positive disables it. |
 || sapwood_functional_years | 0 | years | Number of years a ring stays functional sapwood. Must be positive when sapwood_area_per_leaf_area is set. |
+|| branch_shedding_carbon_ratio | 1 | - | A branch is shed at the end of a season when its leaves' net photosynthesis over the year is below this multiple of the carbon it spent (wood maintenance plus construction). |
 
 Sources: wood, leaf and fruit carbon contents and the respiration coefficients are from the PEACH model (Grossman & DeJong 1994, Tree Physiology 14:37-48 and 14:329-345); growth respiration from DeJong & Goudriaan (1989); almond leaf mass per area from Pica et al. (2022); the root storage ratio from almond tree excavations (Esparza et al. 2001); the shoot:root ratio from excavated mature almond (Muhammad et al. 2020). The sugar-starch and threshold values are set from seasonal almond twig NSC measurements (20-170 mg glucose/g DW over the year).
 
@@ -205,7 +227,7 @@ Both new volume and the rising density are charged.
 
 <b>Flowers:</b> total_flower_cost per flower, charged when a flower bud opens or closes.
 
-<b>Fruit:</b> the structural carbon of a mature fruit is its mature volume times fruit_density times fruit_carbon_percentage. It is charged along a dry-matter curve over the fruit's development period (fruit set to maturity) rather than with its volume: with \f$x\f$ the fraction of the period elapsed, the fraction of the mature carbon in place is a logistic curve \f$L(x) = 1/(1 + e^{-(x - m)/w})\f$ (\f$m\f$ = fruit_dry_matter_midpoint, \f$w\f$ = fruit_dry_matter_width) rescaled to run from 0 at set to 1 at maturity. Almond fruit reaches full size ~12 weeks after bloom and lays down ~65% of its final dry weight by ~500 degree-days (late April); the defaults put ~65% in place at 45% of the development period, so most fruit carbon is demanded early, when fruit drop is decided. fruit_growth_respiration_fraction is added on top. With fruit_late_fraction above 0, that share of the fruit's carbon follows a second logistic curve (fruit_late_midpoint, fruit_late_width) late in development, as for the kernel of a nut, and the remainder follows the first curve.
+<b>Fruit (tree sub-model):</b> the structural carbon of a mature fruit is its mature volume times fruit.density times fruit.carbon_percentage. It is charged along a dry-matter curve over the fruit's development period (fruit set to maturity) rather than with its volume: with \f$x\f$ the fraction of the period elapsed, the fraction of the mature carbon in place is a logistic curve \f$L(x) = 1/(1 + e^{-(x - m)/w})\f$ (\f$m\f$ = fruit.dry_matter_midpoint, \f$w\f$ = fruit.dry_matter_width) rescaled to run from 0 at set to 1 at maturity. Almond fruit reaches full size ~12 weeks after bloom and lays down ~65% of its final dry weight by ~500 degree-days (late April); the defaults put ~65% in place at 45% of the development period, so most fruit carbon is demanded early, when fruit drop is decided. fruit.growth_respiration_fraction is added on top. With fruit.late_fraction above 0, that share of the fruit's carbon follows a second logistic curve (fruit.late_midpoint, fruit.late_width) late in development, as for the kernel of a nut, and the remainder follows the first curve.
 
 Growth respiration of wood, roots and leaves is growth_respiration_fraction times their structural carbon.
 
@@ -242,15 +264,15 @@ where \f$C_{\text{threshold}}\f$ is carbohydrate_growth_threshold. Note that the
 
 Internode elongation and leaf expansion slow with the same carbon availability ratio. Each shoot draws its potential elongation and leaf expansion rates when it is created, and the rates it grows at are those potentials times \f$\min(1, r_{\text{carbon}})\f$. A plant running short of carbohydrate therefore slows its own demand rather than growing on until its pools are exhausted.
 
-\subsubsection CarbGirthMod Radial Growth Modulation
+\subsubsection CarbGirthMod Radial Growth Modulation (tree sub-model)
 
-Radial growth stops when a shoot's carbohydrate is at or below carbohydrate_growth_threshold. Each step closes a fraction \f$1 - e^{-r\,\Delta t}\f$ (\f$r\f$ = radial_growth_rate) of the gap to the girth target, so a jump in the target, such as the new leaf area of a spring flush, is laid down as a ring over weeks rather than at once. This growth is a sink-limited potential paid from photosynthate: it is multiplied by the cambium supply ratio, the share of the photosynthate left after maintenance, vegetative growth and fruit that radial growth receives in competition with storage (each in proportion to its demand, up to that demand), relative to its potential cost, averaged over fruit_drop_averaging_days. Fruit therefore outcompetes the cambium, and abundant carbon does not raise wood growth above its potential (free-air CO2 enrichment of mature trees raised photosynthesis but not stem growth; Koerner et al. 2005).
+Radial growth stops when a shoot's carbohydrate is at or below carbohydrate_growth_threshold. Each step closes a fraction \f$1 - e^{-r\,\Delta t}\f$ (\f$r\f$ = wood.radial_growth_rate) of the gap to the girth target, so a jump in the target, such as the new leaf area of a spring flush, is laid down as a ring over weeks rather than at once. This growth is a sink-limited potential paid from photosynthate: it is multiplied by the cambium supply ratio, the share of the photosynthate left after maintenance, vegetative growth and fruit that radial growth receives in competition with storage (each in proportion to its demand, up to that demand), relative to its potential cost, averaged over supply_averaging_days. Fruit therefore outcompetes the cambium, and abundant carbon does not raise wood growth above its potential (free-air CO2 enrichment of mature trees raised photosynthesis but not stem growth; Koerner et al. 2005).
 
-The pipe-model target grows only with new leaf area, so on its own it lets a mature tree with a steady canopy stop thickening. A tree must in fact lay down a new ring every year at constant leaf area, because its oldest sapwood stops conducting and becomes heartwood. With sapwood_area_per_leaf_area (\f$H\f$) and sapwood_functional_years (\f$n\f$) set, each internode owes in each season a ring of area
+The pipe-model target grows only with new leaf area, so on its own it lets a mature tree with a steady canopy stop thickening. A tree must in fact lay down a new ring every year at constant leaf area, because its oldest sapwood stops conducting and becomes heartwood. With wood.sapwood_area_per_leaf_area (\f$H\f$) and wood.sapwood_functional_years (\f$n\f$) set, each internode owes in each season a ring of area
 
 \f[ \Delta A = \frac{H \, L_{peak}}{n} \f]
 
-where \f$L_{peak}\f$ is the highest leaf area currently borne above it during the season. The part not yet laid down closes at radial_growth_rate, as a uniform area added to each radius of the internode so that its taper is kept, and in each step the internode grows by the larger of this increment and its pipe-model increment. The trunk's ring therefore scales with the whole canopy and a twig's with its own leaves.
+where \f$L_{peak}\f$ is the highest leaf area currently borne above it during the season. The part not yet laid down closes at wood.radial_growth_rate, as a uniform area added to each radius of the internode so that its taper is kept, and in each step the internode grows by the larger of this increment and its pipe-model increment. The trunk's ring therefore scales with the whole canopy and a twig's with its own leaves.
 
 \subsubsection CarbBudMod Vegetative Bud Break Modulation
 
@@ -264,9 +286,9 @@ The bud break probability along the shoot is then computed from this maximum, ve
 
 \subsection CarbAbortion Organ Abortion and Shoot Death
 
-\subsubsection CarbFruitDrop Carbon-Driven Fruit Drop
+\subsubsection CarbFruitDrop Carbon-Driven Fruit Drop (tree sub-model)
 
-Fruit number is decided by carbon rather than set: a plant can set more fruit than it can feed and drops the excess, as almond does in its "June drop" 6-7 weeks after bloom (the main drop runs ~20-60 days after full bloom; Lordan et al. 2021). Fruit is built from current photosynthate after a short period funded from reserves (flowers and expanding leaves are built from stored carbon, fruit from current photosynthate; Hoch et al. 2013). Fruit up to fruit_reserve_funded_days after set grows at its potential, paid from the pools. Older fruit grows at its potential times the fruit supply ratio \f$\phi\f$: the photosynthesis credited for the step, less maintenance respiration, vegetative growth and reserve-funded fruit, relative to the older fruit's potential growth (both with growth respiration), averaged over fruit_drop_averaging_days (apple drop follows carbon deficits of more than ~4 days; Robinson & Lakso 2011) and capped at 1. Growth lost to a shortfall is not made up, so a fruit that falls behind stays smaller. When \f$\phi\f$ is below fruit_abscission_growth_ratio \f$\phi_a\f$, a fraction \f$(1 - \phi/\phi_a)\,\Delta t\,/\,\tau\f$ (\f$\tau\f$ = fruit_drop_averaging_days) of the older fruit up to fruit_drop_window_end days after set is dropped, most recently set first (apple fruitlets growing at under ~50-60% of the dominant fruit's rate abscise; Celton et al. 2014). The number dropped is reported in PlantCarbonBudget::fruit_dropped.
+Fruit number is decided by carbon rather than set: a plant can set more fruit than it can feed and drops the excess, as almond does in its "June drop" 6-7 weeks after bloom (the main drop runs ~20-60 days after full bloom; Lordan et al. 2021). Fruit is built from current photosynthate after a short period funded from reserves (flowers and expanding leaves are built from stored carbon, fruit from current photosynthate; Hoch et al. 2013). Fruit up to fruit.reserve_funded_days after set grows at its potential, paid from the pools. Older fruit grows at its potential times the fruit supply ratio \f$\phi\f$: the photosynthesis credited for the step, less maintenance respiration, vegetative growth and reserve-funded fruit, relative to the older fruit's potential growth (both with growth respiration), averaged over supply_averaging_days (apple drop follows carbon deficits of more than ~4 days; Robinson & Lakso 2011) and capped at 1. Growth lost to a shortfall is not made up, so a fruit that falls behind stays smaller. When \f$\phi\f$ is below fruit.abscission_growth_ratio \f$\phi_a\f$, a fraction \f$(1 - \phi/\phi_a)\,\Delta t\,/\,\tau\f$ (\f$\tau\f$ = supply_averaging_days) of the older fruit up to fruit.drop_window_end days after set is dropped, most recently set first (apple fruitlets growing at under ~50-60% of the dominant fruit's rate abscise; Celton et al. 2014). The number dropped is reported in PlantCarbonBudget::fruit_dropped.
 
 \subsubsection CarbFlowerFruitAbort Flower and Fruit Abortion under Carbon Starvation
 
@@ -276,13 +298,13 @@ If a shoot's carbohydrate concentration stays below carbohydrate_growth_threshol
 
 A shoot left with no carbohydrate at all is removed using \ref PlantArchitecture::pruneBranch(); because deficits are made up from the rest of the plant, this happens only once the whole plant is exhausted. Branches that do not pay their way are shed at the end of the season (see \ref CarbBranchShedding).
 
-\subsubsection CarbBranchShedding Branch Shedding by Carbon Starvation
+\subsubsection CarbBranchShedding Branch Shedding by Carbon Starvation (tree sub-model)
 
 Self-pruning follows the branch autonomy of Sprugel et al. (1991, Annual Review of Ecology and Systematics 22:309-334): a branch lives on the carbon its own leaves fix, not on the tree's reserves. Each shoot records the net photosynthesis credited to its own leaves, the maintenance respiration charged to its own wood, and the construction of its own wood, leaves, flowers and fruit (with growth respiration). At the end of each season (the dormancy boundary), \ref PlantArchitecture::shedCarbonStarvedBranches() totals these records over every branch -- a shoot together with its descendants -- from the tips inward, and sheds a branch when
 
 \f[ A_{branch} < r \left( R_{m,branch} + G_{branch} \right) \f]
 
-where \f$A_{branch}\f$ is the net photosynthesis of the branch's leaves and \f$R_{m,branch}\f$ the maintenance respiration of its wood and \f$G_{branch}\f$ its construction over the year since the last evaluation, and \f$r\f$ is branch_shedding_carbon_ratio. With \f$r = 1\f$ a branch is shed when it has had to import carbon from the rest of the tree; because fruit is part of \f$G_{branch}\f$, heavy cropping on poorly lit wood can kill it, as is observed for almond spurs. A shed sub-branch no longer counts toward the branch that carries it, so a shaded twig is removed while the limb bearing it survives on its other branches, and a limb survives only if what remains of it still pays its way. Only shoots of type "proleptic", "sylleptic" or "spur" that have been through at least one full season are judged; the trunk and scaffolds are never shed (see \ref PlantArchitecture::isStructuralShoot()). The records are then reset.
+where \f$A_{branch}\f$ is the net photosynthesis of the branch's leaves and \f$R_{m,branch}\f$ the maintenance respiration of its wood and \f$G_{branch}\f$ its construction over the year since the last evaluation, and \f$r\f$ is wood.branch_shedding_carbon_ratio. With \f$r = 1\f$ a branch is shed when it has had to import carbon from the rest of the tree; because fruit is part of \f$G_{branch}\f$, heavy cropping on poorly lit wood can kill it, as is observed for almond spurs. A shed sub-branch no longer counts toward the branch that carries it, so a shaded twig is removed while the limb bearing it survives on its other branches, and a limb survives only if what remains of it still pays its way. Only shoots of type "proleptic", "sylleptic" or "spur" that have been through at least one full season are judged; the trunk and scaffolds are never shed (see \ref PlantArchitecture::isStructuralShoot()). The records are then reset.
 
 Short shoots such as almond spurs can be given carbon-based dynamics through their shoot type. With ShootParameters::fruit_cost_share below 1, a shoot is charged only that share of its own fruit's cost and the branch bearing it the rest, since spur fruit also draws on the surrounding leaves. With ShootParameters::carbon_survival_scale set, a shoot survives with probability \f$1/(1+e^{-(z-z_{50})/s})\f$, where \f$z\f$ is the logarithm of its income over its costs, instead of being shed whenever \f$z<0\f$. With ShootParameters::return_bloom_scale set, a surviving shoot flowers in the next season with a probability that rises logistically with its vegetative carbon index and is cut by ShootParameters::return_bloom_bearing_factor if it bore fruit; a shoot that does not flower loses its flower buds at dormancy break. Bearing therefore depletes a spur and lowers its next-year flowering, giving it a season to recover. With the carbohydrate model enabled this replaces the shade-based branch shedding used otherwise; growth priority among sibling laterals is shade-based in both cases.
 

@@ -1167,6 +1167,24 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model does not abort on any li
     }
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model selects its sub-model from CarbohydrateParameters::submodel") {
+    // The default parameters run the tree sub-model. A sub-model this build does not implement is rejected when the
+    // parameters are set, before a plant can be advanced with it.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.enableCarbohydrateModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    CarbohydrateParameters params;
+    DOCTEST_CHECK(params.submodel == CARBON_SUBMODEL_TREE);
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params));
+
+    params.submodel = CARBON_SUBMODEL_GRASS;
+    DOCTEST_CHECK_THROWS_AS(plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params), std::runtime_error);
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model grows a plant when carbon is supplied") {
     // With the aborts fixed, the model must actually run a plant through its carbon balance: the plant
     // has to stay alive and put on leaf area rather than starve. This follows the workflow documented in
@@ -1340,7 +1358,7 @@ static float matureFruitCarbon(Context &context, const FloralBud &fbud, const Ca
             volume += context.getPolymeshObjectVolume(objID);
         }
     }
-    return volume / std::pow(fbud.current_fruit_scale_factor, 3.f) * params.fruit_density * params.fruit_carbon_percentage / C_molecular_wt;
+    return volume / std::pow(fbud.current_fruit_scale_factor, 3.f) * params.fruit.density * params.fruit.carbon_percentage / C_molecular_wt;
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges leaf expansion") {
@@ -1755,8 +1773,8 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges fruit carbon alo
     plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, fruit_development_days, 1000);
     // Every fruit funded from reserves, so it grows at its potential along the curve whatever the photosynthesis
     CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
-    params.fruit_reserve_funded_days = 1e6f;
-    params.fruit_drop_window_end = 2e6f;
+    params.fruit.reserve_funded_days = 1e6f;
+    params.fruit.drop_window_end = 2e6f;
     plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
     plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
     plantarchitecture.enableCarbohydrateModel();
@@ -1765,7 +1783,7 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges fruit carbon alo
         plantarchitecture.advanceTime(plantID, 1);
     }
 
-    auto logistic = [&](float x) { return 1.f / (1.f + std::exp(-(x - params.fruit_dry_matter_midpoint) / params.fruit_dry_matter_width)); };
+    auto logistic = [&](float x) { return 1.f / (1.f + std::exp(-(x - params.fruit.dry_matter_midpoint) / params.fruit.dry_matter_width)); };
     auto dry_matter_fraction = [&](float x) { return (logistic(x) - logistic(0.f)) / (logistic(1.f) - logistic(0.f)); };
     int fruit_checked = 0;
     bool partly_developed_fruit = false;
@@ -1791,7 +1809,7 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges fruit carbon alo
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges a late phase of fruit carbon separately") {
-    // A nut lays down its hull and shell first and fills its kernel later. With fruit_late_fraction set, that share of the
+    // A nut lays down its hull and shell first and fills its kernel later. With fruit.late_fraction set, that share of the
     // fruit's carbon follows a second logistic curve late in development, and each fruit's charged fraction must equal the
     // weighted sum of the two curves at its age.
     Context context;
@@ -1803,7 +1821,7 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges a late phase of 
     constexpr float fruit_development_days = 30.f;
     plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, fruit_development_days, 1000);
     CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
-    params.fruit_late_fraction = 0.45f;
+    params.fruit.late_fraction = 0.45f;
     plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
     plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
     plantarchitecture.enableCarbohydrateModel();
@@ -1816,8 +1834,8 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges a late phase of 
         auto logistic = [&](float position) { return 1.f / (1.f + std::exp(-(position - midpoint) / width)); };
         return (logistic(x) - logistic(0.f)) / (logistic(1.f) - logistic(0.f));
     };
-    auto early_phase = [&](float x) { return rescaledLogistic(x, params.fruit_dry_matter_midpoint, params.fruit_dry_matter_width); };
-    auto both_phases = [&](float x) { return (1.f - params.fruit_late_fraction) * early_phase(x) + params.fruit_late_fraction * rescaledLogistic(x, params.fruit_late_midpoint, params.fruit_late_width); };
+    auto early_phase = [&](float x) { return rescaledLogistic(x, params.fruit.dry_matter_midpoint, params.fruit.dry_matter_width); };
+    auto both_phases = [&](float x) { return (1.f - params.fruit.late_fraction) * early_phase(x) + params.fruit.late_fraction * rescaledLogistic(x, params.fruit.late_midpoint, params.fruit.late_width); };
     int fruit_checked = 0;
     bool partly_developed_fruit = false;
     for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
@@ -1845,7 +1863,7 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model charges a late phase of 
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture builds fruit from current photosynthate after its reserve-funded period") {
-    // Fruit is built from current photosynthate, after a short period funded from reserves. With fruit_reserve_funded_days
+    // Fruit is built from current photosynthate, after a short period funded from reserves. With fruit.reserve_funded_days
     // set, fruit past that period grows at its potential only while there is photosynthate left for it, falls behind its
     // potential (for good) when there is none, and drops; fruit still within the period grows at its potential regardless.
     constexpr float fruit_development_days = 30.f;
@@ -1866,7 +1884,7 @@ DOCTEST_TEST_CASE("PlantArchitecture builds fruit from current photosynthate aft
         const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 75);
         plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, fruit_development_days, 1000);
         CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
-        params.fruit_reserve_funded_days = reserve_funded_days;
+        params.fruit.reserve_funded_days = reserve_funded_days;
         plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
         plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
         plantarchitecture.enableCarbohydrateModel();
@@ -2253,7 +2271,7 @@ DOCTEST_TEST_CASE("PlantArchitecture radial growth approaches its pipe-model tar
         plantarchitecture.loadPlantModelFromLibrary("bean");
         const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
         CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
-        params.radial_growth_rate = radial_growth_rate;
+        params.wood.radial_growth_rate = radial_growth_rate;
         plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
         plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
         plantarchitecture.enableCarbohydrateModel();
@@ -2276,7 +2294,7 @@ DOCTEST_TEST_CASE("PlantArchitecture radial growth approaches its pipe-model tar
     DOCTEST_CHECK(trunkRadiusIncrement(0.f) == 0.f); // a rate of 0 stops radial growth, as a caller's cambial season does
 
     CarbohydrateParameters invalid;
-    invalid.radial_growth_rate = -1.f;
+    invalid.wood.radial_growth_rate = -1.f;
     Context context;
     PlantArchitecture plantarchitecture(&context);
     plantarchitecture.disableMessages();
@@ -2301,9 +2319,9 @@ DOCTEST_TEST_CASE("PlantArchitecture lays down a sapwood ring sized by the live 
     const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
     CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
     constexpr float rate = 0.05f;
-    params.radial_growth_rate = rate;
-    params.sapwood_area_per_leaf_area = 0.05f;
-    params.sapwood_functional_years = 2.f;
+    params.wood.radial_growth_rate = rate;
+    params.wood.sapwood_area_per_leaf_area = 0.05f;
+    params.wood.sapwood_functional_years = 2.f;
     plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
     plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
     plantarchitecture.enableCarbohydrateModel();
@@ -2321,13 +2339,13 @@ DOCTEST_TEST_CASE("PlantArchitecture lays down a sapwood ring sized by the live 
     const float supplied_leaf_area = trunk_base->live_downstream_leaf_area;
     DOCTEST_REQUIRE(supplied_leaf_area > 0.f);
     DOCTEST_CHECK(supplied_leaf_area == doctest::Approx(plantarchitecture.sumPlantLeafArea(plantID)).epsilon(0.2));
-    const float ring_owed = params.sapwood_area_per_leaf_area * supplied_leaf_area / params.sapwood_functional_years;
+    const float ring_owed = params.wood.sapwood_area_per_leaf_area * supplied_leaf_area / params.wood.sapwood_functional_years;
     DOCTEST_REQUIRE(ring_owed > 10.f * area_before); // the ring, not the pipe-model gap, sets this day's growth
     DOCTEST_CHECK(trunkBaseArea() - area_before == doctest::Approx((1.f - std::exp(-rate)) * ring_owed).epsilon(0.02));
 
     // Parameters are validated when set
     CarbohydrateParameters invalid = params;
-    invalid.sapwood_functional_years = 0.f;
+    invalid.wood.sapwood_functional_years = 0.f;
     DOCTEST_CHECK_THROWS(plantarchitecture.setPlantCarbohydrateModelParameters(plantID, invalid));
 }
 
@@ -2350,7 +2368,7 @@ DOCTEST_TEST_CASE("PlantArchitecture pays rate-limited radial growth from photos
         CarbohydrateParameters params = beanCarbohydrateParameters();
         params.storage_capacity = 0.05f;
         params.storage_refill_rate = 0.03f;
-        params.radial_growth_rate = 0.05f;
+        params.wood.radial_growth_rate = 0.05f;
         params.carbohydrate_growth_threshold = 0.f;
         // Leaves nearly free and no maintenance, so that the starved plant does not run out of carbohydrate and lose shoots
         params.SLA = 1e6f;
@@ -6265,7 +6283,7 @@ DOCTEST_TEST_CASE("Maize Tassel Prototype - Volume Is That Of Its Closed Spikele
     float volume = 0.f;
     DOCTEST_REQUIRE_NOTHROW(volume = context.getPolymeshObjectVolume(objID));
     const CarbohydrateParameters carbohydrate_parameters;
-    const float mass_grams = volume * carbohydrate_parameters.fruit_density;
+    const float mass_grams = volume * carbohydrate_parameters.fruit.density;
     DOCTEST_CHECK(mass_grams > 6.f);
     DOCTEST_CHECK(mass_grams < 30.f);
 
