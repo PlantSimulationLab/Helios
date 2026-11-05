@@ -55,6 +55,11 @@ typedef struct {
     int steps; //!< Control steps in the episode
 } HarvestEpisodeRecord;
 
+//! Start this share of episodes (0 to 1; 0 by default) with the cup a few centimeters short of its fruit and somewhat out of line with it, instead of
+//! with the arm tucked, so that training practices the last part of the task. A placement the arm cannot reach without touching anything falls back to
+//! the tucked start. Applies from each simulation's next episode. For training only: evaluation keeps the default. Returns 0 and prints the reason on failure.
+int harvest_env_set_near_start_fraction(void *env, float fraction);
+
 //! Add a camera on the robot's wrist to every simulation, with images of width by height pixels. Call it on the thread that will call harvest_env_render(), since OpenGL is tied to a thread. Returns 0 and prints the reason on failure.
 int harvest_env_enable_camera(void *env, int width, int height);
 

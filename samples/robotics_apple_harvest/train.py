@@ -1,6 +1,6 @@
 """Train a state-based policy to pick apples, and report how it does on trees it never saw in training.
 
-Usage, from the build directory: python ../train.py [--steps 400000] [--threads 6] [--output apple_policy] [--seed 0]
+Usage, from the build directory: python ../train.py [--steps 400000] [--threads 6] [--output apple_policy] [--seed 0] [--near-start 0] [--start-from apple_policy]
 """
 
 import argparse
@@ -51,15 +51,26 @@ def main():
     parser.add_argument("--report-every", type=int, default=50000)
     parser.add_argument("--output", default="apple_policy")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--near-start", type=float, default=0.0, help="share of training episodes started with the cup near its fruit (training success then counts them too); held-out episodes always start tucked")
+    parser.add_argument("--start-from", help="policy to continue training (saved with its _normalization.pkl), rather than starting a new one")
     args = parser.parse_args()
 
     # The simulation has the threads; the small network needs few
     torch.set_num_threads(2)
 
-    env = VecNormalize(AppleHarvestVecEnv(TRAIN_SEEDS, instances_per_tree=2, threads=args.threads, seed=args.seed), norm_obs=True, norm_reward=True, gamma=0.99)
+    training_env = AppleHarvestVecEnv(TRAIN_SEEDS, instances_per_tree=2, threads=args.threads, seed=args.seed)
+    training_env.set_near_start_fraction(args.near_start)
+    if args.start_from:
+        env = VecNormalize.load(args.start_from + "_normalization.pkl", training_env)
+        env.training = True
+    else:
+        env = VecNormalize(training_env, norm_obs=True, norm_reward=True, gamma=0.99)
     held_out_env = AppleHarvestVecEnv(HELD_OUT_SEEDS, instances_per_tree=2, threads=args.threads, seed=1000)
 
-    model = PPO("MlpPolicy", env, n_steps=256, batch_size=1024, n_epochs=8, learning_rate=3e-4, gamma=0.99, gae_lambda=0.95, clip_range=0.2, ent_coef=0.001, policy_kwargs=dict(net_arch=[128, 128]), seed=args.seed, device="cpu", verbose=0)
+    if args.start_from:
+        model = PPO.load(args.start_from, env=env, seed=args.seed, device="cpu")
+    else:
+        model = PPO("MlpPolicy", env, n_steps=256, batch_size=1024, n_epochs=8, learning_rate=3e-4, gamma=0.99, gae_lambda=0.95, clip_range=0.2, ent_coef=0.001, policy_kwargs=dict(net_arch=[128, 128]), seed=args.seed, device="cpu", verbose=0)
     model.learn(args.steps, callback=Progress(held_out_env, args.report_every))
     model.save(args.output)
     env.save(args.output + "_normalization.pkl")

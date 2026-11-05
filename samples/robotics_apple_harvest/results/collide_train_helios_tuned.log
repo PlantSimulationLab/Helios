@@ -1,0 +1,24 @@
+C:\isaacsim\kit\python\Lib\site-packages\stable_baselines3\common\vec_env\base_vec_env.py:78: UserWarning: The `render_mode` attribute is not defined in your environment. It will be set to None.
+  warnings.warn("The `render_mode` attribute is not defined in your environment. It will be set to None.")
+steps    50000     2.9 min    286 steps/s  training success 25.7%  held-out success 12.5% timeout 25.0% slipped  0.0% knocked off 25.0% collision 37.5%
+steps   100000     5.8 min    288 steps/s  training success 28.3%  held-out success 25.0% timeout  6.2% slipped  0.0% knocked off 37.5% collision 31.2%
+steps   150000     8.8 min    284 steps/s  training success 31.4%  held-out success  6.2% timeout 12.5% slipped  0.0% knocked off 18.8% collision 62.5%
+steps   200000    11.8 min    282 steps/s  training success 38.7%  held-out success  6.2% timeout 31.2% slipped  0.0% knocked off 25.0% collision 37.5%
+steps   250000    14.8 min    281 steps/s  training success 36.0%  held-out success  0.0% timeout 25.0% slipped  0.0% knocked off 31.2% collision 43.8%
+steps   300000    17.9 min    280 steps/s  training success 37.8%  held-out success  6.2% timeout 18.8% slipped  0.0% knocked off 18.8% collision 56.2%
+steps   350000    20.9 min    279 steps/s  training success 41.9%  held-out success  6.2% timeout 18.8% slipped  0.0% knocked off 18.8% collision 56.2%
+steps   400000    23.8 min    280 steps/s  training success 38.4%  held-out success  0.0% timeout 18.8% slipped  0.0% knocked off  6.2% collision 75.0%
+steps   450000    26.7 min    280 steps/s  training success 38.4%  held-out success 18.8% timeout 25.0% slipped  0.0% knocked off 25.0% collision 31.2%
+steps   500000    29.8 min    280 steps/s  training success 35.8%  held-out success  6.2% timeout 18.8% slipped  0.0% knocked off 31.2% collision 43.8%
+steps   550000    32.7 min    281 steps/s  training success 39.6%  held-out success 18.8% timeout 31.2% slipped  0.0% knocked off 12.5% collision 37.5%
+steps   600000    35.7 min    280 steps/s  training success 39.5%  held-out success 12.5% timeout 37.5% slipped  0.0% knocked off 18.8% collision 31.2%
+steps   650000    38.6 min    281 steps/s  training success 38.9%  held-out success 31.2% timeout 18.8% slipped  0.0% knocked off 12.5% collision 37.5%
+steps   700000    41.5 min    281 steps/s  training success 45.6%  held-out success 31.2% timeout  6.2% slipped  0.0% knocked off 18.8% collision 43.8%
+steps   750000    44.4 min    282 steps/s  training success 43.9%  held-out success 18.8% timeout 25.0% slipped  0.0% knocked off 25.0% collision 31.2%
+steps   800000    47.3 min    282 steps/s  training success 38.2%  held-out success 25.0% timeout 12.5% slipped  6.2% knocked off 18.8% collision 37.5%
+steps   850000    50.3 min    282 steps/s  training success 45.8%  held-out success 18.8% timeout 25.0% slipped  0.0% knocked off 12.5% collision 43.8%
+steps   900000    53.2 min    282 steps/s  training success 40.0%  held-out success 56.2% timeout  6.2% slipped  0.0% knocked off  6.2% collision 31.2%
+steps   950000    56.1 min    282 steps/s  training success 45.8%  held-out success 50.0% timeout 12.5% slipped  0.0% knocked off 12.5% collision 25.0%
+steps  1000000    59.0 min    282 steps/s  training success 47.7%  held-out success 43.8% timeout  6.2% slipped  0.0% knocked off 12.5% collision 37.5%
+Final, 40 episodes on 4 held-out trees: {'success': 0.35, 'timeout': 0.075, 'slipped': 0.025, 'knocked_off': 0.175, 'collision': 0.375}
+Final, 32 episodes on the 8 training trees: {'success': 0.71875, 'timeout': 0.0625, 'slipped': 0.0, 'knocked_off': 0.125, 'collision': 0.09375}

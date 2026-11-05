@@ -83,6 +83,10 @@ inside PhysX's GPU solve that hardly grows with the number of trees, so the GPU 
 
 ## Known differences from the Helios environment
 
+- **Helios's tree now collides with itself.** Its parts collide with each other, except the pairs that overlap as the tree is grown, so
+  the arm cannot push a fruit through wood it was not grown into. In this port nothing of the tree collides with the tree, as in Helios
+  before. To be brought up to date with the grip.
+
 - **The grip is the earlier one.** Helios's cup is now a bowl with a lip that seals only with the fruit seated in its mouth on the cup's
   axis, holds the fruit there in position and orientation, with limits on the load across the mouth and the moment on the seal, and
   observes the seal's load as a fraction of what breaks it and the fruit's offset from the cup's axis (26 observations). Its protective

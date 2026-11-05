@@ -20,7 +20,7 @@ PyTorch brings its own OpenMP runtime and two in one process can give wrong resu
 
 ## The task
 
-**Observations (23):** fruit position relative to the cup, distance to the fruit's surface, cup position, cup velocity, joint
+**Observations (26):** fruit position relative to the cup, distance to the fruit's surface, cup position, cup velocity, joint
 positions, whether it is gripping, the load on the cup's seal as a fraction of what breaks it, contact force on the tree, time, the
 offset to the nearest wood, and the offset of the fruit's center from the cup's axis. The distance is from the point of the cup's lip
 farthest from the fruit to the fruit's surface, so it is small only when the cup is in line with the fruit.
@@ -32,6 +32,16 @@ so the cup is in line with a fruit when the fruit is on the level line from the 
 **Episode end:** success if the fruit detaches while gripped. Failure if the force of the robot on the tree passes 50 N (a protective
 stop), the cup's seal breaks, the fruit detaches without being gripped, or 10 s pass. The force on the tree leaves out the cup's contact
 with the fruit being picked, which it has to touch; pushing that fruit too hard knocks it off.
+
+**Start:** the arm tucked, with the robot up to 0.2 m along the row from the fruit. For training, `train.py --near-start 0.4` starts 40% of
+episodes with the cup instead 2-12 cm short of where the fruit would be seated and up to 3 cm out of line with it, so that the policy
+practises lining the cup up and sealing it; a placement the arm cannot reach without touching anything (about 3%) starts tucked. Held-out
+episodes and evaluation always start tucked. On the tree whose parts collide, this did not help a policy trained from scratch (1.7% against
+5.0% without it, below).
+
+**Reward:** -0.005 a step; while not gripping, 5 per meter the distance above shrinks; 1 on gripping; while gripping, 3 times the rise in
+the stem's load over 28 N; -0.02 per newton of the peak force on the tree in the step, up to 50 N; and at the end, 10 for success and -2 for
+a broken seal, a knocked-off fruit or a protective stop.
 
 ## Camera
 
@@ -47,6 +57,12 @@ Each tree settles under gravity for 20 s when it is built, which takes about 7 s
 - The policy is given exact positions of the fruit and wood, which stand in for perception.
 - Leaves are removed unless asked for. With `--leaves`, they hide things from the camera but are fixed to the wood and collide with nothing, so the arm passes through them. Only the 8 reachable fruit nearest the robot on each tree are targeted.
 - Wood is rigid except for 8 internodes behind each candidate fruit. Fully flexible wood is about 37x slower.
+- The tree's parts collide with each other, so the arm cannot push a fruit through wood or another fruit. The tree is grown with many
+  parts already overlapping, though: every target fruit is partly inside the shoot that bears it, and often inside other shoots and fruit,
+  by up to 7.7 cm. Pushing them apart would bend the wood against the fruit and load each stem past its force to detach before the arm
+  moves (the scripted controller then succeeded 8.8% of the time, with 84% of episodes ending on their first step). So each pair that
+  overlaps as grown, 87 to 361 pairs per tree, never collides (`PhysicsEngineParameters::keep_initial_link_overlaps`), and a fruit can
+  still pass through the particular wood or fruit it was grown into. These collisions make each step about 60% slower.
 - The cup is a bowl 5 cm across whose lip is a ring of spheres 4 mm in radius; its wall does not collide. It seals at once when every point
   of the lip is within 5 mm of the fruit's surface, which means the fruit sits in the mouth with its center within about 8 mm of the cup's
   axis: a lip that only touches the fruit on one side does not seal. Springs then hold the fruit seated in the mouth, with its center on
@@ -69,7 +85,8 @@ Success over 240 episodes (2 simulations of each of trees 301-312, never used in
 | Grips within 3 cm, pulls toward the fruit's center | 61.3% | 79.2% | collision |
 | Must touch the fruit (5 mm), pulls toward its center | 57.9% | 69.2% | timeout 15%, collision 16% |
 | Must touch, holds the fruit on the face, seal limits on pull, sliding and peeling | 45.0% | 52.1% | slipped 23%, collision 15% |
-| Seals only with the whole lip on the fruit, which sits in the cup's mouth (this version) | 50.0% | 17.1% (31.7% after 1,500,000 steps) | timeout 48%, collision 23% (after 1.5M: collision 37%, timeout 17%) |
+| Seals only with the whole lip on the fruit, which sits in the cup's mouth | 50.0% | 17.1% (31.7% after 1,500,000 steps) | timeout 48%, collision 23% (after 1.5M: collision 37%, timeout 17%) |
+| Same grip, and the tree's parts collide with each other (this version) | 49.6% | 31.7% | collision 29%, knocked off 21%, timeout 16% |
 
 With the face grip the policy pulls mostly downward (mean direction -0.34, -0.09, -0.75), where the earlier ones pulled toward the robot,
 and detaches fruit with a pull out of the face of only half the force to detach: the rest of the load goes along the face or into the
@@ -80,3 +97,9 @@ it up means moving the drive and the arm together. PPO learns this slowly: 17.1%
 after 1,500,000, when its success in training was still rising (47%). Its main failure is then the protective stop, reaching through wood
 to line up. The scripted controller of this version lines the cup up 8 cm short of the fruit and then pushes straight in, which the
 earlier rows' controller (straight at the fruit) did not do, so its rows are not comparable with this one. The results are in `results/seat_*`.
+
+Until this version a fruit could be pushed through wood and other fruit. Now they collide (see the idealizations below), which leaves the
+scripted controller as it was (49.6%) and the seated-grip policy at 22.1% (17.3-27.7%) without retraining. Trained from scratch on the
+colliding tree for 1,500,000 steps, PPO learned to hover short of the fruit until time ran out: 5.0% success with 71% timeouts, and 1.7%
+with the near start. Training the seated-grip policy for 1,000,000 more steps on the colliding tree (`train.py --start-from
+apple_policy_helios_seat_seed0`) brings it back to 31.7% (26.1-37.8%), with its timeouts at 16%. The results are in `results/collide_*`.

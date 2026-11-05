@@ -74,6 +74,12 @@ namespace {
     const float context_update_tolerance = 0.0005f; // m
 
     const float start_offset = 0.2f; // m along the row that the robot starts from the fruit, at most
+    // A start near the fruit, for training only (harvest_env_set_near_start_fraction()): the cup this far short of where the fruit would be seated, along
+    // the line from the turret, and up to near_start_off_axis off that line, sideways and up or down
+    const float near_start_min_standoff = 0.02f; // m
+    const float near_start_max_standoff = 0.12f; // m
+    const float near_start_off_axis = 0.03f; // m
+    const int near_start_attempts = 5; // placements tried, each kept only if the arm reaches it without touching anything; otherwise the tucked start
 
     const int observation_size = 26;
     const int action_size = 4;
@@ -244,6 +250,10 @@ namespace {
 
             PhysicsEngineParameters parameters;
             parameters.ground_collisions = true;
+            // The tree's parts collide with each other, so that the arm cannot push a fruit into wood or another fruit. Those that the tree was grown with
+            // overlapping stay as they are: pushing them apart would bend the wood against the fruit and load their stems before the arm touches them.
+            parameters.articulation_collisions = true;
+            parameters.keep_initial_link_overlaps = true;
             engine.initialize(parameters);
             robot->initialize();
 
@@ -297,6 +307,7 @@ namespace {
         Tree *tree = nullptr;
         uint instance = 0;
         std::mt19937 random;
+        float near_start_fraction = 0.f; // share of episodes started with the cup near the fruit
         const Candidate *target = nullptr;
         float detach_force = 0.f;
         bool gripped = false;
@@ -589,6 +600,53 @@ namespace {
         observation[i++] = off_axis.z;
     }
 
+    // Whether any part of the robot touches anything other than itself and the ground
+    bool robotTouches(const Slot &slot) {
+        const mjModel *model = slot.tree->engine.getMuJoCoModel();
+        const mjData *data = slot.tree->engine.getMuJoCoData(slot.instance);
+        const int robot_root = model->body_rootid[slot.tree->tool_body_ID];
+        for (int c = 0; c < data->ncon; c++) {
+            const mjContact &contact = data->contact[c];
+            if (contact.dist >= 0) {
+                continue;
+            }
+            const int body_0 = model->geom_bodyid[contact.geom[0]];
+            const int body_1 = model->geom_bodyid[contact.geom[1]];
+            const bool robot_0 = model->body_rootid[body_0] == robot_root;
+            const bool robot_1 = model->body_rootid[body_1] == robot_root;
+            if (robot_0 != robot_1 && body_0 != 0 && body_1 != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Place the arm with the cup a few centimeters short of the fruit and somewhat out of line with it, pointing away from the turret, so that training
+    // practices lining the cup up and sealing it. Returns false, leaving the arm as it was, when no placement tried is reachable without touching anything.
+    bool placeCupNearFruit(Slot &slot, const std::vector<float> &start_pose) {
+        Tree &tree = *slot.tree;
+        std::uniform_real_distribution<float> unit(0.f, 1.f);
+        const vec3 fruit = toVec3(tree.engine.getMuJoCoData(slot.instance)->xipos + 3 * slot.target->body_ID);
+        for (int attempt = 0; attempt < near_start_attempts; attempt++) {
+            vec3 line = fruit - make_vec3(robot_base.x + 0.15f, start_pose[0], fruit.z);
+            line.normalize();
+            const vec3 sideways = make_vec3(-line.y, line.x, 0.f);
+            const float standoff = seatDistance(slot) + near_start_min_standoff + unit(slot.random) * (near_start_max_standoff - near_start_min_standoff);
+            const vec3 target = fruit - standoff * line + near_start_off_axis * ((2.f * unit(slot.random) - 1.f) * sideways + (2.f * unit(slot.random) - 1.f) * make_vec3(0, 0, 1));
+            vec3 pointing = target - make_vec3(robot_base.x + 0.15f, start_pose[0], target.z);
+            pointing.normalize();
+            const RobotInverseKinematicsResult pose = tree.robot->solveInverseKinematics(target, pointing, {"roll"}, slot.instance);
+            if (pose.converged) {
+                tree.robot->setJointPositions(pose.joint_positions, slot.instance);
+                if ((tree.robot->getToolPosition(slot.instance) - target).magnitude() < 0.01f && !robotTouches(slot)) {
+                    return true;
+                }
+                tree.robot->setJointPositions(start_pose, slot.instance);
+            }
+        }
+        return false;
+    }
+
     void resetSlot(Slot &slot) {
         Tree &tree = *slot.tree;
         PhysicsEngine &engine = tree.engine;
@@ -604,6 +662,9 @@ namespace {
         std::vector<float> start_pose = tucked_pose;
         start_pose[0] = slot.target->settled_position.y + (2.f * unit(slot.random) - 1.f) * start_offset;
         tree.robot->setJointPositions(start_pose, slot.instance);
+        if (slot.near_start_fraction > 0.f && unit(slot.random) < slot.near_start_fraction) {
+            placeCupNearFruit(slot, start_pose);
+        }
 
         slot.gripped = false;
         slot.grip_seconds = 0.f;
@@ -1072,6 +1133,22 @@ int harvest_env_action_size(void) {
 
 int harvest_env_max_steps(void) {
     return max_control_steps;
+}
+
+int harvest_env_set_near_start_fraction(void *env, float fraction) {
+    Environment &environment = *static_cast<Environment *>(env);
+    try {
+        if (!(fraction >= 0.f && fraction <= 1.f)) {
+            helios_runtime_error("ERROR (harvest_env_set_near_start_fraction): The fraction must be from 0 to 1, but was " + std::to_string(fraction) + ".");
+        }
+        for (Slot &slot: environment.slots) {
+            slot.near_start_fraction = fraction;
+        }
+        return 1;
+    } catch (const std::exception &error) {
+        std::cerr << error.what() << std::endl;
+        return 0;
+    }
 }
 
 int harvest_env_enable_camera(void *env, int width, int height) {

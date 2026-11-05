@@ -34,6 +34,7 @@ _float_pointer = ctypes.POINTER(ctypes.c_float)
 _int_pointer = ctypes.POINTER(ctypes.c_int)
 _lib.harvest_env_reset.argtypes = [ctypes.c_void_p, _float_pointer]
 _lib.harvest_env_enable_camera.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+_lib.harvest_env_set_near_start_fraction.argtypes = [ctypes.c_void_p, ctypes.c_float]
 _lib.harvest_env_render.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ubyte)]
 _lib.harvest_env_save_camera_image.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_char_p]
 _lib.harvest_env_step.argtypes = [ctypes.c_void_p, _float_pointer, _float_pointer, _float_pointer, _int_pointer, _float_pointer]
@@ -79,6 +80,11 @@ class AppleHarvestVecEnv(VecEnv):
         self._actions = None
         self._episode_rewards = np.zeros(count)
         self._episode_lengths = np.zeros(count, np.int64)
+
+    def set_near_start_fraction(self, fraction):
+        """Start this share of episodes with the cup near its fruit (see harvest_env_set_near_start_fraction() in harvest_env.h); for training only."""
+        if not _lib.harvest_env_set_near_start_fraction(self._env, fraction):
+            raise ValueError(f"near start fraction {fraction} was refused; the reason is printed above")
 
     def reset(self):
         _lib.harvest_env_reset(self._env, self._observations.ctypes.data_as(_float_pointer))
