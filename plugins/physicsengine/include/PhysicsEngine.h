@@ -40,6 +40,8 @@ struct PhysicsEngineParameters {
     bool articulation_collisions = false;
     //! Distance in meters at which colliding articulation links start to push each other apart when articulation_collisions is enabled, so that they come to rest separated rather than slightly overlapping
     float articulation_collision_margin = 0.001f;
+    //! When articulation_collisions is enabled, let links that overlap as the articulations were added stay overlapped: each such pair never collides, while every other pair of links does. Organs built through each other are then left as they are rather than pushed apart, and links cannot be pushed into each other afterward. The pairs are found once, in initialize(); getExcludedInitialOverlapCount() gives how many there are.
+    bool keep_initial_link_overlaps = false;
     //! Let articulation links collide with the ground plane at z = 0, so that detached links come to rest on it
     bool ground_collisions = false;
     //! Sliding friction coefficient of contacts
@@ -389,6 +391,12 @@ public:
      */
     [[nodiscard]] float getMaxLinkOverlapDepth(uint instance = 0) const;
 
+    //! Get the number of pairs of links that were overlapping as the articulations were added, and so never collide with each other
+    /**
+     * Zero unless PhysicsEngineParameters::articulation_collisions and PhysicsEngineParameters::keep_initial_link_overlaps are both enabled.
+     */
+    [[nodiscard]] uint getExcludedInitialOverlapCount() const;
+
     //! Get the total force on an articulation from kinematic boxes and loaded models, among the contacts of the last step
     /**
      * \param[in] articulationID ID of the articulation returned by addArticulation().
@@ -495,6 +503,7 @@ private:
     [[nodiscard]] std::string buildMJCF(const PhysicsEngineParameters &params) const;
     void attachModelFiles(const PhysicsEngineParameters &params);
     void addServosAndSensors();
+    void excludeInitialLinkOverlaps();
     void writeLinkBody(std::ostringstream &xml, std::ostringstream &assets, const PhysicsArticulation &articulation, size_t link_index, const std::vector<std::vector<size_t>> &children, int depth) const;
     void bindContextGeometry();
     void bindObjectPrimitives(uint objID, size_t rest_pose_index);
@@ -526,7 +535,8 @@ private:
     std::vector<char> body_is_external; // indexed by MuJoCo body ID: true for kinematic boxes and bodies of loaded models
     std::vector<int> body_articulation; // indexed by MuJoCo body ID: the articulation the body belongs to, otherwise -1
 
-    std::string mjcf_text; // MJCF model that was compiled
+    std::string mjcf_text; // MJCF model that was compiled, before any exclusions excludeInitialLinkOverlaps() added to the spec
+    uint excluded_initial_overlaps = 0; // pairs of links excluded from colliding because they overlapped as built
 
     mjSpec_ *spec = nullptr; // kept for writing models with loaded files
     std::vector<mjSpec_ *> model_file_specs; // each is attached to spec, which refers to it until both are deleted

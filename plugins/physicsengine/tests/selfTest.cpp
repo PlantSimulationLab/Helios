@@ -519,6 +519,59 @@ DOCTEST_TEST_CASE("PhysicsEngine - a detached link comes to rest on the ground w
     DOCTEST_CHECK(finalHeight(false) < -1.f);
 }
 
+DOCTEST_TEST_CASE("PhysicsEngine - links that overlap as built can be kept overlapped while every other pair still collides") {
+    // Pendulums a and b hang with their bobs 2 cm apart, so that the 2 cm spheres overlap. Pendulum c starts swung out to the side and swings
+    // through where a's bob hangs, about 0.35 s later.
+    struct Outcome {
+        uint excluded_pairs;
+        uint overlaps_at_start;
+        float a_moved_before_c_arrives;
+        float a_moved_by_end;
+    };
+    auto run = [](bool keep_initial_link_overlaps) {
+        Context context;
+        PhysicsEngine engine(&context);
+        engine.disableMessages();
+        uint a = engine.addArticulation(makePendulum("a", 1.f, 0.5f, 0.f));
+        PhysicsArticulation b = makePendulum("b", 1.f, 0.5f, 0.f);
+        for (PhysicsLink &link: b.links) {
+            link.position.x += 0.02f;
+        }
+        engine.addArticulation(b);
+        PhysicsArticulation c = makePendulum("c", 1.f, 0.5f, -1.f);
+        for (PhysicsLink &link: c.links) {
+            link.position.x -= 0.1f;
+        }
+        engine.addArticulation(c);
+        PhysicsEngineParameters params;
+        params.articulation_collisions = true;
+        params.keep_initial_link_overlaps = keep_initial_link_overlaps;
+        engine.initialize(params);
+        Outcome outcome;
+        outcome.excluded_pairs = engine.getExcludedInitialOverlapCount();
+        outcome.overlaps_at_start = engine.getLinkOverlapCount();
+        const vec3 a_start = engine.getLinkPosition(a, 1);
+        engine.step(50);
+        outcome.a_moved_before_c_arrives = (engine.getLinkPosition(a, 1) - a_start).magnitude();
+        engine.step(450);
+        outcome.a_moved_by_end = (engine.getLinkPosition(a, 1) - a_start).magnitude();
+        return outcome;
+    };
+
+    // By default the overlapping bobs push each other apart
+    const Outcome pushed = run(false);
+    DOCTEST_CHECK(pushed.excluded_pairs == 0);
+    DOCTEST_CHECK(pushed.overlaps_at_start == 1);
+    DOCTEST_CHECK(pushed.a_moved_before_c_arrives > 0.001f);
+
+    // Kept overlapped, a and b stay as they hang, until c strikes a, which still collides with it
+    const Outcome kept = run(true);
+    DOCTEST_CHECK(kept.excluded_pairs == 1);
+    DOCTEST_CHECK(kept.overlaps_at_start == 0);
+    DOCTEST_CHECK(kept.a_moved_before_c_arrives < 1e-4f);
+    DOCTEST_CHECK(kept.a_moved_by_end > 0.01f);
+}
+
 static void checkTubeSplit(const std::vector<uint> &node_link_indices) {
     Context context;
 

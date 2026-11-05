@@ -229,4 +229,18 @@ it by 5 days. With flexible internodes each step costs several times more, and y
 clear the leaves along them. A leaf whose blade is pierced by a rigid stem may not be able to move clear of it.
 The relaxed pose is not written back to the PlantArchitecture model, so overlaps return if the plant grows further.
 
+Pushing organs apart also loads the plant. A fruit grown through a branch is pushed out of it by bending the branch, and the
+branch then presses on the fruit, which can load the fruit's stem more than a picked fruit's stem ever is. To keep the plant
+as it was built while still stopping its links from passing into each other afterward, set
+PhysicsEngineParameters::keep_initial_link_overlaps: each pair of links that overlaps when the simulation is initialized
+then never collides, and every other pair does. PhysicsEngine::getExcludedInitialOverlapCount() gives the number of pairs
+left overlapping.
+
+\code{.cpp}
+    PhysicsEngineParameters params;
+    params.articulation_collisions = true;
+    params.keep_initial_link_overlaps = true;    // organs built overlapping stay as they are; nothing new can overlap
+    engine.initialize(params);
+\endcode
+
 */

@@ -471,6 +471,9 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
     if (model == nullptr) {
         helios_runtime_error("ERROR (PhysicsEngine::initialize): MuJoCo could not compile the model: " + std::string(mjs_getError(spec)));
     }
+    if (params.articulation_collisions && params.keep_initial_link_overlaps) {
+        excludeInitialLinkOverlaps();
+    }
 
     createInstance();
 
@@ -984,11 +987,11 @@ void PhysicsEngine::writeMJCF(const std::string &filename) const {
     if (!file.is_open()) {
         helios_runtime_error("ERROR (PhysicsEngine::writeMJCF): Could not open " + filename + " for writing. Make sure the directory exists and is writable.");
     }
-    if (model_files.empty() && servo_requests.empty() && sensor_requests.empty()) {
+    if (model_files.empty() && servo_requests.empty() && sensor_requests.empty() && excluded_initial_overlaps == 0) {
         file << mjcf_text;
         return;
     }
-    // Loaded models are only in the spec, not in the generated text. MuJoCo returns the size needed when the buffer is too small.
+    // Loaded models and the exclusions of links that overlap as built are only in the spec, not in the generated text. MuJoCo returns the size needed when the buffer is too small.
     char error[1024] = "";
     std::string xml(1 << 20, '\0');
     int required_size = mj_saveXMLString(spec, xml.data(), static_cast<int>(xml.size()), error, sizeof(error));
@@ -1084,6 +1087,61 @@ uint PhysicsEngine::getLinkOverlapCount(float min_depth, uint instance) const {
         }
     }
     return count;
+}
+
+// Exclude from collisions every pair of articulation links that overlap in the compiled model as built, and compile it again
+void PhysicsEngine::excludeInitialLinkOverlaps() {
+    std::unordered_map<int, std::string> link_body_names;
+    for (const ArticulationRecord &record: articulations) {
+        for (const PhysicsLink &link: record.description.links) {
+            const std::string name = linkBodyName(record.description.name, link.name);
+            const int body_ID = mj_name2id(model, mjOBJ_BODY, name.c_str());
+            if (body_ID < 0) {
+                helios_runtime_error("ERROR (PhysicsEngine::initialize): Body " + name + " is missing from the compiled model.");
+            }
+            link_body_names[body_ID] = name;
+        }
+    }
+
+    mjData *data = mj_makeData(model);
+    if (data == nullptr) {
+        helios_runtime_error("ERROR (PhysicsEngine::initialize): MuJoCo could not allocate the data for finding links that overlap as built.");
+    }
+    mj_forward(model, data);
+    std::set<std::pair<int, int>> overlapping;
+    for (int c = 0; c < data->ncon; c++) {
+        const mjContact &contact = data->contact[c];
+        // A contact within the collision margin is between links that do not touch yet; they keep colliding
+        if (contact.dist >= 0) {
+            continue;
+        }
+        const int body_0 = model->geom_bodyid[contact.geom[0]];
+        const int body_1 = model->geom_bodyid[contact.geom[1]];
+        if (body_0 != body_1 && link_body_names.count(body_0) > 0 && link_body_names.count(body_1) > 0) {
+            overlapping.emplace(std::min(body_0, body_1), std::max(body_0, body_1));
+        }
+    }
+    mj_deleteData(data);
+
+    excluded_initial_overlaps = static_cast<uint>(overlapping.size());
+    if (overlapping.empty()) {
+        return;
+    }
+    for (const auto &[body_0, body_1]: overlapping) {
+        mjsExclude *exclusion = mjs_addExclude(spec);
+        mjs_setString(exclusion->bodyname1, link_body_names.at(body_0).c_str());
+        mjs_setString(exclusion->bodyname2, link_body_names.at(body_1).c_str());
+    }
+    mj_deleteModel(model);
+    model = mj_compile(spec, nullptr);
+    if (model == nullptr) {
+        helios_runtime_error("ERROR (PhysicsEngine::initialize): MuJoCo could not compile the model after excluding links that overlap as built: " + std::string(mjs_getError(spec)));
+    }
+}
+
+uint PhysicsEngine::getExcludedInitialOverlapCount() const {
+    requireInitialized("getExcludedInitialOverlapCount");
+    return excluded_initial_overlaps;
 }
 
 float PhysicsEngine::getMaxLinkOverlapDepth(uint instance) const {
