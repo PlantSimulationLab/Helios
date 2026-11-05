@@ -472,7 +472,7 @@ inline AxisRotation AxisRotation::operator-(const AxisRotation &a) const {
 
 enum BudState { BUD_DORMANT = 0, BUD_ACTIVE = 1, BUD_FLOWER_CLOSED = 2, BUD_FLOWER_OPEN = 3, BUD_FRUITING = 4, BUD_DEAD = 5 };
 
-//! Carbon sub-model of the carbohydrate model: the set of crop-specific mechanisms a plant's carbon economy runs on (see CarbohydrateParameters::submodel)
+//! Carbon sub-model of the carbohydrate model: the set of crop-specific mechanisms a plant's carbon economy runs on, chosen by CarbohydrateParameters::submodel
 enum CarbonSubmodel {
     //! Dicot tree: a volumetric fruit sink that is set and then dropped for lack of carbon (CarbonFruitParameters), a cambium that lays down pipe-model wood and sapwood rings in competition with
     //! storage, and branches judged on their own carbon balance at the end of each season (CarbonWoodParameters)
@@ -482,7 +482,7 @@ enum CarbonSubmodel {
     CARBON_SUBMODEL_GRASS = 1
 };
 
-//! Parameters of the volumetric fruit sink of the carbohydrate model (CarbohydrateParameters::fruit)
+//! Parameters of the volumetric fruit sink of the carbohydrate model, held in CarbohydrateParameters::fruit
 /**
  * A fruit is a sink whose carbon is set by its mature volume and laid down along a dry-matter curve over its development period. Fruit is set in number and then dropped for lack of carbon
  * within a window after set. Defaults are for almond.
@@ -519,7 +519,7 @@ struct CarbonFruitParameters {
     float abscission_growth_ratio = 0.55f;
 };
 
-//! Parameters of the woody-perennial mechanisms of the carbohydrate model (CarbohydrateParameters::wood): the cambium and end-of-season branch shedding
+//! Parameters of the woody-perennial mechanisms of the carbohydrate model, the cambium and end-of-season branch shedding, held in CarbohydrateParameters::wood
 struct CarbonWoodParameters {
     //! Rate (1/day) at which an internode's radius approaches its girth target (the pipe-model target, or the sapwood ring): each sub-step closes a fraction 1 - exp(-radial_growth_rate x dt) of
     //! the gap, so that the cambium lays down a ring over the season rather than at once. This growth is paid from photosynthate: it is multiplied by the cambium supply ratio, the share of the
@@ -538,7 +538,7 @@ struct CarbonWoodParameters {
     float branch_shedding_carbon_ratio = 1.f;
 };
 
-//! Parameters of the grass and grain mechanisms of the carbohydrate model (CarbohydrateParameters::grass): tillering, the culm reserve, stage-dependent root allocation and a grain sink
+//! Parameters of the grass and grain mechanisms of the carbohydrate model, held in CarbohydrateParameters::grass: tillering, the culm reserve, stage-dependent root allocation and a grain sink
 /**
  * A culm -- the main stem or a tiller -- ends in a panicle that appears with its flag leaf, and from then the culm's reproductive clock runs in days. During the <b>critical period</b>, from
  * flag leaf to the start of effective grain filling (anthesis_days + grain_fill_lag_days), the panicle structure is built from current photosynthate in competition with the elongating stem;
@@ -585,8 +585,8 @@ struct CarbonGrassParameters {
     float culm_reserve_floor = 0.04f;
 
     // -- Tillers -- //
-    //! Tiller bud outgrowth follows a carbon supply/demand index (Alam et al. 2014, New Phytologist 203:155): the plant's photosynthate supply rate relative to its vegetative growth demand,
-    //! both averaged over CarbohydrateParameters::supply_averaging_days. The probability that a tiller bud breaks is scaled by 0 at or below this index, rising linearly to 1 at
+    //! Tiller bud outgrowth follows a carbon supply/demand index (Alam et al. 2014, New Phytologist 203:155): the plant's photosynthate supply rate (over the current advanceTime() call) relative to its vegetative growth demand
+    //! averaged over CarbohydrateParameters::supply_averaging_days. The probability that a tiller bud breaks is scaled by 0 at or below this index, rising linearly to 1 at
     //! tiller_supply_demand_max; above that the bud breaks at the probability set by its shoot type, which is the genotype's propensity to tiller. Before any demand has been recorded the
     //! factor is 1.
     float tiller_supply_demand_min = 0.5f;
@@ -728,7 +728,7 @@ struct CarbohydrateParameters {
     [[nodiscard]] static CarbohydrateParameters forSubmodel(CarbonSubmodel submodel);
 };
 
-//! Carbon fluxes of one plant, summed over the most recent call to PlantArchitecture::advanceTime() (mol C)
+//! Carbon fluxes of one plant in mol C, summed over the most recent call to PlantArchitecture::advanceTime
 struct PlantCarbonBudget {
     //! Net leaf photosynthesis credited to the shoots
     float net_photosynthesis = 0;
@@ -767,7 +767,7 @@ struct PlantCarbonBudget {
     float tillers_shed = 0;
 };
 
-//! Grain sink state of a plant under the carbohydrate model's grass sub-model, summed over its culms (see PlantArchitecture::getPlantGrainStatus())
+//! Grain sink state of a plant under the carbohydrate model's grass sub-model, summed over its culms, as returned by PlantArchitecture::getPlantGrainStatus
 struct PlantGrainStatus {
     //! Number of culms (main stem and tillers) bearing a panicle
     float culms = 0;
@@ -850,7 +850,7 @@ struct VegetativeBud {
     uint shoot_ID = -1;
 };
 
-//! Grain sink of a culm's terminal panicle under the carbohydrate model's grass sub-model (CARBON_SUBMODEL_GRASS)
+//! Grain sink of a culm's terminal panicle under the carbohydrate model's grass sub-model, CARBON_SUBMODEL_GRASS
 struct GrainSink {
     //! Structural carbon built into the panicle's rachis, branches and glumes during the critical period (mol C)
     float panicle_carbon_molC = 0;
@@ -6618,7 +6618,7 @@ protected:
      * For each culm with a panicle: during the critical period the panicle structure grows at its potential times the reproductive supply ratio (the photosynthate left after maintenance
      * respiration and reserve-funded spending, relative to the potential growth of all such sinks, averaged over supply_averaging_days); at the end of the critical period the grain number is
      * fixed from the panicle carbon; during filling the grain grows at its potential, paid from the sub-step's remaining photosynthate first and then from the carbohydrate the culms and roots hold
-     * above the growth threshold, the latter reported as PlantCarbonBudget::reserve_remobilization.
+     * above CarbonGrassParameters::culm_reserve_floor, the latter reported as PlantCarbonBudget::reserve_remobilization.
      * \param[in] plantID ID of the plant
      * \param[in] dt Length of the sub-step (days)
      * \param[in] reserve_funded_spending_molC Stem, leaf and root growth (with growth respiration) already charged to the pools this sub-step (mol C)
@@ -6627,9 +6627,8 @@ protected:
     //! Run the grass sub-model's shoot economy for a sub-step: note the onset of stem elongation and shed tillers that do not pay for themselves while the stem elongates
     /**
      * \param[in] plantID ID of the plant
-     * \param[in] dt Length of the sub-step (days)
      */
-    void updateGrassTillers(uint plantID, float dt);
+    void updateGrassTillers(uint plantID);
     //! Factor by which the grass sub-model scales the probability that a tiller bud breaks, from the plant's carbon supply/demand index (CarbonGrassParameters::tiller_supply_demand_min)
     /**
      * \param[in] plantID ID of the plant

@@ -120,11 +120,33 @@ void PlantArchitecture::markShootConstructionCharged(Shoot &shoot) const {
         const auto &phytomer = shoot.phytomers.at(p);
         phytomer->internode_carbon_charged_molC = phytomer->calculateInternodeStructuralCarbon(p);
         phytomer->leaf_carbon_charged_molC = phytomer->calculatePhytomerConstructionCosts();
-        if (plant_instance.carb_parameters.submodel == CARBON_SUBMODEL_TREE) {
-            for (auto &petiole: phytomer->floral_buds) {
-                for (auto &fbud: petiole) {
-                    fbud.fruit_carbon_fraction_charged = phytomer->calculateFruitDryMatterFraction(fbud);
-                    fbud.fruit_potential_fraction = fbud.fruit_carbon_fraction_charged;
+        for (auto &petiole: phytomer->floral_buds) {
+            for (auto &fbud: petiole) {
+                switch (plant_instance.carb_parameters.submodel) {
+                    case CARBON_SUBMODEL_TREE:
+                        fbud.fruit_carbon_fraction_charged = phytomer->calculateFruitDryMatterFraction(fbud);
+                        fbud.fruit_potential_fraction = fbud.fruit_carbon_fraction_charged;
+                        break;
+                    case CARBON_SUBMODEL_GRASS: {
+                        // A panicle that already stands is taken as built at its potential for the part of the critical period that has passed, and its grain number as set if the period is over;
+                        // otherwise an initialization after the critical period would fix the grain number at zero for want of a panicle it never saw grow.
+                        GrainSink &grain = fbud.grain;
+                        if (!fbud.isterminal || fbud.state != BUD_FRUITING || grain.panicle_carbon_molC > 0.f || grain.grain_number_set) {
+                            break; // not a panicle, or one whose growth the model has already recorded
+                        }
+                        const CarbonGrassParameters &grass_params = plant_instance.carb_parameters.grass;
+                        const float critical_period_days = grass_params.anthesis_days + grass_params.grain_fill_lag_days;
+                        grain.panicle_carbon_molC = grass_params.panicle_potential_carbon * std::clamp(fbud.time_counter / critical_period_days, 0.f, 1.f);
+                        if (fbud.time_counter >= critical_period_days && !grain.grain_number_set) {
+                            grain.grain_number = grass_params.grains_per_gram_panicle * grain.panicle_carbon_molC * C_molecular_wt / grass_params.panicle_carbon_percentage;
+                            grain.grain_number_set = true;
+                            // Grain already filled at initialization is likewise taken as built: at the potential rate for the filling time that has passed
+                            const float filled = std::clamp((fbud.time_counter - critical_period_days) / grass_params.grain_fill_days, 0.f, 1.f);
+                            grain.grain_potential_carbon_molC = grain.grain_number * grass_params.kernel_potential_carbon * filled;
+                            grain.grain_carbon_molC = grain.grain_potential_carbon_molC;
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -434,10 +456,16 @@ void PlantArchitecture::subtractShootGrowthCarbon(uint plantID, float dt) {
     budget.growth_respiration += root_growth_respiration;
     reserve_funded_spending += root_growth + root_growth_respiration;
 
-    // The vegetative demand rate, averaged over the supply-averaging period, is the demand side of the grass sub-model's tiller supply/demand index
+    // The vegetative demand rate, averaged over the supply-averaging period, is the demand side of the grass sub-model's tiller supply/demand index. The average starts from the first
+    // demand observed rather than from zero, which would understate the demand -- and so open the tiller gate -- for the first weeks, when the tiller positions are being sampled.
     if (dt > 0.f) {
-        const float relaxation = 1.f - std::exp(-dt / carbohydrate_params.supply_averaging_days);
-        plant_instance.vegetative_demand_rate_molC_day += relaxation * (float(reserve_funded_spending) / dt - plant_instance.vegetative_demand_rate_molC_day);
+        const float demand_rate = float(reserve_funded_spending) / dt;
+        if (plant_instance.vegetative_demand_rate_molC_day <= 0.f) {
+            plant_instance.vegetative_demand_rate_molC_day = demand_rate;
+        } else {
+            const float relaxation = 1.f - std::exp(-dt / carbohydrate_params.supply_averaging_days);
+            plant_instance.vegetative_demand_rate_molC_day += relaxation * (demand_rate - plant_instance.vegetative_demand_rate_molC_day);
+        }
     }
 
     // The reproductive sink is the sub-model's: what it is, and whether it is built from reserves or from current photosynthate, differs between crops.
@@ -919,6 +947,9 @@ void PlantArchitecture::adjustPlantMaintenanceRespiration(float Ta) {
 
 void PlantArchitecture::validateCarbonSubmodel(const CarbohydrateParameters &carb_parameters, const char *caller) {
     const std::string where = std::string("ERROR (PlantArchitecture::") + caller + "): ";
+    if (!(carb_parameters.supply_averaging_days > 0.f)) {
+        helios_runtime_error(where + "CarbohydrateParameters::supply_averaging_days must be positive (got " + std::to_string(carb_parameters.supply_averaging_days) + " days).");
+    }
     switch (carb_parameters.submodel) {
         case CARBON_SUBMODEL_TREE:
             if (carb_parameters.wood.sapwood_area_per_leaf_area > 0.f && !(carb_parameters.wood.sapwood_functional_years > 0.f)) {
@@ -1002,6 +1033,17 @@ float PlantArchitecture::recordReproductiveSupply(uint plantID, float supply_mol
     PlantInstance &plant_instance = plant_instances.at(plantID);
     const float averaging_days = plant_instance.carb_parameters.supply_averaging_days;
     auto &history = plant_instance.reproductive_assimilate_history;
+    // Sub-steps before any sink existed carry supply but no demand. Left in the window, they would cushion the first days of a new sink -- a panicle's first days of its critical period --
+    // with surplus from before it, so the history starts over when demand first appears.
+    if (demand_molC > 0.f) {
+        bool had_demand = false;
+        for (const auto &entry: history) {
+            had_demand = had_demand || entry[1] > 0.f;
+        }
+        if (!had_demand) {
+            history.clear();
+        }
+    }
     history.push_back({supply_molC, demand_molC, dt});
     float history_days = 0.f;
     for (const auto &entry: history) {

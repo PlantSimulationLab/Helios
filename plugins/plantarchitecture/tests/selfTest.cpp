@@ -2695,6 +2695,13 @@ DOCTEST_TEST_CASE("PlantArchitecture grass sub-model: carbon in the critical per
     DOCTEST_CHECK(shaded_window.status.grain_number < 0.5f * full_light.status.grain_number);
     DOCTEST_CHECK(shaded_window.status.panicle_carbon_molC < 0.5f * full_light.status.panicle_carbon_molC);
 
+    // Shade before the panicle appears leaves the grain number untouched: the window is the only time carbon counts for it
+    const SorghumCulmRun shaded_before = runSorghumCulm(140, flag - 12, flag - 1, 0.1f, filling_day);
+    DOCTEST_CHECK(shaded_before.flag_leaf_day == flag);
+    DOCTEST_REQUIRE(shaded_before.status.culms == 1.f);
+    DOCTEST_CHECK(shaded_before.status.grain_number == full_light.status.grain_number);
+    DOCTEST_CHECK(shaded_before.status.panicle_carbon_molC == full_light.status.panicle_carbon_molC);
+
     const SorghumCulmRun shaded_filling = runSorghumCulm(140, filling_day, flag + critical_period_days + grain_fill_days, 0.1f, filling_day);
     DOCTEST_CHECK(shaded_filling.flag_leaf_day == flag);
     DOCTEST_REQUIRE(shaded_filling.status.culms == 1.f);
@@ -2723,11 +2730,20 @@ DOCTEST_TEST_CASE("PlantArchitecture grass sub-model sheds a tiller whose leaves
             bool tiller_pruned = false;
             float tillers_shed = 0.f;
             bool main_stem_pruned = false;
+            int elongation_day = -1; //!< first day the main stem had stem_elongation_node nodes
+            int shed_day = -1; //!< day the tiller was shed
         } outcome;
         for (int day = 0; day < 70; day++) {
             driveSorghumPhotosynthesisForOneDay(context, plantarchitecture, plantID, 30.f, tiller_light);
             plantarchitecture.advanceTime(plantID, 1);
-            outcome.tillers_shed += plantarchitecture.getPlantCarbonBudget(plantID).tillers_shed;
+            const float shed = plantarchitecture.getPlantCarbonBudget(plantID).tillers_shed;
+            outcome.tillers_shed += shed;
+            if (shed > 0.f && outcome.shed_day < 0) {
+                outcome.shed_day = day;
+            }
+            if (outcome.elongation_day < 0 && int(plantarchitecture.getPlantShoot(plantID, 0)->phytomers.size()) >= params.grass.stem_elongation_node) {
+                outcome.elongation_day = day;
+            }
         }
         for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
             if (shootID == 0) {
@@ -2751,6 +2767,9 @@ DOCTEST_TEST_CASE("PlantArchitecture grass sub-model sheds a tiller whose leaves
     DOCTEST_CHECK(!dark.main_stem_pruned);
     DOCTEST_CHECK(dark.tiller_pruned);
     DOCTEST_CHECK(dark.tillers_shed == 1.f);
+    // Shed by the tiller rule -- no earlier than supply_averaging_days after the main stem began to elongate -- not by starvation before it
+    DOCTEST_REQUIRE(dark.elongation_day >= 0);
+    DOCTEST_CHECK(dark.shed_day >= dark.elongation_day + int(CarbohydrateParameters().supply_averaging_days) - 1);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture grass sub-model gates tiller bud outgrowth on the carbon supply/demand index") {

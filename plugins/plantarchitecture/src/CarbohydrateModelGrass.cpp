@@ -56,11 +56,13 @@ namespace {
 float PlantArchitecture::grassMainStemDevelopmentFraction(uint plantID) const {
     Shoot *main_stem = mainStem(plant_instances.at(plantID));
     if (main_stem == nullptr) {
-        return 0.f;
+        // The main stem has died (pruned for starvation): the plant is past any vegetative development
+        return 1.f;
     }
     const int node_cap = main_stem->getGrowthNodeCap();
     if (node_cap <= 0) {
-        return 0.f;
+        helios_runtime_error("ERROR (PlantArchitecture::grassMainStemDevelopmentFraction): the main stem of plant " + std::to_string(plantID) + " has a node cap of " + std::to_string(node_cap) +
+                             ". The grass sub-model measures the main stem's development by its node count over its cap, so the main stem's shoot type needs a positive max_nodes.");
     }
     return std::clamp(float(main_stem->current_node_number) / float(node_cap), 0.f, 1.f);
 }
@@ -105,6 +107,18 @@ void PlantArchitecture::subtractGrainGrowthCarbon(uint plantID, float dt, double
     for (const auto &shoot: plant_instance.shoot_tree) {
         if (shoot->isPruned()) {
             continue;
+        }
+        // The grass sub-model's only reproductive sink is the terminal panicle of a culm. Fruit borne in the leaf axils (a bean's pods, a maize ear) would otherwise grow uncharged.
+        for (const auto &phytomer: shoot->phytomers) {
+            for (const auto &petiole: phytomer->floral_buds) {
+                for (const auto &fbud: petiole) {
+                    if (!fbud.isterminal && fbud.state != BUD_DORMANT && fbud.state != BUD_DEAD) {
+                        helios_runtime_error("ERROR (PlantArchitecture::subtractGrainGrowthCarbon): plant " + std::to_string(plantID) + " (" + plant_instance.plant_name +
+                                             ") bears flowers or fruit in its leaf axils, which the grass sub-model does not represent: CARBON_SUBMODEL_GRASS charges only the terminal panicle of each culm. Use "
+                                             "CARBON_SUBMODEL_TREE for this plant.");
+                    }
+                }
+            }
         }
         FloralBud *fbud = culmPanicle(*shoot);
         if (fbud == nullptr) {
@@ -184,9 +198,10 @@ void PlantArchitecture::subtractGrainGrowthCarbon(uint plantID, float dt, double
     const float root_floor_pool = grass_params.culm_reserve_floor * root_dry_mass_g / C_molecular_wt;
     reserve_available += std::max(0.f, plant_instance.root_sugar_pool_molC + plant_instance.root_starch_pool_molC - root_floor_pool);
 
-    // The pools already hold the sub-step's photosynthate, so what they hold above the threshold bounds the grain growth; the split between photosynthate and reserve is the accounting of it.
+    // The pools already hold the sub-step's photosynthate, so what they hold above the floor bounds the grain growth, and the split between photosynthate and reserve is the accounting of it.
+    // A culm already below the floor does not refill itself before its grain: the grain still receives the sub-step's photosynthate, so the pool neither recovers nor falls further.
     const double photosynthate_after_panicle = std::max(0.0, photosynthate_after_vegetative - spent_on_panicle);
-    const double realized_with_respiration = std::min(grain_demand, double(reserve_available));
+    const double realized_with_respiration = std::min(grain_demand, std::max(double(reserve_available), photosynthate_after_panicle));
     const double from_photosynthate = std::min(realized_with_respiration, photosynthate_after_panicle);
     const double from_reserve = realized_with_respiration - from_photosynthate;
     const float realized_fraction = float(realized_with_respiration / grain_demand);
@@ -211,7 +226,7 @@ void PlantArchitecture::subtractGrainGrowthCarbon(uint plantID, float dt, double
 
 // -------------------- Tillers -------------------- //
 
-void PlantArchitecture::updateGrassTillers(uint plantID, float dt) {
+void PlantArchitecture::updateGrassTillers(uint plantID) {
     PlantInstance &plant_instance = plant_instances.at(plantID);
     const CarbohydrateParameters &carbohydrate_params = plant_instance.carb_parameters;
     const CarbonGrassParameters &grass_params = carbohydrate_params.grass;

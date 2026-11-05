@@ -11012,7 +11012,40 @@ void PlantArchitecture::setPlantCarbohydrateModelParameters(uint plantID, const 
     }
     validateCarbonSubmodel(carb_parameters, "setPlantCarbohydrateModelParameters");
 
-    plant_instances.at(plantID).carb_parameters = carb_parameters;
+    PlantInstance &plant_instance = plant_instances.at(plantID);
+    if (plant_instance.carb_parameters.submodel != carb_parameters.submodel) {
+        // The sub-model's own state restarts: the reproductive supply history and the grass sub-model's development, tiller and grain records belong to the mechanisms being left behind.
+        // The root system's structural carbon, which the grass sub-model grows by allocation, starts from the shoot:root ratio of the new parameters, as at initialization.
+        float wood_structural_carbon = 0.f;
+        for (const auto &shoot: plant_instance.shoot_tree) {
+            if (shoot->isPruned()) {
+                continue;
+            }
+            for (const auto &phytomer: shoot->phytomers) {
+                wood_structural_carbon += phytomer->internode_carbon_charged_molC;
+                for (auto &petiole: phytomer->floral_buds) {
+                    for (auto &fbud: petiole) {
+                        fbud.grain = GrainSink();
+                    }
+                }
+            }
+        }
+        plant_instance.root_structural_carbon_molC = wood_structural_carbon / carb_parameters.shoot_root_ratio;
+        plant_instance.reproductive_assimilate_history.clear();
+        plant_instance.reproductive_supply_ratio = 1.f;
+        plant_instance.vegetative_demand_rate_molC_day = 0.f;
+        plant_instance.grass_stem_elongation_started = false;
+        plant_instance.grass_stem_elongation_age = 0.f;
+        plant_instance.carb_parameters = carb_parameters;
+        // Reproductive organs already standing are taken as built, as initialization takes standing structure as built
+        for (const auto &shoot: plant_instance.shoot_tree) {
+            if (!shoot->isPruned()) {
+                markShootConstructionCharged(*shoot);
+            }
+        }
+        return;
+    }
+    plant_instance.carb_parameters = carb_parameters;
 }
 
 void PlantArchitecture::setPlantCarbohydrateModelParameters(const std::vector<uint> &plantIDs, const CarbohydrateParameters &carb_parameters) {
@@ -11670,7 +11703,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                         checkCarbonPool_dropFruit(plantID, dt_max_days);
                         break;
                     case CARBON_SUBMODEL_GRASS:
-                        updateGrassTillers(plantID, dt_max_days);
+                        updateGrassTillers(plantID);
                         break;
                 }
                 allocateSurplusCarbon(plantID, dt_max_days, budget_before);
