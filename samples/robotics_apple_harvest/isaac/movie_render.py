@@ -229,8 +229,10 @@ def main():
         return outside, Image.fromarray(image.copy())
 
     policy = helios_meta["policy"]
+    scripted = policy == "scripted"
     trained_in = "IsaacSim" if "isaac" in policy else "Helios"
-    subtitle = f"Tree {tree}, policy trained in {trained_in}  ·  drawn by Helios"
+    controller = "the scripted controller" if scripted else f"a policy trained in {trained_in}"
+    subtitle = f"Tree {tree}, " + ("scripted controller" if scripted else f"policy trained in {trained_in}") + "  ·  drawn by Helios"
 
     def side(episodes, convert, title, k, frame):
         episode = episodes[k]
@@ -274,10 +276,10 @@ def main():
 
     size = (args.width, args.height)
     if side_by_side:
-        title_lines = [("Apple harvesting robot, two physics engines", 46, True), (f"The same tree and the same policy (trained in {trained_in}), simulated in Helios (MuJoCo) and Isaac Sim (PhysX)", 24, False), ("Episodes are not paired: each simulator draws its own fruit, force to detach and start position", 22, False), ("Both sides drawn by the Helios visualizer from each simulator's recorded poses  ·  real time", 20, False), ("Leaves are drawn for context; neither simulator simulates them", 20, False)]
+        title_lines = [("Apple harvesting robot, two physics engines", 46, True), (("The same tree and the same scripted controller" if scripted else f"The same tree and the same policy (trained in {trained_in})") + ", simulated in Helios (MuJoCo) and Isaac Sim (PhysX)", 24, False), ("Episodes are not paired: each simulator draws its own fruit, force to detach and start position", 22, False), ("Both sides drawn by the Helios visualizer from each simulator's recorded poses  ·  real time", 20, False), ("Leaves are drawn for context; neither simulator simulates them", 20, False)]
     else:
-        title_lines = [("Apple harvesting robot in Helios", 46, True), (f"Tree {tree}, never used in training, and a policy trained in {trained_in}, simulated in Helios (MuJoCo)", 24, False), ("Drawn by the Helios visualizer  ·  real time", 20, False), ("Leaves are drawn for context; they are not simulated", 20, False)]
-    title_lines += [("The policy is given exact positions of the fruit and wood, not images; the inset shows what a wrist camera would see", 20, False), (args.grip_line, 20, False)]
+        title_lines = [("Apple harvesting robot in Helios", 46, True), (f"Tree {tree}, never used in training, and {controller}, simulated in Helios (MuJoCo)", 24, False), ("Drawn by the Helios visualizer  ·  real time", 20, False), ("Leaves are drawn for context; they are not simulated", 20, False)]
+    title_lines += [(("The controller" if scripted else "The policy") + " is given exact positions of the fruit and wood, not images; the inset shows what a wrist camera would see", 20, False), (args.grip_line, 20, False)]
     emit(card(size, title_lines), int(4.0 * FPS))
     for k in range(pairs):
         length = max(len(helios_episodes[k]["poses"]), len(isaac_episodes[k]["poses"]))

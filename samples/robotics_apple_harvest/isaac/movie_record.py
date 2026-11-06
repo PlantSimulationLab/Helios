@@ -6,6 +6,7 @@ including the step at which the episode ended (before the simulation is reset fo
 From the sample's build directory, with IsaacSim's Python:
     C:/isaacsim/python.bat ../isaac/movie_record.py --simulator helios --policy apple_policy_helios_seed0 --tree 301 --output helios_301.npz
     C:/isaacsim/python.bat ../isaac/movie_record.py --simulator isaac --policy apple_policy_helios_seed0 --tree 301 --output isaac_301.npz
+    C:/isaacsim/python.bat ../isaac/movie_record.py --simulator helios --policy scripted --tree 301 --output scripted_301.npz
 
 Helios records each link's world pose in its own link order. IsaacSim records the world pose of each of its bodies (welded links merged into the
 body that carries them, see tree_preparation.py) with the map from Helios links to those bodies, and movie_render.py turns them into link poses.
@@ -57,6 +58,11 @@ def helios_link_names(lib, env, index=0):
 
 
 def load_policy(path):
+    """The controller to record: a PPO policy saved by train.py or isaac_train.py, or, for "scripted", harvest_env.py's scripted controller."""
+    if path == "scripted":
+        from harvest_env_scripted import scripted_actions
+
+        return scripted_actions
     from stable_baselines3 import PPO
 
     model = PPO.load(path, device="cpu")
@@ -208,7 +214,7 @@ def record_isaac(args, choose):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--simulator", choices=["helios", "isaac"], required=True)
-    parser.add_argument("--policy", required=True, help="a policy saved by train.py or isaac_train.py, with its _normalization.pkl")
+    parser.add_argument("--policy", required=True, help="a policy saved by train.py or isaac_train.py, with its _normalization.pkl, or scripted for the scripted controller")
     parser.add_argument("--tree", type=int, default=301)
     parser.add_argument("--instances", type=int, default=2)
     parser.add_argument("--episodes", type=int, default=6, help="episodes per simulation")

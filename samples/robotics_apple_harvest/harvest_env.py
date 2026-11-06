@@ -202,7 +202,7 @@ def evaluate(env, choose_actions, episodes_per_simulation, records=None):
 
 
 def scripted_actions(observations):
-    """Line the cup up with the fruit, 8 cm short of it, then push straight in until the lip seals, and once gripped pull straight out of the cup.
+    """Line the cup up with the fruit, short of it, then push straight in until the lip seals, and once gripped pull straight out of the cup.
 
     The cup points horizontally away from the robot's turret, so it is lined up when the fruit is on the horizontal line from the turret through
     the cup, at the cup's height.
