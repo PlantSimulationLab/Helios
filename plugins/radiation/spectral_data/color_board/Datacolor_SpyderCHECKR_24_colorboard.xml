@@ -1,4 +1,9 @@
 <!-- Datacolor SpyderCHECKR 24 color calibration board -->
+<!-- PLACEHOLDER DATA (noted 2026-11-05): these are NOT measured SpyderCHECKR 24 spectra. Every spectrum below is an exact copy of a patch of
+     Calibrite_ColorChecker_Classic_colorboard.xml, reordered to the SpyderCHECKR patch layout (SpyderCHECKR 01-06 = Calibrite 06-01, 07-12 = 07-12,
+     13-18 = 18-13, 19-24 = 19-24). The SpyderCHECKR 24 uses different pigments, and no measured spectra for it are published, so a board rendered from
+     this file has the colours of a ColorChecker Classic. Those spectra also share the measurement errors of the Calibrite file (reflectance too high
+     below about 450 nm, dark patches about 0.025 too bright). To be replaced with measured spectra of a SpyderCHECKR 24. -->
 <helios>
 
 	<!-- cyan -->

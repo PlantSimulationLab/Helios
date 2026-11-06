@@ -258,6 +258,8 @@ namespace helios {
 
         // Scattering
         uint scattering_iteration = 0; //!< Current scattering iteration (0 = first bounce)
+        //! Accumulate the forward scattering estimate of this launch (see RayTracingBackend::getForwardScatterResults()); set for scattering launches only
+        bool forward_scatter_enabled = false;
 
         // Face selection (for diffuse rays)
         uint launch_face = 0; //!< Face to launch from: 1 = top (the side the normal points to), 0 = bottom

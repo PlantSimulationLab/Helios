@@ -90,10 +90,15 @@ void AlmondPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 //! Phytomer callback for an almond model that defines a "spur" shoot type: grows spurs from the lateral buds that did not grow a long shoot.
 void AlmondSpurPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 
+//! Apple fruit prototype. Its primitives carry, as defaults for the radiation model, the primitive data "reflectivity_spectrum" (apple_fruit_reflectivity_0000), "specular_roughness" (0.15) and "specular_n" (1.5).
 uint AppleFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
 uint AppleFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters);
 void ApplePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
 void ApplePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
+//! Phytomer creation function of the "apple_fruitingwall" model: the apple rules, with the basal node of every lateral blind.
+void AppleFruitingWallPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
+//! Phytomer callback of the "apple_fruitingwall" model: the apple rules, and the tall-spindle training of the wall, applied once per time step from the leader.
+void AppleFruitingWallPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 
 uint AsparagusLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index);
 void AsparagusPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);

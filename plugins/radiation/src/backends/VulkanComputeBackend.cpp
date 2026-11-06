@@ -169,6 +169,7 @@ namespace helios {
         destroyBuffer(transmissivity_buffer);
         destroyBuffer(radiation_in_buffer);
         destroyBuffer(radiation_in_top_buffer);
+        destroyBuffer(forward_scatter_buffer);
         destroyBuffer(radiation_out_top_buffer);
         destroyBuffer(radiation_out_bottom_buffer);
         destroyBuffer(smoothing_vertex_indices_buffer);
@@ -1506,12 +1507,20 @@ namespace helios {
             uint32_t face_absorption_enabled; // 1 = accumulate the absorption that arrived on the top face into radiation_in_top
             uint32_t below_horizon_diffuse_enabled; // 1 = the diffuse sky also reaches rays leaving below the horizon
             uint32_t specular_reflection_enabled; // 1 = this launch evaluates the surface layers' reflection lobe of the direct radiation
+            uint32_t forward_scatter_enabled; // 1 = accumulate the forward scattering estimate into forward_scatter (scattering launches)
         } push_constants;
         static_assert(sizeof(PushConstants) <= 128, "diffuse push constants must fit the 128-byte push-constant range");
+
+        // Only scattering launches measure the forward scattering estimate, into the buffer zeroScatterBuffers() sized for them
+        if (params.forward_scatter_enabled && forward_scatter_buffer.size != primitive_count * launch_band_count * sizeof(float)) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): The forward scattering buffer holds " + std::to_string(forward_scatter_buffer.size) +
+                                 " bytes, not one value per primitive and launched band. zeroScatterBuffers() must be called before a scattering launch.");
+        }
 
         // Initialize invariant push constants
         push_constants.below_horizon_diffuse_enabled = params.below_horizon_diffuse_enabled != 0 ? 1u : 0u;
         push_constants.specular_reflection_enabled = params.specular_reflection_enabled != 0 ? 1u : 0u;
+        push_constants.forward_scatter_enabled = params.forward_scatter_enabled ? 1u : 0u;
         push_constants.rays_per_primitive = params.rays_per_primitive;
         push_constants.random_seed = params.random_seed;
         push_constants.band_count = launch_band_count; // Use launch band count (not global)
@@ -1590,7 +1599,7 @@ namespace helios {
             vkCmdWriteTimestamp(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestamp_query_pool, 1);
 
             // Final buffer memory barriers to ensure storage buffer writes are visible
-            VkBufferMemoryBarrier buffer_barriers[5];
+            VkBufferMemoryBarrier buffer_barriers[6];
 
             // Radiation_in buffer barrier
             buffer_barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -1647,8 +1656,19 @@ namespace helios {
             buffer_barriers[4].offset = 0;
             buffer_barriers[4].size = VK_WHOLE_SIZE;
 
+            // Forward scattering estimate barrier (a placeholder until zeroScatterBuffers())
+            buffer_barriers[5].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            buffer_barriers[5].pNext = nullptr;
+            buffer_barriers[5].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            buffer_barriers[5].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+            buffer_barriers[5].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[5].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[5].buffer = forward_scatter_buffer.buffer;
+            buffer_barriers[5].offset = 0;
+            buffer_barriers[5].size = VK_WHOLE_SIZE;
+
             vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, // No global memory barriers
-                                 5, buffer_barriers, // Buffer-specific barriers
+                                 6, buffer_barriers, // Buffer-specific barriers
                                  0, nullptr); // No image barriers
 
             vkEndCommandBuffer(compute_command_buffer);
@@ -2208,6 +2228,16 @@ namespace helios {
         requireFiniteResults(white_reference_bottom, "white_reference_bottom", launch_band_count);
     }
 
+    void VulkanComputeBackend::getForwardScatterResults(std::vector<float> &forward_scatter, size_t launch_band_count) {
+        const size_t forward_scatter_size = primitive_count * launch_band_count;
+        if (forward_scatter_buffer.size != forward_scatter_size * sizeof(float)) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::getForwardScatterResults): forward_scatter holds " + std::to_string(forward_scatter_buffer.size) + " bytes, but " + std::to_string(primitive_count) + " primitives and " +
+                                 std::to_string(launch_band_count) + " launched bands require " + std::to_string(forward_scatter_size * sizeof(float)) + ". zeroScatterBuffers() must be called before the scattering launch.");
+        }
+        forward_scatter.resize(forward_scatter_size);
+        downloadBufferData(forward_scatter_buffer, forward_scatter.data(), forward_scatter_size * sizeof(float));
+    }
+
     void VulkanComputeBackend::getRadiationInTopResults(std::vector<float> &radiation_in_top) {
         if (!face_absorption_enabled) {
             helios_runtime_error("ERROR (VulkanComputeBackend::getRadiationInTopResults): Face absorption tracking was not enabled by the last zeroRadiationBuffers() call, so the absorbed radiation that arrived on the top face was not recorded.");
@@ -2434,9 +2464,20 @@ namespace helios {
             scatter_bottom_buffer = createBuffer(buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         }
 
-        // Zero both buffers
+        // The forward scattering estimate of the next scattering launch, one value per [primitive × launch band]
+        const size_t forward_scatter_bytes = primitive_count * launch_band_count * sizeof(float);
+        if (forward_scatter_buffer.buffer == VK_NULL_HANDLE || forward_scatter_buffer.size != forward_scatter_bytes) {
+            if (forward_scatter_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(forward_scatter_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            forward_scatter_buffer = createBuffer(forward_scatter_bytes, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        }
+
+        // Zero the buffers
         zeroBuffer(scatter_top_buffer);
         zeroBuffer(scatter_bottom_buffer);
+        zeroBuffer(forward_scatter_buffer);
 
         descriptors_dirty = true; // Scatter buffers created/changed
     }
@@ -3205,6 +3246,7 @@ namespace helios {
                 {17, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Camera-weighted outgoing radiation of each spectral-texture class (packed)
                 {18, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_pixel_class
                 {19, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Smoothing-vertex radiation of primitives with a spectral texture (packed)
+                {20, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // forward_scatter
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(result_bindings.size());
@@ -3331,6 +3373,8 @@ namespace helios {
         zeroBuffer(white_reference_bottom_buffer);
         radiation_in_top_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         zeroBuffer(radiation_in_top_buffer);
+        forward_scatter_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        zeroBuffer(forward_scatter_buffer);
 
         // ========== Create placeholder specular buffers ==========
         // MoltenVK requires these before pipeline creation (camera/direct shaders reference them)
@@ -4616,6 +4660,23 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &radiation_in_top_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo forward_scatter_info{};
+        forward_scatter_info.buffer = forward_scatter_buffer.buffer;
+        forward_scatter_info.offset = 0;
+        forward_scatter_info.range = VK_WHOLE_SIZE;
+
+        if (forward_scatter_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 20;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &forward_scatter_info;
             descriptor_writes.push_back(write);
         }
 

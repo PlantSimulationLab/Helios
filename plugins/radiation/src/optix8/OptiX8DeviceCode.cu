@@ -1382,6 +1382,30 @@ extern "C" __global__ void __closesthit__diffuse() {
             const float3 point = make_float3(ray_origin.x + t_hit * ray_direction.x, ray_origin.y + t_hit * ray_direction.y, ray_origin.z + t_hit * ray_direction.z);
             outgoing += directLayerReflection(hit_position, (uint32_t)b, hit_layer, face_normal, to_viewer, point, -1);
         }
+        // Forward scattering estimate (see RadiationModel::runBand()): the flux this ray carries away from the origin along its
+        // path, times the fraction of it the surface it reaches scatters again. A cover reflects its reflectance; what it transmits
+        // is counted where the ray continues, attenuated by cover_tau. A hit surface's own reflectivity is used, not that of a
+        // spectral-texture class at the hit point: the estimate need only be unbiased over the scene, not per texel.
+        if (params.forward_scatter) {
+            const float *origin_outgoing = prd->face ? params.radiation_out_top : params.radiation_out_bottom;
+            const float *origin_layer = surfaceLayerTable(origin_position, b_global);
+            const float launched = origin_layer ? outgoingLayerFlux(origin_outgoing, ind_origin, origin_layer, prd->origin_cos) : origin_outgoing[ind_origin];
+            if (launched != 0.f) {
+                float rescattered;
+                if (coverInAllLaunchedBands(hit_position)) {
+                    rescattered = coverTauRhoAlpha(hit_position, b_global, coverCosTheta(hit_position, optixGetWorldRayDirection())).y;
+                } else {
+                    const uint32_t hit_radprop_ind = prd->source_ID * Nprims * Nbands_global + hit_position * Nbands_global + b_global;
+                    rescattered = params.rho[hit_radprop_ind] + params.tau[hit_radprop_ind];
+                    if (hit_layer) {
+                        const float hit_albedo = surfaceLayerAlbedo(hit_layer, primitiveNormalCos(hit_position, optixGetWorldRayDirection()));
+                        rescattered = hit_albedo + (1.f - hit_albedo) * rescattered;
+                    }
+                }
+                atomicFloatAdd(&params.forward_scatter[ind_origin], (float)(fabsf(launched) * prd->strength * cover_tau * rescattered));
+            }
+        }
+
         const double strength  = outgoing * prd->strength * cover_tau;
         if (strength == 0.0) continue;
 

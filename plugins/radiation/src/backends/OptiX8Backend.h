@@ -123,6 +123,7 @@ namespace helios {
         void getWhiteReferenceResults(std::vector<float> &white_reference_top,
                                       std::vector<float> &white_reference_bottom) override;
         void getRadiationInTopResults(std::vector<float> &radiation_in_top) override;
+        void getForwardScatterResults(std::vector<float> &forward_scatter, size_t launch_band_count) override;
         [[nodiscard]] size_t getRadiationInTopBufferSize() const override;
         [[nodiscard]] size_t getAbandonedRayCount() override;
 
@@ -243,6 +244,7 @@ namespace helios {
         CUdeviceptr d_vertex_radiation_out_bottom = 0;
         CUdeviceptr d_scatter_buff_top       = 0;
         CUdeviceptr d_scatter_buff_bottom    = 0;
+        CUdeviceptr d_forward_scatter        = 0; //!< Forward scattering estimate [prim][launch band] (see getForwardScatterResults())
         CUdeviceptr d_radiation_in_camera    = 0;
         CUdeviceptr d_scatter_buff_top_cam   = 0;
         CUdeviceptr d_scatter_buff_bottom_cam= 0;

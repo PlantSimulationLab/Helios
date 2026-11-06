@@ -1456,7 +1456,8 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 - von Caemmerer 2021 spreadsheet verif
     photomodel.setModelCoefficients(c4);
 
     DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "temperature", 298.15f));
-    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.f / 4.57f));
+    // The spreadsheet assumes 2000 umol/m2/s incident PPFD with leaf absorptance 0.85; radiation_flux_PAR is the absorbed flux.
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 0.85f * 2000.f / 4.57f));
     DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "air_CO2", 400.f));
 
     struct C4TestPoint {
@@ -1517,7 +1518,8 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 - Woodford 2025 default A vs Cm regres
     photomodel.setModelCoefficients(c4);
 
     DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "temperature", 298.15f));
-    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.f / 4.57f));
+    // The spreadsheet assumes 2000 umol/m2/s incident PPFD with leaf absorptance 0.85; radiation_flux_PAR is the absorbed flux.
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 0.85f * 2000.f / 4.57f));
     DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "air_CO2", 400.f));
 
     struct C4TestPoint {
@@ -1684,7 +1686,8 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 - Patched Woodford spreadsheet anchors
     photomodel.disableMessages();
     DOCTEST_CHECK_NOTHROW(photomodel.setModelType_C4());
 
-    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 2000.f / 4.57f));
+    // The spreadsheet assumes 2000 umol/m2/s incident PPFD with leaf absorptance 0.85; radiation_flux_PAR is the absorbed flux.
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 0.85f * 2000.f / 4.57f));
     DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "air_CO2", 400.f));
 
     std::string line;
@@ -1722,6 +1725,45 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 - Patched Woodford spreadsheet anchors
         ++n_points;
     }
     DOCTEST_CHECK_MESSAGE(n_points >= 60, "Expected ≥60 anchor rows in CSV; got " << n_points);
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel C4 - radiation_flux_PAR is treated as absorbed PAR") {
+    // radiation_flux_PAR is the PAR flux ABSORBED by the primitive (as written by the radiation model, and as the
+    // C3 Farquhar model already interprets it). The von Caemmerer spreadsheet anchors were generated for an incident
+    // PPFD of 2000 umol/m2/s with leaf absorptance 0.85, i.e. an absorbed PPFD of 1700 umol/m2/s. Supplying that
+    // absorbed flux must reproduce the electron-transport-limited spreadsheet values; a model that multiplies the
+    // absorbed flux by the absorptance a second time under-drives J by ~7% here and fails.
+    auto gaussian_Jmax = [](float T_C) {
+        const float dT = (T_C - 43.f) / 26.f;
+        return 400.f * std::exp(-dT * dT);
+    };
+    struct Anchor {
+        float T_C, Cm, Amin;
+    };
+    // Aj-limited rows of tests/C4_test_anchors.csv (Aj < Ac)
+    const std::vector<Anchor> anchors = {{40.f, 80.f, 69.555506f}, {40.f, 250.f, 69.772399f}, {35.f, 100.f, 67.566676f}};
+
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+    photomodel.disableMessages();
+    photomodel.setModelType_C4();
+    const float absorbed_PPFD = 0.85f * 2000.f;
+    context_test.setPrimitiveData(UUID, "radiation_flux_PAR", absorbed_PPFD / 4.57f);
+    context_test.setPrimitiveData(UUID, "air_CO2", 400.f);
+
+    for (const auto &anchor: anchors) {
+        C4ModelCoefficients c4;
+        c4.Vpr = 1.0e4f;
+        c4.setJmax(gaussian_Jmax(anchor.T_C));
+        photomodel.setModelCoefficients(c4);
+        photomodel.setCm(anchor.Cm, {UUID});
+        context_test.setPrimitiveData(UUID, "temperature", anchor.T_C + 273.15f);
+        photomodel.run();
+        float A;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+        DOCTEST_CHECK_MESSAGE(A == doctest::Approx(anchor.Amin).epsilon(0.005), "T=" << anchor.T_C << " Cm=" << anchor.Cm << " expected A=" << anchor.Amin << " got A=" << A);
+    }
 }
 
 DOCTEST_TEST_CASE("PhotosynthesisModel C4 - Material-data caching round-trip") {
@@ -1906,7 +1948,7 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Reasonable photosynthesis va
     // For each library entry, run the full model (with Ci→Cm coupling and stomatal balance) under
     // realistic midday conditions and confirm net photosynthesis falls within a reasonable C4
     // range, and that a low-light run produces smaller, still-positive A.
-    const std::vector<std::string> species = {"SetariaViridis_vC2021", "GenericC4_vC2000", "Maize_Massad2007"};
+    const std::vector<std::string> species = {"SetariaViridis_vC2021", "GenericC4_vC2000", "Maize_Massad2007", "Sorghum_GEMINI2026"};
 
     for (const auto &sp: species) {
         Context context_test;
@@ -1941,6 +1983,38 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Reasonable photosynthesis va
         context_test.getPrimitiveData(UUID, "net_photosynthesis", A_low);
         bool A_low_valid = (A_low > 0.f) && (A_low < A_high);
         DOCTEST_CHECK_MESSAGE(A_low_valid, sp << ": low-light A=" << A_low << " (should be 0<A<" << A_high << ")");
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel GEMINI crop library entries reproduce field survey photosynthesis") {
+    // The Cowpea (C3) and Sorghum (C4) entries were fitted to GEMINI 2026 field response curves and scaled to the median of the
+    // 2026 LI-6800 surveys. At the median survey conditions (Ci, absorbed PPFD 1686 umol/m2/s, leaf temperature) the library
+    // parameters must reproduce the median measured A (cowpea 44.45, sorghum 35.81 umol/m2/s) to within 5%.
+    struct SurveyAnchor {
+        const char *species;
+        bool is_C4;
+        float Ci, T_C, A_survey_median;
+    };
+    const std::vector<SurveyAnchor> anchors = {{"Cowpea", false, 1736.6f, 28.87f, 44.45f}, {"Sorghum", true, 1526.8f, 29.88f, 35.81f}};
+    for (const auto &anchor: anchors) {
+        Context context_test;
+        uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        PhotosynthesisModel photomodel(&context_test);
+        photomodel.disableMessages();
+        if (anchor.is_C4) {
+            photomodel.setModelType_C4();
+            photomodel.setC4CoefficientsFromLibrary(anchor.species);
+        } else {
+            photomodel.setModelType_Farquhar();
+            photomodel.setFarquharCoefficientsFromLibrary(anchor.species);
+        }
+        context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 1686.f / 4.57f);
+        context_test.setPrimitiveData(UUID, "temperature", anchor.T_C + 273.15f);
+        photomodel.setCi(anchor.Ci, {UUID});
+        photomodel.run();
+        float A;
+        context_test.getPrimitiveData(UUID, "net_photosynthesis", A);
+        DOCTEST_CHECK_MESSAGE(A == doctest::Approx(anchor.A_survey_median).epsilon(0.05), anchor.species << ": A=" << A << " vs survey median " << anchor.A_survey_median);
     }
 }
 
@@ -2237,6 +2311,9 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar library values match documentati
             {"Elderberry", 37.7f, 149.7f, 1.3f, 0.202f},
             {"Maple", 96.4f, 168.f, 0.1f, 0.077f},
             {"Redbud", 68.5f, 132.4f, 0.8f, 0.41f},
+            {"Cowpea", 117.6f, 379.9f, 3.90f, 0.337f},
+            {"CommonBean", 104.7f, 259.4f, 3.13f, 0.321f},
+            {"Bean", 104.7f, 259.4f, 3.13f, 0.321f},
     };
 
     for (const auto &e: expected) {
@@ -2249,7 +2326,7 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar library values match documentati
     }
 
     // Species documented with a TPU column must actually enable TPU limitation.
-    for (const char *sp: {"Almond", "Walnut", "Pistachio"}) {
+    for (const char *sp: {"Almond", "Walnut", "Pistachio", "Cowpea", "CommonBean"}) {
         FarquharModelCoefficients c = photomodel.getFarquharCoefficientsFromLibrary(sp);
         DOCTEST_INFO("species = " << sp);
         DOCTEST_CHECK(c.TPU_flag == 1);

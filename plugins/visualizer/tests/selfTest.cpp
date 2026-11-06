@@ -125,6 +125,11 @@ public:
         return visualizer.contextUUIDs_uploaded.size();
     }
 
+    //! glBufferSubData calls the last transferBufferData() made for changed primitives
+    static size_t getPartialUploadCount(const Visualizer &visualizer) {
+        return visualizer.partial_uploads_last_transfer;
+    }
+
     //! Number of geometry elements the handler will push to the GPU on the next transferBufferData()
     static size_t getDirtyGeometryCount(const Visualizer &visualizer) {
         return visualizer.geometry_handler.getDirtyUUIDs().size();
@@ -6263,4 +6268,240 @@ DOCTEST_TEST_CASE("Visualizer lights each face of a Context voxel from outside t
         const uint unlit = centerGreenLevel(5.f * outward, -1.f * outward);
         DOCTEST_CHECK(lit > unlit + 40);
     }
+}
+
+namespace {
+    //! A grid of small triangles over [-1,1]^2 at z=0, added in order so they sit together in the buffers
+    std::vector<uint> addTriangleGrid(Context &context, int per_side) {
+        std::vector<uint> UUIDs;
+        const float step = 2.f / float(per_side);
+        for (int j = 0; j < per_side; j++) {
+            for (int i = 0; i < per_side; i++) {
+                const vec3 corner = make_vec3(-1.f + step * float(i), -1.f + step * float(j), 0.f);
+                UUIDs.push_back(context.addTriangle(corner, corner + make_vec3(0.8f * step, 0, 0), corner + make_vec3(0, 0.8f * step, 0), RGB::green));
+            }
+        }
+        return UUIDs;
+    }
+
+    void setUpView(Visualizer &visualizer) {
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        // Not (0,0,2) looking at the origin: that is the default camera, which the first build re-frames
+        visualizer.setCameraPosition(make_vec3(0.3f, -0.4f, 3.f), make_vec3(0, 0, 0));
+    }
+} // namespace
+
+TEST_CASE("Moving displayed geometry uploads one run per buffer, not one slice per primitive") {
+    // transferBufferData() uploaded each changed primitive's slice of each of its twelve buffers on
+    // its own: moving a 2900-primitive plant cost ~35000 glBufferSubData calls and ~220 ms per frame
+    // through Apple's OpenGL, against ~10 ms when nothing had changed. Primitives added together sit
+    // together in the buffers, so moving them must cost a handful of uploads however many there are.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 40); // 1600 triangles
+
+    Visualizer visualizer(200, 150, 0, false, true);
+    setUpView(visualizer);
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    const std::vector<uint> moved(UUIDs.begin(), UUIDs.begin() + 800);
+    context.translatePrimitive(moved, make_vec3(0.01f, 0, 0));
+    visualizer.buildContextGeometry(&context);
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    // 800 primitives changed in the triangle buffers: one contiguous run in each of twelve buffers
+    DOCTEST_CHECK(VisualizerTestHelper::getPartialUploadCount(visualizer) <= 12);
+    DOCTEST_CHECK(VisualizerTestHelper::getPartialUploadCount(visualizer) > 0);
+
+    // Nothing changed: nothing is uploaded
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPartialUploadCount(visualizer) == 0);
+}
+
+TEST_CASE("Geometry changed after display renders as a fresh build of the changed scene does") {
+    // The partial uploads must leave every buffer the GPU reads equal to the CPU-side arrays, whatever
+    // the pattern of changes: scattered primitives (runs that do not merge), a block (one run), and a
+    // recolor (only the color buffer is meant to change). Compared against a Visualizer that never saw
+    // the old scene, by primitive identity and by color, pixel for pixel.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 60); // 3600 triangles
+    context.addPatch(make_vec3(0, 0, -0.01f), make_vec2(2.5f, 2.5f), make_SphericalCoord(0, 0), RGB::blue);
+
+    Visualizer incremental(240, 180, 0, false, true);
+    setUpView(incremental);
+    incremental.enableExactColorMode();
+    incremental.buildContextGeometry(&context);
+    std::vector<uint> before;
+    uint width = 0, height = 0;
+    incremental.getPixelUUIDs(before, width, height);
+
+    std::vector<uint> scattered, block;
+    for (size_t k = 0; k < UUIDs.size(); k += 997) {
+        scattered.push_back(UUIDs.at(k)); // far enough apart that their runs stay separate
+    }
+    block.assign(UUIDs.begin() + 1000, UUIDs.begin() + 1600);
+    context.translatePrimitive(scattered, make_vec3(0.05f, 0.05f, 0.1f));
+    context.translatePrimitive(block, make_vec3(-0.1f, 0, 0.05f));
+    context.setPrimitiveColor(std::vector<uint>(UUIDs.begin() + 2000, UUIDs.begin() + 2400), RGB::red);
+
+    incremental.buildContextGeometry(&context);
+    std::vector<uint> after;
+    incremental.getPixelUUIDs(after, width, height);
+    DOCTEST_REQUIRE(after != before); // the change is visible, so the comparison below means something
+    std::vector<uint> incremental_rgb;
+    uint rgb_width = 0, rgb_height = 0;
+    incremental.getWindowPixelsRGB(incremental_rgb, rgb_width, rgb_height);
+
+    Visualizer fresh(240, 180, 0, false, true);
+    setUpView(fresh);
+    fresh.enableExactColorMode();
+    fresh.buildContextGeometry(&context);
+    std::vector<uint> expected;
+    fresh.getPixelUUIDs(expected, width, height);
+    std::vector<uint> fresh_rgb;
+    fresh.getWindowPixelsRGB(fresh_rgb, rgb_width, rgb_height);
+
+    DOCTEST_CHECK(after == expected);
+    DOCTEST_CHECK(incremental_rgb == fresh_rgb);
+}
+
+
+namespace {
+    //! Where a pinhole camera puts a world point: (column, row) from the top-left corner, in pixels
+    /** Written from the camera's definition, independently of how the Visualizer builds its matrices. */
+    vec2 pinholePixel(const vec3 &eye, const vec3 &lookat, const vec3 &world_up, float vertical_fov_degrees, uint width, uint height, float principal_column, float principal_row, const vec3 &point) {
+        vec3 forward = lookat - eye;
+        forward.normalize();
+        vec3 right = cross(forward, world_up);
+        right.normalize();
+        vec3 image_down = cross(forward, right); // = -(camera up)
+        const float focal = 0.5f * float(height) / std::tan(0.5f * deg2rad(vertical_fov_degrees));
+        const vec3 d = point - eye;
+        const float depth = d * forward;
+        return make_vec2(principal_column + focal * (d * right) / depth, principal_row + focal * (d * image_down) / depth);
+    }
+
+    //! Centroid of the pixels showing one primitive, from the pixel-to-primitive map; (-1,-1) when none do
+    vec2 pixelCentroid(const std::vector<uint> &pixel_UUIDs, uint width, uint UUID) {
+        double column_sum = 0, row_sum = 0;
+        size_t count = 0;
+        for (size_t k = 0; k < pixel_UUIDs.size(); k++) {
+            if (pixel_UUIDs[k] == UUID + 1) {
+                column_sum += double(k % width) + 0.5;
+                row_sum += double(k / width) + 0.5;
+                count++;
+            }
+        }
+        return count == 0 ? make_vec2(-1, -1) : make_vec2(float(column_sum / count), float(row_sum / count));
+    }
+} // namespace
+
+TEST_CASE("A camera set to the default position is not re-framed to fit the scene") {
+    // The first build fitted the camera to the scene whenever the camera still held its default
+    // position, judged by comparing coordinates: a camera set on purpose to (0,0,2) looking at the
+    // origin was moved to a 20-degree oblique view with no notice.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(0.5f, 0.5f));
+
+    Visualizer visualizer(200, 150, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.setCameraPosition(make_vec3(0, 0, 2), make_vec3(0, 0, 0));
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    const std::vector<vec3> camera = visualizer.getCameraPosition(); // {look-at, eye}
+    DOCTEST_CHECK(camera.at(0) == make_vec3(0, 0, 0));
+    DOCTEST_CHECK(camera.at(1) == make_vec3(0, 0, 2));
+
+    // A camera nobody set is still fitted to the scene
+    Visualizer unset(200, 150, 0, false, true);
+    unset.disableMessages();
+    unset.buildContextGeometry(&context);
+    unset.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(unset.getCameraPosition().at(1) != make_vec3(0, 0, 2));
+}
+
+TEST_CASE("The camera projects as a pinhole with its field of view, up direction and principal point") {
+    // Small squares at known positions must appear where a pinhole camera with the same pose, vertical
+    // field of view, up direction and principal point puts them. Covers the automatic up direction,
+    // a set one that rolls the image, and an off-centre principal point.
+    const uint width = 320, height = 240;
+    const float fov = 40.f;
+    const vec3 eye = make_vec3(0.6f, -0.9f, 2.2f);
+    const vec3 lookat = make_vec3(0.05f, 0.1f, 0.f);
+
+    Context context;
+    const std::vector<vec3> centres = {make_vec3(0, 0, 0), make_vec3(0.35f, 0.1f, 0.05f), make_vec3(-0.3f, 0.3f, 0.f), make_vec3(0.1f, -0.35f, 0.1f), make_vec3(-0.25f, -0.2f, 0.2f)};
+    std::vector<uint> UUIDs;
+    for (const vec3 &c: centres) {
+        UUIDs.push_back(context.addPatch(c, make_vec2(0.04f, 0.04f)));
+    }
+
+    struct Case {
+        const char *name;
+        bool set_up;
+        vec3 up;
+        bool set_principal;
+        float principal_column, principal_row;
+    };
+    const std::vector<Case> cases = {{"automatic up, centred", false, make_vec3(0, 0, 1), false, 0.5f * width, 0.5f * height},
+                                     {"rolled by a set up direction", true, make_vec3(1, 0.3f, 0.2f), false, 0.5f * width, 0.5f * height},
+                                     {"off-centre principal point", true, make_vec3(0, 0, 1), true, 0.5f * width + 37.f, 0.5f * height - 21.f}};
+
+    for (const Case &c: cases) {
+        DOCTEST_CAPTURE(c.name);
+        Visualizer visualizer(width, height, 0, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.setCameraPosition(eye, lookat);
+        visualizer.setCameraFieldOfView(fov);
+        if (c.set_up) {
+            visualizer.setCameraUpDirection(c.up);
+        }
+        if (c.set_principal) {
+            visualizer.setCameraPrincipalPoint(c.principal_column, c.principal_row);
+        }
+        visualizer.buildContextGeometry(&context);
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.getPixelUUIDs(pixels, w, h);
+        DOCTEST_REQUIRE(w == width);
+        DOCTEST_REQUIRE(h == height);
+
+        for (size_t k = 0; k < centres.size(); k++) {
+            DOCTEST_CAPTURE(k);
+            const vec2 expected = pinholePixel(eye, lookat, c.up, fov, width, height, c.principal_column, c.principal_row, centres[k]);
+            const vec2 seen = pixelCentroid(pixels, w, UUIDs[k]);
+            DOCTEST_REQUIRE(seen.x >= 0.f); // the square is in view
+            DOCTEST_CHECK(std::fabs(seen.x - expected.x) < 0.75f);
+            DOCTEST_CHECK(std::fabs(seen.y - expected.y) < 0.75f);
+        }
+    }
+}
+
+TEST_CASE("A camera up direction that cannot fix the roll is refused") {
+    Visualizer visualizer(64, 64, 0, false, true);
+    visualizer.disableMessages();
+    DOCTEST_CHECK_THROWS(visualizer.setCameraUpDirection(make_vec3(0, 0, 0)));
+    DOCTEST_CHECK_THROWS(visualizer.setCameraPrincipalPoint(std::nanf(""), 10.f));
+
+    // Parallel to the view: refused when the frame is rendered, rather than replaced by another roll
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(0.5f, 0.5f));
+    visualizer.setCameraPosition(make_vec3(0, 0, 3), make_vec3(0, 0, 0));
+    visualizer.setCameraUpDirection(make_vec3(0, 0, 1));
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    DOCTEST_CHECK_THROWS(visualizer.getPixelUUIDs(pixels, width, height));
+
+    visualizer.clearCameraUpDirection();
+    DOCTEST_CHECK_NOTHROW(visualizer.getPixelUUIDs(pixels, width, height));
 }

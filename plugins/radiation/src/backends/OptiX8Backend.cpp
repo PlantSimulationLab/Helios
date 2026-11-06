@@ -270,6 +270,7 @@ void OptiX8Backend::shutdown() {
     freePtr(d_vertex_radiation_out_bottom);
     freePtr(d_scatter_buff_top);
     freePtr(d_scatter_buff_bottom);
+    freePtr(d_forward_scatter);
     freePtr(d_radiation_in_camera);
     freePtr(d_scatter_buff_top_cam);
     freePtr(d_scatter_buff_bottom_cam);
@@ -655,6 +656,7 @@ void OptiX8Backend::updateMaterials(const RayTracingMaterial &materials) {
     reallocDevice(d_radiation_out_bottom, outgoing_bytes);
     reallocDevice(d_scatter_buff_top,     outgoing_bytes);
     reallocDevice(d_scatter_buff_bottom,  outgoing_bytes);
+    reallocDevice(d_forward_scatter,      rad_bytes);
 
     current_band_count   = Nbands;
     current_source_count = materials.num_sources;
@@ -914,6 +916,8 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
     }
 
     applyLaunchParams(launch_params);
+    // Only scattering launches measure the forward scattering estimate; the primary diffuse launch skips it
+    h_params.forward_scatter = launch_params.forward_scatter_enabled ? reinterpret_cast<float *>(d_forward_scatter) : nullptr;
 
     // The kernels write one camera-scatter block per camera; refuse to index past buffers sized for another camera set.
     requireCameraScatterBuffersSized("launchDiffuseRays", launch_params.num_bands_launch);
@@ -1259,6 +1263,14 @@ void OptiX8Backend::getWhiteReferenceResults(std::vector<float> &white_reference
     white_reference_bottom = downloadFloat(d_white_reference_bottom_cam, count);
 }
 
+void OptiX8Backend::getForwardScatterResults(std::vector<float> &forward_scatter, size_t launch_band_count) {
+    if (!d_forward_scatter || launch_band_count > current_band_count) {
+        helios_runtime_error("ERROR (OptiX8Backend::getForwardScatterResults): The forward scattering buffer holds " + std::to_string(current_band_count) + " bands, fewer than the " + std::to_string(launch_band_count) +
+                             " launched. updateMaterials() must be called before rays are launched.");
+    }
+    forward_scatter = downloadFloat(d_forward_scatter, current_primitive_count * launch_band_count);
+}
+
 void OptiX8Backend::getRadiationInTopResults(std::vector<float> &radiation_in_top) {
     if (!d_radiation_in_top || radiation_in_top_count == 0) {
         helios_runtime_error("ERROR (OptiX8Backend::getRadiationInTopResults): Face absorption tracking was not enabled by the last zeroRadiationBuffers() call, so the absorbed radiation that arrived on the top face was not recorded.");
@@ -1379,6 +1391,7 @@ void OptiX8Backend::zeroScatterBuffers() {
 
     if (d_scatter_buff_top)    CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_top),    0, total_bytes));
     if (d_scatter_buff_bottom) CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_bottom), 0, total_bytes));
+    if (d_forward_scatter)     CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_forward_scatter),     0, total_bytes / outgoing_components));
 }
 
 void OptiX8Backend::zeroCameraPixelBuffers(const helios::int2 &resolution) {

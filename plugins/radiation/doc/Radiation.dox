@@ -451,6 +451,32 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  In a band with thermal emission (\ref RadEmission) a primitive has one emissivity, so rays use the primitive's own values there rather than its classes'. Its classes must then agree in that band, or the primitive can be given constant "reflectivity_[band]" and "transmissivity_[band]" data for it, which (in such a band only) override its palette as they would a primitive's spectra. A band of chlorophyll fluorescence (\ref RadiationModel::addSIFCamera()) is treated like a band without emission: rays use the classes, which may differ, and the fluorescence each face emits is added to what it reflects and transmits.
 
+ <b>Surfaces with a class map.</b> A class map of a surface that is not a leaf, such as bark or a fruit skin, is defined by an XML file of the same name beside it that names the surface's spectra and scales them for each class:
+
+ ~~~~~~{.xml}
+ <helios>
+   <surface_class_map reflectivity_spectrum="bark_reflectivity_0000" transmissivity_spectrum="" provenance="AppleBark.jpg via utilities/leaf_class_maps/fit_classes --surface">
+     <class id="1" reflectance_scale="0.11"/>
+     <class id="2" reflectance_scale="0.46"/>
+     ...
+   </surface_class_map>
+ </helios>
+ ~~~~~~
+
+ The spectra are taken from the spectral library or from the Context's global data, and each class's spectra are the surface's spectra times its reflectance_scale (held to at most 1, and to at most 1 together). \ref RadiationModel::applySpectralClassMaps() builds the palette "surface_[class map]" from such definitions for every primitive given to it that carries the primitive data "spectral_class_map" (the class map's path), and assigns the spectral texture. PlantArchitecture records the class map on the bark and fruit of library models that have one, such as the "apple" and "apple_fruitingwall" models (see InternodeParameters::image_class_map_file and InflorescenceParameters::fruit_class_map_file), so one call after building the plants is all that is needed:
+
+ ~~~~~~{.cpp}
+   PlantArchitecture plantarchitecture(&context);
+   plantarchitecture.loadPlantModelFromLibrary("apple");
+   plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 1200);
+
+   RadiationModel radiation(&context);
+   radiation.applySpectralClassMaps(); // bark and fruit; the leaves' class maps are for LeafOptics
+   radiation.updateGeometry();
+ ~~~~~~
+
+ The fruit of the "apple" models instead carries, as primitive data set by its prototype, a red-apple skin spectrum ("apple_fruit_reflectivity_0000") and a waxy surface layer (specular_roughness 0.15, specular_n 1.5), since a surface layer cannot yet be combined with a spectral texture; a user overrides them by setting the same data after the plant is built. Class maps of leaves are defined relative to the leaf's properties and are for LeafOptics instead (see the LeafOptics documentation, "Leaves with a class map"); primitives carrying one are left alone by this call, so a plant can be given whole. Class maps and their definitions can be made from a texture with utilities/leaf_class_maps/fit_classes (its surface mode, for anything that is not a leaf). A class scales the whole spectrum, so its colour in linear light is the spectrum's; the fitter holds every class below a visible reflectance of 0.6 by default, because the brightest parts of a photograph of a natural surface are gloss and lit curvature rather than reflectance, and a class scaled past that renders washed out.
+
  Not yet supported, and raising an error if combined with a spectral texture:
  - Primitive data "reflectivity_[band]" or "transmissivity_[band]" in a band without thermal emission (including a fluorescence band), which would set one value for the whole primitive.
  - Translucent covers (\ref RadGlass) and specular surface layers (\ref RadSurfaceLayer).
@@ -770,7 +796,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  radiationmodel.setScatteringDepth( "PAR", 3); //set the maximum number of scattering iterations
  ~~~~~~
 
- Each iteration launches a fraction q of the energy launched in the one before. In a dense canopy, q is roughly the leaf scattering albedo (reflectivity plus transmissivity) times the chance that scattered light hits another leaf: about 0.1 for PAR leaves and 0.5 for near-infrared leaves with reflectivity and transmissivity of 0.4. After the last iteration some energy is still waiting to be scattered. Rather than absorbing it where it sits, which overestimates absorption by a fraction that falls only as q to the power of the depth, the model sums the remaining iterations as a geometric series: each primitive receives its absorption in the last iteration times q/(1-q), where q is measured from the energy launched in the last two iterations. In a homogeneous canopy with near-infrared leaves, leaf absorption is then within about 0.1% of the converged value after three iterations and a few hundredths of a percent after four, so a depth of 3 to 5 is usually enough. A band with a depth of 0 has no scattering: its primitives absorb all the radiation they intercept. A band in which no primitive reflects or transmits (all have the default reflectivity and transmissivity of 0, and in an emission band an emissivity of 1) has nothing to scatter, so its scattering iterations stop before any rays are traced and add almost no run time.
+ Each iteration launches a fraction q of the energy launched in the one before. In a dense canopy, q is roughly the leaf scattering albedo (reflectivity plus transmissivity) times the chance that scattered light hits another leaf: about 0.1 for PAR leaves and 0.5 for near-infrared leaves with reflectivity and transmissivity of 0.4. After the last iteration some energy is still waiting to be scattered. Rather than absorbing it where it sits, which overestimates absorption by a fraction that falls only as q to the power of the depth, the model sums the remaining iterations as a geometric series: each primitive receives its absorption in the last iteration times q/(1-q). q is measured in the last iteration from each primitive's own rays: the energy it launches times the fraction that the surfaces its rays reach (their reflectivity plus transmissivity) scatter again. Measured this way, q depends little on how many rays the scene's largest primitives launch, and it cannot exceed the largest reflectivity plus transmissivity in the scene. In a homogeneous canopy with near-infrared leaves, leaf absorption is then within about 0.1% of the converged value after three iterations and a few hundredths of a percent after four, so a depth of 3 to 5 is usually enough. A band with a depth of 0 has no scattering: its primitives absorb all the radiation they intercept. A band in which no primitive reflects or transmits (all have the default reflectivity and transmissivity of 0, and in an emission band an emissivity of 1) has nothing to scatter, so its scattering iterations stop before any rays are traced and add almost no run time.
 
  \note The summed tail applies to the absorbed flux (the "radiation_flux_<band>" primitive data), not to radiation camera images. A camera sees the radiation scattered in the iterations that were traced, so an image of a strongly scattering band still misses the multiply-scattered light beyond the scattering depth; keep the depth higher for such images.
 
@@ -1136,9 +1162,20 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  Any exposure setting other than <code>"manual"</code>, and any white balance other than <code>"off"</code>, rescales the images after the atmosphere is applied, so use <code>exposure = "manual"</code> and <code>white_balance = "off"</code> when radiance values are needed.
 
+ \subsubsection RadCamRGBBands Radiation Camera Red, Green and Blue Bands
+
+ White balance (\ref RadCamWhiteBalance), colour correction (\ref RadCamColorCorrection), auto exposure (\ref RadCamExposure) and the tone curve (\ref RadCamToneCurve) act on a camera's red, green and blue bands, so the radiation model has to know which of the camera's bands those are. A thermal or multispectral camera from the camera library, and a camera with fewer than three bands, has none. For any other camera they are identified as follows.
+
+ - If every band of the camera has a spectral response (\ref RadiationModel::setCameraSpectralResponse(), or a camera from the camera library), each band's colour is taken from its response, whatever the band is called and in whatever order the bands are listed. The response-weighted mean wavelength of the response decides: below 400 nm is ultraviolet, 400-505 nm blue, 505-570 nm green, 570-700 nm red, and above 700 nm near-infrared. (The library cameras' blue responses are centred at 460-490 nm, green at 525-555 nm and red at 588-640 nm.) If two bands have the same colour, such as the two green bands of some multispectral cameras, the one named for that colour is taken.
+ - Otherwise, the bands named "red", "green" and "blue" (or "R", "G" and "B", in any case) are taken, and failing that, the bands of a three-band camera in the order they were listed.
+
+ So the bands of a multispectral camera with bands {"blue", "green", "red", "red_edge", "nir"} are found, and its red-edge and near-infrared bands are left untouched; a camera listed {"B", "G", "R"} is still an RGB camera; and a colour-infrared camera with bands {"nir", "red", "green"} is not one, because none of its bands is blue. A camera that looks like an RGB camera but is not one (it has exactly three bands, bands named red, green and blue, or is an RGB camera from the library) prints a warning that lists the mean wavelength and colour of each of its bands, and its images are not white balanced or colour corrected, and are exposed band by band as a multispectral camera's are. Setting \ref CameraProperties::color_correction to "off" silences the warning. If the bands named red, green and blue have red, green and blue responses but in the wrong bands, for example with the red and blue responses swapped, an error is raised, since that is a mistake in setting up the camera.
+
+ White balance, colour correction and exposure act on a camera's whole image, so \ref RadiationModel::runBand() applies them once every band of the camera has been rendered since the image was last processed. A camera rendered one band per call to \ref RadiationModel::runBand() is processed when its last band is rendered, and a camera whose bands are not rendered in a call is left as it is. If some, but not all, of the bands of an already processed image are rendered again, the image is incomplete until the rest are rendered too: reading it in the meantime (e.g. \ref RadiationModel::getCameraPixelData() or \ref RadiationModel::writeCameraImage()) raises an error, since it would mix processed and unprocessed bands.
+
  \subsubsection RadCamWhiteBalance Radiation Camera White Balance
 
- The \ref CameraProperties::white_balance setting controls whether the first three bands of a camera (taken as red, green and blue) are white balanced after \ref RadiationModel::runBand() renders them. With "off", pixel values are left as rendered (after exposure). With "auto" (the default), each of the three bands is scaled so that a spectrally flat surface comes out neutral grey under the light that illuminates the scene.
+ The \ref CameraProperties::white_balance setting controls whether the red, green and blue bands of a camera (\ref RadCamRGBBands) are white balanced after \ref RadiationModel::runBand() renders them. With "off", pixel values are left as rendered. With "auto" (the default), each of the three bands is scaled so that a spectrally flat surface comes out neutral grey under the light that illuminates the scene.
 
  A real camera has to estimate that light from the image. The radiation model does not: while the direct and diffuse rays are traced, it also records, for every primitive, what the camera would see if that primitive were a perfectly white surface lit by the same light - light arriving straight from the radiation sources and from the sky, weighted by the source spectra and the camera's spectral responses. Summing this white reference over the pixels of the image gives the camera's view of the illuminating light, \f$W_R\f$, \f$W_G\f$ and \f$W_B\f$, and each band is scaled by \f$\max(W_R, W_G, W_B)/W_b\f$. The factors applied are recorded as `white_balance_factors` in the JSON metadata written with the camera image (see \ref RadCamMetadata).
 
@@ -1148,6 +1185,32 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  - does not count light already coloured by reflection from other surfaces, such as green light scattered within a canopy, so that shade keeps its colour.
 
  A band without a spectral response uses the band flux as it is, so a camera with no spectral responses is balanced to equalize the light in its three bands. If no surface in view is lit in one of the bands (for example, a camera that sees only sky), a warning is printed and the image is not balanced.
+
+ \subsubsection RadCamColorCorrection Radiation Camera Color Correction
+
+ A camera's own red, green and blue are not the red, green and blue of a display. Its three spectral responses overlap, so each channel also records light that the eye would attribute to the others, and an image shown as recorded looks washed out and greyish. Every real camera converts its RGB to a display colour space with a 3x3 colour correction matrix before writing an image. Radiation cameras do the same: with \ref CameraProperties::color_correction set to "auto" (the default), a camera whose red, green and blue bands all have spectral responses (\ref RadiationModel::setCameraSpectralResponse(), or a camera from the camera library) converts its images to linear sRGB after white balance and before exposure (\ref RadCamExposure). \ref RadiationModel::writeCameraImage() then applies the tone curve (\ref RadCamToneCurve) and encodes them as sRGB.
+
+ The matrix is derived from the camera's spectral responses, so it needs no calibration images and applies equally to a user-defined camera. It is the matrix, with rows summing to 1 so that white stays white, that best maps what the camera records from the reflectance spectra shipped with the radiation plug-in (the colour boards and the leaf, soil, bark and fruit libraries), lit by CIE illuminant D65, to their colorimetric colour for the CIE 1931 standard observer. \ref RadiationModel::getCameraColorCorrectionMatrix() returns it, and it is recorded as `color_correction_matrix` in the camera's image metadata (\ref RadCamMetadata).
+
+ For the cameras of the camera library, the corrected colours of these spectra lie within about 1-2 CIEDE2000 units (median) of their colorimetric values, against about 5-6 units without the correction. The matrices derived for the library's Canon 20D, Nikon D50 and D700, Sony NEX-5N and Leica M8 also agree closely with the matrices Adobe measured for the same camera models. The correction is exact only for colours that a 3x3 matrix can map, and it assumes daylight-like illumination: under strongly coloured artificial light (e.g. tungsten) the colour error roughly doubles.
+
+ The correction changes only the camera's images (\ref RadiationModel::getCameraPixelData() and the written JPEG images). The raw camera data, global data "camera_<label>_<band>" and the files written by \ref RadiationModel::writeCameraImageDataEXR(), are left as rendered. Cameras without spectral responses and cameras that are not RGB (e.g. thermal or multispectral) are never corrected. A camera whose responses do not distinguish colours, such as one with the same response in every band, has no matrix; its images are left uncorrected and a warning is printed. Set \ref CameraProperties::color_correction to "off" to keep a camera's own RGB, for example to apply a matrix of your own with \ref RadiationModel::applyCameraColorCorrectionMatrix(), which refuses to add a second matrix to an image that was already corrected.
+
+ \subsubsection RadCamExposure Radiation Camera Exposure
+
+ After \ref RadiationModel::runBand() renders a camera's image, and after white balance and colour correction, the camera's \ref CameraProperties::exposure setting scales it. With "manual", pixel values are left in radiance units. With "ISOXXX", the scale follows the ISO, shutter speed and aperture. With "auto" (the default), an RGB camera (\ref RadCamRGBBands) meters its image the way a camera's meter does: it scales the image so that its centre-weighted mean luminance equals \ref CameraProperties::exposure_target (0.235 by default). Each pixel's luminance is weighted by \f$\exp(-(d_x^2 + d_y^2))\f$, where \f$d_x\f$ and \f$d_y\f$ are the pixel's offsets from the image centre in units of 0.35 of the image width and height, so the middle of the image counts most.
+
+ The rule and the target were calibrated against real cameras. For 413 camera models, one raw file each from raw.pixls.us (CC0), the exposure each camera chose for its own JPEG was compared with the exposure that candidate metering rules would give. A centre-weighted mean predicted the cameras' exposure with a spread of 0.57 stops, against 0.62 for the plain mean and 0.83 for the median, which Helios used before. What spread remains is mostly the scene-by-scene judgement of the camera or photographer, which no rule reproduces. The target was fitted together with the tone curve below, so the two belong together. A scene darker or brighter than a typical photograph, such as a canopy viewed from above, may still call for a different target.
+
+ Cameras that are not RGB cameras (e.g. multispectral or colour-infrared) normalize each band so that its 95th percentile of signal pixels is 0.7, and thermal cameras are not exposed.
+
+ \subsubsection RadCamToneCurve Radiation Camera Tone Curve
+
+ Real cameras do not encode their images with the sRGB curve alone. Before encoding, every camera applies a tone curve that darkens shadows and rolls off highlights, which gives its JPEGs their contrast. Without it, rendered images look flat and hazy. With \ref CameraProperties::tone_curve set to "auto" (the default), \ref RadiationModel::writeCameraImage() applies the typical in-camera tone curve to each channel of an RGB camera's image before sRGB encoding.
+
+ The curve was measured from the same 413 camera models: each camera's JPEG was compared with its raw data after the camera's colour matrix and white balance. Fitted separately, the curves of Canon, Sony, Nikon, Panasonic, Fujifilm, Olympus and Pentax cameras agree within 2-5 levels out of 255, so one curve serves all of them. Compared with sRGB encoding alone, it gives shadows at a quarter of mid-grey 39 rather than 60 out of 255, leaves mid-grey almost unchanged (114 rather than 118), and compresses highlights instead of clipping them. With the curve and the default auto exposure, rendered images lie about 30\% closer (in CIEDE2000) to the cameras' own JPEGs than without it, and with matched exposure the error falls from 4.2 to 2.6 units. The cameras' JPEGs showed no saturation boost beyond the colour correction (\ref RadCamColorCorrection). Phone cameras were not included: they apply local tone mapping, which a single curve does not reproduce.
+
+ Only the written images are tone mapped. The camera's pixel data (\ref RadiationModel::getCameraPixelData()) and the raw data written by \ref RadiationModel::writeCameraImageDataEXR() stay linear, and grayscale images and cameras that are not RGB cameras are never tone mapped. Set \ref CameraProperties::tone_curve to "off" to encode images with the sRGB curve alone.
 
  \subsubsection RadCamCalibColor Radiation Camera Color Calibration
 
@@ -1212,7 +1275,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  - <b>camera_properties</b>: Intrinsic camera parameters including image resolution, number of channels, optical focal length (mm), aperture (f-stop), and physical sensor dimensions (mm)
  - <b>location_properties</b>: Geographic coordinates (latitude/longitude in degrees)
  - <b>acquisition_properties</b>: Capture information including date (YYYY-MM-DD), time (HH:MM:SS), UTC offset, camera height above ground (meters), camera tilt angle from horizontal (degrees), and light source type ("sunlight", "artificial", "mixed", or "none")
- - <b>image_processing</b>: Image processing applied to the pixel data: exposure gain, white balance factors, the saturation, brightness and contrast adjustments passed to \ref RadiationModel::applyCameraImageCorrections(), and the output color space ("sRGB" for RGB images, whose values are gamma-compressed on write, or "linear" otherwise)
+ - <b>image_processing</b>: Image processing applied to the pixel data: exposure gain, white balance factors, colour correction matrix, the tone curve applied to the written image ("typical camera" or "none"), the saturation, brightness and contrast adjustments passed to \ref RadiationModel::applyCameraImageCorrections(), and the output color space ("sRGB" for RGB images, whose values are gamma-compressed on write, or "linear" otherwise)
 
  \paragraph RadCamMetadataAuto Auto-populating Metadata
 
@@ -1487,10 +1550,9 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
         // --- 6. Calculate incoming solar fluxes for the current time --- //
       
         //Calculate the clear-sky direct and diffuse solar flux for the current date, time, latitude, etc.
-        float Rflux = solarposition.getSolarFlux( pressure, temperature, humidity, turbidity );
-        float fdiff = solarposition.getDiffuseFraction( pressure, temperature, humidity, turbidity ); //fraction of Rflux that is diffuse
-        radiationmodel.setSourceFlux( SunSource, "SW", Rflux*(1-fdiff) ); //set the direct flux: Rflux*(1-fdiff)
-        radiationmodel.setDiffuseRadiationFlux( "SW", Rflux*fdiff ); //set the diffuse flux: Rflux*fdiff
+        solarposition.setAtmosphericConditions( pressure, temperature, humidity, turbidity );
+        radiationmodel.setSourceFlux( SunSource, "SW", solarposition.getDirectSolarFlux() ); //direct flux, perpendicular to the sun
+        radiationmodel.setDiffuseRadiationFlux( "SW", solarposition.getDiffuseSolarFlux() ); //diffuse flux, on a horizontal surface
 
         // --- 7. Run the model --- //
         radiationmodel.runBand("SW");

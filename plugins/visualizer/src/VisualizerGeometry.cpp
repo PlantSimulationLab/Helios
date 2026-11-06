@@ -1545,7 +1545,7 @@ void Visualizer::updateNavigationGizmo() {
 
     // Compute camera view matrix directly from current camera position
     // This avoids relying on potentially uninitialized cameraViewMatrix
-    glm::mat4 view_matrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), glm::vec3(0, 0, 1));
+    glm::mat4 view_matrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), cameraUpVector());
 
     // Extract camera right, up, and forward vectors from the view matrix
     // The view matrix transforms world coordinates to camera coordinates

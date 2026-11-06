@@ -44,6 +44,23 @@ The following object data is used by the nitrogen-based automatic mode (see \ref
  </tr>
 </table>
 
+The following primitive data is used if present (see \ref LeafOpticsClassMaps):
+
+<table>
+ <tr>
+    <th>Primitive Data Label</th>
+    <th>Data Type</th>
+    <th>Description</th>
+    <th>Available Plug-ins</th>
+ </tr>
+ <tr>
+    <td>spectral_class_map</td>
+    <td><span style="font-family: Courier, monospace; color: green;">std::string</span></td>
+    <td>Path of a class map of the leaf's texture, whose classes LeafOptics gives their own spectra.</td>
+    <td>Written by \ref PlantArchitecture for leaves whose prototype has a class map, such as those of the sorghum, maize, wheat and apple library models (and on bark and fruit with a class map, which are for RadiationModel::applySpectralClassMaps() rather than LeafOptics)</td>
+ </tr>
+</table>
+
 \subsection LOOutputGlobalData Output Global Data
 
 The plug-in creates global data containing the computed spectra and the Fluspect-B
@@ -560,6 +577,44 @@ Some things to keep in mind:
 - The object data must be of type int or uint, and every value present must have properties. Every primitive must belong to an object with the object data. Otherwise an error is raised and no primitive is given spectra.
 - Primitives given spectra by this method cannot also be given spectra by the \ref LONitrogenAuto "nitrogen-based mode" of the same LeafOptics, or the other way around, since each would overwrite the other's. An error is raised instead.
 - LeafOptics does not provide properties for stages of senescence, which differ between species. During senescence, chlorophyll is generally lost faster than carotenoids, which is why leaves turn yellow, and brown pigments accumulate later.
+
+\section LeafOpticsClassMaps Leaves with a Class Map
+
+A leaf photograph used as a leaf texture shows tissues that differ optically, such as the pale midrib of a grass leaf. A <b>class map</b> of the texture (a grayscale PNG of integer classes with the texture's resolution, in which class 0 marks exactly its transparent texels) records where each tissue is, and the XML file of the same name beside it defines each class relative to the leaf:
+
+~~~~~~{.xml}
+<helios>
+  <leaf_class_map provenance="...">
+    <class id="1" chlorophyll_scale="0.87" visible_reflectance_scale="0.43"/>
+    <class id="2" chlorophyll_scale="0.26" visible_reflectance_scale="2.19"/>
+  </leaf_class_map>
+</helios>
+~~~~~~
+
+When \ref LeafOptics::run(const std::vector<uint> &, const LeafOpticsProperties &, const std::string &) is given primitives that carry the primitive data "spectral_class_map", it gives them a spectral texture (see the Spectral Textures section of the User Guide) instead of a single spectrum. Each class has the spectra of the given properties with:
+- the chlorophyll and carotenoid contents multiplied by its <code>chlorophyll_scale</code>, and
+- the reflectivity below 700 nm multiplied by its <code>visible_reflectance_scale</code>, blending linearly to no change at 750 nm, and where that increases it, no further than a reflectivity plus transmissivity of 0.98.
+
+So the classes follow the properties the leaf is given, and a class with both scales equal to 1 has exactly the leaf's spectra. The spectra are written as global data "leaf_reflectivity_[label]_[class map]_class[k]" and "leaf_transmissivity_[label]_[class map]_class[k]", and the palette is named "leaf_[label]_[class map]", where [class map] is the class map's file name without its extension. The primitives are still given "reflectivity_spectrum", "transmissivity_spectrum" and "fluspect_spectrum" as usual, though the radiation model uses the spectral texture rather than the first two. Calling run() again with new properties recalculates the class spectra, and \ref LeafOptics::runFromObjectData() and the \ref LONitrogenAuto "nitrogen-based mode" give each value or nitrogen bin its own palette in the same way.
+
+The sorghum, maize and wheat library models of the PlantArchitecture plug-in, whose leaves use the same sorghum leaf photograph, record its class map (SorghumLeaf_classes.png, which picks out the midrib) on their leaves, as the apple models record AppleLeaf_classes.png on theirs, so running LeafOptics on them is all that is needed:
+
+~~~~~~{.cpp}
+plantarchitecture.loadPlantModelFromLibrary("sorghum");
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+
+LeafOptics leafoptics(&context);
+LeafOpticsProperties properties;
+leafoptics.getPropertiesFromLibrary("corn", properties);
+leafoptics.run(plantarchitecture.getAllPlantUUIDs(plantID), properties, "sorghum");  // leaves with a midrib, stems with one spectrum
+~~~~~~
+
+Without LeafOptics, the class map is not used, and leaves have whatever spectra or values they are given.
+
+Some things to keep in mind:
+- An error is raised, before any primitive is changed, if a class map does not exist, has no class definitions, defines its classes other than as 1, 2, 3 and so on, has a class the definitions lack, or has a scale that is not a positive number.
+- A leaf triangle whose (u,v) coordinates cover only transparent texels of the texture can take no class, so PlantArchitecture does not record the class map on it, and it gets the single spectrum.
+- Class maps and their definitions for other leaf textures can be made with the scripts in utilities/leaf_class_maps (see its README), which fit the classes to the colors of the leaf photograph after removing its shading.
 
 \section LONitrogenAuto Nitrogen-Based Automatic Leaf Optics
 

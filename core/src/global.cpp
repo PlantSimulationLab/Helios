@@ -2126,6 +2126,94 @@ void helios::writePNGSingleChannel(const std::string &filename, uint width, uint
     }
 }
 
+namespace {
+
+    //! A point in texture coordinates, for classMapAreaFractions()
+    struct TextureCoordinate {
+        double u;
+        double v;
+    };
+
+    // Area of the part of a convex polygon inside the rectangle u0 <= u <= u1, v0 <= v <= v1, by Sutherland-Hodgman clipping
+    double clippedPolygonArea(const std::vector<TextureCoordinate> &polygon, double u0, double u1, double v0, double v1) {
+        std::vector<TextureCoordinate> clipped = polygon;
+        auto clip = [&clipped](auto inside, auto intersect) {
+            std::vector<TextureCoordinate> output;
+            for (size_t i = 0; i < clipped.size(); i++) {
+                const TextureCoordinate &current = clipped[i];
+                const TextureCoordinate &previous = clipped[(i + clipped.size() - 1) % clipped.size()];
+                if (inside(current)) {
+                    if (!inside(previous)) {
+                        output.push_back(intersect(previous, current));
+                    }
+                    output.push_back(current);
+                } else if (inside(previous)) {
+                    output.push_back(intersect(previous, current));
+                }
+            }
+            clipped = output;
+        };
+        auto at_u = [](double edge) { return [edge](const TextureCoordinate &a, const TextureCoordinate &b) { return TextureCoordinate{edge, a.v + (b.v - a.v) * (edge - a.u) / (b.u - a.u)}; }; };
+        auto at_v = [](double edge) { return [edge](const TextureCoordinate &a, const TextureCoordinate &b) { return TextureCoordinate{a.u + (b.u - a.u) * (edge - a.v) / (b.v - a.v), edge}; }; };
+        clip([u0](const TextureCoordinate &p) { return p.u >= u0; }, at_u(u0));
+        clip([u1](const TextureCoordinate &p) { return p.u <= u1; }, at_u(u1));
+        clip([v0](const TextureCoordinate &p) { return p.v >= v0; }, at_v(v0));
+        clip([v1](const TextureCoordinate &p) { return p.v <= v1; }, at_v(v1));
+        double twice_area = 0;
+        for (size_t i = 0; i < clipped.size(); i++) {
+            const TextureCoordinate &a = clipped[i];
+            const TextureCoordinate &b = clipped[(i + 1) % clipped.size()];
+            twice_area += a.u * b.v - b.u * a.v;
+        }
+        return 0.5 * std::fabs(twice_area);
+    }
+
+} // namespace
+
+std::vector<std::pair<uint16_t, float>> helios::classMapAreaFractions(const std::vector<uint16_t> &classes, const helios::int2 &resolution, const std::vector<helios::vec2> &uv) {
+    const int width = resolution.x;
+    const int height = resolution.y;
+    std::vector<TextureCoordinate> polygon;
+    double u_min = 1e30, u_max = -1e30, v_min = 1e30, v_max = -1e30;
+    for (const helios::vec2 &corner: uv) {
+        polygon.push_back({corner.x, corner.y});
+        u_min = std::min(u_min, double(corner.x));
+        u_max = std::max(u_max, double(corner.x));
+        v_min = std::min(v_min, double(corner.y));
+        v_max = std::max(v_max, double(corner.y));
+    }
+    const double infinity = std::numeric_limits<double>::infinity();
+    auto column_of = [width](double u) { return width == 1 ? 0 : std::clamp(int(std::floor((width - 1) * u)), 0, width - 1); };
+    auto row_of = [height](double v) { return height == 1 ? 0 : std::clamp(int(std::floor((height - 1) * (1.0 - v))), 0, height - 1); };
+
+    std::map<uint16_t, double> class_area;
+    double total_area = 0;
+    for (int row = row_of(v_max); row <= row_of(v_min); row++) {
+        const double v_low = (height == 1 || row == height - 1) ? -infinity : 1.0 - double(row + 1) / double(height - 1);
+        const double v_high = (height == 1 || row == 0) ? infinity : 1.0 - double(row) / double(height - 1);
+        for (int column = column_of(u_min); column <= column_of(u_max); column++) {
+            const uint16_t texel_class = classes.at(size_t(row) * width + column);
+            if (texel_class == 0) {
+                continue;
+            }
+            const double u_low = (width == 1 || column == 0) ? -infinity : double(column) / double(width - 1);
+            const double u_high = (width == 1 || column == width - 1) ? infinity : double(column + 1) / double(width - 1);
+            const double area = clippedPolygonArea(polygon, std::max(u_low, u_min), std::min(u_high, u_max), std::max(v_low, v_min), std::min(v_high, v_max));
+            if (area > 0) {
+                class_area[texel_class] += area;
+                total_area += area;
+            }
+        }
+    }
+
+    std::vector<std::pair<uint16_t, float>> fractions;
+    for (const auto &entry: class_area) {
+        fractions.emplace_back(entry.first, float(entry.second / total_area));
+    }
+    return fractions;
+}
+
+
 void helios::writePNG(const std::string &filename, uint width, uint height, const std::vector<unsigned char> &pixel_data) {
 
     // Convert pixel_data array into RGBcolor vector

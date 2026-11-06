@@ -377,6 +377,9 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Unknown Species") {
     DOCTEST_CHECK(error_message.find("Almond") != std::string::npos);
     DOCTEST_CHECK(error_message.find("Walnut") != std::string::npos);
     DOCTEST_CHECK(error_message.find("EasternRedbud") != std::string::npos);
+    DOCTEST_CHECK(error_message.find("Cowpea") != std::string::npos);
+    DOCTEST_CHECK(error_message.find("CommonBean") != std::string::npos);
+    DOCTEST_CHECK(error_message.find("Sorghum") != std::string::npos);
 
     uint UUID = context.addPatch();
     context.addMaterial("leaf_material");
@@ -415,6 +418,9 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Every library species returns its 
             {{"Baylaurel", "baylaurel", "Bay_Laurel", "bay_laurel", "bay", "Bay"}, 1.6f, 1.359f, 849.4f, 6.485f},
             {{"Olive", "olive"}, 3.9210f, 0.f, 2294.8f, 2.6058f},
             {{"EasternRedbud", "easternredbud"}, 21.88f, 11.47f, 1.387e+05f, 1.051e-06f},
+            {{"Cowpea", "cowpea"}, 37.24f, 289.7f, 40074.f, 0.f},
+            {{"CommonBean", "commonbean", "common_bean", "Common_Bean", "Bean", "bean"}, 23.28f, 433.5f, 23008.f, 0.f},
+            {{"Sorghum", "sorghum"}, 1.0e5f, 425.4f, 5.109e8f, 0.f},
     };
 
     for (const auto &entry: library) {

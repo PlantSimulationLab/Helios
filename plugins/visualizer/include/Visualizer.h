@@ -557,11 +557,43 @@ public:
      */
     void setCameraPosition(const helios::SphericalCoord &cameraAngle, const helios::vec3 &lookAt);
 
-    //! Set the camera field of view (angle width) in degrees. Default value is 45 degrees.
+    //! Set the camera's vertical field of view in degrees. Default value is 45 degrees.
     /**
-     * \param[in] angle_FOV Angle of camera field of view in degrees.
+     * The angle spans the image from its top edge to its bottom edge; the horizontal field of view
+     * follows from the framebuffer's aspect ratio. A pinhole camera with a focal length of f pixels
+     * and an image H pixels high has a vertical field of view of 2*atan(H/(2f)).
+     * \param[in] angle_FOV Vertical angle of the camera field of view in degrees.
      */
     void setCameraFieldOfView(float angle_FOV);
+
+    //! Set the world direction that appears up in the image, fixing the camera's roll
+    /**
+     * By default the roll is chosen automatically: world +z is up in the image, except for a camera
+     * looking within about 2.6 degrees of straight up or down, where world +y is up instead. That
+     * rule cannot express every camera, so a camera reproducing a real one sets its up direction
+     * here. Only the component perpendicular to the viewing direction matters. It must not be
+     * parallel to the viewing direction when the frame is rendered, or rendering raises an error.
+     * \param[in] up Direction, in world coordinates, that should point toward the top of the image. Need not be a unit vector.
+     * \sa clearCameraUpDirection()
+     */
+    void setCameraUpDirection(const helios::vec3 &up);
+
+    //! Return to choosing the camera's up direction automatically (the default)
+    /** \sa setCameraUpDirection() */
+    void clearCameraUpDirection();
+
+    //! Set where the camera's optical axis meets the image, in framebuffer pixels
+    /**
+     * By default the optical axis passes through the centre of the image. A calibrated camera's
+     * principal point is usually a few pixels off centre, and a crop moves it further. The position
+     * is given in the pixel coordinates of the images and maps the Visualizer reads back: column from
+     * the left edge and row from the top edge, so that (width/2, height/2) is the default. The field
+     * of view set by setCameraFieldOfView() keeps its meaning as the angle subtended by the image
+     * height; only where the image is centred changes.
+     * \param[in] column Horizontal position of the principal point in pixels, from the left edge of the image.
+     * \param[in] row Vertical position of the principal point in pixels, from the top edge of the image.
+     */
+    void setCameraPrincipalPoint(float column, float row);
 
     //! Set the direction of the light source
     /**
@@ -2434,6 +2466,14 @@ private:
      */
     std::vector<std::array<GLsizeiptr, 12>> last_uploaded_buffer_sizes;
 
+    //! Partial buffer uploads (glBufferSubData calls) the last transferBufferData() made for changed primitives
+    /**
+     * Each merged run of changed primitives in one buffer costs one call. Kept so a test can hold the
+     * count to the number of runs rather than the number of primitives: one call per primitive per
+     * buffer cost ~75 us each through Apple's OpenGL and dominated every frame after a plant moved.
+     */
+    size_t partial_uploads_last_transfer = 0;
+
     //! Buffer and texture holding the packed per-material Phong parameter table
     /** One RGBA32F texel per material: (ambient, diffuse, specular, shininess). Primitives index
         into this by the integer in material_index_buffer, so the four Phong floats are stored once
@@ -2482,8 +2522,31 @@ private:
 
     glm::mat4 customTransformationMatrix;
 
-    //! Field of view of the camera in degrees
+    //! Vertical field of view of the camera in degrees
     float camera_FOV;
+
+    //! True once setCameraPosition() has been called, so the first build does not re-frame the view
+    /**
+     * The first build used to place the camera to fit the scene whenever the camera still held the
+     * default position, judged by comparing coordinates. A camera deliberately set to that position,
+     * (0,0,2) looking at the origin, was therefore moved without notice.
+     */
+    bool camera_position_set_by_user = false;
+
+    //! World direction set by setCameraUpDirection(), used when camera_up_direction_set is true
+    helios::vec3 camera_up_direction = helios::make_vec3(0, 0, 1);
+    bool camera_up_direction_set = false;
+
+    //! Principal point set by setCameraPrincipalPoint(), in framebuffer pixels from the top-left corner
+    float camera_principal_column = 0.f;
+    float camera_principal_row = 0.f;
+    bool camera_principal_point_set = false;
+
+    //! World up vector the view matrix is built from: the user's, or the automatic choice
+    [[nodiscard]] glm::vec3 cameraUpVector() const;
+
+    //! Offset of the principal point from the image centre in normalized device coordinates (x right, y up)
+    [[nodiscard]] glm::vec2 principalPointOffsetNDC() const;
 
     bool build_all_context_geometry = false;
 

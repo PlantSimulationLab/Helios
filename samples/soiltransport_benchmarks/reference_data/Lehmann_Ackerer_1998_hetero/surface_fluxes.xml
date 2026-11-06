@@ -1,0 +1,188 @@
+<?xml version="1.0"?>
+
+<helios>
+
+<timeseries label="ET">
+	<datapoint>
+		<dateJulian> 109 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 110 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.0 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 111 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 1.003 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 112 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.6015 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 113 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.7986 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 114 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.5043 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 115 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.1049 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 116 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.3046 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 117 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.6041 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 118 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 1.201 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 119 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 1.201 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 120 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.09727 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 121 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.04608 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 122 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.09727 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 123 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.1459 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 124 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.04863 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 125 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.09471 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 126 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.09471 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 127 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.5043 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 128 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.04863 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 129 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.06655 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 130 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.04608 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 131 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.03584 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 132 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.07679 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 133 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.09215 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 134 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.04608 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 135 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.03072 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 136 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.6015 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 137 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 1.503 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 138 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 1.505 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 139 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.7065 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 140 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> 0.000000 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 141 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.1997 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 142 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.1485 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 143 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.04863 </value>
+	</datapoint>
+	<datapoint>
+		<dateJulian> 144 2021 </dateJulian>
+		<time> 12 0 0 </time>
+		<value> -0.04608 </value>
+	</datapoint>
+</timeseries>
+
+</helios>

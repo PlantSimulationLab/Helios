@@ -432,6 +432,8 @@ public:
         azimuth = 0;
         peduncle_axis = helios::make_vec3(0, 0, 1);
         gravity_fraction = 0;
+        contact_tilt_axis = helios::make_vec3(0, 0, 1);
+        contact_tilt_angle = 0;
     }
 
     AxisRotation(float a_pitch, float a_yaw, float a_roll) {
@@ -441,6 +443,8 @@ public:
         azimuth = 0;
         peduncle_axis = helios::make_vec3(0, 0, 1);
         gravity_fraction = 0;
+        contact_tilt_axis = helios::make_vec3(0, 0, 1);
+        contact_tilt_angle = 0;
     }
 
     float pitch;
@@ -449,6 +453,8 @@ public:
     float azimuth; // azimuth rotation for inflorescences (aligns to peduncle orientation)
     helios::vec3 peduncle_axis; // direction vector of peduncle at attachment point (for compound yaw rotation)
     float gravity_fraction; // fraction of its angle from straight down by which a fruit is turned to hang, after all other rotations
+    helios::vec3 contact_tilt_axis; // unit axis (world frame) of the rotation about the fruit's attachment point by which it has been tilted out of a branch (see PlantArchitecture::enableFruitBranchCollisionAvoidance())
+    float contact_tilt_angle; // angle (radians) of that tilt; 0 when the fruit has never been tilted
 
     AxisRotation operator+(const AxisRotation &a) const;
     AxisRotation operator-(const AxisRotation &a) const;
@@ -648,6 +654,11 @@ struct FloralBud {
     std::vector<float> inflorescence_base_scales; // individual base scale for each flower/fruit (before growth scaling)
     std::vector<uint> peduncle_objIDs;
     std::vector<uint> inflorescence_objIDs;
+
+    //! Unit axis (world frame) of the rotation about base_position by which the peduncle and its fruit have been swung out of branches (see PlantArchitecture::enableFruitBranchCollisionAvoidance())
+    helios::vec3 contact_swing_axis = helios::make_vec3(0, 0, 1);
+    //! Angle (radians) of that swing; 0 when the peduncle has never been swung
+    float contact_swing_angle = 0;
 };
 
 struct LeafPrototype {
@@ -693,6 +704,16 @@ public:
      *\note Only available with the default \ref LeafPrototype::prototype_function and without \ref LeafPrototype::OBJ_model_file.
      */
     std::map<int, std::vector<std::vector<std::string>>> leaf_texture_series;
+
+    //! Class map of the leaf texture, from which LeafOptics gives the leaf's tissues (such as a pale midrib) their own spectra
+    /**
+     * Keyed the same way as \ref LeafPrototype::leaf_texture_file. Value is a single-channel PNG of integer classes with the resolution and transparency of the leaf texture (see
+     * helios::Context::setPrimitiveSpectralTexture()), which can be a simple file name as for the texture, and whose class definitions are in an XML file of the same name beside it (see the LeafOptics
+     * documentation). Each leaf triangle that covers a class (helios::classMapAreaFractions()) records the class map's path as the primitive data "spectral_class_map", and LeafOptics::run() then gives
+     * the leaf a spectral texture whose classes are derived from the leaf's own properties. Without LeafOptics, the class map is not used and the leaf keeps whatever spectra or values it is given.
+     *\note Not available with \ref LeafPrototype::leaf_texture_series or \ref LeafPrototype::OBJ_model_file.
+     */
+    std::map<int, std::string> leaf_class_map_file;
 
     //! Age of a leaf in days at which it begins each image of its variant in \ref LeafPrototype::leaf_texture_series
     /**
@@ -843,6 +864,7 @@ public:
     void duplicate(const LeafPrototype &a) {
         this->leaf_texture_file = a.leaf_texture_file;
         this->leaf_texture_series = a.leaf_texture_series;
+        this->leaf_class_map_file = a.leaf_class_map_file;
         this->leaf_texture_stage_ages = a.leaf_texture_stage_ages;
         this->texture_series_selector = a.texture_series_selector;
         this->OBJ_model_file = a.OBJ_model_file;
@@ -878,6 +900,7 @@ public:
         if (this != &a) {
             this->leaf_texture_file = a.leaf_texture_file;
             this->leaf_texture_series = a.leaf_texture_series;
+            this->leaf_class_map_file = a.leaf_class_map_file;
             this->leaf_texture_stage_ages = a.leaf_texture_stage_ages;
             this->texture_series_selector = a.texture_series_selector;
             this->OBJ_model_file = a.OBJ_model_file;
@@ -971,6 +994,14 @@ private:
         helios::RGBcolor color;
         //! Image texture to map to the internode tube (overrides RGB color).
         std::string image_texture;
+        //! Class map of the internode texture, from which the radiation model gives the bark's lighter and darker parts their own spectra
+        /**
+         * A single-channel PNG of integer classes with the resolution of \ref InternodeParameters::image_texture (which can be a simple file name as for the texture), whose class definitions are in an XML
+         * file of the same name beside it (a surface class map; see the radiation plugin documentation, "Spectral Textures"). Each internode triangle records the class map's path as the primitive data
+         * "spectral_class_map", and \ref RadiationModel::applySpectralClassMaps() then gives it a spectral texture whose classes scale the bark spectrum named in the definitions. Without that call, the
+         * class map is not used. Ignored when the internode has no texture.
+         */
+        std::string image_class_map_file;
         //! Longitudinal tessellation count of the internode tube.
         uint length_segments;
         //! Number of radial subdivisions around the internode circumference  (4 = square, 5 = pentagon, ≥ 8 ≈ circular).
@@ -985,6 +1016,7 @@ private:
                 this->max_floral_buds_per_petiole = a.max_floral_buds_per_petiole;
                 this->color = a.color;
                 this->image_texture = a.image_texture;
+                this->image_class_map_file = a.image_class_map_file;
                 this->length_segments = a.length_segments;
                 this->radial_subdivisions = a.radial_subdivisions;
             }
@@ -1155,6 +1187,14 @@ private:
          * \note This is a function pointer, so it is not carried by a ShootParameters reconstructed from values alone. See \ref ShootParameters::inheritCustomFunctionsFrom().
          */
         FruitPrototypeFunction fruit_prototype_function = nullptr;
+        //! Class map of the fruit prototype's texture, from which the radiation model gives the fruit's lighter and darker parts their own spectra
+        /**
+         * A single-channel PNG of integer classes with the resolution of the texture the fruit prototype is mapped with (a simple file name is resolved as for a texture), whose class definitions are in an
+         * XML file of the same name beside it (a surface class map; see the radiation plugin documentation, "Spectral Textures"). Each textured triangle of the fruit records the class map's path as the
+         * primitive data "spectral_class_map", and \ref RadiationModel::applySpectralClassMaps() then gives it a spectral texture whose classes scale the fruit spectrum named in the definitions. Without
+         * that call, the class map is not used. The prototype must use a single texture.
+         */
+        std::string fruit_class_map_file;
         //! Fraction (0‒1) of gravitational influence used to bend peduncles under fruit load
         RandomParameter_float fruit_gravity_factor_fraction;
         //! Number of distinct prototype meshes to cache for this inflorescence
@@ -1178,6 +1218,7 @@ private:
                 this->inflorescence_maturity_period = a.inflorescence_maturity_period;
                 this->fruit_prototype_scale = a.fruit_prototype_scale;
                 this->fruit_prototype_function = a.fruit_prototype_function;
+                this->fruit_class_map_file = a.fruit_class_map_file;
                 this->fruit_gravity_factor_fraction = a.fruit_gravity_factor_fraction;
                 this->unique_prototypes = a.unique_prototypes;
             }
@@ -1872,8 +1913,10 @@ public:
      * \param[in] leaflet_offset Spacing between lateral leaflet pairs as a fraction of the petiole length; zero or greater.
      * \param[in] leaflet_scale Size of each lateral pair relative to the pair nearer the tip; greater than zero.
      * \param[in] prototype_scale Fully-elongated size of the terminal leaflet in meters; greater than zero.
+     * \param[in] intercalary_leaflet_scale Size of the intercalary leaflets, if any, relative to the primary pair nearer the tip; zero for a leaf with none, in which case every lateral slot is a primary pair.
+     * Negative (the default) keeps the phytomer's current value.
      */
-    void setPetioleLeaflets(uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale);
+    void setPetioleLeaflets(uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale, float intercalary_leaflet_scale = -1.f);
 
     //! Rebuild the leaflets of one petiole turned by their own pitch, yaw and roll.
     /**
@@ -1999,6 +2042,28 @@ public:
      * \param[in] inflorescence_scale_factor_fraction Fractional value (between 0 and 1) representing the new scale factor for the inflorescence.
      */
     void setInflorescenceScaleFraction(FloralBud &fbud, float inflorescence_scale_factor_fraction) const;
+
+    //! Swing a floral bud's peduncle and everything it carries rigidly about the bud's base position
+    /**
+     * Rotates the peduncle tube and the flower/fruit objects in the Context, the stored peduncle vertices, the flower/fruit attachment points and their stored peduncle axes, and composes the rotation
+     * into FloralBud::contact_swing_axis / contact_swing_angle. Used to move fruit out of branches (see PlantArchitecture::enableFruitBranchCollisionAvoidance()) and to restore such a swing when a
+     * plant is read back from XML.
+     * \param[in] fbud Floral bud whose peduncle is swung
+     * \param[in] axis Unit axis of the rotation, through fbud.base_position
+     * \param[in] angle Rotation angle (radians)
+     */
+    void applyPeduncleSwing(FloralBud &fbud, const helios::vec3 &axis, float angle);
+
+    //! Tilt one flower/fruit of a floral bud rigidly about its own attachment point on the peduncle
+    /**
+     * Rotates the flower/fruit object in the Context and composes the rotation into the fruit's AxisRotation::contact_tilt_axis / contact_tilt_angle. Used, together with applyPeduncleSwing(), to move
+     * fruit out of branches (see PlantArchitecture::enableFruitBranchCollisionAvoidance()) and to restore such a tilt when a plant is read back from XML.
+     * \param[in] fbud Floral bud carrying the fruit
+     * \param[in] fruit_index Index of the fruit within fbud.inflorescence_objIDs
+     * \param[in] axis Unit axis of the rotation, through the fruit's attachment point
+     * \param[in] angle Rotation angle (radians)
+     */
+    void applyFruitContactTilt(FloralBud &fbud, size_t fruit_index, const helios::vec3 &axis, float angle);
 
     /**
      * \brief Sets the base position of the petiole to the specified position.
@@ -3331,6 +3396,42 @@ struct PlantSkeletonSegment {
     PlantOrganLocation organ;
 };
 
+//! Analytic stand-in for one fruit object in fruit-branch contact tests (see PlantArchitecture::enableFruitBranchCollisionAvoidance())
+/**
+ * Built from the fruit mesh and stored in the frame of the fruit's attachment point, at the fruit scale it was built at. Positions scale linearly with the fruit's growth about that point and are
+ * rotated along with any swing of the peduncle, so the proxy follows the fruit without being rebuilt.
+ */
+struct FruitContactProxy {
+    //! FloralBud::current_fruit_scale_factor at which the proxy was built
+    float build_scale = 1;
+    //! Center of the sphere enclosing the whole fruit, relative to the attachment point
+    helios::vec3 bounding_center;
+    //! Radius of that sphere
+    float bounding_radius = 0;
+    //! Centers of the chain of spheres covering the fruit along its axis, relative to the attachment point
+    std::vector<helios::vec3> sphere_centers;
+    //! Radii of those spheres
+    std::vector<float> sphere_radii;
+    //! Triangle vertices (three per triangle) relative to the attachment point; empty when the mesh is too large and the sphere chain is used instead
+    std::vector<helios::vec3> triangle_vertices;
+    //! Largest distance of any mesh vertex from the attachment point, at build_scale
+    float max_extent = 0;
+};
+
+//! Internode segments near one fruiting floral bud, cached between refreshes of the fruit-branch contact tests
+struct FruitContactCandidates {
+    //! Candidate internode segments as (shootID, phytomer index within the shoot, segment index within the phytomer's internode)
+    std::vector<std::array<uint, 3>> segments;
+    //! Plant age (days) at which the list was built
+    float refreshed_at_age = -1;
+    //! Number of shoots the plant had when the list was built
+    size_t shoot_count = 0;
+    //! Fruit scale at which the bud was last left in contact (wedged); it is not retried until the fruit have grown, or the list is rebuilt. Negative when not wedged.
+    float unresolved_at_scale = -1;
+    //! Fruit scale at which the bud last tried and failed to settle back toward its grown pose; it is not retried until the fruit have grown, or the list is rebuilt. Negative when not blocked.
+    float settle_blocked_at_scale = -1;
+};
+
 class PlantArchitecture {
 public:
     //! Main architectural model class constructor
@@ -3989,6 +4090,31 @@ public:
      */
     void setGeometryUpdateScheduling(int update_frequency = 3, bool force_update_on_collision = true);
 
+    //! Keep growing fruit from intersecting the internodes of their own plant
+    /**
+     * Once enabled, every time step of advanceTime() tests each fruiting floral bud's fruit against the nearby internodes of the same plant. A fruit found inside a branch is moved out at one of two
+     * hinges, whichever moves the contact out with the smaller rotation: the peduncle swings, with everything it carries, rigidly about the node it grows from, or the fruit tilts about its own attachment
+     * point on the peduncle -- the way a pedicel bends and a fruit leans when it comes to rest against a limb. Fruit are tested through
+     * analytic proxies built from their meshes (an enclosing sphere, a chain of spheres along the fruit, and the triangles themselves for small meshes) against the plant's internode skeleton, so the
+     * cost is a small fraction of a growth step and no collision BVH is involved. The swing is incremental: fruit that are already clear cost one bounding-sphere test per nearby segment, and a fruit that
+     * cannot be cleared within the allowed swing, for example one wedged between spurs, is left at the least-penetrating pose reached. A fruit that has been moved and is clear of every branch,
+     * because the branch has grown away or the fruit was pushed further than it needed, settles back toward its grown, hanging pose at a set rate, stopping where it would touch wood again. Swings persist through writePlantStructureXML() /
+     * readPlantStructureXML(). Only internodes of the fruit's own plant are considered; leaves, petioles, flowers and other plants are not. See also setFruitBranchCollisionParameters().
+     */
+    void enableFruitBranchCollisionAvoidance();
+
+    //! Stop testing fruit against branches; peduncles already swung keep their pose
+    void disableFruitBranchCollisionAvoidance();
+
+    //! Set the parameters of fruit-branch collision avoidance (see enableFruitBranchCollisionAvoidance())
+    /**
+     * \param[in] max_swing_deg Largest total angle (degrees) a peduncle may be swung from its grown pose, and likewise a fruit tilted about its attachment point; a fruit still in contact at these angles stays there (default = 90)
+     * \param[in] candidate_refresh_days Days between rebuilds of each bud's list of nearby internode segments; new shoots appearing between rebuilds are only seen at the next one (default = 10)
+     * \param[in] clearance Gap (meters) to leave between a fruit and a branch surface; 0 lets them touch (default = 0)
+     * \param[in] settle_rate_deg_per_day [optional] Rate (degrees per day) at which a swung peduncle or tilted fruit that is clear of every branch turns back toward its grown, hanging pose; 0 leaves fruit where a contact put them (default = 10)
+     */
+    void setFruitBranchCollisionParameters(float max_swing_deg, float candidate_refresh_days, float clearance, float settle_rate_deg_per_day = 10.f);
+
     // -- attraction points methods -- //
 
     //! Enable attraction points to guide plant growth toward specific targets
@@ -4231,8 +4357,11 @@ public:
      * \param[in] leaflet_offset Spacing between lateral leaflet pairs as a fraction of the petiole length; zero or greater.
      * \param[in] leaflet_scale Size of each lateral pair relative to the pair nearer the tip; greater than zero.
      * \param[in] prototype_scale Fully-elongated size of the terminal leaflet in meters; greater than zero.
+     * \param[in] intercalary_leaflet_scale Size of the intercalary leaflets relative to the primary pair nearer the tip; zero for a leaf with none. Negative (the default) keeps the phytomer's current value,
+     * which a leaf measured with no intercalary leaflets would otherwise inherit from its shoot type.
      */
-    void setPetioleLeaflets(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale);
+    void setPetioleLeaflets(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale,
+                            float intercalary_leaflet_scale = -1.f);
 
     //! Rebuild the leaflets of one petiole of an existing phytomer turned by their own pitch, yaw and roll.
     /**
@@ -5524,6 +5653,19 @@ public:
      */
     static std::string resolveTextureFile(const std::string &texture_file);
 
+    //! Record a class map of a texture on the primitives mapped with it, as the primitive data "spectral_class_map"
+    /**
+     * The class map is checked against the texture (resolution, and class 0 marking exactly the transparent texels of a texture with transparency, or absent for one without), and recorded on each
+     * of the given primitives that is mapped with the texture and covers a class (\ref helios::classMapAreaFractions()); primitives that already carry the data are left as they are.
+     * \param[in] context Context the primitives belong to
+     * \param[in] UUIDs Primitives to consider
+     * \param[in] texture_file Resolved path of the texture the class map was made for, or empty to take every textured primitive among the UUIDs (which must then share one texture)
+     * \param[in] class_map_file Class map, resolved as a texture file is (see \ref resolveTextureFile())
+     * \param[in] organ Name of the organ, for error messages (for example "leaf")
+     * \param[in] remedy Advice appended to error messages about a class map that does not match the texture
+     */
+    static void recordSpectralClassMap(helios::Context *context, const std::vector<uint> &UUIDs, const std::string &texture_file, const std::string &class_map_file, const std::string &organ, const std::string &remedy);
+
     friend struct Phytomer;
     friend struct Shoot;
 
@@ -6137,6 +6279,57 @@ protected:
     bool solid_obstacle_fruit_adjustment_enabled = false;
     bool solid_obstacle_pruning_enabled = false;
 
+    // --- Fruit-Branch Collision Avoidance --- //
+
+    //! Whether fruit are swung out of the internodes of their own plant each time step (see enableFruitBranchCollisionAvoidance())
+    bool fruit_branch_collision_enabled = false;
+    //! Largest total swing (radians) of a peduncle out of its grown pose
+    float fruit_branch_collision_max_swing_rad = 0.5f * PI_F;
+    //! Days between rebuilds of the candidate internode lists
+    float fruit_branch_collision_refresh_days = 10.f;
+    //! Gap (meters) kept between fruit and branch surfaces
+    float fruit_branch_collision_clearance = 0.f;
+    //! Rate (radians per day) at which swings and tilts relax back toward the grown pose while the fruit stays clear
+    float fruit_branch_collision_settle_rad_per_day = 10.f * PI_F / 180.f;
+    //! Fruit meshes with more primitives than this are tested through their sphere chain rather than their triangles
+    static constexpr size_t fruit_contact_exact_primitive_limit = 1000;
+    //! Contact proxies of the fruit, keyed by fruit object ID; entries whose object is gone are dropped at the next check
+    std::unordered_map<uint, FruitContactProxy> fruit_contact_proxies;
+    //! Candidate internode segments per fruiting bud, keyed by the bud's first fruit object ID
+    std::unordered_map<uint, FruitContactCandidates> fruit_contact_candidates;
+
+    //! Build the contact proxy of one fruit object from its mesh
+    /**
+     * \param[in] fbud Floral bud carrying the fruit
+     * \param[in] fruit_index Index of the fruit within fbud.inflorescence_objIDs
+     * 
+eturn Proxy in the frame of the fruit's attachment point
+     */
+    [[nodiscard]] FruitContactProxy buildFruitContactProxy(const FloralBud &fbud, size_t fruit_index) const;
+
+    //! Collect the internode segments of a plant that lie within reach of a fruiting bud
+    /**
+     * \param[in] plantID Plant the bud belongs to
+     * \param[in] phytomer Phytomer carrying the bud
+     * \param[in] fbud The fruiting bud
+     * \param[in] reach Distance (meters) from fbud.base_position within which a segment's capsule is kept
+     * \param[in] shoot_lower Per-shoot lower corners of the bounding boxes of the internode capsules, indexed by shoot ID
+     * \param[in] shoot_upper Per-shoot upper corners of the same boxes
+     * 
+eturn Candidate list with its refresh age and shoot count filled in
+     */
+    [[nodiscard]] FruitContactCandidates collectFruitContactCandidates(uint plantID, const Phytomer &phytomer, const FloralBud &fbud, float reach, const std::vector<helios::vec3> &shoot_lower, const std::vector<helios::vec3> &shoot_upper) const;
+
+    //! Swing the fruiting buds of a plant out of the plant's internodes, and let those already clear settle back toward hanging (one time step of fruit-branch collision avoidance)
+    /**
+     * \param[in] plantID Plant to process
+     * \param[in] dt_days Length of the time step (days), which scales the settling
+     */
+    void resolveFruitBranchCollisions(uint plantID, float dt_days);
+
+    //! Drop the fruit-branch contact proxies and candidate lists of fruit objects that no longer exist
+    void pruneFruitContactCaches();
+
     // --- Attraction Points --- //
 
     //! Flag indicating if attraction points are enabled
@@ -6187,8 +6380,10 @@ protected:
 
     uint buildAppleTree(const helios::vec3 &base_position);
 
+    //! Define the shoot types of the "apple_fruitingwall" model: a tall-spindle apple fruiting wall trained from its phytomer callback.
     void initializeAppleFruitingWallShoots();
 
+    //! Build the "apple_fruitingwall" model as a feathered nursery tree, which the training callback grows into a wall over about five seasons.
     uint buildAppleFruitingWall(const helios::vec3 &base_position);
 
     void initializeAsparagusShoots();

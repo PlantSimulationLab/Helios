@@ -547,4 +547,63 @@ inline constexpr BuildParameterDeclaration rice_tiller_count{"tiller_count", 0.f
  */
 [[nodiscard]] int riceTillerCount(const std::map<std::string, float> &build_parameters);
 
+//! Fruit-branch contact geometry and push-out solver, shared between PlantArchitecture::resolveFruitBranchCollisions() and its self-tests (see FruitCollision.cpp)
+namespace fruit_contact {
+
+    //! One internode segment, a capsule whose radius varies linearly along it
+    struct BranchSegment {
+        helios::vec3 start;
+        helios::vec3 end;
+        float start_radius = 0;
+        float end_radius = 0;
+    };
+
+    //! World-space copy of one fruit's contact proxy (see FruitContactProxy), moved while a push-out is worked out
+    struct WorldProxy {
+        helios::vec3 bounding_center;
+        float bounding_radius = 0;
+        std::vector<helios::vec3> sphere_centers;
+        std::vector<float> sphere_radii;
+        //! Three vertices per triangle; empty when the fruit is tested through its spheres only
+        std::vector<helios::vec3> triangle_vertices;
+    };
+
+    //! A contact between a fruit and a branch
+    struct Contact {
+        //! Depth of the contact; positive when a fruit is inside a branch, or within the clearance of one
+        float penetration = 0;
+        //! Point of the fruit proxy in contact, which is where a hinge's lever acts
+        helios::vec3 point;
+        //! Unit direction in which that point must move to clear the contact
+        helios::vec3 direction;
+        //! Fruit of the bud the contact belongs to
+        size_t fruit_index = 0;
+    };
+
+    //! Deepest contact between the fruit of a bud and a set of branch segments; its penetration is zero when there is none
+    [[nodiscard]] Contact deepestContact(const std::vector<WorldProxy> &fruit, const std::vector<BranchSegment> &segments, float clearance);
+
+    //! How the push-out may turn the fruit: whether a rotation is within its budget, and applying it
+    /** apply_swing turns every fruit about the bud's node (the pivot) and must update the fruit proxies and attachment points it was given; apply_tilt turns one fruit about its attachment point. */
+    struct HingeControls {
+        std::function<bool(const helios::vec3 &axis, float angle)> swing_allowed;
+        std::function<void(const helios::vec3 &axis, float angle)> apply_swing;
+        std::function<bool(size_t fruit_index, const helios::vec3 &axis, float angle)> tilt_allowed;
+        std::function<void(size_t fruit_index, const helios::vec3 &axis, float angle)> apply_tilt;
+    };
+
+    //! Move the fruit of a bud out of the branches, a few degrees at a time, at whichever hinge clears a contact with the smaller rotation
+    /**
+     * \param[in] fruit Fruit proxies; read here and moved by the callbacks
+     * \param[in] fruit_bases Fruit attachment points, the tilt pivots; read here and moved by apply_swing
+     * \param[in] pivot The bud's node, the swing pivot
+     * \param[in] segments Branch segments to clear
+     * \param[in] clearance Gap (meters) to leave between fruit and branch surfaces
+     * \param[in] controls Budget checks and the rotations themselves
+     * \return True if the fruit end clear of every segment; false if the bud is left wedged at its least-penetrating pose
+     */
+    [[nodiscard]] bool pushOut(const std::vector<WorldProxy> &fruit, const std::vector<helios::vec3> &fruit_bases, const helios::vec3 &pivot, const std::vector<BranchSegment> &segments, float clearance, const HingeControls &controls);
+
+} // namespace fruit_contact
+
 #endif // HELIOS_PLANT_ARCHITECTURE_INTERNAL_H

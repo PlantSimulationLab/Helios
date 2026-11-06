@@ -1,0 +1,437 @@
+/*! \page SoilTransportDoc SoilTransport Plugin Documentation
+
+ \tableofcontents
+
+ <table>
+ <tr><th>Dependencies</th><td>None required. NVIDIA CUDA (optional) enables the GPU backend for the full-3D solver.</td></tr>
+ <tr><th>CMakeLists.txt</th><td>set( PLUGINS "soiltransport" )</td></tr>
+ <tr><th>Header File</th><td>\#include "SoilTransportModel.h"</td></tr>
+ <tr><th>Class</th><td>\ref SoilTransportModel</td></tr>
+ </table>
+
+ The plugin is organized around the high-level \ref SoilTransportModel facade, which owns the
+ lower-level solver classes: \ref SoilColumn (a single 1D column), \ref SoilGrid (a 2D array of
+ columns for the 1D and quasi-3D modes), \ref SoilSolver3D (the full 3D Richards solver), and
+ \ref RootSoilCoupling (plant-root water uptake). Most users interact only with \ref SoilTransportModel.
+
+ \section SWT_Constructor Class Constructor
+
+ <table>
+ <tr><th>Constructors</th></tr>
+ <tr><td>\ref SoilTransportModel( helios::Context* )</td></tr>
+ </table>
+
+ \section SWT_Data Primitive Data
+
+ The plugin operates on its own internal finite-volume grid and does <b>not</b> require any input
+ primitive data from the Context. It only writes primitive data when the soil geometry is rendered
+ with \ref SoilTransportModel::addSoilVisualization() / \ref SoilTransportModel::updateSoilVisualization().
+
+ \subsection SWT_OutputData Output Primitive Data (visualization geometry)
+
+| Primitive Data Label | Symbol | Units | Data Type | Description |
+| -------------------- | ------ | ------ | --------- | ----------- |
+| water_content        | \f$\theta\f$ | m\f$^3\f$ m\f$^{-3}\f$ | \htmlonly<span style="color: green;"><tt>float</tt></span>\endhtmlonly | Volumetric water content sampled onto each soil voxel |
+| pressure_head        | \f$h\f$ | m | \htmlonly<span style="color: green;"><tt>float</tt></span>\endhtmlonly | Pressure head sampled onto each soil voxel |
+| soil_sample_pos      | N/A | m | \htmlonly<span style="color: green;"><tt>vec3</tt></span>\endhtmlonly | Sample location used by \ref SoilTransportModel::updateSoilVisualization() to re-color existing geometry in place |
+
+ \section SWT_Issues Known Issues
+
+ - The <tt>NGS_FAS</tt> nonlinear method is semi-implicit in the hydraulic conductivity (lagged within
+   each step), so its mass-conservation error grows with both timestep and grid refinement. Keep the
+   timestep moderate (or use the adaptive stepper) when accurate conservation matters; use <tt>PICARD</tt>
+   for machine-exact conservation.
+ - The <tt>M_SCHEME</tt> (Kirchhoff-transform) method is restricted to <b>homogeneous</b> soil and will
+   throw if heterogeneous properties are set.
+ - The CPU solver synchronizes its OpenMP threads many times per iteration. By default it uses one thread
+   per physical core, which leaves the hyperthreads free for other work, but if more processes than
+   physical cores keep the machine busy, the spinning threads can slow it down many-fold. On a heavily
+   shared machine set the environment variable <tt>OMP_WAIT_POLICY=passive</tt> (about 10% slower on an
+   idle machine) or lower <tt>num_threads</tt>.
+ - The GPU backend is double-precision throughout; commodity cards with a low FP64 ratio provide little
+   speedup over a multicore CPU. An A100/H100-class device is recommended.
+ - Surface ponding and overland flow are not yet modeled; infiltration in excess of the surface
+   capacity is not routed laterally.
+ - Explicit root geometry is not supported yet: <tt>setRootPrimitives()</tt> raises an error. Use
+   <tt>setRootDistribution()</tt> or <tt>setRootDistributionWeibull()</tt> to describe a plant's root zone.
+
+ \section SWT_Intro Introduction
+
+ The SoilTransportModel plugin solves variably-saturated subsurface water flow (the Richards equation)
+ in one, two-and-a-half (quasi-3D), or three dimensions. It is intended for coupling with plant models:
+ drip or sprinkler irrigation, root water uptake, and bare-soil evaporation can all be applied as
+ boundary conditions and sink terms, and point sensors can log water content or pressure head over time.
+
+ Three solve modes are available through \ref SoilTransportModel::setSolverType():
+ <ul>
+ <li><b>SOLVER_1D</b> &mdash; a grid of independent vertical columns (fastest; no lateral flow).</li>
+ <li><b>SOLVER_QUASI_3D</b> &mdash; vertical columns with periodic operator-split horizontal coupling.</li>
+ <li><b>SOLVER_3D</b> &mdash; the fully coupled 3D Richards equation (\ref SoilSolver3D), with an optional GPU backend.</li>
+ </ul>
+
+ Soil hydraulic behavior follows the van Genuchten&ndash;Mualem model by default, with a Gardner
+ exponential model available as an alternative. Twelve standard USDA soil textures are provided in a
+ built-in library (see \ref SWT_Params).
+
+ \section SWT_Equations Governing Equations
+
+ \subsection SWT_Richards The Richards equation
+
+ Water movement is governed by the mixed form of the Richards equation, written here with the vertical
+ coordinate \f$z\f$ positive upward and pressure head \f$h\f$ (m):
+ \f[
+   \frac{\partial \theta(h)}{\partial t} = \nabla \cdot \left[ K(h)\left(\nabla h + \hat{\mathbf{z}}\right) \right] - S,
+ \f]
+ where \f$\theta\f$ is the volumetric water content (m\f$^3\f$ m\f$^{-3}\f$), \f$K\f$ is the unsaturated
+ hydraulic conductivity (m s\f$^{-1}\f$), and \f$S\f$ is a sink (root uptake / evaporation, s\f$^{-1}\f$).
+ The \f$\hat{\mathbf{z}}\f$ term is the gravitational contribution.
+
+ \subsection SWT_Constitutive Constitutive relations
+
+ The van Genuchten&ndash;Mualem model relates effective saturation \f$S_e\f$, water content, and
+ conductivity to pressure head. For \f$h<0\f$,
+ \f[
+   S_e(h) = \left[1 + |\alpha h|^{n}\right]^{-m}, \qquad m = 1 - \frac{1}{n},
+ \f]
+ with \f$S_e = 1\f$ for \f$h \ge 0\f$. Water content and conductivity follow as
+ \f[
+   \theta(h) = \theta_r + (\theta_s - \theta_r)\,S_e(h), \qquad
+   K(S_e) = K_s\, S_e^{1/2}\left[1 - \left(1 - S_e^{1/m}\right)^{m}\right]^{2},
+ \f]
+ where \f$\theta_r\f$ and \f$\theta_s\f$ are the residual and saturated water contents, \f$\alpha\f$
+ (m\f$^{-1}\f$) is the inverse air-entry scale, \f$n\f$ is the pore-size distribution index, and
+ \f$K_s\f$ is the saturated conductivity. The specific moisture capacity used by the solvers is
+ \f$C(h) = \mathrm{d}\theta/\mathrm{d}h\f$.
+
+ \par Modified van Genuchten&ndash;Mualem model (air-entry value)
+
+ For \f$n < 2\f$ the slope \f$\mathrm{d}K/\mathrm{d}h\f$ of the standard model is unbounded as
+ \f$h \to 0^-\f$, so K drops very steeply just below saturation. Cells that sit at saturation, such as the
+ cells under a drip emitter delivering more than \f$K_s\f$, can then stall the nonlinear solver.
+ <tt>SoilModel::MODIFIED_VAN_GENUCHTEN</tt> (Ippisch, Vogel &amp; Bastian 2006) adds an air-entry head
+ \f$h_e < 0\f$ (<tt>SoilProperties::h_e</tt>): the soil is saturated for \f$h \ge h_e\f$, and for \f$h < h_e\f$
+ \f[
+   S_e = \frac{\left[1 + |\alpha h|^{n}\right]^{-m}}{S_c}, \qquad
+   K = K_s\, S_e^{1/2}\left[\frac{1 - \left(1 - (S_e S_c)^{1/m}\right)^{m}}{1 - \left(1 - S_c^{1/m}\right)^{m}}\right]^{2},
+   \qquad S_c = \left[1 + |\alpha h_e|^{n}\right]^{-m},
+ \f]
+ so \f$\theta = \theta_s\f$ and \f$K = K_s\f$ at \f$h_e\f$, and \f$\mathrm{d}K/\mathrm{d}h\f$ stays finite. With
+ the same parameters as a standard soil, below \f$h_e\f$ the water content is the standard one rescaled by
+ \f$1/S_c\f$ and the conductivity the standard one times
+ \f$F_K = 1/\left(S_c^{1/2}\left[1 - (1 - S_c^{1/m})^{m}\right]^2\right)\f$ (1.3 for sand, 1.7 for loam, 10 for clay
+ at \f$h_e\f$ = -2 cm). \ref toModifiedVanGenuchten() therefore converts standard parameters by setting
+ \f$\theta_s\f$ and \f$K_s\f$ to the standard \f$\theta\f$ and \f$K\f$ at \f$h_e\f$: the modified model is then
+ the standard one truncated at \f$h_e\f$, identical for \f$h < h_e\f$ and saturated above. Passing
+ <tt>match_standard_curves = false</tt> keeps \f$\theta_s\f$ and \f$K_s\f$ instead (HYDRUS's convention). The model
+ is supported by the column, quasi-3D and 3D solvers on the CPU and GPU, except <tt>M_SCHEME</tt>.
+
+ \par Relative-conductivity spline near saturation
+
+ Alternatively the standard model can keep \f$K_s\f$ at saturation with a finite slope: with
+ <tt>SoilProperties::kr_spline_start</tt> \f$= S_1 < 1\f$ (e.g. 0.9999), the relative conductivity above
+ \f$S_e = S_1\f$ is a cubic Hermite spline from the standard value and slope at \f$S_1\f$ to 1 with zero slope at
+ saturation. The retention curve is unchanged.
+
+ A Gardner exponential soil, \f$K(h) = K_s\,e^{\alpha h}\f$, is also available via the
+ <tt>gardner()</tt> named constructor of \ref SoilProperties; it admits closed-form
+ steady-infiltration solutions used in the plugin's verification tests. A linear soil,
+ \f$S_e = 1 + \alpha h\f$ (between 0 and 1) with \f$K = K_s S_e\f$, is available via the <tt>linear()</tt> named
+ constructor, for verification against closed-form solutions.
+
+ \subsection SWT_Discretization Discretization
+
+ The domain is discretized with a cell-centered finite-volume scheme. Specified-head (Dirichlet)
+ boundary faces are treated as a virtual cell half a cell beyond the face and use the same interblock
+ weighting as interior faces, with flow direction set by total head. Interblock conductivities on cell
+ faces are formed by harmonic, geometric, arithmetic, upstream, or upstream relative-permeability weighting
+ (the <tt>K_weighting</tt> field of \ref SolverParameters). The default is the arithmetic mean, which in
+ grid-convergence tests (infiltration into dry soil, ponded infiltration, layered recharge, evaporation and
+ 3D drip irrigation) was the most accurate overall at practical resolutions and never failed to converge;
+ the harmonic mean nearly blocks infiltration from a wet cell into a dry one. Upstream weighting takes the
+ conductivity of the donor cell (by total head). Upstream relative-permeability
+ weighting (<tt>KWeighting::UPSTREAM_KR</tt>) multiplies the harmonic mean of the two cells'
+ saturated conductivities by the donor cell's relative permeability (the scheme used by MODFLOW 6); it
+ is the better choice across sharp layer interfaces, where taking the donor's full \f$K\f$ lets a coarse
+ layer's \f$K_s\f$ control flow into a fine one. Time integration uses backward Euler, giving a nonlinear
+ algebraic system at each step that is solved by one of the strategies below. Backward Euler conserves water
+ exactly, whatever the step sizes. The 3D solver can use second-order BDF2 instead (SolverParameters::bdf2),
+ but BDF2 does not conserve water when sources or boundary fluxes change: an emitter switched on and off under
+ adaptive stepping lost 1.6% of its water, and with daily recharge over a year (MODFLOW 6 Test 2) the heads
+ ended 29 cm low. Use BDF2 only with fixed steps and smooth forcing.
+
+ The 1D column solver (\ref SoilColumn) uses the mass-conservative Modified-Picard form of Celia et al.
+ (1990) with a direct tridiagonal solve.
+
+ \subsection SWT_Solvers Nonlinear solvers (3D)
+
+ The full-3D solver (\ref SoilSolver3D) offers several nonlinear strategies, selected with the
+ <tt>nonlinear_method</tt> field of \ref SolverParameters. The available strategies are:
+ <ul>
+ <li><b>NEWTON_ANALYTIC</b> (default) &mdash; Newton&ndash;Raphson on an explicitly assembled 7-point
+     Jacobian with analytic derivatives, including the \f$\mathrm{d}K/\mathrm{d}h\f$ terms that
+     Modified Picard drops, so convergence is quadratic near the solution. The nonsymmetric linear system
+     is solved with ILU(0)-preconditioned BiCGSTAB (on large grids, block-Jacobi ILU(0) with one lateral
+     slab of whole vertical columns per thread). Robustness comes from limiting each cell's
+     effective-saturation change per iteration (unsaturated cells take the update in water-content space;
+     cells with specific storage near or below the water table take it in head) and a backtracking line
+     search. A step converges when every cell's water imbalance is negligible, so mass is conserved to
+     solver tolerance. Inside <tt>solveAdaptive()</tt> a step that fails to converge is retried with a
+     smaller \f$\Delta t\f$; a fixed-\f$\Delta t\f$ <tt>solve()</tt> falls back to Modified Picard for
+     that step on uniform grids and, if the step still fails, sub-steps the interval adaptively. Only if
+     that also fails does it return 0, leaving the state unchanged. On the GPU the
+     same algorithm runs device-resident, with BiCGSTAB preconditioned by vertical-line relaxation (flat or
+     terrain-following cells, where vertical coupling dominates) or a geometric-multigrid V-cycle.</li>
+ <li><b>PICARD</b> &mdash; the Modified-Picard iteration of Celia et al. (1990), which linearizes
+     about \f$C(h)\f$ to yield a symmetric positive-definite system each iteration, solved by
+     preconditioned conjugate gradient with geometric multigrid. Robust and machine-exact in mass; also the
+     fallback of a failed NEWTON_ANALYTIC step.</li>
+ <li><b>NEWTON</b> &mdash; a Jacobian-free Newton&ndash;Krylov (JFNK) scheme using matrix-free
+     Jacobian&ndash;vector products and GMRES preconditioned by a single multigrid V-cycle. Roughly 35%
+     faster than Picard on stiff dry-front steps.</li>
+ <li><b>PICARD_NEWTON</b> &mdash; a Picard warm-up followed by Newton for additional globalization.</li>
+ <li><b>NGS_FAS</b> &mdash; lagged-conductivity nonlinear Gauss&ndash;Seidel smoothing within a full
+     approximation scheme (FAS) multigrid (Gu &amp; Wang, 2026); its operator uses harmonic-mean faces, so
+     use it with <tt>KWeighting::HARMONIC</tt>. Iteration counts are grid-independent and
+     the smoother is red-black parallel on the GPU; semi-implicit, so mass error is \f$O(\Delta t)\f$.</li>
+ <li><b>M_SCHEME</b> &mdash; a Kirchhoff-transform linearization with a certified a-posteriori error
+     estimator (Mitra &amp; Pop and co-workers, 2025). Homogeneous soil only; CPU only.</li>
+ </ul>
+
+ \par Failed steps (NEWTON_ANALYTIC, column and 3D solvers alike)
+
+ The 1D column and the 3D solver (CPU and GPU) apply the same rules, with constants shared in SoilUtils.h:
+ <ul>
+ <li>A cell's residual is accepted when it is small in water-content units or relative to the sum of the
+     magnitudes of its terms; that sum includes the round-off of each face flux, so cells far thinner than the
+     head change across them (e.g. at a root surface) can still converge in double precision.</li>
+ <li>The line search measures the residual in water-flux units (weighted by cell volume), so thin cells do not
+     dominate it on graded grids.</li>
+ <li>Newton gives up after ten damped iterations in a row that each remove less than 2% of the residual,
+     the way it behaves when the step has no solution (e.g. a flux the soil can no longer deliver).</li>
+ <li>A Picard step run as the fallback of a failed Newton step is accepted only if the water balance also closes.</li>
+ <li><tt>solve(dt)</tt> rescues a failed step by sub-stepping it, down to 1/1000 of dt; if that cannot cover
+     it, the state is left unchanged and 0 is returned, so the caller can shorten the step. A caller that shortens
+     failed steps itself should set <tt>substep_on_failure = false</tt> (\ref SolverParameters, or
+     \ref SoilSolver3D::Params): a step with no solution then fails at once instead of after the sub-steps.</li>
+ <li>A failed step leaves the state unchanged with every nonlinear method. \ref SoilTransportModel::run() raises an
+     error when it cannot complete a step, and its clock and the cumulative root uptake count only the time that was
+     advanced. An error raised part-way through a step for another reason (e.g. a quasi-3D cell reaching saturation, or a
+     GPU failure) leaves the state and the clock as they were before the call.</li>
+ </ul>
+
+ \par GPU
+ The full 3D solver runs on an NVIDIA GPU automatically when the build has CUDA and a usable device is present
+ (\ref SoilTransportModel::isGPUAvailable(); setting the environment variable <tt>HELIOS_NO_GPU</tt> hides it), except
+ with <tt>NonlinearMethod::M_SCHEME</tt>, which runs on the CPU only. \ref SoilTransportModel::disableGPU() selects the CPU;
+ \ref SoilTransportModel::enableGPU() requires the GPU. The column solvers always run on the CPU. A CUDA failure during a
+ solve raises an error and leaves the state as it was before the step.
+
+ \subsection SWT_Geometry Grid geometry, specified heads and specific storage (3D solver)
+
+ By default each cell of \ref SoilSolver3D is a \f$dx \times dy \times dz\f$ box. Three options extend this
+ for groundwater-style and terrain-following problems; all require <tt>NEWTON_ANALYTIC</tt> (CPU or GPU):
+ <ul>
+ <li><b>Per-cell geometry</b> (\ref SoilSolver3D::setCellGeometry): each cell gets its own centre elevation
+     and thickness, so layers may slope and vary in thickness. Gravity uses the actual cell elevations;
+     vertical faces use the centre-to-centre distance and lateral faces an area equal to the cell width
+     times the mean thickness of the two cells.</li>
+ <li><b>Specified-head cells</b> (\ref SoilSolver3D::setFixedHead): any cell can be held at a fixed pressure
+     head (a canal, lake or water-table boundary on part of a face). The water such a cell exchanges with
+     its neighbours is counted as external inflow in the mass balance.</li>
+ <li><b>Specific storage</b> (\ref SoilSolver3D::setSpecificStorage): stored water per unit volume becomes
+     \f$\theta(h) + S_s S_w h\f$ with \f$S_w = \theta/\theta_s\f$, so saturated cells store water as
+     pressure rises. Even a small \f$S_s\f$ (\f$10^{-6}\f$--\f$10^{-4}\f$ m\f$^{-1}\f$) also makes the
+     saturated zone far easier for the nonlinear solver.</li>
+ </ul>
+
+ \subsection SWT_Radial Radial geometry (1D column)
+
+ \ref SoilColumn::setRadialGeometry() turns a \ref SoilColumn into concentric shells around a cylinder of given
+ radius, such as a root: layer depths become radial distances from the cylinder surface, the top boundary is the
+ cylinder surface and the bottom boundary the outer radius. Face fluxes scale with the face radius and layer
+ storage with the shell area, and gravity is not applied (the flow is horizontal). Boundary fluxes, sources and
+ water storage are per unit area of the cylinder surface (a bottom flux per unit area of the outer surface). This
+ resolves the steep head drop toward a root in dry soil (rhizosphere models).
+
+ \subsection SWT_Boundaries Boundary conditions and sinks
+
+ Each boundary may be a specified pressure head (Dirichlet), a specified flux (Neumann,
+ positive into the soil), or, at the base, unit-gradient free drainage. The top of a \ref SoilColumn may also
+ be a head-limited ("atmospheric") boundary, as in HYDRUS (\ref SoilColumn::setTopBoundaryAtmospheric()): a
+ potential flux is applied unless the flux with the surface held at a limiting head is smaller, i.e. infiltration
+ limited by ponding at the surface or evaporation limited by a drying surface. The branch is chosen for each step
+ from the state at its start and checked at its end (the step is redone with the other branch if needed);
+ \ref SoilColumn::getTopFlux() returns the flux applied. Surface irrigation is applied
+ with \ref SoilTransportModel::addSurfaceEmitter() (a drip emitter is spread over a small footprint for
+ grid independence). Bare-soil evaporation (\ref SoilTransportModel::setSurfaceEvaporation()) and root
+ uptake (\ref RootSoilCoupling) enter the equation through the sink term \f$S\f$; root uptake is
+ partitioned over the soil cells according to a Vrugt-type or Weibull root-density profile.
+
+ Root uptake is limited by soil water availability. Each root cell's share is scaled by a Feddes
+ water-stress factor \f$\alpha(h)\f$, equal to 1 above \f$h_\mathrm{onset}\f$ (default \f$-4\f$ m) and
+ falling linearly to 0 at \f$h_\mathrm{wilt}\f$ (default \f$-150\f$ m, about \f$-1.5\f$ MPa). Uptake is
+ redistributed toward unstressed roots (Jarvis compensation), so the full transpiration demand is met while
+ the root-weighted mean \f$\omega = \sum \alpha f / \sum f\f$ is at least \f$\omega_c\f$ (default 0.5); below
+ that the uptake is \f$T\,\omega/\omega_c\f$. Set the parameters with
+ \ref SoilTransportModel::setRootWaterStressParameters() and read the applied uptake with
+ \ref SoilTransportModel::getRootUptakeFlux(). The root-zone water potential returned for plant-hydraulics
+ coupling (\ref SoilTransportModel::getSoilWaterPotential()) is weighted the same way, by
+ \f$f\,\alpha\f$, so it reflects the soil the roots are drawing from.
+
+ \section SWT_Params Parameters
+
+ \subsection SWT_SoilProps Soil hydraulic properties
+
+ The \ref SoilProperties struct holds the van Genuchten&ndash;Mualem (or Gardner) parameters:
+
+| Parameter | Symbol | Units | Description | Default (sand) |
+| --------- | ------ | ----- | ----------- | -------------- |
+| theta_r   | \f$\theta_r\f$ | m\f$^3\f$ m\f$^{-3}\f$ | Residual water content | 0.045 |
+| theta_s   | \f$\theta_s\f$ | m\f$^3\f$ m\f$^{-3}\f$ | Saturated water content | 0.43 |
+| alpha     | \f$\alpha\f$ | m\f$^{-1}\f$ | Inverse air-entry scale (van Genuchten \f$\alpha\f$ / Gardner rate) | 14.5 |
+| n         | \f$n\f$ | &ndash; | Pore-size distribution index (van Genuchten only) | 2.68 |
+| K_s       | \f$K_s\f$ | m s\f$^{-1}\f$ | Saturated hydraulic conductivity | \f$8.25\times10^{-5}\f$ |
+| h_e       | \f$h_e\f$ | m | Air-entry head (<tt>MODIFIED_VAN_GENUCHTEN</tt> only, < 0) | 0 |
+
+ Properties may be built directly, via the named constructors <tt>SoilProperties::vanGenuchten()</tt> /
+ <tt>SoilProperties::modifiedVanGenuchten()</tt> / <tt>SoilProperties::gardner()</tt>, or looked up by USDA
+ texture with \ref getSoilPropertiesFromTexture(). The library holds the Carsel &amp; Parrish (1988) class
+ averages. <tt>getSoilPropertiesFromTexture(texture, SoilModel::MODIFIED_VAN_GENUCHTEN)</tt> (or
+ <tt>SoilTransportModel::setSoilPropertiesFromTexture(texture, model)</tt>) converts them with
+ \ref toModifiedVanGenuchten() at \f$h_e\f$ = -2 cm (the value of HYDRUS's "van Genuchten&ndash;Mualem with an
+ air-entry value of -2 cm" option): the Carsel &amp; Parrish curves truncated at \f$h_e\f$. No class averages
+ refitted for the air-entry model have been published for the 12 USDA classes; Schaap &amp; van Genuchten (2006)
+ give 4 texture groups at -4 cm. Available textures:
+ <tt>sand</tt>, <tt>loamy_sand</tt>, <tt>sandy_loam</tt>, <tt>loam</tt>, <tt>silt</tt>, <tt>silt_loam</tt>,
+ <tt>sandy_clay_loam</tt>, <tt>clay_loam</tt>, <tt>silty_clay_loam</tt>, <tt>sandy_clay</tt>,
+ <tt>silty_clay</tt>, and <tt>clay</tt>.
+
+ \subsection SWT_SolverParams Solver parameters
+
+ The \ref SolverParameters struct configures the nonlinear/linear solve and timestepping:
+
+| Parameter | Units | Description | Default |
+| --------- | ----- | ----------- | ------- |
+| nonlinear_method | &ndash; | 3D nonlinear strategy (NEWTON_ANALYTIC, PICARD, NEWTON, PICARD_NEWTON, NGS_FAS, M_SCHEME) | NEWTON_ANALYTIC |
+| max_picard_iterations | &ndash; | Maximum nonlinear iterations per step | 20 |
+| picard_tolerance | m | Nonlinear convergence tolerance | \f$1\times10^{-5}\f$ |
+| picard_omega | &ndash; | Under-relaxation factor (use 0.5&ndash;0.7 for sharp fronts) | 1.0 |
+| anderson_depth | &ndash; | Anderson-acceleration depth for the Picard tail (0 = off) | 0 |
+| K_weighting | &ndash; | Interblock conductivity weighting (DEFAULT/HARMONIC/GEOMETRIC/ARITHMETIC/UPSTREAM/UPSTREAM_KR) | DEFAULT (arithmetic) |
+| K_min | m s\f$^{-1}\f$ | Additive conductivity floor easing dry-front infiltration (0 = off) | 0.0 |
+| num_threads | &ndash; | CPU threads for the 3D solver (0 = <tt>OMP_NUM_THREADS</tt> if set, else one per physical core) | 0 |
+| enable_gravity | &ndash; | Include gravity in the flux (column solvers only; false for horizontal or capillarity-only problems) | true |
+| adaptive_dt | &ndash; | Enable \f$\Delta\theta\f$-controlled adaptive timestepping | false |
+| dt_target_rel_change | &ndash; | Target per-step \f$|\Delta\theta|/(\theta_s-\theta_r)\f$ for step sizing | 0.03 |
+| dt_min / dt_max | s | Timestep bounds | 0.01 / 3600 |
+| horizontal_coupling_interval | &ndash; | Quasi-3D: couple laterally every N vertical steps | 1 |
+
+ \section SWT_Example Examples
+
+ \subsection SWT_Ex1 Minimal 3D infiltration
+
+ A uniform, moderately dry loam with steady surface infiltration and free drainage at the base. The
+ wetting front descends over the first hour.
+
+ \code{.cpp}
+ #include "SoilTransportModel.h"
+ using namespace helios;
+
+ int main() {
+     Context context;
+     SoilTransportModel soil(&context);
+
+     // A 1 m x 1 m x 1 m block of soil, 20 x 20 x 40 cells.
+     soil.defineSoilDomain(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
+     soil.setGridResolution(20, 20, 40);
+     soil.setSolverType(SolverType::SOLVER_3D);
+
+     soil.setSoilPropertiesFromTexture("loam");
+     soil.setInitialCondition(-1.0f);              // uniform pressure head [m]
+     soil.setTopBoundaryFlux(2e-6f);               // steady infiltration [m/s]
+     soil.setBottomBoundaryFreeDrainage();
+
+     for (int step = 0; step < 60; step++) {
+         soil.run(60.0f);                          // advance 60 s
+     }
+
+     float theta = soil.getWaterContent(make_vec3(0.5f, 0.5f, -0.1f));
+     std::cout << "Near-surface water content: " << theta << std::endl;
+     std::cout << "Total storage [m^3]: " << soil.getTotalWaterStorage() << std::endl;
+ }
+ \endcode
+
+ \subsection SWT_Ex2 Drip irrigation with root uptake and sensors
+
+ Two drip emitters wet an initially dry loam while a plant transpires; a buried sensor logs the water
+ content over the simulation and the series is written to CSV. The grid-independent, GPU-capable
+ NGS-FAS solver is used with adaptive timestepping.
+
+ \code{.cpp}
+ #include "SoilTransportModel.h"
+ using namespace helios;
+
+ int main() {
+     Context context;
+     SoilTransportModel soil(&context);
+
+     soil.defineSoilDomain(make_vec3(-0.5f, -0.5f, 0.0f), make_vec3(1, 1, 1.5f));
+     soil.setGridResolution(24, 24, 32);
+     soil.setSolverType(SolverType::SOLVER_3D);
+
+     SolverParameters sp;
+     sp.nonlinear_method = NonlinearMethod::NGS_FAS;
+     sp.adaptive_dt = true;                        // sub-step through the stiff wetting front
+     sp.dt_max = 3600.0f;
+     sp.K_weighting = KWeighting::HARMONIC;        // NGS_FAS's operator uses harmonic-mean faces
+     soil.setSolverParameters(sp);
+     // soil.disableGPU();                         // the 3D solver uses a GPU when one is available
+
+     soil.setSoilPropertiesFromTexture("loam");
+     soil.setInitialCondition(-1.5f);              // moderately dry
+     soil.setTopBoundaryFlux(0.0f);
+     soil.setBottomBoundaryFreeDrainage();
+
+     // Two drip emitters at the surface, ~2 L/h each.
+     soil.addSurfaceEmitter(-0.25f, 0.0f, 5.6e-7f);
+     soil.addSurfaceEmitter( 0.25f, 0.0f, 5.6e-7f);
+
+     // A single transpiring plant with a default root distribution.
+     RootDistributionParams roots;
+     soil.setRootDistribution(/*plant_id=*/1, roots);
+     soil.setTranspiration(1, 5e-7f);
+
+     // A buried water-content sensor.
+     uint sensor = soil.addSensor(make_vec3(0.0f, 0.0f, -0.2f), SoilMeasurement::WATER_CONTENT);
+
+     for (int hour = 0; hour < 12; hour++) {
+         soil.run(3600.0f);
+         soil.recordSensors();
+     }
+     soil.writeSensorData("soil_moisture.csv");
+
+     std::cout << "Sensor " << sensor << " logged " << soil.getSensorData(sensor).size()
+               << " samples; root-weighted soil water potential is "
+               << soil.getSoilWaterPotential(1) << " m." << std::endl;
+ }
+ \endcode
+
+ \section SWT_References References
+
+ - Celia, M.A., Bouloutas, E.T., Zarba, R.L. (1990). A general mass-conservative numerical solution for
+   the unsaturated flow equation. <i>Water Resources Research</i> 26(7), 1483&ndash;1496.
+ - Carsel, R.F., Parrish, R.S. (1988). Developing joint probability distributions of soil water retention
+   characteristics. <i>Water Resources Research</i> 24(5), 755&ndash;769.
+ - Ippisch, O., Vogel, H.-J., Bastian, P. (2006). Validity limits for the van Genuchten&ndash;Mualem model and
+   implications for parameter estimation and numerical simulation. <i>Advances in Water Resources</i> 29(12),
+   1780&ndash;1789.
+ - Schaap, M.G., van Genuchten, M.Th. (2006). A modified Mualem&ndash;van Genuchten formulation for improved
+   description of the hydraulic conductivity near saturation. <i>Vadose Zone Journal</i> 5(1), 27&ndash;34.
+ - Schnepf, A., et al. (2020). Call for participation: collaborative benchmarking of functional-structural root
+   architecture models. The case of root water uptake. <i>Frontiers in Plant Science</i> 11, 316.
+ - van Genuchten, M.Th. (1980). A closed-form equation for predicting the hydraulic conductivity of
+   unsaturated soils. <i>Soil Science Society of America Journal</i> 44(5), 892&ndash;898.
+ - Vogel, T., Cislerova, M. (1988). On the reliability of unsaturated hydraulic conductivity calculated from
+   the moisture retention curve. <i>Transport in Porous Media</i> 3, 1&ndash;15.
+
+*/

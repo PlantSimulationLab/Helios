@@ -367,10 +367,33 @@ BMFcoefficients StomatalConductanceModel::getBMFCoefficientsFromLibrary(const st
         coeffs.i0 = 11.47;
         coeffs.k = 1.387e+05;
         coeffs.b = 1.051e-06;
+    } else if (s == "Cowpea" || s == "cowpea") {
+        // Vigna unguiculata, well-watered field plants, GEMINI 2022-2026 (Davis, CA): LI-600 surveys corrected per Rizzo & Bailey
+        // (2026, Plant Cell Environ.) and converted to total leaf conductance assuming the abaxial face was measured and an
+        // adaxial stomatal fraction of 0.30, jointly fitted with steady-state LI-6800 light responses for shape.
+        coeffs.Em = 37.24;
+        coeffs.i0 = 289.7;
+        coeffs.k = 40074.f;
+        coeffs.b = 0.f;
+    } else if (s == "CommonBean" || s == "commonbean" || s == "common_bean" || s == "Common_Bean" || s == "Bean" || s == "bean") {
+        // Phaseolus vulgaris, well-watered field plants, GEMINI 2022-2023 (Davis, CA); as for cowpea with an adaxial stomatal
+        // fraction of 0.20.
+        coeffs.Em = 23.28;
+        coeffs.i0 = 433.5;
+        coeffs.k = 23008.f;
+        coeffs.b = 0.f;
+    } else if (s == "Sorghum" || s == "sorghum") {
+        // Sorghum bicolor, well-watered field plants, GEMINI 2022-2026 (Davis, CA); as for cowpea with an adaxial stomatal fraction
+        // of 0.40. The surveys showed no VPD response, so the fit drove Em and k to large values together: only Em/k (1.96e-4) and
+        // i0 are determined, and the resulting conductance increases with light but is effectively insensitive to VPD.
+        coeffs.Em = 1.0e5f;
+        coeffs.i0 = 425.4;
+        coeffs.k = 5.109e8f;
+        coeffs.b = 0.f;
     } else {
         helios_runtime_error("ERROR (StomatalConductanceModel::getBMFCoefficientsFromLibrary): Unknown species '" + s +
                              "'. Valid species are: Almond, Apple, Cherry, Prune, Pear, PistachioFemale (or Pistachio), PistachioMale, Walnut, Grape, Elderberry, Toyon, Big_Leaf_Maple (or Maple), Western_Redbud (or Redbud), Baylaurel (or "
-                             "Bay_Laurel), Olive, EasternRedbud. Names are also accepted in all lower case.");
+                             "Bay_Laurel), Olive, EasternRedbud, Cowpea, CommonBean (or Bean, common_bean), Sorghum. Names are also accepted in all lower case.");
     }
     if (message_flag) {
         std::cout << "Returning Stomatal Model Coefficients to " << s << std::endl;

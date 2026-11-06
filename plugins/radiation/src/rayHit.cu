@@ -493,6 +493,30 @@ RT_PROGRAM void closest_hit_diffuse() {
                 // In the launch that reads the first scattering of the direct radiation, add the layer's reflection lobe of it
                 outgoing += directLayerReflection(hit_position, b, hit_layer, face ? normal : -normal, -ray.direction, ray.origin + t_hit * ray.direction, -1);
             }
+            // Forward scattering estimate (see RadiationModel::runBand()): the flux this ray carries away from the origin along its
+            // path, times the fraction of it the surface it reaches scatters again. A cover reflects its reflectance; what it transmits
+            // is counted where the ray continues, attenuated by the cover transmittance. A hit surface's own reflectivity is used, not
+            // that of a spectral-texture class at the hit point: the estimate need only be unbiased over the scene, not per texel.
+            if (forward_scatter_enabled) {
+                const float launched = outgoingFlux(prd.face, ind_origin, surfaceLayerTable(origin_position, b_global), prd.origin_cos);
+                if (launched != 0.f) {
+                    float rescattered;
+                    if (coverInAllLaunchedBands(hit_position)) {
+                        bool hit_face_unused;
+                        rescattered = coverTauRhoAlpha(hit_position, b_global, coverNormalFaceCos(hit_position, ray.direction, hit_face_unused)).y;
+                    } else {
+                        const size_t hit_radprop_ind = mat_indexer(prd.source_ID, hit_position, b_global);
+                        rescattered = rho[hit_radprop_ind] + tau[hit_radprop_ind];
+                        if (hit_layer >= 0) {
+                            const float hit_albedo = surfaceLayerAlbedo(hit_layer, fabsf(dot(normal, ray.direction)));
+                            rescattered = hit_albedo + (1.f - hit_albedo) * rescattered;
+                        }
+                    }
+                    const float path_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? prd.cover_transmittance[b] : 1.f;
+                    atomicAdd(&forward_scatter[ind_origin], fabsf(launched) * prd.strength * path_tau * rescattered);
+                }
+            }
+
             double strength = outgoing * prd.strength;
 
             // Attenuated by any translucent covers the ray passed on its way to the surface.

@@ -143,6 +143,7 @@ struct OptiX8LaunchParams {
     float*    vertex_radiation_out_bottom; //!< [vertex * Nbands_launch + band], null when camera flux smoothing is disabled
     float*    scatter_buff_top;       //!< [prim * Nbands_global + band]
     float*    scatter_buff_bottom;    //!< [prim * Nbands_global + band]
+    float*    forward_scatter;        //!< Forward scattering estimate [prim * Nbands_launch + band]; null except in scattering launches
     float*    radiation_in_camera;    //!< [prim * Nbands_launch + band]
     float*    scatter_buff_top_cam;   //!< [cam * Nprims * Nbands_launch + prim * Nbands_launch + band]
     float*    scatter_buff_bottom_cam; //!< same layout as scatter_buff_top_cam

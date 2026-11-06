@@ -570,6 +570,13 @@ public:
      * */
     std::vector<uint> getPrimitivesByPlantID(int plantID);
 
+    //! Primitives of each of the given plants, as getPrimitivesByPlantID() returns them, found in one pass over the Context
+    /**
+     * \param[in] plantIDs Plant identifiers
+     * \return Map from plant identifier to its sorted, de-duplicated primitive UUIDs (an entry for every requested plant)
+     */
+    std::map<int, std::vector<uint>> getPrimitivesByPlantIDs(const std::vector<int> &plantIDs);
+
     //! Query the unique plantIDs of leaf primitives
     /**
      * \param[in] UUIDs List of leaf primitives who have plantID primitive data
@@ -586,6 +593,7 @@ public:
 
     //! Get the plantID primitive data of leaf primitives
     /**
+     * Raises an error if the list is empty or the first and last primitives belong to different plants.
      * \param[in] UUIDs Leaf primitives
      * \return int plantID The primitives shared plantID, if exists
      * */

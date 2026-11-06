@@ -820,6 +820,94 @@ DOCTEST_TEST_CASE("Plant Library Model Building - sorghum") {
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
 
+DOCTEST_TEST_CASE("Plant Library - sorghum, maize and wheat leaves carry the class map traced from their texture") {
+    // The three use the same leaf photograph, whose class map (SorghumLeaf_classes.png) is recorded on every leaf triangle that covers a
+    // class, as the primitive data "spectral_class_map" that LeafOptics reads. A triangle whose (u,v) coordinates cover only transparent
+    // texels gets no class map, and nothing other than the leaf blades carries one.
+    size_t transparent_triangles = 0;
+    for (const std::string species: {"sorghum", "maize", "wheat"}) {
+        DOCTEST_CAPTURE(species);
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary(species);
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+        const std::vector<uint> leaf_objects = plantarchitecture.getPlantLeafObjectIDs(plantID);
+        DOCTEST_REQUIRE(!leaf_objects.empty());
+        std::vector<uint> leaf_UUIDs = context.getObjectPrimitiveUUIDs(leaf_objects);
+        const std::set<uint> leaf_set(leaf_UUIDs.begin(), leaf_UUIDs.end());
+
+        std::string class_map;
+        std::vector<uint16_t> classes;
+        int2 resolution;
+        size_t with_map = 0;
+        size_t mismatches = 0;
+        for (uint UUID: leaf_UUIDs) {
+            if (std::filesystem::path(context.getPrimitiveTextureFile(UUID)).filename() != "SorghumLeaf.png") {
+                DOCTEST_CHECK(!context.doesPrimitiveDataExist(UUID, "spectral_class_map"));
+                continue;
+            }
+            const bool has_map = context.doesPrimitiveDataExist(UUID, "spectral_class_map");
+            if (has_map && class_map.empty()) {
+                context.getPrimitiveData(UUID, "spectral_class_map", class_map);
+                DOCTEST_REQUIRE(std::filesystem::exists(class_map));
+                DOCTEST_REQUIRE(std::filesystem::path(class_map).filename() == "SorghumLeaf_classes.png");
+                uint width, height;
+                readPNGSingleChannel(class_map, width, height, classes);
+                resolution = make_int2(int(width), int(height));
+            }
+            with_map += has_map;
+        }
+        DOCTEST_REQUIRE(with_map > 0);
+        for (uint UUID: leaf_UUIDs) {
+            if (std::filesystem::path(context.getPrimitiveTextureFile(UUID)).filename() == "SorghumLeaf.png") {
+                const bool covers_a_class = !classMapAreaFractions(classes, resolution, context.getPrimitiveTextureUV(UUID)).empty();
+                mismatches += covers_a_class != context.doesPrimitiveDataExist(UUID, "spectral_class_map");
+                transparent_triangles += !covers_a_class;
+            }
+        }
+        DOCTEST_CHECK(mismatches == 0);
+        for (uint UUID: context.getAllUUIDs()) {
+            if (!leaf_set.count(UUID)) {
+                DOCTEST_CHECK(!context.doesPrimitiveDataExist(UUID, "spectral_class_map"));
+            }
+        }
+    }
+    // Some triangles at the leaf edges cover only transparent texels, so the check above covers them
+    DOCTEST_CHECK(transparent_triangles > 0);
+}
+
+DOCTEST_TEST_CASE("Plant Library - a leaf class map that does not match a changed leaf texture raises an error until it is cleared") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    ShootParameters shoot_parameters = plantarchitecture.getCurrentShootParameters("mainstem");
+    shoot_parameters.phytomer_parameters.leaf.prototype.leaf_texture_file[0] = "AlmondLeaf.png";
+    plantarchitecture.updateCurrentShootParameters("mainstem", shoot_parameters);
+    std::string message;
+    try {
+        capture_cerr capture;
+        plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 20);
+    } catch (const std::runtime_error &error) {
+        message = error.what();
+    }
+    DOCTEST_CHECK(message.find("leaf_class_map_file") != std::string::npos);
+
+    // A build that raised an error leaves the PlantArchitecture unusable, so this starts afresh
+    Context context_cleared;
+    PlantArchitecture plantarchitecture_cleared(&context_cleared);
+    plantarchitecture_cleared.disableMessages();
+    plantarchitecture_cleared.loadPlantModelFromLibrary("sorghum");
+    shoot_parameters.phytomer_parameters.leaf.prototype.leaf_class_map_file.clear();
+    plantarchitecture_cleared.updateCurrentShootParameters("mainstem", shoot_parameters);
+    uint plantID = 0;
+    DOCTEST_REQUIRE_NOTHROW(plantID = plantarchitecture_cleared.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 20));
+    for (uint UUID: context_cleared.getObjectPrimitiveUUIDs(plantarchitecture_cleared.getPlantLeafObjectIDs(plantID))) {
+        DOCTEST_CHECK(!context_cleared.doesPrimitiveDataExist(UUID, "spectral_class_map"));
+    }
+}
+
 DOCTEST_TEST_CASE("Plant Library Model Building - soybean") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -3124,6 +3212,655 @@ DOCTEST_TEST_CASE("PlantArchitecture enableSolidObstacleAvoidance fruit adjustme
 
     // Test with different avoidance distance and disabled fruit adjustment
     DOCTEST_CHECK_NOTHROW(plantarchitecture.enableSolidObstacleAvoidance(obstacle_UUIDs, 0.3f, false));
+}
+
+// ---------------------------------------------------------------------------------------------------------------- //
+// Fruit-branch collision avoidance
+
+namespace {
+
+    // Fruit objects of a plant whose mesh is overlapped by one of the plant's own internode capsules, measured exactly with the collision plug-in
+    std::set<uint> fruitOverlappingBranches(Context &context, PlantArchitecture &plantarchitecture, uint plantID) {
+        std::set<uint> overlapping;
+        const std::vector<uint> fruit_objIDs = plantarchitecture.getPlantFruitObjectIDs(plantID);
+        if (fruit_objIDs.empty()) {
+            return overlapping;
+        }
+        CollisionDetection collision(&context);
+        collision.disableMessages();
+        collision.buildBVH(context.getObjectPrimitiveUUIDs(fruit_objIDs));
+        std::vector<CollisionDetection::Capsule> capsules;
+        for (const PlantSkeletonSegment &segment: plantarchitecture.getPlantSkeletonSegments(plantID, {PlantOrganType::INTERNODE})) {
+            capsules.push_back({segment.start, segment.end, 0.5f * (segment.start_radius + segment.end_radius)});
+        }
+        for (const std::vector<uint> &near: collision.findPrimitivesNearCapsules(capsules, 0.f)) {
+            for (uint UUID: near) {
+                overlapping.insert(context.getPrimitiveParentObjectID(UUID));
+            }
+        }
+        return overlapping;
+    }
+
+    // Grow a library model until it has fruit and the fruit have had time to reach full size
+    uint growPlantToMatureFruit(PlantArchitecture &plantarchitecture, const std::string &model, float build_age, bool avoid_branches) {
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary(model);
+        if (avoid_branches) {
+            plantarchitecture.enableFruitBranchCollisionAvoidance();
+        }
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), build_age);
+        for (float extra_days = 0; plantarchitecture.getPlantFruitObjectIDs(plantID).empty() && extra_days < 400; extra_days += 10) {
+            plantarchitecture.advanceTime(plantID, 10);
+        }
+        plantarchitecture.advanceTime(plantID, 60);
+        return plantID;
+    }
+
+    // Every fruiting bud of a plant: its swing stays within the limit and its fruit still hang from the tip of its peduncle tube
+    void checkFruitingBudsConsistent(Context &context, PlantArchitecture &plantarchitecture, uint plantID, float max_swing_rad, uint &swung_bud_count) {
+        swung_bud_count = 0;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            if (plantarchitecture.isShootPruned(plantID, shootID)) {
+                continue;
+            }
+            for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+                for (const auto &petiole_buds: phytomer->floral_buds) {
+                    for (const FloralBud &fbud: petiole_buds) {
+                        if (fbud.state != BUD_FRUITING || fbud.inflorescence_objIDs.empty()) {
+                            continue;
+                        }
+                        DOCTEST_CHECK(fbud.contact_swing_angle >= 0.f);
+                        DOCTEST_CHECK(fbud.contact_swing_angle <= max_swing_rad + 1e-4f);
+                        if (fbud.contact_swing_angle > 0.f) {
+                            swung_bud_count++;
+                            DOCTEST_CHECK(std::abs(fbud.contact_swing_axis.magnitude() - 1.f) < 1e-4f);
+                        }
+                        // The stored peduncle nodes and the rendered tube must agree, and the fruit must sit at the peduncle's tip
+                        const uint2 storage = phytomer->getFloralBudStorageIndex(fbud);
+                        const std::vector<vec3> &stored_nodes = phytomer->peduncle_vertices.at(storage.x).at(storage.y);
+                        DOCTEST_REQUIRE(!stored_nodes.empty());
+                        DOCTEST_CHECK((stored_nodes.front() - fbud.base_position).magnitude() < 1e-4f);
+                        for (uint objID: fbud.peduncle_objIDs) {
+                            const std::vector<vec3> tube_nodes = context.getTubeObjectNodes(objID);
+                            DOCTEST_REQUIRE(tube_nodes.size() == stored_nodes.size());
+                            for (size_t n = 0; n < tube_nodes.size(); n++) {
+                                DOCTEST_CHECK((tube_nodes.at(n) - stored_nodes.at(n)).magnitude() < 1e-4f);
+                            }
+                        }
+                        for (const vec3 &fruit_base: fbud.inflorescence_bases) {
+                            DOCTEST_CHECK((fruit_base - stored_nodes.back()).magnitude() < 1e-4f);
+                        }
+                        for (const AxisRotation &rotation: fbud.inflorescence_rotation) {
+                            DOCTEST_CHECK(rotation.contact_tilt_angle >= 0.f);
+                            DOCTEST_CHECK(rotation.contact_tilt_angle <= max_swing_rad + 1e-4f);
+                            if (rotation.contact_tilt_angle > 0.f) {
+                                swung_bud_count++;
+                                DOCTEST_CHECK(std::abs(rotation.contact_tilt_axis.magnitude() - 1.f) < 1e-4f);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    vec3 objectCenter(Context &context, uint objID) {
+        vec3 lower, upper;
+        context.getObjectBoundingBox(objID, lower, upper);
+        return 0.5f * (lower + upper);
+    }
+
+} // namespace
+
+DOCTEST_TEST_CASE("PlantArchitecture ground clipping one fruit of a bud keeps the bud's per-fruit records with their fruit") {
+    // A soybean peduncle carries several pods, hanging below it. Clipping one of them at the ground must remove its rotation and base scale along with its object and base; leaving them behind shifted every later pod onto
+    // the record of the pod before it, which is what writePlantStructureXML() then saved.
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("soybean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    for (float days = 0; plantarchitecture.getPlantFruitObjectIDs(plantID).empty() && days < 200; days += 5) {
+        plantarchitecture.advanceTime(plantID, 5);
+    }
+    plantarchitecture.advanceTime(plantID, 10);
+
+    // A bud with two or more pods hanging to different depths, and a height between the lowest pod and everything else on the bud and its shoot
+    std::array<uint, 4> chosen{0, 0, 0, 0};
+    float clip_height = 0;
+    bool found = false;
+    for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        if (found || plantarchitecture.isShootPruned(plantID, shootID)) {
+            continue;
+        }
+        float shoot_floor = -1e9f;
+        if (shoot->rank > 0) {
+            vec3 lower, upper;
+            context.getObjectBoundingBox(shoot->internode_tube_objID, lower, upper);
+            shoot_floor = lower.z;
+        }
+        for (uint node = 0; node < shoot->phytomers.size() && !found; node++) {
+            const auto &buds = shoot->phytomers.at(node)->floral_buds;
+            for (uint petiole = 0; petiole < buds.size() && !found; petiole++) {
+                for (uint bud = 0; bud < buds.at(petiole).size() && !found; bud++) {
+                    const FloralBud &fbud = buds.at(petiole).at(bud);
+                    if (fbud.state != BUD_FRUITING || fbud.inflorescence_objIDs.size() < 2 || fbud.peduncle_objIDs.empty()) {
+                        continue;
+                    }
+                    std::vector<float> fruit_floor;
+                    for (uint objID: fbud.inflorescence_objIDs) {
+                        vec3 lower, upper;
+                        context.getObjectBoundingBox(objID, lower, upper);
+                        fruit_floor.push_back(lower.z);
+                    }
+                    std::sort(fruit_floor.begin(), fruit_floor.end());
+                    vec3 lower, upper;
+                    context.getObjectBoundingBox(fbud.peduncle_objIDs.front(), lower, upper);
+                    const float ceiling = std::min({fruit_floor.at(1), lower.z, shoot_floor > -1e8f ? shoot_floor : 1e9f});
+                    if (ceiling - fruit_floor.at(0) > 0.005f && fruit_floor.at(0) > 0.f) {
+                        clip_height = fruit_floor.at(0) + 0.3f * (ceiling - fruit_floor.at(0));
+                        chosen = {shootID, node, petiole, bud};
+                        found = true;
+                    }
+                }
+            }
+        }
+    }
+    DOCTEST_REQUIRE(found);
+
+    // Each pod's own pitch, to check afterwards that the surviving pods still have their own records
+    std::map<uint, float> pitch_of_fruit;
+    {
+        const FloralBud &fbud = plantarchitecture.getPlantShoot(plantID, chosen[0])->phytomers.at(chosen[1])->floral_buds.at(chosen[2]).at(chosen[3]);
+        DOCTEST_REQUIRE(fbud.inflorescence_rotation.size() == fbud.inflorescence_objIDs.size());
+        for (size_t i = 0; i < fbud.inflorescence_objIDs.size(); i++) {
+            pitch_of_fruit[fbud.inflorescence_objIDs.at(i)] = fbud.inflorescence_rotation.at(i).pitch;
+        }
+    }
+    const size_t pods_before = pitch_of_fruit.size();
+
+    plantarchitecture.enableGroundClipping(clip_height);
+    plantarchitecture.advanceTime(plantID, 1);
+
+    const FloralBud &fbud = plantarchitecture.getPlantShoot(plantID, chosen[0])->phytomers.at(chosen[1])->floral_buds.at(chosen[2]).at(chosen[3]);
+    DOCTEST_REQUIRE(fbud.inflorescence_objIDs.size() >= 1);
+    DOCTEST_REQUIRE(fbud.inflorescence_objIDs.size() < pods_before);
+    DOCTEST_CHECK(fbud.inflorescence_rotation.size() == fbud.inflorescence_objIDs.size());
+    DOCTEST_CHECK(fbud.inflorescence_bases.size() == fbud.inflorescence_objIDs.size());
+    DOCTEST_CHECK(fbud.inflorescence_base_scales.size() == fbud.inflorescence_objIDs.size());
+    for (size_t i = 0; i < fbud.inflorescence_objIDs.size() && i < fbud.inflorescence_rotation.size(); i++) {
+        DOCTEST_CHECK(fbud.inflorescence_rotation.at(i).pitch == doctest::Approx(pitch_of_fruit.at(fbud.inflorescence_objIDs.at(i))));
+    }
+}
+
+namespace {
+    // An octahedral "fruit" of circumradius r about center c, as triangles, with its enclosing sphere as the bounding sphere and as the one sphere of its chain
+    fruit_contact::WorldProxy octahedronFruit(const vec3 &c, float r) {
+        fruit_contact::WorldProxy proxy;
+        proxy.bounding_center = c;
+        proxy.bounding_radius = r;
+        proxy.sphere_centers = {c};
+        proxy.sphere_radii = {r};
+        const vec3 px = c + make_vec3(r, 0, 0), nx = c - make_vec3(r, 0, 0), py = c + make_vec3(0, r, 0), ny = c - make_vec3(0, r, 0), pz = c + make_vec3(0, 0, r), nz = c - make_vec3(0, 0, r);
+        for (const vec3 &cap: {pz, nz}) {
+            for (const auto &edge: std::vector<std::pair<vec3, vec3>>{{px, py}, {py, nx}, {nx, ny}, {ny, px}}) {
+                proxy.triangle_vertices.insert(proxy.triangle_vertices.end(), {cap, edge.first, edge.second});
+            }
+        }
+        return proxy;
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("Fruit-branch collision avoidance - a branch lying wholly inside a fruit is a contact") {
+    // Fruit with small meshes are tested against branches through their triangles, which see a branch only where it reaches the fruit's surface. A short internode lying wholly inside the fruit never
+    // does, and must still count.
+    const vec3 center = make_vec3(0, 0, -0.065f);
+    const std::vector<fruit_contact::WorldProxy> fruit = {octahedronFruit(center, 0.04f)};
+    const fruit_contact::BranchSegment inside{center - make_vec3(0.005f, 0, 0), center + make_vec3(0.005f, 0, 0), 0.002f, 0.002f};
+    const fruit_contact::BranchSegment crossing{center, center + make_vec3(0.1f, 0, 0), 0.002f, 0.002f};
+    const fruit_contact::BranchSegment outside{center + make_vec3(0.2f, 0, 0), center + make_vec3(0.3f, 0, 0), 0.002f, 0.002f};
+
+    DOCTEST_CHECK(fruit_contact::deepestContact(fruit, {inside}, 0.f).penetration > 0.01f);
+    DOCTEST_CHECK(fruit_contact::deepestContact(fruit, {crossing}, 0.f).penetration > 0.f);
+    DOCTEST_CHECK(fruit_contact::deepestContact(fruit, {outside}, 0.f).penetration == 0.f);
+}
+
+DOCTEST_TEST_CASE("Fruit-branch collision avoidance - a contact no hinge can move does not stop the others being cleared") {
+    // A fruit hangs 2.5 cm below its node. A branch running under it pushes straight up along the pedicel, which no rotation about the node or the attachment point can relieve; a second, shallower
+    // branch beside it can be cleared by swinging the fruit sideways. Giving up on the bud because its deepest contact cannot be moved left the second one in place.
+    const vec3 pivot = make_vec3(0, 0, 0);
+    std::vector<vec3> fruit_bases = {make_vec3(0, 0, -0.025f)};
+    fruit_contact::WorldProxy proxy;
+    proxy.bounding_center = make_vec3(0, 0, -0.065f);
+    proxy.bounding_radius = 0.04f;
+    proxy.sphere_centers = {proxy.bounding_center};
+    proxy.sphere_radii = {0.04f};
+    std::vector<fruit_contact::WorldProxy> fruit = {proxy};
+
+    const fruit_contact::BranchSegment under{make_vec3(-0.2f, 0, -0.09f), make_vec3(0.2f, 0, -0.09f), 0.005f, 0.005f};
+    const fruit_contact::BranchSegment beside{make_vec3(0.04f, -0.2f, -0.065f), make_vec3(0.04f, 0.2f, -0.065f), 0.005f, 0.005f};
+    DOCTEST_REQUIRE(fruit_contact::deepestContact(fruit, {under}, 0.f).penetration > fruit_contact::deepestContact(fruit, {beside}, 0.f).penetration);
+    DOCTEST_REQUIRE(fruit_contact::deepestContact(fruit, {beside}, 0.f).penetration > 0.f);
+
+    auto rotateProxy = [](fruit_contact::WorldProxy &p, const vec3 &about, const vec3 &axis, float angle) {
+        p.bounding_center = rotatePointAboutLine(p.bounding_center, about, axis, angle);
+        for (vec3 &c: p.sphere_centers) {
+            c = rotatePointAboutLine(c, about, axis, angle);
+        }
+        for (vec3 &v: p.triangle_vertices) {
+            v = rotatePointAboutLine(v, about, axis, angle);
+        }
+    };
+    fruit_contact::HingeControls controls;
+    controls.swing_allowed = [](const vec3 &, float) { return true; };
+    controls.apply_swing = [&](const vec3 &axis, float angle) {
+        for (auto &p: fruit) {
+            rotateProxy(p, pivot, axis, angle);
+        }
+        for (vec3 &b: fruit_bases) {
+            b = rotatePointAboutLine(b, pivot, axis, angle);
+        }
+    };
+    controls.tilt_allowed = [](size_t, const vec3 &, float) { return true; };
+    controls.apply_tilt = [&](size_t i, const vec3 &axis, float angle) { rotateProxy(fruit.at(i), fruit_bases.at(i), axis, angle); };
+
+    static_cast<void>(fruit_contact::pushOut(fruit, fruit_bases, pivot, {under, beside}, 0.f, controls));
+    DOCTEST_CHECK(fruit_contact::deepestContact(fruit, {beside}, 0.f).penetration <= 1e-5f);
+}
+
+DOCTEST_TEST_CASE("Fruit-branch collision avoidance - small swings and tilts are recorded at their true angle") {
+    // A step of a fraction of a milliradian is a normal push for a slightly overlapping fruit on a long lever. It is applied to the geometry exactly, so the record must carry it exactly too: a record
+    // that rounds it to zero leaves the geometry and the saved pose apart, and one that rounds a nearly-settled swing up never lets it reach zero.
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    for (float days = 0; plantarchitecture.getPlantFruitObjectIDs(plantID).empty() && days < 200; days += 5) {
+        plantarchitecture.advanceTime(plantID, 5);
+    }
+    DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(plantID).empty());
+
+    std::shared_ptr<Phytomer> phytomer;
+    FloralBud *fbud = nullptr;
+    for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        for (const auto &candidate: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+            for (auto &petiole_buds: candidate->floral_buds) {
+                for (FloralBud &bud: petiole_buds) {
+                    if (fbud == nullptr && bud.state == BUD_FRUITING && !bud.inflorescence_objIDs.empty()) {
+                        phytomer = candidate;
+                        fbud = &bud;
+                    }
+                }
+            }
+        }
+    }
+    DOCTEST_REQUIRE(fbud != nullptr);
+
+    const vec3 axis = make_vec3(0.6f, 0.8f, 0.f);
+    const float small_angle = 2e-4f;
+    // Absolute tolerances: doctest::Approx scales its epsilon by at least 1, which would accept 0 for 2e-4
+    phytomer->applyPeduncleSwing(*fbud, axis, small_angle);
+    DOCTEST_CHECK(std::abs(fbud->contact_swing_angle - small_angle) < 1e-6f);
+    phytomer->applyPeduncleSwing(*fbud, axis, small_angle);
+    DOCTEST_CHECK(std::abs(fbud->contact_swing_angle - 2.f * small_angle) < 2e-6f);
+    phytomer->applyPeduncleSwing(*fbud, axis, -2.f * small_angle);
+    DOCTEST_CHECK(fbud->contact_swing_angle < 1e-6f);
+
+    phytomer->applyFruitContactTilt(*fbud, 0, axis, small_angle);
+    DOCTEST_CHECK(std::abs(fbud->inflorescence_rotation.at(0).contact_tilt_angle - small_angle) < 1e-6f);
+}
+
+DOCTEST_TEST_CASE("Fruit-branch collision avoidance - grape clusters are swung clear of the cordon and neighbouring shoots") {
+    // Grown twice from the same seed, with and without avoidance. The feature draws no random numbers, so the two vines have the same structure and the same clusters.
+    Context context_off;
+    context_off.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture_off(&context_off);
+    const uint plant_off = growPlantToMatureFruit(plantarchitecture_off, "grapevine_VSP", 300, false);
+
+    Context context_on;
+    context_on.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture_on(&context_on);
+    const uint plant_on = growPlantToMatureFruit(plantarchitecture_on, "grapevine_VSP", 300, true);
+
+    const std::vector<uint> fruit_off = plantarchitecture_off.getPlantFruitObjectIDs(plant_off);
+    const std::vector<uint> fruit_on = plantarchitecture_on.getPlantFruitObjectIDs(plant_on);
+    DOCTEST_REQUIRE(fruit_off.size() >= 10);
+    DOCTEST_REQUIRE(fruit_on.size() == fruit_off.size());
+
+    // Without avoidance a fair share of the clusters hang into wood; with it almost none do
+    const std::set<uint> overlapping_off = fruitOverlappingBranches(context_off, plantarchitecture_off, plant_off);
+    const std::set<uint> overlapping_on = fruitOverlappingBranches(context_on, plantarchitecture_on, plant_on);
+    DOCTEST_REQUIRE(overlapping_off.size() >= 3);
+    DOCTEST_CHECK(4 * overlapping_on.size() <= overlapping_off.size());
+
+    // Swings stay within the default limit, peduncles and fruit stay joined, and at least one cluster was actually swung
+    uint swung_buds = 0;
+    checkFruitingBudsConsistent(context_on, plantarchitecture_on, plant_on, deg2rad(90.f), swung_buds);
+    DOCTEST_CHECK(swung_buds >= 1);
+
+    // A swing moves a cluster by less than a peduncle plus a cluster length; nothing is flung away
+    for (size_t i = 0; i < fruit_on.size(); i++) {
+        DOCTEST_CHECK((objectCenter(context_on, fruit_on.at(i)) - objectCenter(context_off, fruit_off.at(i))).magnitude() < 0.35f);
+    }
+
+    // XML round trip: the swung poses are written and restored
+    const std::string xml_filename = "test_fruit_branch_swing.xml";
+    DOCTEST_CHECK_NOTHROW(plantarchitecture_on.writePlantStructureXML(plant_on, xml_filename));
+    {
+        std::ifstream xml_file(xml_filename);
+        const std::string xml_text((std::istreambuf_iterator<char>(xml_file)), std::istreambuf_iterator<char>());
+        DOCTEST_CHECK(xml_text.find("<peduncle_swing_angle>") != std::string::npos);
+        DOCTEST_CHECK(xml_text.find("<peduncle_swing_axis>") != std::string::npos);
+    }
+    Context context_read;
+    PlantArchitecture plantarchitecture_read(&context_read);
+    plantarchitecture_read.disableMessages();
+    plantarchitecture_read.loadPlantModelFromLibrary("grapevine_VSP");
+    std::vector<uint> plantIDs_read;
+    DOCTEST_REQUIRE_NOTHROW(plantIDs_read = plantarchitecture_read.readPlantStructureXML(xml_filename, true));
+    DOCTEST_REQUIRE(plantIDs_read.size() == 1);
+    const std::vector<uint> fruit_read = plantarchitecture_read.getPlantFruitObjectIDs(plantIDs_read.front());
+    DOCTEST_REQUIRE(fruit_read.size() == fruit_on.size());
+    // Cluster prototypes are drawn at random when the fruit are rebuilt, so the meshes differ, and the peduncles themselves are reconstructed from their saved angles only approximately (an unswung
+    // vine already reads back with peduncle vectors off by up to several centimeters). What the feature must bring back exactly is each bud's swing and each fruit's tilt, axis and angle; that they are
+    // applied to the rebuilt geometry is checked structurally below. Buds are paired by shoot, node, petiole and bud index, which the file preserves.
+    struct BudPose {
+        vec3 swing_axis;
+        float swing_angle;
+        std::vector<vec3> tilt_axes;
+        std::vector<float> tilt_angles;
+    };
+    auto collectBudPoses = [](PlantArchitecture &plantarchitecture, uint plantID) {
+        std::map<std::array<uint, 4>, BudPose> poses;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            if (plantarchitecture.isShootPruned(plantID, shootID)) {
+                continue;
+            }
+            const auto &phytomers = plantarchitecture.getPlantShoot(plantID, shootID)->phytomers;
+            for (uint node = 0; node < phytomers.size(); node++) {
+                for (uint petiole = 0; petiole < phytomers.at(node)->floral_buds.size(); petiole++) {
+                    for (uint bud = 0; bud < phytomers.at(node)->floral_buds.at(petiole).size(); bud++) {
+                        const FloralBud &fbud = phytomers.at(node)->floral_buds.at(petiole).at(bud);
+                        if (fbud.state != BUD_FRUITING || fbud.inflorescence_objIDs.empty()) {
+                            continue;
+                        }
+                        BudPose pose{fbud.contact_swing_axis, fbud.contact_swing_angle, {}, {}};
+                        for (const AxisRotation &rotation: fbud.inflorescence_rotation) {
+                            pose.tilt_axes.push_back(rotation.contact_tilt_axis);
+                            pose.tilt_angles.push_back(rotation.contact_tilt_angle);
+                        }
+                        poses[{shootID, node, petiole, bud}] = pose;
+                    }
+                }
+            }
+        }
+        return poses;
+    };
+    const auto poses_on = collectBudPoses(plantarchitecture_on, plant_on);
+    const auto poses_read = collectBudPoses(plantarchitecture_read, plantIDs_read.front());
+    DOCTEST_REQUIRE(poses_read.size() == poses_on.size());
+    for (const auto &entry: poses_on) {
+        const auto match = poses_read.find(entry.first);
+        DOCTEST_REQUIRE(match != poses_read.end());
+        const BudPose &pose = entry.second;
+        const BudPose &pose_read = match->second;
+        DOCTEST_CHECK(std::abs(pose_read.swing_angle - pose.swing_angle) < 1e-3f);
+        if (pose.swing_angle > 0.f) {
+            DOCTEST_CHECK((pose_read.swing_axis - pose.swing_axis).magnitude() < 1e-3f);
+        }
+        DOCTEST_REQUIRE(pose_read.tilt_angles.size() == pose.tilt_angles.size());
+        for (size_t i = 0; i < pose.tilt_angles.size(); i++) {
+            DOCTEST_CHECK(std::abs(pose_read.tilt_angles.at(i) - pose.tilt_angles.at(i)) < 1e-3f);
+            if (pose.tilt_angles.at(i) > 0.f) {
+                DOCTEST_CHECK((pose_read.tilt_axes.at(i) - pose.tilt_axes.at(i)).magnitude() < 1e-3f);
+            }
+        }
+    }
+    uint swung_buds_read = 0;
+    checkFruitingBudsConsistent(context_read, plantarchitecture_read, plantIDs_read.front(), deg2rad(90.f), swung_buds_read);
+    DOCTEST_CHECK(swung_buds_read == swung_buds);
+    std::remove(xml_filename.c_str());
+
+    // Harvest clears the swings along with the fruit, and growing on afterwards is fine
+    plantarchitecture_on.harvestPlant(plant_on);
+    DOCTEST_CHECK_NOTHROW(plantarchitecture_on.advanceTime(plant_on, 10));
+    for (uint shootID: plantarchitecture_on.getAllShootIDs(plant_on)) {
+        if (plantarchitecture_on.isShootPruned(plant_on, shootID)) {
+            continue;
+        }
+        for (const auto &phytomer: plantarchitecture_on.getPlantShoot(plant_on, shootID)->phytomers) {
+            for (const auto &petiole_buds: phytomer->floral_buds) {
+                for (const FloralBud &fbud: petiole_buds) {
+                    DOCTEST_CHECK(fbud.contact_swing_angle == 0.f);
+                }
+            }
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("Fruit-branch collision avoidance - apples are swung off the spurs they hang from") {
+    Context context_off;
+    context_off.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture_off(&context_off);
+    const uint plant_off = growPlantToMatureFruit(plantarchitecture_off, "apple", 600, false);
+
+    Context context_on;
+    context_on.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture_on(&context_on);
+    const uint plant_on = growPlantToMatureFruit(plantarchitecture_on, "apple", 600, true);
+
+    const std::vector<uint> fruit_off = plantarchitecture_off.getPlantFruitObjectIDs(plant_off);
+    const std::vector<uint> fruit_on = plantarchitecture_on.getPlantFruitObjectIDs(plant_on);
+    DOCTEST_REQUIRE(fruit_off.size() >= 5);
+    DOCTEST_REQUIRE(fruit_on.size() == fruit_off.size());
+
+    // An apple's pedicel is shorter than the apple is wide, so most hang back into their spur without avoidance; with it the count drops by at least half
+    const std::set<uint> overlapping_off = fruitOverlappingBranches(context_off, plantarchitecture_off, plant_off);
+    const std::set<uint> overlapping_on = fruitOverlappingBranches(context_on, plantarchitecture_on, plant_on);
+    DOCTEST_REQUIRE(overlapping_off.size() >= 3);
+    DOCTEST_CHECK(2 * overlapping_on.size() <= overlapping_off.size());
+
+    uint swung_buds = 0;
+    checkFruitingBudsConsistent(context_on, plantarchitecture_on, plant_on, deg2rad(90.f), swung_buds);
+    DOCTEST_CHECK(swung_buds >= 1);
+    for (size_t i = 0; i < fruit_on.size(); i++) {
+        DOCTEST_CHECK((objectCenter(context_on, fruit_on.at(i)) - objectCenter(context_off, fruit_off.at(i))).magnitude() < 0.2f);
+    }
+
+    // A swung pedicel stays anchored to its node through further growth (checked below), and a peduncle tube that already starts at its node is not rebuilt. Context::setTubeNodes() bakes the
+    // tube's transform into its nodes, so a tube rebuilt during a step comes out of it with an identity transform, while one that was only carried along by its node keeps the translation. The
+    // re-anchoring used to compare the bottom of the tube's bounding box with the node, which differ for any pedicel that leaves its node downward, and so rebuilt all of those on every step.
+    plantarchitecture_off.advanceTime(plant_off, 1);
+    uint downward_peduncles = 0;
+    uint downward_peduncles_carried = 0;
+    std::vector<uint> peduncle_objIDs;
+    for (uint shootID: plantarchitecture_off.getAllShootIDs(plant_off)) {
+        if (plantarchitecture_off.isShootPruned(plant_off, shootID)) {
+            continue;
+        }
+        for (const auto &phytomer: plantarchitecture_off.getPlantShoot(plant_off, shootID)->phytomers) {
+            for (const auto &petiole_buds: phytomer->floral_buds) {
+                for (const FloralBud &fbud: petiole_buds) {
+                    peduncle_objIDs.insert(peduncle_objIDs.end(), fbud.peduncle_objIDs.begin(), fbud.peduncle_objIDs.end());
+                }
+            }
+        }
+    }
+    for (uint objID: peduncle_objIDs) {
+        const std::vector<vec3> nodes = context_off.getTubeObjectNodes(objID);
+        if (nodes.size() < 2 || nodes.back().z > nodes.front().z - 1e-3f) {
+            continue;
+        }
+        downward_peduncles++;
+        float transform[16], identity[16];
+        context_off.getObjectTransformationMatrix(objID, transform);
+        makeIdentityMatrix(identity);
+        if (!std::equal(std::begin(transform), std::end(transform), std::begin(identity))) {
+            downward_peduncles_carried++;
+        }
+    }
+    DOCTEST_REQUIRE(downward_peduncles >= 3);
+    DOCTEST_CHECK(downward_peduncles_carried >= 1);
+
+    plantarchitecture_on.advanceTime(plant_on, 1);
+    uint swung_buds_after = 0;
+    checkFruitingBudsConsistent(context_on, plantarchitecture_on, plant_on, deg2rad(90.f), swung_buds_after);
+    DOCTEST_CHECK(swung_buds_after >= swung_buds);
+}
+
+DOCTEST_TEST_CASE("Fruit-branch collision avoidance - a terminal panicle on its own culm is never swung") {
+    // A grass panicle or tassel continues the culm it stands on and necessarily meets it at its base, which must not count as a contact. (A maize ear, an axillary fruit on a 5 cm shank, is a
+    // different matter and may be swung off the stalk like any other fruit, so only terminal buds are checked.)
+    for (const std::string &model: {std::string("sorghum"), std::string("maize")}) {
+        Context context;
+        context.seedRandomGenerator(3);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary(model);
+        plantarchitecture.enableFruitBranchCollisionAvoidance();
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        plantarchitecture.advanceTime(plantID, 120);
+        DOCTEST_REQUIRE(!plantarchitecture.getPlantFruitObjectIDs(plantID).empty());
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+                for (const auto &petiole_buds: phytomer->floral_buds) {
+                    for (const FloralBud &fbud: petiole_buds) {
+                        if (fbud.isterminal) {
+                            DOCTEST_CHECK(fbud.contact_swing_angle == 0.f);
+                            for (const AxisRotation &rotation: fbud.inflorescence_rotation) {
+                                DOCTEST_CHECK(rotation.contact_tilt_angle == 0.f);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("Fruit-branch collision avoidance - fruit pushed further than they need settle back toward hanging") {
+    // A large clearance makes every cluster near wood swing well away from it. Once the clearance is dropped those poses are clear by a margin, and with settling on they relax back toward the
+    // grown pose at the set rate; with settling off they stay where the contact put them. Settling must never put a fruit back into a branch.
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    plantarchitecture.enableFruitBranchCollisionAvoidance();
+    plantarchitecture.setFruitBranchCollisionParameters(90.f, 10.f, 0.06f, 0.f);
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 205);
+    for (float extra_days = 0; plantarchitecture.getPlantFruitObjectIDs(plantID).empty() && extra_days < 400; extra_days += 1) {
+        plantarchitecture.advanceTime(plantID, 1);
+    }
+    plantarchitecture.advanceTime(plantID, 20);
+
+    // pose angle of every fruiting bud: its swing plus the largest tilt of its fruit, keyed by shoot, node, petiole, bud
+    auto poseAngles = [&]() {
+        std::map<std::array<uint, 4>, float> angles;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            if (plantarchitecture.isShootPruned(plantID, shootID)) {
+                continue;
+            }
+            const auto &phytomers = plantarchitecture.getPlantShoot(plantID, shootID)->phytomers;
+            for (uint node = 0; node < phytomers.size(); node++) {
+                for (uint petiole = 0; petiole < phytomers.at(node)->floral_buds.size(); petiole++) {
+                    for (uint bud = 0; bud < phytomers.at(node)->floral_buds.at(petiole).size(); bud++) {
+                        const FloralBud &fbud = phytomers.at(node)->floral_buds.at(petiole).at(bud);
+                        if (fbud.state != BUD_FRUITING || fbud.inflorescence_objIDs.empty()) {
+                            continue;
+                        }
+                        float angle = fbud.contact_swing_angle;
+                        for (const AxisRotation &rotation: fbud.inflorescence_rotation) {
+                            angle += rotation.contact_tilt_angle;
+                        }
+                        angles[{shootID, node, petiole, bud}] = angle;
+                    }
+                }
+            }
+        }
+        return angles;
+    };
+    const auto pushed = poseAngles();
+    uint pushed_count = 0;
+    float pushed_sum = 0;
+    for (const auto &entry: pushed) {
+        if (entry.second > deg2rad(10.f)) {
+            pushed_count++;
+        }
+        pushed_sum += entry.second;
+    }
+    DOCTEST_REQUIRE(pushed_count >= 3);
+    const size_t overlapping_pushed = fruitOverlappingBranches(context, plantarchitecture, plantID).size();
+
+    // Settling off: nothing comes back. Contacts still evolve, since shoots move and thicken day by day, and a further push composed onto a pose about another axis can shrink a bud's composed angle by a
+    // degree or so, so the check is on the total: it must stay within a few percent of what the pushes left.
+    plantarchitecture.setFruitBranchCollisionParameters(90.f, 10.f, 0.f, 0.f);
+    plantarchitecture.advanceTime(plantID, 5);
+    const auto held = poseAngles();
+    float held_sum = 0;
+    for (const auto &entry: held) {
+        held_sum += entry.second;
+    }
+    DOCTEST_CHECK(held_sum >= 0.95f * pushed_sum);
+
+    // Settling on at 10 degrees per day: no bud relaxes faster than the rate at each of its two hinges, and the surplus starts coming off at once
+    plantarchitecture.setFruitBranchCollisionParameters(90.f, 10.f, 0.f, 10.f);
+    plantarchitecture.advanceTime(plantID, 1);
+    const auto after_one_day = poseAngles();
+    float relaxed_sum = 0;
+    for (const auto &entry: after_one_day) {
+        DOCTEST_CHECK(entry.second >= held.at(entry.first) - 2.f * deg2rad(10.f) - 1e-4f);
+        relaxed_sum += held.at(entry.first) - entry.second;
+    }
+    DOCTEST_CHECK(relaxed_sum > deg2rad(5.f));
+
+    // After a month most of the surplus is gone, and no fruit has been settled back into a branch
+    plantarchitecture.advanceTime(plantID, 30);
+    float settled_sum = 0;
+    for (const auto &entry: poseAngles()) {
+        settled_sum += entry.second;
+    }
+    DOCTEST_CHECK(settled_sum < 0.5f * pushed_sum);
+    DOCTEST_CHECK(fruitOverlappingBranches(context, plantarchitecture, plantID).size() <= overlapping_pushed);
+}
+
+DOCTEST_TEST_CASE("Fruit-branch collision avoidance - disabled it changes nothing, and parameters are validated") {
+    Context context_a;
+    context_a.seedRandomGenerator(11);
+    PlantArchitecture plantarchitecture_a(&context_a);
+    const uint plant_a = growPlantToMatureFruit(plantarchitecture_a, "grapevine_VSP", 300, false);
+
+    Context context_b;
+    context_b.seedRandomGenerator(11);
+    PlantArchitecture plantarchitecture_b(&context_b);
+    plantarchitecture_b.disableMessages();
+    plantarchitecture_b.loadPlantModelFromLibrary("grapevine_VSP");
+    plantarchitecture_b.enableFruitBranchCollisionAvoidance();
+    plantarchitecture_b.disableFruitBranchCollisionAvoidance();
+    const uint plant_b = plantarchitecture_b.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 300);
+    for (float extra_days = 0; plantarchitecture_b.getPlantFruitObjectIDs(plant_b).empty() && extra_days < 400; extra_days += 10) {
+        plantarchitecture_b.advanceTime(plant_b, 10);
+    }
+    plantarchitecture_b.advanceTime(plant_b, 60);
+
+    const std::vector<uint> fruit_a = plantarchitecture_a.getPlantFruitObjectIDs(plant_a);
+    const std::vector<uint> fruit_b = plantarchitecture_b.getPlantFruitObjectIDs(plant_b);
+    DOCTEST_REQUIRE(fruit_a.size() == fruit_b.size());
+    for (size_t i = 0; i < fruit_a.size(); i++) {
+        DOCTEST_CHECK((objectCenter(context_a, fruit_a.at(i)) - objectCenter(context_b, fruit_b.at(i))).magnitude() < 1e-5f);
+    }
+
+    DOCTEST_CHECK_THROWS(plantarchitecture_a.setFruitBranchCollisionParameters(0.f, 10.f, 0.f));
+    DOCTEST_CHECK_THROWS(plantarchitecture_a.setFruitBranchCollisionParameters(181.f, 10.f, 0.f));
+    DOCTEST_CHECK_THROWS(plantarchitecture_a.setFruitBranchCollisionParameters(90.f, 0.f, 0.f));
+    DOCTEST_CHECK_THROWS(plantarchitecture_a.setFruitBranchCollisionParameters(90.f, 10.f, -0.01f));
+    DOCTEST_CHECK_THROWS(plantarchitecture_a.setFruitBranchCollisionParameters(90.f, 10.f, 0.f, -1.f));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture_a.setFruitBranchCollisionParameters(45.f, 5.f, 0.005f, 0.f));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture_a.setFruitBranchCollisionParameters(45.f, 5.f, 0.005f));
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture collision avoidance inherits the plant's message setting") {
@@ -11159,7 +11896,7 @@ DOCTEST_TEST_CASE("PlantArchitecture duplicatePlantInstance preserves phenology 
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture duplicatePlantInstance translates attraction points to the new base") {
-    // Attraction points are absolute world coordinates -- buildAppleFruitingWall() builds its trellis by
+    // Attraction points are absolute world coordinates -- buildGrapevineVSP() builds its trellis by
     // adding base_position to each point, and detectAttractionPointsInCone() tests them against absolute
     // internode positions. They were not carried over at all, so a duplicate of a trellis-trained plant
     // grew unguided; and copying them verbatim would be just as wrong, steering the copy back toward the
@@ -11171,7 +11908,7 @@ DOCTEST_TEST_CASE("PlantArchitecture duplicatePlantInstance translates attractio
     PlantArchitecture plantarchitecture(&context);
     plantarchitecture.disableMessages();
 
-    plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
     vec3 base_original = make_vec3(0, 0, 0);
     uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(base_original, 0.f);
 
@@ -11192,6 +11929,355 @@ DOCTEST_TEST_CASE("PlantArchitecture duplicatePlantInstance translates attractio
         DOCTEST_CHECK(points_duplicate.at(i).y == doctest::Approx(points_original.at(i).y + shift.y).epsilon(err_tol));
         DOCTEST_CHECK(points_duplicate.at(i).z == doctest::Approx(points_original.at(i).z + shift.z).epsilon(err_tol));
     }
+}
+
+// ---- apple_fruitingwall: tall-spindle fruiting wall grown from a nursery tree ---- //
+
+namespace {
+    // Highest woody vertex of a shoot above the plant base.
+    float appleWallShootTopHeight(const PlantArchitecture &pa, uint plantID, uint shootID) {
+        const vec3 base = pa.getPlantBasePosition(plantID);
+        float top = 0;
+        for (const auto &segment: pa.getPlantShoot(plantID, shootID)->shoot_internode_vertices) {
+            for (const vec3 &v: segment) {
+                top = std::max(top, v.z - base.z);
+            }
+        }
+        return top;
+    }
+
+    // Diameter of the leader (shoot 0) at a height above the plant base, interpolated between its nodes.
+    float appleWallTrunkDiameterAt(const PlantArchitecture &pa, uint plantID, float height) {
+        const vec3 base = pa.getPlantBasePosition(plantID);
+        const std::shared_ptr<Shoot> &leader = pa.getPlantShoot(plantID, 0);
+        float z_prev = 0, r_prev = leader->shoot_internode_radii.front().front();
+        for (uint node = 0; node < leader->shoot_internode_vertices.size(); node++) {
+            const float z = leader->shoot_internode_vertices.at(node).back().z - base.z;
+            const float r = leader->shoot_internode_radii.at(node).back();
+            if (z >= height) {
+                const float f = (z - z_prev) > 1e-6f ? (height - z_prev) / (z - z_prev) : 0.f;
+                return 2.f * (r_prev + f * (r - r_prev));
+            }
+            z_prev = z;
+            r_prev = r;
+        }
+        return 2.f * r_prev;
+    }
+
+    // The live fruiting branches of the wall: a child of the leader, or the shoot regrown from a bevel-cut stub (a child with one
+    // node and a dead meristem). Stubs that have not regrown are counted separately.
+    struct AppleWallBranches {
+        std::vector<uint> branchIDs;
+        uint stubs = 0;
+    };
+    AppleWallBranches appleWallBranches(const PlantArchitecture &pa, uint plantID) {
+        AppleWallBranches result;
+        for (uint childID: pa.getChildShootIDs(plantID, 0)) {
+            if (pa.isShootPruned(plantID, childID) || pa.getPlantShoot(plantID, childID)->shoot_type_label == "spur") {
+                continue;
+            }
+            uint shootID = childID;
+            bool waiting = false;
+            for (int depth = 0; depth < 16; depth++) {
+                const std::shared_ptr<Shoot> &shoot = pa.getPlantShoot(plantID, shootID);
+                if (!(shoot->phytomers.size() == 1 && !shoot->meristem_is_alive)) {
+                    break;
+                }
+                uint regrown = uint(-1);
+                for (uint grandchildID: pa.getChildShootIDs(plantID, shootID)) {
+                    if (!pa.isShootPruned(plantID, grandchildID) && pa.getPlantShoot(plantID, grandchildID)->shoot_type_label != "spur") {
+                        regrown = grandchildID;
+                        break;
+                    }
+                }
+                if (regrown == uint(-1)) {
+                    waiting = true;
+                    break;
+                }
+                shootID = regrown;
+            }
+            if (waiting) {
+                result.stubs++;
+            } else if (pa.getPlantShoot(plantID, shootID)->phytomers.size() >= 2) {
+                result.branchIDs.push_back(shootID);
+            }
+        }
+        return result;
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("PlantArchitecture apple models record class maps on leaves and bark and optical defaults on fruit") {
+    // The "apple" model's leaf and bark textures have class maps, recorded on the primitives mapped with them as the primitive data
+    // "spectral_class_map": the leaf's for LeafOptics, the bark's for RadiationModel::applySpectralClassMaps(). Its fruit carries a
+    // reflectivity spectrum and a specular surface layer.
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0.f);
+    // Into the second season, when the spurs carry fruit
+    plantarchitecture.advanceTime(365.f + 200.f);
+
+    auto classMapOf = [&](uint UUID) {
+        std::string file;
+        if (context.doesPrimitiveDataExist(UUID, "spectral_class_map")) {
+            context.getPrimitiveData(UUID, "spectral_class_map", file);
+        }
+        return std::filesystem::path(file).filename().string();
+    };
+    auto countWith = [&](const std::vector<uint> &UUIDs, const std::string &name) {
+        size_t count = 0;
+        for (uint UUID: UUIDs) {
+            count += classMapOf(UUID) == name;
+        }
+        return count;
+    };
+
+    const std::vector<uint> leaf_UUIDs = context.getObjectPrimitiveUUIDs(plantarchitecture.getPlantLeafObjectIDs(plantID));
+    DOCTEST_REQUIRE(!leaf_UUIDs.empty());
+    DOCTEST_CHECK(countWith(leaf_UUIDs, "AppleLeaf_classes.png") > leaf_UUIDs.size() / 2);
+
+    // Every bark triangle covers a class (the texture has no transparency), on the trunk built with the tree and on the shoots grown since
+    const std::vector<uint> bark_UUIDs = context.getObjectPrimitiveUUIDs(plantarchitecture.getPlantInternodeObjectIDs(plantID));
+    DOCTEST_REQUIRE(!bark_UUIDs.empty());
+    DOCTEST_CHECK(countWith(bark_UUIDs, "AppleBark_classes.png") == bark_UUIDs.size());
+
+    // The fruit carries its spectrum and its waxy surface layer as primitive data (set by AppleFruitPrototype()) instead of a class map
+    const std::vector<uint> fruit_UUIDs = context.getObjectPrimitiveUUIDs(plantarchitecture.getPlantFruitObjectIDs(plantID));
+    DOCTEST_REQUIRE(!fruit_UUIDs.empty());
+    DOCTEST_CHECK(countWith(fruit_UUIDs, "AppleFruit_classes.png") == 0);
+    for (uint UUID: fruit_UUIDs) {
+        std::string spectrum;
+        float roughness, n;
+        DOCTEST_REQUIRE(context.doesPrimitiveDataExist(UUID, "reflectivity_spectrum"));
+        DOCTEST_REQUIRE(context.doesPrimitiveDataExist(UUID, "specular_roughness"));
+        DOCTEST_REQUIRE(context.doesPrimitiveDataExist(UUID, "specular_n"));
+        context.getPrimitiveData(UUID, "reflectivity_spectrum", spectrum);
+        context.getPrimitiveData(UUID, "specular_roughness", roughness);
+        context.getPrimitiveData(UUID, "specular_n", n);
+        DOCTEST_CHECK(spectrum == "apple_fruit_reflectivity_0000");
+        DOCTEST_CHECK(roughness == doctest::Approx(0.15f));
+        DOCTEST_CHECK(n == doctest::Approx(1.5f));
+    }
+
+    // The recorded path is usable as it stands, and its definitions sit beside it
+    std::string bark_map;
+    context.getPrimitiveData(bark_UUIDs.front(), "spectral_class_map", bark_map);
+    DOCTEST_CHECK(std::filesystem::exists(bark_map));
+    DOCTEST_CHECK(std::filesystem::exists(std::filesystem::path(bark_map).replace_extension(".xml")));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture rejects a bark class map that does not match the texture") {
+    // The sorghum leaf class map has another resolution than the apple bark texture
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    ShootParameters trunk = plantarchitecture.getCurrentShootParameters("trunk");
+    trunk.phytomer_parameters.internode.image_class_map_file = "SorghumLeaf_classes.png";
+    plantarchitecture.updateCurrentShootParameters("trunk", trunk);
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0.f)));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall builds a feathered nursery tree") {
+    Context context;
+    context.seedRandomGenerator(1234);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
+    const vec3 base = make_vec3(1, 2, 0);
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(base, 0.f);
+
+    // The leader is a living whip of nursery-tree size, 1.5-1.8 m tall and about 1.6 cm in caliper.
+    const std::shared_ptr<Shoot> &leader = plantarchitecture.getPlantShoot(plantID, 0);
+    DOCTEST_CHECK(leader->shoot_type_label == "leader");
+    DOCTEST_CHECK(leader->meristem_is_alive);
+    const float leader_height = appleWallShootTopHeight(plantarchitecture, plantID, 0);
+    DOCTEST_CHECK(leader_height >= 1.45f);
+    DOCTEST_CHECK(leader_height <= 1.85f);
+    DOCTEST_CHECK(leader->shoot_internode_radii.front().front() == doctest::Approx(0.008f).epsilon(0.05));
+
+    // Ten feathers, all above the trunk, thinner than half the leader and hanging below horizontal at their tips.
+    const AppleWallBranches branches = appleWallBranches(plantarchitecture, plantID);
+    DOCTEST_CHECK(branches.branchIDs.size() == 10);
+    DOCTEST_CHECK(branches.stubs == 0);
+    for (uint branchID: branches.branchIDs) {
+        const std::shared_ptr<Shoot> &branch = plantarchitecture.getPlantShoot(plantID, branchID);
+        DOCTEST_CHECK(branch->shoot_type_label == "branch");
+        const uint node = branch->parent_node_index;
+        DOCTEST_CHECK(leader->shoot_internode_vertices.at(node).back().z - base.z >= 0.68f);
+        DOCTEST_CHECK(branch->shoot_internode_radii.front().front() <= 0.5f * leader->shoot_internode_radii.at(node).back());
+        DOCTEST_CHECK(branch->phytomers.back()->getInternodeAxisVector(0.5f).z < 0.f);
+        DOCTEST_CHECK(branch->calculateShootLength() <= 0.32f);
+    }
+
+    // The branches hang freely: the model no longer trains them to trellis wires.
+    DOCTEST_CHECK(!PlantArchitectureTestHelper::attractionPointsEnabled(plantarchitecture, plantID));
+
+    // The dimensions the tree was built with are kept for the training rules.
+    const std::map<std::string, float> &build_parameters = plantarchitecture.getPlantBuildParameters(plantID);
+    DOCTEST_REQUIRE(build_parameters.count("tree_height") == 1);
+    DOCTEST_CHECK(build_parameters.at("tree_height") == doctest::Approx(3.1f));
+    DOCTEST_REQUIRE(build_parameters.count("trunk_height") == 1);
+    DOCTEST_CHECK(build_parameters.at("trunk_height") == doctest::Approx(0.7f));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall build parameters") {
+    Context context;
+    context.seedRandomGenerator(99);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
+
+    const std::vector<std::string> names = plantarchitecture.getPlantModelBuildParameterNames("apple_fruitingwall");
+    for (const char *name: {"tree_height", "trunk_height", "num_feathers", "tree_spacing", "row_spacing"}) {
+        DOCTEST_CHECK(std::find(names.begin(), names.end(), std::string(name)) != names.end());
+    }
+
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0.f, {{"tree_height", 2.5f}, {"trunk_height", 0.9f}, {"num_feathers", 8.f}, {"tree_spacing", 1.2f}, {"row_spacing", 3.6f}});
+    // A short wall gets a shorter whip, so that the leader still has somewhere to grow.
+    DOCTEST_CHECK(appleWallShootTopHeight(plantarchitecture, plantID, 0) <= 2.2f + 1e-3f);
+    const AppleWallBranches branches = appleWallBranches(plantarchitecture, plantID);
+    DOCTEST_CHECK(branches.branchIDs.size() == 8);
+    const std::shared_ptr<Shoot> &leader = plantarchitecture.getPlantShoot(plantID, 0);
+    for (uint branchID: branches.branchIDs) {
+        const uint node = plantarchitecture.getPlantShoot(plantID, branchID)->parent_node_index;
+        DOCTEST_CHECK(leader->shoot_internode_vertices.at(node).back().z >= 0.88f);
+    }
+    DOCTEST_CHECK(plantarchitecture.getPlantBuildParameters(plantID).at("row_spacing") == doctest::Approx(3.6f));
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(3, 0, 0), 0.f, {{"num_scaffolds", 4.f}})));
+    // The trunk must leave room for the wall above it.
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(3, 0, 0), 0.f, {{"tree_height", 2.f}, {"trunk_height", 1.8f}})));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall is deterministic for a seed") {
+    std::vector<vec3> leader_vertices[2];
+    size_t shoot_counts[2];
+    for (int run = 0; run < 2; run++) {
+        Context context;
+        context.seedRandomGenerator(777);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0.f);
+        plantarchitecture.advanceTime(400.f);
+        shoot_counts[run] = plantarchitecture.getAllShootIDs(plantID).size();
+        for (const auto &segment: plantarchitecture.getPlantShoot(plantID, 0)->shoot_internode_vertices) {
+            leader_vertices[run].push_back(segment.back());
+        }
+    }
+    DOCTEST_CHECK(shoot_counts[0] == shoot_counts[1]);
+    DOCTEST_REQUIRE(leader_vertices[0].size() == leader_vertices[1].size());
+    for (size_t i = 0; i < leader_vertices[0].size(); i++) {
+        DOCTEST_CHECK(leader_vertices[0].at(i) == leader_vertices[1].at(i));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall training keeps the tree a wall") {
+    // Two seasons from planting (the model's season is 366 days): the leader has extended to the top wire and been headed there, new
+    // fruiting branches have grown from it, spurs clothe the year-old wood, and every shoot has been hedged to the wall.
+    Context context;
+    context.seedRandomGenerator(2024);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
+    const vec3 base = make_vec3(0, 0, 0);
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(base, 0.f);
+    plantarchitecture.advanceTime(2.f * 366.f + 20.f);
+
+    const float leader_height = appleWallShootTopHeight(plantarchitecture, plantID, 0);
+    DOCTEST_CHECK(leader_height >= 2.4f);
+    DOCTEST_CHECK(leader_height <= 3.1f + 0.05f);
+
+    const AppleWallBranches branches = appleWallBranches(plantarchitecture, plantID);
+    DOCTEST_CHECK(branches.branchIDs.size() >= 15);
+    DOCTEST_CHECK(branches.branchIDs.size() <= 45);
+
+    uint spurs = 0;
+    for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+        if (plantarchitecture.isShootPruned(plantID, shootID)) {
+            continue;
+        }
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+        if (shoot->shoot_type_label == "spur") {
+            spurs++;
+        }
+        // Inside the wall: below the heading height, within half the tree spacing along the row (y) and the wall's width across it (x).
+        for (const auto &segment: shoot->shoot_internode_vertices) {
+            for (const vec3 &v: segment) {
+                DOCTEST_CHECK(v.z - base.z <= 3.1f + 0.05f);
+                if (shoot->parent_shoot_ID >= 0 && shoot->shoot_type_label != "spur") {
+                    DOCTEST_CHECK(std::fabs(v.y - base.y) <= 0.5f * 0.9f + 0.05f + 0.02f);
+                    DOCTEST_CHECK(std::fabs(v.x - base.x) <= 0.75f + 0.02f);
+                }
+            }
+        }
+    }
+    DOCTEST_CHECK(spurs >= 20);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall is a mature tall spindle after five seasons") {
+    Context context;
+    context.seedRandomGenerator(31);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
+    const vec3 base = make_vec3(0, 0, 0);
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(base, 0.f);
+    plantarchitecture.advanceTime(5.f * 366.f + 20.f);
+
+    // Trunk about 5.4 cm at 30 cm (Cline et al. 2021, NC-140 'Fuji' trial, year 5) and the leader headed back to a fruiting branch
+    // within half a metre of the wall's height.
+    const float trunk_diameter = appleWallTrunkDiameterAt(plantarchitecture, plantID, 0.3f);
+    DOCTEST_CHECK(trunk_diameter >= 0.04f);
+    DOCTEST_CHECK(trunk_diameter <= 0.07f);
+    const float leader_height = appleWallShootTopHeight(plantarchitecture, plantID, 0);
+    DOCTEST_CHECK(leader_height >= 2.6f);
+    DOCTEST_CHECK(leader_height <= 3.15f);
+    DOCTEST_CHECK(!plantarchitecture.getPlantShoot(plantID, 0)->meristem_is_alive);
+    // The leader was headed back to a fruiting branch, which is now the top of the tree
+    {
+        const std::shared_ptr<Shoot> &headed_leader = plantarchitecture.getPlantShoot(plantID, 0);
+        const uint top_node = uint(headed_leader->phytomers.size()) - 1;
+        bool branch_at_top = false;
+        for (uint childID: plantarchitecture.getChildShootIDs(plantID, 0)) {
+            const std::shared_ptr<Shoot> &child = plantarchitecture.getPlantShoot(plantID, childID);
+            branch_at_top = branch_at_top || (!plantarchitecture.isShootPruned(plantID, childID) && child->shoot_type_label != "spur" && child->parent_node_index == top_node);
+        }
+        DOCTEST_CHECK(branch_at_top);
+    }
+
+    // 20-36 fruiting branches of up to 0.75 m, hanging rather than rising at their tips, none older than the renewal age plus the few
+    // a winter's cap carries over, at most that many established branches still thicker than half the leader, and renewal under way.
+    const std::shared_ptr<Shoot> &leader = plantarchitecture.getPlantShoot(plantID, 0);
+    const AppleWallBranches branches = appleWallBranches(plantarchitecture, plantID);
+    DOCTEST_CHECK(branches.branchIDs.size() >= 20);
+    DOCTEST_CHECK(branches.branchIDs.size() <= 45);
+    uint renewals = 0, over_ratio = 0, rising_tips = 0;
+    for (uint branchID: branches.branchIDs) {
+        const std::shared_ptr<Shoot> &branch = plantarchitecture.getPlantShoot(plantID, branchID);
+        DOCTEST_CHECK(branch->calculateShootLength() <= 0.8f);
+        if (branch->phytomers.back()->getInternodeAxisVector(0.5f).z > 0.5f) {
+            rising_tips++;
+        }
+        DOCTEST_CHECK(branch->dormancy_cycles <= 8);
+        if (branch->dormancy_cycles >= 3 && branch->shoot_type_label == "branch") {
+            const uint node = branch->parent_node_index;
+            if (branch->shoot_internode_radii.front().front() > 0.5f * leader->shoot_internode_radii.at(node).back() + 1e-4f) {
+                over_ratio++;
+            }
+        }
+        if (branch->shoot_type_label == "renewal") {
+            renewals++;
+        }
+    }
+    DOCTEST_CHECK(rising_tips == 0);
+    // Renewal is capped at three a winter, so a few candidates wait a winter or two for their turn.
+    DOCTEST_CHECK(over_ratio <= 6);
+    DOCTEST_CHECK(branches.stubs + renewals >= 1);
+    DOCTEST_CHECK(branches.stubs <= 3);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture duplicatePlantInstance reproduces branch attachment nodes") {
@@ -19779,6 +20865,56 @@ DOCTEST_TEST_CASE("PlantArchitecture setPetioleShape generates a petiole from it
     DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleShape(plantID, shootID, 9, 0, make_vec3(1.f, 0.f, 0.f), 45.f, 0.f, 0.08f));
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture setPetioleLeaflets keeps a growing leaf growing") {
+    // A phytomer creation function that gives each new leaf its own leaflets rebuilds them on a phytomer a moment old. Pinned as prescribed leaves
+    // are, the leaf was full size the day it appeared and never grew, and its petiole stopped at the length it had then.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("tomato");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 12);
+    const auto &shoot = plantarchitecture.getPlantShoot(plantID, 0);
+    // the youngest phytomer whose leaf is still expanding
+    int node = -1;
+    for (int n = int(shoot->phytomers.size()) - 1; n >= 0; n--) {
+        const auto &p = shoot->phytomers.at(n);
+        if (!p->leaf_objIDs.at(0).empty() && p->current_leaf_scale_factor.at(0) < 0.9f && p->current_petiole_scale_factor.at(0) < 0.9f) {
+            node = n;
+            break;
+        }
+    }
+    DOCTEST_REQUIRE(node >= 0);
+    const auto phytomer = shoot->phytomers.at(node);
+    const float expansion = phytomer->current_leaf_scale_factor.at(0);
+    const float elongation = phytomer->current_petiole_scale_factor.at(0);
+    const float petiole_max = phytomer->petiole_length_max.at(0);
+
+    plantarchitecture.setPetioleLeaflets(plantID, 0, uint(node), 0, 3, 0.2f, 0.5f, 0.05f);
+
+    DOCTEST_REQUIRE(phytomer->leaf_objIDs.at(0).size() == 3);
+    DOCTEST_CHECK(phytomer->current_leaf_scale_factor.at(0) == doctest::Approx(expansion));
+    DOCTEST_CHECK(phytomer->current_petiole_scale_factor.at(0) == doctest::Approx(elongation));
+    DOCTEST_CHECK(phytomer->petiole_length_max.at(0) == doctest::Approx(petiole_max));
+    // leaf_size_max is the mature size; the terminal leaflet is drawn at that times how far it has expanded
+    const float terminal = *std::max_element(phytomer->leaf_size_max.at(0).begin(), phytomer->leaf_size_max.at(0).end());
+    DOCTEST_CHECK(terminal == doctest::Approx(0.05f));
+    float area_now = 0;
+    for (const uint objID: phytomer->leaf_objIDs.at(0)) {
+        area_now += context.getObjectArea(objID);
+    }
+
+    plantarchitecture.advanceTime(plantID, 6);
+
+    DOCTEST_CHECK(phytomer->current_leaf_scale_factor.at(0) > expansion);
+    DOCTEST_CHECK(phytomer->leaf_objIDs.at(0).size() == 3);
+    float area_later = 0;
+    for (const uint objID: phytomer->leaf_objIDs.at(0)) {
+        area_later += context.getObjectArea(objID);
+    }
+    DOCTEST_CHECK(area_later > 1.5f * area_now);
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture setPetioleLeaflets rebuilds one petiole's leaflets with their own spacing and sizes") {
     Context context;
     context.seedRandomGenerator(12345);
@@ -19823,6 +20959,22 @@ DOCTEST_TEST_CASE("PlantArchitecture setPetioleLeaflets rebuilds one petiole's l
     DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeaflets(plantID, shootID, 1, 0, 5, -0.1f, 0.5f, 0.04f));
     DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeaflets(plantID, shootID, 1, 0, 5, 0.2f, 0.f, 0.04f));
     DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeaflets(plantID, shootID, 1, 0, 5, 0.2f, 0.5f, 0.f));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeaflets(plantID, shootID, 1, 0, 5, 0.2f, 0.5f, 0.04f, std::numeric_limits<float>::quiet_NaN()));
+
+    // The intercalary leaflets are the phytomer's own too: the second slot pair is an intercalary pair 0.4 of the primary
+    // pair above it (8 mm), and with no intercalaries it is a primary pair half the size of the first (10 mm).
+    const auto second_pair = [&]() {
+        std::vector<float> s = phytomer->leaf_size_max.at(0);
+        std::sort(s.begin(), s.end());
+        return s.front();
+    };
+    plantarchitecture.setPetioleLeaflets(plantID, shootID, 1, 0, 5, 0.2f, 0.5f, 0.04f, 0.4f);
+    DOCTEST_CHECK(second_pair() == doctest::Approx(0.008f));
+    plantarchitecture.setPetioleLeaflets(plantID, shootID, 1, 0, 5, 0.2f, 0.5f, 0.04f, 0.f);
+    DOCTEST_CHECK(second_pair() == doctest::Approx(0.01f));
+    // left out, it keeps what the phytomer has
+    plantarchitecture.setPetioleLeaflets(plantID, shootID, 1, 0, 5, 0.2f, 0.5f, 0.04f);
+    DOCTEST_CHECK(second_pair() == doctest::Approx(0.01f));
 }
 
 //! Area-weighted mean normal of one object's primitives.

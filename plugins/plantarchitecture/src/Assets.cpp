@@ -803,6 +803,23 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
         context_ptr->computePolymeshObjectVertexNormals(objID, leaf_crease_angle_degrees);
     }
 
+    // The class map of the leaf texture, recorded on each leaf triangle that covers a class so that LeafOptics can give the leaf's tissues their own spectra. A triangle covering only transparent texels
+    // (as the radiation model samples the texture) can take no class, so it keeps the spectra given to the leaf as a whole.
+    std::string class_map;
+    if (prototype_parameters->leaf_class_map_file.size() == 1) {
+        class_map = prototype_parameters->leaf_class_map_file.begin()->second;
+    } else if (prototype_parameters->leaf_class_map_file.find(compound_leaf_index) != prototype_parameters->leaf_class_map_file.end()) {
+        class_map = prototype_parameters->leaf_class_map_file.at(compound_leaf_index);
+    }
+    if (!class_map.empty()) {
+        const std::string remedy = " A class map is made for one leaf texture (see utilities/leaf_class_maps). If the leaf texture was changed, clear LeafPrototype::leaf_class_map_file, or set it to a class map made for the new texture.";
+        if (!prototype_parameters->leaf_texture_series.empty()) {
+            helios_runtime_error("ERROR (PlantArchitecture): A leaf prototype has both a class map (LeafPrototype::leaf_class_map_file) and a texture series (LeafPrototype::leaf_texture_series), which cannot be combined." + remedy);
+        }
+        // The petiolule has no texture, so only the blade triangles are considered.
+        PlantArchitecture::recordSpectralClassMap(context_ptr, context_ptr->getObjectPrimitiveUUIDs(objID), leaf_texture, class_map, "leaf", remedy);
+    }
+
     return objID;
 }
 
@@ -820,6 +837,63 @@ uint AlmondFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AlmondFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
+}
+
+// ---- Training helpers shared by the trained tree models ---- //
+
+//! Number of nodes to keep so that a shoot is cut back to about `length` metres (the first node whose far end reaches that length is kept).
+static uint nodesToKeepForLength(const Shoot &shoot, float length) {
+    float arc = 0;
+    bool first_vertex = true;
+    helios::vec3 previous;
+    for (uint node = 0; node < shoot.shoot_internode_vertices.size(); node++) {
+        for (const helios::vec3 &vertex: shoot.shoot_internode_vertices.at(node)) {
+            if (!first_vertex) {
+                arc += (vertex - previous).magnitude();
+            }
+            previous = vertex;
+            first_vertex = false;
+        }
+        if (arc >= length) {
+            return node + 1;
+        }
+    }
+    return uint(shoot.shoot_internode_vertices.size());
+}
+
+//! Cut a shoot back to about `length` metres, ending its growth. Returns the number of nodes kept.
+/** The cut is deferred to the end of the time step (see PlantArchCallbackEdits), but the tip is stopped at once: removing phytomers only
+    ends a shoot's growth when the removed tip already has its geometry, so a young tip could otherwise survive the cut and regrow. */
+static uint cutShootToLength(Shoot &shoot, float length) {
+    uint keep = nodesToKeepForLength(shoot, length);
+    if (keep < shoot.phytomers.size()) {
+        shoot.plantarchitecture_ptr->pruneBranch(shoot.plantID, uint(shoot.ID), keep);
+        shoot.meristem_is_alive = false;
+    }
+    return keep;
+}
+
+//! Make one vegetative bud on each of the top `node_count` nodes below `keep` break into a shoot of type `shoot_type_label`, standing in for the release from apical dominance a cut causes.
+/** The bud-break probabilities cannot tell a cut from a natural shoot tip, so without this a headed shoot usually regrows from a single bud
+    or none. Only valid while the shoot is growing: a bud set active in dormancy is drawn again when dormancy breaks. Node 0 is skipped
+    (a blind node), and so are buds that have already grown a shoot. */
+static void releaseBudsBelowCut(Shoot &shoot, uint keep, uint node_count, const std::string &shoot_type_label) {
+    uint released = 0;
+    for (int node = int(keep) - 1; node >= 1 && released < node_count; node--) {
+        const std::shared_ptr<Phytomer> &phytomer = shoot.phytomers.at(node);
+        bool released_here = false;
+        for (auto &petiole: phytomer->axillary_vegetative_buds) {
+            for (auto &vbud: petiole) {
+                if (!released_here && vbud.shoot_ID == uint(-1)) {
+                    // A bud already passed over for a spur (see growSpursFromUnbrokenBuds()) is growing a limb after all.
+                    vbud.shoot_type_label = shoot_type_label;
+                    Phytomer::setVegetativeBudState(BUD_ACTIVE, vbud);
+                    released_here = true;
+                }
+            }
+        }
+        released++;
+    }
 }
 
 //! Grow spurs from the lateral buds of a limb that did not grow a long shoot.
@@ -878,6 +952,13 @@ void AlmondSpurPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 uint AppleFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AppleFruit.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
+
+    // Optical defaults for the radiation model, as the primitive data it reads: a red-apple skin spectrum (the radiation plugin's fruit spectral library; a stand-in for a measured one) under a waxy
+    // specular surface layer, which is what makes the fruit read as an apple to a radiation camera. Every fruit copied from the prototype carries them, and a user overrides them by setting the same
+    // primitive data (or the fruit material's data, which takes precedence) after the plant is built. Without the radiation model they are inert.
+    context_ptr->setPrimitiveData(UUIDs, "reflectivity_spectrum", "apple_fruit_reflectivity_0000");
+    context_ptr->setPrimitiveData(UUIDs, "specular_roughness", 0.15f);
+    context_ptr->setPrimitiveData(UUIDs, "specular_n", 1.5f);
     return objID;
 }
 
@@ -979,9 +1060,10 @@ void ApplePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
     }
 }
 
-void ApplePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
+//! Rules shared by the apple models: spur release, flower-bud thinning by light, and the distal zone of a long shoot without axillary flowers.
+static void applePhytomerCallback(const std::shared_ptr<Phytomer> &phytomer, float spur_fraction) {
 
-    growSpursFromUnbrokenBuds(phytomer, apple_spur_fraction);
+    growSpursFromUnbrokenBuds(phytomer, spur_fraction);
 
     const Shoot &shoot = *phytomer->parent_shoot_ptr;
     if (!shoot.isdormant) {
@@ -1011,6 +1093,342 @@ void ApplePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
                 phytomer->setFloralBudState(BUD_DEAD, fbud);
             }
         }
+    }
+}
+
+void ApplePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
+    applePhytomerCallback(phytomer, apple_spur_fraction);
+}
+
+// ---- Apple fruiting wall (tall spindle) training ---- //
+//
+// The tall spindle (Hoying, Robinson & Fargione, "The Tall Spindle Planting System", Cornell Cooperative Extension; Robinson 2007, NY
+// Fruit Quarterly 15(1); Robinson & Hoying 2014) is a single tied leader with no permanent scaffolds. Each winter the grower heads the
+// leader back to a fruiting side branch once it has reached the wall's height, pinches the shoots that compete with it at the top of last year's extension,
+// removes any fruiting branch that has grown to half the leader's diameter or too old with a bevel cut that leaves a short stub (a flat,
+// weak replacement grows from the stub), keeps every branch columnar by removing its larger side shoots, and hedges the wall to its
+// width. The rules below are state-based, so they are applied on every dormant time step and change nothing after the first.
+
+//! Fraction of the lateral vegetative buds left unbroken on a fruiting branch's year-old wood that grow a spur (see growSpursFromUnbrokenBuds()).
+static constexpr float apple_fruitingwall_spur_fraction = 0.3f;
+//! The same fraction for the leader, whose wood is kept cleaner than the branches'.
+static constexpr float apple_fruitingwall_leader_spur_fraction = 0.1f;
+//! Fruiting branches renewed in one winter at most (Cornell: two or three of the largest limbs a year).
+static constexpr uint apple_fruitingwall_renewals_per_winter = 3;
+//! Wall dimensions used when a plant was not built with the corresponding build parameter (see PlantArchitecture::buildAppleFruitingWall()).
+static constexpr float apple_fruitingwall_default_tree_height = 3.1f;
+static constexpr float apple_fruitingwall_default_trunk_height = 0.7f;
+static constexpr float apple_fruitingwall_default_tree_spacing = 0.9f;
+static constexpr float apple_fruitingwall_default_row_spacing = 3.3f;
+//! Width (m) of the wall across the row at the height of the lowest branch and at the top, for the reference row spacing (Robinson &
+//! Hoying 2014: a summer-hedged wall about 1.5 m wide at the base and 0.75 m at the top). The widths scale with the row spacing.
+static constexpr float apple_fruitingwall_wall_width_base = 1.5f;
+static constexpr float apple_fruitingwall_wall_width_top = 0.75f;
+static constexpr float apple_fruitingwall_reference_row_spacing = 3.3f;
+//! A branch may reach this far past the midpoint between neighbouring trees along the row.
+static constexpr float apple_fruitingwall_row_overlap = 0.05f;
+//! Height (m) above the wall's height that a shoot may reach before it is cut back.
+static constexpr float apple_fruitingwall_height_tolerance = 0.03f;
+//! When the leader reaches the wall's height it is cut back to the highest fruiting branch within this distance (m) below it, which becomes the top of the tree.
+static constexpr float apple_fruitingwall_heading_window = 0.5f;
+//! A fruiting branch is renewed when its base diameter exceeds this fraction of the leader's diameter at its insertion ...
+static constexpr float apple_fruitingwall_branch_diameter_ratio_max = 0.5f;
+//! ... or exceeds this diameter (m) ...
+static constexpr float apple_fruitingwall_branch_diameter_max = 0.025f;
+//! ... or this many winters have passed since it grew.
+static constexpr uint apple_fruitingwall_branch_age_max = 6;
+//! Winters a branch must have stood before the diameter-ratio rule applies to it: a new branch at the top of the leader is as thick as
+//! the leader there, and the ratio only becomes meaningful once the leader has thickened below it.
+static constexpr uint apple_fruitingwall_branch_ratio_rule_age_min = 3;
+//! A fruiting branch longer than this (m) is cut back ...
+static constexpr float apple_fruitingwall_branch_length_max = 0.75f;
+//! ... to about this length (m).
+static constexpr float apple_fruitingwall_branch_length_headed = 0.6f;
+//! Side shoots of a fruiting branch thicker than half the branch, and upright side shoots (water sprouts) longer than this (m), are
+//! removed to keep the branch columnar ...
+static constexpr float apple_fruitingwall_upright_side_shoot_length_max = 0.25f;
+//! ... and any other side shoot longer than this (m) is cut back ...
+static constexpr float apple_fruitingwall_side_shoot_length_max = 0.35f;
+//! ... to about this length (m), as the hedger would.
+static constexpr float apple_fruitingwall_side_shoot_length_headed = 0.2f;
+//! Shoots that grew within this distance (m) of the leader's tip last season compete with it and are pinched ...
+static constexpr float apple_fruitingwall_competitor_zone = 0.2f;
+//! ... back to this many nodes.
+static constexpr uint apple_fruitingwall_competitor_nodes_kept = 3;
+//! Buds released below the leader's heading cut, so that the new top carries fresh fruiting branches.
+static constexpr uint apple_fruitingwall_buds_released_at_heading = 2;
+//! A feather that sits this far (m) below the trunk height is removed.
+static constexpr float apple_fruitingwall_low_feather_tolerance = 0.05f;
+
+struct AppleFruitingWallDimensions {
+    float tree_height;
+    float trunk_height;
+    float tree_spacing;
+    float row_spacing;
+};
+
+//! Wall dimensions the plant was built with (see PlantArchitecture::buildAppleFruitingWall()), or the defaults for a plant built another way.
+static AppleFruitingWallDimensions appleFruitingWallDimensions(const PlantArchitecture *plantarchitecture, uint plantID) {
+    const std::map<std::string, float> &build_parameters = plantarchitecture->getPlantBuildParameters(plantID);
+    auto read = [&build_parameters](const char *name, float default_value) {
+        const auto it = build_parameters.find(name);
+        return it == build_parameters.end() ? default_value : it->second;
+    };
+    AppleFruitingWallDimensions wall{};
+    wall.tree_height = read("tree_height", apple_fruitingwall_default_tree_height);
+    wall.trunk_height = read("trunk_height", apple_fruitingwall_default_trunk_height);
+    wall.tree_spacing = read("tree_spacing", apple_fruitingwall_default_tree_spacing);
+    wall.row_spacing = read("row_spacing", apple_fruitingwall_default_row_spacing);
+    return wall;
+}
+
+//! Half-width (m) of the wall across the row at `height` above the plant base: the wall tapers from its base width at the lowest branch to its top width at the leader's height.
+static float appleFruitingWallHalfWidth(const AppleFruitingWallDimensions &wall, float height) {
+    const float fraction = std::clamp((height - wall.trunk_height) / std::fmax(wall.tree_height - wall.trunk_height, 0.01f), 0.f, 1.f);
+    const float width = apple_fruitingwall_wall_width_base + (apple_fruitingwall_wall_width_top - apple_fruitingwall_wall_width_base) * fraction;
+    return 0.5f * width * wall.row_spacing / apple_fruitingwall_reference_row_spacing;
+}
+
+//! A bevel-cut stub: the single basal node left of a renewed fruiting branch.
+static bool appleFruitingWallIsStub(const Shoot &shoot) {
+    return shoot.phytomers.size() == 1 && !shoot.meristem_is_alive;
+}
+
+//! The fruiting branch borne at one node of the leader.
+/** The leader's child at the node is the branch until it is renewed; then it is a stub, and the branch is the shoot regrown from the stub.
+    A regrown branch renewed in its turn leaves a stub on the stub, so the branch is found by following the stubs down the chain. */
+struct AppleFruitingWallBranch {
+    //! Node of the leader the branch is borne at.
+    uint leader_node;
+    //! The last stub of the chain, or -1 if the branch has never been renewed.
+    uint stubID;
+    //! The branch itself, or -1 if the last stub has not regrown yet.
+    uint branchID;
+};
+
+static std::vector<AppleFruitingWallBranch> appleFruitingWallBranches(const PlantArchitecture *plantarchitecture, const Shoot &leader) {
+    const uint plantID = leader.plantID;
+    std::vector<AppleFruitingWallBranch> branches;
+    for (const uint childID: plantarchitecture->getChildShootIDs(plantID, uint(leader.ID))) {
+        if (plantarchitecture->isShootPruned(plantID, childID) || plantarchitecture->getPlantShoot(plantID, childID)->shoot_type_label == "spur") {
+            continue;
+        }
+        AppleFruitingWallBranch branch{plantarchitecture->getPlantShoot(plantID, childID)->parent_node_index, uint(-1), childID};
+        for (uint depth = 0; depth < 16 && branch.branchID != uint(-1); depth++) {
+            const std::shared_ptr<Shoot> &shoot = plantarchitecture->getPlantShoot(plantID, branch.branchID);
+            if (!appleFruitingWallIsStub(*shoot)) {
+                break;
+            }
+            branch.stubID = branch.branchID;
+            branch.branchID = uint(-1);
+            for (const uint regrownID: plantarchitecture->getChildShootIDs(plantID, branch.stubID)) {
+                if (!plantarchitecture->isShootPruned(plantID, regrownID) && plantarchitecture->getPlantShoot(plantID, regrownID)->shoot_type_label != "spur") {
+                    branch.branchID = regrownID;
+                    break;
+                }
+            }
+        }
+        branches.push_back(branch);
+    }
+    return branches;
+}
+
+//! Dormant-season training of the wall (see the section comment above). Run once per time step from the leader.
+static void appleFruitingWallWinterPruning(Shoot &leader, const AppleFruitingWallDimensions &wall) {
+    PlantArchitecture *plantarchitecture = leader.plantarchitecture_ptr;
+    const uint plantID = leader.plantID;
+    const helios::vec3 base = plantarchitecture->getPlantBasePosition(plantID);
+    const float z_cap = base.z + wall.tree_height + apple_fruitingwall_height_tolerance;
+    const float row_half_extent = 0.5f * wall.tree_spacing + apple_fruitingwall_row_overlap;
+
+    const std::vector<AppleFruitingWallBranch> branches = appleFruitingWallBranches(plantarchitecture, leader);
+
+    // Once the leader reaches the wall's height it is headed, as the grower does, back to a weak fruiting side branch: the highest
+    // fruiting branch within the heading window below the wall's height, which becomes the top of the tree. With no branch there it is
+    // cut at the wall's height.
+    if (leader.meristem_is_alive && leader.shoot_internode_vertices.back().back().z > z_cap) {
+        uint cut_node = uint(leader.shoot_internode_vertices.size());
+        for (uint node = 0; node < leader.shoot_internode_vertices.size(); node++) {
+            if (leader.shoot_internode_vertices.at(node).back().z > z_cap) {
+                cut_node = node;
+                break;
+            }
+        }
+        uint top_branch_node = 0;
+        bool top_branch_found = false;
+        for (const AppleFruitingWallBranch &entry: branches) {
+            const float base_height = leader.shoot_internode_vertices.at(entry.leader_node).back().z - base.z;
+            if (entry.branchID != uint(-1) && entry.leader_node + 1 < cut_node && base_height >= wall.tree_height - apple_fruitingwall_heading_window && (!top_branch_found || entry.leader_node > top_branch_node)) {
+                top_branch_node = entry.leader_node;
+                top_branch_found = true;
+            }
+        }
+        if (top_branch_found) {
+            cut_node = top_branch_node + 1;
+        }
+        if (cut_node >= 1 && cut_node < leader.phytomers.size()) {
+            plantarchitecture->pruneBranch(plantID, uint(leader.ID), cut_node);
+        }
+        leader.meristem_is_alive = false;
+    }
+
+    // Everything else is kept inside the wall: shoots above the wall's height are cut back, and the branches are hedged to the wall's
+    // width across the row and to half the tree spacing along it. A shoot is cut at its first node outside the wall.
+    for (const uint shootID: plantarchitecture->getAllShootIDs(plantID)) {
+        if (plantarchitecture->isShootPruned(plantID, shootID) || shootID == uint(leader.ID)) {
+            continue;
+        }
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture->getPlantShoot(plantID, shootID);
+        const bool hedged = shoot->parent_shoot_ID >= 0 && shoot->shoot_type_label != "spur";
+        for (uint node = 0; node < shoot->shoot_internode_vertices.size(); node++) {
+            const helios::vec3 &tip = shoot->shoot_internode_vertices.at(node).back();
+            bool outside = tip.z > z_cap;
+            if (hedged) {
+                outside = outside || std::fabs(tip.x - base.x) > appleFruitingWallHalfWidth(wall, tip.z - base.z) || std::fabs(tip.y - base.y) > row_half_extent;
+            }
+            if (outside) {
+                plantarchitecture->pruneBranch(plantID, shootID, node);
+                break;
+            }
+        }
+    }
+
+    // The fruiting branches on the leader.
+    const float leader_tip_z = leader.shoot_internode_vertices.back().back().z;
+    // A stub that has not regrown was cut this winter (a stub always regrows the following summer), so the stubs without a branch
+    // count the renewals already made this winter.
+    uint renewals_this_winter = 0;
+    for (const AppleFruitingWallBranch &branch: branches) {
+        if (branch.branchID == uint(-1)) {
+            renewals_this_winter++;
+        }
+    }
+    std::vector<std::pair<float, uint>> renewal_candidates; // base radius, shoot ID
+
+    for (const AppleFruitingWallBranch &entry: branches) {
+        if (entry.branchID == uint(-1)) {
+            continue;
+        }
+        const std::shared_ptr<Shoot> &branch = plantarchitecture->getPlantShoot(plantID, entry.branchID);
+        const float branch_base_height = leader.shoot_internode_vertices.at(entry.leader_node).back().z - base.z;
+
+        // The trunk is kept clear.
+        if (branch_base_height < wall.trunk_height - apple_fruitingwall_low_feather_tolerance) {
+            plantarchitecture->pruneBranch(plantID, entry.stubID == uint(-1) ? entry.branchID : entry.stubID, 0);
+            continue;
+        }
+
+        // Shoots that grew at the top of last season's leader extension compete with the leader and are pinched back.
+        if (leader.meristem_is_alive && branch->dormancy_cycles == 1 && leader_tip_z - (branch_base_height + base.z) < apple_fruitingwall_competitor_zone && branch->phytomers.size() > apple_fruitingwall_competitor_nodes_kept) {
+            plantarchitecture->pruneBranch(plantID, entry.branchID, apple_fruitingwall_competitor_nodes_kept);
+            branch->meristem_is_alive = false;
+            continue;
+        }
+
+        // Renewal candidates: a branch that has grown too thick for the leader, or too old. The thickest are cut first, a few a winter.
+        const float branch_radius = branch->shoot_internode_radii.front().front();
+        const float leader_radius = leader.shoot_internode_radii.at(entry.leader_node).back();
+        const bool too_thick_for_leader = branch->dormancy_cycles >= apple_fruitingwall_branch_ratio_rule_age_min && branch_radius > apple_fruitingwall_branch_diameter_ratio_max * leader_radius;
+        if (branch->phytomers.size() > 1 && (too_thick_for_leader || 2.f * branch_radius > apple_fruitingwall_branch_diameter_max || branch->dormancy_cycles >= apple_fruitingwall_branch_age_max)) {
+            renewal_candidates.emplace_back(branch_radius, entry.branchID);
+        }
+
+        // A branch that has grown too long is cut back.
+        if (branch->calculateShootLength() > apple_fruitingwall_branch_length_max) {
+            static_cast<void>(cutShootToLength(*branch, apple_fruitingwall_branch_length_headed));
+        }
+
+        // The branch is kept columnar: side shoots that would become limbs are removed.
+        for (const uint sideID: plantarchitecture->getChildShootIDs(plantID, entry.branchID)) {
+            if (plantarchitecture->isShootPruned(plantID, sideID)) {
+                continue;
+            }
+            const std::shared_ptr<Shoot> &side = plantarchitecture->getPlantShoot(plantID, sideID);
+            if (side->shoot_type_label == "spur") {
+                continue;
+            }
+            const float side_radius = side->shoot_internode_radii.front().front();
+            const float branch_radius_at_side = branch->shoot_internode_radii.at(side->parent_node_index).back();
+            const helios::vec3 side_axis = side->phytomers.front()->getInternodeAxisVector(0.5f);
+            const float side_length = side->calculateShootLength();
+            // A side shoot starts as thick as the branch wood it grew from, so its diameter is judged once it has stood a full season.
+            if ((side->dormancy_cycles >= 2 && side_radius > 0.5f * branch_radius_at_side) || (side_axis.z > 0.5f && side_length > apple_fruitingwall_upright_side_shoot_length_max)) {
+                plantarchitecture->pruneBranch(plantID, sideID, 0);
+            } else if (side_length > apple_fruitingwall_side_shoot_length_max) {
+                static_cast<void>(cutShootToLength(*side, apple_fruitingwall_side_shoot_length_headed));
+            }
+        }
+    }
+
+    // The bevel cuts: the branch is cut to its basal node, which regrows a replacement next season (see appleFruitingWallSummerTraining()).
+    std::sort(renewal_candidates.begin(), renewal_candidates.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+    for (const auto &[radius, branchID]: renewal_candidates) {
+        if (renewals_this_winter >= apple_fruitingwall_renewals_per_winter) {
+            break;
+        }
+        plantarchitecture->pruneBranch(plantID, branchID, 1);
+        plantarchitecture->getPlantShoot(plantID, branchID)->meristem_is_alive = false;
+        renewals_this_winter++;
+    }
+}
+
+//! Growing-season training of the wall: stubs regrow, and a headed leader releases the buds below its cut. Run once per time step from the leader.
+static void appleFruitingWallSummerTraining(Shoot &leader) {
+    PlantArchitecture *plantarchitecture = leader.plantarchitecture_ptr;
+    const uint plantID = leader.plantID;
+
+    // Both rules stop by themselves once the released bud has grown a shoot (its shoot ID is then set).
+    for (const AppleFruitingWallBranch &entry: appleFruitingWallBranches(plantarchitecture, leader)) {
+        if (entry.branchID != uint(-1) || entry.stubID == uint(-1)) {
+            continue;
+        }
+        const std::shared_ptr<Shoot> &stub = plantarchitecture->getPlantShoot(plantID, entry.stubID);
+        for (auto &petiole: stub->phytomers.front()->axillary_vegetative_buds) {
+            for (auto &vbud: petiole) {
+                if (vbud.shoot_ID == uint(-1)) {
+                    vbud.shoot_type_label = "renewal";
+                    Phytomer::setVegetativeBudState(BUD_ACTIVE, vbud);
+                }
+            }
+        }
+    }
+
+    if (!leader.meristem_is_alive) {
+        releaseBudsBelowCut(leader, uint(leader.phytomers.size()), apple_fruitingwall_buds_released_at_heading, "branch");
+    }
+}
+
+void AppleFruitingWallPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
+
+    ApplePhytomerCreationFunction(phytomer, shoot_node_index, parent_shoot_node_index, shoot_max_nodes, plant_age);
+
+    // The basal node of a lateral is blind: it never grows a shoot or a spur, which keeps the base of every branch clean. Its bud is the
+    // one a bevel-cut stub regrows from, which appleFruitingWallSummerTraining() wakes explicitly.
+    if (shoot_node_index == 0 && phytomer->parent_shoot_ptr->parent_shoot_ID >= 0) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        for (auto &petiole: phytomer->axillary_vegetative_buds) {
+            for (auto &vbud: petiole) {
+                vbud.shoot_type_label = "spur";
+            }
+        }
+    }
+}
+
+void AppleFruitingWallPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
+
+    applePhytomerCallback(phytomer, phytomer->parent_shoot_ptr->parent_shoot_ID < 0 ? apple_fruitingwall_leader_spur_fraction : apple_fruitingwall_spur_fraction);
+
+    // The training rules act on the whole plant once per time step, from the tip phytomer of the leader. Seasons are read from the
+    // leader's own dormancy flag (see PistachioPhytomerCallbackFunction()).
+    Shoot &leader = *phytomer->parent_shoot_ptr;
+    if (leader.parent_shoot_ID >= 0 || leader.phytomers.empty() || phytomer != leader.phytomers.back()) {
+        return;
+    }
+
+    if (leader.isdormant) {
+        appleFruitingWallWinterPruning(leader, appleFruitingWallDimensions(leader.plantarchitecture_ptr, leader.plantID));
+    } else {
+        appleFruitingWallSummerTraining(leader);
     }
 }
 
@@ -1679,61 +2097,6 @@ static constexpr uint pistachio_buds_released_per_cut = 2;
 static constexpr uint pistachio_buds_released_at_tipping = 5;
 //! Fraction of the lateral vegetative buds left unbroken on a limb's year-old wood that grow a spur (see growSpursFromUnbrokenBuds()).
 static constexpr float pistachio_spur_fraction = 0.f;
-//! Number of nodes to keep so that a shoot is cut back to about `length` metres (the first node whose far end reaches that length is kept).
-static uint pistachioNodesToKeep(const Shoot &shoot, float length) {
-    float arc = 0;
-    bool first_vertex = true;
-    helios::vec3 previous;
-    for (uint node = 0; node < shoot.shoot_internode_vertices.size(); node++) {
-        for (const helios::vec3 &vertex: shoot.shoot_internode_vertices.at(node)) {
-            if (!first_vertex) {
-                arc += (vertex - previous).magnitude();
-            }
-            previous = vertex;
-            first_vertex = false;
-        }
-        if (arc >= length) {
-            return node + 1;
-        }
-    }
-    return uint(shoot.shoot_internode_vertices.size());
-}
-
-//! Cut a shoot back to about `length` metres, ending its growth. Returns the number of nodes kept.
-/** The cut is deferred to the end of the time step (see PlantArchCallbackEdits), but the tip is stopped at once: removing phytomers only
-    ends a shoot's growth when the removed tip already has its geometry, so a young tip could otherwise survive the cut and regrow. */
-static uint pistachioCutToLength(Shoot &shoot, float length) {
-    uint keep = pistachioNodesToKeep(shoot, length);
-    if (keep < shoot.phytomers.size()) {
-        shoot.plantarchitecture_ptr->pruneBranch(shoot.plantID, uint(shoot.ID), keep);
-        shoot.meristem_is_alive = false;
-    }
-    return keep;
-}
-
-//! Make one vegetative bud on each of the top `node_count` nodes below `keep` break, standing in for the release from apical dominance a cut causes.
-/** The bud-break probabilities cannot tell a cut from a natural shoot tip, so without this a headed shoot usually regrows from a single bud
-    or none. Only valid while the shoot is growing: a bud set active in dormancy is drawn again when dormancy breaks. Node 0 is skipped
-    (a blind node), and so are buds that have already grown a shoot. */
-static void pistachioReleaseBudsBelow(Shoot &shoot, uint keep, uint node_count) {
-    uint released = 0;
-    for (int node = int(keep) - 1; node >= 1 && released < node_count; node--) {
-        const std::shared_ptr<Phytomer> &phytomer = shoot.phytomers.at(node);
-        bool released_here = false;
-        for (auto &petiole: phytomer->axillary_vegetative_buds) {
-            for (auto &vbud: petiole) {
-                if (!released_here && vbud.shoot_ID == uint(-1)) {
-                    // A bud already passed over for a spur (see growSpursFromUnbrokenBuds()) is growing a limb after all.
-                    vbud.shoot_type_label = "proleptic";
-                    Phytomer::setVegetativeBudState(BUD_ACTIVE, vbud);
-                    released_here = true;
-                }
-            }
-        }
-        released++;
-    }
-}
-
 void PistachioPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 
     growSpursFromUnbrokenBuds(phytomer, pistachio_spur_fraction);
@@ -1763,7 +2126,7 @@ void PistachioPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
     // once those buds have grown shoots. (Scaffolds are in their first dormancy cycle from planting, secondaries from their first winter.)
     if ((is_scaffold || is_secondary) && !shoot.meristem_is_alive && !shoot.isdormant && shoot.dormancy_cycles == 1) {
         const uint buds_released = is_scaffold ? pistachio_buds_released_at_tipping : pistachio_buds_released_per_cut;
-        pistachioReleaseBudsBelow(shoot, uint(shoot.phytomers.size()), buds_released);
+        releaseBudsBelowCut(shoot, uint(shoot.phytomers.size()), buds_released, "proleptic");
 
         // The shoots that grow from those buds are released from apical dominance, so they grow as leaders of the fork rather than as
         // laterals: each gets the full internode length of its shoot type. Without this only the top one did (a new shoot's internode
@@ -1781,7 +2144,7 @@ void PistachioPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
         // Tip each scaffold once, in the season it reaches the tipping length. Tipping removes the growing tip even when the node reaching
         // the tipping length is the tip itself and nothing is cut off.
         if (shoot.meristem_is_alive && !shoot.isdormant && shoot.calculateShootLength() >= pistachio_scaffold_tip_length) {
-            static_cast<void>(pistachioCutToLength(shoot, pistachio_scaffold_tip_length));
+            static_cast<void>(cutShootToLength(shoot, pistachio_scaffold_tip_length));
             shoot.meristem_is_alive = false;
         }
 
@@ -1798,7 +2161,7 @@ void PistachioPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
                 if (i >= pistachio_secondaries_per_scaffold) {
                     plantarchitecture->pruneBranch(shoot.plantID, secondaries.at(i).second, 0);
                 } else {
-                    static_cast<void>(pistachioCutToLength(*secondary, pistachio_secondary_head_length));
+                    static_cast<void>(cutShootToLength(*secondary, pistachio_secondary_head_length));
                 }
             }
         }

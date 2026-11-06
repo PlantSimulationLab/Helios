@@ -698,6 +698,90 @@ std::string PlantArchitecture::resolveTextureFile(const std::string &texture_fil
     return ""; // Never reached
 }
 
+void PlantArchitecture::recordSpectralClassMap(helios::Context *context, const std::vector<uint> &UUIDs, const std::string &texture_file, const std::string &class_map_file, const std::string &organ, const std::string &remedy) {
+    const std::string class_map = resolveTextureFile(class_map_file);
+
+    // A class map is read once: this is called for every leaf and every internode created, and reading the image each time cost ten times the growth.
+    struct ClassMapImage {
+        int2 size;
+        std::vector<uint16_t> classes;
+    };
+    static std::map<std::string, ClassMapImage> class_map_cache;
+    auto cached = class_map_cache.find(class_map);
+    if (cached == class_map_cache.end()) {
+        uint map_width, map_height;
+        ClassMapImage image;
+        helios::readPNGSingleChannel(class_map, map_width, map_height, image.classes);
+        image.size = make_int2(int(map_width), int(map_height));
+        cached = class_map_cache.emplace(class_map, std::move(image)).first;
+    }
+    const int2 map_size = cached->second.size;
+    const std::vector<uint16_t> &classes = cached->second.classes;
+
+    std::vector<uint> textured_UUIDs;
+    for (uint UUID: UUIDs) {
+        const std::string &file = context->getPrimitiveTextureFile(UUID);
+        if (file.empty() || (!texture_file.empty() && file != texture_file)) {
+            continue;
+        }
+        textured_UUIDs.push_back(UUID);
+    }
+    if (textured_UUIDs.empty()) {
+        return;
+    }
+
+    // Checked here, so that a class map not made for this texture is reported as such rather than when the spectral texture is assigned
+    const std::string texture = context->getPrimitiveTextureFile(textured_UUIDs.front());
+    const int2 texture_size = context->getPrimitiveTextureSize(textured_UUIDs.front());
+    if (texture_size.x != map_size.x || texture_size.y != map_size.y) {
+        helios_runtime_error("ERROR (PlantArchitecture): The " + organ + " class map " + class_map + " is " + std::to_string(map_size.x) + " x " + std::to_string(map_size.y) + " texels, but the " + organ + " texture " + texture + " is " +
+                             std::to_string(texture_size.x) + " x " + std::to_string(texture_size.y) + "." + remedy);
+    }
+    const bool has_transparency = context->primitiveTextureHasTransparencyChannel(textured_UUIDs.front());
+    if (has_transparency) {
+        const std::vector<std::vector<bool>> *opaque = context->getPrimitiveTextureTransparencyData(textured_UUIDs.front());
+        for (int row = 0; row < map_size.y; row++) {
+            for (int column = 0; column < map_size.x; column++) {
+                if (opaque->at(row).at(column) == (classes.at(size_t(row) * map_size.x + column) == 0)) {
+                    helios_runtime_error("ERROR (PlantArchitecture): The " + organ + " class map " + class_map + " does not match the transparency of the " + organ + " texture " + texture + " (at column " + std::to_string(column) + ", row " +
+                                         std::to_string(row) + "): class 0 must mark exactly its transparent texels." + remedy);
+                }
+            }
+        }
+    } else {
+        for (size_t texel = 0; texel < classes.size(); texel++) {
+            if (classes.at(texel) == 0) {
+                helios_runtime_error("ERROR (PlantArchitecture): The " + organ + " class map " + class_map + " has a texel of class 0 (at column " + std::to_string(texel % map_size.x) + ", row " + std::to_string(texel / map_size.x) +
+                                     "), but the " + organ + " texture " + texture + " has no transparency: every texel must have a class." + remedy);
+            }
+        }
+    }
+
+    for (uint UUID: textured_UUIDs) {
+        if (context->doesPrimitiveDataExist(UUID, "spectral_class_map")) {
+            continue;
+        }
+        if (context->getPrimitiveTextureFile(UUID) != texture) {
+            helios_runtime_error("ERROR (PlantArchitecture): The " + organ + " class map " + class_map + " was made for the texture " + texture + ", but the " + organ + " is also mapped with " + context->getPrimitiveTextureFile(UUID) + "." + remedy);
+        }
+        // Every texel of a texture without transparency has a class, so every triangle covers one; only a triangle of a texture with
+        // transparency can lie wholly on transparent texels, and the test (which clips every texel cell under the triangle) is costly on
+        // the thousands of triangles of a tube.
+        if (!has_transparency || !helios::classMapAreaFractions(classes, map_size, context->getPrimitiveTextureUV(UUID)).empty()) {
+            context->setPrimitiveData(UUID, "spectral_class_map", class_map);
+        }
+    }
+}
+
+//! Record the fruit prototype's class map (InflorescenceParameters::fruit_class_map_file) on its textured triangles; every fruit copied from the prototype then carries it.
+static void recordFruitClassMap(helios::Context *context, uint objID_fruit, const PhytomerParameters &params) {
+    if (params.inflorescence.fruit_class_map_file.empty()) {
+        return;
+    }
+    PlantArchitecture::recordSpectralClassMap(context, context->getObjectPrimitiveUUIDs(objID_fruit), "", params.inflorescence.fruit_class_map_file, "fruit",
+                                              " A class map is made for one texture (see utilities/leaf_class_maps). If the fruit prototype or its texture was changed, clear InflorescenceParameters::fruit_class_map_file, or set it to a class map made for the new texture.");
+}
+
 LeafPrototype::LeafPrototype(std::minstd_rand0 *generator) : generator(generator) {
     leaf_aspect_ratio.initialize(1.f, generator);
     midrib_fold_fraction.initialize(0.f, generator);
@@ -1427,6 +1511,9 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
         context_ptr->deleteObject(fbud.peduncle_objIDs);
         fbud.peduncle_objIDs.resize(0);
     }
+    // The peduncle that had been swung out of a branch is gone; a dead bud keeps no swing and a rebuilt one starts unswung (see applyPeduncleSwing())
+    fbud.contact_swing_axis = make_vec3(0, 0, 1);
+    fbud.contact_swing_angle = 0.f;
 
     fbud.state = state;
 
@@ -3108,6 +3195,15 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         // Resolve internode texture path (allows users to specify simple paths like "OliveBark.jpg")
         std::string resolved_internode_texture = PlantArchitecture::resolveTextureFile(phytomer_parameters.internode.image_texture);
 
+        // The class map of the bark texture, recorded on the tube's new triangles (those added earlier already carry it) for the radiation model to give the bark's parts their own spectra.
+        auto recordInternodeClassMap = [&](const std::string &texture) {
+            if (texture.empty() || phytomer_parameters.internode.image_class_map_file.empty()) {
+                return;
+            }
+            PlantArchitecture::recordSpectralClassMap(context_ptr, context_ptr->getObjectPrimitiveUUIDs(parent_shoot->internode_tube_objID), texture, phytomer_parameters.internode.image_class_map_file, "internode",
+                                                      " A class map is made for one texture (see utilities/leaf_class_maps). If the internode texture was changed, clear InternodeParameters::image_class_map_file, or set it to a class map made for the new texture.");
+        };
+
         if (!context_ptr->doesObjectExist(parent_shoot->internode_tube_objID)) {
             // first internode on shoot
             if (!resolved_internode_texture.empty()) {
@@ -3118,6 +3214,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(parent_shoot->internode_tube_objID), "object_label", "shoot");
             std::string stem_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_stem";
             plantarchitecture_ptr->nameOrganMaterials(parent_shoot->internode_tube_objID, stem_material_name);
+            recordInternodeClassMap(resolved_internode_texture);
         } else {
             // appending internode to shoot
             for (int inode_segment = 1; inode_segment <= Ndiv_internode_length; inode_segment++) {
@@ -3132,6 +3229,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             // The appended segments are created with automatic materials; they take the shoot's stem material.
             std::string stem_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_stem";
             plantarchitecture_ptr->nameOrganMaterials(parent_shoot->internode_tube_objID, stem_material_name);
+            recordInternodeClassMap(resolved_internode_texture);
         }
     }
 
@@ -3483,6 +3581,7 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
             std::string fruit_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_fruit";
             plantarchitecture_ptr->nameOrganMaterials(objID_fruit, fruit_material_name);
             makeClosedFruitSurfacesOneSided(context_ptr, objID_fruit, fruit_material_name);
+            recordFruitClassMap(context_ptr, objID_fruit, phytomer_parameters);
         }
     } else {
         // Flower (open or closed)
@@ -3610,6 +3709,7 @@ void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerP
                 objID_fruit = params.inflorescence.fruit_prototype_function(context_ptr, 1, sampleOrganBuildParameters(build_parameters));
                 nameOrganMaterials(objID_fruit, plant_name + "_fruit");
                 makeClosedFruitSurfacesOneSided(context_ptr, objID_fruit, plant_name + "_fruit");
+                recordFruitClassMap(context_ptr, objID_fruit, params);
                 context_ptr->hideObject(objID_fruit);
             }
         }
@@ -3724,18 +3824,15 @@ void Phytomer::updatePeduncleRadii() {
                 //
                 // The anchor is measured from the rendered geometry, which is what has to be placed correctly. Phytomer::setPetioleBase() and Phytomer::setLeafScaleFraction() both translate peduncle
                 // objects by a shift derived from the PETIOLE base -- correct for an axillary bud, which sits there, and wrong for a terminal bud, which is anchored to the internode tip.
-                vec3 lower_corner;
-                vec3 upper_corner;
-                context_ptr->getObjectBoundingBox(objID, lower_corner, upper_corner);
-
-                // The peduncle grows upward from its base, so the bottom of its bounding box is where it attaches to the culm.
-                const vec3 rendered_base = make_vec3(0.5f * (lower_corner.x + upper_corner.x), 0.5f * (lower_corner.y + upper_corner.y), lower_corner.z);
-                const vec3 anchor_shift = fbud.base_position - rendered_base;
-                if (anchor_shift.magnitude() > 1e-6f) {
-                    // Rewritten through the node list, which Context::setTubeNodes() takes in world coordinates and rebuilds the primitives from.
-                    std::vector<vec3> nodes = context_ptr->getTubeObjectNodes(objID);
-                    if (!nodes.empty()) {
-                        const vec3 node_base = nodes.front();
+                //
+                // The attachment is the tube's first node, whatever direction the peduncle leaves in. Taking the bottom of the bounding box instead assumed the peduncle rises from its lowest point,
+                // which a tilted or drooping pedicel, or one swung out of a branch (see applyPeduncleSwing()), does not; such tubes were then rebuilt on every time step.
+                std::vector<vec3> nodes = context_ptr->getTubeObjectNodes(objID);
+                if (!nodes.empty()) {
+                    const vec3 node_base = nodes.front();
+                    const vec3 anchor_shift = fbud.base_position - node_base;
+                    if (anchor_shift.magnitude() > 1e-6f) {
+                        // Rewritten through the node list, which Context::setTubeNodes() takes in world coordinates and rebuilds the primitives from.
                         for (vec3 &node: nodes) {
                             node = fbud.base_position + (node - node_base);
                         }
@@ -3753,6 +3850,9 @@ void Phytomer::updatePeduncleRadii() {
 
 void Phytomer::updateInflorescence(FloralBud &fbud) {
     plantarchitecture_ptr->invalidateOrganIndex();
+    // The peduncle is rebuilt here from the bud's base, so any swing it had been given out of a branch (see applyPeduncleSwing()) goes with it.
+    fbud.contact_swing_axis = make_vec3(0, 0, 1);
+    fbud.contact_swing_angle = 0.f;
     // Assign the member rather than a local of the same name, so that whether peduncle geometry was
     // actually built here is the same flag consulted later when that geometry is deleted.
     this->build_context_geometry_peduncle = plantarchitecture_ptr->build_context_geometry_peduncle;
@@ -5822,7 +5922,7 @@ void Phytomer::setPetioleShape(uint petiole_index, const helios::vec3 &outward_d
     rebuildPetioleLeaves(petiole_index, uint(leaf_objIDs.at(petiole_index).size()));
 }
 
-void Phytomer::setPetioleLeaflets(uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale) {
+void Phytomer::setPetioleLeaflets(uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale, float intercalary_leaflet_scale) {
     if (petiole_index >= leaf_objIDs.size()) {
         helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeaflets): Petiole index of " + std::to_string(petiole_index) + " was given, but this phytomer has " + std::to_string(leaf_objIDs.size()) + " petioles.");
     }
@@ -5844,9 +5944,16 @@ void Phytomer::setPetioleLeaflets(uint petiole_index, uint leaf_count, float lea
                              " leaflets beyond the base of the petiole. The most this count allows is " + std::to_string(clampOffset(int(leaf_count), leaflet_offset)) + ".");
     }
 
+    if (std::isnan(intercalary_leaflet_scale)) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeaflets): The intercalary leaflet scale must be a number; give a negative value to keep the phytomer's own.");
+    }
+
     phytomer_parameters.leaf.leaflet_offset = leaflet_offset;
     phytomer_parameters.leaf.leaflet_scale = leaflet_scale;
     phytomer_parameters.leaf.prototype_scale = prototype_scale;
+    if (intercalary_leaflet_scale >= 0.f) {
+        phytomer_parameters.leaf.intercalary_leaflet_scale = intercalary_leaflet_scale;
+    }
     rebuildPetioleLeaves(petiole_index, leaf_count);
 }
 
@@ -5898,8 +6005,21 @@ void Phytomer::rebuildPetioleLeaves(uint petiole_index, uint leaf_count) {
         helios_runtime_error("ERROR (PlantArchitecture::rebuildPetioleLeaves): Petiole " + std::to_string(petiole_index) + " cannot carry " + std::to_string(leaf_count) + " leaves.");
     }
 
-    // Pin the growth fraction so that leaf_size_max is the fully-elongated size, as it is for prescribed leaves.
-    lockPetioleScale(petiole_index);
+    // A leaf still expanding on a phytomer whose geometry nobody prescribed keeps growing: its leaflets are built at their mature size times how far it has expanded, leaf_size_max stays the mature size, and
+    // its petiole keeps elongating. A phytomer creation function that lays out each new leaf with its own leaflets calls this on a phytomer a moment old, and pinning it there froze the leaf at full size on
+    // the day it appeared and its petiole at the length it had then. Anything else -- a prescribed leaf, a petiole placed by setPetioleNodePositions(), a leaf already fully expanded -- is pinned so that
+    // leaf_size_max is the fully-elongated size and advanceTime() leaves the geometry where it was put.
+    bool prescribed = false;
+    if (petiole_index < leaf_pose_prescribed.size()) {
+        for (const bool p: leaf_pose_prescribed.at(petiole_index)) {
+            prescribed = prescribed || p;
+        }
+    }
+    const bool still_growing = !prescribed && current_leaf_scale_factor.size() > petiole_index && current_leaf_scale_factor.at(petiole_index) < 1.f;
+    if (!still_growing) {
+        lockPetioleScale(petiole_index);
+    }
+    const float expansion = still_growing ? current_leaf_scale_factor.at(petiole_index) : 1.f;
 
     for (const uint objID: leaf_objIDs.at(petiole_index)) {
         if (context_ptr->doesObjectExist(objID)) {
@@ -5948,7 +6068,7 @@ void Phytomer::rebuildPetioleLeaves(uint petiole_index, uint leaf_count) {
         labelLeafPrototype(objID_leaf);
         plantarchitecture_ptr->nameOrganMaterials(objID_leaf, material_base_name);
         leaf_size_max.at(petiole_index).at(leaf) = size;
-        context_ptr->scaleObject(objID_leaf, size * make_vec3(1, 1, 1));
+        context_ptr->scaleObject(objID_leaf, size * expansion * make_vec3(1, 1, 1));
 
         const float compound_rotation = compoundLeafRotation(int(leaf_count), int(leaf), leaflet_offset_val);
         // This leaflet's own offset from the leaf's angles, if it has one (setPetioleLeafletAngleOffsets())
@@ -6244,6 +6364,8 @@ void Phytomer::deletePhytomer(std::vector<uint> *detached_objIDs) {
                     fbud.peduncle_objIDs.clear();
                     fbud.inflorescence_objIDs.clear();
                     fbud.inflorescence_bases.clear();
+                    fbud.inflorescence_rotation.clear();
+                    fbud.inflorescence_base_scales.clear();
                     continue;
                 }
                 for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
@@ -6251,6 +6373,13 @@ void Phytomer::deletePhytomer(std::vector<uint> *detached_objIDs) {
                     context_ptr->deleteObject(objID);
                     fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
                     fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+                    // The per-fruit records run in parallel with the objects, so they go with them
+                    if (p < int(fbud.inflorescence_rotation.size())) {
+                        fbud.inflorescence_rotation.erase(fbud.inflorescence_rotation.begin() + p);
+                    }
+                    if (p < int(fbud.inflorescence_base_scales.size())) {
+                        fbud.inflorescence_base_scales.erase(fbud.inflorescence_base_scales.begin() + p);
+                    }
                 }
                 for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
                     context_ptr->deleteObject(fbud.peduncle_objIDs);
@@ -6258,6 +6387,8 @@ void Phytomer::deletePhytomer(std::vector<uint> *detached_objIDs) {
                     fbud.peduncle_objIDs.clear();
                     fbud.inflorescence_objIDs.clear();
                     fbud.inflorescence_bases.clear();
+                    fbud.inflorescence_rotation.clear();
+                    fbud.inflorescence_base_scales.clear();
                     break;
                 }
             }
@@ -7042,6 +7173,13 @@ void PlantArchitecture::pruneGroundCollisions(uint plantID) {
                             context_ptr->deleteObject(objID);
                             fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
                             fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+                            // The per-fruit records run in parallel with the objects, so they go with them
+                            if (p < int(fbud.inflorescence_rotation.size())) {
+                                fbud.inflorescence_rotation.erase(fbud.inflorescence_rotation.begin() + p);
+                            }
+                            if (p < int(fbud.inflorescence_base_scales.size())) {
+                                fbud.inflorescence_base_scales.erase(fbud.inflorescence_base_scales.begin() + p);
+                            }
                         }
                     }
                     for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
@@ -7052,6 +7190,8 @@ void PlantArchitecture::pruneGroundCollisions(uint plantID) {
                             fbud.peduncle_objIDs.clear();
                             fbud.inflorescence_objIDs.clear();
                             fbud.inflorescence_bases.clear();
+                            fbud.inflorescence_rotation.clear();
+                            fbud.inflorescence_base_scales.clear();
                             break;
                         }
                     }
@@ -7184,7 +7324,8 @@ void PlantArchitecture::setPetioleLeafShape(uint plantID, uint shootID, uint nod
     parent_shoot->phytomers.at(node_index)->setPetioleLeafShape(petiole_index, aspect_ratio, longitudinal_curvature, lateral_curvature, midrib_fold_fraction);
 }
 
-void PlantArchitecture::setPetioleLeaflets(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale) {
+void PlantArchitecture::setPetioleLeaflets(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale,
+                                           float intercalary_leaflet_scale) {
     validateShootID(plantID, shootID, "setPetioleLeaflets");
 
     const auto &parent_shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
@@ -7192,7 +7333,7 @@ void PlantArchitecture::setPetioleLeaflets(uint plantID, uint shootID, uint node
         helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeaflets): Shoot " + std::to_string(shootID) + " does not have a node " + std::to_string(node_index) + "; it has " + std::to_string(parent_shoot->phytomers.size()) + " nodes.");
     }
 
-    parent_shoot->phytomers.at(node_index)->setPetioleLeaflets(petiole_index, leaf_count, leaflet_offset, leaflet_scale, prototype_scale);
+    parent_shoot->phytomers.at(node_index)->setPetioleLeaflets(petiole_index, leaf_count, leaflet_offset, leaflet_scale, prototype_scale, intercalary_leaflet_scale);
 }
 
 void PlantArchitecture::setPlantBasePosition(uint plantID, const helios::vec3 &base_position) {
@@ -11547,6 +11688,12 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
             // Reset collision avoidance flag for next timestep
             collision_avoidance_applied = false;
 
+            // *** fruit-branch collision avoidance *** //
+            // After the node update, so that the internode skeleton and the fruit positions are those of this time step.
+            if (fruit_branch_collision_enabled) {
+                resolveFruitBranchCollisions(plantID, dt_max_days);
+            }
+
             // *** ground collision detection *** //
             if (ground_clipping_height != -99999) {
                 pruneGroundCollisions(plantID);
@@ -11615,6 +11762,11 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
     // Adjust fruit positions to avoid solid obstacle collisions
     adjustFruitForObstacleCollision();
+
+    // Drop the fruit-branch contact caches of fruit that no longer exist (harvested, dropped or pruned during this call)
+    if (fruit_branch_collision_enabled) {
+        pruneFruitContactCaches();
+    }
 
     // Fallback collision detection: prune any objects that still intersect solid boundaries
     if (solid_obstacle_pruning_enabled) {
@@ -11935,6 +12087,9 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
         progress_bar.update();
     }
 
+    // The rotations above are not recorded in the floral buds, so any fruit-branch contact proxies describe poses the fruit no longer have. Dropped here, they are rebuilt from the meshes at the next check.
+    fruit_contact_proxies.clear();
+
     // Ensure progress bar shows 100% completion
     progress_bar.finish();
 }
@@ -12033,6 +12188,13 @@ void PlantArchitecture::pruneSolidBoundaryCollisions() {
                                 context_ptr->deleteObject(objID);
                                 fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
                                 fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+                                // The per-fruit records run in parallel with the objects, so they go with them
+                                if (p < int(fbud.inflorescence_rotation.size())) {
+                                    fbud.inflorescence_rotation.erase(fbud.inflorescence_rotation.begin() + p);
+                                }
+                                if (p < int(fbud.inflorescence_base_scales.size())) {
+                                    fbud.inflorescence_base_scales.erase(fbud.inflorescence_base_scales.begin() + p);
+                                }
                             }
                         }
                         // Check peduncle objects
@@ -12045,6 +12207,8 @@ void PlantArchitecture::pruneSolidBoundaryCollisions() {
                                 fbud.peduncle_objIDs.clear();
                                 fbud.inflorescence_objIDs.clear();
                                 fbud.inflorescence_bases.clear();
+                                fbud.inflorescence_rotation.clear();
+                                fbud.inflorescence_base_scales.clear();
                                 break;
                             }
                         }

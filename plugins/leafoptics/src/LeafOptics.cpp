@@ -514,6 +514,9 @@ void LeafOptics::initializeSpeciesLibrary() {
 }
 
 void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties, const std::string &label) {
+    // Checked first, so that a class map that cannot be used leaves every primitive as it was
+    const std::map<std::string, std::vector<uint>> UUIDs_by_class_map = collectClassMaps(UUIDs);
+
     std::vector<vec2> reflectivities_fit;
     std::vector<vec2> transmissivities_fit;
     getLeafSpectra(leafproperties, reflectivities_fit, transmissivities_fit);
@@ -553,6 +556,130 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties 
 
     // Store parameters in map for later retrieval
     spectrum_parameters_map[label] = leafproperties;
+
+    assignClassMapSpectra(UUIDs_by_class_map, leafproperties, label);
+}
+
+const std::vector<LeafOptics::LeafClassDefinition> &LeafOptics::classDefinitions(const std::string &class_map_file) {
+    const auto cached = class_map_definitions.find(class_map_file);
+    if (cached != class_map_definitions.end()) {
+        return cached->second;
+    }
+    if (!std::filesystem::exists(class_map_file)) {
+        helios_runtime_error("ERROR (LeafOptics): The class map '" + class_map_file + "' given by the primitive data \"spectral_class_map\" does not exist.");
+    }
+    const std::string definitions_file = std::filesystem::path(class_map_file).replace_extension(".xml").string();
+    if (!std::filesystem::exists(definitions_file)) {
+        helios_runtime_error("ERROR (LeafOptics): The class map '" + class_map_file + "' has no class definitions. They must be in the XML file '" + definitions_file + "' (see the LeafOptics documentation, \"Leaves with a class map\").");
+    }
+    pugi::xml_document document;
+    const pugi::xml_parse_result parsed = document.load_file(definitions_file.c_str());
+    if (!parsed) {
+        helios_runtime_error("ERROR (LeafOptics): The class definitions '" + definitions_file + "' could not be read: " + std::string(parsed.description()) + ".");
+    }
+    const pugi::xml_node map_node = document.child("helios").child("leaf_class_map");
+    if (!map_node) {
+        helios_runtime_error("ERROR (LeafOptics): The class definitions '" + definitions_file + "' have no <leaf_class_map> element inside <helios>.");
+    }
+    std::map<int, LeafClassDefinition> by_id;
+    for (const pugi::xml_node class_node: map_node.children("class")) {
+        const pugi::xml_attribute id = class_node.attribute("id");
+        const pugi::xml_attribute chlorophyll = class_node.attribute("chlorophyll_scale");
+        const pugi::xml_attribute visible = class_node.attribute("visible_reflectance_scale");
+        if (!id || !chlorophyll || !visible) {
+            helios_runtime_error("ERROR (LeafOptics): A class in '" + definitions_file + "' lacks one of the attributes id, chlorophyll_scale and visible_reflectance_scale.");
+        }
+        const LeafClassDefinition definition{chlorophyll.as_float(-1.f), visible.as_float(-1.f)};
+        if (!(definition.chlorophyll_scale > 0.f) || !std::isfinite(definition.chlorophyll_scale) || !(definition.visible_reflectance_scale > 0.f) || !std::isfinite(definition.visible_reflectance_scale)) {
+            helios_runtime_error("ERROR (LeafOptics): Class " + std::string(id.value()) + " in '" + definitions_file + "' has a chlorophyll_scale or visible_reflectance_scale that is not a positive number.");
+        }
+        if (!by_id.emplace(id.as_int(0), definition).second) {
+            helios_runtime_error("ERROR (LeafOptics): Class " + std::string(id.value()) + " is defined twice in '" + definitions_file + "'.");
+        }
+    }
+    std::vector<LeafClassDefinition> definitions;
+    for (const auto &[id, definition]: by_id) {
+        if (id != int(definitions.size()) + 1) {
+            helios_runtime_error("ERROR (LeafOptics): The classes in '" + definitions_file + "' must be numbered 1, 2, 3 and so on without gaps, but class " + std::to_string(definitions.size() + 1) + " is missing.");
+        }
+        definitions.push_back(definition);
+    }
+    uint width, height;
+    std::vector<uint16_t> classes;
+    helios::readPNGSingleChannel(class_map_file, width, height, classes);
+    const uint16_t highest = classes.empty() ? 0 : *std::max_element(classes.begin(), classes.end());
+    if (highest > definitions.size()) {
+        helios_runtime_error("ERROR (LeafOptics): The class map '" + class_map_file + "' has class " + std::to_string(highest) + ", but '" + definitions_file + "' defines only " + std::to_string(definitions.size()) + " classes.");
+    }
+    return class_map_definitions.emplace(class_map_file, definitions).first->second;
+}
+
+std::map<std::string, std::vector<uint>> LeafOptics::collectClassMaps(const std::vector<uint> &UUIDs) {
+    std::map<std::string, std::vector<uint>> UUIDs_by_class_map;
+    for (uint UUID: UUIDs) {
+        if (!context->doesPrimitiveDataExist(UUID, "spectral_class_map")) {
+            continue;
+        }
+        if (context->getPrimitiveDataType("spectral_class_map") != HELIOS_TYPE_STRING) {
+            helios_runtime_error("ERROR (LeafOptics): The primitive data \"spectral_class_map\" must be a string (the path of a class map).");
+        }
+        std::string class_map_file;
+        context->getPrimitiveData(UUID, "spectral_class_map", class_map_file);
+        UUIDs_by_class_map[class_map_file].push_back(UUID);
+    }
+    for (const auto &entry: UUIDs_by_class_map) {
+        classDefinitions(entry.first);
+    }
+    return UUIDs_by_class_map;
+}
+
+void LeafOptics::assignClassMapSpectra(const std::map<std::string, std::vector<uint>> &UUIDs_by_class_map, const LeafOpticsProperties &properties, const std::string &label) {
+    // Only the properties PROSPECT uses decide whether a palette's spectra must be recomputed
+    auto same_properties = [](const LeafOpticsProperties &a, const LeafOpticsProperties &b) {
+        return a.numberlayers == b.numberlayers && a.brownpigments == b.brownpigments && a.chlorophyllcontent == b.chlorophyllcontent && a.carotenoidcontent == b.carotenoidcontent && a.anthocyancontent == b.anthocyancontent &&
+               a.watermass == b.watermass && a.drymass == b.drymass && a.protein == b.protein && a.carbonconstituents == b.carbonconstituents;
+    };
+    for (const auto &[class_map_file, UUIDs]: UUIDs_by_class_map) {
+        const std::vector<LeafClassDefinition> &definitions = classDefinitions(class_map_file);
+        const std::string stem = std::filesystem::path(class_map_file).stem().string();
+        const std::string palette_label = "leaf_" + label + "_" + stem;
+        std::vector<SpectralTextureClass> palette;
+        const auto built = class_palette_properties.find(palette_label);
+        const bool up_to_date = built != class_palette_properties.end() && same_properties(built->second, properties);
+        for (size_t k = 0; k < definitions.size(); k++) {
+            const std::string suffix = label + "_" + stem + "_class" + std::to_string(k + 1);
+            const std::string reflectivity_label = "leaf_reflectivity_" + suffix;
+            const std::string transmissivity_label = "leaf_transmissivity_" + suffix;
+            if (!up_to_date) {
+                LeafOpticsProperties class_properties = properties;
+                class_properties.chlorophyllcontent *= definitions[k].chlorophyll_scale;
+                class_properties.carotenoidcontent *= definitions[k].chlorophyll_scale;
+                std::vector<vec2> reflectivity, transmissivity;
+                getLeafSpectra(class_properties, reflectivity, transmissivity);
+                // The visible reflectance is scaled below 700 nm, blending to no scaling at 750 nm; where that brightens it, no further than reflectivity plus transmissivity of 0.98
+                const float scale = definitions[k].visible_reflectance_scale;
+                for (size_t i = 0; i < reflectivity.size(); i++) {
+                    const float weight = std::clamp((750.f - reflectivity[i].x) / 50.f, 0.f, 1.f);
+                    const float factor = 1.f + weight * (scale - 1.f);
+                    if (factor != 1.f) {
+                        reflectivity[i].y *= factor;
+                        if (factor > 1.f) {
+                            reflectivity[i].y = std::min(reflectivity[i].y, 0.98f - transmissivity.at(i).y);
+                        }
+                    }
+                }
+                context->setGlobalData(reflectivity_label.c_str(), reflectivity);
+                context->setGlobalData(transmissivity_label.c_str(), transmissivity);
+            }
+            char provenance[200];
+            std::snprintf(provenance, sizeof(provenance), "LeafOptics '%s', class %zu of %s: chlorophyll and carotenoids x %.3g, visible reflectance x %.3g", label.c_str(), k + 1, stem.c_str(), definitions[k].chlorophyll_scale,
+                          definitions[k].visible_reflectance_scale);
+            palette.push_back({reflectivity_label, transmissivity_label, provenance});
+        }
+        class_palette_properties[palette_label] = properties;
+        context->addSpectralPalette(palette_label, palette);
+        context->setPrimitiveSpectralTexture(UUIDs, class_map_file, palette_label);
+    }
 }
 
 void LeafOptics::run(const LeafOpticsProperties &leafproperties, const std::string &label) {
@@ -1076,6 +1203,12 @@ void LeafOptics::assignSpectrumToPrimitives(const std::vector<uint> &UUIDs, uint
     std::string fluspect_label = "fluspect_biochem_" + label;
     context->setPrimitiveData(UUIDs, "fluspect_spectrum", fluspect_label);
 
+    // Leaves carrying a class map get a spectral texture whose classes are derived from the bin's properties
+    const std::map<std::string, std::vector<uint>> UUIDs_by_class_map = collectClassMaps(UUIDs);
+    if (!UUIDs_by_class_map.empty()) {
+        assignClassMapSpectra(UUIDs_by_class_map, computePropertiesFromNitrogen(nitrogen_bins[bin_index].N_center, nitrogen_params), label);
+    }
+
     // Write optional primitive data if any are enabled
     if (!output_prim_data.empty()) {
         // Compute properties from the bin's nitrogen center value
@@ -1154,6 +1287,8 @@ void LeafOptics::runFromObjectData(const std::vector<uint> &UUIDs, const std::st
 }
 
 void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_Nauto &params) {
+    // Checked first, so that a class map that cannot be used leaves every primitive as it was
+    collectClassMaps(UUIDs);
     for (uint UUID: UUIDs) {
         if (object_data_mode_UUIDs.find(UUID) != object_data_mode_UUIDs.end()) {
             helios_runtime_error("ERROR (LeafOptics::run): Primitive " + std::to_string(UUID) + " is given spectra by runFromObjectData() of this LeafOptics, which would overwrite the spectra given here. Use only one of the two for a primitive.");

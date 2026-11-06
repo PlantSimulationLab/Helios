@@ -77,23 +77,44 @@ struct CameraProperties {
     //! Camera shutter speed in seconds (used for ISO-based exposure calculations). Example: 1/125 second = 0.008
     float shutter_speed;
 
-    //! Target median scene luminance for "auto" exposure, as a fraction of full scale
+    //! Target centre-weighted mean scene luminance for "auto" exposure of an RGB camera, as a fraction of full scale
     /**
-     * Auto exposure scales every band so that the median pixel luminance lands here. The default of
-     * 0.18 is the middle-grey convention, which assumes a scene whose average reflectance is that of
-     * a grey card. A canopy imaged from above is darker than that, so matching a real camera's
-     * output may need a lower value; conversely a bright scene may need a higher one.
+     * Auto exposure scales an RGB camera's image so that its centre-weighted mean luminance lands here, as a camera's meter does
+     * (\ref RadCamExposure). The luminance is that of the final linear sRGB image, after white balance and colour correction, and
+     * each pixel is weighted by exp(-(dx^2 + dy^2)), with dx and dy its offsets from the image centre in units of 0.35 of the image
+     * width and height. The default of 0.235 reproduces the exposure that real cameras choose: it was fitted, together with the
+     * tone curve (\ref CameraProperties::tone_curve), to the in-camera JPEGs of 413 camera models. A scene darker or brighter
+     * than typical (e.g. a canopy imaged from above) may call for a lower or higher value.
      *
-     * Ignored when exposure is "manual" or "ISOXXX".
+     * Ignored when exposure is "manual" or "ISOXXX", and by cameras that are not RGB cameras.
      */
-    float exposure_target = 0.18f;
+    float exposure_target = 0.235f;
 
     //! White balance mode: "auto" (default) or "off" (no white balance correction)
     /**
-     * With "auto", the red, green and blue bands (the camera's first three) are scaled so that a spectrally flat surface renders neutral under the light reaching the surfaces in view, as seen through
-     * the camera's spectral responses. See \ref RadCamWhiteBalance.
+     * With "auto", the camera's red, green and blue bands (identified as described in \ref RadCamRGBBands) are scaled so that a spectrally flat surface renders neutral under the light reaching the
+     * surfaces in view, as seen through the camera's spectral responses. See \ref RadCamWhiteBalance.
      */
     std::string white_balance;
+
+    //! Colour correction mode: "auto" (default) or "off" (keep the camera's own RGB)
+    /**
+     * With "auto", a camera whose red, green and blue bands all have spectral responses (\ref RadiationModel::setCameraSpectralResponse()) converts its images from its own RGB to linear sRGB with a
+     * 3x3 colour correction matrix, after white balance and before exposure, as a real camera does. The matrix is derived from the camera's spectral responses (see \ref RadCamColorCorrection and
+     * \ref RadiationModel::getCameraColorCorrectionMatrix()). Cameras without spectral responses, and cameras that are not RGB, are not changed. The raw camera data (global data
+     * "camera_<label>_<band>", written by \ref RadiationModel::writeCameraImageDataEXR()) is never colour corrected.
+     */
+    std::string color_correction;
+
+    //! Tone curve mode: "auto" (default) or "off" (sRGB encoding only)
+    /**
+     * With "auto", \ref RadiationModel::writeCameraImage() passes an RGB camera's image through the tone curve that real cameras apply
+     * in their JPEGs before encoding it as sRGB: it darkens shadows and rolls off highlights, which gives images the contrast of a
+     * camera's own JPEG. The curve was measured on the in-camera JPEGs of 413 camera models (\ref RadCamToneCurve) and goes with
+     * the default auto exposure. Only the written images are affected; the camera's pixel data (\ref RadiationModel::getCameraPixelData())
+     * and raw data stay linear. Cameras that are not RGB cameras are never tone mapped.
+     */
+    std::string tone_curve;
 
     /**! \brief Camera optical zoom multiplier (1.0 = no zoom, 2.0 = 2x zoom, etc.)
      *
@@ -121,13 +142,15 @@ struct CameraProperties {
         exposure = "auto";
         shutter_speed = 1.f / 125.f; // 1/125 second (standard default)
         white_balance = "auto";
+        color_correction = "auto";
+        tone_curve = "auto";
         camera_zoom = 1.0f;
     }
 
     bool operator==(const CameraProperties &rhs) const {
         return camera_resolution == rhs.camera_resolution && focal_plane_distance == rhs.focal_plane_distance && lens_focal_length == rhs.lens_focal_length && lens_diameter == rhs.lens_diameter && FOV_aspect_ratio == rhs.FOV_aspect_ratio &&
                HFOV == rhs.HFOV && sensor_width_mm == rhs.sensor_width_mm && manufacturer == rhs.manufacturer && model == rhs.model && lens_make == rhs.lens_make && lens_model == rhs.lens_model && lens_specification == rhs.lens_specification &&
-               exposure == rhs.exposure && shutter_speed == rhs.shutter_speed && white_balance == rhs.white_balance && camera_zoom == rhs.camera_zoom;
+               exposure == rhs.exposure && shutter_speed == rhs.shutter_speed && white_balance == rhs.white_balance && color_correction == rhs.color_correction && tone_curve == rhs.tone_curve && camera_zoom == rhs.camera_zoom;
     }
 };
 
@@ -214,6 +237,8 @@ struct RadiationCamera {
         exposure_target = camera_properties.exposure_target;
         shutter_speed = camera_properties.shutter_speed;
         white_balance = camera_properties.white_balance;
+        color_correction = camera_properties.color_correction;
+        tone_curve = camera_properties.tone_curve;
         camera_zoom = camera_properties.camera_zoom;
     }
 
@@ -250,12 +275,16 @@ struct RadiationCamera {
     // Exposure mode: "auto", "ISOXXX" (e.g., "ISO100"), or "manual"
     std::string exposure;
 
-    //! Target median luminance for "auto" exposure (see CameraProperties::exposure_target)
-    float exposure_target = 0.18f;
+    //! Target centre-weighted mean luminance for "auto" exposure (see CameraProperties::exposure_target)
+    float exposure_target = 0.235f;
     // Camera shutter speed in seconds
     float shutter_speed;
     // White balance mode: "auto" or "off"
     std::string white_balance;
+    //! Colour correction mode: "auto" or "off" (see CameraProperties::color_correction)
+    std::string color_correction;
+    //! Tone curve mode for written images: "auto" or "off" (see CameraProperties::tone_curve)
+    std::string tone_curve;
     // Camera optical zoom multiplier
     float camera_zoom;
     // Camera type (rgb, spectral, or thermal)
@@ -280,6 +309,16 @@ struct RadiationCamera {
 
     //! White balance factors [R,G,B] that were actually applied to pixel data ({1,1,1} if off)
     helios::vec3 applied_white_balance_factors = helios::make_vec3(1.f, 1.f, 1.f);
+
+    //! Bands rendered since the image was last processed (white balance, colour correction and exposure). RadiationModel::runBand() processes the image once every band of the camera has been rendered,
+    //! so that an image is never processed twice and an image rendered one band at a time is processed once it is complete.
+    std::set<std::string> bands_rendered_since_processing;
+
+    //! Whether the image has been processed at least once. A processed image with some, but not all, bands rendered again since is incomplete, and cannot be read (RadiationModel::requireCompleteCameraImage()).
+    bool image_processed = false;
+
+    //! Colour correction matrix (row-major 3x3) applied to the current image by the automatic colour correction; empty if the current image is not colour corrected
+    std::vector<float> applied_color_correction_matrix;
 
     //! White reference of each band rendered since the camera was last white balanced, summed over the camera's pixels
     /**
@@ -394,7 +433,8 @@ struct RadiationCamera {
     //! Apply camera exposure based on the camera's exposure setting
     /**
      * Applies exposure scaling to pixel_data based on the camera's exposure mode:
-     * - "auto": Automatic exposure using percentile-based normalization (18% gray target for RGB, per-band for spectral)
+     * - "auto": For an RGB camera (one whose red, green and blue bands are given), a centre-weighted mean luminance target (CameraProperties::exposure_target); for any other camera except a
+     *   thermal one, per-band normalization
      * - "ISOXXX" (e.g., "ISO100"): Fixed exposure based on ISO, shutter speed, and aperture settings.
      *   Calibrated to match auto-exposure at reference settings (ISO 100, 1/125s, f/2.8) for typical Helios scenes.
      *   Higher ISO/longer shutter/wider aperture → proportionally brighter.
@@ -402,25 +442,27 @@ struct RadiationCamera {
      *
      * This method should be called after rendering is complete and pixel_data is populated.
      * \param[in] context Pointer to Helios context for accessing spectral data
+     * \param[in] rgb_bands The camera's red, green and blue bands, from RadiationModel::cameraRGBBands(); empty if the camera is not an RGB camera
      */
-    void applyCameraExposure(helios::Context *context);
+    void applyCameraExposure(helios::Context *context, const std::vector<std::string> &rgb_bands);
 
     //! Apply automatic white balance correction to camera image data
     /**
      * Applies white balance correction based on the camera's white_balance setting:
-     * - "auto": Scales the first three bands (red, green, blue) so that a spectrally flat surface renders neutral under the light illuminating the scene. The scale of each band is the reciprocal of
+     * - "auto": Scales the red, green and blue bands so that a spectrally flat surface renders neutral under the light illuminating the scene. The scale of each band is the reciprocal of
      *   its white reference total (white_reference_band_totals), normalized so that the band with the largest total keeps unit gain.
      * - "off": No white balance correction applied
      *
-     * White balance is skipped for single-channel (grayscale) images, and until all three bands have been rendered since the last balance. For multi-channel images, white balance is applied
+     * White balance is skipped for cameras that are not RGB cameras (rgb_bands empty), and until all three bands have been rendered since the last balance. For multi-channel images, white balance is applied
      * simultaneously to all channels.
      * \note With "auto", if the surfaces the camera sees receive no light in one of the bands (for example, the camera sees only sky), the image is left unbalanced and the reason is returned so
      * the caller can report it as a warning.
      *
      * This method should be called after rendering and exposure adjustment are complete.
+     * \param[in] rgb_bands The camera's red, green and blue bands, from RadiationModel::cameraRGBBands(); empty if the camera is not an RGB camera
      * \return Empty if white balance was applied or was not needed; otherwise a message explaining why it was not applied.
      */
-    std::string applyCameraWhiteBalance();
+    std::string applyCameraWhiteBalance(const std::vector<std::string> &rgb_bands);
 
     //! Adjust brightness and contrast of image data
     /**
@@ -440,6 +482,16 @@ struct RadiationCamera {
      * \param[in] saturation Saturation adjustment factor (1.0 = no change, 0.0 = grayscale, >1.0 = more saturated)
      */
     void adjustSaturation(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation);
+
+    //! The typical in-camera tone curve (CameraProperties::tone_curve)
+    /**
+     * Maps linear scene values, exposed with the default auto exposure, to display-linear values in [0, 1], to which sRGB encoding is then applied. Tabulated at
+     * half-stop steps from the in-camera JPEGs of 413 camera models (raw.pixls.us samples, CC0), interpolated linearly in log2 of the input; below the table it is
+     * linear through zero, and above it the output is 1.
+     * \param[in] value Linear input value
+     * \return Display-linear output value in [0, 1]
+     */
+    static float typicalCameraToneCurve(float value);
 
     //! Converts a linear color value to sRGB color space.
     /**
@@ -532,6 +584,8 @@ struct CameraMetadata {
         float contrast_adjustment = 1.f; //!< Contrast adjustment factor (1.0 = no change)
         float exposure_gain = 1.f; //!< Exposure gain that was applied to pixel data (1.0 = no gain)
         helios::vec3 white_balance_factors = helios::make_vec3(1.f, 1.f, 1.f); //!< White balance per-channel multipliers [R,G,B] (1,1,1 = no correction)
+        std::vector<float> color_correction_matrix; //!< Colour correction matrix (row-major 3x3) applied after white balance; empty if none was applied
+        std::string tone_curve = "none"; //!< Tone curve applied to the written image: "typical camera" or "none"
         std::string color_space = "linear"; //!< Output color space: "linear" or "sRGB"
     } image_processing;
 
@@ -1258,8 +1312,8 @@ public:
     /**
      * \param[in] label Label used to reference the band
      * \param[in] depth Maximum number of scattering iterations (default is 3; depth=0 turns scattering off)
-     * \note The energy that would still be scattered after the last iteration is not dropped: the later iterations are summed as a geometric series, each primitive receiving its absorption in the last iteration times q/(1-q), where q is the ratio of
-     * the energy launched in the last two iterations. A depth of 3 to 5 is therefore usually enough for absorbed fluxes, even for strongly scattering bands.
+     * \note The energy that would still be scattered after the last iteration is not dropped: the later iterations are summed as a geometric series, each primitive receiving its absorption in the last iteration times q/(1-q), where q is the fraction
+     * of the energy launched in the last iteration that the surfaces it reaches scatter again. A depth of 3 to 5 is therefore usually enough for absorbed fluxes, even for strongly scattering bands.
      * \note Radiation camera images are not extrapolated: they include only the scattering iterations that were traced, so images of strongly scattering bands need a higher depth.
      */
     void setScatteringDepth(const std::string &label, uint depth);
@@ -1421,6 +1475,23 @@ public:
      * \param[in] camera_label Label of the camera.
      */
     void disableCameraAtmosphere(const std::string &camera_label);
+
+    //! Give primitives that carry a surface class map a spectral texture whose classes scale the surface's library spectra
+    /**
+     * A primitive whose texture has a class map, such as the bark and fruit of a PlantArchitecture library model (see InternodeParameters::image_class_map_file and
+     * InflorescenceParameters::fruit_class_map_file), carries the class map's path as the primitive data "spectral_class_map". The XML file of the same name beside the class map defines a
+     * surface class map: the labels of the reflectivity (and optionally transmissivity) spectra of the surface, from the spectral library or the Context's global data, and a reflectance_scale for
+     * each class (see \ref RadSpectralTexture). For each class map this registers the scaled spectra of its classes as global data "[spectrum]_[class map]_class[k]" (each class's reflectivity and
+     * transmissivity are kept from summing to more than 1), registers the palette "surface_[class map]", where [class map] is the class map's file name without its extension, and assigns the
+     * spectral texture to the primitives (see \ref helios::Context::setPrimitiveSpectralTexture()). Primitives without the data are left alone, as are those carrying a class map defined
+     * relative to a leaf (a <leaf_class_map>, as PlantArchitecture records on leaves), whose classes LeafOptics::run() derives from the leaf's properties; so a plant can be given whole.
+     * \param[in] UUIDs Primitives to consider.
+     * \note Call this before \ref updateGeometry(), as a spectral texture assigned after it is not seen until the geometry is updated again.
+     */
+    void applySpectralClassMaps(const std::vector<uint> &UUIDs);
+
+    //! Give every primitive in the Context that carries a surface class map a spectral texture (see \ref applySpectralClassMaps(const std::vector<uint>&))
+    void applySpectralClassMaps();
 
     //! Set the camera spectral response based on a camera available in the standard camera spectral library (radiation/spectral_data/camera_spectral_library.xml).
     /**
@@ -1813,8 +1884,22 @@ public:
      * \param[in] green_band_label Label for green channel band data
      * \param[in] blue_band_label Label for blue channel band data
      * \param[in] ccm_file_path Path to XML file containing color correction matrix
+     * \note A camera with spectral responses already colour corrects its images by default (CameraProperties::color_correction). Applying a second matrix on top of that would correct the colours
+     * twice, so this method raises an error for a camera whose current image was colour corrected automatically; set CameraProperties::color_correction to "off" for that camera to apply your own matrix.
      */
     void applyCameraColorCorrectionMatrix(const std::string &camera_label, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, const std::string &ccm_file_path);
+
+    //! Get the colour correction matrix a camera applies to its images
+    /**
+     * The matrix converts the camera's white-balanced red, green and blue to linear sRGB (\ref RadCamColorCorrection). It is derived from the camera's spectral responses: under CIE illuminant D65,
+     * it is the 3x3 matrix whose rows each sum to 1 (so that white stays white) that best maps what the camera records from the reflectance spectra shipped with the radiation plug-in (colour
+     * boards, leaves, soils, bark and fruit) to their colorimetric colour for the CIE 1931 standard observer, in the least-squares sense.
+     * \param[in] camera_label Label of the camera
+     * \return Matrix as three rows of three; pixel (r, g, b) becomes matrix * (r, g, b)
+     * \note Raises an error if the matrix is undefined: when the camera's red, green and blue bands do not all have spectral responses, or the responses do not distinguish colours (e.g. the same
+     * response in every band, or a band that responds only outside the visible range). The automatic colour correction leaves such a camera's images uncorrected and prints a warning.
+     */
+    [[nodiscard]] std::vector<std::vector<float>> getCameraColorCorrectionMatrix(const std::string &camera_label) const;
 
 
     //! Write camera data for one or more bands to a JPEG image
@@ -2112,6 +2197,12 @@ public:
 
     //! Auto-calibrate camera image using colorboard reference values
     /**
+     * Fits a colour correction matrix from the colour board patches (added with CameraCalibration) in the camera's view: the matrix that best maps, in the weighted least-squares
+     * sense, the camera's mean linear RGB over each patch to the patch's reference colour, the colorimetric linear sRGB (CIE illuminant D65, CIE 1931 2-degree observer) of the
+     * reflectance spectrum the patch was rendered with. Neutral patches count double. Patches seen by 10 pixels or fewer are left out. The corrected image is written sRGB encoded
+     * (without the tone curve of \ref writeCameraImage()), and the exported matrix maps linear camera RGB to linear sRGB, as \ref applyCameraColorCorrectionMatrix() expects.
+     * With MATRIX_3X3_AUTO, a diagonal correction is fitted instead, with a warning, if the patches in view do not determine a stable 3x3 matrix. Raises an error if no patch is in view,
+     * or with MATRIX_3X3_FORCE if fewer than 6 patches of distinct colours are.
      * \param[in] camera_label Label of the camera that generated the image
      * \param[in] red_band_label Label for red channel band data
      * \param[in] green_band_label Label for green channel band data
@@ -2121,6 +2212,8 @@ public:
      * \param[in] algorithm Color correction algorithm to use (defaults to 3x3 matrix with auto-fallback)
      * \param[in] ccm_export_file_path Optional path to export the computed color correction matrix to XML file
      * \return Path to the written corrected image file
+     * \note The matrix is fitted to the camera's own (white-balanced) RGB, as \ref applyCameraColorCorrectionMatrix() expects. If the camera's image was colour corrected automatically
+     * (CameraProperties::color_correction "auto"), that correction is undone on a copy of the data before fitting, so the result is the same as for the same camera with color_correction "off".
      */
     std::string autoCalibrateCameraImage(const std::string &camera_label, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, const std::string &output_file_path,
                                          bool print_quality_report = false, ColorCorrectionAlgorithm algorithm = ColorCorrectionAlgorithm::MATRIX_3X3_AUTO, const std::string &ccm_export_file_path = "");
@@ -2469,6 +2562,54 @@ protected:
      * \note With the Prague model, a band with a uniform camera response must have wavelength bounds
      */
     void computeCameraSky(const std::vector<std::string> &band_labels, const RadiationCamera &camera, uint camera_index, bool diffuse_rays_launched, std::vector<float> &camera_sky_radiance, std::vector<helios::vec4> &sky_pattern_params) const;
+
+    //! The red, green and blue bands of a camera, identified from their spectral responses or else their names (see \ref RadCamRGBBands)
+    /**
+     * \param[in] camera Camera whose bands are identified
+     * \param[out] not_rgb_reason Empty if the camera is an RGB camera, or is plainly not meant to be one (e.g. a multispectral camera with no visible bands); otherwise why a camera that looks like an
+     * RGB camera (camera type "rgb", exactly three bands, or bands named red, green and blue) is not treated as one, for a warning
+     * \return The {red, green, blue} band labels; empty if the camera is not an RGB camera
+     * \note Raises an error if the bands named red, green and blue have spectral responses of three different colours that do not match their names (e.g. the red and blue responses swapped).
+     */
+    [[nodiscard]] std::vector<std::string> cameraRGBBands(const RadiationCamera &camera, std::string &not_rgb_reason) const;
+
+    //! Spectra the colour correction matrices are fitted on, resampled to a common 1 nm grid; loaded on first use and kept for the life of the model
+    struct ColorCorrectionTrainingData {
+        std::vector<float> wavelengths; //!< 300-830 nm in 1 nm steps
+        std::vector<float> illuminant; //!< CIE D65
+        std::vector<float> xbar, ybar, zbar; //!< CIE 1931 2-degree colour-matching functions
+        std::vector<std::vector<float>> reflectances; //!< Colour-board, leaf, soil, bark and fruit reflectance spectra shipped with the plug-in (not the leaf transmittance spectra)
+    };
+    mutable std::unique_ptr<ColorCorrectionTrainingData> color_correction_training;
+
+    //! Load the colour correction training spectra (once) into color_correction_training
+    const ColorCorrectionTrainingData &colorCorrectionTrainingData() const;
+
+    //! Colorimetric linear sRGB of a reflectance spectrum lit by CIE illuminant D65, for the CIE 1931 2-degree observer, scaled so that a perfect white has Y = 1
+    /**
+     * The same definition of a surface's true colour as the colour correction matrices are fitted to (see getCameraColorCorrectionMatrix()).
+     * \param[in] reflectance Reflectance spectrum (wavelength in nm, reflectance as a fraction)
+     * \return Linear sRGB; components may lie outside [0, 1] for colours outside the sRGB gamut
+     */
+    [[nodiscard]] helios::vec3 colorimetricLinearSRGB(const std::vector<helios::vec2> &reflectance) const;
+
+    //! Colour correction matrix of a camera from its spectral responses (see getCameraColorCorrectionMatrix()), row-major 3x3; empty, with the reason in undefined_reason, if the camera has none
+    [[nodiscard]] std::vector<float> computeColorCorrectionMatrix(const RadiationCamera &camera, std::string &undefined_reason) const;
+
+    //! Raise an error if a camera's image is incomplete: processed once, then some but not all of its bands rendered again (RadiationCamera::bands_rendered_since_processing)
+    /**
+     * \param[in] camera_label Label of an existing camera
+     * \param[in] caller Name of the calling method, for the error message
+     */
+    void requireCompleteCameraImage(const std::string &camera_label, const std::string &caller) const;
+
+    //! Apply the automatic colour correction to a camera's complete image: colour correction "auto" and spectral responses for its red, green and blue bands
+    /**
+     * \param[in,out] camera Camera whose image is corrected
+     * \param[in] rgb_bands The camera's red, green and blue bands, from cameraRGBBands()
+     * \param[in] not_rgb_reason Why the camera is not treated as an RGB camera, from cameraRGBBands(); reported as a warning once the camera's image is complete
+     */
+    void applyAutomaticColorCorrection(RadiationCamera &camera, const std::vector<std::string> &rgb_bands, const std::string &not_rgb_reason) const;
 
     //! Apply the sensor atmosphere enabled with enableCameraAtmosphere() to the pixel data of the bands just traced for a camera
     /**

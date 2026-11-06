@@ -191,55 +191,37 @@ void SolarPosition::setSunDirection(const helios::SphericalCoord &sundirection) 
 
 float SolarPosition::getSolarFlux(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const {
     // Deprecated method - kept for backward compatibility
-    float Eb_PAR, Eb_NIR, fdiff;
-    GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
-    if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
-    }
-    return Eb_PAR + Eb_NIR;
+    const BroadbandSolarFlux flux = computeBroadbandSolarFlux(pressure_Pa, temperature_K, humidity_rel, turbidity);
+    return globalFluxNormalToSun(flux.direct_PAR + flux.direct_NIR, flux.diffuse_PAR + flux.diffuse_NIR, flux.cos_zenith);
 }
 
 float SolarPosition::getSolarFluxPAR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const {
     // Deprecated method - kept for backward compatibility
-    float Eb_PAR, Eb_NIR, fdiff;
-    GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
-    if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
-    }
-    return Eb_PAR;
+    const BroadbandSolarFlux flux = computeBroadbandSolarFlux(pressure_Pa, temperature_K, humidity_rel, turbidity);
+    return globalFluxNormalToSun(flux.direct_PAR, flux.diffuse_PAR, flux.cos_zenith);
 }
 
 float SolarPosition::getSolarFluxNIR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const {
     // Deprecated method - kept for backward compatibility
-    float Eb_PAR, Eb_NIR, fdiff;
-    GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
-    if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
-    }
-    return Eb_NIR;
+    const BroadbandSolarFlux flux = computeBroadbandSolarFlux(pressure_Pa, temperature_K, humidity_rel, turbidity);
+    return globalFluxNormalToSun(flux.direct_NIR, flux.diffuse_NIR, flux.cos_zenith);
 }
 
 float SolarPosition::getDiffuseFraction(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const {
     // Deprecated method - kept for backward compatibility
-    float Eb_PAR, Eb_NIR, fdiff;
-    GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
-    if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
-    }
-    return fdiff;
+    return diffuseFractionOfGlobal(computeBroadbandSolarFlux(pressure_Pa, temperature_K, humidity_rel, turbidity));
 }
 
-void SolarPosition::GueymardSolarModel(float pressure, float temperature, float humidity, float turbidity, float &Eb_PAR, float &Eb_NIR, float &fdiff) const {
+SolarPosition::BroadbandSolarFlux SolarPosition::GueymardSolarModel(float pressure, float temperature, float humidity, float turbidity) const {
 
     float beta = turbidity;
 
     float theta = getSunZenith();
 
+    BroadbandSolarFlux flux;
+
     if (theta <= 0.f || theta > 0.5 * M_PI) {
-        Eb_PAR = 0.f;
-        Eb_NIR = 0.f;
-        fdiff = 1.f;
-        return;
+        return flux; // sun below the horizon (or invalid): all fluxes zero
     }
 
     float m = pow(cos(theta) + 0.15 * pow(93.885 - theta * 180 / M_PI, -1.25), -1);
@@ -342,20 +324,19 @@ void SolarPosition::GueymardSolarModel(float pressure, float temperature, float 
 
     float Tas_NIR = exp(-ma * omega_NIR * beta * pow(lambdae_NIR, -alpha.y));
 
-    // direct irradiation
-    Eb_PAR = TR_PAR * Tg_PAR * To_PAR * Tn_PAR * Tw_PAR * Ta_PAR * E0_PAR;
-    Eb_NIR = TR_NIR * Tg_NIR * To_NIR * Tn_NIR * Tw_NIR * Ta_NIR * E0_NIR;
-    float Eb = Eb_PAR + Eb_NIR;
+    const float cos_zenith = cosf(theta);
 
-    // diffuse irradiation
-    float Edp_PAR = To_PAR * Tg_PAR * Tn_PAR_p * Tw_PAR_p * (BR_PAR * (1.f - TR_PAR) * pow(Ta_PAR, 0.25) + Ba * TR_PAR * (1.f - pow(Tas_PAR, 0.25))) * E0_PAR;
-    float Edp_NIR = To_NIR * Tg_NIR * Tn_NIR_p * Tw_NIR_p * (BR_NIR * (1.f - TR_NIR) * pow(Ta_NIR, 0.25) + Ba * TR_NIR * (1.f - pow(Tas_NIR, 0.25))) * E0_NIR;
-    float Edp = Edp_PAR + Edp_NIR;
+    // direct irradiation, on a surface normal to the sun
+    flux.direct_PAR = TR_PAR * Tg_PAR * To_PAR * Tn_PAR * Tw_PAR * Ta_PAR * E0_PAR;
+    flux.direct_NIR = TR_NIR * Tg_NIR * To_NIR * Tn_NIR * Tw_NIR * Ta_NIR * E0_NIR;
 
-    // diffuse fraction
-    fdiff = Edp / (Eb + Edp);
+    // diffuse irradiation on a horizontal surface (Gueymard 2008: the extraterrestrial flux is projected onto the horizontal by cos(zenith))
+    flux.diffuse_PAR = To_PAR * Tg_PAR * Tn_PAR_p * Tw_PAR_p * (BR_PAR * (1.f - TR_PAR) * pow(Ta_PAR, 0.25) + Ba * TR_PAR * (1.f - pow(Tas_PAR, 0.25))) * E0_PAR * cos_zenith;
+    flux.diffuse_NIR = To_NIR * Tg_NIR * Tn_NIR_p * Tw_NIR_p * (BR_NIR * (1.f - TR_NIR) * pow(Ta_NIR, 0.25) + Ba * TR_NIR * (1.f - pow(Tas_NIR, 0.25))) * E0_NIR * cos_zenith;
 
-    assert(fdiff >= 0.f && fdiff <= 1.f);
+    flux.cos_zenith = cos_zenith;
+
+    return flux;
 }
 
 float SolarPosition::getAmbientLongwaveFlux(float temperature_K, float humidity_rel) const {
@@ -635,52 +616,79 @@ const std::vector<std::array<float, 12>> &SolarPosition::getOzoneClimatology() {
     return climatology;
 }
 
-float SolarPosition::getSolarFlux() const {
+SolarPosition::BroadbandSolarFlux SolarPosition::computeBroadbandSolarFlux(float pressure, float temperature, float humidity, float turbidity) const {
+    BroadbandSolarFlux flux = GueymardSolarModel(pressure, temperature, humidity, turbidity);
+    if (!cloudcalibrationlabel.empty()) {
+        applyCloudCalibration(flux);
+    }
+    return flux;
+}
+
+SolarPosition::BroadbandSolarFlux SolarPosition::computeBroadbandSolarFlux() const {
     float pressure, temperature, humidity, turbidity;
     getAtmosphericConditions(pressure, temperature, humidity, turbidity);
+    return computeBroadbandSolarFlux(pressure, temperature, humidity, turbidity);
+}
 
-    float Eb_PAR, Eb_NIR, fdiff;
-    GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
-    if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
+float SolarPosition::globalFluxNormalToSun(float direct_normal, float diffuse_horizontal, float cos_zenith) {
+    if (cos_zenith <= 0.f) {
+        return 0.f; // sun below the horizon, where all fluxes are zero
     }
-    return Eb_PAR + Eb_NIR;
+    return direct_normal + diffuse_horizontal / cos_zenith;
+}
+
+float SolarPosition::diffuseFractionOfGlobal(const BroadbandSolarFlux &flux) {
+    const float diffuse_horizontal = flux.diffuse_PAR + flux.diffuse_NIR;
+    const float global_horizontal = (flux.direct_PAR + flux.direct_NIR) * flux.cos_zenith + diffuse_horizontal;
+    if (global_horizontal <= 0.f) {
+        return 1.f; // no sunlight: by convention all (zero) radiation is diffuse
+    }
+    return diffuse_horizontal / global_horizontal;
+}
+
+float SolarPosition::getSolarFlux() const {
+    const BroadbandSolarFlux flux = computeBroadbandSolarFlux();
+    return globalFluxNormalToSun(flux.direct_PAR + flux.direct_NIR, flux.diffuse_PAR + flux.diffuse_NIR, flux.cos_zenith);
 }
 
 float SolarPosition::getSolarFluxPAR() const {
-    float pressure, temperature, humidity, turbidity;
-    getAtmosphericConditions(pressure, temperature, humidity, turbidity);
-
-    float Eb_PAR, Eb_NIR, fdiff;
-    GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
-    if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
-    }
-    return Eb_PAR;
+    const BroadbandSolarFlux flux = computeBroadbandSolarFlux();
+    return globalFluxNormalToSun(flux.direct_PAR, flux.diffuse_PAR, flux.cos_zenith);
 }
 
 float SolarPosition::getSolarFluxNIR() const {
-    float pressure, temperature, humidity, turbidity;
-    getAtmosphericConditions(pressure, temperature, humidity, turbidity);
-
-    float Eb_PAR, Eb_NIR, fdiff;
-    GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
-    if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
-    }
-    return Eb_NIR;
+    const BroadbandSolarFlux flux = computeBroadbandSolarFlux();
+    return globalFluxNormalToSun(flux.direct_NIR, flux.diffuse_NIR, flux.cos_zenith);
 }
 
 float SolarPosition::getDiffuseFraction() const {
-    float pressure, temperature, humidity, turbidity;
-    getAtmosphericConditions(pressure, temperature, humidity, turbidity);
+    return diffuseFractionOfGlobal(computeBroadbandSolarFlux());
+}
 
-    float Eb_PAR, Eb_NIR, fdiff;
-    GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
-    if (!cloudcalibrationlabel.empty()) {
-        applyCloudCalibration(Eb_PAR, Eb_NIR, fdiff);
-    }
-    return fdiff;
+float SolarPosition::getDirectSolarFlux() const {
+    const BroadbandSolarFlux flux = computeBroadbandSolarFlux();
+    return flux.direct_PAR + flux.direct_NIR;
+}
+
+float SolarPosition::getDirectSolarFluxPAR() const {
+    return computeBroadbandSolarFlux().direct_PAR;
+}
+
+float SolarPosition::getDirectSolarFluxNIR() const {
+    return computeBroadbandSolarFlux().direct_NIR;
+}
+
+float SolarPosition::getDiffuseSolarFlux() const {
+    const BroadbandSolarFlux flux = computeBroadbandSolarFlux();
+    return flux.diffuse_PAR + flux.diffuse_NIR;
+}
+
+float SolarPosition::getDiffuseSolarFluxPAR() const {
+    return computeBroadbandSolarFlux().diffuse_PAR;
+}
+
+float SolarPosition::getDiffuseSolarFluxNIR() const {
+    return computeBroadbandSolarFlux().diffuse_NIR;
 }
 
 float SolarPosition::getAmbientLongwaveFlux() const {
@@ -721,36 +729,49 @@ float SolarPosition::getExtraterrestrialHorizontalFlux() const {
     return solar_constant * calculateGeometricFactor(context->getJulianDate()) * cos_zenith;
 }
 
-void SolarPosition::applyCloudCalibration(float &Eb_PAR_Wm2, float &Eb_NIR_Wm2, float &fdiff_calc) const {
+void SolarPosition::applyCloudCalibration(BroadbandSolarFlux &flux) const {
 
-    // The measured flux is all-wave, so the calibration must be based on the all-wave (PAR+NIR)
-    // clear-sky flux. Deriving the attenuation factor from a single band would make the band cancel
-    // out of the ratio below, collapsing every band onto R_meas/cos(theta).
     float R_meas = context->queryTimeseriesData(cloudcalibrationlabel.c_str());
     if (R_meas < 0.f) {
         helios_runtime_error("ERROR (SolarPosition::applyCloudCalibration): Measured shortwave flux from timeseries '" + cloudcalibrationlabel + "' is negative (" + std::to_string(R_meas) + " W/m^2). Cloud calibration requires a non-negative measured flux; check the timeseries data for invalid or sentinel values.");
     }
-    float R_calc_Wm2 = Eb_PAR_Wm2 + Eb_NIR_Wm2;
-    float R_calc_horiz = R_calc_Wm2 * cosf(getSunZenith());
 
-    // Estimate the diffuse fraction from the clearness index. The previous expression here,
-    // 1-(R_meas-R_calc_horiz)/R_calc_horiz, reduces to 2-R_meas/R_calc_horiz, which exceeds 1 for
-    // any measurement below the clear-sky prediction and therefore clamped to a fully-diffuse sky
-    // under all real cloud, varying only when the measurement exceeded clear-sky irradiance.
-    float extraterrestrial_horiz = getExtraterrestrialHorizontalFlux();
-    float fdiff = 1.f;
-    if (extraterrestrial_horiz > 1.f) {
-        fdiff = diffuseFractionFromClearnessIndex(R_meas / extraterrestrial_horiz);
+    if (flux.cos_zenith <= 0.f) {
+        return; // sun below the horizon: there is no direct beam, and the clear-sky fluxes are all zero
     }
 
-    if (R_calc_horiz > 1.f) {
-        // Scale both bands by the same broadband cloud attenuation factor. This preserves the
-        // clear-sky PAR/NIR ratio and keeps Eb_PAR+Eb_NIR equal to the calibrated all-wave flux.
-        float cloud_attenuation_factor = R_meas / R_calc_horiz;
-        Eb_PAR_Wm2 *= cloud_attenuation_factor;
-        Eb_NIR_Wm2 *= cloud_attenuation_factor;
-        fdiff_calc = fdiff;
+    const float clear_global_PAR = flux.direct_PAR * flux.cos_zenith + flux.diffuse_PAR;
+    const float clear_global_NIR = flux.direct_NIR * flux.cos_zenith + flux.diffuse_NIR;
+    const float clear_global = clear_global_PAR + clear_global_NIR;
+
+    if (R_meas == 0.f) {
+        flux.direct_PAR = 0.f;
+        flux.direct_NIR = 0.f;
+        flux.diffuse_PAR = 0.f;
+        flux.diffuse_NIR = 0.f;
+        return;
     }
+
+    if (clear_global <= 1.f) {
+        helios_runtime_error("ERROR (SolarPosition::applyCloudCalibration): The sun is at the horizon (zenith angle " + std::to_string(acosf(flux.cos_zenith) * 180.f / float(M_PI)) + " degrees, clear-sky global flux " + std::to_string(clear_global) +
+                             " W/m^2), but the measured shortwave flux from timeseries '" + cloudcalibrationlabel + "' is " + std::to_string(R_meas) +
+                             " W/m^2. Fluxes referenced to a surface perpendicular to the sun diverge as 1/cos(zenith) here, so the measurement cannot be represented. Skip this timestep or set its flux to zero.");
+    }
+
+    // The measurement is global (direct + diffuse), so it is split between the bands with the clear-sky GLOBAL PAR fraction.
+    // The direct beam alone is much redder than the global flux at low sun, because Rayleigh scattering moves PAR from the beam into the sky.
+    const float PAR_fraction = clear_global_PAR / clear_global;
+
+    // Diffuse fraction from the clearness index (Erbs et al. 1982), applied to both bands.
+    const float diffuse_fraction = diffuseFractionFromClearnessIndex(R_meas / getExtraterrestrialHorizontalFlux());
+
+    const float measured_PAR = R_meas * PAR_fraction;
+    const float measured_NIR = R_meas * (1.f - PAR_fraction);
+
+    flux.diffuse_PAR = measured_PAR * diffuse_fraction;
+    flux.diffuse_NIR = measured_NIR * diffuse_fraction;
+    flux.direct_PAR = measured_PAR * (1.f - diffuse_fraction) / flux.cos_zenith;
+    flux.direct_NIR = measured_NIR * (1.f - diffuse_fraction) / flux.cos_zenith;
 }
 
 // ===== SSolar-GOA Spectral Solar Radiation Model =====

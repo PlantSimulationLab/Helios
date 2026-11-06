@@ -363,6 +363,9 @@ void OptiX6Backend::initialize() {
     addBuffer("abandoned_ray_count", abandoned_ray_count_RTbuffer, abandoned_ray_count_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("scatter_buff_top", scatter_buff_top_RTbuffer, scatter_buff_top_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("scatter_buff_bottom", scatter_buff_bottom_RTbuffer, scatter_buff_bottom_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("forward_scatter", forward_scatter_RTbuffer, forward_scatter_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "forward_scatter_enabled", &forward_scatter_enabled_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet1ui(forward_scatter_enabled_RTvariable, 0));
     addBuffer("radiation_specular", radiation_specular_RTbuffer, radiation_specular_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("scatter_buff_top_cam", scatter_buff_top_cam_RTbuffer, scatter_buff_top_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("scatter_buff_bottom_cam", scatter_buff_bottom_cam_RTbuffer, scatter_buff_bottom_cam_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
@@ -730,6 +733,8 @@ void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams &params) {
         RT_CHECK_ERROR(rtVariableSet1ui(specular_reflection_enabled_RTvariable, specular_enabled));
 
         RT_CHECK_ERROR(rtVariableSet1ui(below_horizon_diffuse_enabled_RTvariable, params.below_horizon_diffuse_enabled ? 1 : 0));
+        // Only scattering launches measure the forward scattering estimate; the primary diffuse launch skips it
+        RT_CHECK_ERROR(rtVariableSet1ui(forward_scatter_enabled_RTvariable, params.forward_scatter_enabled ? 1 : 0));
 
         // Launch this batch: dimension = (n, n, primitives_this_batch)
         RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_DIFFUSE, n, n, prims_this_launch));
@@ -866,6 +871,19 @@ void OptiX6Backend::getWhiteReferenceResults(std::vector<float> &white_reference
     white_reference_bottom = getOptiXbufferData(white_reference_bottom_cam_RTbuffer);
 }
 
+void OptiX6Backend::getForwardScatterResults(std::vector<float> &forward_scatter, size_t launch_band_count) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX6Backend::getForwardScatterResults): Backend not initialized.");
+    }
+    const size_t required = current_primitive_count * launch_band_count;
+    forward_scatter = getOptiXbufferData(forward_scatter_RTbuffer);
+    if (forward_scatter.size() < required) {
+        helios_runtime_error("ERROR (OptiX6Backend::getForwardScatterResults): The forward scattering buffer holds " + std::to_string(forward_scatter.size()) + " values, fewer than the " + std::to_string(required) +
+                             " required. zeroScatterBuffers() must be called before the scattering launch.");
+    }
+    forward_scatter.resize(required);
+}
+
 void OptiX6Backend::getRadiationInTopResults(std::vector<float> &radiation_in_top) {
     if (!is_initialized) {
         helios_runtime_error("ERROR (OptiX6Backend::getRadiationInTopResults): Backend not initialized.");
@@ -963,6 +981,7 @@ void OptiX6Backend::zeroScatterBuffers() {
     if (buffer_size > 0) {
         zeroBuffer1D(scatter_buff_top_RTbuffer, buffer_size);
         zeroBuffer1D(scatter_buff_bottom_RTbuffer, buffer_size);
+        zeroBuffer1D(forward_scatter_RTbuffer, buffer_size / outgoing_components);
     }
 
     // NOTE: Camera scatter buffers are NOT zeroed here

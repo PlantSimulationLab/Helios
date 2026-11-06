@@ -291,6 +291,9 @@ rtBuffer<float, 1> radiation_in;
 // Absorbed radiation that arrived on the top face [primitive * Nbands_launch + band], written only when face_absorption_enabled is set (a one-element placeholder otherwise)
 rtBuffer<float, 1> radiation_in_top;
 rtDeclareVariable(unsigned int, face_absorption_enabled, , );
+// Forward scattering estimate [primitive * Nbands_launch + band], written only when forward_scatter_enabled is set (scattering launches)
+rtBuffer<float, 1> forward_scatter;
+rtDeclareVariable(unsigned int, forward_scatter_enabled, , );
 rtBuffer<float, 1> radiation_in_camera;
 rtBuffer<float, 1> radiation_out_top;
 rtBuffer<float, 1> radiation_out_bottom;

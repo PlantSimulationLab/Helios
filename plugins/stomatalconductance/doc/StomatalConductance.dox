@@ -298,7 +298,7 @@
 
  The leaf-surface humidity \f$h_s\f$ and CO<sub>2</sub> concentration \f$C_s\f$ are then the stomata-weighted means over the two faces. For stomata on one face only \f$g_{bw}\f$ is the conductance of that face, and for an amphistomatous leaf (\f$\zeta=0.5\f$) with equal face conductances \f$g_{bw}=2g_f\f$. The boundary-layer conductance to CO<sub>2</sub> \f$g_{bc}\f$ is given by the same expression with the face conductances to CO<sub>2</sub> (primitive data "boundarylayer_conductance_CO2_front" and "boundarylayer_conductance_CO2_back", or otherwise those to water vapor divided by 1.37) and \f$g_s\f$ replaced by \f$g_s/1.6\f$, where 1.37 and 1.6 are the ratios of the conductances to water vapor and CO<sub>2</sub> through the boundary layer and the stomata, respectively, as conventionally used in leaf gas-exchange analysis (e.g., <a href="https://doi.org/10.1038/s41598-018-25838-2">Cernusak et al. 2018</a>). Otherwise these conductances depend on \f$g_s\f$, and the self-consistent \f$g_s\f$ is found by bisection. A leaf-surface CO<sub>2</sub> concentration \f$C_s\le 0\f$ is an error only if it occurs even at the largest possible boundary-layer conductance, the sum of the two face conductances. A face with stomata but a boundary-layer conductance that is not positive is an error. The total moisture conductance implied by \f$g_s\f$ and \f$g_{bw}\f$ is the same one used by the \ref EnergyBalanceModel plug-in to calculate the latent heat flux.
 
- Below are example parameter values for several different tree crop species (a description of how calibration data was collected is given in the section below). Note that, as mentioned above, in order to apply the model photosynthesis must also be modeled - coefficients for these species are also given in the photosynthesis model documentation.
+ Below are example parameter values for several tree crop species and, marked †, three field crops calibrated from the GEMINI field trials (see \ref StomatalGEMINI). Note that, as mentioned above, in order to apply the model photosynthesis must also be modeled - coefficients for these species are also given in the photosynthesis model documentation.
 
 <table>
 <tr>
@@ -354,6 +354,24 @@
         <td>0.1253</td>
         <td>5.527</td>
         <td>0.962</td>
+</tr>
+<tr>
+        <td>Cowpea \ref StomatalGEMINI "†"</td>
+        <td>0.0597</td>
+        <td>23.25</td>
+        <td>0.466</td>
+</tr>
+<tr>
+        <td>Common bean \ref StomatalGEMINI "†"</td>
+        <td>0.0</td>
+        <td>21.78</td>
+        <td>0.362</td>
+</tr>
+<tr>
+        <td>Sorghum \ref StomatalGEMINI "†"</td>
+        <td>0.0714</td>
+        <td>10.27</td>
+        <td>0.481</td>
 </tr>
 </table>
 
@@ -433,6 +451,27 @@ Below are example parameter values for several different tree crop species (a de
         <td>   21.4</td>
         <td>0.977</td>
     </tr>
+<tr>
+        <td>Cowpea \ref StomatalGEMINI "†"</td>
+        <td>0.0</td>
+        <td>22.67</td>
+        <td>16.63</td>
+        <td>0.408</td>
+</tr>
+<tr>
+        <td>Common bean \ref StomatalGEMINI "†"</td>
+        <td>0.0</td>
+        <td>18.40</td>
+        <td>19.56</td>
+        <td>0.321</td>
+</tr>
+<tr>
+        <td>Sorghum \ref StomatalGEMINI "†"</td>
+        <td>0.0608</td>
+        <td>3.936</td>
+        <td>710.7</td>
+        <td>0.524</td>
+</tr>
  </table>
 
 \section MoptTheory Medlyn et al. (2011) Optimality-Based Model
@@ -502,6 +541,24 @@ Below are example parameter values for several different tree crop species (a de
         <td> 1.167</td>
         <td>0.973</td>
     </tr>
+<tr>
+        <td>Cowpea \ref StomatalGEMINI "†"</td>
+        <td>0.0</td>
+        <td>8.930</td>
+        <td>0.392</td>
+</tr>
+<tr>
+        <td>Common bean \ref StomatalGEMINI "†"</td>
+        <td>0.0</td>
+        <td>7.703</td>
+        <td>0.315</td>
+</tr>
+<tr>
+        <td>Sorghum \ref StomatalGEMINI "†"</td>
+        <td>0.0616</td>
+        <td>2.377</td>
+        <td>0.512</td>
+</tr>
 </table>
 
 \section BMFTheory Buckley, Mott, Farquhar (2003) Model (simplified version given in Buckley, Turnbull, and Adams 2012)
@@ -595,9 +652,45 @@ Below are example parameter values for several different tree crop species (a de
         <td>75.26</td>
         <td>0.972</td>
     </tr>
+    <tr>
+        <td>Cowpea \ref StomatalGEMINI "†"</td>
+        <td>37.24</td>
+        <td>289.7</td>
+        <td>40074</td>
+        <td>0</td>
+        <td>0.410</td>
+    </tr>
+    <tr>
+        <td>Common bean \ref StomatalGEMINI "†"</td>
+        <td>23.28</td>
+        <td>433.5</td>
+        <td>23008</td>
+        <td>0</td>
+        <td>0.127</td>
+    </tr>
+    <tr>
+        <td>Sorghum \ref StomatalGEMINI "†"</td>
+        <td>1.0e5</td>
+        <td>425.4</td>
+        <td>5.109e8</td>
+        <td>0</td>
+        <td>0.449</td>
+    </tr>
  </table>
 
-These coefficients can be applied by species name using \ref StomatalConductanceModel::setBMFCoefficientsFromLibrary(const std::string&) "setBMFCoefficientsFromLibrary()" (all primitives, a subset of UUIDs, or a material label) or retrieved using \ref StomatalConductanceModel::getBMFCoefficientsFromLibrary(). Besides the species in the table above, the library also contains: Grape (cv. Cabernet Sauvignon), Elderberry, Toyon, Big_Leaf_Maple (or Maple), Western_Redbud (or Redbud), Baylaurel (or Bay_Laurel), Olive, and EasternRedbud. Pistachio female and male coefficients are requested as "PistachioFemale" (or "Pistachio") and "PistachioMale". Names may be given capitalized as listed or in all lower case. An unrecognized species name is an error, and the error message lists the valid names.
+These coefficients can be applied by species name using \ref StomatalConductanceModel::setBMFCoefficientsFromLibrary(const std::string&) "setBMFCoefficientsFromLibrary()" (all primitives, a subset of UUIDs, or a material label) or retrieved using \ref StomatalConductanceModel::getBMFCoefficientsFromLibrary(). Besides the species in the table above, the library also contains: Grape (cv. Cabernet Sauvignon), Elderberry, Toyon, Big_Leaf_Maple (or Maple), Western_Redbud (or Redbud), Baylaurel (or Bay_Laurel), Olive, and EasternRedbud. The field crops are requested as "Cowpea", "CommonBean" (or "Bean", "common_bean"), and "Sorghum". Pistachio female and male coefficients are requested as "PistachioFemale" (or "Pistachio") and "PistachioMale". Names may be given capitalized as listed or in all lower case. An unrecognized species name is an error, and the error message lists the valid names.
+
+\subsection StomatalGEMINI GEMINI field-crop calibration (cowpea, common bean, sorghum)
+
+The cowpea (<i>Vigna unguiculata</i>), common bean (<i>Phaseolus vulgaris</i>), and sorghum (<i>Sorghum bicolor</i>) coefficients were calibrated from well-watered plots of the GEMINI breeding trials at Davis, CA (cowpea 2022-2026, common bean 2022-2023, sorghum 2022-2026; several genotypes per crop), so they represent a typical genotype rather than any one cultivar.
+
+<ul>
+<li><b>Data.</b> LI-600 porometer surveys of many leaves per plot and day (cowpea 3635, common bean 1339, sorghum 1649 readings), sunlit leaves in 2022-2023 and upper- and lower-canopy leaves in 2024-2026, so that the surveys span a range of light and VPD. Every reading was corrected with the chamber thermal correction of <a href="https://doi.org/10.1111/pce.70304">Rizzo and Bailey (2026)</a>.</li>
+<li><b>Conductance basis.</b> The model conductance is the total conductance of both leaf faces. The LI-600 measures one face (here the abaxial face), so readings were converted to total conductance as \f$g_s = g_{s,ab}/(1-\zeta)\f$ using literature adaxial stomatal fractions \f$\zeta\f$ of 0.30 for cowpea (low confidence; Sun and Fotev 2025, 14 accessions spanning 0.14-0.50), 0.20 for common bean (<a href="https://doi.org/10.1007/s40626-019-00161-x">Toro et al. 2019</a>), and 0.40 for sorghum (<a href="https://doi.org/10.32615/ps.2019.085">Wang et al. 2019</a>; <a href="https://doi.org/10.1093/plphys/kiab174">Bheemanahalli et al. 2021</a>). The same values are recommended for the primitive data "stomatal_sidedness" when these coefficients are used.</li>
+<li><b>Driving variables.</b> \f$i\f$ is absorbed PPFD (0.85 times the porometer's ambient quantum sensor reading) and \f$D_s\f$ is the leaf-to-air water vapor mole fraction difference.</li>
+<li><b>BMF fit.</b> For cowpea and common bean the survey readings were fitted jointly with the end-of-step windows of steady-state LI-6800 light-response curves, which carry a free magnitude factor so that they inform only the shape of the light response. Steady-state VPD-step curves were not used because temperature was raised together with VPD. Sorghum was fitted to the survey readings alone. The \f$R^2\f$ values are low because a survey includes leaf-to-leaf variation that no environmental model can explain. Sorghum showed no detectable VPD response, so the fit drove \f$E_m\f$ and \f$k\f$ to large values together: only \f$E_m/k\f$ and \f$i_0\f$ are determined, and the resulting conductance increases with light but is practically insensitive to VPD.</li>
+<li><b>Ball-Berry-type models.</b> The surveys do not measure photosynthesis, so for the BWB, BBL, and Medlyn fits \f$A_n\f$ was inferred for each reading by solving the GEMINI photosynthesis model (\ref PhotosynthesisModel library entries "Cowpea", "CommonBean", and "Sorghum_GEMINI2026") together with \f$A_n = g_s/1.6\,(C_a-C_i)\f$ at \f$C_a\f$ = 420 \f$\mu\f$mol/mol, following <a href="https://doi.org/10.1111/nph.70949">Rizzo et al. (2026)</a>. These coefficients therefore carry the uncertainty of that photosynthesis model, and the high slopes reflect the high conductance of the irrigated legumes.</li>
+</ul>
 
 \section BBTheory Bailey Model Theory
 

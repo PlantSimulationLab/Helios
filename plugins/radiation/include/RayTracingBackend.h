@@ -214,6 +214,20 @@ namespace helios {
         [[nodiscard]] virtual size_t getRadiationInTopBufferSize() const = 0;
 
         /**
+         * @brief Get the forward scattering estimate of the diffuse launches since zeroScatterBuffers()
+         *
+         * In a launch with RayTracingLaunchParams::forward_scatter_enabled set, every ray that leaves a primitive and reaches a surface adds
+         * the flux the primitive sends out along the ray times the fraction of it that surface scatters again (its reflectivity plus
+         * transmissivity, or a cover's reflectance), attenuated by any covers on the way. Summed over a primitive's rays this is the share
+         * of its outgoing flux that the next scattering generation will carry, a forward estimate whose total over all primitives,
+         * weighted by area, cannot exceed the launched power times the largest re-scattered fraction in the scene.
+         *
+         * @param[out] forward_scatter Per [primitive][launch band], in the units of the outgoing flux (per unit area of the launching primitive)
+         * @param[in] launch_band_count Number of launched bands
+         */
+        virtual void getForwardScatterResults(std::vector<float> &forward_scatter, size_t launch_band_count) = 0;
+
+        /**
          * @brief Number of direct and diffuse rays abandoned at the periodic wrap limit
          *
          * @return Rays that reached the periodic-boundary wrap limit (MAX_PERIODIC_WRAPS) and were treated as blocked, accumulated by every
@@ -245,7 +259,7 @@ namespace helios {
         virtual void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) = 0;
 
         /**
-         * @brief Zero scatter buffers (scatter_buff_top, scatter_buff_bottom)
+         * @brief Zero scatter buffers (scatter_buff_top, scatter_buff_bottom) and the forward scattering estimate (see getForwardScatterResults())
          */
         virtual void zeroScatterBuffers() = 0;
 

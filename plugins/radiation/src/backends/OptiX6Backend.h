@@ -101,6 +101,7 @@ namespace helios {
         void getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) override;
         void getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) override;
         void getRadiationInTopResults(std::vector<float> &radiation_in_top) override;
+        void getForwardScatterResults(std::vector<float> &forward_scatter, size_t launch_band_count) override;
         [[nodiscard]] size_t getRadiationInTopBufferSize() const override;
         [[nodiscard]] size_t getAbandonedRayCount() override;
 
@@ -296,6 +297,9 @@ namespace helios {
         RTvariable scatter_buff_top_RTvariable;
         RTbuffer scatter_buff_bottom_RTbuffer;
         RTvariable scatter_buff_bottom_RTvariable;
+        RTbuffer forward_scatter_RTbuffer; //!< Forward scattering estimate [primitive][launch band] (see getForwardScatterResults())
+        RTvariable forward_scatter_RTvariable;
+        RTvariable forward_scatter_enabled_RTvariable;
         RTbuffer radiation_in_camera_RTbuffer;
         RTvariable radiation_in_camera_RTvariable;
         RTbuffer scatter_buff_top_cam_RTbuffer;

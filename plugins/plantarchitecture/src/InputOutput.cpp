@@ -728,6 +728,12 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
 
                 output_xml << "\t\t\t\t\t\t\t</peduncle>" << std::endl;
 
+                // Swing of the peduncle out of a branch (see PlantArchitecture::enableFruitBranchCollisionAvoidance()), written only when there is one
+                if (fbud.contact_swing_angle > 0.f) {
+                    output_xml << "\t\t\t\t\t\t\t<peduncle_swing_axis>" << fbud.contact_swing_axis.x << " " << fbud.contact_swing_axis.y << " " << fbud.contact_swing_axis.z << "</peduncle_swing_axis>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t<peduncle_swing_angle>" << rad2deg(fbud.contact_swing_angle) << "</peduncle_swing_angle>" << std::endl;
+                }
+
                 // Write inflorescence parameters
                 output_xml << "\t\t\t\t\t\t\t<inflorescence>" << std::endl;
                 output_xml << "\t\t\t\t\t\t\t\t<flower_offset>" << phytomer->phytomer_parameters.inflorescence.flower_offset.val() << "</flower_offset>" << std::endl;
@@ -744,6 +750,12 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                         output_xml << "\t\t\t\t\t\t\t\t\t<flower_azimuth>" << rad2deg(fbud.inflorescence_rotation.at(i).azimuth) << "</flower_azimuth>" << std::endl;
                         if (fbud.inflorescence_rotation.at(i).gravity_fraction > 0.f) {
                             output_xml << "\t\t\t\t\t\t\t\t\t<flower_gravity_fraction>" << fbud.inflorescence_rotation.at(i).gravity_fraction << "</flower_gravity_fraction>" << std::endl;
+                        }
+                        if (i < fbud.inflorescence_rotation.size() && fbud.inflorescence_rotation.at(i).contact_tilt_angle > 0.f) {
+                            // Tilt of the fruit out of a branch (see PlantArchitecture::enableFruitBranchCollisionAvoidance()), written only when there is one
+                            const AxisRotation &rotation = fbud.inflorescence_rotation.at(i);
+                            output_xml << "\t\t\t\t\t\t\t\t\t<flower_contact_tilt_axis>" << rotation.contact_tilt_axis.x << " " << rotation.contact_tilt_axis.y << " " << rotation.contact_tilt_axis.z << "</flower_contact_tilt_axis>" << std::endl;
+                            output_xml << "\t\t\t\t\t\t\t\t\t<flower_contact_tilt_angle>" << rad2deg(rotation.contact_tilt_angle) << "</flower_contact_tilt_angle>" << std::endl;
                         }
                     }
                     // Save individual base scale for this flower/fruit
@@ -1603,6 +1615,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     float peduncle_roll = 0;
                     float peduncle_yaw = 0;
                     float peduncle_curvature = 0;
+                    // Swing of the peduncle out of a branch (zero when absent)
+                    vec3 peduncle_swing_axis = make_vec3(0, 0, 1);
+                    float peduncle_swing_angle_deg = 0;
                 };
                 std::vector<std::vector<FloralBudData>> floral_bud_data; // first index is petiole within internode; second index is bud within petiole
                 auto readFloralBud = [](const pugi::xml_node &floral_bud) -> FloralBudData {
@@ -1660,6 +1675,17 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         }
                     }
 
+                    // Swing of the peduncle out of a branch; absent from files written without fruit-branch collision avoidance
+                    pugi::xml_node swing_angle_node = floral_bud.child("peduncle_swing_angle");
+                    if (swing_angle_node) {
+                        fbud_data.peduncle_swing_angle_deg = parse_xml_tag_float(swing_angle_node, "peduncle_swing_angle", "PlantArchitecture::readPlantStructureXML");
+                        pugi::xml_node swing_axis_node = floral_bud.child("peduncle_swing_axis");
+                        if (!swing_axis_node) {
+                            helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A floral bud has a <peduncle_swing_angle> tag but no <peduncle_swing_axis> tag.");
+                        }
+                        fbud_data.peduncle_swing_axis = parse_xml_tag_vec3(swing_axis_node, "peduncle_swing_axis", "PlantArchitecture::readPlantStructureXML");
+                    }
+
                     // Read inflorescence parameters and flower positions (if present)
                     pugi::xml_node inflorescence = floral_bud.child("inflorescence");
                     if (inflorescence) {
@@ -1713,6 +1739,17 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             pugi::xml_node gravity_node = flower.child("flower_gravity_fraction");
                             if (gravity_node) {
                                 rotation.gravity_fraction = parse_xml_tag_float(gravity_node, "flower_gravity_fraction", "PlantArchitecture::readPlantStructureXML");
+                            }
+
+                            // Tilt of the fruit out of a branch; absent from files written without fruit-branch collision avoidance
+                            pugi::xml_node tilt_angle_node = flower.child("flower_contact_tilt_angle");
+                            if (tilt_angle_node) {
+                                rotation.contact_tilt_angle = deg2rad(parse_xml_tag_float(tilt_angle_node, "flower_contact_tilt_angle", "PlantArchitecture::readPlantStructureXML"));
+                                pugi::xml_node tilt_axis_node = flower.child("flower_contact_tilt_axis");
+                                if (!tilt_axis_node) {
+                                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A flower has a <flower_contact_tilt_angle> tag but no <flower_contact_tilt_axis> tag.");
+                                }
+                                rotation.contact_tilt_axis = parse_xml_tag_vec3(tilt_axis_node, "flower_contact_tilt_axis", "PlantArchitecture::readPlantStructureXML");
                             }
 
                             fbud_data.flower_rotations.push_back(rotation);
@@ -3579,6 +3616,18 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                         // returns immediately when the bud is already at the requested fraction.
                                         fbud.current_fruit_scale_factor = 1.f;
                                         phytomer_ptr->setInflorescenceScaleFraction(fbud, fbud_data.current_fruit_scale_factor);
+
+                                        // Restore the swing the peduncle had been given out of a branch. The peduncle and fruit above were rebuilt unswung from the bud's base, which is the hinge,
+                                        // so the saved world-frame rotation applies as it was; the later updateShootNodes() only translates and carries it along.
+                                        if (fbud_data.peduncle_swing_angle_deg > 0.f) {
+                                            phytomer_ptr->applyPeduncleSwing(fbud, fbud_data.peduncle_swing_axis, deg2rad(fbud_data.peduncle_swing_angle_deg));
+                                        }
+                                        // Then each fruit's own tilt, whose saved axis is in the frame of the swung peduncle
+                                        for (size_t i = 0; i < fbud.inflorescence_objIDs.size() && i < fbud_data.flower_rotations.size(); i++) {
+                                            if (fbud_data.flower_rotations.at(i).contact_tilt_angle > 0.f) {
+                                                phytomer_ptr->applyFruitContactTilt(fbud, i, fbud_data.flower_rotations.at(i).contact_tilt_axis, fbud_data.flower_rotations.at(i).contact_tilt_angle);
+                                            }
+                                        }
                                     }
                                 }
                             } else {
