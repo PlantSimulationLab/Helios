@@ -214,10 +214,14 @@ def scripted_actions(observations):
     line = from_turret / np.maximum(np.linalg.norm(from_turret, axis=1, keepdims=True), 1e-6)
     along = np.sum(toward_fruit[:, :2] * line, axis=1)
     sideways = toward_fruit[:, :2] - along[:, None] * line
-    lined_up = np.hypot(np.linalg.norm(sideways, axis=1), toward_fruit[:, 2]) < 0.004
-    # To 8 cm short of the fruit while lining up (holding back alone would leave the arm trying to move only sideways or up and down from where it
-    # is, which from the tucked pose it cannot), then in to where the lip meets it, which stops the cup
-    wanted_along = np.where(lined_up, 0.0, 0.08)
+    off_line = np.hypot(np.linalg.norm(sideways, axis=1), toward_fruit[:, 2])
+    lined_up = off_line < 0.004
+    # While lining up, toward a point short of the fruit by 8 cm plus three quarters of the distance still off the line, up to 15 cm more, then in to
+    # where the lip meets the fruit, which stops the cup. Staying back while far off the line moves the cup sideways and up or down outside the
+    # canopy, where the 32 cm tool sweeping across would otherwise hit the branches around the fruit; staying back further leaves the arm short of
+    # where it can reach. Holding back alone, without coming in, would leave the arm trying to move only sideways or up and down from the tucked
+    # pose, which it cannot.
+    wanted_along = np.where(lined_up, 0.0, 0.08 + np.minimum(0.75 * off_line, 0.15))
     actions[:, :2] = 8.0 * (sideways + (along - wanted_along)[:, None] * line)
     actions[:, 2] = 8.0 * toward_fruit[:, 2]
     gripped = observations[:, 16] > 0.5

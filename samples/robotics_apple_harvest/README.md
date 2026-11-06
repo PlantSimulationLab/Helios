@@ -86,7 +86,7 @@ Success over 240 episodes (2 simulations of each of trees 301-312, never used in
 | Must touch the fruit (5 mm), pulls toward its center | 57.9% | 69.2% | timeout 15%, collision 16% |
 | Must touch, holds the fruit on the face, seal limits on pull, sliding and peeling | 45.0% | 52.1% | slipped 23%, collision 15% |
 | Seals only with the whole lip on the fruit, which sits in the cup's mouth | 50.0% | 17.1% (31.7% after 1,500,000 steps) | timeout 48%, collision 23% (after 1.5M: collision 37%, timeout 17%) |
-| Same grip, and the tree's parts collide with each other (this version) | 57.5% | 31.7% | collision 29%, knocked off 21%, timeout 16% |
+| Same grip, and the tree's parts collide with each other (this version) | 65.4% | 31.7% | collision 29%, knocked off 21%, timeout 16% |
 
 With the face grip the policy pulls mostly downward (mean direction -0.34, -0.09, -0.75), where the earlier ones pulled toward the robot,
 and detaches fruit with a pull out of the face of only half the force to detach: the rest of the load goes along the face or into the
@@ -108,3 +108,12 @@ The scripted controller used to hold its distance along the line to the fruit un
 down. From the tucked pose the arm cannot do that, so in a quarter of episodes it never moved (49.6% success, 26.7% timeouts). It now comes to
 8 cm short of the fruit while lining up: 57.5% (51.2-63.6%), with timeouts at 6.2% and protective stops up from 18% to 31%, as it now
 reaches through wood where it used to wait (`results/collide_scripted_approach_*`).
+
+Every one of those protective stops is the tool, the 32 cm cone from the wrist to the cup, hitting wood, and most came while the cup was still
+moving up or down to the fruit's height, close to the fruit inside the canopy. The scripted controller now stays further back while it is
+further off the line, by 8 cm plus three quarters of its distance off the line (up to 15 cm more), so it moves sideways and up or down
+outside the canopy and comes in along the line last: 65.4% (59.2-71.1%), with protective stops down to 22% and timeouts at 8.3%
+(`results/collide_scripted_funnel_*`). Staying back further than that leaves the arm short of where it can reach, and more episodes time
+out (52.1% with twice the distance, capped at 30 cm). About half of the remaining stops come on the final push, lined up, with no contact
+before the hit, so from wood near the line from the turret to the fruit. The cup always points level and away from the turret, so with the
+cup on the fruit the tool lies along that line, and where wood is on it no controller of this robot can reach the fruit.
