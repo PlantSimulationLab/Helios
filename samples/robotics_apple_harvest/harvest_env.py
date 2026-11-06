@@ -215,8 +215,9 @@ def scripted_actions(observations):
     along = np.sum(toward_fruit[:, :2] * line, axis=1)
     sideways = toward_fruit[:, :2] - along[:, None] * line
     lined_up = np.hypot(np.linalg.norm(sideways, axis=1), toward_fruit[:, 2]) < 0.004
-    # Short of the fruit until lined up, then in to where the lip meets it, which stops the cup
-    wanted_along = np.where(lined_up, 0.0, np.maximum(along, 0.08))
+    # To 8 cm short of the fruit while lining up (holding back alone would leave the arm trying to move only sideways or up and down from where it
+    # is, which from the tucked pose it cannot), then in to where the lip meets it, which stops the cup
+    wanted_along = np.where(lined_up, 0.0, 0.08)
     actions[:, :2] = 8.0 * (sideways + (along - wanted_along)[:, None] * line)
     actions[:, 2] = 8.0 * toward_fruit[:, 2]
     gripped = observations[:, 16] > 0.5
