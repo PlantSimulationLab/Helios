@@ -170,3 +170,17 @@ done
 echo -e '\nusing namespace helios;\n' >> main.cpp
 
 echo -e 'int main(){\n\n\n}' >> main.cpp
+
+#----- write instructions for AI coding agents (AGENTS.md, CLAUDE.md) ------#
+# The same files are also (re)generated every time the project is configured with CMake; writing them
+# here as well means an agent started in the new directory has them before the first build.
+# Disable with the environment variable HELIOS_GENERATE_AGENT_FILES=OFF.
+
+if command -v cmake >/dev/null 2>&1; then
+    if ! cmake -DHELIOS_PROJECT_DIR="$(pwd)" -P "${HELIOS_BASE_DIR}/utilities/agents/generate_agent_files.cmake"; then
+        echo "Error: Failed to write AI agent instruction files (AGENTS.md, CLAUDE.md) to ${DIRPATH}."
+        exit 1
+    fi
+else
+    echo "Note: cmake was not found, so AGENTS.md and CLAUDE.md were not written yet. They will be generated the first time the project is configured with CMake."
+fi

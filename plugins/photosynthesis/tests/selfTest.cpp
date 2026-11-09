@@ -2057,6 +2057,24 @@ DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Temperature discrimination")
     DOCTEST_CHECK(setaria_35 > setaria_25);
 }
 
+DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar Library - Unknown species raises error") {
+    // Regression test. An unknown (e.g., misspelled) species was given the Almond coefficients, with a warning that disableMessages() silenced, so the simulation went on
+    // with the wrong plant. It is now an error that names the species and lists those available, as for the C4 library.
+    Context context;
+    PhotosynthesisModel photomodel(&context);
+    photomodel.disableMessages();
+    std::string error;
+    try {
+        static_cast<void>(photomodel.getFarquharCoefficientsFromLibrary("Grapevine"));
+    } catch (const std::runtime_error &e) {
+        error = e.what();
+    }
+    DOCTEST_CHECK(error.find("Grapevine") != std::string::npos);
+    DOCTEST_CHECK(error.find("Grape") != std::string::npos);
+    DOCTEST_CHECK(error.find("Almond") != std::string::npos);
+    DOCTEST_CHECK_THROWS_AS(photomodel.setFarquharCoefficientsFromLibrary("NotARealSpecies"), std::runtime_error);
+}
+
 DOCTEST_TEST_CASE("PhotosynthesisModel C4 Library - Unknown species raises error") {
     Context context_test;
     context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));

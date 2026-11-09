@@ -1,0 +1,14 @@
+{
+  "name": "plantsimulationlab-helios",
+  "description": "Claude Code plugins for the Helios 3D plant and environmental simulation library",
+  "owner": {
+    "name": "Plant Simulation Lab, UC Davis"
+  },
+  "plugins": [
+    {
+      "name": "helios",
+      "source": "./utilities/agents/claude-plugin/helios",
+      "description": "Set up, build, and run Helios simulation projects using the documentation of the installed Helios version"
+    }
+  ]
+}

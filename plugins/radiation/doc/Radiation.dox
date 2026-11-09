@@ -1232,7 +1232,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  By default, it is assumed that the spectral sensitivity is 100\% across all wavelengths. This is not the case for any real camera, as sensitivity of the sensor usually varies greatly with wavelength as shown in the image below. We need to set the spectral response of each camera channel. This can be done using the \ref RadiationModel::setCameraSpectralResponse() method. Three arguments must be provided: 1) the label for the camera to be set (first argument to the camera adder method), 2) the label for the camera channel (e.g., "red", "PAR", etc.), and 3) the label for global data in the Context containing spectral response data. The 3rd point is similar to how spectral data is specified for sources and radiative properties - a vector of wavelength and intensity values.
 
- With a spectral response \f$C_\lambda\f$, a surface's camera-weighted reflectivity for radiation with spectrum \f$I_\lambda\f$ is \f$\int \rho_\lambda I_\lambda C_\lambda d\lambda / \int I_\lambda d\lambda\f$, over the wavelengths where both \f$I\f$ and \f$C\f$ are tabulated (the band's wavelength bounds are not applied here), so it keeps the magnitude of the response. Radiation without a spectrum (a source flux set without a source spectrum, or a diffuse flux without a diffuse spectrum) is treated as a spectrum of 1 across the response when any radiation in the band has a spectrum, so that all of it is on one scale. In a band where no radiation has a spectrum, the camera-weighted reflectivity is instead the response-weighted average \f$\int \rho_\lambda C_\lambda d\lambda / \int C_\lambda d\lambda\f$, and a white surface gives 1. Specularly reflected source radiation is weighted as a white surface would be. Diffuse and scattered radiation use the flux-weighted combination described in \ref RadProps. A response that is zero everywhere is an error.
+ With a spectral response \f$C_\lambda\f$, a surface's camera-weighted reflectivity for radiation with spectrum \f$I_\lambda\f$ is \f$\int \rho_\lambda I_\lambda C_\lambda d\lambda / \int I_\lambda d\lambda\f$, over the wavelengths where both \f$I\f$ and \f$C\f$ are tabulated (the band's wavelength bounds are not applied here), so it keeps the magnitude of the response. Radiation without a spectrum (a source flux set without a source spectrum, or a diffuse flux without a diffuse spectrum) is treated as a spectrum of 1 across the response when any radiation in the band has a spectrum, so that all of it is on one scale. In a band where no radiation has a spectrum, the camera-weighted reflectivity is instead the response-weighted average \f$\int \rho_\lambda C_\lambda d\lambda / \int C_\lambda d\lambda\f$, and a white surface gives 1. Specularly reflected source radiation is weighted as a white surface would be. Diffuse and scattered radiation use the flux-weighted combination described in \ref RadProps. A response that is zero everywhere is an error. In a band with emission enabled (including a SIF emission band), the camera-weighted reflectivity is always the response-weighted average, \f$\int \rho_\lambda I_\lambda C_\lambda d\lambda / \int I_\lambda C_\lambda d\lambda\f$, whatever the radiation's spectra: cameras receive the emitted radiance without the response, and the reflected radiance must be on the same scale, so that a pixel is an in-band radiance as \ref RadiationModel::getCameraPixelBrightnessTemperature() and the sensor atmosphere (\ref RadiationModel::enableCameraAtmosphere()) take it to be, and the fluorescence and reflected light in a SIF image keep their true ratio.
 
  \image html CameraSpectralResponse.png
 
@@ -1289,7 +1289,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  Camera metadata is stored in the \ref CameraMetadata struct, which contains the following nested structures:
 
  - <b>camera_properties</b>: Intrinsic camera parameters including image resolution, number of channels, optical focal length (mm), aperture (f-stop), and physical sensor dimensions (mm)
- - <b>location_properties</b>: Geographic coordinates (latitude/longitude in degrees)
+ - <b>location_properties</b>: Geographic coordinates (latitude/longitude in degrees). The longitude, and the UTC offset in acquisition_properties, are positive East, the usual convention (ISO 6709 and ISO 8601) and that of the EXIF tags, so they have the opposite sign to the Context's west-positive \ref helios::Location, from which they are filled automatically.
  - <b>acquisition_properties</b>: Capture information including date (YYYY-MM-DD), time (HH:MM:SS), UTC offset, camera height above ground (meters), camera tilt angle from horizontal (degrees), and light source type ("sunlight", "artificial", "mixed", or "none")
  - <b>image_processing</b>: Image processing applied to the pixel data: exposure gain, white balance factors, colour correction matrix, the tone curve applied to the written image ("typical camera" or "none"), the saturation, brightness and contrast adjustments passed to \ref RadiationModel::applyCameraImageCorrections(), and the output color space ("sRGB" for RGB images, whose values are gamma-compressed on write, or "linear" otherwise)
 
@@ -1343,7 +1343,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  // Set acquisition properties
  metadata.acquisition_properties.date = "2025-09-30";
  metadata.acquisition_properties.time = "14:30:00";
- metadata.acquisition_properties.UTC_offset = 8.0f;
+ metadata.acquisition_properties.UTC_offset = -8.0f; // UTC-8: positive East, as in ISO 8601
  metadata.acquisition_properties.camera_height_m = 50.0f;
  metadata.acquisition_properties.camera_angle_deg = 15.0f;
  metadata.acquisition_properties.light_source = "sunlight";
@@ -1383,7 +1383,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
    "acquisition_properties": {
      "date": "2025-09-30",
      "time": "14:30:00",
-     "UTC_offset": 8.0,
+     "UTC_offset": -8.00,
      "camera_height_m": 50.0,
      "camera_angle_deg": 15.0,
      "light_source": "sunlight"

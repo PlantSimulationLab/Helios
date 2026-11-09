@@ -7652,14 +7652,15 @@ GPU_TEST_CASE("RadiationModel - Camera Metadata Export") {
         // Check camera model (should be default "generic")
         DOCTEST_CHECK(metadata.camera_properties.model == "generic");
 
-        // Check location properties
+        // Check location properties. The metadata uses the usual east-positive convention, unlike the Context (regression: the Context's west-positive longitude was
+        // copied as it was, so Los Angeles was recorded in the Eastern hemisphere, and the UTC offset with the opposite sign to the image's EXIF OffsetTime)
         DOCTEST_CHECK(metadata.location_properties.latitude == doctest::Approx(34.0522).epsilon(0.0001));
-        DOCTEST_CHECK(metadata.location_properties.longitude == doctest::Approx(118.2437).epsilon(0.0001));
+        DOCTEST_CHECK(metadata.location_properties.longitude == doctest::Approx(-118.2437).epsilon(0.0001));
 
         // Check acquisition properties
         DOCTEST_CHECK(metadata.acquisition_properties.date == "2025-09-30");
         DOCTEST_CHECK(metadata.acquisition_properties.time == "10:30:00");
-        DOCTEST_CHECK(metadata.acquisition_properties.UTC_offset == 8.0f);
+        DOCTEST_CHECK(metadata.acquisition_properties.UTC_offset == -8.0f);
         DOCTEST_CHECK(metadata.acquisition_properties.camera_height_m == 2.0f); // z-position
 
         // Check tilt angle: camera at (0,-5,2) looking at (0,0,0)
@@ -10872,6 +10873,52 @@ GPU_TEST_CASE("RadiationModel - Camera images emission in a band with a scatteri
     model.setScatteringDepth("TIR", 0);
     const float depth0_again_radiance = mean_pixel();
     DOCTEST_CHECK(std::abs(depth0_again_radiance - blackbody_radiance) < 0.01f * blackbody_radiance);
+}
+
+GPU_TEST_CASE("RadiationModel - thermal camera pixels do not depend on the magnitude of the spectral response") {
+    // Regression test. In an emission band, cameras receive the emitted radiance as it is, without the spectral response. The radiation a surface reflects was weighted
+    // by the response and kept its magnitude whenever some radiation in the band had a spectrum (e.g., a source with a spectrum, as the sun in a 3-5 um band), so the
+    // reflected part of a pixel was on a different scale from the emitted part: with a response of 0.5, the reflected radiance was halved. A gray tile (emissivity 0.5)
+    // must give the same pixels through a flat response of 0.5 as without a response.
+    auto mean_pixel = [](bool with_response) {
+        Context context;
+        uint tile = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+        context.setPrimitiveData(tile, "twosided_flag", uint(0));
+        context.setPrimitiveData(tile, "temperature", 300.f);
+        context.setPrimitiveData(tile, "emissivity_MWIR", 0.5f);
+        context.setGlobalData("half_response", std::vector<vec2>{make_vec2(2500.f, 0.5f), make_vec2(5500.f, 0.5f)});
+        context.setGlobalData("flat_source_spectrum", std::vector<vec2>{make_vec2(2500.f, 1.f), make_vec2(5500.f, 1.f)});
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiation.disableMessages();
+        radiation.addRadiationBand("MWIR", 3000.f, 5000.f);
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceSpectrum(sun, "flat_source_spectrum");
+        radiation.setSourceFlux(sun, "MWIR", 20.f);
+        radiation.setDiffuseRadiationFlux("MWIR", 10.f);
+        radiation.setDirectRayCount("MWIR", 100);
+        radiation.setDiffuseRayCount("MWIR", 400);
+        radiation.setScatteringDepth("MWIR", 1);
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(4, 4);
+        camera_properties.HFOV = 10.f;
+        camera_properties.exposure = "manual";
+        radiation.addRadiationCamera("cam", {"MWIR"}, make_vec3(0.01f, 0, 2), make_vec3(0, 0, 0), camera_properties, 4);
+        if (with_response) {
+            radiation.setCameraSpectralResponse("cam", "MWIR", "half_response");
+        }
+        radiation.updateGeometry();
+        radiation.runBand("MWIR");
+        const std::vector<float> pixels = radiation.getCameraPixelData("cam", "MWIR");
+        double sum = 0.0;
+        for (float pixel: pixels) {
+            sum += pixel;
+        }
+        return float(sum / double(pixels.size()));
+    };
+    const float without_response = mean_pixel(false);
+    const float with_response = mean_pixel(true);
+    DOCTEST_CHECK(without_response > 0.f);
+    DOCTEST_CHECK(std::abs(with_response - without_response) < 0.01f * without_response);
 }
 
 GPU_TEST_CASE("RadiationModel::getCameraPixelBrightnessTemperature") {
@@ -17080,6 +17127,57 @@ GPU_TEST_CASE("Spectral weighting - a band whose surface spectra cannot be weigh
     const std::string error_message = runBandError(model, "FAR");
     DOCTEST_CHECK(error_message.find("sw_vis_rho") != std::string::npos);
     DOCTEST_CHECK(error_message.find("FAR") != std::string::npos);
+}
+
+GPU_TEST_CASE("SIF camera pixels do not depend on the magnitude of a flat spectral response") {
+    // Regression test. A SIF band is an emission band: cameras receive the leaves' fluorescence without the spectral response, but the sunlight they reflect was weighted by
+    // the response and kept its magnitude (the sun has a spectrum), so with a response of 0.5 the reflected part of a pixel was halved while the SIF part was not, and the
+    // ratio of fluorescence to reflected light in the image was wrong. With a flat response the pixels must not change.
+    auto mean_pixel = [](bool with_response) {
+        Context context;
+        context.setGlobalData("flat_leaf_rho", std::vector<vec2>{make_vec2(400, 0.1f), make_vec2(800, 0.1f)});
+        context.setGlobalData("half_response", std::vector<vec2>{make_vec2(600, 0.5f), make_vec2(800, 0.5f)});
+        uint leaf = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+        context.setPrimitiveData(leaf, "twosided_flag", uint(0));
+        context.setPrimitiveData(leaf, "reflectivity_spectrum", "flat_leaf_rho");
+        sif_stamp_biochem(context, {leaf}, "flat_bins");
+        context.setPrimitiveData(leaf, "electron_transport_ratio", 0.5f);
+        context.setPrimitiveData(leaf, "temperature", 298.15f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.addRadiationBand("SIF_red", 680.f, 700.f);
+        model.setDirectRayCount("SIF_red", 100);
+        model.setDiffuseRayCount("SIF_red", 100);
+        model.setScatteringDepth("SIF_red", 1);
+        model.setDiffuseRadiationFlux("SIF_red", 0.f);
+        uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        model.setSourceSpectrum(sun, "solar_spectrum_direct_ASTMG173");
+        model.setSourceFlux(sun, "SIF_red", 50.f);
+
+        SIFCameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(4, 4);
+        camera_properties.HFOV = 10.f;
+        camera_properties.exposure = "manual";
+        camera_properties.excitation_bin_width_nm = 50.f;
+        model.addSIFCamera("sif_cam", {"SIF_red"}, make_vec3(0.01f, 0, 2), make_vec3(0, 0, 0), camera_properties, 4);
+        if (with_response) {
+            model.setCameraSpectralResponse("sif_cam", "SIF_red", "half_response");
+        }
+        model.updateGeometry();
+        model.runBand("SIF_red");
+        const std::vector<float> pixels = model.getCameraPixelData("sif_cam", "SIF_red");
+        double sum = 0.0;
+        for (float pixel: pixels) {
+            sum += pixel;
+        }
+        return float(sum / double(pixels.size()));
+    };
+    const float without_response = mean_pixel(false);
+    const float with_response = mean_pixel(true);
+    const float reflected_only = 0.1f * 50.f / PI_F;
+    DOCTEST_CHECK(without_response > 1.001f * reflected_only); // the leaf fluoresces
+    DOCTEST_CHECK(std::abs(with_response - without_response) < 0.01f * without_response);
 }
 
 GPU_TEST_CASE("Spectral weighting - SIF excitation bins beyond a leaf spectrum are not an error") {

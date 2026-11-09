@@ -565,14 +565,14 @@ struct CameraMetadata {
     //! Geographic location properties
     struct LocationProperties {
         float latitude; //!< Latitude in degrees (+N/-S)
-        float longitude; //!< Longitude in degrees (+E/-W)
+        float longitude; //!< Longitude in degrees (+E/-W), the usual (ISO 6709) convention, opposite to the Context's (helios::Location counts longitude positive West)
     } location_properties;
 
     //! Image acquisition properties
     struct AcquisitionProperties {
         std::string date; //!< Acquisition date (YYYY-MM-DD format)
         std::string time; //!< Acquisition time (HH:MM:SS format)
-        float UTC_offset; //!< UTC offset in hours
+        float UTC_offset; //!< Offset of local time from UTC in hours, positive East as in ISO 8601 and the EXIF OffsetTime tags (UTC-8 is -8), opposite to the Context's (helios::Location counts it positive West)
         float camera_height_m; //!< Camera height above ground in meters
         float camera_angle_deg; //!< Camera tilt angle from horizontal (0=horizontal, 90=down)
         std::string light_source; //!< Lighting type: "sunlight", "artificial", "mixed", or "none"

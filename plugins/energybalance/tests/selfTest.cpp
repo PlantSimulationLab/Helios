@@ -100,6 +100,25 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Temperature Solution Check 1") {
     DOCTEST_CHECK(temperature == doctest::Approx(temperature_exact).epsilon(err_tol));
 }
 
+DOCTEST_TEST_CASE("EnergyBalanceModel rejects a negative or non-finite moisture conductance") {
+    // Regression test. A negative "moisture_conductance" (e.g., from a stomatal model evaluated with strongly negative net photosynthesis) was used as given, which
+    // reversed the leaf's transpiration: water condensed onto it and it gained latent heat. It is now an error.
+    for (float conductance: {-0.05f, std::numeric_limits<float>::quiet_NaN()}) {
+        Context context;
+        uint UUID = context.addPatch();
+        context.setPrimitiveData(UUID, "radiation_flux_LW", float(5.67e-8 * pow(300.f, 4)));
+        context.setPrimitiveData(UUID, "radiation_flux_SW", 350.f);
+        context.setPrimitiveData(UUID, "air_temperature", 300.f);
+        context.setPrimitiveData(UUID, "air_humidity", 0.4f);
+        context.setPrimitiveData(UUID, "moisture_conductance", conductance);
+        EnergyBalanceModel energymodel(&context);
+        energymodel.disableMessages();
+        energymodel.addRadiationBand("LW");
+        energymodel.addRadiationBand("SW");
+        DOCTEST_CHECK_THROWS_WITH_AS(energymodel.run(), doctest::Contains("moisture_conductance"), std::runtime_error);
+    }
+}
+
 DOCTEST_TEST_CASE("EnergyBalanceModel Temperature Solution Check 2 - Object Length") {
     Context context_3;
     uint UUID_3 = context_3.addPatch(make_vec3(1, 2, 3), make_vec2(3, 2));

@@ -534,7 +534,7 @@
 
   \subsection DirScript New Project Script
 
-  There is a script in the main Helios directory that can quickly set up a new project called "create\_project.sh". First, create a new directory where the project will exist, for example:
+  There is a script in the utilities/ directory that can quickly set up a new project called "create\_project.sh". First, create a new directory where the project will exist, for example:
 
  ~~~~~~
  $ mkdir projects/myProject
@@ -552,6 +552,40 @@
 
  ~~~~~~
  $ utilities/create_project.sh projects/myProjects radiation visualizer
+ ~~~~~~
+
+ The script also writes the AGENTS.md and CLAUDE.md files described in the next section.
+
+ \subsection AIAgents Working with AI Coding Agents
+
+ Each Helios project directory contains two files written for AI coding agents such as Claude Code, Codex, Cursor and GitHub Copilot, so that an agent started in the project directory, with no prior knowledge of Helios, knows how to set up and build a simulation correctly:
+
+ <ul>
+   <li><b>AGENTS.md</b> gives the location and version of the Helios install, the plug-ins enabled in the project, how to build and run it, Helios conventions (coordinate system, angle units, primitive data) and common pitfalls, and an index of the documentation, headers and sample projects of every plug-in. Most coding agents read this file automatically.</li>
+   <li><b>CLAUDE.md</b> contains only the line `@AGENTS.md`, which makes Claude Code read AGENTS.md even when another CLAUDE.md exists in a directory above the project.</li>
+ </ul>
+
+ The files are written by create\_project.sh, and are regenerated every time the project is configured with CMake, so that they always match the installed version of Helios. For an existing project that has not been configured yet, they can be written with:
+
+ ~~~~~~
+ $ utilities/generate_agent_files.sh path/to/myProject
+ ~~~~~~
+
+ The first line of each file is a marker comment. Helios only overwrites a file that still starts with this marker; to keep your own edits, delete the marker line and the file will never be touched again. If you write your own CLAUDE.md, add the line `@AGENTS.md` to it so that Claude Code still reads the Helios instructions. The general guidance in AGENTS.md comes from utilities/agents/helios_agent_guide.md in the Helios install.
+
+ To turn generation off for a project, configure it with:
+
+ ~~~~~~
+ $ cmake -DHELIOS_GENERATE_AGENT_FILES=OFF ..
+ ~~~~~~
+
+ or add `set( HELIOS_GENERATE_AGENT_FILES OFF )` to its CMakeLists.txt before the line that includes CMake_project.cmake. To turn it off for all projects, set the environment variable `HELIOS_GENERATE_AGENT_FILES=OFF`. Projects located inside the Helios directory are skipped, except those under projects/.
+
+ <b>Claude Code skill:</b> the Helios repository is also a Claude Code plugin marketplace. Its `helios` plugin provides a skill that finds a project's Helios install and makes sure the project has its AGENTS.md, which is useful when Claude Code is started outside a Helios project. To install it from a local copy of Helios (which keeps the skill matched to that copy):
+
+ ~~~~~~
+ $ claude plugin marketplace add /path/to/Helios
+ $ claude plugin install helios@plantsimulationlab-helios
  ~~~~~~
 
  \subsection GlobalInclude C++ Standard Library Include Files

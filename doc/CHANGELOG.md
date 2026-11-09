@@ -1,5 +1,21 @@
 # Changelog
 
+# [1.3.97] 2026-XX-XX
+
+## Core
+- Projects now get `AGENTS.md` and `CLAUDE.md` files with instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot and others): the Helios install path and version, build commands, conventions and common pitfalls, and an index of the documentation, headers and samples of every plug-in. The files are written by `utilities/create_project.sh` and refreshed whenever a project is configured with CMake, and can be written into an existing project with the new `utilities/generate_agent_files.sh`. A file whose first-line marker has been removed is never overwritten; generation is disabled with `-DHELIOS_GENERATE_AGENT_FILES=OFF` or the environment variable `HELIOS_GENERATE_AGENT_FILES=OFF`. Projects inside the Helios tree other than under `projects/` are skipped.
+- Added a Claude Code plugin marketplace to the repository, with a `helios` plugin whose `helios-simulation` skill finds a project's Helios install and its agent instructions.
+
+## Radiation
+- **Behavior change:** Radiation camera metadata (`RadiationModel::getCameraMetadata()` and the JSON written with images) now records the longitude and UTC offset positive East, the usual convention and that of the image's EXIF tags. The longitude was copied from the Context's west-positive location, so every image was recorded in the wrong hemisphere (e.g., Los Angeles at +118.24, although the metadata documents longitude as positive East), and the UTC offset had the opposite sign to the image's EXIF OffsetTime. The UTC offset is also written with two decimals instead of one, so that UTC+5:45 is no longer written as 5.8.
+- Fixed the reflected radiation seen by a radiation camera with a spectral response in a band with emission enabled, including SIF emission bands, when some radiation in the band had a spectrum (e.g., the sun in a SIF band or a source with a spectrum in a 3-5 um band). The reflected radiance kept the magnitude of the response while the emitted radiance (thermal emission or fluorescence) did not, so the two parts of a pixel were on different scales (with a response of 0.5, the reflected part was halved, and a SIF image overstated fluorescence relative to reflected light). The reflected radiance is now normalized by the response, as it already was when no radiation in the band had a spectrum.
+
+## Photosynthesis
+- **Behavior change:** `PhotosynthesisModel::getFarquharCoefficientsFromLibrary()` and `setFarquharCoefficientsFromLibrary()` now raise an error, listing the species in the library, for a species it does not hold, as the C4 library already did. Previously the species was given the Almond coefficients with a warning that `disableMessages()` silenced, so a misspelled species name silently gave the wrong plant.
+
+## Energy Balance
+- `EnergyBalanceModel::run()` now raises an error for a primitive whose "moisture_conductance" is negative or not finite. A negative conductance was used as given and reversed the surface's transpiration, so that it gained latent heat.
+
 # [1.3.96] 2026-11-08
 
 🚨+ NEW PLUG-IN + 🚨

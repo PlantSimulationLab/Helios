@@ -16,6 +16,15 @@ permissions:
   id-token: write
   contents: read
 
+# Serialize runs of this workflow so concurrent runs do not race on the single shared
+# EC2 GPU instance. Without this, re-pushing "release" while a run was in progress let the
+# older run's stop-gpu job (if: always()) stop the instance underneath the newer run's
+# tests, killing them. New runs queue behind in-progress ones (rather than cancelling them),
+# so the instance is always fully released before the next run touches it.
+concurrency:
+  group: linux-gpu-ec2-instance
+  cancel-in-progress: false
+
 jobs:
 
   start-gpu:

@@ -259,7 +259,7 @@ In the Photosynthesis Plugin, the Arrhenius form will be assumed as it requires 
 
 The model coefficients can be set manually or by using the library of coefficients provided in the table above.
 
-To load the FvCB parameters from the library, call the function \ref PhotosynthesisModel::setFarquharCoefficientsFromLibrary() with the species name as an argument. This will automatically set the parameters for all primitives. Alternatively, a vector of UUIDs can be passed to this function to set the parameters for a subset of primitives.
+To load the FvCB parameters from the library, call the function \ref PhotosynthesisModel::setFarquharCoefficientsFromLibrary() with the species name as an argument. This will automatically set the parameters for all primitives. Alternatively, a vector of UUIDs can be passed to this function to set the parameters for a subset of primitives. A species that is not in the library (e.g., a misspelled one) raises an error listing the species that are. The library covers tree crops, bean and cowpea; it has no C3 grass such as wheat or rice, whose parameters must be set directly.
 
 To set the parameters manually, first declare an instance of the \ref FarquharModelCoefficients structure, and then set the parameters using the member functions of the structure. Finally, call the function \ref PhotosynthesisModel::setModelCoefficients() with the structure as an argument.
 

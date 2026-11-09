@@ -793,7 +793,7 @@ public:
 
     //! Get Farquhar-von Caemmerer-Berry model coefficients for a species from the library.
     /**
-     * \param[in] species Name of species from the library.
+     * \param[in] species Name of species from the library. A species that is not in the library raises an error listing those that are.
      * \return Farquhar-von Caemmerer-Berry model coefficients for the species.
      */
     FarquharModelCoefficients getFarquharCoefficientsFromLibrary(const std::string &species);

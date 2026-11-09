@@ -3043,9 +3043,27 @@ void RadiationModel::updateRadiativeProperties() {
     // spectrally flat contributor is taken as a unit spectrum over the response, ∫ρ·C / ∫dλ, when the band has any flux with a spectrum, so
     // that it is on the same scale; in a band where no flux has a spectrum it gives the camera-weighted average ∫ρ·C / ∫C, whose white
     // reference is 1. An empty object spectrum stands for a spectrally flat, perfectly white surface, whose value is the white reference.
+    //
+    // In an emission band (thermal or SIF), cameras receive the emitted radiance without the response (see the emission launch in runBand()), and the
+    // thermal conversions (getCameraPixelBrightnessTemperature(), the sensor atmosphere) read the pixels as in-band radiances. So that reflected radiation
+    // is on the same scale, the value there is always normalized by the response, ∫ρ·W·C / ∫W·C, whose white reference is 1.
     auto cameraWeightedValue = [&](const std::vector<helios::vec2> &object_spectrum, uint b, uint contributor, uint cam) -> float {
         const std::vector<helios::vec2> &response = camera_response_unique.at(cam).at(b);
         const std::vector<helios::vec2> &weighting = contributorSpectrum(contributor, b);
+        if (radiation_bands.at(band_labels.at(b)).emissionFlag) {
+            if (weighting.empty()) {
+                const WeightedSpectrumIntegral integral = integrateWeightedSpectrum(object_spectrum, response, {}, response.front().x, response.back().x);
+                return integral.weighted / integral.weight;
+            }
+            const float wavelength1 = std::max(weighting.front().x, response.front().x);
+            const float wavelength2 = std::min(weighting.back().x, response.back().x);
+            if (!(wavelength2 > wavelength1)) {
+                return 0.f; // the camera responds to none of this contributor's radiation
+            }
+            const float object_integral = integrateWeightedSpectrum(object_spectrum, weighting, response, wavelength1, wavelength2).weighted;
+            const float white_integral = integrateWeightedSpectrum({}, weighting, response, wavelength1, wavelength2).weighted;
+            return white_integral > 0.f ? object_integral / white_integral : 0.f;
+        }
         if (weighting.empty()) {
             const WeightedSpectrumIntegral integral =
                     band_has_spectral_flux.at(b) ? integrateWeightedSpectrum(object_spectrum, {}, response, response.front().x, response.back().x) : integrateWeightedSpectrum(object_spectrum, response, {}, response.front().x, response.back().x);
