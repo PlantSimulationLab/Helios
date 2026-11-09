@@ -100,6 +100,8 @@ layout(set = 0, binding = 13) readonly buffer MaskOffsetsBuffer { uint mask_offs
 layout(set = 0, binding = 14) readonly buffer MaskIDsBuffer { int mask_ids[]; } mask_ids_buf;
 layout(set = 0, binding = 15) readonly buffer UVDataBuffer { vec2 uv_data[]; } uv_data_buf;
 layout(set = 0, binding = 16) readonly buffer UVIDsBuffer { int uv_ids[]; } uv_ids_buf;
+// Camera flux smoothing topology, 4 entries per primitive; entry 4*prim is negative for a primitive taking no part in smoothing, and the buffer is a single entry when smoothing is off
+layout(set = 0, binding = 18) readonly buffer SmoothingVertexIndicesBuffer { int indices[]; } smoothing_indices_buf;
 
 // ---- Periodic boundary bbox vertices ----
 layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer {
@@ -895,8 +897,10 @@ void main() {
 
                     // A surface layer reflects a source's direct radiation into its microfacet lobe around the mirror direction, which
                     // the rays reading the first scattering of the direct radiation evaluate from the incident flux stored here
+                    // With camera flux smoothing, every smoothed primitive records it as well, for the camera to evaluate the direct radiation with the shading normal
                     if (pc.specular_reflection_enabled > 0) {
-                        float spec_energy = layer >= 0 ? flux * strength : 0.0;
+                        bool smoothed = !origin_is_cover && smoothing_indices_buf.indices.length() > int(prim_idx) * 4 + 3 && smoothing_indices_buf.indices[int(prim_idx) * 4] >= 0;
+                        float spec_energy = (layer >= 0 || smoothed) ? flux * strength : 0.0;
                         float spec_sum = subgroupAdd(spec_energy);
                         if (subgroupElect()) {
                             uint spec_idx = src_idx * pc.primitive_count * pc.band_count + prim_idx * pc.band_count + band;

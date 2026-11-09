@@ -698,6 +698,90 @@ std::string PlantArchitecture::resolveTextureFile(const std::string &texture_fil
     return ""; // Never reached
 }
 
+void PlantArchitecture::recordSpectralClassMap(helios::Context *context, const std::vector<uint> &UUIDs, const std::string &texture_file, const std::string &class_map_file, const std::string &organ, const std::string &remedy) {
+    const std::string class_map = resolveTextureFile(class_map_file);
+
+    // A class map is read once: this is called for every leaf and every internode created, and reading the image each time cost ten times the growth.
+    struct ClassMapImage {
+        int2 size;
+        std::vector<uint16_t> classes;
+    };
+    static std::map<std::string, ClassMapImage> class_map_cache;
+    auto cached = class_map_cache.find(class_map);
+    if (cached == class_map_cache.end()) {
+        uint map_width, map_height;
+        ClassMapImage image;
+        helios::readPNGSingleChannel(class_map, map_width, map_height, image.classes);
+        image.size = make_int2(int(map_width), int(map_height));
+        cached = class_map_cache.emplace(class_map, std::move(image)).first;
+    }
+    const int2 map_size = cached->second.size;
+    const std::vector<uint16_t> &classes = cached->second.classes;
+
+    std::vector<uint> textured_UUIDs;
+    for (uint UUID: UUIDs) {
+        const std::string &file = context->getPrimitiveTextureFile(UUID);
+        if (file.empty() || (!texture_file.empty() && file != texture_file)) {
+            continue;
+        }
+        textured_UUIDs.push_back(UUID);
+    }
+    if (textured_UUIDs.empty()) {
+        return;
+    }
+
+    // Checked here, so that a class map not made for this texture is reported as such rather than when the spectral texture is assigned
+    const std::string texture = context->getPrimitiveTextureFile(textured_UUIDs.front());
+    const int2 texture_size = context->getPrimitiveTextureSize(textured_UUIDs.front());
+    if (texture_size.x != map_size.x || texture_size.y != map_size.y) {
+        helios_runtime_error("ERROR (PlantArchitecture): The " + organ + " class map " + class_map + " is " + std::to_string(map_size.x) + " x " + std::to_string(map_size.y) + " texels, but the " + organ + " texture " + texture + " is " +
+                             std::to_string(texture_size.x) + " x " + std::to_string(texture_size.y) + "." + remedy);
+    }
+    const bool has_transparency = context->primitiveTextureHasTransparencyChannel(textured_UUIDs.front());
+    if (has_transparency) {
+        const std::vector<std::vector<bool>> *opaque = context->getPrimitiveTextureTransparencyData(textured_UUIDs.front());
+        for (int row = 0; row < map_size.y; row++) {
+            for (int column = 0; column < map_size.x; column++) {
+                if (opaque->at(row).at(column) == (classes.at(size_t(row) * map_size.x + column) == 0)) {
+                    helios_runtime_error("ERROR (PlantArchitecture): The " + organ + " class map " + class_map + " does not match the transparency of the " + organ + " texture " + texture + " (at column " + std::to_string(column) + ", row " +
+                                         std::to_string(row) + "): class 0 must mark exactly its transparent texels." + remedy);
+                }
+            }
+        }
+    } else {
+        for (size_t texel = 0; texel < classes.size(); texel++) {
+            if (classes.at(texel) == 0) {
+                helios_runtime_error("ERROR (PlantArchitecture): The " + organ + " class map " + class_map + " has a texel of class 0 (at column " + std::to_string(texel % map_size.x) + ", row " + std::to_string(texel / map_size.x) +
+                                     "), but the " + organ + " texture " + texture + " has no transparency: every texel must have a class." + remedy);
+            }
+        }
+    }
+
+    for (uint UUID: textured_UUIDs) {
+        if (context->doesPrimitiveDataExist(UUID, "spectral_class_map")) {
+            continue;
+        }
+        if (context->getPrimitiveTextureFile(UUID) != texture) {
+            helios_runtime_error("ERROR (PlantArchitecture): The " + organ + " class map " + class_map + " was made for the texture " + texture + ", but the " + organ + " is also mapped with " + context->getPrimitiveTextureFile(UUID) + "." + remedy);
+        }
+        // Every texel of a texture without transparency has a class, so every triangle covers one; only a triangle of a texture with
+        // transparency can lie wholly on transparent texels, and the test (which clips every texel cell under the triangle) is costly on
+        // the thousands of triangles of a tube.
+        if (!has_transparency || !helios::classMapAreaFractions(classes, map_size, context->getPrimitiveTextureUV(UUID)).empty()) {
+            context->setPrimitiveData(UUID, "spectral_class_map", class_map);
+        }
+    }
+}
+
+//! Record the fruit prototype's class map (InflorescenceParameters::fruit_class_map_file) on its textured triangles; every fruit copied from the prototype then carries it.
+static void recordFruitClassMap(helios::Context *context, uint objID_fruit, const PhytomerParameters &params) {
+    if (params.inflorescence.fruit_class_map_file.empty()) {
+        return;
+    }
+    PlantArchitecture::recordSpectralClassMap(context, context->getObjectPrimitiveUUIDs(objID_fruit), "", params.inflorescence.fruit_class_map_file, "fruit",
+                                              " A class map is made for one texture (see utilities/leaf_class_maps). If the fruit prototype or its texture was changed, clear InflorescenceParameters::fruit_class_map_file, or set it to a class map made for the new texture.");
+}
+
 LeafPrototype::LeafPrototype(std::minstd_rand0 *generator) : generator(generator) {
     leaf_aspect_ratio.initialize(1.f, generator);
     midrib_fold_fraction.initialize(0.f, generator);
@@ -705,6 +789,7 @@ LeafPrototype::LeafPrototype(std::minstd_rand0 *generator) : generator(generator
     // Defaults to the quartic the leaf prototype has always used, so a species that does not set it keeps its existing blade shape exactly.
     longitudinal_curvature_exponent.initialize(4.f, generator);
     lateral_curvature.initialize(0.f, generator);
+    roll_fraction.initialize(0.f, generator);
     petiole_roll.initialize(0.f, generator);
     wave_period.initialize(0.f, generator);
     wave_amplitude.initialize(0.f, generator);
@@ -809,6 +894,7 @@ std::minstd_rand0 *LeafPrototype::setRandomGenerator(std::minstd_rand0 *rand_gen
     longitudinal_curvature.setRandomGenerator(rand_generator);
     longitudinal_curvature_exponent.setRandomGenerator(rand_generator);
     lateral_curvature.setRandomGenerator(rand_generator);
+    roll_fraction.setRandomGenerator(rand_generator);
     petiole_roll.setRandomGenerator(rand_generator);
     wave_period.setRandomGenerator(rand_generator);
     wave_amplitude.setRandomGenerator(rand_generator);
@@ -947,6 +1033,7 @@ void PhytomerParameters::resample() {
     resampleIfDistributed(leaf.prototype.longitudinal_curvature_exponent);
     resampleIfDistributed(leaf.prototype.longitudinal_curvature);
     resampleIfDistributed(leaf.prototype.lateral_curvature);
+    resampleIfDistributed(leaf.prototype.roll_fraction);
     resampleIfDistributed(leaf.prototype.petiole_roll);
     resampleIfDistributed(leaf.prototype.wave_period);
     resampleIfDistributed(leaf.prototype.wave_amplitude);
@@ -1427,6 +1514,9 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
         context_ptr->deleteObject(fbud.peduncle_objIDs);
         fbud.peduncle_objIDs.resize(0);
     }
+    // The peduncle that had been swung out of a branch is gone; a dead bud keeps no swing and a rebuilt one starts unswung (see applyPeduncleSwing())
+    fbud.contact_swing_axis = make_vec3(0, 0, 1);
+    fbud.contact_swing_angle = 0.f;
 
     fbud.state = state;
 
@@ -3108,6 +3198,15 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         // Resolve internode texture path (allows users to specify simple paths like "OliveBark.jpg")
         std::string resolved_internode_texture = PlantArchitecture::resolveTextureFile(phytomer_parameters.internode.image_texture);
 
+        // The class map of the bark texture, recorded on the tube's new triangles (those added earlier already carry it) for the radiation model to give the bark's parts their own spectra.
+        auto recordInternodeClassMap = [&](const std::string &texture) {
+            if (texture.empty() || phytomer_parameters.internode.image_class_map_file.empty()) {
+                return;
+            }
+            PlantArchitecture::recordSpectralClassMap(context_ptr, context_ptr->getObjectPrimitiveUUIDs(parent_shoot->internode_tube_objID), texture, phytomer_parameters.internode.image_class_map_file, "internode",
+                                                      " A class map is made for one texture (see utilities/leaf_class_maps). If the internode texture was changed, clear InternodeParameters::image_class_map_file, or set it to a class map made for the new texture.");
+        };
+
         if (!context_ptr->doesObjectExist(parent_shoot->internode_tube_objID)) {
             // first internode on shoot
             if (!resolved_internode_texture.empty()) {
@@ -3118,6 +3217,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(parent_shoot->internode_tube_objID), "object_label", "shoot");
             std::string stem_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_stem";
             plantarchitecture_ptr->nameOrganMaterials(parent_shoot->internode_tube_objID, stem_material_name);
+            recordInternodeClassMap(resolved_internode_texture);
         } else {
             // appending internode to shoot
             for (int inode_segment = 1; inode_segment <= Ndiv_internode_length; inode_segment++) {
@@ -3132,6 +3232,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             // The appended segments are created with automatic materials; they take the shoot's stem material.
             std::string stem_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_stem";
             plantarchitecture_ptr->nameOrganMaterials(parent_shoot->internode_tube_objID, stem_material_name);
+            recordInternodeClassMap(resolved_internode_texture);
         }
     }
 
@@ -3365,6 +3466,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             } else {
                 // load a new prototype
                 objID_leaf = buildLeafPrototype(leaves_per_petiole, ind_from_tip);
+                recordBuiltLeafShape(objID_leaf);
                 std::string material_base_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_leaf";
                 plantarchitecture_ptr->nameOrganMaterials(objID_leaf, material_base_name);
             }
@@ -3483,6 +3585,7 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
             std::string fruit_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_fruit";
             plantarchitecture_ptr->nameOrganMaterials(objID_fruit, fruit_material_name);
             makeClosedFruitSurfacesOneSided(context_ptr, objID_fruit, fruit_material_name);
+            recordFruitClassMap(context_ptr, objID_fruit, phytomer_parameters);
         }
     } else {
         // Flower (open or closed)
@@ -3610,6 +3713,7 @@ void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerP
                 objID_fruit = params.inflorescence.fruit_prototype_function(context_ptr, 1, sampleOrganBuildParameters(build_parameters));
                 nameOrganMaterials(objID_fruit, plant_name + "_fruit");
                 makeClosedFruitSurfacesOneSided(context_ptr, objID_fruit, plant_name + "_fruit");
+                recordFruitClassMap(context_ptr, objID_fruit, params);
                 context_ptr->hideObject(objID_fruit);
             }
         }
@@ -3659,6 +3763,33 @@ std::vector<RGBcolor> Phytomer::getPeduncleNodeColors(size_t node_count) const {
                                         culm_color.b + (peduncle_color.b - culm_color.b) * blend);
     }
     return colors;
+}
+
+vec3 Phytomer::bendPeduncleAxis(const vec3 &peduncle_axis, float curvature_degrees_per_meter, float segment_length) {
+    if (curvature_degrees_per_meter == 0.f) {
+        return peduncle_axis;
+    }
+    const vec3 target = curvature_degrees_per_meter > 0.f ? make_vec3(0, 0, 1) : make_vec3(0, 0, -1);
+
+    // The bend is about the horizontal axis across the peduncle, so that it turns purely up or down.
+    vec3 horizontal_bending_axis = cross(peduncle_axis, make_vec3(0, 0, 1));
+    const float axis_magnitude = horizontal_bending_axis.magnitude();
+    if (axis_magnitude < 1e-6f) {
+        // Along the vertical there is no horizontal axis to bend about. A peduncle pointing straight up with a negative curvature used to be snapped to hang straight down here, and with a threshold of 1e-3
+        // that caught any peduncle within 0.06 degrees of vertical: a head meant to nod a few degrees was turned upside down in one segment. With no direction to bend in, it is left as it is.
+        return peduncle_axis * target > 0.f ? target : peduncle_axis;
+    }
+    horizontal_bending_axis = horizontal_bending_axis / axis_magnitude;
+
+    // Clamped so as not to overshoot the vertical the peduncle is being turned toward
+    const float theta_curvature = deg2rad(curvature_degrees_per_meter * segment_length);
+    const float theta_from_target = std::acos(std::clamp(peduncle_axis * target, -1.f, 1.f));
+    if (std::fabs(theta_curvature) >= theta_from_target) {
+        return target;
+    }
+    vec3 bent_axis = rotatePointAboutLine(peduncle_axis, nullorigin, horizontal_bending_axis, theta_curvature);
+    bent_axis.normalize();
+    return bent_axis;
 }
 
 bool Phytomer::peduncleShouldMatchCulm() const {
@@ -3724,18 +3855,15 @@ void Phytomer::updatePeduncleRadii() {
                 //
                 // The anchor is measured from the rendered geometry, which is what has to be placed correctly. Phytomer::setPetioleBase() and Phytomer::setLeafScaleFraction() both translate peduncle
                 // objects by a shift derived from the PETIOLE base -- correct for an axillary bud, which sits there, and wrong for a terminal bud, which is anchored to the internode tip.
-                vec3 lower_corner;
-                vec3 upper_corner;
-                context_ptr->getObjectBoundingBox(objID, lower_corner, upper_corner);
-
-                // The peduncle grows upward from its base, so the bottom of its bounding box is where it attaches to the culm.
-                const vec3 rendered_base = make_vec3(0.5f * (lower_corner.x + upper_corner.x), 0.5f * (lower_corner.y + upper_corner.y), lower_corner.z);
-                const vec3 anchor_shift = fbud.base_position - rendered_base;
-                if (anchor_shift.magnitude() > 1e-6f) {
-                    // Rewritten through the node list, which Context::setTubeNodes() takes in world coordinates and rebuilds the primitives from.
-                    std::vector<vec3> nodes = context_ptr->getTubeObjectNodes(objID);
-                    if (!nodes.empty()) {
-                        const vec3 node_base = nodes.front();
+                //
+                // The attachment is the tube's first node, whatever direction the peduncle leaves in. Taking the bottom of the bounding box instead assumed the peduncle rises from its lowest point,
+                // which a tilted or drooping pedicel, or one swung out of a branch (see applyPeduncleSwing()), does not; such tubes were then rebuilt on every time step.
+                std::vector<vec3> nodes = context_ptr->getTubeObjectNodes(objID);
+                if (!nodes.empty()) {
+                    const vec3 node_base = nodes.front();
+                    const vec3 anchor_shift = fbud.base_position - node_base;
+                    if (anchor_shift.magnitude() > 1e-6f) {
+                        // Rewritten through the node list, which Context::setTubeNodes() takes in world coordinates and rebuilds the primitives from.
                         for (vec3 &node: nodes) {
                             node = fbud.base_position + (node - node_base);
                         }
@@ -3753,6 +3881,9 @@ void Phytomer::updatePeduncleRadii() {
 
 void Phytomer::updateInflorescence(FloralBud &fbud) {
     plantarchitecture_ptr->invalidateOrganIndex();
+    // The peduncle is rebuilt here from the bud's base, so any swing it had been given out of a branch (see applyPeduncleSwing()) goes with it.
+    fbud.contact_swing_axis = make_vec3(0, 0, 1);
+    fbud.contact_swing_angle = 0.f;
     // Assign the member rather than a local of the same name, so that whether peduncle geometry was
     // actually built here is the same flag consulted later when that geometry is deleted.
     this->build_context_geometry_peduncle = plantarchitecture_ptr->build_context_geometry_peduncle;
@@ -3869,54 +4000,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     this->peduncle_yaw.at(petiole_idx).at(bud_idx) = peduncle_yaw;
 
     for (int i = 1; i <= phytomer_parameters.peduncle.length_segments; i++) {
-        if (peduncle_curvature != 0.f) {
-            float curvature_value = peduncle_curvature;
-
-            // Calculate horizontal bending axis perpendicular to current peduncle direction
-            // This ensures bending is purely upward or downward
-            vec3 horizontal_bending_axis = cross(peduncle_axis, make_vec3(0, 0, 1));
-            float axis_magnitude = horizontal_bending_axis.magnitude();
-
-            // Check if peduncle is nearly vertical (axis magnitude near zero)
-            if (axis_magnitude > 0.001f) {
-                horizontal_bending_axis = horizontal_bending_axis / axis_magnitude; // normalize
-
-                // Calculate current angle from target vertical direction
-                float theta_curvature = deg2rad(curvature_value * dr_peduncle);
-                float theta_from_target;
-
-                if (curvature_value > 0) {
-                    // Positive curvature: target is upward (0, 0, 1)
-                    // Current angle from target = acos(peduncle_axis.z)
-                    theta_from_target = std::acos(std::min(1.0f, std::max(-1.0f, peduncle_axis.z)));
-                } else {
-                    // Negative curvature: target is downward (0, 0, -1)
-                    // Current angle from target = acos(-peduncle_axis.z)
-                    theta_from_target = std::acos(std::min(1.0f, std::max(-1.0f, -peduncle_axis.z)));
-                }
-
-                // Clamp rotation to not overshoot vertical
-                if (fabs(theta_curvature) >= theta_from_target) {
-                    // Would overshoot - snap to exact vertical
-                    if (curvature_value > 0) {
-                        peduncle_axis = make_vec3(0, 0, 1);
-                    } else {
-                        peduncle_axis = make_vec3(0, 0, -1);
-                    }
-                } else {
-                    // Won't overshoot - apply rotation
-                    peduncle_axis = rotatePointAboutLine(peduncle_axis, nullorigin, horizontal_bending_axis, theta_curvature);
-                    peduncle_axis.normalize();
-                }
-            } else {
-                // Already vertical - snap to correct vertical direction based on curvature sign
-                if (curvature_value > 0) {
-                    peduncle_axis = make_vec3(0, 0, 1); // upward
-                } else {
-                    peduncle_axis = make_vec3(0, 0, -1); // downward
-                }
-            }
-        }
+        peduncle_axis = bendPeduncleAxis(peduncle_axis, peduncle_curvature, dr_peduncle);
 
         peduncle_vertices.at(i) = peduncle_vertices.at(i - 1) + dr_peduncle * peduncle_axis;
 
@@ -4496,6 +4580,11 @@ void PlantArchitecture::recordLeafPrototypeRestGeometry(const LeafPrototype &pro
     // Keep the prototype's undeformed blade so that a drooping leaf can be re-deflected from its rest shape as it grows, instead of being bent further from wherever it already is. Stored once
     // per prototype and shared by every leaf copied from it, so this costs a handful of meshes per plant type rather than one per leaf. Only leaves that actually droop are recorded.
     LeafRestGeometry rest_geometry;
+    // The shape is kept for every blade, drooping or not, so that its copies can be reshaped in place later.
+    rest_geometry.has_shape = prototype_params.last_built_shape_valid;
+    if (rest_geometry.has_shape) {
+        rest_geometry.shape = prototype_params.last_built_shape;
+    }
     if (leaf_flexibility > 0.f) {
         // Recorded in the prototype's own local frame, not the world frame that getPolymeshObjectVertices() returns. A leaf is a copyObject() of this prototype, and copyObject preserves the
         // local vertices while giving the copy its own transform; the deflected lattice is later carried through that transform. Storing world-space vertices would bake the prototype's own
@@ -4882,7 +4971,14 @@ uint Phytomer::buildLeafPrototype(int leaves_per_petiole, float ind_from_tip, ui
         prototype.petiolule_radius_fraction = petiole_radius / leaflet_size;
     }
 
-    return prototype.prototype_function(context_ptr, &prototype, int(ind_from_tip));
+    // GenericLeafPrototype() records the shape it built; anything else leaves the record invalid, and a leaf built that way cannot be reshaped.
+    prototype.last_built_shape_valid = false;
+    const uint objID_leaf = prototype.prototype_function(context_ptr, &prototype, int(ind_from_tip));
+    last_built_leaf_shape_valid = prototype.last_built_shape_valid;
+    if (last_built_leaf_shape_valid) {
+        last_built_leaf_shape = prototype.last_built_shape;
+    }
+    return objID_leaf;
 }
 
 void Phytomer::labelLeafPrototype(uint objID_leaf) {
@@ -5144,18 +5240,35 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
     if (petiole_index >= leaf_prototype_index.size() || leaf_index >= leaf_prototype_index.at(petiole_index).size()) {
         return;
     }
-    const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
-    if (prototype < 0) {
-        return;
-    }
 
-    // The rest shapes are cached per leaflet count alongside the blades themselves, so the lookup is keyed on the number of leaflets this petiole carries.
-    const PlantArchitecture::LeafPrototypeCacheKey rest_cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaf_prototype_index.at(petiole_index).size()));
-    auto rest_cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(rest_cache_key);
-    if (rest_cache == plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() || rest_cache->second.size() <= uint(prototype) || rest_cache->second.at(prototype).size() <= leaf_index) {
-        return;
+    // A leaf reshaped in place (reshapeLeaf()) has its own rest shape on the phytomer, which takes the place of the one shared by every copy of its prototype.
+    PlantArchitecture::LeafRestGeometry own_rest;
+    const PlantArchitecture::LeafRestGeometry *rest_ptr = nullptr;
+    const auto own_state = leaf_shape_state.find(leaf_objIDs.at(petiole_index).at(leaf_index));
+    if (own_state != leaf_shape_state.end()) {
+        if (!own_state->second.deformable) {
+            return;
+        }
+        own_rest.vertices = own_state->second.rest_vertices;
+        own_rest.appended_vertices = own_state->second.rest_appended_vertices;
+        own_rest.subdivisions_x = own_state->second.shape.subdivisions_x;
+        own_rest.subdivisions_y = own_state->second.shape.subdivisions_y;
+        rest_ptr = &own_rest;
+    } else {
+        const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
+        if (prototype < 0) {
+            return;
+        }
+
+        // The rest shapes are cached per leaflet count alongside the blades themselves, so the lookup is keyed on the number of leaflets this petiole carries.
+        const PlantArchitecture::LeafPrototypeCacheKey rest_cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaf_prototype_index.at(petiole_index).size()));
+        auto rest_cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(rest_cache_key);
+        if (rest_cache == plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() || rest_cache->second.size() <= uint(prototype) || rest_cache->second.at(prototype).size() <= leaf_index) {
+            return;
+        }
+        rest_ptr = &rest_cache->second.at(prototype).at(leaf_index);
     }
-    const PlantArchitecture::LeafRestGeometry &rest = rest_cache->second.at(prototype).at(leaf_index);
+    const PlantArchitecture::LeafRestGeometry &rest = *rest_ptr;
     if (rest.vertices.empty() || rest.subdivisions_x == 0) {
         // No usable rest lattice was recorded for this prototype, so there is nothing to deflect from.
         return;
@@ -5515,8 +5628,18 @@ void Phytomer::setPetioleLeafGeometry(uint petiole_index, const std::vector<heli
             // A leaf that still carries a prototype index was copied from the set cached for this petiole's own leaflet count: setPetioleLeafCount() clears the index of every leaf it rebuilds.
             objID_leaf_new = context_ptr->copyObject(plantarchitecture_ptr->getCachedLeafPrototypeObjID(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaves_per_petiole), uint(prototype),
                                                                                                        uint(leaf), "PlantArchitecture::setPetioleLeafGeometry"));
+            // The prototype index is cleared below, so the shape the copy has is recorded on the phytomer while it can still be looked up.
+            const PlantArchitecture::LeafPrototypeCacheKey cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaves_per_petiole));
+            const auto cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(cache_key);
+            if (cache != plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() && cache->second.size() > uint(prototype) && cache->second.at(prototype).size() > leaf &&
+                cache->second.at(prototype).at(leaf).has_shape) {
+                LeafShapeState state;
+                state.shape = cache->second.at(prototype).at(leaf).shape;
+                leaf_shape_state[objID_leaf_new] = state;
+            }
         } else {
             objID_leaf_new = buildLeafPrototype(int(leaves_per_petiole), ind_from_tip);
+            recordBuiltLeafShape(objID_leaf_new);
             // Built fresh rather than copied from the cache, so it carries none of the cache's labelling.
             labelLeafPrototype(objID_leaf_new);
         }
@@ -5538,6 +5661,7 @@ void Phytomer::setPetioleLeafGeometry(uint petiole_index, const std::vector<heli
         if (context_ptr->doesObjectExist(leaf_objIDs.at(petiole_index).at(leaf))) {
             context_ptr->deleteObject(leaf_objIDs.at(petiole_index).at(leaf));
         }
+        leaf_shape_state.erase(leaf_objIDs.at(petiole_index).at(leaf));
         leaf_objIDs.at(petiole_index).at(leaf) = objID_leaf_new;
         leaf_bases.at(petiole_index).at(leaf) = leaf_bases_new.at(leaf);
 
@@ -5822,7 +5946,7 @@ void Phytomer::setPetioleShape(uint petiole_index, const helios::vec3 &outward_d
     rebuildPetioleLeaves(petiole_index, uint(leaf_objIDs.at(petiole_index).size()));
 }
 
-void Phytomer::setPetioleLeaflets(uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale) {
+void Phytomer::setPetioleLeaflets(uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale, float intercalary_leaflet_scale) {
     if (petiole_index >= leaf_objIDs.size()) {
         helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeaflets): Petiole index of " + std::to_string(petiole_index) + " was given, but this phytomer has " + std::to_string(leaf_objIDs.size()) + " petioles.");
     }
@@ -5844,9 +5968,16 @@ void Phytomer::setPetioleLeaflets(uint petiole_index, uint leaf_count, float lea
                              " leaflets beyond the base of the petiole. The most this count allows is " + std::to_string(clampOffset(int(leaf_count), leaflet_offset)) + ".");
     }
 
+    if (std::isnan(intercalary_leaflet_scale)) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeaflets): The intercalary leaflet scale must be a number; give a negative value to keep the phytomer's own.");
+    }
+
     phytomer_parameters.leaf.leaflet_offset = leaflet_offset;
     phytomer_parameters.leaf.leaflet_scale = leaflet_scale;
     phytomer_parameters.leaf.prototype_scale = prototype_scale;
+    if (intercalary_leaflet_scale >= 0.f) {
+        phytomer_parameters.leaf.intercalary_leaflet_scale = intercalary_leaflet_scale;
+    }
     rebuildPetioleLeaves(petiole_index, leaf_count);
 }
 
@@ -5889,7 +6020,276 @@ void Phytomer::setPetioleLeafShape(uint petiole_index, float aspect_ratio, float
     prototype.longitudinal_curvature = longitudinal_curvature;
     prototype.lateral_curvature = lateral_curvature;
     prototype.midrib_fold_fraction = midrib_fold_fraction;
-    rebuildPetioleLeaves(petiole_index, uint(leaf_objIDs.at(petiole_index).size()));
+    // Reshaped in place rather than rebuilt: rebuilding gave every leaf a new object, which discarded its object data (the nitrogen model's state among it) along with its ID.
+    for (uint leaf = 0; leaf < leaf_objIDs.at(petiole_index).size(); leaf++) {
+        LeafShapeValues shape = getLeafShape(petiole_index, leaf);
+        shape.aspect_ratio = aspect_ratio;
+        shape.longitudinal_curvature = longitudinal_curvature;
+        shape.lateral_curvature = lateral_curvature;
+        shape.midrib_fold_fraction = midrib_fold_fraction;
+        reshapeLeaf(petiole_index, leaf, shape);
+    }
+}
+
+void Phytomer::setPetioleLeafRoll(uint petiole_index, float roll_fraction) {
+    if (petiole_index >= leaf_objIDs.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafRoll): Petiole index of " + std::to_string(petiole_index) + " was given, but this phytomer has " + std::to_string(leaf_objIDs.size()) + " petioles.");
+    }
+    if (!std::isfinite(roll_fraction) || roll_fraction < 0.f || roll_fraction > 1.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafRoll): The roll fraction must be between 0 (flat) and 1 (rolled into a closed tube), but " + std::to_string(roll_fraction) + " was given.");
+    }
+    if (leaf_objIDs.at(petiole_index).empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafRoll): Petiole " + std::to_string(petiole_index) + " carries no leaves, so there is nothing to roll.");
+    }
+    phytomer_parameters.leaf.prototype.roll_fraction = roll_fraction;
+    for (uint leaf = 0; leaf < leaf_objIDs.at(petiole_index).size(); leaf++) {
+        LeafShapeValues shape = getLeafShape(petiole_index, leaf);
+        shape.roll_fraction = roll_fraction;
+        reshapeLeaf(petiole_index, leaf, shape);
+    }
+}
+
+void Phytomer::recordBuiltLeafShape(uint objID_leaf) {
+    if (last_built_leaf_shape_valid) {
+        LeafShapeState state;
+        state.shape = last_built_leaf_shape;
+        leaf_shape_state[objID_leaf] = state;
+    }
+}
+
+LeafShapeValues Phytomer::getLeafShape(uint petiole_index, uint leaf_index) const {
+    if (petiole_index >= leaf_objIDs.size() || leaf_index >= leaf_objIDs.at(petiole_index).size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::getLeafShape): Leaf " + std::to_string(leaf_index) + " of petiole " + std::to_string(petiole_index) + " does not exist on this phytomer.");
+    }
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const auto state = leaf_shape_state.find(objID_leaf);
+    if (state != leaf_shape_state.end()) {
+        return state->second.shape;
+    }
+    // Otherwise the leaf is still a plain copy of a cached prototype, whose shape was recorded when the prototype was built.
+    if (petiole_index < leaf_prototype_index.size() && leaf_index < leaf_prototype_index.at(petiole_index).size()) {
+        const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
+        if (prototype >= 0) {
+            const PlantArchitecture::LeafPrototypeCacheKey cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaf_prototype_index.at(petiole_index).size()));
+            const auto cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(cache_key);
+            if (cache != plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() && cache->second.size() > uint(prototype) && cache->second.at(prototype).size() > leaf_index &&
+                cache->second.at(prototype).at(leaf_index).has_shape) {
+                return cache->second.at(prototype).at(leaf_index).shape;
+            }
+        }
+    }
+    helios_runtime_error("ERROR (PlantArchitecture::Phytomer::getLeafShape): The blade shape of leaf object " + std::to_string(objID_leaf) +
+                         " was not recorded, so it cannot be reshaped. Only leaves built by the generic leaf prototype (GenericLeafPrototype) can be reshaped; a leaf loaded from an OBJ model or built by a custom "
+                         "prototype function cannot.");
+    return {};
+}
+
+void Phytomer::reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested) {
+    const LeafShapeValues current = getLeafShape(petiole_index, leaf_index);
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    if (!context_ptr->doesObjectExist(objID_leaf)) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): Leaf object " + std::to_string(objID_leaf) + " no longer exists in the Context, so it cannot be reshaped.");
+    }
+    if (shape_requested.subdivisions_x != current.subdivisions_x || !(shape_requested.lattice_offset == current.lattice_offset)) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): The new shape of leaf object " + std::to_string(objID_leaf) +
+                             " has a different number of subdivisions along the blade or a different lattice offset from the leaf's own. Start from Phytomer::getLeafShape() and change only the shape terms.");
+    }
+
+    LeafShapeValues shape = shape_requested;
+    // A roll needs enough cells across the blade to form its arc. Each cell is held to turning through at most pi/16, which keeps the chords' projected area within a fraction of a percent of the arc's.
+    const uint cells_for_roll = 2 * uint(std::ceil(16.f * shape.roll_fraction));
+    shape.subdivisions_y = std::max({current.subdivisions_y, shape_requested.subdivisions_y, cells_for_roll});
+    if (shape.subdivisions_y % 2 != 0) {
+        shape.subdivisions_y++;
+    }
+
+    const uint Nx = current.subdivisions_x;
+    const size_t lattice_count_old = size_t(Nx + 1) * size_t(current.subdivisions_y + 1);
+    const size_t lattice_count_new = size_t(Nx + 1) * size_t(shape.subdivisions_y + 1);
+    const std::vector<vec3> vertices_old = context_ptr->getPolymeshObjectVertices(objID_leaf);
+    if (context_ptr->getPolymeshObjectFaceCount(objID_leaf) == 0 || vertices_old.size() < lattice_count_old) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): Leaf object " + std::to_string(objID_leaf) + " does not carry the " + std::to_string(Nx) + " x " + std::to_string(current.subdivisions_y) +
+                             " blade lattice it was built with, so it cannot be reshaped.");
+    }
+    const size_t appended_count = vertices_old.size() - lattice_count_old;
+    if (appended_count != 0 && appended_count != petioluleVertexCount()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): Leaf object " + std::to_string(objID_leaf) + " has " + std::to_string(appended_count) +
+                             " vertices beyond its blade lattice, which is neither none nor a petiolule, so it cannot be reshaped.");
+    }
+
+    // The lattice is built in the leaf's own frame, which is the frame of the prototype it was built from, and carried into the canopy by the leaf's transformation matrix.
+    float transform[16];
+    context_ptr->getObjectTransformationMatrix(objID_leaf, transform);
+    auto toGlobal = [&transform](const vec3 &p) {
+        return make_vec3(transform[0] * p.x + transform[1] * p.y + transform[2] * p.z + transform[3], transform[4] * p.x + transform[5] * p.y + transform[6] * p.z + transform[7],
+                         transform[8] * p.x + transform[9] * p.y + transform[10] * p.z + transform[11]);
+    };
+
+    // A leaf that droops is deflected from its rest shape, so the new rest shape takes the place of the old one and the deflection is applied to it. It droops if its shape was already recorded as drooping,
+    // or if it is a copy of a cached prototype that has a rest shape to droop from.
+    bool deformable = false;
+    std::vector<vec3> rest_appended_vertices;
+    const auto state_existing = leaf_shape_state.find(objID_leaf);
+    if (state_existing != leaf_shape_state.end()) {
+        if (state_existing->second.deformable) {
+            deformable = true;
+            rest_appended_vertices = state_existing->second.rest_appended_vertices;
+        }
+    } else if (leaf_flexibility > 0.f && leaf_prototype_index.at(petiole_index).at(leaf_index) >= 0) {
+        const PlantArchitecture::LeafPrototypeCacheKey cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaf_prototype_index.at(petiole_index).size()));
+        const auto cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(cache_key);
+        const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
+        if (cache != plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() && cache->second.size() > uint(prototype) && cache->second.at(prototype).size() > leaf_index &&
+            !cache->second.at(prototype).at(leaf_index).vertices.empty()) {
+            deformable = true;
+            rest_appended_vertices = cache->second.at(prototype).at(leaf_index).appended_vertices;
+        }
+    }
+
+    const std::vector<vec3> lattice = buildLeafBladeLattice(shape);
+    std::vector<vec3> vertices_new;
+    vertices_new.reserve(lattice_count_new + appended_count);
+    for (const vec3 &vertex: lattice) {
+        vertices_new.push_back(toGlobal(vertex));
+    }
+    // The petiolule does not change shape; a drooping leaf's is placed again below along with its blade.
+    vertices_new.insert(vertices_new.end(), vertices_old.begin() + long(lattice_count_old), vertices_old.end());
+
+    if (shape.subdivisions_y == current.subdivisions_y) {
+        // The lattice keeps its topology, so only its vertices move and every primitive, with its data, is kept.
+        context_ptr->setPolymeshObjectVertices(objID_leaf, vertices_new);
+    } else {
+        // Too few cells across the blade for the new shape: the blade is re-meshed inside the leaf's object, keeping the object and its data.
+        const uint Ny_old = current.subdivisions_y;
+        const uint Ny_new = shape.subdivisions_y;
+        const std::vector<uint> members = context_ptr->getObjectPrimitiveUUIDs(objID_leaf);
+        const std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData(members, "object_label", "petiolule");
+        const std::set<uint> petiolule_set(petiolule_UUIDs.begin(), petiolule_UUIDs.end());
+        std::vector<uint> blade_UUIDs_old;
+        for (const uint UUID: members) {
+            if (petiolule_set.find(UUID) == petiolule_set.end()) {
+                blade_UUIDs_old.push_back(UUID);
+            }
+        }
+        if (blade_UUIDs_old.empty()) {
+            helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): Leaf object " + std::to_string(objID_leaf) + " has no blade primitives to re-mesh.");
+        }
+
+        // The petiolule's faces are kept, renumbered past the larger lattice.
+        const std::vector<int3> faces_old = context_ptr->getPolymeshObjectFaces(objID_leaf);
+        const std::vector<vec2> vertex_uv_old = context_ptr->getPolymeshObjectVertexUV(objID_leaf);
+        std::vector<int3> faces_new;
+        std::vector<uint> face_UUIDs_new;
+        const int index_shift = int(lattice_count_new) - int(lattice_count_old);
+        for (size_t face = 0; face < faces_old.size(); face++) {
+            const uint UUID = context_ptr->getPolymeshObjectPrimitiveUUIDForFace(objID_leaf, face);
+            if (petiolule_set.find(UUID) == petiolule_set.end()) {
+                continue;
+            }
+            const int3 &f = faces_old.at(face);
+            if (f.x < int(lattice_count_old) || f.y < int(lattice_count_old) || f.z < int(lattice_count_old)) {
+                helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): A petiolule face of leaf object " + std::to_string(objID_leaf) + " shares vertices with the blade lattice, so the blade cannot be re-meshed.");
+            }
+            faces_new.push_back(make_int3(f.x + index_shift, f.y + index_shift, f.z + index_shift));
+            face_UUIDs_new.push_back(UUID);
+        }
+
+        // Each new facet takes the primitive data of the old facet whose texture cell contains it, the same correspondence the texture itself has.
+        auto cellOf = [](const std::vector<vec2> &uv, uint cells_u, uint cells_v) {
+            const vec2 centroid = (uv.at(0) + uv.at(1) + uv.at(2)) / 3.f;
+            const int i = std::clamp(int(std::floor(centroid.x * float(cells_u))), 0, int(cells_u) - 1);
+            const int j = std::clamp(int(std::floor(centroid.y * float(cells_v))), 0, int(cells_v) - 1);
+            return std::make_pair(i, j);
+        };
+        std::map<std::pair<int, int>, uint> old_facet_in_cell;
+        for (const uint UUID: blade_UUIDs_old) {
+            old_facet_in_cell.emplace(cellOf(context_ptr->getPrimitiveTextureUV(UUID), Nx, Ny_old), UUID);
+        }
+        const std::string texture_file = context_ptr->getPrimitiveTextureFile(blade_UUIDs_old.front());
+        if (texture_file.empty()) {
+            helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): The blade of leaf object " + std::to_string(objID_leaf) + " has no texture, which a generic leaf blade always has, so it cannot be re-meshed.");
+        }
+        const std::string material_label = context_ptr->getPrimitiveMaterialLabel(blade_UUIDs_old.front());
+
+        const float du = 1.f / float(Nx);
+        const float dv = 1.f / float(Ny_new);
+        auto latticeIndex = [Nx](uint i, uint j) { return int(j * (Nx + 1) + i); };
+        std::vector<uint> blade_UUIDs_new;
+        std::vector<uint> data_sources;
+        auto addFacet = [&](uint i0, uint j0, uint i1, uint j1, uint i2, uint j2) {
+            const std::vector<vec2> uv = {make_vec2(float(i0) * du, float(j0) * dv), make_vec2(float(i1) * du, float(j1) * dv), make_vec2(float(i2) * du, float(j2) * dv)};
+            const int a = latticeIndex(i0, j0);
+            const int b = latticeIndex(i1, j1);
+            const int c = latticeIndex(i2, j2);
+            const uint UUID = context_ptr->addTriangle(vertices_new.at(a), vertices_new.at(b), vertices_new.at(c), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2));
+            if (context_ptr->getPrimitiveArea(UUID) <= 0.f) {
+                // Wholly on transparent texels, as when the blade was first built.
+                context_ptr->deletePrimitive(UUID);
+                return;
+            }
+            const std::pair<int, int> cell = cellOf(uv, Nx, Ny_old);
+            auto source = old_facet_in_cell.find(cell);
+            uint source_UUID = blade_UUIDs_old.front();
+            if (source != old_facet_in_cell.end()) {
+                source_UUID = source->second;
+            } else {
+                // The old cell had no facet left, so the nearest old facet across the blade at the same station is used.
+                int best_distance = std::numeric_limits<int>::max();
+                for (const auto &[old_cell, old_UUID]: old_facet_in_cell) {
+                    const int distance = std::abs(old_cell.first - cell.first) * int(Ny_old + 1) + std::abs(old_cell.second - cell.second);
+                    if (distance < best_distance) {
+                        best_distance = distance;
+                        source_UUID = old_UUID;
+                    }
+                }
+            }
+            blade_UUIDs_new.push_back(UUID);
+            data_sources.push_back(source_UUID);
+            faces_new.push_back(make_int3(a, b, c));
+            face_UUIDs_new.push_back(UUID);
+        };
+        for (uint j = 0; j < Ny_new; j++) {
+            for (uint i = 0; i < Nx; i++) {
+                addFacet(i, j, i + 1, j, i + 1, j + 1);
+                addFacet(i, j, i + 1, j + 1, i, j + 1);
+            }
+        }
+        if (blade_UUIDs_new.empty()) {
+            helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): Re-meshing leaf object " + std::to_string(objID_leaf) + " left no visible facets, so its texture " + texture_file + " is entirely transparent.");
+        }
+
+        context_ptr->replacePolymeshObjectPrimitives(objID_leaf, blade_UUIDs_old, blade_UUIDs_new, data_sources);
+        context_ptr->assignMaterialToPrimitive(blade_UUIDs_new, material_label);
+
+        std::vector<vec2> vertex_uv_new;
+        if (!vertex_uv_old.empty()) {
+            vertex_uv_new.reserve(vertices_new.size());
+            for (uint j = 0; j <= Ny_new; j++) {
+                for (uint i = 0; i <= Nx; i++) {
+                    vertex_uv_new.push_back(make_vec2(float(i) * du, float(j) * dv));
+                }
+            }
+            vertex_uv_new.insert(vertex_uv_new.end(), vertex_uv_old.begin() + long(lattice_count_old), vertex_uv_old.end());
+        }
+        context_ptr->setPolymeshObjectTopology(objID_leaf, vertices_new, faces_new, face_UUIDs_new, {}, vertex_uv_new, helios::NORMAL_SOURCE_NONE);
+    }
+
+    LeafShapeState &state = leaf_shape_state[objID_leaf];
+    state.shape = shape;
+    state.reshaped = true;
+    state.deformable = deformable;
+    if (deformable) {
+        state.rest_vertices = lattice;
+        state.rest_appended_vertices = rest_appended_vertices;
+        leaf_last_deformed_scale.at(petiole_index).at(leaf_index) = -1.f;
+        deformLeafUnderSelfWeight(petiole_index, leaf_index);
+    } else {
+        state.rest_vertices.clear();
+        state.rest_appended_vertices.clear();
+    }
+
+    context_ptr->computePolymeshObjectVertexNormals(objID_leaf, 180.f);
+    plantarchitecture_ptr->invalidateOrganIndex();
 }
 
 void Phytomer::rebuildPetioleLeaves(uint petiole_index, uint leaf_count) {
@@ -5898,13 +6298,27 @@ void Phytomer::rebuildPetioleLeaves(uint petiole_index, uint leaf_count) {
         helios_runtime_error("ERROR (PlantArchitecture::rebuildPetioleLeaves): Petiole " + std::to_string(petiole_index) + " cannot carry " + std::to_string(leaf_count) + " leaves.");
     }
 
-    // Pin the growth fraction so that leaf_size_max is the fully-elongated size, as it is for prescribed leaves.
-    lockPetioleScale(petiole_index);
+    // A leaf still expanding on a phytomer whose geometry nobody prescribed keeps growing: its leaflets are built at their mature size times how far it has expanded, leaf_size_max stays the mature size, and
+    // its petiole keeps elongating. A phytomer creation function that lays out each new leaf with its own leaflets calls this on a phytomer a moment old, and pinning it there froze the leaf at full size on
+    // the day it appeared and its petiole at the length it had then. Anything else -- a prescribed leaf, a petiole placed by setPetioleNodePositions(), a leaf already fully expanded -- is pinned so that
+    // leaf_size_max is the fully-elongated size and advanceTime() leaves the geometry where it was put.
+    bool prescribed = false;
+    if (petiole_index < leaf_pose_prescribed.size()) {
+        for (const bool p: leaf_pose_prescribed.at(petiole_index)) {
+            prescribed = prescribed || p;
+        }
+    }
+    const bool still_growing = !prescribed && current_leaf_scale_factor.size() > petiole_index && current_leaf_scale_factor.at(petiole_index) < 1.f;
+    if (!still_growing) {
+        lockPetioleScale(petiole_index);
+    }
+    const float expansion = still_growing ? current_leaf_scale_factor.at(petiole_index) : 1.f;
 
     for (const uint objID: leaf_objIDs.at(petiole_index)) {
         if (context_ptr->doesObjectExist(objID)) {
             context_ptr->deleteObject(objID);
         }
+        leaf_shape_state.erase(objID);
     }
     leaf_objIDs.at(petiole_index).assign(leaf_count, 0);
     leaf_bases.at(petiole_index).assign(leaf_count, make_vec3(0, 0, 0));
@@ -5945,10 +6359,11 @@ void Phytomer::rebuildPetioleLeaves(uint petiole_index, uint leaf_count) {
 
         // Built fresh rather than copied: the cached prototypes are stored per leaflet position for the shoot type's own count, and a different count has different positions.
         const uint objID_leaf = buildLeafPrototype(int(leaf_count), ind_from_tip, 0, size, petiole_radius_here);
+        recordBuiltLeafShape(objID_leaf);
         labelLeafPrototype(objID_leaf);
         plantarchitecture_ptr->nameOrganMaterials(objID_leaf, material_base_name);
         leaf_size_max.at(petiole_index).at(leaf) = size;
-        context_ptr->scaleObject(objID_leaf, size * make_vec3(1, 1, 1));
+        context_ptr->scaleObject(objID_leaf, size * expansion * make_vec3(1, 1, 1));
 
         const float compound_rotation = compoundLeafRotation(int(leaf_count), int(leaf), leaflet_offset_val);
         // This leaflet's own offset from the leaf's angles, if it has one (setPetioleLeafletAngleOffsets())
@@ -6244,6 +6659,8 @@ void Phytomer::deletePhytomer(std::vector<uint> *detached_objIDs) {
                     fbud.peduncle_objIDs.clear();
                     fbud.inflorescence_objIDs.clear();
                     fbud.inflorescence_bases.clear();
+                    fbud.inflorescence_rotation.clear();
+                    fbud.inflorescence_base_scales.clear();
                     continue;
                 }
                 for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
@@ -6251,6 +6668,13 @@ void Phytomer::deletePhytomer(std::vector<uint> *detached_objIDs) {
                     context_ptr->deleteObject(objID);
                     fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
                     fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+                    // The per-fruit records run in parallel with the objects, so they go with them
+                    if (p < int(fbud.inflorescence_rotation.size())) {
+                        fbud.inflorescence_rotation.erase(fbud.inflorescence_rotation.begin() + p);
+                    }
+                    if (p < int(fbud.inflorescence_base_scales.size())) {
+                        fbud.inflorescence_base_scales.erase(fbud.inflorescence_base_scales.begin() + p);
+                    }
                 }
                 for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
                     context_ptr->deleteObject(fbud.peduncle_objIDs);
@@ -6258,6 +6682,8 @@ void Phytomer::deletePhytomer(std::vector<uint> *detached_objIDs) {
                     fbud.peduncle_objIDs.clear();
                     fbud.inflorescence_objIDs.clear();
                     fbud.inflorescence_bases.clear();
+                    fbud.inflorescence_rotation.clear();
+                    fbud.inflorescence_base_scales.clear();
                     break;
                 }
             }
@@ -7042,6 +7468,13 @@ void PlantArchitecture::pruneGroundCollisions(uint plantID) {
                             context_ptr->deleteObject(objID);
                             fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
                             fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+                            // The per-fruit records run in parallel with the objects, so they go with them
+                            if (p < int(fbud.inflorescence_rotation.size())) {
+                                fbud.inflorescence_rotation.erase(fbud.inflorescence_rotation.begin() + p);
+                            }
+                            if (p < int(fbud.inflorescence_base_scales.size())) {
+                                fbud.inflorescence_base_scales.erase(fbud.inflorescence_base_scales.begin() + p);
+                            }
                         }
                     }
                     for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
@@ -7052,6 +7485,8 @@ void PlantArchitecture::pruneGroundCollisions(uint plantID) {
                             fbud.peduncle_objIDs.clear();
                             fbud.inflorescence_objIDs.clear();
                             fbud.inflorescence_bases.clear();
+                            fbud.inflorescence_rotation.clear();
+                            fbud.inflorescence_base_scales.clear();
                             break;
                         }
                     }
@@ -7184,7 +7619,38 @@ void PlantArchitecture::setPetioleLeafShape(uint plantID, uint shootID, uint nod
     parent_shoot->phytomers.at(node_index)->setPetioleLeafShape(petiole_index, aspect_ratio, longitudinal_curvature, lateral_curvature, midrib_fold_fraction);
 }
 
-void PlantArchitecture::setPetioleLeaflets(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale) {
+void PlantArchitecture::setPetioleLeafRoll(uint plantID, uint shootID, uint node_index, uint petiole_index, float roll_fraction) {
+    validateShootID(plantID, shootID, "setPetioleLeafRoll");
+
+    const auto &parent_shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
+    if (node_index >= parent_shoot->phytomers.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafRoll): Shoot " + std::to_string(shootID) + " does not have a node " + std::to_string(node_index) + "; it has " + std::to_string(parent_shoot->phytomers.size()) + " nodes.");
+    }
+
+    parent_shoot->phytomers.at(node_index)->setPetioleLeafRoll(petiole_index, roll_fraction);
+}
+
+void PlantArchitecture::setPlantLeafRoll(uint plantID, float roll_fraction) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantLeafRoll): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    // Checked here as well as per petiole, so that a plant with no leaves still rejects a bad value.
+    if (!std::isfinite(roll_fraction) || roll_fraction < 0.f || roll_fraction > 1.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantLeafRoll): The roll fraction must be between 0 (flat) and 1 (rolled into a closed tube), but " + std::to_string(roll_fraction) + " was given.");
+    }
+    for (const auto &shoot: plant_instances.at(plantID).shoot_tree) {
+        for (const auto &phytomer: shoot->phytomers) {
+            for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
+                if (!phytomer->leaf_objIDs.at(petiole).empty()) {
+                    phytomer->setPetioleLeafRoll(petiole, roll_fraction);
+                }
+            }
+        }
+    }
+}
+
+void PlantArchitecture::setPetioleLeaflets(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale,
+                                           float intercalary_leaflet_scale) {
     validateShootID(plantID, shootID, "setPetioleLeaflets");
 
     const auto &parent_shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
@@ -7192,7 +7658,7 @@ void PlantArchitecture::setPetioleLeaflets(uint plantID, uint shootID, uint node
         helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeaflets): Shoot " + std::to_string(shootID) + " does not have a node " + std::to_string(node_index) + "; it has " + std::to_string(parent_shoot->phytomers.size()) + " nodes.");
     }
 
-    parent_shoot->phytomers.at(node_index)->setPetioleLeaflets(petiole_index, leaf_count, leaflet_offset, leaflet_scale, prototype_scale);
+    parent_shoot->phytomers.at(node_index)->setPetioleLeaflets(petiole_index, leaf_count, leaflet_offset, leaflet_scale, prototype_scale, intercalary_leaflet_scale);
 }
 
 void PlantArchitecture::setPlantBasePosition(uint plantID, const helios::vec3 &base_position) {
@@ -7364,6 +7830,12 @@ void PlantArchitecture::enablePlantLeafAngleDistributionTracking(uint plantID, f
 void PlantArchitecture::enablePlantLeafAngleDistributionTracking(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees, float lambda_degrees) {
     for (const uint plantID: plantIDs) {
         enablePlantLeafAngleDistributionTracking(plantID, Beta_mu_inclination, Beta_nu_inclination, eccentricity, ellipse_rotation_degrees, lambda_degrees);
+    }
+}
+
+void PlantArchitecture::enablePlantLeafElevationAngleDistributionTracking(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float lambda_degrees) {
+    for (const uint plantID: plantIDs) {
+        enablePlantLeafElevationAngleDistributionTracking(plantID, Beta_mu_inclination, Beta_nu_inclination, lambda_degrees);
     }
 }
 
@@ -11547,6 +12019,12 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
             // Reset collision avoidance flag for next timestep
             collision_avoidance_applied = false;
 
+            // *** fruit-branch collision avoidance *** //
+            // After the node update, so that the internode skeleton and the fruit positions are those of this time step.
+            if (fruit_branch_collision_enabled) {
+                resolveFruitBranchCollisions(plantID, dt_max_days);
+            }
+
             // *** ground collision detection *** //
             if (ground_clipping_height != -99999) {
                 pruneGroundCollisions(plantID);
@@ -11615,6 +12093,11 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
     // Adjust fruit positions to avoid solid obstacle collisions
     adjustFruitForObstacleCollision();
+
+    // Drop the fruit-branch contact caches of fruit that no longer exist (harvested, dropped or pruned during this call)
+    if (fruit_branch_collision_enabled) {
+        pruneFruitContactCaches();
+    }
 
     // Fallback collision detection: prune any objects that still intersect solid boundaries
     if (solid_obstacle_pruning_enabled) {
@@ -11935,6 +12418,9 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
         progress_bar.update();
     }
 
+    // The rotations above are not recorded in the floral buds, so any fruit-branch contact proxies describe poses the fruit no longer have. Dropped here, they are rebuilt from the meshes at the next check.
+    fruit_contact_proxies.clear();
+
     // Ensure progress bar shows 100% completion
     progress_bar.finish();
 }
@@ -12033,6 +12519,13 @@ void PlantArchitecture::pruneSolidBoundaryCollisions() {
                                 context_ptr->deleteObject(objID);
                                 fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
                                 fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+                                // The per-fruit records run in parallel with the objects, so they go with them
+                                if (p < int(fbud.inflorescence_rotation.size())) {
+                                    fbud.inflorescence_rotation.erase(fbud.inflorescence_rotation.begin() + p);
+                                }
+                                if (p < int(fbud.inflorescence_base_scales.size())) {
+                                    fbud.inflorescence_base_scales.erase(fbud.inflorescence_base_scales.begin() + p);
+                                }
                             }
                         }
                         // Check peduncle objects
@@ -12045,6 +12538,8 @@ void PlantArchitecture::pruneSolidBoundaryCollisions() {
                                 fbud.peduncle_objIDs.clear();
                                 fbud.inflorescence_objIDs.clear();
                                 fbud.inflorescence_bases.clear();
+                                fbud.inflorescence_rotation.clear();
+                                fbud.inflorescence_base_scales.clear();
                                 break;
                             }
                         }

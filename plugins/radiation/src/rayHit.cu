@@ -327,6 +327,59 @@ static __device__ __inline__ float directLayerReflection(uint pos, uint b_launch
     return float(M_PI) * reflected; // radiance to flux units
 }
 
+//! With camera flux smoothing: flux, in the units of the outgoing buffers, that the surface layer of the primitive at position pos reflects toward to_viewer from the direct radiation of every source,
+//! evaluated with the interpolated shading normal rather than the facet's. viewed_normal is the facet's own unit normal on the side the camera sees, and shading_normal the interpolated one on that side.
+//! The incident flux carries the cosine of the facet, so it is rescaled to the cosine of the shading normal; it reached the face toward the source, so only a source on the viewed side counts.
+static __device__ __inline__ float directLayerReflectionSmoothed(uint pos, uint b_launch, int table, const float3 &viewed_normal, const float3 &shading_normal, const float3 &to_viewer, const float3 &point, int camera, const int v[4],
+                                                                 const float w[4]) {
+    float reflected = 0.f;
+    for (uint s = 0; s < Nsources; s++) {
+        const float3 to_source = d_directionToSource(s, point);
+        // What reached the face toward the source; a viewed face turned away from it takes the irradiance its vertices carry (see d_faceDirect())
+        const float facet_value = dot(viewed_normal, to_source) > 0.f ? radiation_specular[((size_t) s * Nprimitives + pos) * Nbands_launch + b_launch] : 0.f;
+        float incident = d_faceDirect(facet_value, to_source, viewed_normal, shading_normal, s, b_launch, v, w);
+        if (incident <= 0.f) {
+            continue;
+        }
+        if (camera >= 0) {
+            incident *= source_fluxes_cam[((size_t) s * Nbands_launch + b_launch) * Ncameras + uint(camera)];
+        }
+        reflected += incident * surfaceLayerLobe(table, shading_normal, to_source, to_viewer);
+    }
+    return float(M_PI) * reflected; // radiance to flux units
+}
+
+//! Whether the primitive at position pos takes part in camera flux smoothing, whose direct radiation is then recorded for the camera (see RadiationModel::subtractCameraDirectFlux())
+static __device__ __inline__ bool isSmoothedPrimitive(uint pos) {
+    return smoothing_vertex_indices.size() > 4 * size_t(pos) + 3 && smoothing_vertex_indices[4 * pos] >= 0;
+}
+
+//! With camera flux smoothing: the outgoing radiation, first component, that the face of the primitive at position pos seen along the camera ray sends out of the direct radiation of every source,
+//! evaluated with the shading normal (see RadiationModel::subtractCameraDirectFlux(), which removes the facet's own value from what the vertices carry). viewed_normal and shading_normal are on the viewed
+//! side. The radiation reaching the face toward a source is reflected by the viewed face if it is that face and transmitted to it otherwise; a surface layer, whose albedo table starts at `layer` (-1 for
+//! none), keeps 1 - a(mu) of it in the body.
+static __device__ __inline__ float smoothedDirectBodyFlux(uint pos, uint b_launch, uint b_global, int layer, const float3 &viewed_normal, const float3 &shading_normal, const float3 &point, const int v[4], const float w[4]) {
+    CameraMaterialIndexer cam_mat_indexer(Nsources + 1, Nprimitives, Nbands_global, Ncameras);
+    float flux = 0.f;
+    for (uint s = 0; s < Nsources; s++) {
+        const float incident = radiation_specular[((size_t) s * Nprimitives + pos) * Nbands_launch + b_launch];
+        const float3 to_source = d_directionToSource(s, point);
+        const bool viewed_face_toward_source = dot(viewed_normal, to_source) > 0.f;
+        const size_t material = cam_mat_indexer(s, pos, b_global, camera_ID);
+        const float rho = rho_cam[material];
+        const float tau = tau_cam[material];
+        if (rho > 0.f) {
+            const float reaching = d_faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, viewed_normal, shading_normal, s, b_launch, v, w);
+            flux += rho * reaching * (layer >= 0 ? 1.f - surfaceLayerAlbedo(layer, fmaxf(0.f, dot(shading_normal, to_source))) : 1.f);
+        }
+        if (tau > 0.f) {
+            const float reaching = d_faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, -viewed_normal, -shading_normal, s, b_launch, v, w);
+            flux += tau * reaching * (layer >= 0 ? 1.f - surfaceLayerAlbedo(layer, fmaxf(0.f, -dot(shading_normal, to_source))) : 1.f);
+        }
+    }
+    return flux;
+}
+
 //! Global index of the launched band with launch index b_launch
 static __device__ __inline__ uint globalBandIndex(uint b_launch) {
     uint b = 0;
@@ -493,6 +546,30 @@ RT_PROGRAM void closest_hit_diffuse() {
                 // In the launch that reads the first scattering of the direct radiation, add the layer's reflection lobe of it
                 outgoing += directLayerReflection(hit_position, b, hit_layer, face ? normal : -normal, -ray.direction, ray.origin + t_hit * ray.direction, -1);
             }
+            // Forward scattering estimate (see RadiationModel::runBand()): the flux this ray carries away from the origin along its
+            // path, times the fraction of it the surface it reaches scatters again. A cover reflects its reflectance; what it transmits
+            // is counted where the ray continues, attenuated by the cover transmittance. A hit surface's own reflectivity is used, not
+            // that of a spectral-texture class at the hit point: the estimate need only be unbiased over the scene, not per texel.
+            if (forward_scatter_enabled) {
+                const float launched = outgoingFlux(prd.face, ind_origin, surfaceLayerTable(origin_position, b_global), prd.origin_cos);
+                if (launched != 0.f) {
+                    float rescattered;
+                    if (coverInAllLaunchedBands(hit_position)) {
+                        bool hit_face_unused;
+                        rescattered = coverTauRhoAlpha(hit_position, b_global, coverNormalFaceCos(hit_position, ray.direction, hit_face_unused)).y;
+                    } else {
+                        const size_t hit_radprop_ind = mat_indexer(prd.source_ID, hit_position, b_global);
+                        rescattered = rho[hit_radprop_ind] + tau[hit_radprop_ind];
+                        if (hit_layer >= 0) {
+                            const float hit_albedo = surfaceLayerAlbedo(hit_layer, fabsf(dot(normal, ray.direction)));
+                            rescattered = hit_albedo + (1.f - hit_albedo) * rescattered;
+                        }
+                    }
+                    const float path_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? prd.cover_transmittance[b] : 1.f;
+                    atomicAdd(&forward_scatter[ind_origin], fabsf(launched) * prd.strength * path_tau * rescattered);
+                }
+            }
+
             double strength = outgoing * prd.strength;
 
             // Attenuated by any translucent covers the ray passed on its way to the surface.
@@ -677,6 +754,52 @@ RT_PROGRAM void closest_hit_camera() {
 
         float3 camera_normal = d_rotatePoint(make_float3(0, 0, 1), -0.5 * M_PI + camera_direction.x, 0.5f * M_PI - camera_direction.y);
 
+        // Camera flux smoothing: the shared vertices of the facet that was hit, and the weights to blend them with. Done once for the whole hit rather than once per band. A primitive taking no part in
+        // smoothing keeps the single value of the facet behind the pixel.
+        int smooth_vertices[4] = {-1, -1, -1, -1};
+        float smooth_weights[4] = {0.f, 0.f, 0.f, 0.f};
+        if (smoothing_vertex_indices.size() > 4 * hit_position + 3 && vertex_radiation_out_top.size() > 0 && smoothing_vertex_indices[4 * hit_position + 0] >= 0) {
+            for (int c = 0; c < 4; c++) {
+                smooth_vertices[c] = smoothing_vertex_indices[4 * hit_position + c];
+            }
+            if (smooth_vertices[3] < 0) {
+                // Triangle: barycentric weights, with the attributes holding the weights of the second and third corners.
+                smooth_weights[1] = surface_u;
+                smooth_weights[2] = surface_v;
+                smooth_weights[0] = 1.f - surface_u - surface_v;
+            } else {
+                // Patch: bilinear weights over the patch-local coordinates, whose corners run (0,0), (1,0), (1,1), (0,1).
+                smooth_weights[0] = (1.f - surface_u) * (1.f - surface_v);
+                smooth_weights[1] = surface_u * (1.f - surface_v);
+                smooth_weights[2] = surface_u * surface_v;
+                smooth_weights[3] = (1.f - surface_u) * surface_v;
+            }
+        }
+        const int smooth_v0 = smooth_vertices[0];
+
+        // With smoothing and a specular surface layer: a shading normal interpolated from the facet's vertices, for the layer's angle-dependent terms. Each vertex normal is first turned to the side of the
+        // facet, so that the result does not depend on how the facet is wound. The facet's own normal is kept in the rare case where the vertex normals interpolate to nothing on its side.
+        const float3 hit_point = ray.origin + t_hit * ray.direction;
+        const uint vertex_normal_count = uint(vertex_normals.size() / 3);
+        const bool smooth_shading = smooth_v0 >= 0 && vertex_normal_count > 0;
+        float3 shading_normal = viewed_normal;
+        if (smooth_shading) {
+            float3 interpolated = make_float3(0.f, 0.f, 0.f);
+            for (int c = 0; c < 4; c++) {
+                if (smooth_vertices[c] < 0) {
+                    continue;
+                }
+                float3 vertex_normal = make_float3(vertex_normals[3 * smooth_vertices[c] + 0], vertex_normals[3 * smooth_vertices[c] + 1], vertex_normals[3 * smooth_vertices[c] + 2]);
+                if (dot(vertex_normal, viewed_normal) < 0.f) {
+                    vertex_normal = -vertex_normal;
+                }
+                interpolated += smooth_weights[c] * vertex_normal;
+            }
+            if (dot(interpolated, viewed_normal) > 1e-6f) {
+                shading_normal = normalize(interpolated);
+            }
+        }
+
         double strength;
         for (size_t b = 0; b < Nbands_launch; b++) {
 
@@ -762,50 +885,13 @@ RT_PROGRAM void closest_hit_camera() {
             const bool use_top_face = face;
 
             // Camera flux smoothing: blend the outgoing flux across the facet from the values carried by the vertices it shares with its neighbours, so that a coarsely tessellated curved surface does not
-            // render as flat panels with a step at every facet edge. A primitive taking no part in smoothing keeps the single value of the facet behind the pixel.
-            int smooth_v0 = -1;
-            if (smoothing_vertex_indices.size() > 4 * hit_position + 3 && vertex_radiation_out_top.size() > 0) {
-                smooth_v0 = smoothing_vertex_indices[4 * hit_position + 0];
-            }
-            int smooth_vertices[4] = {-1, -1, -1, -1};
-            float smooth_weights[4] = {0.f, 0.f, 0.f, 0.f};
-
+            // render as flat panels with a step at every facet edge.
             if (smooth_v0 >= 0) {
-                const int smooth_v1 = smoothing_vertex_indices[4 * hit_position + 1];
-                const int smooth_v2 = smoothing_vertex_indices[4 * hit_position + 2];
-                const int smooth_v3 = smoothing_vertex_indices[4 * hit_position + 3];
-
-                float w0 = 0.f, w1 = 0.f, w2 = 0.f, w3 = 0.f;
-                if (smooth_v3 < 0) {
-                    // Triangle: barycentric weights, with the attributes holding the weights of the second and third corners.
-                    w1 = surface_u;
-                    w2 = surface_v;
-                    w0 = 1.f - w1 - w2;
-                } else {
-                    // Patch: bilinear weights over the patch-local coordinates, whose corners run (0,0), (1,0), (1,1), (0,1).
-                    w0 = (1.f - surface_u) * (1.f - surface_v);
-                    w1 = surface_u * (1.f - surface_v);
-                    w2 = surface_u * surface_v;
-                    w3 = (1.f - surface_u) * surface_v;
-                }
-                const int vertices[4] = {smooth_v0, smooth_v1, smooth_v2, smooth_v3};
-                const float weights[4] = {w0, w1, w2, w3};
+                float outgoing_flux = 0.f;
                 for (int c = 0; c < 4; c++) {
-                    smooth_vertices[c] = vertices[c];
-                    smooth_weights[c] = weights[c];
-                }
-
-                float outgoing_flux;
-                if (use_top_face) {
-                    outgoing_flux = w0 * vertex_radiation_out_top[smooth_v0 * Nbands_launch + b] + w1 * vertex_radiation_out_top[smooth_v1 * Nbands_launch + b] + w2 * vertex_radiation_out_top[smooth_v2 * Nbands_launch + b];
-                    if (smooth_v3 >= 0) {
-                        outgoing_flux += w3 * vertex_radiation_out_top[smooth_v3 * Nbands_launch + b];
-                    }
-                } else {
-                    outgoing_flux = w0 * vertex_radiation_out_bottom[smooth_v0 * Nbands_launch + b] + w1 * vertex_radiation_out_bottom[smooth_v1 * Nbands_launch + b] +
-                                    w2 * vertex_radiation_out_bottom[smooth_v2 * Nbands_launch + b];
-                    if (smooth_v3 >= 0) {
-                        outgoing_flux += w3 * vertex_radiation_out_bottom[smooth_v3 * Nbands_launch + b];
+                    if (smooth_vertices[c] >= 0) {
+                        const size_t index = size_t(smooth_vertices[c]) * Nbands_launch + b;
+                        outgoing_flux += smooth_weights[c] * (use_top_face ? vertex_radiation_out_top[index] : vertex_radiation_out_bottom[index]);
                     }
                 }
                 strength = outgoing_flux * prd.strength;
@@ -817,28 +903,53 @@ RT_PROGRAM void closest_hit_camera() {
             // A primitive with a spectral texture is seen in the outgoing radiation of the class at the hit point: flat over the facet, or with
             // camera flux smoothing, interpolated from the facet's vertices
             const uint hit_class_slot = d_spectralCameraClassSlot(hit_position, primitive_type[hit_position], surface_u, surface_v, uvID[hit_position]);
-            if (hit_class_slot != 0xFFFFFFFFu && d_spectralPaletteApplies(0u, globalBandIndex(b))) {
+            const bool class_applies = hit_class_slot != 0xFFFFFFFFu && d_spectralPaletteApplies(0u, globalBandIndex(b));
+            // With smoothing, the vertices carry the radiation other than the sources' direct radiation, which is evaluated here per facet with the shading normal
+            if (smooth_shading && Nsources > 0 && radiation_specular.size() >= size_t(Nsources) * Nprimitives * Nbands_launch && !class_applies) {
+                strength += smoothedDirectBodyFlux(hit_position, b, globalBandIndex(b), surfaceLayerTable(hit_position, globalBandIndex(b)), viewed_normal, shading_normal, hit_point, smooth_vertices, smooth_weights) * prd.strength;
+            }
+            if (class_applies) {
                 if (smooth_v0 >= 0 && spectral_vertex[0] != 0u) {
-                    strength = d_spectralSmoothedClassFlux(hit_position, hit_class_slot, use_top_face, b, globalBandIndex(b), smooth_vertices, smooth_weights) * prd.strength;
+                    strength = d_spectralSmoothedClassFlux(hit_position, hit_class_slot, use_top_face, b, globalBandIndex(b), smooth_vertices, smooth_weights, viewed_normal, shading_normal, hit_point) * prd.strength;
                 } else {
                     strength = d_spectralClassFlux(hit_class_slot, use_top_face, b) * prd.strength;
                 }
             }
-            // A surface with a layer sends out its two components, in proportions that depend on the viewing angle. Smoothing
-            // applies to the first; the second, the layer's reflection, is that of the facet.
+            // A surface with a layer sends out its two components, in proportions that depend on the viewing angle. With smoothing,
+            // the second component is interpolated from the facet's vertices like the first, and the viewing angle is taken from the shading normal.
             const int layer = surfaceLayerTable(hit_position, globalBandIndex(b));
             if (layer >= 0) {
-                const size_t layer_offset = (size_t) Nprimitives * Nbands_launch;
-                const float a = surfaceLayerAlbedo(layer, fabsf(dot(viewed_normal, ray.direction)));
+                float mu_view;
+                float layer_flux;
+                if (smooth_shading) {
+                    const size_t layer_offset = (size_t) vertex_normal_count * Nbands_launch;
+                    layer_flux = 0.f;
+                    for (int c = 0; c < 4; c++) {
+                        if (smooth_vertices[c] >= 0) {
+                            const size_t index = layer_offset + size_t(smooth_vertices[c]) * Nbands_launch + b;
+                            layer_flux += smooth_weights[c] * (use_top_face ? vertex_radiation_out_top[index] : vertex_radiation_out_bottom[index]);
+                        }
+                    }
+                    // A shading normal can tip away from the viewer at a silhouette, where the layer is seen edge-on
+                    mu_view = fminf(1.f, fmaxf(0.f, -dot(shading_normal, ray.direction)));
+                } else {
+                    const size_t layer_offset = (size_t) Nprimitives * Nbands_launch;
+                    layer_flux = use_top_face ? radiation_out_top[layer_offset + ind_hit] : radiation_out_bottom[layer_offset + ind_hit];
+                    mu_view = fabsf(dot(viewed_normal, ray.direction));
+                }
+                const float a = surfaceLayerAlbedo(layer, mu_view);
                 const float abar = surface_layer_tables[layer + surface_layer_table_size];
-                const float layer_flux = use_top_face ? radiation_out_top[layer_offset + ind_hit] : radiation_out_bottom[layer_offset + ind_hit];
                 strength = strength * (1.f - a) / (1.f - abar) + layer_flux * prd.strength * a / abar;
             }
 
             // Direct radiation reflected into the camera by a surface layer's microfacet lobe
             double strength_spec = 0;
             if (layer >= 0 && specular_reflection_enabled != 0) {
-                strength_spec = directLayerReflection(hit_position, b, layer, viewed_normal, -ray.direction, ray.origin + t_hit * ray.direction, int(camera_ID)) * prd.strength;
+                if (smooth_shading) {
+                    strength_spec = directLayerReflectionSmoothed(hit_position, b, layer, viewed_normal, shading_normal, -ray.direction, ray.origin + t_hit * ray.direction, int(camera_ID), smooth_vertices, smooth_weights) * prd.strength;
+                } else {
+                    strength_spec = directLayerReflection(hit_position, b, layer, viewed_normal, -ray.direction, ray.origin + t_hit * ray.direction, int(camera_ID)) * prd.strength;
+                }
             }
 
             // absorption
@@ -1044,7 +1155,7 @@ RT_PROGRAM void miss_direct() {
             const int layer = surfaceLayerTable(origin_position, b_global);
             const float layer_albedo = layer >= 0 ? surfaceLayerAlbedo(layer, prd.origin_cos) : 0.f;
             const double body_strength = layer >= 0 ? strength * (1.0 - layer_albedo) : strength;
-            if (layer >= 0 && specular_reflection_enabled != 0) {
+            if ((layer >= 0 || isSmoothedPrimitive(origin_position)) && specular_reflection_enabled != 0) {
                 atomicFloatAdd(&radiation_specular[((size_t) prd.source_ID * Nprimitives + origin_position) * Nbands_launch + b], strength);
             }
             // The reflected energy is also kept in the face's second outgoing component, so that the host counts it in the energy
@@ -1314,11 +1425,18 @@ RT_PROGRAM void miss_camera() {
             }
         }
 
-        // The sky fills only the upper hemisphere unless the diffuse sky is enabled below the horizon.
-        const bool sees_sky = ray.direction.z >= 0.f || below_horizon_diffuse_enabled != 0;
+        // The diffuse transfer limits the sky to the upper hemisphere, but the camera continues the sky below the horizon so that a finite
+        // domain does not render a black strip between its edge and the horizon: a ray leaving below the horizon sees the sky radiance at the
+        // horizon in its own azimuth. With the diffuse sky enabled below the horizon the camera sees the full-sphere sky pattern instead.
+        float3 sky_direction = ray.direction;
+        if (ray.direction.z < 0.f && below_horizon_diffuse_enabled == 0) {
+            const float horizontal_length = sqrtf(ray.direction.x * ray.direction.x + ray.direction.y * ray.direction.y);
+            // A ray pointing straight down has no azimuth; any horizontal direction is equally valid for this single direction.
+            sky_direction = horizontal_length > 1e-6f ? make_float3(ray.direction.x / horizontal_length, ray.direction.y / horizontal_length, 0.f) : make_float3(1.f, 0.f, 0.f);
+        }
 
         // Fallback to sky radiance if no sources visible
-        if (sees_sky && radiance <= 0.0f && camera_sky_radiance[b] > 0.f) {
+        if (radiance <= 0.0f && camera_sky_radiance[b] > 0.f) {
             // Evaluate directional sky radiance using unified distribution function. Prague parameters (normalization w > 0) give the
             // sky's own pattern. Without them the camera sees the diffuse sky that lights the scene, so it takes the band's angular
             // distribution from the diffuse launches: its power law, or isotropic.
@@ -1331,14 +1449,14 @@ RT_PROGRAM void miss_camera() {
                 power_N = diffuse_dist_norm[b];
                 peak_d = diffuse_peak_dir[b];
             }
-            float angular_weight = evaluateDiffuseAngularDistribution(ray.direction, peak_d, power_K, power_N, sky_p);
+            float angular_weight = evaluateDiffuseAngularDistribution(sky_direction, peak_d, power_K, power_N, sky_p);
 
             radiance = camera_sky_radiance[b] * angular_weight;
         }
 
         // Isotropic sky emission/longwave: when band has emission enabled, the user-set diffuse_flux
         // represents hemispherical sky thermal/longwave irradiance. Convert to isotropic radiance.
-        if (sees_sky && band_emission_flag[b] != 0u && camera_diffuse_flux[b] > 0.f) {
+        if (band_emission_flag[b] != 0u && camera_diffuse_flux[b] > 0.f) {
             radiance += camera_diffuse_flux[b] / M_PI;
         }
 

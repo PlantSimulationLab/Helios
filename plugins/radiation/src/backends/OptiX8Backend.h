@@ -123,6 +123,8 @@ namespace helios {
         void getWhiteReferenceResults(std::vector<float> &white_reference_top,
                                       std::vector<float> &white_reference_bottom) override;
         void getRadiationInTopResults(std::vector<float> &radiation_in_top) override;
+        void getForwardScatterResults(std::vector<float> &forward_scatter, size_t launch_band_count) override;
+        void getDirectFluxResults(std::vector<float> &direct_flux, size_t launch_band_count) override;
         [[nodiscard]] size_t getRadiationInTopBufferSize() const override;
         [[nodiscard]] size_t getAbandonedRayCount() override;
 
@@ -139,6 +141,8 @@ namespace helios {
         void uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) override;
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top,
                                       const std::vector<float> &vertex_radiation_out_bottom) override;
+        void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
+        void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
         void zeroCameraScatterBuffers(size_t launch_band_count) override;
         void uploadSourceFluxes(const std::vector<float> &fluxes) override;
         void uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) override;
@@ -241,8 +245,11 @@ namespace helios {
         CUdeviceptr d_smoothing_vertex_indices = 0;
         CUdeviceptr d_vertex_radiation_out_top = 0;
         CUdeviceptr d_vertex_radiation_out_bottom = 0;
+        CUdeviceptr d_vertex_normals = 0; //!< Shading normal per smoothing vertex; allocated only while smoothing is enabled and there is a source or a surface layer
+        CUdeviceptr d_vertex_direct_irradiance = 0; //!< Unoccluded direct irradiance per [source][smoothing vertex][band]; allocated only while smoothing is enabled and there is a source
         CUdeviceptr d_scatter_buff_top       = 0;
         CUdeviceptr d_scatter_buff_bottom    = 0;
+        CUdeviceptr d_forward_scatter        = 0; //!< Forward scattering estimate [prim][launch band] (see getForwardScatterResults())
         CUdeviceptr d_radiation_in_camera    = 0;
         CUdeviceptr d_scatter_buff_top_cam   = 0;
         CUdeviceptr d_scatter_buff_bottom_cam= 0;

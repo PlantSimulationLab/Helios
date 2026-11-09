@@ -839,6 +839,7 @@ void GeometryHandler::deleteGeometry(size_t UUID) {
 
     delete_flag_data.at(index_map.geometry_type).at(index_map.delete_flag_index) = true;
     visible_flag_data.at(index_map.geometry_type).at(index_map.visible_index) = false;
+    layout_revision++;
 
     markDirty(UUID);
 
@@ -880,6 +881,7 @@ void GeometryHandler::clearAllGeometry() {
     }
 
     UUID_map.clear();
+    layout_revision++;
 
     deleted_primitive_count = 0;
 
@@ -902,6 +904,7 @@ void GeometryHandler::clearContextGeometry() {
                 delete_flag_data.at(geometry_type).at(i) = true;
                 // visible_flag_data.at(geometry_type).at(i) = false;
                 deleted_primitive_count++;
+                layout_revision++;
             }
         }
     }
@@ -1026,6 +1029,7 @@ void GeometryHandler::defragmentBuffers() {
     if (deleted_primitive_count == 0) {
         return;
     }
+    layout_revision++;
 
     // Iterate each geometry type
 
@@ -1169,6 +1173,8 @@ void GeometryHandler::defragmentBuffers() {
 
 void GeometryHandler::registerUUID(size_t UUID, const VisualizerGeometryType &geometry_type) {
 
+    layout_revision++;
+
     UUID_map[UUID] = {geometry_type,
                       face_index_data.at(geometry_type).size(),
                       vertex_data.at(geometry_type).size(),
@@ -1215,6 +1221,10 @@ const std::unordered_set<size_t> &GeometryHandler::getDirtyUUIDs() const {
 void GeometryHandler::clearDirtyUUIDs() {
     dirty_UUIDs.clear();
     buffer_needs_full_update = false;
+}
+
+size_t GeometryHandler::getLayoutRevision() const {
+    return layout_revision;
 }
 
 bool GeometryHandler::doesBufferNeedFullUpdate() const {

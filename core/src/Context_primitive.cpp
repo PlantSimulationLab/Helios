@@ -924,8 +924,15 @@ void Primitive::getTransformationMatrix(float (&T)[16]) const {
     std::memcpy(T, transform, 16 * sizeof(float));
 }
 
+std::atomic<uint64_t> Primitive::modification_clock{1};
+
+void Primitive::stampModification() {
+    modification_stamp = modification_clock.load(std::memory_order_relaxed);
+}
+
 void Primitive::markDirty() {
     dirty_flag = true;
+    stampModification();
     if (context_ptr != nullptr) {
         context_ptr->geometry_revision.markModified();
     }

@@ -367,10 +367,33 @@ BMFcoefficients StomatalConductanceModel::getBMFCoefficientsFromLibrary(const st
         coeffs.i0 = 11.47;
         coeffs.k = 1.387e+05;
         coeffs.b = 1.051e-06;
+    } else if (s == "Cowpea" || s == "cowpea") {
+        // Vigna unguiculata, well-watered field plants, GEMINI 2022-2026 (Davis, CA): LI-600 surveys corrected per Rizzo & Bailey
+        // (2026, Plant Cell Environ.) and converted to total leaf conductance assuming the abaxial face was measured and an
+        // adaxial stomatal fraction of 0.30, jointly fitted with steady-state LI-6800 light responses for shape.
+        coeffs.Em = 37.24;
+        coeffs.i0 = 289.7;
+        coeffs.k = 40074.f;
+        coeffs.b = 0.f;
+    } else if (s == "CommonBean" || s == "commonbean" || s == "common_bean" || s == "Common_Bean" || s == "Bean" || s == "bean") {
+        // Phaseolus vulgaris, well-watered field plants, GEMINI 2022-2023 (Davis, CA); as for cowpea with an adaxial stomatal
+        // fraction of 0.20.
+        coeffs.Em = 23.28;
+        coeffs.i0 = 433.5;
+        coeffs.k = 23008.f;
+        coeffs.b = 0.f;
+    } else if (s == "Sorghum" || s == "sorghum") {
+        // Sorghum bicolor, well-watered field plants, GEMINI 2022-2026 (Davis, CA); as for cowpea with an adaxial stomatal fraction
+        // of 0.40. The surveys showed no VPD response, so the fit drove Em and k to large values together: only Em/k (1.96e-4) and
+        // i0 are determined, and the resulting conductance increases with light but is effectively insensitive to VPD.
+        coeffs.Em = 1.0e5f;
+        coeffs.i0 = 425.4;
+        coeffs.k = 5.109e8f;
+        coeffs.b = 0.f;
     } else {
         helios_runtime_error("ERROR (StomatalConductanceModel::getBMFCoefficientsFromLibrary): Unknown species '" + s +
                              "'. Valid species are: Almond, Apple, Cherry, Prune, Pear, PistachioFemale (or Pistachio), PistachioMale, Walnut, Grape, Elderberry, Toyon, Big_Leaf_Maple (or Maple), Western_Redbud (or Redbud), Baylaurel (or "
-                             "Bay_Laurel), Olive, EasternRedbud. Names are also accepted in all lower case.");
+                             "Bay_Laurel), Olive, EasternRedbud, Cowpea, CommonBean (or Bean, common_bean), Sorghum. Names are also accepted in all lower case.");
     }
     if (message_flag) {
         std::cout << "Returning Stomatal Model Coefficients to " << s << std::endl;
@@ -821,7 +844,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
                 float esurf = solveSurfaceVaporPressure(evaluate_BWBmodel, variables, &coeffs, ea, es, warnings);
                 float hs = esurf / es;
-                gs_result = gs0 + a1 * An * beta * hs / Cs;
+                gs_result = max(0.f, gs0 + a1 * An * beta * hs / Cs); // strong respiration (negative An) would otherwise give a negative conductance
 
                 if (write_outputs && std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
                     context->setPrimitiveData(UUID, "gs0_BWB", gs0);
@@ -840,7 +863,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
                 float esurf = solveSurfaceVaporPressure(evaluate_BBLmodel, variables, &coeffs, ea, es, warnings); // Pa
                 float Ds = max(0.f, (es - esurf) / press * 1000.f); // mmol/mol
-                gs_result = gs0 + a1 * An * beta / (Cs - Gamma) / (1.f + Ds / D0);
+                gs_result = max(0.f, gs0 + a1 * An * beta / (Cs - Gamma) / (1.f + Ds / D0)); // strong respiration (negative An) would otherwise give a negative conductance
 
                 if (write_outputs && std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
                     context->setPrimitiveData(UUID, "gs0_BBL", gs0);
@@ -859,7 +882,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
                 float esurf = solveSurfaceVaporPressure(evaluate_MOPTmodel, variables, &coeffs, ea, es, warnings);
                 float Ds = max(0.00001f, (es - esurf) / 1000.f); // kPa
-                gs_result = gs0 + 1.6f * (1.f + g1 * sqrtf(beta / Ds)) * An / Cs;
+                gs_result = max(0.f, gs0 + 1.6f * (1.f + g1 * sqrtf(beta / Ds)) * An / Cs); // strong respiration (negative An) would otherwise give a negative conductance
 
                 if (write_outputs && std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
                     context->setPrimitiveData(UUID, "gs0_MOPT", gs0);
@@ -1104,7 +1127,7 @@ float StomatalConductanceModel::evaluate_BWBmodel(float esurf, std::vector<float
     float beta = variables[5];
 
     float hs = esurf / es;
-    float gs = gs0 + a1 * An * beta * hs / Cs;
+    float gs = max(0.f, gs0 + a1 * An * beta * hs / Cs); // floored at zero, as in run()
 
     return gs * (es - esurf) - gbw * (esurf - ea);
 }
@@ -1129,7 +1152,7 @@ float StomatalConductanceModel::evaluate_BBLmodel(float esurf, std::vector<float
     float beta = variables[7];
 
     float Ds = max(0.f, (es - esurf) / press * 1000.f); // mmol/mol
-    float gs = gs0 + a1 * An * beta / (Cs - Gamma) / (1.f + Ds / D0);
+    float gs = max(0.f, gs0 + a1 * An * beta / (Cs - Gamma) / (1.f + Ds / D0)); // floored at zero, as in run()
 
     return gs * (es - esurf) - gbw * (esurf - ea);
 }
@@ -1151,7 +1174,7 @@ float StomatalConductanceModel::evaluate_MOPTmodel(float esurf, std::vector<floa
     float beta = variables[5];
 
     float Ds = max(0.00001f, (es - esurf) / 1000.f); // kPa, floored as in run() so that gs stays finite at a saturated surface
-    float gs = gs0 + 1.6f * (1.f + g1 * sqrtf(beta / Ds)) * An / Cs;
+    float gs = max(0.f, gs0 + 1.6f * (1.f + g1 * sqrtf(beta / Ds)) * An / Cs); // floored at zero, as in run()
 
     return gs * (es - esurf) - gbw * (esurf - ea);
 }

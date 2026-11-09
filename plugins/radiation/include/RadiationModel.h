@@ -77,23 +77,44 @@ struct CameraProperties {
     //! Camera shutter speed in seconds (used for ISO-based exposure calculations). Example: 1/125 second = 0.008
     float shutter_speed;
 
-    //! Target median scene luminance for "auto" exposure, as a fraction of full scale
+    //! Target centre-weighted mean scene luminance for "auto" exposure of an RGB camera, as a fraction of full scale
     /**
-     * Auto exposure scales every band so that the median pixel luminance lands here. The default of
-     * 0.18 is the middle-grey convention, which assumes a scene whose average reflectance is that of
-     * a grey card. A canopy imaged from above is darker than that, so matching a real camera's
-     * output may need a lower value; conversely a bright scene may need a higher one.
+     * Auto exposure scales an RGB camera's image so that its centre-weighted mean luminance lands here, as a camera's meter does
+     * (\ref RadCamExposure). The luminance is that of the final linear sRGB image, after white balance and colour correction, and
+     * each pixel is weighted by exp(-(dx^2 + dy^2)), with dx and dy its offsets from the image centre in units of 0.35 of the image
+     * width and height. The default of 0.235 reproduces the exposure that real cameras choose: it was fitted, together with the
+     * tone curve (\ref CameraProperties::tone_curve), to the in-camera JPEGs of 413 camera models. A scene darker or brighter
+     * than typical (e.g. a canopy imaged from above) may call for a lower or higher value.
      *
-     * Ignored when exposure is "manual" or "ISOXXX".
+     * Ignored when exposure is "manual" or "ISOXXX", and by cameras that are not RGB cameras.
      */
-    float exposure_target = 0.18f;
+    float exposure_target = 0.235f;
 
     //! White balance mode: "auto" (default) or "off" (no white balance correction)
     /**
-     * With "auto", the red, green and blue bands (the camera's first three) are scaled so that a spectrally flat surface renders neutral under the light reaching the surfaces in view, as seen through
-     * the camera's spectral responses. See \ref RadCamWhiteBalance.
+     * With "auto", the camera's red, green and blue bands (identified as described in \ref RadCamRGBBands) are scaled so that a spectrally flat surface renders neutral under the light reaching the
+     * surfaces in view, as seen through the camera's spectral responses. See \ref RadCamWhiteBalance.
      */
     std::string white_balance;
+
+    //! Colour correction mode: "auto" (default) or "off" (keep the camera's own RGB)
+    /**
+     * With "auto", a camera whose red, green and blue bands all have spectral responses (\ref RadiationModel::setCameraSpectralResponse()) converts its images from its own RGB to linear sRGB with a
+     * 3x3 colour correction matrix, after white balance and before exposure, as a real camera does. The matrix is derived from the camera's spectral responses (see \ref RadCamColorCorrection and
+     * \ref RadiationModel::getCameraColorCorrectionMatrix()). Cameras without spectral responses, and cameras that are not RGB, are not changed. The raw camera data (global data
+     * "camera_<label>_<band>", written by \ref RadiationModel::writeCameraImageDataEXR()) is never colour corrected.
+     */
+    std::string color_correction;
+
+    //! Tone curve mode: "auto" (default) or "off" (sRGB encoding only)
+    /**
+     * With "auto", \ref RadiationModel::writeCameraImage() passes an RGB camera's image through the tone curve that real cameras apply
+     * in their JPEGs before encoding it as sRGB: it darkens shadows and rolls off highlights, which gives images the contrast of a
+     * camera's own JPEG. The curve was measured on the in-camera JPEGs of 413 camera models (\ref RadCamToneCurve) and goes with
+     * the default auto exposure. Only the written images are affected; the camera's pixel data (\ref RadiationModel::getCameraPixelData())
+     * and raw data stay linear. Cameras that are not RGB cameras are never tone mapped.
+     */
+    std::string tone_curve;
 
     /**! \brief Camera optical zoom multiplier (1.0 = no zoom, 2.0 = 2x zoom, etc.)
      *
@@ -121,13 +142,15 @@ struct CameraProperties {
         exposure = "auto";
         shutter_speed = 1.f / 125.f; // 1/125 second (standard default)
         white_balance = "auto";
+        color_correction = "auto";
+        tone_curve = "auto";
         camera_zoom = 1.0f;
     }
 
     bool operator==(const CameraProperties &rhs) const {
         return camera_resolution == rhs.camera_resolution && focal_plane_distance == rhs.focal_plane_distance && lens_focal_length == rhs.lens_focal_length && lens_diameter == rhs.lens_diameter && FOV_aspect_ratio == rhs.FOV_aspect_ratio &&
                HFOV == rhs.HFOV && sensor_width_mm == rhs.sensor_width_mm && manufacturer == rhs.manufacturer && model == rhs.model && lens_make == rhs.lens_make && lens_model == rhs.lens_model && lens_specification == rhs.lens_specification &&
-               exposure == rhs.exposure && shutter_speed == rhs.shutter_speed && white_balance == rhs.white_balance && camera_zoom == rhs.camera_zoom;
+               exposure == rhs.exposure && shutter_speed == rhs.shutter_speed && white_balance == rhs.white_balance && color_correction == rhs.color_correction && tone_curve == rhs.tone_curve && camera_zoom == rhs.camera_zoom;
     }
 };
 
@@ -214,6 +237,8 @@ struct RadiationCamera {
         exposure_target = camera_properties.exposure_target;
         shutter_speed = camera_properties.shutter_speed;
         white_balance = camera_properties.white_balance;
+        color_correction = camera_properties.color_correction;
+        tone_curve = camera_properties.tone_curve;
         camera_zoom = camera_properties.camera_zoom;
     }
 
@@ -250,12 +275,16 @@ struct RadiationCamera {
     // Exposure mode: "auto", "ISOXXX" (e.g., "ISO100"), or "manual"
     std::string exposure;
 
-    //! Target median luminance for "auto" exposure (see CameraProperties::exposure_target)
-    float exposure_target = 0.18f;
+    //! Target centre-weighted mean luminance for "auto" exposure (see CameraProperties::exposure_target)
+    float exposure_target = 0.235f;
     // Camera shutter speed in seconds
     float shutter_speed;
     // White balance mode: "auto" or "off"
     std::string white_balance;
+    //! Colour correction mode: "auto" or "off" (see CameraProperties::color_correction)
+    std::string color_correction;
+    //! Tone curve mode for written images: "auto" or "off" (see CameraProperties::tone_curve)
+    std::string tone_curve;
     // Camera optical zoom multiplier
     float camera_zoom;
     // Camera type (rgb, spectral, or thermal)
@@ -280,6 +309,16 @@ struct RadiationCamera {
 
     //! White balance factors [R,G,B] that were actually applied to pixel data ({1,1,1} if off)
     helios::vec3 applied_white_balance_factors = helios::make_vec3(1.f, 1.f, 1.f);
+
+    //! Bands rendered since the image was last processed (white balance, colour correction and exposure). RadiationModel::runBand() processes the image once every band of the camera has been rendered,
+    //! so that an image is never processed twice and an image rendered one band at a time is processed once it is complete.
+    std::set<std::string> bands_rendered_since_processing;
+
+    //! Whether the image has been processed at least once. A processed image with some, but not all, bands rendered again since is incomplete, and cannot be read (RadiationModel::requireCompleteCameraImage()).
+    bool image_processed = false;
+
+    //! Colour correction matrix (row-major 3x3) applied to the current image by the automatic colour correction; empty if the current image is not colour corrected
+    std::vector<float> applied_color_correction_matrix;
 
     //! White reference of each band rendered since the camera was last white balanced, summed over the camera's pixels
     /**
@@ -394,7 +433,8 @@ struct RadiationCamera {
     //! Apply camera exposure based on the camera's exposure setting
     /**
      * Applies exposure scaling to pixel_data based on the camera's exposure mode:
-     * - "auto": Automatic exposure using percentile-based normalization (18% gray target for RGB, per-band for spectral)
+     * - "auto": For an RGB camera (one whose red, green and blue bands are given), a centre-weighted mean luminance target (CameraProperties::exposure_target); for any other camera except a
+     *   thermal one, per-band normalization
      * - "ISOXXX" (e.g., "ISO100"): Fixed exposure based on ISO, shutter speed, and aperture settings.
      *   Calibrated to match auto-exposure at reference settings (ISO 100, 1/125s, f/2.8) for typical Helios scenes.
      *   Higher ISO/longer shutter/wider aperture → proportionally brighter.
@@ -402,25 +442,28 @@ struct RadiationCamera {
      *
      * This method should be called after rendering is complete and pixel_data is populated.
      * \param[in] context Pointer to Helios context for accessing spectral data
+     * \param[in] rgb_bands The camera's red, green and blue bands, from RadiationModel::cameraRGBBands(); empty if the camera is not an RGB camera
+     * \param[in] effective_camera_type The camera's type from RadiationModel::effectiveCameraType(): "rgb", "spectral" or "thermal", or empty to infer it from the number of bands
      */
-    void applyCameraExposure(helios::Context *context);
+    void applyCameraExposure(helios::Context *context, const std::vector<std::string> &rgb_bands, const std::string &effective_camera_type);
 
     //! Apply automatic white balance correction to camera image data
     /**
      * Applies white balance correction based on the camera's white_balance setting:
-     * - "auto": Scales the first three bands (red, green, blue) so that a spectrally flat surface renders neutral under the light illuminating the scene. The scale of each band is the reciprocal of
+     * - "auto": Scales the red, green and blue bands so that a spectrally flat surface renders neutral under the light illuminating the scene. The scale of each band is the reciprocal of
      *   its white reference total (white_reference_band_totals), normalized so that the band with the largest total keeps unit gain.
      * - "off": No white balance correction applied
      *
-     * White balance is skipped for single-channel (grayscale) images, and until all three bands have been rendered since the last balance. For multi-channel images, white balance is applied
+     * White balance is skipped for cameras that are not RGB cameras (rgb_bands empty), and until all three bands have been rendered since the last balance. For multi-channel images, white balance is applied
      * simultaneously to all channels.
      * \note With "auto", if the surfaces the camera sees receive no light in one of the bands (for example, the camera sees only sky), the image is left unbalanced and the reason is returned so
      * the caller can report it as a warning.
      *
      * This method should be called after rendering and exposure adjustment are complete.
+     * \param[in] rgb_bands The camera's red, green and blue bands, from RadiationModel::cameraRGBBands(); empty if the camera is not an RGB camera
      * \return Empty if white balance was applied or was not needed; otherwise a message explaining why it was not applied.
      */
-    std::string applyCameraWhiteBalance();
+    std::string applyCameraWhiteBalance(const std::vector<std::string> &rgb_bands);
 
     //! Adjust brightness and contrast of image data
     /**
@@ -440,6 +483,16 @@ struct RadiationCamera {
      * \param[in] saturation Saturation adjustment factor (1.0 = no change, 0.0 = grayscale, >1.0 = more saturated)
      */
     void adjustSaturation(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation);
+
+    //! The typical in-camera tone curve (CameraProperties::tone_curve)
+    /**
+     * Maps linear scene values, exposed with the default auto exposure, to display-linear values in [0, 1], to which sRGB encoding is then applied. Tabulated at
+     * half-stop steps from the in-camera JPEGs of 413 camera models (raw.pixls.us samples, CC0), interpolated linearly in log2 of the input; below the table it is
+     * linear through zero, and above it the output is 1.
+     * \param[in] value Linear input value
+     * \return Display-linear output value in [0, 1]
+     */
+    static float typicalCameraToneCurve(float value);
 
     //! Converts a linear color value to sRGB color space.
     /**
@@ -532,6 +585,8 @@ struct CameraMetadata {
         float contrast_adjustment = 1.f; //!< Contrast adjustment factor (1.0 = no change)
         float exposure_gain = 1.f; //!< Exposure gain that was applied to pixel data (1.0 = no gain)
         helios::vec3 white_balance_factors = helios::make_vec3(1.f, 1.f, 1.f); //!< White balance per-channel multipliers [R,G,B] (1,1,1 = no correction)
+        std::vector<float> color_correction_matrix; //!< Colour correction matrix (row-major 3x3) applied after white balance; empty if none was applied
+        std::string tone_curve = "none"; //!< Tone curve applied to the written image: "typical camera" or "none"
         std::string color_space = "linear"; //!< Output color space: "linear" or "sRGB"
     } image_processing;
 
@@ -789,6 +844,7 @@ public:
      * \param[in] label Label used to reference the band
      * \param[in] flux Radiative flux
      * \note The diffuse sky fills the upper hemisphere only; rays leaving the domain below the horizon receive no diffuse radiation unless \ref RadiationModel::enableBelowHorizonDiffuseRadiation() "enableBelowHorizonDiffuseRadiation()" is called.
+     * Radiation cameras still show sky below the horizon, the sky radiance at the horizon in the same azimuth, so that a finite domain does not render a black strip before the horizon.
      */
     void setDiffuseRadiationFlux(const std::string &label, float flux);
 
@@ -815,7 +871,8 @@ public:
     //! Apply the diffuse (ambient) sky radiation to rays that leave the domain below the horizon
     /**
      * By default, the diffuse sky only fills the upper hemisphere: a ray that leaves all geometry heading downward (e.g., past the edge of a finite ground, or from the underside of an isolated object) receives no ambient radiation. Calling this
-     * function makes the sky fill the full sphere, so that such rays receive the same ambient radiation as rays leaving upward. This applies to all bands, and to camera rays.
+     * function makes the sky fill the full sphere, so that such rays receive the same ambient radiation as rays leaving upward. This applies to all bands. Camera rays leaving below the horizon always see sky; by default
+     * they see the sky radiance at the horizon in the same azimuth, and with this function called they see the sky's full-sphere angular pattern.
      * \note To avoid edge effects from a finite ground (where the domain edges are dark from below), use \ref RadiationModel::enforcePeriodicBoundary() "enforcePeriodicBoundary()" rather than this function.
      */
     void enableBelowHorizonDiffuseRadiation();
@@ -1258,9 +1315,10 @@ public:
     /**
      * \param[in] label Label used to reference the band
      * \param[in] depth Maximum number of scattering iterations (default is 3; depth=0 turns scattering off)
-     * \note The energy that would still be scattered after the last iteration is not dropped: the later iterations are summed as a geometric series, each primitive receiving its absorption in the last iteration times q/(1-q), where q is the ratio of
-     * the energy launched in the last two iterations. A depth of 3 to 5 is therefore usually enough for absorbed fluxes, even for strongly scattering bands.
-     * \note Radiation camera images are not extrapolated: they include only the scattering iterations that were traced, so images of strongly scattering bands need a higher depth.
+     * \note The energy that would still be scattered after the last iteration is not dropped: the later iterations are summed as a geometric series, each primitive receiving its absorption in the last iteration times q/(1-q), where q is the fraction
+     * of the energy launched in the last iteration that the surfaces it reaches scatter again (or, where q alternates between iterations, as between leaves and the ground, its absorption in the last two iterations times q2/(1-q2); see \ref RadScatter).
+     * Radiation camera images are extrapolated the same way. A depth of 3 to 5 is therefore usually enough for absorbed fluxes and images, even for strongly scattering bands.
+     * \note With a depth of 0, surfaces are black in the band: they absorb all the radiation they intercept, and cameras see only what they emit.
      */
     void setScatteringDepth(const std::string &label, uint depth);
 
@@ -1422,6 +1480,23 @@ public:
      */
     void disableCameraAtmosphere(const std::string &camera_label);
 
+    //! Give primitives that carry a surface class map a spectral texture whose classes scale the surface's library spectra
+    /**
+     * A primitive whose texture has a class map, such as the bark and fruit of a PlantArchitecture library model (see InternodeParameters::image_class_map_file and
+     * InflorescenceParameters::fruit_class_map_file), carries the class map's path as the primitive data "spectral_class_map". The XML file of the same name beside the class map defines a
+     * surface class map: the labels of the reflectivity (and optionally transmissivity) spectra of the surface, from the spectral library or the Context's global data, and a reflectance_scale for
+     * each class (see \ref RadSpectralTexture). For each class map this registers the scaled spectra of its classes as global data "[spectrum]_[class map]_class[k]" (each class's reflectivity and
+     * transmissivity are kept from summing to more than 1), registers the palette "surface_[class map]", where [class map] is the class map's file name without its extension, and assigns the
+     * spectral texture to the primitives (see \ref helios::Context::setPrimitiveSpectralTexture()). Primitives without the data are left alone, as are those carrying a class map defined
+     * relative to a leaf (a <leaf_class_map>, as PlantArchitecture records on leaves), whose classes LeafOptics::run() derives from the leaf's properties; so a plant can be given whole.
+     * \param[in] UUIDs Primitives to consider.
+     * \note Call this before \ref updateGeometry(), as a spectral texture assigned after it is not seen until the geometry is updated again.
+     */
+    void applySpectralClassMaps(const std::vector<uint> &UUIDs);
+
+    //! Give every primitive in the Context that carries a surface class map a spectral texture (see \ref applySpectralClassMaps(const std::vector<uint>&))
+    void applySpectralClassMaps();
+
     //! Set the camera spectral response based on a camera available in the standard camera spectral library (radiation/spectral_data/camera_spectral_library.xml).
     /**
      * Consult the documentation for available cameras in the library, or examine the file radiation/spectral_data/camera_spectral_library.xml.
@@ -1436,12 +1511,18 @@ public:
     //! Reconstruct camera images by interpolating the outgoing flux across each facet, instead of holding it constant
     /**
      * A camera builds each pixel from a single outgoing flux value per primitive, so every pixel landing on a facet reads the same value and a coarsely tessellated surface renders as flat panels separated
-     * by visible steps. With smoothing enabled, the flux is first averaged onto the vertices the facets share, weighted by facet area, and then interpolated across each facet from its own corners, so a
-     * tessellated curve reads as a curve.
+     * by visible steps. With smoothing enabled, the direct radiation of the sources is evaluated per facet with a shading normal interpolated from the vertices the facets share, replacing the cosine of
+     * the facet's own normal with that of the shading normal, and the rest of the outgoing radiation is averaged onto those vertices, weighted by facet area, and interpolated across each facet from its
+     * corners. A tessellated curve then reads as a curve, without the darkening that averaging the direct radiation would cause, and a cast shadow stays where the facets put it; a face turned away from a
+     * source takes the irradiance of its sunlit neighbours, so the light fades across the terminator. See the Camera Flux Smoothing section of the radiation plug-in documentation.
      *
      * This applies to \a Tube, \a Sphere, \a Cone, \a Polymesh, \a Tile and \a AdaptiveTile objects. A \a Box or \a Disk object, and any primitive that belongs to no object, is left alone: its faces are
      * genuinely flat, so the per-facet value is already correct everywhere on them. A \a Polymesh must carry the face table that \ref helios::Context::loadOBJ() and \ref helios::Context::loadPLY() retain;
-     * one assembled from loose primitives by \ref helios::Context::addPolymeshObject() has no topology and is left alone. Vertex normals are neither required nor used.
+     * one assembled from loose primitives by \ref helios::Context::addPolymeshObject() has no topology and is left alone. No stored vertex normals are required.
+     *
+     * Primitives with a specular surface layer (`specular_roughness`) are smoothed completely: the layer's own outgoing component is interpolated like the flux, and its highlight and viewing-angle
+     * dependence are evaluated with the shading normal. Vertices are shared across the rings of a \a Sphere and the segments of a \a Tube or \a Cone as well as around them. The transmittance of a
+     * translucent cover (`glass_*`) a camera looks through still uses the cover's facet normal.
      *
      * \note This changes what the camera reports. A pixel no longer carries the outgoing flux of the primitive behind it, but a blend of that primitive's value with those of its neighbours, so pixel values
      * no longer correspond exactly to the `radiation_flux_*` primitive data. Nothing else is affected: the radiation solve, the `radiation_flux_*` values themselves, and the pixel-label and depth images are
@@ -1813,8 +1894,22 @@ public:
      * \param[in] green_band_label Label for green channel band data
      * \param[in] blue_band_label Label for blue channel band data
      * \param[in] ccm_file_path Path to XML file containing color correction matrix
+     * \note A camera with spectral responses already colour corrects its images by default (CameraProperties::color_correction). Applying a second matrix on top of that would correct the colours
+     * twice, so this method raises an error for a camera whose current image was colour corrected automatically; set CameraProperties::color_correction to "off" for that camera to apply your own matrix.
      */
     void applyCameraColorCorrectionMatrix(const std::string &camera_label, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, const std::string &ccm_file_path);
+
+    //! Get the colour correction matrix a camera applies to its images
+    /**
+     * The matrix converts the camera's white-balanced red, green and blue to linear sRGB (\ref RadCamColorCorrection). It is derived from the camera's spectral responses: under CIE illuminant D65,
+     * it is the 3x3 matrix whose rows each sum to 1 (so that white stays white) that best maps what the camera records from the reflectance spectra shipped with the radiation plug-in (colour
+     * boards, leaves, soils, bark and fruit) to their colorimetric colour for the CIE 1931 standard observer, in the least-squares sense.
+     * \param[in] camera_label Label of the camera
+     * \return Matrix as three rows of three; pixel (r, g, b) becomes matrix * (r, g, b)
+     * \note Raises an error if the matrix is undefined: when the camera's red, green and blue bands do not all have spectral responses, or the responses do not distinguish colours (e.g. the same
+     * response in every band, or a band that responds only outside the visible range). The automatic colour correction leaves such a camera's images uncorrected and prints a warning.
+     */
+    [[nodiscard]] std::vector<std::vector<float>> getCameraColorCorrectionMatrix(const std::string &camera_label) const;
 
 
     //! Write camera data for one or more bands to a JPEG image
@@ -2112,6 +2207,12 @@ public:
 
     //! Auto-calibrate camera image using colorboard reference values
     /**
+     * Fits a colour correction matrix from the colour board patches (added with CameraCalibration) in the camera's view: the matrix that best maps, in the weighted least-squares
+     * sense, the camera's mean linear RGB over each patch to the patch's reference colour, the colorimetric linear sRGB (CIE illuminant D65, CIE 1931 2-degree observer) of the
+     * reflectance spectrum the patch was rendered with. Neutral patches count double. Patches seen by 10 pixels or fewer are left out. The corrected image is written sRGB encoded
+     * (without the tone curve of \ref writeCameraImage()), and the exported matrix maps linear camera RGB to linear sRGB, as \ref applyCameraColorCorrectionMatrix() expects.
+     * With MATRIX_3X3_AUTO, a diagonal correction is fitted instead, with a warning, if the patches in view do not determine a stable 3x3 matrix. Raises an error if no patch is in view,
+     * or with MATRIX_3X3_FORCE if fewer than 6 patches of distinct colours are.
      * \param[in] camera_label Label of the camera that generated the image
      * \param[in] red_band_label Label for red channel band data
      * \param[in] green_band_label Label for green channel band data
@@ -2121,12 +2222,33 @@ public:
      * \param[in] algorithm Color correction algorithm to use (defaults to 3x3 matrix with auto-fallback)
      * \param[in] ccm_export_file_path Optional path to export the computed color correction matrix to XML file
      * \return Path to the written corrected image file
+     * \note The matrix is fitted to the camera's own (white-balanced) RGB, as \ref applyCameraColorCorrectionMatrix() expects. If the camera's image was colour corrected automatically
+     * (CameraProperties::color_correction "auto"), that correction is undone on a copy of the data before fitting, so the result is the same as for the same camera with color_correction "off".
      */
     std::string autoCalibrateCameraImage(const std::string &camera_label, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, const std::string &output_file_path,
                                          bool print_quality_report = false, ColorCorrectionAlgorithm algorithm = ColorCorrectionAlgorithm::MATRIX_3X3_AUTO, const std::string &ccm_export_file_path = "");
 
     //! Get camera pixel data for a specific band
     std::vector<float> getCameraPixelData(const std::string &camera_label, const std::string &band_label);
+
+    //! Get the brightness temperature of each pixel of a camera in an emission band
+    /**
+     * The brightness temperature of a pixel is the temperature of a blackbody whose radiance in the band equals the pixel's radiance. Without a sensor atmosphere, the pixels of an emission band hold the
+     * radiance in the band, \f$\sigma T^4 F_{\lambda_1-\lambda_2}(T)/\pi\f$ for a band with wavelength bounds (see \ref RadEmission) or \f$\sigma T^4/\pi\f$ for a band without bounds, whatever the
+     * camera's spectral response, and this is inverted for T. With a sensor atmosphere (\ref enableCameraAtmosphere()), the pixels hold the radiance above the atmosphere weighted by the camera's spectral
+     * response, and the result is the brightness temperature above the atmosphere: the T for which \f$\int C_\lambda B_\lambda(T) d\lambda\f$ over the band equals the pixel, as satellite thermal
+     * products report it.
+     * \param[in] camera_label Label of the camera.
+     * \param[in] band_label Label of an emission band of the camera.
+     * \return Brightness temperature of each pixel (K), in the order of \ref getCameraPixelData(). A pixel of zero radiance has a brightness temperature of 0 K.
+     * \note The brightness temperature of a surface is its temperature only if its emissivity is 1. It also includes the radiation the surface reflects (e.g., from the sky), so it is not its temperature
+     * divided by the emissivity to the 1/4 power. A surface temperature can be recovered from the pixel radiance L as the T for which \f$\varepsilon L_b(T) + (1-\varepsilon) L_{sky} = L\f$, where
+     * \f$L_b\f$ is the blackbody radiance in the band.
+     * \note The pixels must be radiances: the camera's exposure must be "manual", or "auto" for a thermal camera (a library camera of type "thermal", or a camera whose bands all have emission enabled
+     * and wavelength bounds starting at 3000 nm or above), which automatic exposure leaves unscaled. Any other camera with "auto" exposure (including one imaging a band without bounds such as "LW"), or
+     * one with "ISOXXX" exposure, scales its images and is refused.
+     */
+    [[nodiscard]] std::vector<float> getCameraPixelBrightnessTemperature(const std::string &camera_label, const std::string &band_label);
 
     //! Set camera pixel data for a specific band
     void setCameraPixelData(const std::string &camera_label, const std::string &band_label, const std::vector<float> &pixel_data);
@@ -2470,6 +2592,54 @@ protected:
      */
     void computeCameraSky(const std::vector<std::string> &band_labels, const RadiationCamera &camera, uint camera_index, bool diffuse_rays_launched, std::vector<float> &camera_sky_radiance, std::vector<helios::vec4> &sky_pattern_params) const;
 
+    //! The red, green and blue bands of a camera, identified from their spectral responses or else their names (see \ref RadCamRGBBands)
+    /**
+     * \param[in] camera Camera whose bands are identified
+     * \param[out] not_rgb_reason Empty if the camera is an RGB camera, or is plainly not meant to be one (e.g. a multispectral camera with no visible bands); otherwise why a camera that looks like an
+     * RGB camera (camera type "rgb", exactly three bands, or bands named red, green and blue) is not treated as one, for a warning
+     * \return The {red, green, blue} band labels; empty if the camera is not an RGB camera
+     * \note Raises an error if the bands named red, green and blue have spectral responses of three different colours that do not match their names (e.g. the red and blue responses swapped).
+     */
+    [[nodiscard]] std::vector<std::string> cameraRGBBands(const RadiationCamera &camera, std::string &not_rgb_reason) const;
+
+    //! Spectra the colour correction matrices are fitted on, resampled to a common 1 nm grid; loaded on first use and kept for the life of the model
+    struct ColorCorrectionTrainingData {
+        std::vector<float> wavelengths; //!< 300-830 nm in 1 nm steps
+        std::vector<float> illuminant; //!< CIE D65
+        std::vector<float> xbar, ybar, zbar; //!< CIE 1931 2-degree colour-matching functions
+        std::vector<std::vector<float>> reflectances; //!< Colour-board, leaf, soil, bark and fruit reflectance spectra shipped with the plug-in (not the leaf transmittance spectra)
+    };
+    mutable std::unique_ptr<ColorCorrectionTrainingData> color_correction_training;
+
+    //! Load the colour correction training spectra (once) into color_correction_training
+    const ColorCorrectionTrainingData &colorCorrectionTrainingData() const;
+
+    //! Colorimetric linear sRGB of a reflectance spectrum lit by CIE illuminant D65, for the CIE 1931 2-degree observer, scaled so that a perfect white has Y = 1
+    /**
+     * The same definition of a surface's true colour as the colour correction matrices are fitted to (see getCameraColorCorrectionMatrix()).
+     * \param[in] reflectance Reflectance spectrum (wavelength in nm, reflectance as a fraction)
+     * \return Linear sRGB; components may lie outside [0, 1] for colours outside the sRGB gamut
+     */
+    [[nodiscard]] helios::vec3 colorimetricLinearSRGB(const std::vector<helios::vec2> &reflectance) const;
+
+    //! Colour correction matrix of a camera from its spectral responses (see getCameraColorCorrectionMatrix()), row-major 3x3; empty, with the reason in undefined_reason, if the camera has none
+    [[nodiscard]] std::vector<float> computeColorCorrectionMatrix(const RadiationCamera &camera, std::string &undefined_reason) const;
+
+    //! Raise an error if a camera's image is incomplete: processed once, then some but not all of its bands rendered again (RadiationCamera::bands_rendered_since_processing)
+    /**
+     * \param[in] camera_label Label of an existing camera
+     * \param[in] caller Name of the calling method, for the error message
+     */
+    void requireCompleteCameraImage(const std::string &camera_label, const std::string &caller) const;
+
+    //! Apply the automatic colour correction to a camera's complete image: colour correction "auto" and spectral responses for its red, green and blue bands
+    /**
+     * \param[in,out] camera Camera whose image is corrected
+     * \param[in] rgb_bands The camera's red, green and blue bands, from cameraRGBBands()
+     * \param[in] not_rgb_reason Why the camera is not treated as an RGB camera, from cameraRGBBands(); reported as a warning once the camera's image is complete
+     */
+    void applyAutomaticColorCorrection(RadiationCamera &camera, const std::vector<std::string> &rgb_bands, const std::string &not_rgb_reason) const;
+
     //! Apply the sensor atmosphere enabled with enableCameraAtmosphere() to the pixel data of the bands just traced for a camera
     /**
      * \param[in,out] camera Camera whose pixel data is converted.
@@ -2485,6 +2655,28 @@ protected:
      * \param[in] band Label of the emission band.
      */
     void applyCameraThermalAtmosphere(RadiationCamera &camera, const std::string &band);
+
+    //! Wavelengths and trapezoidal weights for integrating over a band, weighted by a spectral response
+    /**
+     * The grid holds the band bounds and every wavelength of the given spectra and the response that lies between them, with steps subdivided to at most 10 nm, which integrates the Planck spectrum to better
+     * than 1e-4 by the trapezoidal rule. Each weight is the trapezoidal weight times the response there; the response is zero outside its tabulated range, and 1 everywhere if it is empty.
+     * \param[in] bounds Band bounds (nm).
+     * \param[in] spectra Spectra whose wavelengths are added to the grid.
+     * \param[in] response Spectral response (empty for a uniform response of 1).
+     * \param[out] wavelengths Grid wavelengths (nm).
+     * \param[out] weights Weight of each grid wavelength (nm).
+     */
+    //! The type of a camera as its images are processed
+    /**
+     * A camera from the camera library has the type given there. A camera without one (added with addRadiationCamera()) is a thermal camera if every one of its bands has emission enabled and
+     * wavelength bounds starting at 3000 nm or above, so that its images are not exposed or processed as an RGB camera's would be; otherwise its type is empty, and inferred from its number of bands
+     * where needed. Bands without bounds do not count, since emission is enabled by default and is often left enabled in visible bands.
+     * \param[in] camera The camera.
+     * \return "rgb", "spectral", "thermal", or empty.
+     */
+    [[nodiscard]] std::string effectiveCameraType(const RadiationCamera &camera) const;
+
+    static void bandIntegrationGrid(const helios::vec2 &bounds, const std::vector<const std::vector<helios::vec2> *> &spectra, const std::vector<helios::vec2> &response, std::vector<float> &wavelengths, std::vector<float> &weights);
 
     //! Spectral response of a camera band, or an empty vector if the band has no response spectrum (a uniform response of one)
     /**
@@ -2675,6 +2867,25 @@ protected:
     //! Area of each primitive, in GPU buffer order, cached so that it is not recomputed for every band
     std::vector<float> smoothing_primitive_area;
 
+    //! Unit shading normal at each shared vertex, three entries per vertex: the area-weighted mean of the normals of the facets that meet there
+    /**
+     * Used by cameras for the angle-dependent terms of specular surface layers, which a scalar flux cannot carry. The normals of the facets meeting at a vertex are first oriented to agree with one of them, so
+     * that oppositely wound facets do not cancel; the camera program orients each vertex normal to the facet it shades. Empty when smoothing is disabled.
+     */
+    std::vector<float> smoothing_vertex_normals;
+
+    //! Whether the backend currently holds smoothing_vertex_normals, which it needs only while smoothing is enabled and there is a radiation source or some primitive has a specular surface layer
+    bool smoothing_vertex_normals_uploaded = false;
+
+    //! Whether the backend currently holds the vertex direct irradiance (see accumulateDirectIrradianceAtVertices()), which it needs only while smoothing is enabled and there is a radiation source
+    bool vertex_direct_irradiance_uploaded = false;
+
+    //! Unit normal of each primitive taking part in smoothing, in GPU buffer order, from its corner positions (zero for the others)
+    std::vector<helios::vec3> smoothing_facet_normal;
+
+    //! Centroid of each primitive taking part in smoothing, in GPU buffer order (zero for the others)
+    std::vector<helios::vec3> smoothing_facet_centroid;
+
     //! Build the shared vertex topology that camera flux smoothing accumulates onto
     /**
      * Walks the participating objects once, assigns every shared vertex a slot in one flat buffer, and records which slots each primitive's corners belong to. Called from updateGeometry(), because the
@@ -2690,22 +2901,52 @@ protected:
 
     //! Resample the per-primitive outgoing flux onto the shared vertices
     /**
-     * \param[in] flux_top Per-primitive outgoing radiation for the top face, indexed [primitive][band].
-     * \param[in] flux_bottom Per-primitive outgoing radiation for the bottom face, indexed [primitive][band].
+     * \param[in] flux_top Per-primitive outgoing radiation for the top face, indexed [component][primitive][band].
+     * \param[in] flux_bottom Per-primitive outgoing radiation for the bottom face, indexed [component][primitive][band].
      * \param[in] band_count Number of bands in the current launch.
-     * \param[out] vertex_flux_top Area-weighted mean top-face radiation at each shared vertex, indexed [vertex][band].
-     * \param[out] vertex_flux_bottom Area-weighted mean bottom-face radiation at each shared vertex, indexed [vertex][band].
+     * \param[in] component_count Number of outgoing components: 2 when some primitive has a specular surface layer, whose reflection is the second, and 1 otherwise.
+     * \param[out] vertex_flux_top Area-weighted mean top-face radiation at each shared vertex, indexed [component][vertex][band].
+     * \param[out] vertex_flux_bottom Area-weighted mean bottom-face radiation at each shared vertex, indexed [component][vertex][band].
      */
-    void accumulateCameraFluxAtVertices(const std::vector<float> &flux_top, const std::vector<float> &flux_bottom, size_t band_count, std::vector<float> &vertex_flux_top, std::vector<float> &vertex_flux_bottom) const;
+    void accumulateCameraFluxAtVertices(const std::vector<float> &flux_top, const std::vector<float> &flux_bottom, size_t band_count, size_t component_count, std::vector<float> &vertex_flux_top, std::vector<float> &vertex_flux_bottom) const;
+
+    //! Remove from a camera's outgoing radiation the part each smoothed primitive reflects and transmits of the sources' direct radiation, before the rest is averaged onto the shared vertices
+    /**
+     * With camera flux smoothing, the camera evaluates the direct radiation per facet with the interpolated shading normal instead of interpolating it from the vertices: the direct radiation reaching a
+     * facet carries the cosine of the facet's own normal, which the camera replaces with that of the shading normal, so the brightness follows the curvature of the surface the tessellation stands for and a
+     * shadow edge stays where the facets put it. This removes that part from the values to be averaged, so that the camera does not count it twice. Each facet's direct radiation from source s, E_s, reached
+     * the face toward the source, which reflects rho_cam E_s and passes tau_cam E_s to the other face; a primitive with a surface layer keeps (1 - a(mu)) of it in its body. The face toward a finite source
+     * is decided from the facet's centroid.
+     * \param[inout] camera_scatter_top Camera-weighted outgoing radiation of the top faces, [component][primitive][band]; the direct part is removed from the first component.
+     * \param[inout] camera_scatter_bottom The same for the bottom faces.
+     * \param[in] direct_flux Direct radiation reaching each primitive from each source, [source][primitive][launch band] (see RayTracingBackend::getDirectFluxResults()).
+     * \param[in] camera_index Position of the camera in the camera-weighted material buffers.
+     * \param[in] band_launch_flag Which global bands the current launch covers.
+     */
+    void subtractCameraDirectFlux(std::vector<float> &camera_scatter_top, std::vector<float> &camera_scatter_bottom, const std::vector<float> &direct_flux, uint camera_index, const std::vector<char> &band_launch_flag) const;
+
+    //! Average the unoccluded direct irradiance of each source onto the shared vertices, for the faces that camera flux smoothing finds turned away from a source
+    /**
+     * A facet's direct radiation from source s, E_s, carries the cosine mu of the facet's normal and the fraction of the facet the source reaches, so E_s / |mu| is the irradiance the source delivers
+     * there normal to its direction, reduced by what occludes it. A face turned away from the source records none of it, yet near the terminator its shading normal can still face the source; the camera
+     * then takes this value, interpolated from the vertices, times the cosine of the shading normal, so that the light fades across the terminator instead of stopping at a facet edge. Each vertex averages,
+     * by area, the facets meeting there that received some of the source's radiation; facets nearly edge-on to the source (|mu| < 0.01) are left out, since E_s / |mu| is ill-determined for them.
+     * \param[in] direct_flux Direct radiation reaching each primitive from each source, [source][primitive][launch band] (see RayTracingBackend::getDirectFluxResults()).
+     * \param[in] launch_band_count Number of launched bands.
+     * \param[out] vertex_irradiance Values per [source][vertex][launch band].
+     */
+    void accumulateDirectIrradianceAtVertices(const std::vector<float> &direct_flux, size_t launch_band_count, std::vector<float> &vertex_irradiance) const;
 
     //! Average the radiation reaching and leaving the faces of primitives with a spectral texture onto the shared vertices, for camera flux smoothing
     /**
-     * Each vertex takes the area-weighted mean over the primitives with a spectral texture that meet there, so that the zeros recorded for the others do not dilute it.
+     * Only what the camera interpolates is averaged: the radiation reaching each face from the sky and from other surfaces (the last source slot) and the radiation each face emits. The direct radiation
+     * of the sources, in the other slots, the camera takes from the facet itself (see subtractCameraDirectFlux()), so it is not carried by the vertices. Each vertex takes the area-weighted mean over the
+     * primitives with a spectral texture that meet there, so that the zeros recorded for the others do not dilute it.
      * \param[in] spectral_incident Radiation reaching each face, per [face][source slot][primitive][band] (see RayTracingResults::spectral_incident).
      * \param[in] spectral_emitted Radiation emitted by each face, per [face][primitive][band].
-     * \param[in] slot_count Number of source slots.
+     * \param[in] slot_count Number of source slots: the sources and, last, the sky and other surfaces.
      * \param[in] band_count Number of bands in the current launch.
-     * \param[out] vertex_values Values per [face][layer][vertex][band], where layers 0 to slot_count - 1 are the source slots and layer slot_count the emitted radiation (see RayTracingBackend::uploadSpectralVertexIncident()).
+     * \param[out] vertex_values Values per [face][layer][vertex][band], where layer 0 is the last source slot and layer 1 the emitted radiation (see RayTracingBackend::uploadSpectralVertexIncident()).
      */
     void accumulateSpectralIncidentAtVertices(const std::vector<float> &spectral_incident, const std::vector<float> &spectral_emitted, size_t slot_count, size_t band_count, std::vector<float> &vertex_values) const;
 

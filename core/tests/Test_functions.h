@@ -2586,3 +2586,20 @@ TEST_CASE("annotation segmentation masks from a pixel-to-primitive map") {
 
     std::filesystem::remove_all(output_directory);
 }
+
+DOCTEST_TEST_CASE("classMapAreaFractions follows the texel convention of the radiation model") {
+    // A 3 x 3 class map, rows from the top. Column i covers i/2 <= u < (i+1)/2 and row j covers 1 - (j+1)/2 < v <= 1 - j/2; the last column
+    // and row are reached only at u = 1 and v = 0. So the whole square covers the top-left four texels, a quarter each.
+    const std::vector<uint16_t> classes = {1, 2, 0, 2, 0, 0, 0, 0, 0};
+    const int2 resolution = make_int2(3, 3);
+    const std::vector<std::pair<uint16_t, float>> whole = classMapAreaFractions(classes, resolution, {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)});
+    DOCTEST_REQUIRE(whole.size() == 2);
+    DOCTEST_CHECK(whole[0].first == 1);
+    DOCTEST_CHECK(whole[0].second == doctest::Approx(1.f / 3.f));
+    DOCTEST_CHECK(whole[1].first == 2);
+    DOCTEST_CHECK(whole[1].second == doctest::Approx(2.f / 3.f));
+    // A triangle inside the transparent texel at row 1, column 1 covers no class
+    DOCTEST_CHECK(classMapAreaFractions(classes, resolution, {make_vec2(0.6f, 0.1f), make_vec2(0.9f, 0.1f), make_vec2(0.9f, 0.4f)}).empty());
+    // A triangle touching a class only along its edge covers none of it
+    DOCTEST_CHECK(classMapAreaFractions(classes, resolution, {make_vec2(0.5f, 0.1f), make_vec2(0.9f, 0.1f), make_vec2(0.9f, 0.5f)}).empty());
+}

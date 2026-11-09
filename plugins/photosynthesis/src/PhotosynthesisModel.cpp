@@ -108,7 +108,6 @@ namespace {
     constexpr const char *LABEL_C4_fcyc = "photo_c4_fcyc";
     constexpr const char *LABEL_C4_gbs = "photo_c4_gbs";
     constexpr const char *LABEL_C4_ao = "photo_c4_ao";
-    constexpr const char *LABEL_C4_absorptance = "photo_c4_absorptance";
     constexpr const char *LABEL_C4_f_spectral = "photo_c4_f_spectral";
     constexpr const char *LABEL_C4_theta_etr = "photo_c4_theta_etr";
     constexpr const char *LABEL_C4_h_protons = "photo_c4_h_protons";
@@ -229,7 +228,6 @@ void PhotosynthesisModel::setModelCoefficients(const std::string &material_label
     context->setMaterialData(material_label, LABEL_C4_fcyc, coeffs.fcyc);
     context->setMaterialData(material_label, LABEL_C4_gbs, coeffs.gbs);
     context->setMaterialData(material_label, LABEL_C4_ao, coeffs.ao);
-    context->setMaterialData(material_label, LABEL_C4_absorptance, coeffs.absorptance);
     context->setMaterialData(material_label, LABEL_C4_f_spectral, coeffs.f_spectral);
     context->setMaterialData(material_label, LABEL_C4_theta_etr, coeffs.theta_etr);
     context->setMaterialData(material_label, LABEL_C4_h_protons, coeffs.h_protons);
@@ -299,7 +297,6 @@ C4ModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_C4(uint UUI
             if (mat.doesMaterialDataExist(LABEL_C4_fcyc)) mat.getMaterialData(LABEL_C4_fcyc, coeffs.fcyc);
             if (mat.doesMaterialDataExist(LABEL_C4_gbs)) mat.getMaterialData(LABEL_C4_gbs, coeffs.gbs);
             if (mat.doesMaterialDataExist(LABEL_C4_ao)) mat.getMaterialData(LABEL_C4_ao, coeffs.ao);
-            if (mat.doesMaterialDataExist(LABEL_C4_absorptance)) mat.getMaterialData(LABEL_C4_absorptance, coeffs.absorptance);
             if (mat.doesMaterialDataExist(LABEL_C4_f_spectral)) mat.getMaterialData(LABEL_C4_f_spectral, coeffs.f_spectral);
             if (mat.doesMaterialDataExist(LABEL_C4_theta_etr)) mat.getMaterialData(LABEL_C4_theta_etr, coeffs.theta_etr);
             if (mat.doesMaterialDataExist(LABEL_C4_h_protons)) mat.getMaterialData(LABEL_C4_h_protons, coeffs.h_protons);
@@ -538,6 +535,26 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrar
         fmc.setTPU(9.53, 0.0747);
         fmc.setRd(1.13, 46.39f);
         fmc.setQuantumEfficiency_alpha(0.713);
+    } else if (s == "Cowpea" || s == "cowpea") {
+        // Vigna unguiculata, well-watered field plants, GEMINI 2026 (Davis, CA). Temperature and light responses from same-leaf
+        // A/Ci ramps at ~30/34/38 C plus light curves (50 leaves, 5 MAGIC/IT genotypes); capacities scaled to the median of
+        // 2026 survey A. Rd25 from steady-state dark measurements. No Vcmax optimum below 39 C, so Vcmax is monotonic Arrhenius.
+        fmc.setVcmax(117.6, 68.57);
+        fmc.setJmax(379.9, 49.32, 36.41, 303.3);
+        fmc.setTPU(14.28, 26.12, 38.16, 307.8);
+        fmc.setRd(3.90, 46.39f);
+        fmc.setQuantumEfficiency_alpha(0.337);
+    } else if (s == "CommonBean" || s == "commonbean" || s == "common_bean" || s == "Common_Bean" || s == "Bean" || s == "bean") {
+        // Phaseolus vulgaris (interspecific GEMINI lines), well-watered field plants, GEMINI 2022-2023 (Davis, CA). Rapid A/Ci
+        // ramps at 2-4 temperatures per plot and day plus stepped light curves (53 plot-days); temperature parameters shared across
+        // the season. No survey A exists for bean, so capacities are the median of the curve fits. Rd25 from steady-state dark
+        // measurements. No Vcmax or TPU optimum below 40 C, so those are monotonic Arrhenius.
+        fmc.setVcmax(104.7, 90.45);
+        fmc.setJmax(259.4, 80.33, 31.17, 148.7);
+        fmc.setTPU(12.96, 48.27);
+        fmc.setRd(3.13, 46.39f);
+        fmc.setQuantumEfficiency_alpha(0.321);
+        fmc.setLightResponseCurvature_theta(0.460);
     } else {
         defaultSpecies = true;
         if (message_flag) {
@@ -599,7 +616,7 @@ C4ModelCoefficients PhotosynthesisModel::getC4CoefficientsFromLibrary(const std:
         // Kinetic + scalar fields keep struct-constructor defaults (Kc=1210, Ko=292000, Kp=82,
         // γ*=3.8168e-4 with dH=+31.1, Om=210000, dH_Kc=64.2, dH_Ko=10.5, dH_Kp=38.3, alpha_psII=0,
         // x=0.4, Vpr=80, Rm_frac=0.5, fcyc=0.45, H_J=3, H_Jcyc=3.4, gbs=0.003, ao=0.047,
-        // absorptance=0.85, f_spectral=0.15).
+        // f_spectral=0.15).
         // NOTE: dH_gamma_star=+31.1 deliberately differs from the vC2021 Setaria spreadsheet value
         // of -31.1 — see block comment on dH_gamma_star in PhotosynthesisModel.h. The spreadsheet
         // sign is an error (copies Boyd 2015 S_c/o activation energy without flipping for γ*=0.5/S_c/o).
@@ -648,9 +665,22 @@ C4ModelCoefficients PhotosynthesisModel::getC4CoefficientsFromLibrary(const std:
         c4.Kp_25 = 80.f;
         c4.dH_Kp = 38.3f;
         c4.fcyc = 0.f; // implicit in Massad's vC&F (1999) parent framework
+    } else if (s == "sorghum_gemini2026" || s == "sorghum" || s == "sorghum_bicolor") {
+        // Sorghum bicolor (NADP-ME), well-watered field plants, GEMINI 2026 (Davis, CA). Fitted to same-leaf A/Ci ramps at
+        // ~30/34/38 C plus light curves (39 leaves) with the light input taken as absorbed PPFD; capacities scaled to the median
+        // of 2026 survey A. Rd25 from steady-state dark measurements (2023). Kinetic constants, gm response and scalar
+        // structural parameters are the struct defaults (Setaria / Woodford et al. 2025), which the fit assumed. No Vpmax or
+        // Vcmax optimum below 40 C, so those are monotonic Arrhenius. The fitted J curvature is low: the A-light response of
+        // these leaves was still rising at 2000 umol/m2/s.
+        c4.setVpmax(71.87f, 50.76f);
+        c4.setVcmax(40.26f, 33.52f);
+        c4.setJmax(209.1f, 55.26f, 38.33f, 209.5f);
+        c4.setRd(3.24f, 66.4f);
+        c4.setMesophyllConductance_gm(1.0f, 49.8f);
+        c4.theta_etr = 0.030f;
     } else {
         helios_runtime_error("ERROR (PhotosynthesisModel::getC4CoefficientsFromLibrary): unknown C4 species '" + species +
-                             "'. Available keys (case-insensitive): SetariaViridis_vC2021, GenericC4_vC2000, Maize_Massad2007.");
+                             "'. Available keys (case-insensitive): SetariaViridis_vC2021, GenericC4_vC2000, Maize_Massad2007, Sorghum_GEMINI2026 (or Sorghum).");
     }
 
     if (message_flag) {
@@ -1454,7 +1484,7 @@ namespace {
     //! Formulae follow the von Caemmerer (2021) spreadsheet (C4__model_setaria__11-06-2021.xlsm).
     //! Note: the quadratic coefficients include the g_bs·K terms that are dropped in the paper's
     //! Eqs. 22-24 text; we keep them because the spreadsheet does and they are numerically relevant.
-    void computeC4RatesFromCm(float Cm, const C4ModelCoefficients &p, float Vpmax, float Vcmax, float Jmax, float Rd, float Kc, float Ko, float Kp, float gamma_star, float Om, float I_incident, float &Ac_out, float &Aj_out, float &Vp_out, float &J_out, float &J_light_limited_out) {
+    void computeC4RatesFromCm(float Cm, const C4ModelCoefficients &p, float Vpmax, float Vcmax, float Jmax, float Rd, float Kc, float Ko, float Kp, float gamma_star, float Om, float I_absorbed, float &Ac_out, float &Aj_out, float &Vp_out, float &J_out, float &J_light_limited_out) {
 
         const float Rm = p.Rm_frac * Rd;
 
@@ -1463,9 +1493,10 @@ namespace {
         const float Vp = std::min(Vp_MM, p.Vpr);
         Vp_out = Vp;
 
-        // Whole-chain electron transport rate J from non-rectangular hyperbola (Eq. 34)
+        // Whole-chain electron transport rate J from non-rectangular hyperbola (Eq. 34). The light input is the PAR
+        // ABSORBED by the leaf (radiation_flux_PAR), so vC2021 Eq. 35 is applied without its leaf-absorptance factor.
         const float rho = (1.f - p.fcyc) / (2.f - p.fcyc);
-        const float I2 = I_incident * p.absorptance * rho * (1.f - p.f_spectral);
+        const float I2 = I_absorbed * rho * (1.f - p.f_spectral);
         const float theta = std::max(p.theta_etr, 1.0e-4f);
         const float sum_IJ = I2 + Jmax;
         const float radicand_J = std::max(sum_IJ * sum_IJ - 4.f * theta * I2 * Jmax, 0.f);
@@ -1531,7 +1562,7 @@ float PhotosynthesisModel::evaluateCi_C4(float Ci, std::vector<float> &variables
     const C4ModelCoefficients &p = *reinterpret_cast<const C4ModelCoefficients *>(parameters);
 
     const float CO2 = variables[0];
-    const float I_incident = variables[1];
+    const float I_absorbed = variables[1];
     const float TL = variables[2];
     const float gC = variables[3];
 
@@ -1562,7 +1593,7 @@ float PhotosynthesisModel::evaluateCi_C4(float Ci, std::vector<float> &variables
 
     float Ac = 0.f, Aj = 0.f, Vp = 0.f, A = 0.f, J = 0.f, J_light_limited = 0.f;
     for (int iter = 0; iter < 50; ++iter) {
-        computeC4RatesFromCm(Cm, p, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_incident, Ac, Aj, Vp, J, J_light_limited);
+        computeC4RatesFromCm(Cm, p, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_absorbed, Ac, Aj, Vp, J, J_light_limited);
         A = std::min(Ac, Aj);
         const float Cm_target = Ci - A / gm;
         if (std::fabs(Cm_target - Cm) < 1.0e-5f) {
@@ -1572,7 +1603,7 @@ float PhotosynthesisModel::evaluateCi_C4(float Ci, std::vector<float> &variables
         Cm = 0.5f * Cm + 0.5f * Cm_target; // damped update
     }
     // Final re-evaluation at the converged C_m
-    computeC4RatesFromCm(Cm, p, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_incident, Ac, Aj, Vp, J, J_light_limited);
+    computeC4RatesFromCm(Cm, p, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_absorbed, Ac, Aj, Vp, J, J_light_limited);
     A = std::min(Ac, Aj);
 
     // Limitation state: 1 = Rubisco/PEPC enzyme-limited, 2 = electron transport-limited
@@ -1591,7 +1622,7 @@ float PhotosynthesisModel::evaluateCi_C4(float Ci, std::vector<float> &variables
 
 float PhotosynthesisModel::evaluateCm_C4(float Cm, std::vector<float> &variables, const C4ModelCoefficients &params) {
 
-    const float I_incident = variables[1];
+    const float I_absorbed = variables[1];
     const float TL = variables[2];
 
     const float R = 0.0083144598f;
@@ -1608,7 +1639,7 @@ float PhotosynthesisModel::evaluateCm_C4(float Cm, std::vector<float> &variables
     const float Om = params.Om_25 * std::exp(params.dH_Om * invDiffRT);
 
     float Ac = 0.f, Aj = 0.f, Vp = 0.f, J = 0.f, J_light_limited = 0.f;
-    computeC4RatesFromCm(Cm, params, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_incident, Ac, Aj, Vp, J, J_light_limited);
+    computeC4RatesFromCm(Cm, params, Vpmax, Vcmax, Jmax, Rd, Kc, Ko, Kp, gamma_star, Om, I_absorbed, Ac, Aj, Vp, J, J_light_limited);
     const float A = std::min(Ac, Aj);
     const int limitation = (Ac < Aj) ? 1 : 2;
 

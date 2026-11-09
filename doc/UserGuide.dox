@@ -161,6 +161,7 @@
   - \subpage PlantHydraulicsDoc "Plant Hydraulics: Models the water potentials, water contents, hydraulic conductances, and hydraulic capacitances."
   - \subpage ProjectBuilderDoc "GUI and XML interface for creating and running Helios projects."
   - \subpage RadiationDoc "Radiation Model: GPU-accelerated ray-tracing radiation transport model (all platforms via Vulkan; NVIDIA systems via OptiX)"
+  - \subpage SoilTransportDoc "Soil Transport: Richards-equation soil water flow in 1D columns and 3D grids (CPU, or GPU via CUDA), with root water uptake coupling."
   - \subpage SolarPositionDoc "Solar Position Model: Model for the position of the sun in the sky, as well as models of solar radiation flux and longwave flux from the sky."
   - \subpage StomatalDoc "Stomatal Conductance Model: Model for the conductance of water vapor through stomatal pores"
   - \subpage SyntheticAnnotationDoc "Synthetic Annotation: Automatic generation of labeled images for machine learning (object detection, semantic and instance segmentation). Deprecated: use the Visualizer."
@@ -1167,7 +1168,10 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   <tr><td>Class map file</td><td>\ref helios::Context::getPrimitiveSpectralTextureFile( uint ) const</td></tr>
   <tr><td>Palette</td><td>\ref helios::Context::getPrimitiveSpectralPalette( uint ) const</td></tr>
   <tr><td>Classes of a class map</td><td>\ref helios::Context::getSpectralTextureClassMap()</td></tr>
+  <tr><td>Fraction of a primitive's (u,v) area in each class</td><td>\ref helios::classMapAreaFractions()</td></tr>
   </table>
+
+ The LeafOptics plug-in can make the palette from a leaf's PROSPECT properties, for leaves whose class map PlantArchitecture records, such as those of its sorghum, maize and wheat models (see the LeafOptics documentation, "Leaves with a Class Map").
 
  \subsection Compound Compound Geometry
 

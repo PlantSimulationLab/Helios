@@ -300,6 +300,24 @@ uint64_t Context::getShapeRevision() const {
     return shape_revision.read();
 }
 
+uint64_t Context::getMaterialRevision() const {
+    return material_revision.read();
+}
+
+std::vector<uint> Context::getModifiedUUIDs(uint64_t &mark) const {
+    const uint64_t previous_mark = mark;
+    // The clock moves on before the scan, so a primitive modified during or after it is stamped later than the new mark and is
+    // returned by the next call. One modified just before is stamped no later than the new mark and is returned by this one.
+    mark = Primitive::modification_clock.fetch_add(1, std::memory_order_relaxed);
+    std::vector<uint> modified_UUIDs;
+    for (const auto &[UUID, primitive]: primitives) {
+        if (primitive->modification_stamp > previous_mark) {
+            modified_UUIDs.push_back(UUID);
+        }
+    }
+    return modified_UUIDs;
+}
+
 bool Context::isGeometryDirty() const {
     if (!dirty_deleted_primitives.empty()) {
         return true;
@@ -554,6 +572,7 @@ void Context::hidePrimitive(uint UUID) const {
     }
 #endif
     primitives.at(UUID)->ishidden = true;
+    primitives.at(UUID)->stampModification();
     invalidateAllUUIDsCache();
 }
 
@@ -570,6 +589,7 @@ void Context::showPrimitive(uint UUID) const {
     }
 #endif
     primitives.at(UUID)->ishidden = false;
+    primitives.at(UUID)->stampModification();
     invalidateAllUUIDsCache();
 }
 
@@ -3982,6 +4002,7 @@ uint Context::getMaterialIDFromLabel(const std::string &material_label) const {
 }
 
 void Context::addMaterial(const std::string &material_label) {
+    material_revision.markModified();
     if (material_label.empty()) {
         helios_runtime_error("ERROR (Context::addMaterial): Material label cannot be empty.");
     }
@@ -4014,6 +4035,7 @@ void Context::addMaterial(const std::string &material_label) {
 }
 
 uint Context::addMaterial_internal(const std::string &label, const RGBAcolor &color, const std::string &texture) {
+    material_revision.markModified();
     // Internal method - no check for __ prefix reservation
     if (label.empty()) {
         helios_runtime_error("ERROR (Context::addMaterial_internal): Material label cannot be empty.");
@@ -4185,6 +4207,7 @@ void Context::setPrimitiveAppearance(Primitive *primitive, const RGBAcolor &colo
     material.color = color;
     material.texture_file = texture_file;
     material.texture_color_overridden = texture_color_overridden;
+    material_revision.markModified();
     if (texture_changed) {
         updatePrimitiveSolidFraction(primitive);
     } else {
@@ -4193,6 +4216,7 @@ void Context::setPrimitiveAppearance(Primitive *primitive, const RGBAcolor &colo
 }
 
 void Context::renameMaterial(const std::string &old_label, const std::string &new_label) {
+    material_revision.markModified();
     if (material_label_to_id.find(old_label) == material_label_to_id.end()) {
         helios_runtime_error("ERROR (Context::renameMaterial): Material with label '" + old_label + "' does not exist.");
     }
@@ -4250,6 +4274,7 @@ bool Context::isMaterialTextureColorOverridden(const std::string &material_label
 }
 
 void Context::setMaterialColor(const std::string &material_label, const RGBAcolor &color) {
+    material_revision.markModified();
     uint matID = getMaterialIDFromLabel(material_label);
     if (materials.at(matID).color == color) {
         return;
@@ -4259,6 +4284,7 @@ void Context::setMaterialColor(const std::string &material_label, const RGBAcolo
 }
 
 void Context::setMaterialTexture(const std::string &material_label, const std::string &texture_file) {
+    material_revision.markModified();
     uint matID = getMaterialIDFromLabel(material_label);
     // Add texture to context if it has a file
     if (!texture_file.empty()) {
@@ -4272,6 +4298,7 @@ void Context::setMaterialTexture(const std::string &material_label, const std::s
 }
 
 void Context::setMaterialTextureColorOverride(const std::string &material_label, bool override) {
+    material_revision.markModified();
     uint matID = getMaterialIDFromLabel(material_label);
     if (materials.at(matID).texture_color_overridden == override) {
         return;
@@ -4286,6 +4313,7 @@ uint Context::getMaterialTwosidedFlag(const std::string &material_label) const {
 }
 
 void Context::setMaterialTwosidedFlag(const std::string &material_label, uint twosided_flag) {
+    material_revision.markModified();
     uint matID = getMaterialIDFromLabel(material_label);
     materials[matID].twosided_flag = twosided_flag;
 }
@@ -4351,6 +4379,7 @@ std::vector<uint> Context::getPrimitivesUsingMaterial(const std::string &materia
 }
 
 void Context::deleteMaterial(const std::string &material_label) {
+    material_revision.markModified();
     if (material_label == DEFAULT_MATERIAL_LABEL) {
         helios_runtime_error("ERROR (Context::deleteMaterial): Cannot delete the default material.");
     }
@@ -4389,6 +4418,7 @@ HeliosDataType Context::getMaterialDataType(const std::string &material_label, c
 }
 
 void Context::clearMaterialData(const std::string &material_label, const char *data_label) {
+    material_revision.markModified();
     uint matID = getMaterialIDFromLabel(material_label);
     materials[matID].clearMaterialData(data_label);
 }
@@ -4811,6 +4841,7 @@ void Context::hideObject(uint ObjID) {
         }
 #endif
         primitives.at(UUID)->ishidden = true;
+        primitives.at(UUID)->stampModification();
     }
 }
 
@@ -4834,6 +4865,7 @@ void Context::showObject(uint ObjID) {
         }
 #endif
         primitives.at(UUID)->ishidden = false;
+        primitives.at(UUID)->stampModification();
     }
 }
 
@@ -5512,6 +5544,75 @@ void Context::setPolymeshObjectTopology(uint ObjID, const std::vector<helios::ve
         }
     }
     getPolymeshObjectPointer_private(ObjID)->setTopology(vertices, faces, face_UUIDs, vertex_normals, vertex_uv, normal_source);
+}
+
+void Context::replacePolymeshObjectPrimitives(uint ObjID, const std::vector<uint> &old_UUIDs, const std::vector<uint> &new_UUIDs, const std::vector<uint> &data_source_UUIDs) {
+    if (!doesObjectExist(ObjID)) {
+        helios_runtime_error("ERROR (Context::replacePolymeshObjectPrimitives): Object ID " + std::to_string(ObjID) + " does not exist in the Context.");
+    }
+    if (getObjectType(ObjID) != OBJECT_TYPE_POLYMESH) {
+        helios_runtime_error("ERROR (Context::replacePolymeshObjectPrimitives): Object " + std::to_string(ObjID) + " is not a Polymesh object.");
+    }
+    if (data_source_UUIDs.size() != new_UUIDs.size()) {
+        helios_runtime_error("ERROR (Context::replacePolymeshObjectPrimitives): " + std::to_string(new_UUIDs.size()) + " new primitives were given but " + std::to_string(data_source_UUIDs.size()) +
+                             " data source primitives. Give one data source per new primitive.");
+    }
+
+    Polymesh *polymesh = getPolymeshObjectPointer_private(ObjID);
+    const std::vector<uint> members = polymesh->getPrimitiveUUIDs();
+    const std::unordered_set<uint> member_set(members.begin(), members.end());
+
+    const std::unordered_set<uint> old_set(old_UUIDs.begin(), old_UUIDs.end());
+    if (old_set.size() != old_UUIDs.size()) {
+        helios_runtime_error("ERROR (Context::replacePolymeshObjectPrimitives): The primitives to remove from object " + std::to_string(ObjID) + " contain duplicates.");
+    }
+    for (uint UUID: old_UUIDs) {
+        if (member_set.find(UUID) == member_set.end()) {
+            helios_runtime_error("ERROR (Context::replacePolymeshObjectPrimitives): Primitive " + std::to_string(UUID) + " is not a member of object " + std::to_string(ObjID) + ", so it cannot be removed from it.");
+        }
+    }
+    const std::unordered_set<uint> new_set(new_UUIDs.begin(), new_UUIDs.end());
+    if (new_set.size() != new_UUIDs.size()) {
+        helios_runtime_error("ERROR (Context::replacePolymeshObjectPrimitives): The primitives to add to object " + std::to_string(ObjID) + " contain duplicates.");
+    }
+    for (uint UUID: new_UUIDs) {
+        if (!doesPrimitiveExist(UUID)) {
+            helios_runtime_error("ERROR (Context::replacePolymeshObjectPrimitives): Primitive " + std::to_string(UUID) + " does not exist in the Context.");
+        }
+        if (getPrimitiveParentObjectID(UUID) != 0) {
+            helios_runtime_error("ERROR (Context::replacePolymeshObjectPrimitives): Primitive " + std::to_string(UUID) + " already belongs to object " + std::to_string(getPrimitiveParentObjectID(UUID)) +
+                                 ". Only primitives that belong to no object can be added.");
+        }
+    }
+    for (uint UUID: data_source_UUIDs) {
+        if (!doesPrimitiveExist(UUID)) {
+            helios_runtime_error("ERROR (Context::replacePolymeshObjectPrimitives): Data source primitive " + std::to_string(UUID) + " does not exist in the Context.");
+        }
+    }
+    if (members.size() - old_UUIDs.size() + new_UUIDs.size() == 0) {
+        helios_runtime_error("ERROR (Context::replacePolymeshObjectPrimitives): Removing " + std::to_string(old_UUIDs.size()) + " primitives and adding none would leave object " + std::to_string(ObjID) +
+                             " empty. Delete the object instead.");
+    }
+
+    // The data is copied while the old primitives, which are usually the sources, still exist.
+    for (size_t k = 0; k < new_UUIDs.size(); k++) {
+        if (!listPrimitiveData(data_source_UUIDs.at(k)).empty()) {
+            copyPrimitiveData(data_source_UUIDs.at(k), new_UUIDs.at(k));
+        }
+    }
+
+    // The face set refers to the primitives being removed, so it is cleared before anything else touches the membership.
+    polymesh->setTopology({}, {}, {}, {}, {}, NORMAL_SOURCE_NONE);
+
+    // The new members are added before the old ones are deleted, so the object is never momentarily empty, which would delete it.
+    std::vector<uint> updated_members = members;
+    updated_members.insert(updated_members.end(), new_UUIDs.begin(), new_UUIDs.end());
+    polymesh->setPrimitiveUUIDs(updated_members);
+    for (uint UUID: new_UUIDs) {
+        getPrimitivePointer_private(UUID)->setParentObjectID(ObjID);
+    }
+
+    deletePrimitive(old_UUIDs);
 }
 
 size_t Context::getPolymeshObjectFaceIndexForPrimitive(uint ObjID, uint UUID) const {

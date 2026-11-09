@@ -98,6 +98,7 @@ A number of plant models are available in the plant architecture library, which 
 | Almond Tree (*Prunus dulcis*)            | Nonpareil                          | "almond"                   | trunk, scaffold, proleptic                         |
 | Almond Tree (*Prunus dulcis*)            | Independence                       | "almond_independence"      | trunk, scaffold, proleptic                         |
 | Apple Tree (*Malus pumila*)              | Fuji                               | "apple"                    | trunk, proleptic, spur                             |
+| Apple Tree (*Malus pumila*)              | Fuji, tall-spindle fruiting wall   | "apple_fruitingwall"       | leader, branch, renewal, proleptic, spur           |
 | Bindweed (*Convolvulus arvensis*)        | generic                            | "bindweed"                 | base, offshoots, children                          |
 | Butter Lettuce (*Lactuca sativa*)        | generic                            | "butterlettuce"            | mainstem                                           |
 | Capsicum Pepper (*Capsicum annuum*)      | generic                            | "capsicum"                 | mainstem                                           |
@@ -289,6 +290,18 @@ Tree species use a simplified height-based training system. The code automatical
 
 The pistachio model also trains the young tree as California orchards do (UC ANR pistachio establishment guidelines): each scaffold is tipped at 0.45 m during its first growing season and regrows from the buds below the cut, and in the first winter the secondaries on each scaffold are thinned to three and headed to 0.30 m, regrowing from below those cuts the next season. After that the tree grows without further pruning. The training runs from the model's phytomer callback (see \ref PlantArchCallbackEdits) and is always applied.
 
+<b>Apple fruiting wall (apple_fruitingwall)</b>
+
+The apple fruiting wall is a tall spindle (Hoying, Robinson & Fargione, "The Tall Spindle Planting System", Cornell Cooperative Extension): a single leader tied to a trellis, with no permanent scaffolds, bearing pendant, spur-covered fruiting branches that are renewed as they age. The plant is built as a feathered nursery tree, a whip 1.5-1.8 m tall and 1.6 cm in caliper with its feathers tied below horizontal, and is trained year by year from the model's phytomer callback (see \ref PlantArchCallbackEdits): each winter the leader, once it reaches the wall's height, is headed back to the highest fruiting branch just below it (which becomes the top of the tree), shoots competing with it at the top of last year's extension are pinched, any fruiting branch thicker than half the leader at its insertion or older than six winters is cut to a stub (two or three a winter at most) that regrows a replacement the next season, each branch is kept columnar by removing its upright and oversized side shoots, and everything is hedged to the wall's width and to half the tree spacing along the row. The tree is a mature wall after about five seasons, so a mature tree is obtained by building it with an age of about 1830 days (five 366-day seasons). The wall runs along the y-axis.
+
+| Parameter | Default | Valid Range | Units | Description |
+|-----------|---------|-------------|-------|-------------|
+| tree_height | 3.1 | 2.0-4.5 | m | Height at which the leader is headed (the top wire) |
+| trunk_height | 0.7 | 0.1-3.0 | m | Height of the lowest fruiting branch; must be at least 0.5 m below tree_height |
+| num_feathers | 10 | 6-15 | - | Number of feathers on the nursery tree |
+| tree_spacing | 0.9 | 0.5-2.0 | m | In-row tree spacing, to which the branches are hedged along the row |
+| row_spacing | 3.3 | 2.0-5.0 | m | Between-row spacing, which scales the wall's width (1.5 m at the base and 0.75 m at the top for a 3.3 m row) |
+
 \subsubsection PlantArchBuildParamsValidation Parameter Validation
 
 All build parameters are validated when the plant is built, before any geometry is created (for parameters given as distributions, see \ref PlantArchBuildParamDistributions). If a parameter value is outside the valid range, or is not a finite number, a `helios_runtime_error` will be thrown with a clear error message indicating the parameter name, the provided value, and the valid range. A parameter name that the model does not accept, such as a misspelled name or one belonging to another species, also throws, and the message lists the names the model does accept. \ref PlantArchitecture::getPlantModelBuildParameterNames() returns the accepted names of a model.
@@ -458,6 +471,7 @@ Plant type string argument | time_to_dormancy_break | time_to_flower_initiation 
 "almond" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1825 days (5 years) |
 "almond_independence" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 3000 days (8.2 years) |
 "apple" | 165 | -1 | 3 | 7 | 30 | 200 | 3 years | 1460 days (4 years) |
+"apple_fruitingwall" | 165 | -1 | 3 | 7 | 30 | 200 | 6 years | 3650 days (10 years) |
 "bean" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "bindweed" | 0 | -1 | 14 | -1 | -1 | \f$\infty\f$ | 0 | 50 days             |
 "butterlettuce" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 365 days (1 year)   |
@@ -565,6 +579,27 @@ int main(){
 When soft collision avoidance is enabled, depending on the value of the inertia factor, plants may effectively avoid solid boundaries without hard boundary collision avoidance enabled.
 
 When enabling hard boundary collision avoidance, users can optionally enable fruit adjustment based on solid obstacle collisions using the \c enable_fruit_adjustment parameter. This is useful for large fruit growing near solid obstacles (e.g., large fruit resting on the ground). When this is enabled, fruit are rotated away from the boundary such that a bounding box encompassing the fruit no longer intersects the solid boundaries it was intersecting. Then an iterative refinement procedure rotates the fruit back toward the boundary to get it closer without intersecting it again.
+
+\subsubsection PlantArchFruitBranchCollision Fruit-Branch Collision Avoidance
+
+Nothing in the growth model otherwise keeps a fruit out of the branches of its own plant: an apple hanging from a 2.5 cm pedicel is wider than the pedicel is long and swings back into the spur it grows from, and a grape cluster hanging from a shoot reaches the cordon or a neighbouring shoot. \ref PlantArchitecture::enableFruitBranchCollisionAvoidance() switches on a check that runs on every time step of \ref PlantArchitecture::advanceTime() for every fruiting floral bud. It is independent of the soft and hard collision avoidance above and does not build a collision BVH.
+
+~~~~~~{.cpp}
+PlantArchitecture plantarchitecture(&context);
+plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+plantarchitecture.enableFruitBranchCollisionAvoidance();
+plantarchitecture.setFruitBranchCollisionParameters(90.f, 10.f, 0.f, 10.f); // optional: largest swing (degrees), days between candidate refreshes, clearance (m), settling rate (degrees/day)
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 300);
+plantarchitecture.advanceTime(120);
+~~~~~~
+
+**What it does.** When a fruit is found inside an internode it is moved out at one of two hinges: the peduncle swings rigidly about the node it grows from, with everything it carries, or the fruit tilts about its own attachment point on the peduncle -- the way a pedicel bends and a fruit leans when it comes to rest against a limb. At each step the hinge that moves the deepest contact out with the smaller rotation is used (a grape cluster hanging from an 8 cm peduncle mostly swings; an 8 cm apple on a 2.5 cm pedicel resting against the shoot it grows from mostly tilts, since no swing of so short a pedicel can lift its shoulder off the shoot). The rotation is the smallest that moves the contact out along the direction from the branch axis to the fruit's center, taken in steps of at most 5 degrees, and it accumulates from one time step to the next as the fruit grows, so a fruit that is already clear is not moved again. A fruit that cannot be cleared within the allowed rotation at either hinge (default 90 degrees each, see \ref PlantArchitecture::setFruitBranchCollisionParameters()), for example one wedged between spurs, is left at the least-penetrating pose reached and is not retried until it has grown.
+
+**Settling back.** The grown pose, with the fruit hanging as the gravity term left it, is the pose a fruit returns to when nothing holds it away. On every time step, a swung peduncle or tilted fruit that is clear of every branch is turned back toward that pose by up to \c settle_rate_deg_per_day (default 10 degrees per day, 0 to disable), at each hinge separately, and only as far as it stays clear: the step is tried at full, half and quarter size against the proxies and the first one that leaves the fruit clear is kept. A fruit resting against a limb therefore stays resting against it, while one whose branch has grown away, or that was pushed further than it needed, swings back over a few days. A fruit found unable to settle is not tried again until it has grown or its bud's list of nearby segments is rebuilt. Swings are chosen by geometry alone, as the smallest rotation that moves the deepest contact out along the direction from the branch axis to the fruit's center; their axis can point anywhere, so a fruit pushed sideways around a cordon or lifted off a spur is as normal as one swung in the vertical plane. Gravity enters only through this settling. Only the internodes of the fruit's own plant are considered; leaves, petioles, flowers, other plants and user obstacles are not (the latter are handled by the hard boundary fruit adjustment above).
+
+**How fruit are tested.** Fruit meshes are never used as collision primitives. Each fruit object is given, on its first check, an analytic proxy built from its mesh: the sphere enclosing it, a chain of spheres along its axis (one for a round fruit, several for an elongated cluster) and, for meshes of at most 1000 primitives, the triangles themselves. Because triangles only see a branch where it reaches the fruit's surface, the ends of each segment are also tested against the chain spheres, so a short internode lying wholly inside a fruit is found too; this errs toward counting an end just outside the fruit as a contact. Branches are the capsules of the plant's internode skeleton (see \ref PlantArchSkeleton). The proxy lives in the frame of the fruit's attachment point, so it follows the fruit's growth, which is a scaling about that point, and its swing without being rebuilt. Each bud keeps a list of the internode segments within reach of its node, rebuilt every \c candidate_refresh_days or when the plant gains or loses shoots; a shoot that appears between refreshes is only seen at the next one. The per-step cost is one sphere-capsule test per candidate segment for a fruit that is clear, and a few iterations of triangle-capsule or sphere-capsule tests for one that is not -- a small fraction of a growth step.
+
+**Persistence.** The swing of each peduncle is stored on its floral bud and written by \ref PlantArchitecture::writePlantStructureXML() as the tags \c peduncle_swing_axis and \c peduncle_swing_angle (degrees), and the tilt of each fruit as \c flower_contact_tilt_axis and \c flower_contact_tilt_angle; \ref PlantArchitecture::readPlantStructureXML() applies them after rebuilding the peduncle and its fruit. A bud whose peduncle is rebuilt (a new flowering, harvest) starts unswung again.
 
 \subsubsection PlantArchCollisionConfig Collision Detection Configuration
 
@@ -683,6 +718,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | max_floral_buds_per_petiole | RandomParameter_int | - | Maximum number of possible floral nodes per petiole. Some of these buds may not break depending on the flower bud break probability. |
 | color | helios::RGBcolor | - | Diffuse color of the internode tube. |
 | image_texture | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | - | Image texture to map to the internode tube (overrides RGB color). |
+| image_class_map_file | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | empty | Class map of the internode texture, from which RadiationModel::applySpectralClassMaps() gives the bark's lighter and darker parts their own spectra. Recorded on each internode triangle as the primitive data "spectral_class_map". Set to AppleBark_classes.png by the apple library models; clear it if their bark texture is replaced. See the radiation plug-in documentation, "Spectral Textures". |
 | length_segments | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of longitudinal segment subdivisions of the internode tube. |
 | radial_subdivisions | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of radial subdivisions segments of the internode tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **petiole** --- ||||
@@ -726,6 +762,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | flower_prototype_function | function pointer | - | Pointer to a function that generates the flower prototype model. Function takes arguments ( helios::Context*, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters ) and returns an object ID (uint). The build parameters are those the plant was built with (see \ref PlantArchBuildParams), and are empty for a plant not built from the library. |
 | fruit_prototype_scale | RandomParameter_float | - | Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit. |
 | fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, const std::map<std::string, float> &build_parameters ) and returns an object ID (uint). The build parameters are those the plant was built with (see \ref PlantArchBuildParams), and are empty for a plant not built from the library. |
+| fruit_class_map_file | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | empty | Class map of the texture the fruit prototype is mapped with, from which RadiationModel::applySpectralClassMaps() gives the fruit's lighter and darker parts their own spectra. Recorded on each textured fruit triangle as the primitive data "spectral_class_map". Cannot be combined with a specular surface layer on the fruit. The apple library models ship AppleFruit_classes.png but do not set it, since their fruit carries a surface layer (see below). See the radiation plug-in documentation, "Spectral Textures". |
 | inflorescence_maturity_period | RandomParameter_float | days | Time for the inflorescence to expand from its initial quarter size to full size. Zero means it is already full size when it forms, and a negative value (the default) defers to the plant-level fruit-maturity threshold set by <code>setPlantPhenologicalThresholds()</code>. Set this where the inflorescence finishes elongating on a different schedule from the fruit, as in maize, where the tassel is fully expanded at VT roughly two months before the ear finishes grain fill. |
 | unique_prototypes | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of unique flower/fruit prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
 
@@ -798,11 +835,13 @@ The built-in function for procedural leaf generation generates leaf geometries b
 | --- **parameters for procedural parametric leaf generation** --- ||||
 | leaf_texture_file | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | Must be specified | Path to the leaf texture image file. |
 | leaf_texture_series | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::map&lt;int,std::vector&lt;std::vector&lt;std::string&gt;&gt;&gt;</span>\endhtmlonly | empty | Variants of the leaf texture image to choose among, so that leaves vary across the plant. Overrides leaf_texture_file. See \ref LeafTextureVariants. |
+| leaf_class_map_file | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::map&lt;int,std::string&gt;</span>\endhtmlonly | empty | Class map of the leaf texture, from which the LeafOptics plug-in gives the leaf's tissues, such as a pale midrib, their own spectra. Recorded on each leaf triangle that covers a class as the primitive data "spectral_class_map". Set to SorghumLeaf_classes.png by the sorghum, maize and wheat library models and to AppleLeaf_classes.png by the apple models; clear it if their leaf texture is replaced. Cannot be combined with leaf_texture_series. See the LeafOptics documentation, "Leaves with a Class Map". |
 | leaf_texture_stage_ages | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::vector&lt;float&gt;</span>\endhtmlonly | empty | Age of a leaf in days at which each image of a variant in leaf_texture_series begins. See \ref LeafTextureStages. |
 | leaf_aspect_ratio | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 1.0 | Ratio of leaf width to leaf length. |
 | midrib_fold_fraction | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half). |
 | longitudinal_curvature | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Curvature factor along x-direction (lengthwise). (+curves upward, -curved downward) |
-| lateral_curvature | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Curvature factor along y-direction (widthwise). (+curves upward, -curved downward) |
+| lateral_curvature | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Curvature factor along y-direction (widthwise). (+curves upward, -curved downward) The cross-section bends without stretching, so the blade keeps its area. |
+| roll_fraction | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Roll of the blade about its midrib toward its upper side, as a fraction of a closed tube (=0 flat, =1 edges meeting). The blade keeps its area while its projected area falls. See \ref PlantArch_leafroll. |
 | wave_period | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Period factor of leaf waves/wrinkles. |
 | wave_amplitude | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Amplitude of leaf waves/wrinkles. |
 | flexibility | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Droopiness of the fully-grown leaf blade under its own weight. The leaf points along its growing direction when small and bends over as it expands. =0 gives a rigid leaf that keeps its prototype shape at every size. |
@@ -1175,6 +1214,18 @@ plantarchitecture.loadPlantModelFromLibrary( "rice" );
 uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( make_vec3(0,0,0), 110, {{"tiller_count", 6}} );
 ~~~~~~
 
+\subsubsection SorghumPlantVariation Sorghum Plant-to-Plant Variation
+
+Plants of a library sorghum plot do not stand identically, so that their heads are not lined up in height or directly over their bases:
+
+<ul>
+<li><b>Lean.</b> Each plant is tipped 1-6 degrees from vertical at its base, toward a random direction. Its culm above is straight (the "mainstem" shoot type has no gravitropic curvature), and its tillers grow off the leaning crown and lean with it. The tilt does not change the arrangement of the leaves about the culm: the two leaf ranks stay opposite.</li>
+<li><b>Head.</b> The peduncle is tipped 0-6 degrees off the culm in a random direction (peduncle pitch and yaw) and nods by up to 12 degrees over its length (a curvature of 0 to -40 degrees per meter). The panicle follows the tip of the peduncle.</li>
+<li><b>Height.</b> The maximum internode length of the main stem is drawn for each plant within +/-10% of 0.075 m. It scales only the elongated internodes; the crown and the internode below the flag leaf are unaffected, so plant height varies by about +/-4%.</li>
+</ul>
+
+No measurements of these quantities were found for field sorghum, so they are estimates from field plots. They are set by the "mainstem" shoot type and its phytomer parameters, except the lean, which is set when the plant is built.
+
 \subsubsection SorghumTillering Sorghum Tillering
 
 A library sorghum plant has no tillers by default. The build parameter "tiller_count" (0-6, see \ref PlantArchBuildParams) gives it tillers, which grow from axillary buds in the axils of the lowest main-stem leaves as the plant grows:
@@ -1189,7 +1240,7 @@ uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( make_vec3(0,0,0)
 <li><b>Timing.</b> A tiller emerges about 9 days (2.5 phyllochrons) after the leaf that subtends it, so T3 appears as main-stem leaves 5-6 appear (Kim et al. 2010).</li>
 <li><b>Leaf number.</b> Each tiller has one leaf fewer than the main stem for every main-stem leaf below its own: on a 16-leaf main stem, T1 has 15 leaves and T6 has 10. This brings the final leaves of all tillers out together, shortly after the main stem's, as Lafarge et al. (2002) observed. Every tiller ends in a panicle, so a plant has tiller_count + 1 panicles.</li>
 <li><b>Crown.</b> The lowest six main-stem internodes do not elongate (each is 8 mm long), so the lowest leaves and all tillers emerge at the soil surface. The next two internodes are transitional and the rest elongate fully, following the basal internodes of sweet sorghum (Nakamura & Goto 1996, Japanese Journal of Crop Science 65:324).</li>
-<li><b>Orientation.</b> A tiller leans out over its subtending leaf, within the main stem's leaf plane. Its prophyll faces the main stem and its first leaf is opposite, so its own leaves begin in a plane parallel to that of the main stem (Choob 2022, Frontiers in Plant Science 13:855146). The tiller leaves the main stem at 15-30 degrees from vertical, and gravitropism brings it back to 10-20 degrees from base to tip by maturity. No measurements of these angles were found for sorghum, so they are estimates. They are set by the "tiller" shoot type and can be changed with \ref PlantArchitecture::updateCurrentShootParameters().</li>
+<li><b>Orientation.</b> A tiller leans out over its subtending leaf, within the main stem's leaf plane. Its prophyll faces the main stem and its first leaf is opposite, so its own leaves begin in a plane parallel to that of the main stem (Choob 2022, Frontiers in Plant Science 13:855146). The tiller leaves the main stem at 15-30 degrees, and gravitropism brings it back to 10-20 degrees from vertical from base to tip by maturity; the lean of the plant (see \ref SorghumPlantVariation) adds to or takes from this. No measurements of these angles were found for sorghum, so they are estimates. They are set by the "tiller" shoot type and can be changed with \ref PlantArchitecture::updateCurrentShootParameters().</li>
 </ul>
 
 \subsubsection WheatTillering Wheat Tillering
@@ -1208,6 +1259,37 @@ uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( make_vec3(0,0,0)
 <li><b>Leaf number.</b> Tillers carry fewer leaves than the main stem, which brings their ears out close to those of the main stem (Stern & Kirby 1979, Journal of Agricultural Science). No count by tiller position was found, so each tiller has one leaf fewer than the main stem for every main-stem leaf below its own, as for sorghum: on the 8-leaf main stem, T1 has 7 leaves and T4 has 4. The ears of all tillers reach full size together, about 9 days after the main stem's. Every tiller ends in an ear, so a plant has tiller_count + 1 ears.</li>
 <li><b>Orientation.</b> A tiller leans out over its subtending leaf and is turned back toward vertical as it grows. No measurements of these angles were found for wheat, so they are taken from the sorghum "tiller" shoot type and can be changed with \ref PlantArchitecture::updateCurrentShootParameters().</li>
 </ul>
+
+\subsection PlantArch_leafroll Leaf Rolling
+
+Grasses such as wheat, maize, rice and sorghum roll their leaves under water stress, curling each blade about its midrib toward its upper surface, and unroll them again as the stress eases - over the course of
+a single day as well as over a drought. A rolled canopy intercepts less light and exposes more of the soil than an unrolled one with the same leaf area. Narrowing the blades (with
+\htmlonly<span style="font-family: Courier, monospace; color: blue;">leaf_aspect_ratio</span>\endhtmlonly) is no substitute, because it removes leaf area that a rolled leaf still has.
+
+The leaf prototype parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">roll_fraction</span>\endhtmlonly wraps each cross-section of the blade onto a circular arc about the midrib with half-angle
+\htmlonly<span style="font-family: Courier, monospace; color: blue;">roll_fraction</span>\endhtmlonly &times; &pi;: 0 leaves the blade flat and 1 brings its two edges together in a closed tube. Wrapping a strip onto a cylinder does not stretch it, so the blade keeps its area and its
+texture (including the transparency that gives its outline), while the area it presents on the plane facing its mean normal falls - to sin(&theta;)/&theta; of the flat area for a strip of uniform width with
+half-angle &theta;, which is 2/&pi; = 0.64 at a roll fraction of 0.5. A blade that narrows toward its ends loses a little less, since its narrow parts span a smaller part of the arc.
+
+The blade shape terms are composed in a fixed order. The midrib fold, the lateral curvature and the roll together give the shape of each cross-section, which is laid out along its arc length from the midrib so
+that it never stretches. That cross-section is then bent along the blade by the longitudinal curvature, given its waves, and finally deflected under the blade's own weight (\ref PlantArch_leafdroop).
+
+To roll the leaves of a plant that already exists - the usual case, since rolling responds to the plant's water status as it grows - use
+\htmlonly<span style="font-family: Courier, monospace; color: blue;">PlantArchitecture::setPetioleLeafRoll()</span>\endhtmlonly for one petiole or \htmlonly<span style="font-family: Courier, monospace; color: blue;">PlantArchitecture::setPlantLeafRoll()</span>\endhtmlonly for a whole plant:
+
+~~~~~~{.cpp}
+// Roll every leaf of the plant halfway toward a closed tube at midday...
+plantarchitecture.setPlantLeafRoll(plantID, 0.5f);
+// ...and unroll them again in the evening.
+plantarchitecture.setPlantLeafRoll(plantID, 0.f);
+~~~~~~
+
+The leaves are reshaped in place: each keeps its object ID and object data (for example the nitrogen model's \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaf_nitrogen_gN_m2</span>\endhtmlonly), its size, orientation and position, and the rest of its
+shape. A drooping leaf is deflected again from its rolled rest shape, and stays rolled as it continues to grow. A blade needs enough cells across its width to form the arc, and many grass blades are built with
+only two; such a blade is re-meshed finer the first time it is rolled. The leaf keeps its object and object data, but its blade primitives are replaced, each new one taking the primitive data of the old facet
+whose part of the texture it covers. Later changes to the roll then move the existing vertices only. \htmlonly<span style="font-family: Courier, monospace; color: blue;">PlantArchitecture::setPetioleLeafShape()</span>\endhtmlonly reshapes leaves in place in the same way, and the
+shape a leaf was given by either setter is recorded by \htmlonly<span style="font-family: Courier, monospace; color: blue;">writePlantStructureXML()</span>\endhtmlonly and restored by \htmlonly<span style="font-family: Courier, monospace; color: blue;">readPlantStructureXML()</span>\endhtmlonly. Only leaves built by the procedural leaf prototype can
+be reshaped; an OBJ-loaded leaf, or one built by a custom prototype function, raises an error.
 
 \subsection PlantArch_leafdroop Leaf Droop Under Self-Weight
 
@@ -2453,6 +2535,13 @@ plainly:
   population to steer, and tracking pulls the distribution a long way. A determinate grass produces a
   fixed dozen leaves on one culm and then stops; enabling tracking on such a plant late in its life
   leaves almost nothing to act on.
+- **The distribution is realized within each plant.** Every tracking mode steers each plant's leaves
+  toward the distribution using that plant's own leaves, including when several plants are given in one
+  call. A plant with few leaves can only approximate it: on a wheat culm of 7-14 blades each blade fills
+  a large share of the distribution, neighbouring blades can be steered to very different angles, and the
+  mean angle stays between the target and the angles the model gave the leaves. To realize a
+  distribution over a canopy as a whole, apply \ref PlantArchitecture::setPlantLeafAngleDistribution()
+  to the list of plants once they have grown; it pools the leaves of all of them.
 - **Leaves that already exist are never re-aimed.** Enabling tracking on a plant that has already
   been grown does nothing to the leaves it already carries. Use
   \ref PlantArchitecture::setPlantLeafAngleDistribution() for those, and tracking for what grows next.

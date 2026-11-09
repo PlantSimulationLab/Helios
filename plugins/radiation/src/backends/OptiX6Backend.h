@@ -101,6 +101,8 @@ namespace helios {
         void getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) override;
         void getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) override;
         void getRadiationInTopResults(std::vector<float> &radiation_in_top) override;
+        void getForwardScatterResults(std::vector<float> &forward_scatter, size_t launch_band_count) override;
+        void getDirectFluxResults(std::vector<float> &direct_flux, size_t launch_band_count) override;
         [[nodiscard]] size_t getRadiationInTopBufferSize() const override;
         [[nodiscard]] size_t getAbandonedRayCount() override;
 
@@ -112,6 +114,8 @@ namespace helios {
         void copyScatterToRadiation() override;
         void uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) override;
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) override;
+        void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
+        void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
         void uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) override;
         void getCameraPixelSpectralClasses(std::vector<uint> &pixel_classes, const helios::int2 &resolution) override;
         void uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) override;
@@ -290,12 +294,19 @@ namespace helios {
         RTvariable vertex_radiation_out_top_RTvariable;
         RTbuffer vertex_radiation_out_bottom_RTbuffer;
         RTvariable vertex_radiation_out_bottom_RTvariable;
+        RTbuffer vertex_normals_RTbuffer; //!< Shading normal per smoothing vertex; one element unless smoothing is enabled and some primitive has a surface layer
+        RTvariable vertex_normals_RTvariable;
+        RTbuffer vertex_direct_irradiance_RTbuffer; //!< Unoccluded direct irradiance per [source][smoothing vertex][band]; one element unless smoothing is enabled and there is a source
+        RTvariable vertex_direct_irradiance_RTvariable;
         RTbuffer radiation_specular_RTbuffer;
         RTvariable radiation_specular_RTvariable;
         RTbuffer scatter_buff_top_RTbuffer;
         RTvariable scatter_buff_top_RTvariable;
         RTbuffer scatter_buff_bottom_RTbuffer;
         RTvariable scatter_buff_bottom_RTvariable;
+        RTbuffer forward_scatter_RTbuffer; //!< Forward scattering estimate [primitive][launch band] (see getForwardScatterResults())
+        RTvariable forward_scatter_RTvariable;
+        RTvariable forward_scatter_enabled_RTvariable;
         RTbuffer radiation_in_camera_RTbuffer;
         RTvariable radiation_in_camera_RTvariable;
         RTbuffer scatter_buff_top_cam_RTbuffer;

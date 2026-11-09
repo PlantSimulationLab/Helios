@@ -151,6 +151,35 @@ DOCTEST_TEST_CASE("PlantHydraulicsModel - getPlantID") {
     DOCTEST_CHECK(retrieved_plant_id == expected_plant_id);
 }
 
+DOCTEST_TEST_CASE("PlantHydraulicsModel - getPlantID of an empty primitive list raises an error") {
+    // Plant 0 is a valid plant, so an empty list must not be answered with a plant ID
+    Context context_test;
+    PlantHydraulicsModel ph_test(&context_test);
+    uint leaf = context_test.addPatch();
+    context_test.setPrimitiveData(leaf, "plantID", 0);
+    ph_test.setSoilWaterPotentialOfPlant(0, -0.05f);
+
+    const std::vector<uint> no_primitives;
+    auto errorFrom = [](const auto &call) {
+        try {
+            call();
+        } catch (const std::runtime_error &error) {
+            return std::string(error.what());
+        }
+        return std::string("no error");
+    };
+    std::string plant_id_error, potential_error, printed;
+    {
+        helios::capture_cout cout_capture;
+        plant_id_error = errorFrom([&] { static_cast<void>(ph_test.getPlantID(no_primitives)); });
+        potential_error = errorFrom([&] { static_cast<void>(ph_test.getSoilWaterPotential(no_primitives)); });
+        printed = cout_capture.get_captured_output();
+    }
+    DOCTEST_CHECK(plant_id_error.find("empty") != std::string::npos);
+    DOCTEST_CHECK(potential_error.find("empty") != std::string::npos);
+    DOCTEST_CHECK(printed.empty());
+}
+
 DOCTEST_TEST_CASE("PlantHydraulicsModel - getUniquePlantIDs") {
     Context context_test;
     std::vector<uint> leaves;
@@ -173,6 +202,28 @@ DOCTEST_TEST_CASE("PlantHydraulicsModel - getUniquePlantIDs") {
     DOCTEST_CHECK((check11 == check21 || check11 == check22));
     DOCTEST_CHECK((check12 == check21 || check12 == check22));
     DOCTEST_CHECK(check11 != check12);
+}
+
+DOCTEST_TEST_CASE("PlantHydraulicsModel - getPrimitivesByPlantIDs matches getPrimitivesByPlantID") {
+    // Several plants, identified by primitive data and by parent object data, plus primitives of no plant: the
+    // one-pass batch lookup must return exactly what the per-plant lookup returns.
+    Context context_test;
+    PlantHydraulicsModel hydraulics(&context_test);
+    for (int plant = 1; plant <= 3; plant++)
+        for (int i = 0; i < 4; i++)
+            context_test.setPrimitiveData(context_test.addPatch(vec3(plant, i, 0), vec2(0.1, 0.1)), "plantID", plant);
+    std::vector<uint> obj_leaves;
+    for (int i = 0; i < 3; i++)
+        obj_leaves.push_back(context_test.addPatch(vec3(9, i, 0), vec2(0.1, 0.1)));
+    context_test.setObjectData(context_test.addPolymeshObject(obj_leaves), "plantID", 7);
+    context_test.addPatch(vec3(5, 5, 0), vec2(0.1, 0.1)); // no plant
+    const std::vector<int> ids = {1, 2, 3, 7, 42}; // 42 has no primitives
+    const auto byPlant = hydraulics.getPrimitivesByPlantIDs(ids);
+    DOCTEST_CHECK(byPlant.size() == ids.size());
+    for (int id: ids)
+        DOCTEST_CHECK(byPlant.at(id) == hydraulics.getPrimitivesByPlantID(id));
+    DOCTEST_CHECK(byPlant.at(7).size() == 3);
+    DOCTEST_CHECK(byPlant.at(42).empty());
 }
 
 DOCTEST_TEST_CASE("PlantHydraulicsModel - Documentation Example 1") {

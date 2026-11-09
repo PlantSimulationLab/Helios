@@ -1,0 +1,23 @@
+<helios>
+  <!-- Class definitions of AppleLeaf_classes.png, relative to the leaf LeafOptics is given (see the LeafOptics documentation, "Leaves with a class map").
+       chlorophyll_scale multiplies its chlorophyll and carotenoid contents, and visible_reflectance_scale its reflectance below 700 nm (blending to 1 at 750 nm).
+       Fitted by utilities/leaf_class_maps/fit_classes to AppleLeaf.png relative to the LeafOptics library leaf 'default'. -->
+  <leaf_class_map provenance="AppleLeaf.png via utilities/leaf_class_maps (fitted to AppleLeaf.png, relative to LeafOptics 'default')">
+    <class id="1" chlorophyll_scale="0.5333" visible_reflectance_scale="0.2554" texels="28222" source_srgb="52 82 15"/>
+    <class id="2" chlorophyll_scale="0.5333" visible_reflectance_scale="0.3817" texels="51291" source_srgb="64 95 22"/>
+    <class id="3" chlorophyll_scale="0.6" visible_reflectance_scale="0.5553" texels="50513" source_srgb="74 106 29"/>
+    <class id="4" chlorophyll_scale="0.7333" visible_reflectance_scale="0.8134" texels="42913" source_srgb="83 117 38"/>
+    <class id="5" chlorophyll_scale="1" visible_reflectance_scale="1.233" texels="30538" source_srgb="94 127 49"/>
+    <class id="6" chlorophyll_scale="1.933" visible_reflectance_scale="2.417" texels="9309" source_srgb="111 134 77"/>
+    <class id="7" chlorophyll_scale="0.9333" visible_reflectance_scale="1.446" texels="10844" source_srgb="103 140 53"/>
+    <class id="8" chlorophyll_scale="1.533" visible_reflectance_scale="2.624" texels="6633" source_srgb="120 152 77"/>
+    <class id="9" chlorophyll_scale="3.333" visible_reflectance_scale="4.354" texels="2789" source_srgb="139 150 105"/>
+    <class id="10" chlorophyll_scale="1.733" visible_reflectance_scale="3.894" texels="2194" source_srgb="140 173 96"/>
+    <class id="11" chlorophyll_scale="3.333" visible_reflectance_scale="6.517" texels="1397" source_srgb="165 176 131"/>
+    <class id="12" chlorophyll_scale="0.1333" visible_reflectance_scale="1.715" texels="538" source_srgb="183 185 94"/>
+    <class id="13" chlorophyll_scale="0.1333" visible_reflectance_scale="2.188" texels="205" source_srgb="228 200 96"/>
+    <class id="14" chlorophyll_scale="3.133" visible_reflectance_scale="8.786" texels="734" source_srgb="193 211 142"/>
+    <class id="15" chlorophyll_scale="3.333" visible_reflectance_scale="14.01" texels="137" source_srgb="240 226 197"/>
+    <class id="16" chlorophyll_scale="0.1333" visible_reflectance_scale="3.315" texels="473" source_srgb="239 231 141"/>
+  </leaf_class_map>
+</helios>

@@ -258,6 +258,8 @@ namespace helios {
 
         // Scattering
         uint scattering_iteration = 0; //!< Current scattering iteration (0 = first bounce)
+        //! Accumulate the forward scattering estimate of this launch (see RayTracingBackend::getForwardScatterResults()); set for scattering launches only
+        bool forward_scatter_enabled = false;
 
         // Face selection (for diffuse rays)
         uint launch_face = 0; //!< Face to launch from: 1 = top (the side the normal points to), 0 = bottom
@@ -292,8 +294,8 @@ namespace helios {
         std::vector<float> radiation_out_bottom; //!< Emitted/outgoing radiation (bottom face) per [primitive][band]
 
         // Outgoing radiation resampled onto the shared mesh vertices, for camera flux smoothing (empty unless smoothing is enabled)
-        std::vector<float> vertex_radiation_out_top; //!< Area-weighted mean outgoing radiation (top face) per [vertex][band]
-        std::vector<float> vertex_radiation_out_bottom; //!< Area-weighted mean outgoing radiation (bottom face) per [vertex][band]
+        std::vector<float> vertex_radiation_out_top; //!< Area-weighted mean outgoing radiation (top face) per [component][vertex][band]
+        std::vector<float> vertex_radiation_out_bottom; //!< Area-weighted mean outgoing radiation (bottom face) per [component][vertex][band]
 
         // Flags
         uint specular_reflection_enabled =
@@ -368,7 +370,7 @@ namespace helios {
 
     //! Pack the vertex values of RayTracingBackend::uploadSpectralVertexIncident() for the Vulkan and OptiX 6 devices
     /**
-     * Layout: the layer count L (0 for none), the launch band count B, the smoothing vertex count V and the camera index; then the values per
+     * Layout: the layer count L (2, or 0 for none), the launch band count B, the smoothing vertex count V and the camera index; then the values per
      * [face][layer][vertex][band] as float bits.
      */
     std::vector<uint32_t> packSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, size_t launch_band_count, uint32_t camera);

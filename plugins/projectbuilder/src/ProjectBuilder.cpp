@@ -1133,14 +1133,11 @@ void ProjectBuilder::buildFromXML() {
 
             // Set atmospheric conditions first, then use parameter-free getters
             solarposition->setAtmosphericConditions(101000, air_temperature, air_humidity, turbidity);
-            R_PAR_dir = solarposition->getSolarFluxPAR();
-            R_NIR_dir = solarposition->getSolarFluxNIR();
-            fdiff = solarposition->getDiffuseFraction();
-
-            radiation->setSourceFlux(sun_ID, "PAR", R_PAR_dir * (1.f - fdiff));
-            radiation->setDiffuseRadiationFlux("PAR", R_PAR_dir * fdiff);
-            radiation->setSourceFlux(sun_ID, "NIR", R_NIR_dir * (1.f - fdiff));
-            radiation->setDiffuseRadiationFlux("NIR", R_NIR_dir * fdiff);
+            // Direct flux is normal to the sun (source flux); diffuse flux is on a horizontal surface (diffuse flux).
+            radiation->setSourceFlux(sun_ID, "PAR", solarposition->getDirectSolarFluxPAR());
+            radiation->setDiffuseRadiationFlux("PAR", solarposition->getDiffuseSolarFluxPAR());
+            radiation->setSourceFlux(sun_ID, "NIR", solarposition->getDirectSolarFluxNIR());
+            radiation->setDiffuseRadiationFlux("NIR", solarposition->getDiffuseSolarFluxNIR());
 
             // Run the radiation model
             radiation->runBand({"PAR", "NIR", "LW"});

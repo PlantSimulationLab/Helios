@@ -174,6 +174,84 @@ TEST_CASE("Core Context State and Configuration") {
         DOCTEST_CHECK(ctx.getShapeRevision() > after_mark_geometry);
     }
 
+    SUBCASE("Modified UUIDs since a caller's mark") {
+        // Each caller keeps its own mark: a call returns what was created or modified since that caller's previous call, regardless
+        // of the dirty flags, of markGeometryClean(), and of other callers
+        Context ctx;
+        uint p = ctx.addPatch();
+        uint t = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
+
+        uint64_t mark = 0;
+        std::vector<uint> modified = ctx.getModifiedUUIDs(mark);
+        std::sort(modified.begin(), modified.end());
+        DOCTEST_CHECK(modified == std::vector<uint>{std::min(p, t), std::max(p, t)}); // the first call returns every primitive
+        DOCTEST_CHECK(ctx.getModifiedUUIDs(mark).empty()); // nothing since
+
+        ctx.translatePrimitive(p, make_vec3(1, 0, 0));
+        DOCTEST_CHECK(ctx.getModifiedUUIDs(mark) == std::vector<uint>{p});
+
+        // markGeometryClean() clears the dirty flags, not what a mark has yet to see
+        ctx.setPrimitiveData(t, "temperature", 300.f);
+        ctx.markGeometryClean();
+        DOCTEST_CHECK(ctx.getModifiedUUIDs(mark) == std::vector<uint>{t});
+
+        // A second caller sees everything since its own mark, and taking it does not consume the first caller's
+        uint64_t other_mark = 0;
+        ctx.setPrimitiveColor(p, RGB::red);
+        DOCTEST_CHECK(ctx.getModifiedUUIDs(other_mark).size() == 2);
+        DOCTEST_CHECK(ctx.getModifiedUUIDs(mark) == std::vector<uint>{p});
+
+        // A new primitive is returned; a deleted one is not (see getDeletedUUIDs())
+        uint added = ctx.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1));
+        ctx.deletePrimitive(t);
+        DOCTEST_CHECK(ctx.getModifiedUUIDs(mark) == std::vector<uint>{added});
+
+        // A copy is new, whatever the state of the primitive it was copied from
+        uint copy = ctx.copyPrimitive(p);
+        DOCTEST_CHECK(ctx.getModifiedUUIDs(mark) == std::vector<uint>{copy});
+    }
+
+    SUBCASE("Material revision") {
+        // Advances when a material changes, including material data, which marks no primitive dirty; not when one is read or assigned
+        Context ctx;
+        uint p = ctx.addPatch();
+        ctx.addMaterial("leaf");
+        uint64_t revision = ctx.getMaterialRevision();
+        DOCTEST_CHECK(ctx.getMaterialRevision() == revision);
+
+        auto advanced = [&]() {
+            const uint64_t now = ctx.getMaterialRevision();
+            const bool moved = now > revision;
+            revision = now;
+            return moved;
+        };
+
+        ctx.setMaterialData("leaf", "phong_specular", 0.5f);
+        DOCTEST_CHECK(advanced());
+        ctx.setMaterialData("leaf", "spectrum", std::vector<float>{0.1f, 0.2f});
+        DOCTEST_CHECK(advanced());
+        ctx.clearMaterialData("leaf", "spectrum");
+        DOCTEST_CHECK(advanced());
+        ctx.setMaterialColor("leaf", make_RGBAcolor(0.1f, 0.5f, 0.1f, 1.f));
+        DOCTEST_CHECK(advanced());
+        ctx.setMaterialTwosidedFlag("leaf", 0);
+        DOCTEST_CHECK(advanced());
+        ctx.setMaterialTextureColorOverride("leaf", true);
+        DOCTEST_CHECK(advanced());
+
+        float value;
+        ctx.getMaterialData("leaf", "phong_specular", value);
+        ctx.assignMaterialToPrimitive(p, "leaf");
+        DOCTEST_CHECK(!advanced());
+
+        ctx.renameMaterial("leaf", "stem");
+        DOCTEST_CHECK(advanced());
+        ctx.addMaterial("bark");
+        DOCTEST_CHECK(advanced());
+        ctx.deleteMaterial("bark");
+        DOCTEST_CHECK(advanced());
+    }
+
     SUBCASE("Geometry dirty flags vector") {
         Context ctx;
         std::vector<uint> ids{ctx.addPatch(), ctx.addPatch()};
@@ -7784,6 +7862,68 @@ TEST_CASE("Shared vertex topology survives the ways an object can legitimately b
         DOCTEST_CHECK(ctx.doesObjectHaveSharedVertexTopology(tube_ObjID));
         checkSharedVertexTopologyIsConsistent(ctx, tube_ObjID, WELD_CROSS_SECTION_ONLY, 1e-4f);
     }
+}
+
+TEST_CASE("Polymesh primitives replaced inside the existing object") {
+    Context ctx;
+    const std::vector<vec3> quad = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0)};
+    std::vector<uint> old_UUIDs = {ctx.addTriangle(quad.at(0), quad.at(1), quad.at(2)), ctx.addTriangle(quad.at(0), quad.at(2), quad.at(3))};
+    const uint objID = ctx.addPolymeshObject(old_UUIDs);
+    ctx.setPolymeshObjectTopology(objID, quad, {make_int3(0, 1, 2), make_int3(0, 2, 3)}, old_UUIDs, {}, {}, NORMAL_SOURCE_NONE);
+    ctx.setObjectData(objID, "nitrogen", 1.7f);
+    ctx.setPrimitiveData(old_UUIDs.at(0), "label", std::string("first"));
+    ctx.setPrimitiveData(old_UUIDs.at(1), "label", std::string("second"));
+    ctx.translateObject(objID, make_vec3(0, 0, 2));
+    float transform_before[16];
+    ctx.getObjectTransformationMatrix(objID, transform_before);
+
+    // Split the first triangle in two; the second stays.
+    const vec3 mid = 0.5f * (make_vec3(1, 0, 2) + make_vec3(1, 1, 2));
+    const std::vector<uint> new_UUIDs = {ctx.addTriangle(make_vec3(0, 0, 2), make_vec3(1, 0, 2), mid), ctx.addTriangle(make_vec3(0, 0, 2), mid, make_vec3(1, 1, 2))};
+    ctx.replacePolymeshObjectPrimitives(objID, {old_UUIDs.at(0)}, new_UUIDs, {old_UUIDs.at(0), old_UUIDs.at(0)});
+
+    DOCTEST_REQUIRE(ctx.doesObjectExist(objID));
+    DOCTEST_CHECK(!ctx.doesPrimitiveExist(old_UUIDs.at(0)));
+    const std::vector<uint> members = ctx.getObjectPrimitiveUUIDs(objID);
+    DOCTEST_CHECK(members.size() == 3);
+    DOCTEST_CHECK(std::find(members.begin(), members.end(), old_UUIDs.at(1)) != members.end());
+    float nitrogen = 0.f;
+    ctx.getObjectData(objID, "nitrogen", nitrogen);
+    DOCTEST_CHECK(nitrogen == doctest::Approx(1.7f));
+    for (const uint UUID: new_UUIDs) {
+        DOCTEST_CHECK(ctx.getPrimitiveParentObjectID(UUID) == objID);
+        std::string label;
+        ctx.getPrimitiveData(UUID, "label", label);
+        DOCTEST_CHECK(label == "first");
+    }
+    DOCTEST_CHECK(ctx.getObjectArea(objID) == doctest::Approx(1.f).epsilon(1e-5));
+    float transform_after[16];
+    ctx.getObjectTransformationMatrix(objID, transform_after);
+    for (int k = 0; k < 16; k++) {
+        DOCTEST_CHECK(transform_after[k] == doctest::Approx(transform_before[k]));
+    }
+    // The face set described the old primitives, so it is gone until the caller sets a new one.
+    DOCTEST_CHECK(ctx.getPolymeshObjectFaceCount(objID) == 0);
+
+    // The object moves its new members along with the rest.
+    ctx.translateObject(objID, make_vec3(0, 0, 1));
+    DOCTEST_CHECK(ctx.getPrimitiveVertices(new_UUIDs.at(0)).at(0).z == doctest::Approx(3.f));
+
+    const uint loose = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
+    const uint other_object_member = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
+    const uint other_objID = ctx.addPolymeshObject({other_object_member});
+    const uint tile_objID = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(1, 1));
+    capture_cerr cerr_buffer;
+    // Removing a primitive that is not a member
+    DOCTEST_CHECK_THROWS(ctx.replacePolymeshObjectPrimitives(objID, {loose}, {}, {}));
+    // Adding a primitive that already belongs to an object
+    DOCTEST_CHECK_THROWS(ctx.replacePolymeshObjectPrimitives(objID, {}, {other_object_member}, {other_object_member}));
+    // Mismatched data sources
+    DOCTEST_CHECK_THROWS(ctx.replacePolymeshObjectPrimitives(objID, {}, {loose}, {}));
+    // Emptying the object
+    DOCTEST_CHECK_THROWS(ctx.replacePolymeshObjectPrimitives(other_objID, {other_object_member}, {}, {}));
+    // Not a polymesh
+    DOCTEST_CHECK_THROWS(ctx.replacePolymeshObjectPrimitives(tile_objID, {}, {loose}, {loose}));
 }
 
 TEST_CASE("Polymesh bulk vertex deformation") {

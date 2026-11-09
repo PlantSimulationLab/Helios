@@ -161,6 +161,9 @@ rtBuffer<unsigned int, 1> spectral_camera_flux;
 rtBuffer<unsigned int, 1> spectral_vertex;
 // Class of the spectral texture seen in each pixel by the pixel-label launch (0 = none), sized when some primitive has a spectral texture
 rtBuffer<unsigned int, 1> camera_pixel_class;
+rtBuffer<float, 1> vertex_normals; // Unit shading normal per smoothing vertex [vertex * 3], for camera flux smoothing; a one-element placeholder when there are none
+rtBuffer<float, 1> vertex_direct_irradiance; // Unoccluded direct irradiance of each source at the smoothing vertices [source][vertex][band_launch]; a one-element placeholder when there is none
+rtBuffer<float, 1> radiation_specular; // Direct flux reaching primitives with a surface layer, and with camera flux smoothing every smoothed primitive [source * Nprimitives * Nbands_launch + primitive * Nbands_launch + band]
 
 //! Texture (u,v) of a launch point sp in a primitive's canonical space, as d_sampleTexture_patch() and d_sampleTexture_triangle() compute it
 __device__ optix::float2 d_originTextureUV(uint ptype, const optix::float3 &sp, int uv_ID) {
@@ -236,33 +239,83 @@ __device__ float d_spectralClassFlux(uint slot, bool top_face, uint launch_band)
 //! Value of camera-weighted palette table `table` (7 reflectivity, 8 transmissivity) for material slot `slot`
 __device__ float d_spectralPaletteValueCam(uint table, uint slot, uint entry, uint b_global, uint camera);
 
-//! With camera flux smoothing: the camera-weighted outgoing radiation of the class of class-flux slot `slot` on the primitive at `position`, from one face in a
-//! launch band, interpolated from the facet's vertices v (v[3] < 0 for a triangle) with weights w
-__device__ float d_spectralSmoothedClassFlux(uint position, uint slot, bool top_face, uint launch_band, uint b_global, const int v[4], const float w[4]) {
+//! Direction from point to radiation source s: the source's direction for a collimated source or the sun sphere, and toward its centre for a finite source
+__device__ optix::float3 d_directionToSource(uint s, const optix::float3 &point) {
+    if (source_types[s] == 0 || source_types[s] == 2) {
+        return optix::normalize(source_positions[s]);
+    }
+    return optix::normalize(source_positions[s] - point);
+}
+
+//! With camera flux smoothing: unoccluded direct irradiance of source s at the hit point, interpolated from the facet's vertices v with weights w (see RadiationModel::accumulateDirectIrradianceAtVertices())
+__device__ float d_vertexDirectIrradiance(uint s, uint b_launch, const int v[4], const float w[4]) {
+    const size_t vertex_count = vertex_normals.size() / 3;
+    if (vertex_count == 0 || vertex_direct_irradiance.size() < size_t(Nsources) * vertex_count * Nbands_launch) {
+        return 0.f;
+    }
+    float value = 0.f;
+    for (int c = 0; c < 4; c++) {
+        if (v[c] >= 0) {
+            value += w[c] * vertex_direct_irradiance[(size_t(s) * vertex_count + size_t(v[c])) * Nbands_launch + b_launch];
+        }
+    }
+    return value;
+}
+
+//! With camera flux smoothing: direct radiation of source s reaching one face of a facet, evaluated with the shading normal. face_normal and face_shading_normal are the facet's normal and the shading
+//! normal of that face, and facet_value what the face itself received. That carries the cosine of the facet's normal, which is replaced by that of the shading normal. A face turned away from the source
+//! received nothing of its own, yet near the terminator its shading normal can still face the source; it takes the irradiance its vertices carry from the neighbouring facets that the source reached.
+__device__ float d_faceDirect(float facet_value, const optix::float3 &to_source, const optix::float3 &face_normal, const optix::float3 &face_shading_normal, uint s, uint b_launch, const int v[4], const float w[4]) {
+    const float mu_facet = optix::dot(face_normal, to_source);
+    const float mu_shading = fmaxf(0.f, optix::dot(face_shading_normal, to_source));
+    if (mu_shading <= 0.f) {
+        return 0.f;
+    }
+    if (mu_facet > 0.f) {
+        return facet_value * mu_shading / mu_facet;
+    }
+    return d_vertexDirectIrradiance(s, b_launch, v, w) * mu_shading;
+}
+
+//! Value of layer `layer` of spectral_vertex on face `face` (0 top, 1 bottom) in a launch band, interpolated from the facet's vertices v with weights w
+__device__ float d_spectralVertexValue(uint face, uint layer, uint launch_band, const int v[4], const float w[4]) {
     const uint layers = spectral_vertex[0];
     const uint num_bands = spectral_vertex[1];
     const uint num_vertices = spectral_vertex[2];
+    const size_t base = 4 + (size_t(face * layers + layer) * num_vertices) * num_bands + launch_band;
+    float sum = 0.f;
+    for (int c = 0; c < 4; c++) {
+        if (v[c] >= 0) {
+            sum += w[c] * __uint_as_float(spectral_vertex[base + size_t(v[c]) * num_bands]);
+        }
+    }
+    return sum;
+}
+
+//! With camera flux smoothing: the camera-weighted outgoing radiation of the class of class-flux slot `slot` on the primitive at `position`, from one face in a
+//! launch band. The radiation from the sky and other surfaces (the last source slot, layer 0 of spectral_vertex) and the emitted radiation (layer 1) are
+//! interpolated from the facet's vertices v (v[3] < 0 for a triangle) with weights w. The direct radiation of the sources is taken from the facet itself and
+//! carried over to the shading normal (see d_faceDirect()); a primitive with a spectral texture has no surface layer, so what its face toward a source received
+//! is the direct flux the facet records. viewed_normal and shading_normal are on the side of `top_face`, and point is where the camera ray hit.
+__device__ float d_spectralSmoothedClassFlux(uint position, uint slot, bool top_face, uint launch_band, uint b_global, const int v[4], const float w[4], const optix::float3 &viewed_normal, const optix::float3 &shading_normal,
+                                             const optix::float3 &point) {
     const uint camera = spectral_vertex[3];
     const uint entry = spectral_palette[spectral_palette[3] + position] + (slot - spectral_camera_flux[3 + position]);
     const uint same_face = top_face ? 0u : 1u;
-    float flux = 0.f;
-    for (uint layer = 0; layer < layers; layer++) {
+    float flux = d_spectralVertexValue(same_face, 1, launch_band, v, w); // emitted
+    for (uint source_slot = 0; source_slot <= Nsources; source_slot++) {
         float value[2];
-        for (uint face = 0; face < 2; face++) {
-            const size_t base = 4 + (size_t(face * layers + layer) * num_vertices) * num_bands + launch_band;
-            float sum = 0.f;
-            for (int c = 0; c < 4; c++) {
-                if (v[c] >= 0) {
-                    sum += w[c] * __uint_as_float(spectral_vertex[base + size_t(v[c]) * num_bands]);
-                }
-            }
-            value[face] = sum;
-        }
-        if (layer + 1 == layers) {
-            flux += value[same_face]; // emitted
+        if (source_slot < Nsources) {
+            const optix::float3 to_source = d_directionToSource(source_slot, point);
+            const float incident = radiation_specular[(size_t(source_slot) * Nprimitives + position) * Nbands_launch + launch_band];
+            const bool viewed_face_toward_source = optix::dot(viewed_normal, to_source) > 0.f;
+            value[same_face] = d_faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, viewed_normal, shading_normal, source_slot, launch_band, v, w);
+            value[1 - same_face] = d_faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, -viewed_normal, -shading_normal, source_slot, launch_band, v, w);
         } else {
-            flux += d_spectralPaletteValueCam(7, layer, entry, b_global, camera) * value[same_face] + d_spectralPaletteValueCam(8, layer, entry, b_global, camera) * value[1 - same_face];
+            value[same_face] = d_spectralVertexValue(same_face, 0, launch_band, v, w);
+            value[1 - same_face] = d_spectralVertexValue(1 - same_face, 0, launch_band, v, w);
         }
+        flux += d_spectralPaletteValueCam(7, source_slot, entry, b_global, camera) * value[same_face] + d_spectralPaletteValueCam(8, source_slot, entry, b_global, camera) * value[1 - same_face];
     }
     return flux;
 }
@@ -291,6 +344,9 @@ rtBuffer<float, 1> radiation_in;
 // Absorbed radiation that arrived on the top face [primitive * Nbands_launch + band], written only when face_absorption_enabled is set (a one-element placeholder otherwise)
 rtBuffer<float, 1> radiation_in_top;
 rtDeclareVariable(unsigned int, face_absorption_enabled, , );
+// Forward scattering estimate [primitive * Nbands_launch + band], written only when forward_scatter_enabled is set (scattering launches)
+rtBuffer<float, 1> forward_scatter;
+rtDeclareVariable(unsigned int, forward_scatter_enabled, , );
 rtBuffer<float, 1> radiation_in_camera;
 rtBuffer<float, 1> radiation_out_top;
 rtBuffer<float, 1> radiation_out_bottom;
@@ -304,7 +360,6 @@ rtBuffer<float, 1> scatter_buff_bottom_cam;
 // Each camera's white reference [camera * Nprimitives * Nbands_launch + primitive * Nbands_launch + band], accumulated over all the launches of a runBand()
 rtBuffer<float, 1> white_reference_top_cam;
 rtBuffer<float, 1> white_reference_bottom_cam;
-rtBuffer<float, 1> radiation_specular; // Direct flux reaching primitives with a surface layer [source * Nprimitives * Nbands_launch + primitive * Nbands_launch + band]
 
 // Camera variables
 rtBuffer<unsigned int, 1> camera_pixel_label;

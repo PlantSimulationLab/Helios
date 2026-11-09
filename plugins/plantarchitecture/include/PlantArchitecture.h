@@ -432,6 +432,8 @@ public:
         azimuth = 0;
         peduncle_axis = helios::make_vec3(0, 0, 1);
         gravity_fraction = 0;
+        contact_tilt_axis = helios::make_vec3(0, 0, 1);
+        contact_tilt_angle = 0;
     }
 
     AxisRotation(float a_pitch, float a_yaw, float a_roll) {
@@ -441,6 +443,8 @@ public:
         azimuth = 0;
         peduncle_axis = helios::make_vec3(0, 0, 1);
         gravity_fraction = 0;
+        contact_tilt_axis = helios::make_vec3(0, 0, 1);
+        contact_tilt_angle = 0;
     }
 
     float pitch;
@@ -449,6 +453,8 @@ public:
     float azimuth; // azimuth rotation for inflorescences (aligns to peduncle orientation)
     helios::vec3 peduncle_axis; // direction vector of peduncle at attachment point (for compound yaw rotation)
     float gravity_fraction; // fraction of its angle from straight down by which a fruit is turned to hang, after all other rotations
+    helios::vec3 contact_tilt_axis; // unit axis (world frame) of the rotation about the fruit's attachment point by which it has been tilted out of a branch (see PlantArchitecture::enableFruitBranchCollisionAvoidance())
+    float contact_tilt_angle; // angle (radians) of that tilt; 0 when the fruit has never been tilted
 
     AxisRotation operator+(const AxisRotation &a) const;
     AxisRotation operator-(const AxisRotation &a) const;
@@ -648,6 +654,44 @@ struct FloralBud {
     std::vector<float> inflorescence_base_scales; // individual base scale for each flower/fruit (before growth scaling)
     std::vector<uint> peduncle_objIDs;
     std::vector<uint> inflorescence_objIDs;
+
+    //! Unit axis (world frame) of the rotation about base_position by which the peduncle and its fruit have been swung out of branches (see PlantArchitecture::enableFruitBranchCollisionAvoidance())
+    helios::vec3 contact_swing_axis = helios::make_vec3(0, 0, 1);
+    //! Angle (radians) of that swing; 0 when the peduncle has never been swung
+    float contact_swing_angle = 0;
+};
+
+//! The sampled shape of one generic leaf blade: everything needed to rebuild its lattice exactly
+/**
+ * The blade-shape parameters of \ref LeafPrototype are random parameters, resampled after every blade is built, so the values a particular leaf was built with cannot be read back from the prototype
+ * afterwards. A leaf reshaped in place (\ref PlantArchitecture::setPetioleLeafShape(), \ref PlantArchitecture::setPetioleLeafRoll()) starts from these recorded values, so only what is being changed
+ * changes. Lengths are in units of the blade length, as in the unit-length prototype.
+ */
+struct LeafShapeValues {
+    //! Ratio of blade width to length (\ref LeafPrototype::leaf_aspect_ratio)
+    float aspect_ratio = 1.f;
+    //! \ref LeafPrototype::midrib_fold_fraction
+    float midrib_fold_fraction = 0.f;
+    //! \ref LeafPrototype::longitudinal_curvature
+    float longitudinal_curvature = 0.f;
+    //! \ref LeafPrototype::longitudinal_curvature_exponent
+    float longitudinal_curvature_exponent = 4.f;
+    //! \ref LeafPrototype::lateral_curvature
+    float lateral_curvature = 0.f;
+    //! \ref LeafPrototype::petiole_roll
+    float petiole_roll = 0.f;
+    //! \ref LeafPrototype::wave_period
+    float wave_period = 0.f;
+    //! \ref LeafPrototype::wave_amplitude
+    float wave_amplitude = 0.f;
+    //! \ref LeafPrototype::roll_fraction
+    float roll_fraction = 0.f;
+    //! Number of lattice subdivisions along the blade
+    uint subdivisions_x = 1;
+    //! Number of lattice subdivisions across the blade (even)
+    uint subdivisions_y = 2;
+    //! Translation of the lattice in the prototype frame: \ref LeafPrototype::leaf_offset, plus the petiolule's length when the blade sits beyond one
+    helios::vec3 lattice_offset;
 };
 
 struct LeafPrototype {
@@ -694,6 +738,16 @@ public:
      */
     std::map<int, std::vector<std::vector<std::string>>> leaf_texture_series;
 
+    //! Class map of the leaf texture, from which LeafOptics gives the leaf's tissues (such as a pale midrib) their own spectra
+    /**
+     * Keyed the same way as \ref LeafPrototype::leaf_texture_file. Value is a single-channel PNG of integer classes with the resolution and transparency of the leaf texture (see
+     * helios::Context::setPrimitiveSpectralTexture()), which can be a simple file name as for the texture, and whose class definitions are in an XML file of the same name beside it (see the LeafOptics
+     * documentation). Each leaf triangle that covers a class (helios::classMapAreaFractions()) records the class map's path as the primitive data "spectral_class_map", and LeafOptics::run() then gives
+     * the leaf a spectral texture whose classes are derived from the leaf's own properties. Without LeafOptics, the class map is not used and the leaf keeps whatever spectra or values it is given.
+     *\note Not available with \ref LeafPrototype::leaf_texture_series or \ref LeafPrototype::OBJ_model_file.
+     */
+    std::map<int, std::string> leaf_class_map_file;
+
     //! Age of a leaf in days at which it begins each image of its variant in \ref LeafPrototype::leaf_texture_series
     /**
      * Has one value per image, starting at 0 and strictly increasing. Required if the variants have more than one image.
@@ -724,7 +778,7 @@ public:
      */
     [[nodiscard]] uint getTextureStageAtAge(float age) const;
 
-    // Ratio of leaf width to leaf length
+    //! Ratio of leaf width to leaf length
     RandomParameter_float leaf_aspect_ratio;
 
     //! Fraction of folding along the leaf midrib. =0 means leaf is flat, =1 means leaf is completely folded in half along midrib.
@@ -743,7 +797,23 @@ public:
      */
     RandomParameter_float longitudinal_curvature_exponent;
     //! Leaf curvature factor along the lateral/width (y-direction). (+curves upward, -curved downward)
+    /**
+     * The cross-section takes the slope profile of <code>lateral_curvature * (y / leaf_aspect_ratio)^4</code>, laid out along the arc length from the midrib, so the blade bends across its width without
+     * stretching: its area and texture outline are unchanged whatever the value.
+     */
     RandomParameter_float lateral_curvature;
+
+    //! How far the blade is rolled about its midrib toward its upper (adaxial) side, as a fraction of a closed tube
+    /**
+     * Each cross-section of the blade is wrapped onto a circular arc about the midrib with half-angle <code>roll_fraction * pi</code>: 0 leaves the blade flat and 1 brings its two edges together in a closed
+     * tube. Wrapping a strip onto a cylinder does not stretch it, so the blade keeps its area and texture outline while the area it presents to the light falls - for a strip of uniform width, the projected
+     * width is <code>sin(theta) / theta</code> of the flat width for half-angle theta (2/pi at 0.5). This is how grasses such as wheat, maize and rice respond to water stress. Must be between 0 and 1.
+     *
+     * Rolling is composed with the other blade-shape terms in this order: the midrib fold, lateral curvature and roll together set the cross-section, which is then bent along the blade by the longitudinal
+     * curvature, given its waves, and finally deflected under the blade's own weight.
+     * \note A blade needs enough lattice cells across its width to form the arc. Leaves rolled on an existing plant with \ref PlantArchitecture::setPetioleLeafRoll() are re-meshed finer when they need it.
+     */
+    RandomParameter_float roll_fraction;
 
     //! Creates a rolling at the leaf where the petiole attaches to the leaf blade
     RandomParameter_float petiole_roll;
@@ -843,6 +913,7 @@ public:
     void duplicate(const LeafPrototype &a) {
         this->leaf_texture_file = a.leaf_texture_file;
         this->leaf_texture_series = a.leaf_texture_series;
+        this->leaf_class_map_file = a.leaf_class_map_file;
         this->leaf_texture_stage_ages = a.leaf_texture_stage_ages;
         this->texture_series_selector = a.texture_series_selector;
         this->OBJ_model_file = a.OBJ_model_file;
@@ -851,6 +922,7 @@ public:
         this->longitudinal_curvature = a.longitudinal_curvature;
         this->longitudinal_curvature_exponent = a.longitudinal_curvature_exponent;
         this->lateral_curvature = a.lateral_curvature;
+        this->roll_fraction = a.roll_fraction;
         this->petiole_roll = a.petiole_roll;
         this->wave_period = a.wave_period;
         this->wave_amplitude = a.wave_amplitude;
@@ -878,6 +950,7 @@ public:
         if (this != &a) {
             this->leaf_texture_file = a.leaf_texture_file;
             this->leaf_texture_series = a.leaf_texture_series;
+            this->leaf_class_map_file = a.leaf_class_map_file;
             this->leaf_texture_stage_ages = a.leaf_texture_stage_ages;
             this->texture_series_selector = a.texture_series_selector;
             this->OBJ_model_file = a.OBJ_model_file;
@@ -886,6 +959,7 @@ public:
             this->longitudinal_curvature = a.longitudinal_curvature;
             this->longitudinal_curvature_exponent = a.longitudinal_curvature_exponent;
             this->lateral_curvature = a.lateral_curvature;
+            this->roll_fraction = a.roll_fraction;
             this->petiole_roll = a.petiole_roll;
             this->wave_period = a.wave_period;
             this->wave_amplitude = a.wave_amplitude;
@@ -948,7 +1022,16 @@ private:
      */
     float petiolule_radius_fraction = 0.f;
 
+    //! Shape of the most recent blade built by GenericLeafPrototype() from this prototype
+    /**
+     * Not a user parameter. The blade-shape parameters are resampled as soon as a blade is built, so the values it was built with are recorded here for Phytomer::buildLeafPrototype() to keep. Only
+     * meaningful while \ref LeafPrototype::last_built_shape_valid is true, which it is not for an OBJ-loaded leaf or a custom prototype function.
+     */
+    LeafShapeValues last_built_shape;
+    bool last_built_shape_valid = false;
+
     friend struct Phytomer;
+    friend class PlantArchitecture;
     friend class PlantArchitectureTestHelper;
     friend uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index);
 };
@@ -971,6 +1054,14 @@ private:
         helios::RGBcolor color;
         //! Image texture to map to the internode tube (overrides RGB color).
         std::string image_texture;
+        //! Class map of the internode texture, from which the radiation model gives the bark's lighter and darker parts their own spectra
+        /**
+         * A single-channel PNG of integer classes with the resolution of \ref InternodeParameters::image_texture (which can be a simple file name as for the texture), whose class definitions are in an XML
+         * file of the same name beside it (a surface class map; see the radiation plugin documentation, "Spectral Textures"). Each internode triangle records the class map's path as the primitive data
+         * "spectral_class_map", and \ref RadiationModel::applySpectralClassMaps() then gives it a spectral texture whose classes scale the bark spectrum named in the definitions. Without that call, the
+         * class map is not used. Ignored when the internode has no texture.
+         */
+        std::string image_class_map_file;
         //! Longitudinal tessellation count of the internode tube.
         uint length_segments;
         //! Number of radial subdivisions around the internode circumference  (4 = square, 5 = pentagon, ≥ 8 ≈ circular).
@@ -985,6 +1076,7 @@ private:
                 this->max_floral_buds_per_petiole = a.max_floral_buds_per_petiole;
                 this->color = a.color;
                 this->image_texture = a.image_texture;
+                this->image_class_map_file = a.image_class_map_file;
                 this->length_segments = a.length_segments;
                 this->radial_subdivisions = a.radial_subdivisions;
             }
@@ -1155,6 +1247,14 @@ private:
          * \note This is a function pointer, so it is not carried by a ShootParameters reconstructed from values alone. See \ref ShootParameters::inheritCustomFunctionsFrom().
          */
         FruitPrototypeFunction fruit_prototype_function = nullptr;
+        //! Class map of the fruit prototype's texture, from which the radiation model gives the fruit's lighter and darker parts their own spectra
+        /**
+         * A single-channel PNG of integer classes with the resolution of the texture the fruit prototype is mapped with (a simple file name is resolved as for a texture), whose class definitions are in an
+         * XML file of the same name beside it (a surface class map; see the radiation plugin documentation, "Spectral Textures"). Each textured triangle of the fruit records the class map's path as the
+         * primitive data "spectral_class_map", and \ref RadiationModel::applySpectralClassMaps() then gives it a spectral texture whose classes scale the fruit spectrum named in the definitions. Without
+         * that call, the class map is not used. The prototype must use a single texture.
+         */
+        std::string fruit_class_map_file;
         //! Fraction (0‒1) of gravitational influence used to bend peduncles under fruit load
         RandomParameter_float fruit_gravity_factor_fraction;
         //! Number of distinct prototype meshes to cache for this inflorescence
@@ -1178,6 +1278,7 @@ private:
                 this->inflorescence_maturity_period = a.inflorescence_maturity_period;
                 this->fruit_prototype_scale = a.fruit_prototype_scale;
                 this->fruit_prototype_function = a.fruit_prototype_function;
+                this->fruit_class_map_file = a.fruit_class_map_file;
                 this->fruit_gravity_factor_fraction = a.fruit_gravity_factor_fraction;
                 this->unique_prototypes = a.unique_prototypes;
             }
@@ -1872,8 +1973,10 @@ public:
      * \param[in] leaflet_offset Spacing between lateral leaflet pairs as a fraction of the petiole length; zero or greater.
      * \param[in] leaflet_scale Size of each lateral pair relative to the pair nearer the tip; greater than zero.
      * \param[in] prototype_scale Fully-elongated size of the terminal leaflet in meters; greater than zero.
+     * \param[in] intercalary_leaflet_scale Size of the intercalary leaflets, if any, relative to the primary pair nearer the tip; zero for a leaf with none, in which case every lateral slot is a primary pair.
+     * Negative (the default) keeps the phytomer's current value.
      */
-    void setPetioleLeaflets(uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale);
+    void setPetioleLeaflets(uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale, float intercalary_leaflet_scale = -1.f);
 
     //! Rebuild the leaflets of one petiole turned by their own pitch, yaw and roll.
     /**
@@ -1886,10 +1989,12 @@ public:
      */
     void setPetioleLeafletAngles(uint petiole_index, float pitch_degrees, float yaw_degrees, float roll_degrees);
 
-    //! Rebuild the leaflets of one petiole with their own blade shape.
+    //! Reshape the leaflets of one petiole with their own blade shape.
     /**
-     * Sets this phytomer's own copy of the leaf prototype's leaf_aspect_ratio, longitudinal_curvature, lateral_curvature and midrib_fold_fraction, and rebuilds the petiole's leaves from it. The prototype is
-     * otherwise the shoot type's: one shape for every phytomer, drawn per unique prototype. The values are the phytomer's, so a later rebuild of another of its petioles uses them too.
+     * Sets this phytomer's own copy of the leaf prototype's leaf_aspect_ratio, longitudinal_curvature, lateral_curvature and midrib_fold_fraction, and reshapes the petiole's existing leaves to it in place:
+     * each leaf keeps its object ID, object data, size, orientation and position, and any other shape term (such as its roll) it already had. The prototype is otherwise the shoot type's: one shape for
+     * every phytomer, drawn per unique prototype. The values are the phytomer's, so a later rebuild of another of its petioles uses them too. The shape is recorded by
+     * PlantArchitecture::writePlantStructureXML().
      * \param[in] petiole_index Index of the petiole within the internode.
      * \param[in] aspect_ratio Ratio of blade width to length; greater than zero.
      * \param[in] longitudinal_curvature Curvature along the blade's length (+ up, - down).
@@ -1897,6 +2002,35 @@ public:
      * \param[in] midrib_fold_fraction Fold along the midrib, from 0 (flat) to 1 (folded shut).
      */
     void setPetioleLeafShape(uint petiole_index, float aspect_ratio, float longitudinal_curvature, float lateral_curvature, float midrib_fold_fraction);
+
+    //! Roll the leaflets of one petiole about their midribs
+    /**
+     * Sets this phytomer's own copy of LeafPrototype::roll_fraction and reshapes the petiole's existing leaves to it in place, as Phytomer::setPetioleLeafShape() does. See
+     * PlantArchitecture::setPetioleLeafRoll().
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] roll_fraction Roll as a fraction of a closed tube, from 0 (flat) to 1.
+     */
+    void setPetioleLeafRoll(uint petiole_index, float roll_fraction);
+
+    //! Shape a leaf currently has, as recorded when it was built or last reshaped
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return The leaf's blade shape. Raises an error for a leaf whose shape was not recorded, which is one not built by GenericLeafPrototype().
+     */
+    [[nodiscard]] LeafShapeValues getLeafShape(uint petiole_index, uint leaf_index) const;
+
+    //! Rebuild one existing leaf's blade to a new shape inside its existing object
+    /**
+     * The blade lattice is rebuilt in the leaf's own frame from \p shape and carried through the leaf's transformation matrix, so the leaf keeps its object ID, object data, size, orientation and position;
+     * a leaf that droops under its own weight is deflected again from the new rest shape. When the lattice has as many cells across the blade as the new shape needs, only its vertices move and its
+     * primitives (and their data) are kept. A roll needs enough cells across the blade to form its arc, and a coarser blade is re-meshed with Context::replacePolymeshObjectPrimitives(): its blade
+     * primitives are replaced by finer ones, each taking the primitive data of the old facet whose texture cell contains it.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] shape New blade shape. Its subdivisions_y is the least number of cells wanted across the blade; its subdivisions_x and lattice_offset must be the leaf's own.
+     */
+    void reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeValues &shape);
 
     //! Rebuild the leaflets of one petiole with each turned by its own offset from the leaf's angles.
     /**
@@ -1999,6 +2133,28 @@ public:
      * \param[in] inflorescence_scale_factor_fraction Fractional value (between 0 and 1) representing the new scale factor for the inflorescence.
      */
     void setInflorescenceScaleFraction(FloralBud &fbud, float inflorescence_scale_factor_fraction) const;
+
+    //! Swing a floral bud's peduncle and everything it carries rigidly about the bud's base position
+    /**
+     * Rotates the peduncle tube and the flower/fruit objects in the Context, the stored peduncle vertices, the flower/fruit attachment points and their stored peduncle axes, and composes the rotation
+     * into FloralBud::contact_swing_axis / contact_swing_angle. Used to move fruit out of branches (see PlantArchitecture::enableFruitBranchCollisionAvoidance()) and to restore such a swing when a
+     * plant is read back from XML.
+     * \param[in] fbud Floral bud whose peduncle is swung
+     * \param[in] axis Unit axis of the rotation, through fbud.base_position
+     * \param[in] angle Rotation angle (radians)
+     */
+    void applyPeduncleSwing(FloralBud &fbud, const helios::vec3 &axis, float angle);
+
+    //! Tilt one flower/fruit of a floral bud rigidly about its own attachment point on the peduncle
+    /**
+     * Rotates the flower/fruit object in the Context and composes the rotation into the fruit's AxisRotation::contact_tilt_axis / contact_tilt_angle. Used, together with applyPeduncleSwing(), to move
+     * fruit out of branches (see PlantArchitecture::enableFruitBranchCollisionAvoidance()) and to restore such a tilt when a plant is read back from XML.
+     * \param[in] fbud Floral bud carrying the fruit
+     * \param[in] fruit_index Index of the fruit within fbud.inflorescence_objIDs
+     * \param[in] axis Unit axis of the rotation, through the fruit's attachment point
+     * \param[in] angle Rotation angle (radians)
+     */
+    void applyFruitContactTilt(FloralBud &fbud, size_t fruit_index, const helios::vec3 &axis, float angle);
 
     /**
      * \brief Sets the base position of the petiole to the specified position.
@@ -2418,6 +2574,30 @@ public:
     //! Leaf scale at which each leaf was last deflected, used to skip redeforming a leaf that has not measurably grown. Indexed as <code>leaf_objIDs</code>.
     std::vector<std::vector<float>> leaf_last_deformed_scale;
 
+    //! Shape of a leaf recorded on the phytomer itself, rather than in the shared prototype cache
+    struct LeafShapeState {
+        //! Shape the blade was built with or last reshaped to
+        LeafShapeValues shape;
+        //! Whether the leaf was reshaped from the shape it was built with (recorded by PlantArchitecture::writePlantStructureXML())
+        bool reshaped = false;
+        //! Whether the blade droops under its own weight, deflected from rest_vertices
+        bool deformable = false;
+        //! Undeformed blade lattice in the leaf's own frame, used in place of the prototype cache's when the leaf droops
+        std::vector<helios::vec3> rest_vertices;
+        //! Undeformed petiolule vertices that follow the lattice in the mesh, if any
+        std::vector<helios::vec3> rest_appended_vertices;
+    };
+
+    //! Shapes of leaves that are not, or no longer, simply copies of a cached prototype: those built fresh by the prototype function, and those reshaped in place. Keyed by leaf object ID.
+    std::map<uint, LeafShapeState> leaf_shape_state;
+
+    //! Shape of the most recent blade built by buildLeafPrototype(), if it was built by GenericLeafPrototype()
+    LeafShapeValues last_built_leaf_shape;
+    bool last_built_leaf_shape_valid = false;
+
+    //! Record on the phytomer the shape of a leaf just built by buildLeafPrototype() rather than copied from the prototype cache
+    void recordBuiltLeafShape(uint objID_leaf);
+
     //! Bending flexibility this phytomer's leaves were built with
     /**
      * Resolved once when the phytomer is created and held, rather than being read from the prototype on each timestep. The prototype's value is a random parameter that resamples when it is read, so
@@ -2531,6 +2711,18 @@ protected:
      * \return Color of each node, from base to tip
      */
     [[nodiscard]] std::vector<helios::RGBcolor> getPeduncleNodeColors(size_t node_count) const;
+
+    //! Turn a peduncle's direction by its curvature over one segment of its tube
+    /**
+     * A positive curvature turns the peduncle toward pointing straight up, and a negative one toward hanging straight down, about the horizontal axis across it, without carrying it past that vertical. A
+     * peduncle lying along the vertical has no horizontal axis across it: one already pointing the way it is turned toward stays there, and one pointing the opposite way is left unturned, since there is no
+     * direction for it to bend in.
+     * \param[in] peduncle_axis Unit direction of the peduncle at the start of the segment.
+     * \param[in] curvature_degrees_per_meter Peduncle curvature (degrees per meter), as \ref PeduncleParameters::curvature.
+     * \param[in] segment_length Length of the segment (meters).
+     * \return Unit direction of the peduncle at the end of the segment
+     */
+    [[nodiscard]] static helios::vec3 bendPeduncleAxis(const helios::vec3 &peduncle_axis, float curvature_degrees_per_meter, float segment_length);
 
     //! Whether this phytomer's peduncle should take its radius from the culm rather than from its own parameter
     /**
@@ -3103,6 +3295,8 @@ struct PlantInstance {
     float cumulative_N_uptake_gN = 0;
     //! Fruit nitrogen demand (g N) the available pool could not cover this timestep; filled by remobilization. Rebuilt every timestep.
     float unmet_fruit_N_demand_gN = 0;
+    //! Nitrogen delivered to the plant's fruit since the nitrogen pools were initialized (g N)
+    float fruit_nitrogen_pool_gN = 0;
     //! Plant nitrogen stress factor from the last nitrogen update (0 = no leaf nitrogen, 1 = at target)
     float nitrogen_stress_factor = 1.f;
 
@@ -3329,6 +3523,42 @@ struct PlantSkeletonSegment {
     float end_radius;
     //! Organ the segment belongs to. Its node_index is the phytomer the segment belongs to.
     PlantOrganLocation organ;
+};
+
+//! Analytic stand-in for one fruit object in fruit-branch contact tests (see PlantArchitecture::enableFruitBranchCollisionAvoidance())
+/**
+ * Built from the fruit mesh and stored in the frame of the fruit's attachment point, at the fruit scale it was built at. Positions scale linearly with the fruit's growth about that point and are
+ * rotated along with any swing of the peduncle, so the proxy follows the fruit without being rebuilt.
+ */
+struct FruitContactProxy {
+    //! FloralBud::current_fruit_scale_factor at which the proxy was built
+    float build_scale = 1;
+    //! Center of the sphere enclosing the whole fruit, relative to the attachment point
+    helios::vec3 bounding_center;
+    //! Radius of that sphere
+    float bounding_radius = 0;
+    //! Centers of the chain of spheres covering the fruit along its axis, relative to the attachment point
+    std::vector<helios::vec3> sphere_centers;
+    //! Radii of those spheres
+    std::vector<float> sphere_radii;
+    //! Triangle vertices (three per triangle) relative to the attachment point; empty when the mesh is too large and the sphere chain is used instead
+    std::vector<helios::vec3> triangle_vertices;
+    //! Largest distance of any mesh vertex from the attachment point, at build_scale
+    float max_extent = 0;
+};
+
+//! Internode segments near one fruiting floral bud, cached between refreshes of the fruit-branch contact tests
+struct FruitContactCandidates {
+    //! Candidate internode segments as (shootID, phytomer index within the shoot, segment index within the phytomer's internode)
+    std::vector<std::array<uint, 3>> segments;
+    //! Plant age (days) at which the list was built
+    float refreshed_at_age = -1;
+    //! Number of shoots the plant had when the list was built
+    size_t shoot_count = 0;
+    //! Fruit scale at which the bud was last left in contact (wedged); it is not retried until the fruit have grown, or the list is rebuilt. Negative when not wedged.
+    float unresolved_at_scale = -1;
+    //! Fruit scale at which the bud last tried and failed to settle back toward its grown pose; it is not retried until the fruit have grown, or the list is rebuilt. Negative when not blocked.
+    float settle_blocked_at_scale = -1;
 };
 
 class PlantArchitecture {
@@ -3989,6 +4219,31 @@ public:
      */
     void setGeometryUpdateScheduling(int update_frequency = 3, bool force_update_on_collision = true);
 
+    //! Keep growing fruit from intersecting the internodes of their own plant
+    /**
+     * Once enabled, every time step of advanceTime() tests each fruiting floral bud's fruit against the nearby internodes of the same plant. A fruit found inside a branch is moved out at one of two
+     * hinges, whichever moves the contact out with the smaller rotation: the peduncle swings, with everything it carries, rigidly about the node it grows from, or the fruit tilts about its own attachment
+     * point on the peduncle -- the way a pedicel bends and a fruit leans when it comes to rest against a limb. Fruit are tested through
+     * analytic proxies built from their meshes (an enclosing sphere, a chain of spheres along the fruit, and the triangles themselves for small meshes) against the plant's internode skeleton, so the
+     * cost is a small fraction of a growth step and no collision BVH is involved. The swing is incremental: fruit that are already clear cost one bounding-sphere test per nearby segment, and a fruit that
+     * cannot be cleared within the allowed swing, for example one wedged between spurs, is left at the least-penetrating pose reached. A fruit that has been moved and is clear of every branch,
+     * because the branch has grown away or the fruit was pushed further than it needed, settles back toward its grown, hanging pose at a set rate, stopping where it would touch wood again. Swings persist through writePlantStructureXML() /
+     * readPlantStructureXML(). Only internodes of the fruit's own plant are considered; leaves, petioles, flowers and other plants are not. See also setFruitBranchCollisionParameters().
+     */
+    void enableFruitBranchCollisionAvoidance();
+
+    //! Stop testing fruit against branches; peduncles already swung keep their pose
+    void disableFruitBranchCollisionAvoidance();
+
+    //! Set the parameters of fruit-branch collision avoidance (see enableFruitBranchCollisionAvoidance())
+    /**
+     * \param[in] max_swing_deg Largest total angle (degrees) a peduncle may be swung from its grown pose, and likewise a fruit tilted about its attachment point; a fruit still in contact at these angles stays there (default = 90)
+     * \param[in] candidate_refresh_days Days between rebuilds of each bud's list of nearby internode segments; new shoots appearing between rebuilds are only seen at the next one (default = 10)
+     * \param[in] clearance Gap (meters) to leave between a fruit and a branch surface; 0 lets them touch (default = 0)
+     * \param[in] settle_rate_deg_per_day [optional] Rate (degrees per day) at which a swung peduncle or tilted fruit that is clear of every branch turns back toward its grown, hanging pose; 0 leaves fruit where a contact put them (default = 10)
+     */
+    void setFruitBranchCollisionParameters(float max_swing_deg, float candidate_refresh_days, float clearance, float settle_rate_deg_per_day = 10.f);
+
     // -- attraction points methods -- //
 
     //! Enable attraction points to guide plant growth toward specific targets
@@ -4231,8 +4486,11 @@ public:
      * \param[in] leaflet_offset Spacing between lateral leaflet pairs as a fraction of the petiole length; zero or greater.
      * \param[in] leaflet_scale Size of each lateral pair relative to the pair nearer the tip; greater than zero.
      * \param[in] prototype_scale Fully-elongated size of the terminal leaflet in meters; greater than zero.
+     * \param[in] intercalary_leaflet_scale Size of the intercalary leaflets relative to the primary pair nearer the tip; zero for a leaf with none. Negative (the default) keeps the phytomer's current value,
+     * which a leaf measured with no intercalary leaflets would otherwise inherit from its shoot type.
      */
-    void setPetioleLeaflets(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale);
+    void setPetioleLeaflets(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale,
+                            float intercalary_leaflet_scale = -1.f);
 
     //! Rebuild the leaflets of one petiole of an existing phytomer turned by their own pitch, yaw and roll.
     /**
@@ -4247,9 +4505,10 @@ public:
      */
     void setPetioleLeafletAngles(uint plantID, uint shootID, uint node_index, uint petiole_index, float pitch_degrees, float yaw_degrees, float roll_degrees);
 
-    //! Rebuild the leaflets of one petiole of an existing phytomer with their own blade shape.
+    //! Reshape the leaflets of one petiole of an existing phytomer with their own blade shape.
     /**
-     * The per-phytomer counterpart of the leaf prototype's leaf_aspect_ratio, longitudinal_curvature, lateral_curvature and midrib_fold_fraction. See Phytomer::setPetioleLeafShape().
+     * The per-phytomer counterpart of the leaf prototype's leaf_aspect_ratio, longitudinal_curvature, lateral_curvature and midrib_fold_fraction. The leaves are reshaped in place, keeping their object IDs
+     * and object data. See Phytomer::setPetioleLeafShape().
      * \param[in] plantID ID of the plant instance.
      * \param[in] shootID ID of the shoot within the plant.
      * \param[in] node_index Index of the phytomer along the shoot.
@@ -4260,6 +4519,30 @@ public:
      * \param[in] midrib_fold_fraction Fold along the midrib, from 0 (flat) to 1 (folded shut).
      */
     void setPetioleLeafShape(uint plantID, uint shootID, uint node_index, uint petiole_index, float aspect_ratio, float longitudinal_curvature, float lateral_curvature, float midrib_fold_fraction);
+
+    //! Roll the leaves of one petiole of an existing plant about their midribs
+    /**
+     * Wraps each blade's cross-section onto a circular arc about its midrib, toward its upper side (see LeafPrototype::roll_fraction), without changing its area: grasses roll their leaves this way under
+     * water stress, and unroll them again as it eases, over the course of a day. The leaves are reshaped in place, keeping their object IDs and object data (for example the nitrogen model's
+     * "leaf_nitrogen_gN_m2", "age" and "leaf_texture_stage"), their size, orientation and position, and the rest of their shape; a drooping leaf is deflected again from its new rest shape. A blade with too
+     * few cells across its width to form the arc is re-meshed finer the first time it is rolled, keeping its object but replacing its blade primitives (see Phytomer::reshapeLeaf()). The phytomer's own
+     * copy of the leaf prototype takes the value, so leaves it builds later are rolled too, and the roll is recorded by writePlantStructureXML().
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot within the plant.
+     * \param[in] node_index Index of the phytomer along the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] roll_fraction Roll as a fraction of a closed tube, from 0 (flat) to 1 (edges meeting).
+     * \note Only leaves built by the generic leaf prototype can be rolled; an OBJ-loaded or custom-built leaf raises an error.
+     */
+    void setPetioleLeafRoll(uint plantID, uint shootID, uint node_index, uint petiole_index, float roll_fraction);
+
+    //! Roll every leaf of an existing plant about its midrib
+    /**
+     * Applies \ref setPetioleLeafRoll() to every petiole of the plant that carries leaves.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] roll_fraction Roll as a fraction of a closed tube, from 0 (flat) to 1 (edges meeting).
+     */
+    void setPlantLeafRoll(uint plantID, float roll_fraction);
 
     //! Rebuild the leaflets of one petiole of an existing phytomer with each turned by its own offset from the leaf's angles.
     /**
@@ -4412,11 +4695,16 @@ public:
      * \param[in] lambda_degrees How strongly to favour filling the distribution over keeping each leaf near the angle the model gave it. Zero leaves the plant unchanged; values of order 180 match the
      * distribution as closely as the growing plant allows.
      * \note Enabling tracking on a plant that is already being tracked replaces the target, so the target may be varied over the plant's life.
+     * \note The distribution is realized within each plant, from that plant's own leaves, in every tracking mode (also when several plants are given at once). A plant with few leaves, such as a
+     * grass culm with 7-14, can only approximate it: each leaf fills a large share of the distribution, and the mean angle stays between the target and the angles the model gave the leaves.
+     * To realize a distribution over a canopy as a whole once the plants have grown, use \ref setPlantLeafAngleDistribution(const std::vector<uint> &, float, float, float, float) const, which pools
+     * the leaves of all the plants.
      */
     void enablePlantLeafAngleDistributionTracking(uint plantID, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity, float ellipse_rotation_degrees, float lambda_degrees);
 
     //! Steer the leaf angles of several plants toward a prescribed distribution as they grow
     /**
+     * Each plant is steered toward the distribution on its own, as by \ref enablePlantLeafAngleDistributionTracking(uint, float, float, float, float, float); the distribution is not pooled over the plants.
      * \param[in] plantIDs List of plant IDs to steer.
      * \param[in] Beta_mu_inclination Mean value parameter for the Beta distribution of inclination angles.
      * \param[in] Beta_nu_inclination Shape parameter for the Beta distribution of inclination angles.
@@ -4434,6 +4722,16 @@ public:
      * \param[in] lambda_degrees How strongly to favour filling the distribution over keeping each leaf near the angle the model gave it.
      */
     void enablePlantLeafElevationAngleDistributionTracking(uint plantID, float Beta_mu_inclination, float Beta_nu_inclination, float lambda_degrees);
+
+    //! Steer the leaf inclination angles of several plants toward a Beta distribution as they grow, leaving azimuth to the model
+    /**
+     * Each plant is steered toward the distribution on its own, as by \ref enablePlantLeafElevationAngleDistributionTracking(uint, float, float, float) (see the note there on plants with few leaves).
+     * \param[in] plantIDs List of plant IDs to steer.
+     * \param[in] Beta_mu_inclination Mean value parameter for the Beta distribution of inclination angles.
+     * \param[in] Beta_nu_inclination Shape parameter for the Beta distribution of inclination angles.
+     * \param[in] lambda_degrees How strongly to favour filling the distribution over keeping each leaf near the angle the model gave it.
+     */
+    void enablePlantLeafElevationAngleDistributionTracking(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float lambda_degrees);
 
     //! Steer a plant's leaf azimuth angles toward an ellipsoidal distribution as it grows, leaving inclination to the model
     /**
@@ -5343,6 +5641,22 @@ public:
      */
     [[nodiscard]] float getPlantAvailableNitrogen(uint plantID) const;
 
+    /**
+     * \brief Get the nitrogen a plant has delivered to its fruit since its nitrogen pools were initialized
+     * \param[in] plantID Plant ID to query
+     * \return Nitrogen delivered to fruit (g N), from the available pool and remobilized from leaves, including that of fruit since removed from the plant
+     * \note With the root pool (getPlantRootNitrogen()), the available pool (getPlantAvailableNitrogen()) and the nitrogen of the leaves ("leaf_nitrogen_gN_m2" object data times leaf area),
+     * this accounts for all the nitrogen given to the plant, less what has left with leaves that were shed.
+     */
+    [[nodiscard]] float getPlantFruitNitrogen(uint plantID) const;
+
+    /**
+     * \brief Get the nitrogen allocated to a plant's roots since its nitrogen pools were initialized
+     * \param[in] plantID Plant ID to query
+     * \return Nitrogen in the root pool (g N): NitrogenParameters::root_allocation_fraction of the nitrogen given with addPlantNitrogen()
+     */
+    [[nodiscard]] float getPlantRootNitrogen(uint plantID) const;
+
     // -- manual plant generation from input string -- //
 
     /**
@@ -5523,6 +5837,19 @@ public:
      * \throws helios_runtime_error if the asset file cannot be found
      */
     static std::string resolveTextureFile(const std::string &texture_file);
+
+    //! Record a class map of a texture on the primitives mapped with it, as the primitive data "spectral_class_map"
+    /**
+     * The class map is checked against the texture (resolution, and class 0 marking exactly the transparent texels of a texture with transparency, or absent for one without), and recorded on each
+     * of the given primitives that is mapped with the texture and covers a class (\ref helios::classMapAreaFractions()); primitives that already carry the data are left as they are.
+     * \param[in] context Context the primitives belong to
+     * \param[in] UUIDs Primitives to consider
+     * \param[in] texture_file Resolved path of the texture the class map was made for, or empty to take every textured primitive among the UUIDs (which must then share one texture)
+     * \param[in] class_map_file Class map, resolved as a texture file is (see \ref resolveTextureFile())
+     * \param[in] organ Name of the organ, for error messages (for example "leaf")
+     * \param[in] remedy Advice appended to error messages about a class map that does not match the texture
+     */
+    static void recordSpectralClassMap(helios::Context *context, const std::vector<uint> &UUIDs, const std::string &texture_file, const std::string &class_map_file, const std::string &organ, const std::string &remedy);
 
     friend struct Phytomer;
     friend struct Shoot;
@@ -5759,6 +6086,9 @@ protected:
         std::vector<helios::vec3> appended_vertices;
         uint subdivisions_x = 0;
         uint subdivisions_y = 0;
+        //! Shape the prototype blade was built with, recorded for every blade built by GenericLeafPrototype() whether or not it droops
+        LeafShapeValues shape;
+        bool has_shape = false;
     };
     std::map<LeafPrototypeCacheKey, std::vector<std::vector<LeafRestGeometry>>> unique_leaf_prototype_rest_geometry;
 
@@ -6137,6 +6467,57 @@ protected:
     bool solid_obstacle_fruit_adjustment_enabled = false;
     bool solid_obstacle_pruning_enabled = false;
 
+    // --- Fruit-Branch Collision Avoidance --- //
+
+    //! Whether fruit are swung out of the internodes of their own plant each time step (see enableFruitBranchCollisionAvoidance())
+    bool fruit_branch_collision_enabled = false;
+    //! Largest total swing (radians) of a peduncle out of its grown pose
+    float fruit_branch_collision_max_swing_rad = 0.5f * PI_F;
+    //! Days between rebuilds of the candidate internode lists
+    float fruit_branch_collision_refresh_days = 10.f;
+    //! Gap (meters) kept between fruit and branch surfaces
+    float fruit_branch_collision_clearance = 0.f;
+    //! Rate (radians per day) at which swings and tilts relax back toward the grown pose while the fruit stays clear
+    float fruit_branch_collision_settle_rad_per_day = 10.f * PI_F / 180.f;
+    //! Fruit meshes with more primitives than this are tested through their sphere chain rather than their triangles
+    static constexpr size_t fruit_contact_exact_primitive_limit = 1000;
+    //! Contact proxies of the fruit, keyed by fruit object ID; entries whose object is gone are dropped at the next check
+    std::unordered_map<uint, FruitContactProxy> fruit_contact_proxies;
+    //! Candidate internode segments per fruiting bud, keyed by the bud's first fruit object ID
+    std::unordered_map<uint, FruitContactCandidates> fruit_contact_candidates;
+
+    //! Build the contact proxy of one fruit object from its mesh
+    /**
+     * \param[in] fbud Floral bud carrying the fruit
+     * \param[in] fruit_index Index of the fruit within fbud.inflorescence_objIDs
+     * 
+eturn Proxy in the frame of the fruit's attachment point
+     */
+    [[nodiscard]] FruitContactProxy buildFruitContactProxy(const FloralBud &fbud, size_t fruit_index) const;
+
+    //! Collect the internode segments of a plant that lie within reach of a fruiting bud
+    /**
+     * \param[in] plantID Plant the bud belongs to
+     * \param[in] phytomer Phytomer carrying the bud
+     * \param[in] fbud The fruiting bud
+     * \param[in] reach Distance (meters) from fbud.base_position within which a segment's capsule is kept
+     * \param[in] shoot_lower Per-shoot lower corners of the bounding boxes of the internode capsules, indexed by shoot ID
+     * \param[in] shoot_upper Per-shoot upper corners of the same boxes
+     * 
+eturn Candidate list with its refresh age and shoot count filled in
+     */
+    [[nodiscard]] FruitContactCandidates collectFruitContactCandidates(uint plantID, const Phytomer &phytomer, const FloralBud &fbud, float reach, const std::vector<helios::vec3> &shoot_lower, const std::vector<helios::vec3> &shoot_upper) const;
+
+    //! Swing the fruiting buds of a plant out of the plant's internodes, and let those already clear settle back toward hanging (one time step of fruit-branch collision avoidance)
+    /**
+     * \param[in] plantID Plant to process
+     * \param[in] dt_days Length of the time step (days), which scales the settling
+     */
+    void resolveFruitBranchCollisions(uint plantID, float dt_days);
+
+    //! Drop the fruit-branch contact proxies and candidate lists of fruit objects that no longer exist
+    void pruneFruitContactCaches();
+
     // --- Attraction Points --- //
 
     //! Flag indicating if attraction points are enabled
@@ -6187,8 +6568,10 @@ protected:
 
     uint buildAppleTree(const helios::vec3 &base_position);
 
+    //! Define the shoot types of the "apple_fruitingwall" model: a tall-spindle apple fruiting wall trained from its phytomer callback.
     void initializeAppleFruitingWallShoots();
 
+    //! Build the "apple_fruitingwall" model as a feathered nursery tree, which the training callback grows into a wall over about five seasons.
     uint buildAppleFruitingWall(const helios::vec3 &base_position);
 
     void initializeAsparagusShoots();

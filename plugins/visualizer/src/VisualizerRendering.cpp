@@ -25,6 +25,9 @@
 #include "Visualizer.h"
 #include "annotation_io.h"
 
+#include <algorithm>
+#include <array>
+
 using namespace helios;
 
 float dphi = 0.0;
@@ -417,11 +420,6 @@ void Visualizer::displayImageWithSegmentationMasks(const std::string &image_file
 }
 
 void Visualizer::getWindowPixelsRGB(uint *buffer) const {
-    // Validate framebuffer completeness
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        helios_runtime_error("ERROR (getWindowPixelsRGB): Framebuffer is not complete");
-    }
-
     std::vector<GLubyte> buff;
     buff.resize(3 * Wframebuffer * Hframebuffer);
 
@@ -441,6 +439,15 @@ void Visualizer::getWindowPixelsRGB(uint *buffer) const {
 
         glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
 
+        // Completeness is checked on the framebuffer being read, after binding it. Whatever was bound on entry is irrelevant
+        // here, and is commonly framebuffer 0 (printWindow() leaves it bound). An EGL context is surfaceless, so it has no
+        // default framebuffer and framebuffer 0 reports GL_FRAMEBUFFER_UNDEFINED.
+        const GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+            glBindFramebuffer(GL_FRAMEBUFFER, current_framebuffer);
+            helios_runtime_error("ERROR (getWindowPixelsRGB): The offscreen framebuffer is not complete (status: " + std::to_string(framebuffer_status) + ")");
+        }
+
         // Framebuffer objects don't use front/back buffer concepts, read directly
         glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
         GLenum error = glGetError();
@@ -452,6 +459,11 @@ void Visualizer::getWindowPixelsRGB(uint *buffer) const {
             helios_runtime_error("ERROR (getWindowPixelsRGB): glReadPixels failed in headless mode (error: " + std::to_string(error) + ")");
         }
     } else {
+        const GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+            helios_runtime_error("ERROR (getWindowPixelsRGB): Framebuffer is not complete (status: " + std::to_string(framebuffer_status) + ")");
+        }
+
         // In windowed mode, robustly determine which buffer contains rendered content
         // Sample multiple pixels to avoid false negatives from legitimately black pixels
         const int num_samples = 9;
@@ -623,7 +635,9 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     buildContextGeometry_private();
 
     // Set the view to fit window
-    if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { // default center
+    // Only a camera nobody has set is fitted to the scene. Judging that by the default coordinates
+    // alone moved a camera that had been set to them on purpose.
+    if (!camera_position_set_by_user && camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { // default center
         if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { // default eye position
 
             vec3 center_sph;
@@ -869,6 +883,7 @@ void Visualizer::plotOnce(bool getKeystrokes) {
 
 void Visualizer::transferBufferData() {
     assert(checkerrors());
+    partial_uploads_last_transfer = 0;
 
     const auto &dirty = geometry_handler.getDirtyUUIDs();
     if (dirty.empty() && !geometry_handler.doesBufferNeedFullUpdate()) {
@@ -899,9 +914,13 @@ void Visualizer::transferBufferData() {
     // doesBufferNeedFullUpdate() reports.
     const bool force_full_upload = geometry_handler.doesBufferNeedFullUpdate();
 
-    auto ensureArrayBuffer = [&](GLuint buf, GLenum target, GLsizeiptr size, const void *data, GLsizeiptr &last_uploaded_size) {
+    // Whether each buffer was sent whole by this call, [geometry type][buffer]: its changed
+    // primitives then need no second, partial upload below.
+    std::array<std::array<bool, 12>, GeometryHandler::all_geometry_types.size()> uploaded_whole{};
+
+    auto ensureArrayBuffer = [&](GLuint buf, GLenum target, GLsizeiptr size, const void *data, GLsizeiptr &last_uploaded_size) -> bool {
         if (size == last_uploaded_size && !force_full_upload) {
-            return;
+            return false;
         }
         glBindBuffer(target, buf);
         if (size != last_uploaded_size) {
@@ -910,13 +929,14 @@ void Visualizer::transferBufferData() {
             glBufferSubData(target, 0, size, data);
         }
         last_uploaded_size = size;
+        return true;
     };
 
-    auto ensureTextureBuffer = [&](GLuint buf, GLuint tex, GLenum format, GLsizeiptr size, const void *data, GLsizeiptr &last_uploaded_size) {
+    auto ensureTextureBuffer = [&](GLuint buf, GLuint tex, GLenum format, GLsizeiptr size, const void *data, GLsizeiptr &last_uploaded_size) -> bool {
         if (size == last_uploaded_size && !force_full_upload) {
             glBindTexture(GL_TEXTURE_BUFFER, tex);
             glTexBuffer(GL_TEXTURE_BUFFER, format, buf);
-            return;
+            return false;
         }
         glBindBuffer(GL_TEXTURE_BUFFER, buf);
         if (size != last_uploaded_size) {
@@ -927,6 +947,7 @@ void Visualizer::transferBufferData() {
         last_uploaded_size = size;
         glBindTexture(GL_TEXTURE_BUFFER, tex);
         glTexBuffer(GL_TEXTURE_BUFFER, format, buf);
+        return true;
     };
 
     // Ensure buffers are allocated to the correct size
@@ -945,22 +966,42 @@ void Visualizer::transferBufferData() {
         const auto *sky_geometry_flag_data = geometry_handler.getSkyGeometryFlagData_ptr(geometry_type);
         const auto *visible_flag_data = geometry_handler.getVisibilityFlagData_ptr(geometry_type);
 
-        ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER, vertex_data->size() * sizeof(GLfloat), vertex_data->data(), last_uploaded_buffer_sizes.at(gi).at(0));
-        ensureArrayBuffer(uv_buffer.at(gi), GL_ARRAY_BUFFER, uv_data->size() * sizeof(GLfloat), uv_data->data(), last_uploaded_buffer_sizes.at(gi).at(1));
-        ensureArrayBuffer(vertex_normal_buffer.at(gi), GL_ARRAY_BUFFER, vertex_normal_data->size() * sizeof(GLfloat), vertex_normal_data->data(), last_uploaded_buffer_sizes.at(gi).at(2));
-        ensureArrayBuffer(face_index_buffer.at(gi), GL_ARRAY_BUFFER, face_index_data->size() * sizeof(GLint), face_index_data->data(), last_uploaded_buffer_sizes.at(gi).at(3));
-        ensureTextureBuffer(color_buffer.at(gi), color_texture_object.at(gi), GL_RGBA32F, color_data->size() * sizeof(GLfloat), color_data->data(), last_uploaded_buffer_sizes.at(gi).at(4));
-        ensureTextureBuffer(normal_buffer.at(gi), normal_texture_object.at(gi), GL_RGB32F, normal_data->size() * sizeof(GLfloat), normal_data->data(), last_uploaded_buffer_sizes.at(gi).at(5));
-        ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I, texture_flag_data->size() * sizeof(GLint), texture_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(6));
-        ensureTextureBuffer(material_index_buffer.at(gi), material_index_texture_object.at(gi), GL_R32I, material_index_data->size() * sizeof(GLint), material_index_data->data(), last_uploaded_buffer_sizes.at(gi).at(7));
-        ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I, texture_ID_data->size() * sizeof(GLint), texture_ID_data->data(), last_uploaded_buffer_sizes.at(gi).at(8));
-        ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I, coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(9));
-        ensureTextureBuffer(sky_geometry_flag_buffer.at(gi), sky_geometry_flag_texture_object.at(gi), GL_R8I, sky_geometry_flag_data->size() * sizeof(GLbyte), sky_geometry_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(10));
-        ensureTextureBuffer(hidden_flag_buffer.at(gi), hidden_flag_texture_object.at(gi), GL_R8I, visible_flag_data->size() * sizeof(GLbyte), visible_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(11));
+        uploaded_whole.at(gi).at(0) = ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER, vertex_data->size() * sizeof(GLfloat), vertex_data->data(), last_uploaded_buffer_sizes.at(gi).at(0));
+        uploaded_whole.at(gi).at(1) = ensureArrayBuffer(uv_buffer.at(gi), GL_ARRAY_BUFFER, uv_data->size() * sizeof(GLfloat), uv_data->data(), last_uploaded_buffer_sizes.at(gi).at(1));
+        uploaded_whole.at(gi).at(2) = ensureArrayBuffer(vertex_normal_buffer.at(gi), GL_ARRAY_BUFFER, vertex_normal_data->size() * sizeof(GLfloat), vertex_normal_data->data(), last_uploaded_buffer_sizes.at(gi).at(2));
+        uploaded_whole.at(gi).at(3) = ensureArrayBuffer(face_index_buffer.at(gi), GL_ARRAY_BUFFER, face_index_data->size() * sizeof(GLint), face_index_data->data(), last_uploaded_buffer_sizes.at(gi).at(3));
+        uploaded_whole.at(gi).at(4) = ensureTextureBuffer(color_buffer.at(gi), color_texture_object.at(gi), GL_RGBA32F, color_data->size() * sizeof(GLfloat), color_data->data(), last_uploaded_buffer_sizes.at(gi).at(4));
+        uploaded_whole.at(gi).at(5) = ensureTextureBuffer(normal_buffer.at(gi), normal_texture_object.at(gi), GL_RGB32F, normal_data->size() * sizeof(GLfloat), normal_data->data(), last_uploaded_buffer_sizes.at(gi).at(5));
+        uploaded_whole.at(gi).at(6) = ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I, texture_flag_data->size() * sizeof(GLint), texture_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(6));
+        uploaded_whole.at(gi).at(7) = ensureTextureBuffer(material_index_buffer.at(gi), material_index_texture_object.at(gi), GL_R32I, material_index_data->size() * sizeof(GLint), material_index_data->data(), last_uploaded_buffer_sizes.at(gi).at(7));
+        uploaded_whole.at(gi).at(8) = ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I, texture_ID_data->size() * sizeof(GLint), texture_ID_data->data(), last_uploaded_buffer_sizes.at(gi).at(8));
+        uploaded_whole.at(gi).at(9) = ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I, coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(9));
+        uploaded_whole.at(gi).at(10) = ensureTextureBuffer(sky_geometry_flag_buffer.at(gi), sky_geometry_flag_texture_object.at(gi), GL_R8I, sky_geometry_flag_data->size() * sizeof(GLbyte), sky_geometry_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(10));
+        uploaded_whole.at(gi).at(11) = ensureTextureBuffer(hidden_flag_buffer.at(gi), hidden_flag_texture_object.at(gi), GL_R8I, visible_flag_data->size() * sizeof(GLbyte), visible_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(11));
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindTexture(GL_TEXTURE_BUFFER, 0);
     }
+
+    // Upload what changed. Each primitive owns one slice of each of the twelve buffers of its
+    // geometry type. Uploading those slices one primitive at a time issued twelve glBufferSubData
+    // calls per primitive, each a few bytes: moving one plant of 2900 primitives cost ~35000 calls
+    // and about 220 ms, nearly all of it driver overhead, against ~10 ms for a frame in which
+    // nothing changed. A plant's primitives were added together and sit next to each other in the
+    // buffers, so the slices are gathered per buffer, sorted, and merged into runs, and each run is
+    // uploaded once. Runs separated by a small gap are merged too: the CPU-side arrays are the
+    // source of truth for every primitive, so re-sending a few unchanged bytes is harmless and much
+    // cheaper than another call.
+    //
+    // No glTexBuffer is needed after these uploads. A texture buffer object is a view of its buffer,
+    // not a copy, and the loop above has already (re)attached every texture buffer on this call.
+    constexpr size_t buffer_count = 12;
+    constexpr GLsizeiptr merge_gap_bytes = 16384;
+    struct Slice {
+        size_t begin; // in elements of the buffer's data array
+        size_t end;
+    };
+    std::array<std::array<std::vector<Slice>, buffer_count>, GeometryHandler::all_geometry_types.size()> slices;
 
     bool rect_dirty = false;
     for (size_t UUID: dirty) {
@@ -969,70 +1010,68 @@ void Visualizer::transferBufferData() {
         }
 
         const auto &index_map = geometry_handler.getIndexMap(UUID);
-        auto geometry_type = index_map.geometry_type;
-        size_t i = std::find(GeometryHandler::all_geometry_types.begin(), GeometryHandler::all_geometry_types.end(), geometry_type) - GeometryHandler::all_geometry_types.begin();
+        const auto geometry_type = index_map.geometry_type;
+        const size_t i = std::find(GeometryHandler::all_geometry_types.begin(), GeometryHandler::all_geometry_types.end(), geometry_type) - GeometryHandler::all_geometry_types.begin();
+        const size_t vcount = GeometryHandler::getVertexCount(geometry_type);
 
-        const char vcount = GeometryHandler::getVertexCount(geometry_type);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.vertex_index * sizeof(GLfloat), vcount * 3 * sizeof(GLfloat), geometry_handler.getVertexData_ptr(geometry_type)->data() + index_map.vertex_index);
-
-        glBindBuffer(GL_ARRAY_BUFFER, uv_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.uv_index * sizeof(GLfloat), vcount * 2 * sizeof(GLfloat), geometry_handler.getUVData_ptr(geometry_type)->data() + index_map.uv_index);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vertex_normal_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.vertex_normal_index * sizeof(GLfloat), vcount * 3 * sizeof(GLfloat), geometry_handler.getVertexNormalData_ptr(geometry_type)->data() + index_map.vertex_normal_index);
-
-        glBindBuffer(GL_ARRAY_BUFFER, face_index_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.face_index_index * sizeof(GLint), vcount * sizeof(GLint), geometry_handler.getFaceIndexData_ptr(geometry_type)->data() + index_map.face_index_index);
-
-        glBindBuffer(GL_TEXTURE_BUFFER, color_buffer.at(i));
-        glBufferSubData(GL_TEXTURE_BUFFER, index_map.color_index * sizeof(GLfloat), 4 * sizeof(GLfloat), geometry_handler.getColorData_ptr(geometry_type)->data() + index_map.color_index);
-        glBindTexture(GL_TEXTURE_BUFFER, color_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, color_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, normal_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.normal_index * sizeof(GLfloat), 3 * sizeof(GLfloat), geometry_handler.getNormalData_ptr(geometry_type)->data() + index_map.normal_index);
-        glBindTexture(GL_TEXTURE_BUFFER, normal_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, normal_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, material_index_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.material_index_index * sizeof(GLint), sizeof(GLint), geometry_handler.getMaterialIndexData_ptr(geometry_type)->data() + index_map.material_index_index);
-        glBindTexture(GL_TEXTURE_BUFFER, material_index_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, material_index_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, texture_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.texture_flag_index * sizeof(GLint), sizeof(GLint), geometry_handler.getTextureFlagData_ptr(geometry_type)->data() + index_map.texture_flag_index);
-        glBindTexture(GL_TEXTURE_BUFFER, texture_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, texture_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, texture_ID_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.texture_ID_index * sizeof(GLint), sizeof(GLint), geometry_handler.getTextureIDData_ptr(geometry_type)->data() + index_map.texture_ID_index);
-        glBindTexture(GL_TEXTURE_BUFFER, texture_ID_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, texture_ID_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, coordinate_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.coordinate_flag_index * sizeof(GLint), sizeof(GLint), geometry_handler.getCoordinateFlagData_ptr(geometry_type)->data() + index_map.coordinate_flag_index);
-        glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, coordinate_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, sky_geometry_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.sky_geometry_flag_index * sizeof(GLbyte), sizeof(GLbyte), geometry_handler.getSkyGeometryFlagData_ptr(geometry_type)->data() + index_map.sky_geometry_flag_index);
-        glBindTexture(GL_TEXTURE_BUFFER, sky_geometry_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R8I, sky_geometry_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, hidden_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.visible_index * sizeof(GLbyte), sizeof(GLbyte), geometry_handler.getVisibilityFlagData_ptr(geometry_type)->data() + index_map.visible_index);
-        glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R8I, hidden_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindTexture(GL_TEXTURE_BUFFER, 0);
+        // In the order of last_uploaded_buffer_sizes: vertex, uv, vertex normal, face index, color,
+        // normal, texture flag, material index, texture ID, coordinate flag, sky flag, visibility.
+        const std::array<size_t, buffer_count> begins = {index_map.vertex_index,         index_map.uv_index,           index_map.vertex_normal_index,   index_map.face_index_index,
+                                                         index_map.color_index,          index_map.normal_index,       index_map.texture_flag_index,    index_map.material_index_index,
+                                                         index_map.texture_ID_index,     index_map.coordinate_flag_index, index_map.sky_geometry_flag_index, index_map.visible_index};
+        const std::array<size_t, buffer_count> lengths = {3 * vcount, 2 * vcount, 3 * vcount, vcount, 4, 3, 1, 1, 1, 1, 1, 1};
+        for (size_t b = 0; b < buffer_count; ++b) {
+            if (!uploaded_whole.at(i).at(b)) {
+                slices.at(i).at(b).push_back({begins.at(b), begins.at(b) + lengths.at(b)});
+            }
+        }
 
         if (geometry_type == GeometryHandler::GEOMETRY_TYPE_RECTANGLE) {
             rect_dirty = true;
         }
     }
+
+    auto uploadSlices = [&](GLuint buf, std::vector<Slice> &runs, const void *data, size_t element_size) {
+        if (runs.empty()) {
+            return;
+        }
+        std::sort(runs.begin(), runs.end(), [](const Slice &a, const Slice &b) { return a.begin < b.begin; });
+        const size_t gap_elements = std::max<size_t>(1, merge_gap_bytes / element_size);
+        const auto *bytes = static_cast<const char *>(data);
+        glBindBuffer(GL_ARRAY_BUFFER, buf);
+        Slice run = runs.front();
+        auto send = [&](const Slice &s) {
+            glBufferSubData(GL_ARRAY_BUFFER, GLintptr(s.begin * element_size), GLsizeiptr((s.end - s.begin) * element_size), bytes + s.begin * element_size);
+            partial_uploads_last_transfer++;
+        };
+        for (size_t k = 1; k < runs.size(); ++k) {
+            if (runs[k].begin <= run.end + gap_elements) {
+                run.end = std::max(run.end, runs[k].end);
+            } else {
+                send(run);
+                run = runs[k];
+            }
+        }
+        send(run);
+    };
+
+    for (size_t i = 0; i < GeometryHandler::all_geometry_types.size(); ++i) {
+        const auto geometry_type = GeometryHandler::all_geometry_types[i];
+        auto &s = slices.at(i);
+        uploadSlices(vertex_buffer.at(i), s.at(0), geometry_handler.getVertexData_ptr(geometry_type)->data(), sizeof(GLfloat));
+        uploadSlices(uv_buffer.at(i), s.at(1), geometry_handler.getUVData_ptr(geometry_type)->data(), sizeof(GLfloat));
+        uploadSlices(vertex_normal_buffer.at(i), s.at(2), geometry_handler.getVertexNormalData_ptr(geometry_type)->data(), sizeof(GLfloat));
+        uploadSlices(face_index_buffer.at(i), s.at(3), geometry_handler.getFaceIndexData_ptr(geometry_type)->data(), sizeof(GLint));
+        uploadSlices(color_buffer.at(i), s.at(4), geometry_handler.getColorData_ptr(geometry_type)->data(), sizeof(GLfloat));
+        uploadSlices(normal_buffer.at(i), s.at(5), geometry_handler.getNormalData_ptr(geometry_type)->data(), sizeof(GLfloat));
+        uploadSlices(texture_flag_buffer.at(i), s.at(6), geometry_handler.getTextureFlagData_ptr(geometry_type)->data(), sizeof(GLint));
+        uploadSlices(material_index_buffer.at(i), s.at(7), geometry_handler.getMaterialIndexData_ptr(geometry_type)->data(), sizeof(GLint));
+        uploadSlices(texture_ID_buffer.at(i), s.at(8), geometry_handler.getTextureIDData_ptr(geometry_type)->data(), sizeof(GLint));
+        uploadSlices(coordinate_flag_buffer.at(i), s.at(9), geometry_handler.getCoordinateFlagData_ptr(geometry_type)->data(), sizeof(GLint));
+        uploadSlices(sky_geometry_flag_buffer.at(i), s.at(10), geometry_handler.getSkyGeometryFlagData_ptr(geometry_type)->data(), sizeof(GLbyte));
+        uploadSlices(hidden_flag_buffer.at(i), s.at(11), geometry_handler.getVisibilityFlagData_ptr(geometry_type)->data(), sizeof(GLbyte));
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     if (rect_dirty) {
         size_t rectangle_count = geometry_handler.getRectangleCount();
@@ -1224,6 +1263,16 @@ void Visualizer::render(bool shadow) const {
 
     // The annotation pass identifies each face by its geometry type as well as its face index, so it must be told which type each draw call below is drawing.
     const bool annotation_pass = annotationShader.initialized && static_cast<GLuint>(current_shader_program) == annotationShader.shaderID;
+
+    // initialize() enables polygon smoothing for anti-aliased Visualizers, which makes the driver emit a fragment for every
+    // pixel a primitive's edge touches. The color passes are unaffected, as smoothing is ignored while rendering to a
+    // multisampled target. The shadow=true passes (shadow cascades, the depth map, the annotation IDs) render to
+    // single-sampled framebuffers, though, where such a fragment simply overwrites the pixel, and every primitive would
+    // grow by one pixel. NVIDIA drivers honor the flag there; Mesa and macOS largely ignore it.
+    const bool suspend_polygon_smoothing = shadow && glIsEnabled(GL_POLYGON_SMOOTH);
+    if (suspend_polygon_smoothing) {
+        glDisable(GL_POLYGON_SMOOTH);
+    }
 
     // Bind our texture array
     glActiveTexture(GL_TEXTURE0);
@@ -1641,6 +1690,10 @@ void Visualizer::render(bool shadow) const {
     // This helps prevent texture unit binding issues in headless mode
     glActiveTexture(GL_TEXTURE0);
 
+    if (suspend_polygon_smoothing) {
+        glEnable(GL_POLYGON_SMOOTH);
+    }
+
     assert(checkerrors());
 }
 
@@ -1649,6 +1702,10 @@ void Visualizer::plotUpdate() {
 }
 
 void Visualizer::plotUpdate(bool hide_window) {
+    plotUpdate_private(hide_window, false);
+}
+
+void Visualizer::plotUpdate_private(bool hide_window, bool context_geometry_is_current) {
     // Check if window is marked for closure to prevent hanging on glfwSwapBuffers()
     if (!headless && window != nullptr && glfwWindowShouldClose(scast<GLFWwindow *>(window))) {
         return; // Don't render to a window that should be closed
@@ -1670,13 +1727,17 @@ void Visualizer::plotUpdate(bool hide_window) {
     }
 
     // Update the Context geometry
-    buildContextGeometry_private();
+    if (!context_geometry_is_current) {
+        buildContextGeometry_private();
+    }
 
     // Apply point cloud culling for performance optimization
     updatePointCulling();
 
     // Set the view to fit window
-    if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { // default center
+    // Only a camera nobody has set is fitted to the scene. Judging that by the default coordinates
+    // alone moved a camera that had been set to them on purpose.
+    if (!camera_position_set_by_user && camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { // default center
         if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { // default eye position
 
             vec3 center_sph;
@@ -1916,7 +1977,8 @@ void Visualizer::renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::ve
     // Bring the rendered frame up to date, under the same conditions as printWindow(). This also settles anything that is decided at render time, such as the default camera that is fitted to the scene, so
     // that the annotations describe the same view as the image whichever of the two is produced first.
     if (!rendered_frame_is_current || !geometry_handler.getDirtyUUIDs().empty() || geometry_handler.doesBufferNeedFullUpdate() || cameraHasChanged()) {
-        plotUpdate(true);
+        // The Context was walked just above, and a second walk would visit every dirty primitive again to find nothing new
+        plotUpdate_private(true, true);
     }
 
     width_pixels = Wframebuffer;
@@ -2018,13 +2080,21 @@ void Visualizer::renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::ve
     }
 
     // Translate (geometry type, face index) into Context primitive UUIDs. Only rectangles and triangles are drawn by this pass.
-    std::vector<std::vector<uint>> face_context_UUIDs(GeometryHandler::all_geometry_types.size());
-    for (size_t type_index = 0; type_index < GeometryHandler::all_geometry_types.size(); type_index++) {
-        const GeometryHandler::VisualizerGeometryType geometry_type = GeometryHandler::all_geometry_types.at(type_index);
-        if (geometry_type == GeometryHandler::GEOMETRY_TYPE_RECTANGLE || geometry_type == GeometryHandler::GEOMETRY_TYPE_TRIANGLE) {
-            face_context_UUIDs.at(type_index) = geometry_handler.getFaceContextUUIDs(geometry_type);
+    // Building the lookup visits every displayed primitive, and it depends only on which primitive occupies which face slot,
+    // so it is kept until a primitive is added or deleted or the buffers are compacted - not rebuilt for a move or recolor.
+    if (!annotation_face_lookup_built || annotation_face_lookup_revision != geometry_handler.getLayoutRevision()) {
+        annotation_face_lookup.assign(GeometryHandler::all_geometry_types.size(), {});
+        for (size_t type_index = 0; type_index < GeometryHandler::all_geometry_types.size(); type_index++) {
+            const GeometryHandler::VisualizerGeometryType geometry_type = GeometryHandler::all_geometry_types.at(type_index);
+            if (geometry_type == GeometryHandler::GEOMETRY_TYPE_RECTANGLE || geometry_type == GeometryHandler::GEOMETRY_TYPE_TRIANGLE) {
+                annotation_face_lookup.at(type_index) = geometry_handler.getFaceContextUUIDs(geometry_type);
+            }
         }
+        annotation_face_lookup_revision = geometry_handler.getLayoutRevision();
+        annotation_face_lookup_built = true;
+        annotation_face_lookup_build_count++;
     }
+    const std::vector<std::vector<uint>> &face_context_UUIDs = annotation_face_lookup;
 
     pixel_UUIDs.assign(pixel_count, 0);
     pixel_depth.assign(pixel_count, -1.f);

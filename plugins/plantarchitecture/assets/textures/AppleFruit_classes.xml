@@ -1,0 +1,17 @@
+<helios>
+  <!-- Class definitions of AppleFruit_classes.png, relative to the spectra named below from the radiation plugin's spectral library (see the radiation plugin documentation, "Spectral Textures").
+       reflectance_scale multiplies the surface's reflectivity (and transmissivity) spectrum: the ratio of the class's luminance to the source's mean luminance.
+       Every class is multiplied by 0.60 (--reflectance-factor), the surface being darker than the spectrum it is fitted relative to.
+       No class reflects more than 0.6 at any wavelength from 400 to 700 nm (--max-reflectance).
+       Fitted by utilities/leaf_class_maps/fit_classes --surface to AppleFruit.jpg. -->
+  <surface_class_map reflectivity_spectrum="strawberry_reflectivity_0000" transmissivity_spectrum="" provenance="AppleFruit.jpg via utilities/leaf_class_maps/fit_classes --surface (fitted to AppleFruit.jpg, relative to strawberry_reflectivity_0000)">
+    <class id="1" reflectance_scale="0.1431" texels="26614" source_srgb="66 40 20"/>
+    <class id="2" reflectance_scale="0.3378" texels="60244" source_srgb="130 42 34"/>
+    <class id="3" reflectance_scale="0.4512" texels="90248" source_srgb="150 48 41"/>
+    <class id="4" reflectance_scale="0.5912" texels="88570" source_srgb="164 60 47"/>
+    <class id="5" reflectance_scale="0.755" texels="69127" source_srgb="179 72 52"/>
+    <class id="6" reflectance_scale="0.895" texels="45866" source_srgb="195 77 55"/>
+    <class id="7" reflectance_scale="1.063" texels="19469" source_srgb="216 79 59"/>
+    <class id="8" reflectance_scale="1.311" texels="12543" source_srgb="242 81 65"/>
+  </surface_class_map>
+</helios>

@@ -2822,6 +2822,20 @@ namespace helios {
         //! flag to indicate state of primitive has been changed
         bool dirty_flag;
 
+        //! Process-wide clock that modification stamps are read from (see Context::getModifiedUUIDs())
+        /**
+         * Shared by every Context, so that a stamp can be taken in a primitive's constructor, before the primitive knows its
+         * Context. A modification only reads it, so that primitives modified from parallel loops do not contend for it; only
+         * Context::getModifiedUUIDs() advances it.
+         */
+        static std::atomic<uint64_t> modification_clock;
+
+        //! The clock's value when the primitive was created, last marked dirty, or last hidden or shown (see Context::getModifiedUUIDs())
+        uint64_t modification_stamp = modification_clock.load(std::memory_order_relaxed);
+
+        //! Record that the primitive changed now, for Context::getModifiedUUIDs(), without marking it dirty
+        void stampModification();
+
         //! Set dirty_flag and advance the parent Context's geometry revision (see Context::getGeometryRevision())
         void markDirty();
 
@@ -3562,6 +3576,9 @@ namespace helios {
         //! Advanced whenever a primitive's shape (vertices, transform, texture mapping, or solid fraction) changes or a primitive is deleted (see getShapeRevision()). Unlike geometry_revision, changes to primitive data and color do not advance it.
         RevisionCounter shape_revision;
 
+        //! Advanced whenever a material is added, deleted or renamed, or its properties or data change (see getMaterialRevision())
+        RevisionCounter material_revision;
+
         //! Map containing a pointer to each compound object
         std::unordered_map<uint, CompoundObject *> objects;
 
@@ -3911,6 +3928,17 @@ namespace helios {
          * \sa getGeometryRevision()
          */
         [[nodiscard]] uint64_t getShapeRevision() const;
+
+        //! Get a counter that advances whenever a material is added, deleted or renamed, or its properties or data change
+        /**
+         * Material properties are its color, texture, texture color override and two-sided flag; material data is anything set by
+         * setMaterialData() or removed by clearMaterialData(). Setting material data does not mark the primitives using the
+         * material dirty, so a plug-in that caches something derived from material data (e.g., the visualizer's table of Phong
+         * parameters) checks this counter instead. If two calls return the same value, no material changed in between. Assigning
+         * a material to a primitive changes the primitive, not the material: see getModifiedUUIDs().
+         * \return Current material revision
+         */
+        [[nodiscard]] uint64_t getMaterialRevision() const;
 
         //! Mark a primitive as "dirty", meaning it has been modified since last set as clean
         /**
@@ -4371,6 +4399,22 @@ namespace helios {
          * \return Vector of UUIDs for primitives that are marked dirty
          */
         [[nodiscard]] std::vector<uint> getDirtyUUIDs(bool include_deleted_UUIDs = false) const;
+
+        //! Get the primitives created or modified since an earlier call, and advance the caller's mark
+        /**
+         * The dirty flags are shared: they stay set until whoever owns them calls markGeometryClean() or markPrimitiveClean(),
+         * so a plug-in that only reads them sees every primitive ever modified, on every call, and has to work out for itself
+         * which of them changed since it last looked. This gives each caller its own view instead. Keep one variable per caller,
+         * starting at 0, and pass it on every call: each call returns the primitives created or modified since the previous
+         * call that was given that variable, whatever other callers do and whether or not anything marks the geometry clean in
+         * between. A modification is anything that marks a primitive dirty, and also hiding or showing it, which does not mark
+         * it dirty: hidden primitives are returned like any other, so check isPrimitiveHidden(). Deleted primitives are not
+         * returned (see getDeletedUUIDs()). The cost is one comparison per primitive in the Context.
+         * \param[inout] mark The caller's mark: 0 on the first call, which returns every primitive, and afterwards whatever the
+         * previous call left in it.
+         * \return UUIDs of the primitives created or modified since the call that set \p mark
+         */
+        [[nodiscard]] std::vector<uint> getModifiedUUIDs(uint64_t &mark) const;
 
         //! Get all primitive UUIDs that were deleted since the Context was last marked clean.
         /**
@@ -5592,6 +5636,7 @@ namespace helios {
         void setMaterialData(const std::string &material_label, const char *data_label, const T &data) {
             uint matID = getMaterialIDFromLabel(material_label);
             materials[matID].setMaterialData(data_label, data);
+            material_revision.markModified();
         }
 
         //! Set vector data for a material
@@ -5606,6 +5651,7 @@ namespace helios {
         void setMaterialData(const std::string &material_label, const char *data_label, const std::vector<T> &data) {
             uint matID = getMaterialIDFromLabel(material_label);
             materials[matID].setMaterialData(data_label, data);
+            material_revision.markModified();
         }
 
         //! Get scalar data value from a material
@@ -7337,6 +7383,20 @@ namespace helios {
          * \param[in] ObjID object ID of the Polygon Mesh object
          */
         [[nodiscard]] float getPolymeshObjectVolume(uint ObjID) const;
+
+        //! Replace some of the primitives of a Polygon Mesh object with new ones, keeping the object itself
+        /**
+         * Re-meshing an object by deleting it and grouping new primitives into a fresh one changes its object ID and discards its object data, which breaks anything that keys state on the object. This
+         * instead swaps the primitives inside the existing object: its ID, object data and transformation matrix are kept. Each new primitive first receives a copy of the primitive data of its paired
+         * source primitive, and then the old primitives are deleted.
+         *
+         * The face set no longer describes the object once its primitives change, so it is cleared; call \ref setPolymeshObjectTopology() afterwards if the object should carry one.
+         * \param[in] ObjID Object ID of the Polygon Mesh object.
+         * \param[in] old_UUIDs Primitives of the object to remove and delete. All must be members of the object, and at least one member must remain or be added.
+         * \param[in] new_UUIDs Existing primitives, not yet members of any object, to add to the object.
+         * \param[in] data_source_UUIDs Parallel to new_UUIDs: the existing primitive whose primitive data each new primitive receives (typically one of old_UUIDs).
+         */
+        void replacePolymeshObjectPrimitives(uint ObjID, const std::vector<uint> &old_UUIDs, const std::vector<uint> &new_UUIDs, const std::vector<uint> &data_source_UUIDs);
 
         //! Set the indexed face set of a Polygon Mesh object
         /**

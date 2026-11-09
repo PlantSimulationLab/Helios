@@ -1553,6 +1553,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
                 uint newID = currentMaterialID++;
                 Material loaded_mat(newID, material_label, color, texture_file, texture_override, twosided);
                 materials[newID] = loaded_mat;
+                material_revision.markModified();
                 material_label_to_id[material_label] = newID;
             } else {
                 // Material already exists, update its properties

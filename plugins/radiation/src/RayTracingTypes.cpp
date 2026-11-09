@@ -360,6 +360,10 @@ namespace helios {
         if (vertex_values.empty() || layer_count == 0) {
             return packed;
         }
+        if (layer_count != 2) {
+            helios_runtime_error("ERROR (packSpectralVertexIncident): The vertex values have " + std::to_string(layer_count) +
+                                 " layers, but the camera programs read exactly two: the radiation from the sky and other surfaces, and the emitted radiation.");
+        }
         if (launch_band_count == 0 || vertex_values.size() % (2 * size_t(layer_count) * launch_band_count) != 0) {
             helios_runtime_error("ERROR (packSpectralVertexIncident): " + std::to_string(vertex_values.size()) + " vertex values are not two faces of " + std::to_string(layer_count) + " layers of " + std::to_string(launch_band_count) +
                                  " bands for a whole number of vertices.");

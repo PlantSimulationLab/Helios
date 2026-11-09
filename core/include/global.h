@@ -954,6 +954,17 @@ namespace helios {
      */
     void writePNGSingleChannel(const std::string &filename, uint width, uint height, const std::vector<uint16_t> &pixel_values, uint bit_depth);
 
+    //! Fraction of a primitive's (u,v) polygon in each class of a class map, leaving out class 0 (transparent texels)
+    /**
+     * Uses the texel convention of the radiation model and of texture masks: texture coordinate (u,v) falls in column floor((W-1) u) and row floor((H-1) (1-v)) from the top, clamped to the image, so column i covers
+     * i/(W-1) <= u < (i+1)/(W-1) and the last column only u >= 1 (likewise for rows). Each texel's cell is clipped against the polygon, so a texel touching the polygon only along an edge or at a corner covers none of it.
+     * \param[in] classes Class of each texel, row by row from the top of the image (index at classes[row*width+column]).
+     * \param[in] resolution Width and height of the class map.
+     * \param[in] uv (u,v) coordinates of the polygon's corners, in order (three for a triangle, four for a patch).
+     * \return (class, fraction of the covered area) for each class with a nonzero area, in increasing order of class, or nothing if the polygon covers no texel of a class above 0.
+     */
+    [[nodiscard]] std::vector<std::pair<uint16_t, float>> classMapAreaFractions(const std::vector<uint16_t> &classes, const helios::int2 &resolution, const std::vector<helios::vec2> &uv);
+
     //! Function to read a JPEG image file into pixel data array
     /**
      * \param[in] filename Name of the JPEG image file
