@@ -1,0 +1,261 @@
+name: Probe GitHub-hosted GPU runners
+
+# Temporary diagnostic for migrating linux_GPU_selftests / windows_GPU_selftests off the
+# self-hosted EC2 instances and onto GitHub-hosted GPU runners. Both runners use Azure Marketplace
+# partner images that GitHub does not manage, so their contents are undocumented:
+#   - Linux ("NVIDIA GPU-Optimized VMI"): driver installed but kernel modules not loaded at boot,
+#     and no CUDA toolkit (established by PyHelios' probe-gpu-runner.yml).
+#   - Windows ("Microsoft Data Science Windows Server 2022"): VS 2019 Community (MSVC 14.29),
+#     CMake, CUDA 11.4 and Git are preinstalled, but there is no pwsh or jq, "bash" on PATH
+#     resolves to the WSL launcher (C:\Windows\system32\bash.exe, no distributions installed)
+#     rather than Git Bash, and the NVIDIA driver is 471.11 (2021, CUDA <= 11.4, T4 in TCC mode).
+#     Helios selects OptiX 8.1 only on drivers >= 560, so the job installs a current driver.
+# Each job first records an inventory (non-fatal), then does the real thing: builds Helios with
+# CUDA/OptiX and runs the radiation suite with --requiregpu.
+#
+# Runs on pushes to the throwaway branches "ci/gpu-probe*" only, so it never touches master/release.
+# A branch ending in "-win" runs only the Windows job, and one ending in "-linux" only the Linux
+# job, so one platform can be re-probed without cancelling or re-billing the other.
+# Delete this file once the GPU workflows have been migrated.
+
+on:
+  push:
+    branches: [ "ci/gpu-probe", "ci/gpu-probe-*" ]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  probe_linux:
+    if: ${{ !endsWith(github.ref_name, '-win') }}
+    runs-on: linux-x64-gpu-githubhosted
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inventory (non-fatal)
+        continue-on-error: true
+        run: |
+          cat /etc/os-release; uname -a; nproc; free -g; df -h .
+          echo "=== nvcc ==="; command -v nvcc && nvcc --version || echo "nvcc NOT INSTALLED"
+          echo "=== cmake ==="; command -v cmake && cmake --version || echo "cmake NOT INSTALLED"
+          echo "=== compilers ==="; gcc --version | head -1 || true; g++ --version | head -1 || true
+
+      # The driver is installed but its kernel modules are not loaded at boot, so nvidia-smi fails
+      # with "couldn't communicate with the NVIDIA driver" until they are.
+      # https://github.com/orgs/community/discussions/138813
+      - name: Load NVIDIA kernel modules
+        run: |
+          set -euo pipefail
+          sudo modprobe nvidia
+          sudo modprobe nvidia_uvm
+          ls -l /dev/nvidia*
+
+      - name: Verify GPU is present and usable
+        run: |
+          set -euo pipefail
+          nvidia-smi
+          nvidia-smi -L | grep -q "GPU 0" || { echo "ERROR: nvidia-smi reports no GPU devices."; exit 1; }
+
+      - name: Install build dependencies for visualizer and Vulkan
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cmake build-essential libx11-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev libxrandr-dev libvulkan-dev glslang-tools
+
+      # From NVIDIA's apt repository rather than Jimver/cuda-toolkit: on this image the Jimver
+      # runfile install exited part-way without an error and left no nvcc in
+      # /usr/local/cuda-12.6/bin. The radiation CMake errors out if the toolkit is newer than the
+      # driver supports (590.48 -> CUDA 13.1 here), so 12.6 leaves headroom.
+      - name: Install CUDA toolkit
+        run: |
+          set -euo pipefail
+          curl -fsSL -o "$RUNNER_TEMP/cuda-keyring.deb" https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i "$RUNNER_TEMP/cuda-keyring.deb"
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends cuda-toolkit-12-6
+          test -x /usr/local/cuda-12.6/bin/nvcc || { echo "ERROR: nvcc missing after install"; exit 1; }
+          echo "/usr/local/cuda-12.6/bin" >> "$GITHUB_PATH"
+          echo "CUDA_PATH=/usr/local/cuda-12.6" >> "$GITHUB_ENV"
+
+      # The radiation CMake uses find_package(CUDAToolkit QUIET) and quietly builds Vulkan-only
+      # when it fails, so check here, loudly, before spending ~25 minutes on the real build.
+      - name: Check CMake can find CUDA (fail fast)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PATH=$PATH"
+          echo "CUDA_PATH=${CUDA_PATH:-<unset>}"
+          command -v nvcc && nvcc --version || echo "nvcc NOT on PATH"
+          ls -d /usr/local/cuda* 2>/dev/null || true
+          cmake --version | head -1
+          mkdir -p "$RUNNER_TEMP/cudacheck"
+          cd "$RUNNER_TEMP/cudacheck"
+          printf '%s\n' \
+            'cmake_minimum_required(VERSION 3.18)' \
+            'project(cudacheck LANGUAGES CXX)' \
+            'find_package(CUDAToolkit REQUIRED)' \
+            'message(STATUS "CUDAToolkit ${CUDAToolkit_VERSION}: nvcc=${CUDAToolkit_NVCC_EXECUTABLE}")' \
+            'include(CheckLanguage)' \
+            'check_language(CUDA)' \
+            'if(NOT CMAKE_CUDA_COMPILER)' \
+            '  message(FATAL_ERROR "CUDAToolkit found but the CUDA language cannot be enabled")' \
+            'endif()' > CMakeLists.txt
+          cmake -S . -B build
+
+      - name: Build and run radiation tests
+        run: |
+          cd utilities
+          if ! ./run_tests.sh --test radiation --visbuildonly --requiregpu --verbose --log-file ../gpu_probe_linux.log; then
+            echo "==== run_tests.sh failed; dumping log ===="
+            cat ../gpu_probe_linux.log
+            exit 1
+          fi
+
+      # The radiation CMake falls back to a Vulkan-only build if CUDA cannot be used, and
+      # --requiregpu would still pass on Vulkan. Fail unless OptiX was actually enabled.
+      - name: Assert the OptiX backend was built
+        if: always()
+        run: |
+          grep -E "\[Radiation\] (OptiX 8.1 backend enabled|Using OptiX 6.5 backend)|CUDA not found|falling back to Vulkan-only|Driver supports up to CUDA" gpu_probe_linux.log || true
+          grep -q "\[Radiation\] OptiX 8.1 backend enabled" gpu_probe_linux.log \
+            || { echo "ERROR: OptiX 8.1 backend was not enabled (Vulkan-only or legacy OptiX 6.5 build)."; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpu_probe_linux_log
+          path: gpu_probe_linux.log
+
+  probe_windows:
+    if: ${{ !endsWith(github.ref_name, '-linux') }}
+    runs-on: windows-x64-gpu-githubhosted
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      # "bash" otherwise resolves to the WSL launcher in system32, which fails with "Windows
+      # Subsystem for Linux has no installed distributions". GITHUB_PATH entries are prepended,
+      # so this makes every later `shell: bash` step (ours and those inside actions) use Git Bash.
+      - name: Put Git Bash ahead of the WSL launcher on PATH
+        shell: powershell
+        run: |
+          if (-not (Test-Path "C:\Program Files\Git\bin\bash.exe")) { Write-Error "Git Bash not found"; exit 1 }
+          "C:\Program Files\Git\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      # Windows PowerShell: this image has no pwsh (PowerShell 7).
+      - name: Inventory (non-fatal)
+        continue-on-error: true
+        shell: powershell
+        run: |
+          Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version
+          "Logical processors: $env:NUMBER_OF_PROCESSORS"
+          "=== nvidia-smi ==="; & nvidia-smi
+          "=== bash ==="; Get-Command bash -ErrorAction SilentlyContinue | Format-List Source; & bash --version
+          "=== cmake ==="; Get-Command cmake -ErrorAction SilentlyContinue | Format-List Source
+          "=== nvcc ==="; Get-Command nvcc -ErrorAction SilentlyContinue | Format-List Source
+          "CUDA_PATH=$env:CUDA_PATH"
+          "=== Visual Studio installations ==="
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (Test-Path $vswhere) { & $vswhere -all -products * -format text | Select-String "displayName|installationVersion|installationPath" } else { "vswhere NOT FOUND - no Visual Studio installer present" }
+
+      # The image's driver 471.11 would make Helios build the legacy OptiX 6.5 backend, which
+      # current drivers no longer run, so it would not test what users run. 582.99 is the R580
+      # data-center driver (T4 and Windows Server 2022 listed as supported, CUDA 13.x).
+      # Whether it takes effect without a reboot is what this step is probing; the version check
+      # in "Verify GPU" below is the real pass/fail, not the installer's exit code.
+      - name: Install current NVIDIA data-center driver
+        shell: powershell
+        run: |
+          $ver = "582.99"
+          $url = "https://us.download.nvidia.com/tesla/$ver/$ver-data-center-tesla-desktop-winserver-2022-2025-dch-international.exe"
+          $exe = "$env:RUNNER_TEMP\nvidia-driver.exe"
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          curl.exe -fsSL -o $exe $url
+          if ($LASTEXITCODE -ne 0) { Write-Error "Driver download failed: $url"; exit 1 }
+          "Downloaded in $([int]$sw.Elapsed.TotalSeconds) s"
+          $proc = Start-Process -FilePath $exe -ArgumentList "-s","-noreboot","-noeula","-clean" -Wait -PassThru
+          "Installer exit code: $($proc.ExitCode) after $([int]$sw.Elapsed.TotalSeconds) s total"
+          & nvidia-smi --query-gpu=name,driver_version,driver_model.current --format=csv
+
+      # setup-vulkan-sdk parses JSON with jq, which this image lacks.
+      - name: Install jq
+        shell: powershell
+        run: choco install jq -y --no-progress
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-query-version: latest
+          vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Headers, SPIRV-Tools, Glslang
+          vulkan-use-cache: true
+
+      - name: Install CUDA toolkit
+        uses: Jimver/cuda-toolkit@v0.2.24
+        with:
+          cuda: '12.6.2'
+
+      - name: Verify GPU is present and usable
+        shell: bash
+        run: |
+          set -euo pipefail
+          nvidia-smi
+          nvidia-smi -L | grep -q "GPU 0" || { echo "ERROR: nvidia-smi reports no GPU devices."; exit 1; }
+          driver_major=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
+          if [ "$driver_major" -lt 560 ]; then
+            echo "ERROR: driver $driver_major is still loaded; the new driver did not take effect without a reboot."
+            exit 1
+          fi
+
+      # The radiation CMake uses find_package(CUDAToolkit QUIET) and quietly builds Vulkan-only
+      # when it fails, so check here, loudly, before spending ~25 minutes on the real build.
+      - name: Check CMake can find CUDA (fail fast)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PATH=$PATH"
+          echo "CUDA_PATH=${CUDA_PATH:-<unset>}"
+          command -v nvcc && nvcc --version || echo "nvcc NOT on PATH"
+          ls -d /usr/local/cuda* 2>/dev/null || true
+          cmake --version | head -1
+          mkdir -p "$RUNNER_TEMP/cudacheck"
+          cd "$RUNNER_TEMP/cudacheck"
+          printf '%s\n' \
+            'cmake_minimum_required(VERSION 3.18)' \
+            'project(cudacheck LANGUAGES CXX)' \
+            'find_package(CUDAToolkit REQUIRED)' \
+            'message(STATUS "CUDAToolkit ${CUDAToolkit_VERSION}: nvcc=${CUDAToolkit_NVCC_EXECUTABLE}")' \
+            'include(CheckLanguage)' \
+            'check_language(CUDA)' \
+            'if(NOT CMAKE_CUDA_COMPILER)' \
+            '  message(FATAL_ERROR "CUDAToolkit found but the CUDA language cannot be enabled")' \
+            'endif()' > CMakeLists.txt
+          cmake -S . -B build
+
+      - name: Build and run radiation tests
+        shell: bash
+        run: |
+          cd utilities
+          if ! ./run_tests.sh --test radiation --visbuildonly --requiregpu --verbose --log-file ../gpu_probe_windows.log; then
+            echo "==== run_tests.sh failed; dumping log ===="
+            cat ../gpu_probe_windows.log
+            exit 1
+          fi
+
+      - name: Assert the OptiX backend was built
+        if: always()
+        shell: bash
+        run: |
+          grep -E "\[Radiation\] (OptiX 8.1 backend enabled|Using OptiX 6.5 backend)|CUDA not found|falling back to Vulkan-only|Driver supports up to CUDA" gpu_probe_windows.log || true
+          grep -q "\[Radiation\] OptiX 8.1 backend enabled" gpu_probe_windows.log \
+            || { echo "ERROR: OptiX 8.1 backend was not enabled (Vulkan-only or legacy OptiX 6.5 build)."; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpu_probe_windows_log
+          path: gpu_probe_windows.log

@@ -1,10 +1,10 @@
-name: Build and Run on Windows EC2 GPU Instance
+name: Build and Run on Windows GPU
 
 on:
   push:
     # Runs on the release branch only. The release flow validates a candidate on "release",
     # then fast-forwards master to that exact commit, so a run on master would re-test an
-    # identical SHA -- doubly wasteful here, where the runner is a billed EC2 GPU instance.
+    # identical SHA -- doubly wasteful here, where the runner is billed per minute.
     branches: [ "release" ]
   workflow_dispatch: {}
 
@@ -13,122 +13,138 @@ env:
   BUILD_TYPE: Release
 
 permissions:
-  id-token: write
   contents: read
 
-# Serialize runs of this workflow so concurrent runs do not race on the single shared
-# EC2 GPU instance. Previously, one run could try to start the instance while another
-# run's stop-gpu job was stopping it, leaving the instance in a transitional state that
-# broke start-gpu. New runs queue behind in-progress ones (rather than cancelling them),
-# so the instance is always fully released before the next run touches it.
+# Cancel a superseded run when "release" is re-pushed (e.g. a fix for a failure on another
+# runner). Safe now that each run gets its own ephemeral GitHub-hosted machine; the old
+# self-hosted setup had to serialize runs because they shared one EC2 instance.
 concurrency:
-  group: windows-gpu-ec2-instance
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
 
-  start-gpu:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
-          aws-region: us-west-2
-      - run: |
-          set -uo pipefail
-          INSTANCE_ID="${{ secrets.EC2_INSTANCE_ID_WIN }}"
-
-          # Drive the shared GPU instance to a 'running' state, tolerating transitional
-          # states and races with other runs. The previous implementation exited 1 whenever
-          # the instance was momentarily in 'stopping'/'pending', which made start-gpu fail
-          # before the build job ever ran. Here we keep polling until the instance is either
-          # 'running' or settles into 'stopped' (which we then start), bounded by a deadline.
-          deadline=$(( SECONDS + 600 ))   # up to 10 minutes
-          while true; do
-            STATE=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
-              --query "Reservations[0].Instances[0].State.Name" --output text 2>/dev/null || echo "unknown")
-            echo "Current instance state: $STATE"
-            case "$STATE" in
-              running)
-                echo "Instance is running."
-                break
-                ;;
-              stopped)
-                echo "Instance is stopped; issuing start-instances..."
-                # Tolerate a concurrent run that may have already started it.
-                aws ec2 start-instances --instance-ids "$INSTANCE_ID" >/dev/null \
-                  || echo "start-instances returned non-zero (likely a concurrent start); will keep polling."
-                ;;
-              pending|stopping)
-                echo "Instance is transitioning ('$STATE'); waiting for it to settle..."
-                ;;
-              shutting-down|terminated)
-                echo "Instance is '$STATE' and cannot be started." >&2
-                exit 1
-                ;;
-              *)
-                echo "Unexpected/empty instance state ('$STATE'); waiting and retrying..."
-                ;;
-            esac
-            if (( SECONDS >= deadline )); then
-              echo "Timed out waiting for instance to reach 'running' state." >&2
-              exit 1
-            fi
-            sleep 10
-          done
-
-          # Belt-and-suspenders: confirm AWS also reports the instance as running before
-          # handing off to the self-hosted runner job.
-          aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
-          echo "Instance is running and ready."
-
   run_samples_windows:
-    runs-on: [self-hosted, Windows]
-    needs: start-gpu
+    # GitHub-hosted GPU larger runner (Tesla T4, 4 vCPU), defined in the PlantSimulationLab org
+    # settings with the "Microsoft Data Science Windows Server 2022" partner image. That Azure
+    # Marketplace image is not managed by GitHub. It provides VS 2019 (MSVC 14.29), CMake and Git,
+    # but has no pwsh or jq, resolves "bash" to the WSL launcher, and ships NVIDIA driver 471.11
+    # (CUDA <= 11.4, T4 in TCC mode) -- each handled by a step below.
+    runs-on: windows-x64-gpu-githubhosted
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
+
+      # "bash" otherwise resolves to the WSL launcher in system32, which fails with "Windows
+      # Subsystem for Linux has no installed distributions". GITHUB_PATH entries are prepended,
+      # so this makes every later `shell: bash` step (ours and those inside actions) use Git Bash.
+      - name: Put Git Bash ahead of the WSL launcher on PATH
+        shell: powershell
+        run: |
+          if (-not (Test-Path "C:\Program Files\Git\bin\bash.exe")) { Write-Error "Git Bash not found"; exit 1 }
+          "C:\Program Files\Git\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      # With the image's driver 471.11, Helios builds the legacy OptiX 6.5 backend, which current
+      # drivers no longer run, so the job would not test what users run. 582.99 is the R580
+      # data-center driver (T4 and Windows Server 2022 supported, CUDA 13.x); it takes effect
+      # without a reboot. Bump $ver when moving to a newer driver branch. The version check in
+      # "Verify GPU" is the real pass/fail, not the installer's exit code.
+      - name: Install current NVIDIA data-center driver
+        shell: powershell
+        run: |
+          $ver = "582.99"
+          $url = "https://us.download.nvidia.com/tesla/$ver/$ver-data-center-tesla-desktop-winserver-2022-2025-dch-international.exe"
+          $exe = "$env:RUNNER_TEMP\nvidia-driver.exe"
+          curl.exe -fsSL -o $exe $url
+          if ($LASTEXITCODE -ne 0) { Write-Error "Driver download failed: $url"; exit 1 }
+          $proc = Start-Process -FilePath $exe -ArgumentList "-s","-noreboot","-noeula","-clean" -Wait -PassThru
+          "Installer exit code: $($proc.ExitCode)"
+
+      # setup-vulkan-sdk parses JSON with jq, which this image lacks.
+      - name: Install jq
+        shell: powershell
+        run: choco install jq -y --no-progress
+
       - uses: ilammy/msvc-dev-cmd@v1
 
-      # See the equivalent step in linux_GPU_selftests.yaml: every GPU test skips gracefully
-      # when no device is found, so a runner with a dead driver would report a green build
-      # having tested nothing. Runs before the build so the failure is reported in seconds.
+      - name: Install Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-query-version: latest
+          vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Headers, SPIRV-Tools, Glslang
+          vulkan-use-cache: true
+
+      # Replaces the image's CUDA 11.4, which is too old for the OptiX 8 backend.
+      - name: Install CUDA toolkit
+        uses: Jimver/cuda-toolkit@v0.2.24
+        with:
+          cuda: '12.6.2'
+
+      # The entire purpose of this job is exercising GPU code paths. Every GPU test skips
+      # gracefully when no device is found, so without this check a runner with an unusable
+      # driver would report a green build having tested nothing. The driver-version check catches
+      # the new driver failing to take effect, which would silently select legacy OptiX 6.5.
       - name: Verify GPU is present and usable
         shell: bash
         run: |
-          if ! command -v nvidia-smi >/dev/null 2>&1; then
-            echo "ERROR: nvidia-smi not found on a runner dedicated to GPU testing."
-            echo "The NVIDIA driver is not installed, or is not on PATH."
-            exit 1
-          fi
+          set -euo pipefail
           if ! nvidia-smi; then
             echo "ERROR: nvidia-smi failed, so no usable NVIDIA device is present."
-            echo "The CUDA toolkit can still compile in this state, which is why the build"
-            echo "would otherwise succeed and every GPU test would silently skip."
             exit 1
           fi
+          nvidia-smi -L | grep -q "GPU 0" || { echo "ERROR: nvidia-smi reports no GPU devices."; exit 1; }
+          driver_major=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
+          if [ "$driver_major" -lt 560 ]; then
+            echo "ERROR: driver $driver_major is loaded; the driver install did not take effect."
+            exit 1
+          fi
+
+      # The radiation CMake uses find_package(CUDAToolkit QUIET) and builds Vulkan-only when it
+      # fails (including when CUDA's Visual Studio integration is missing), which --requiregpu
+      # does not catch. Check loudly here, in seconds, before the full build.
+      - name: Check CMake can find CUDA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/cudacheck"
+          cd "$RUNNER_TEMP/cudacheck"
+          printf '%s\n' \
+            'cmake_minimum_required(VERSION 3.18)' \
+            'project(cudacheck LANGUAGES CXX)' \
+            'find_package(CUDAToolkit REQUIRED)' \
+            'message(STATUS "CUDAToolkit ${CUDAToolkit_VERSION}: nvcc=${CUDAToolkit_NVCC_EXECUTABLE}")' \
+            'include(CheckLanguage)' \
+            'check_language(CUDA)' \
+            'if(NOT CMAKE_CUDA_COMPILER)' \
+            '  message(FATAL_ERROR "CUDAToolkit found but the CUDA language cannot be enabled")' \
+            'endif()' > CMakeLists.txt
+          cmake -S . -B build
 
       - name: Bash script
         shell: bash
         run: |
           cd utilities
           # --requiregpu turns a would-be GPU test skip into a failure, proving Helios can
-          # actually use the device rather than merely that a driver is installed.
-          if ! ./run_tests.sh --visbuildonly --requiregpu --log-file ../windows_GPU_selftests.log; then
+          # actually use the device rather than merely that a driver is installed. --verbose puts
+          # the CMake output in the log, which the OptiX assertion below reads.
+          if ! ./run_tests.sh --visbuildonly --requiregpu --verbose --log-file ../windows_GPU_selftests.log; then
             echo "==== run_tests.sh failed; dumping windows_GPU_selftests.log ===="
             cat ../windows_GPU_selftests.log
             exit 1
           fi
 
+      # --requiregpu passes on a Vulkan-only or legacy OptiX 6.5 build, neither of which tests the
+      # OptiX 8 backend that users with current drivers run.
+      - name: Assert the OptiX 8.1 backend was built
+        if: always()
+        shell: bash
+        run: |
+          grep -E "\[Radiation\] (OptiX|Detected NVIDIA|Driver supports)|CUDA not found|falling back to Vulkan-only" windows_GPU_selftests.log || true
+          grep -q "\[Radiation\] OptiX 8.1 backend enabled" windows_GPU_selftests.log \
+            || { echo "ERROR: OptiX 8.1 backend was not enabled (Vulkan-only or legacy OptiX 6.5 build)."; exit 1; }
 
-  stop-gpu:
-    needs: run_samples_windows
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
-          aws-region: us-west-2
-      - run: |
-          aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}
-          aws ec2 wait instance-stopped --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}
+          name: windows_GPU_selftests_log
+          path: windows_GPU_selftests.log
