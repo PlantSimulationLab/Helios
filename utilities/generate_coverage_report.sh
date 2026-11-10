@@ -18,7 +18,7 @@ coverage_dir="coverage"
 log_file=""
 
 # Test plugins available for coverage (same as run_tests.sh)
-TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization collisiondetection"
+TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics soiltransport parameteroptimization collisiondetection"
 
 BUILD_TYPE="Debug"  # Coverage requires debug build
 
@@ -63,7 +63,7 @@ Available tests:
   context, energybalance, lidar, aeriallidar, photosynthesis, radiation, leafoptics,
   solarposition, stomatalconductance, visualizer, voxelintersection, weberpenntree,
   canopygenerator, boundarylayerconductance, syntheticannotation, plantarchitecture,
-  projectbuilder, planthydraulics, parameteroptimization, collisiondetection
+  projectbuilder, planthydraulics, soiltransport, parameteroptimization, collisiondetection
 
 Examples:
   # HTML report for radiation test in current directory

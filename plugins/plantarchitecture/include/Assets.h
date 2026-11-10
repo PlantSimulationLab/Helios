@@ -47,6 +47,22 @@
 std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float scale, float mature_scale, float flexibility, float taper = 1.f,
                                             const helios::vec3 &gravity = helios::make_vec3(0.f, 0.f, -1.f));
 
+//! Build the vertex lattice of a generic leaf blade in the prototype's own frame
+/**
+ * This is the geometry \ref GenericLeafPrototype() builds, and the leaf reshaping setters rebuild a leaf from it. The blade runs along +x from its base, at unit length, with its upper (adaxial) side toward
+ * +z. The shape terms are composed in this order:
+ *  1. the cross-section: the midrib fold, the lateral curvature and the roll together give the tangent angle of the cross-section as a function of arc length from the midrib, and each lattice cell is laid
+ *     along that curve at its own width, so the cross-section bends without stretching;
+ *  2. the petiole roll near the blade base;
+ *  3. the longitudinal curvature, which bends the blade along its length;
+ *  4. the waves, displaced along the bent blade's normal;
+ *  5. the translation by \ref LeafShapeValues::lattice_offset.
+ * The deflection under the blade's own weight is applied later, to the leaf in the canopy (see \ref deformLeafLattice()).
+ * \param[in] shape Sampled blade shape and lattice dimensions.
+ * \return Lattice vertices, row-major over (subdivisions_y + 1) rows across the blade by (subdivisions_x + 1) along it, with row subdivisions_y / 2 on the midrib.
+ */
+std::vector<helios::vec3> buildLeafBladeLattice(const LeafShapeValues &shape);
+
 //! Number of vertices a petiolule adds to a leaf prototype built by the generic leaf prototype function
 /**
  * The petiolule's vertices are appended after the blade lattice in the prototype's mesh, so this is what separates the two: the lattice is every vertex but the last petioluleVertexCount().
@@ -79,6 +95,14 @@ uint petioluleVertexCount();
 std::vector<helios::vec3> bendPetioleCenterline(const std::vector<helios::vec3> &rest_offsets, const std::vector<float> &radii, const std::vector<float> &load_arclength_fractions, const std::vector<float> &load_weights,
                                                 float reference_load, float compliance, float *equilibrium_residual = nullptr);
 
+//! Build a leaf blade procedurally from the parameters of a leaf prototype
+/**
+ * The default LeafPrototype::prototype_function. Builds the blade lattice with buildLeafBladeLattice(), textured and with fully transparent facets dropped, and a petiolule if the prototype asks for one.
+ * \param[in] context_ptr Pointer to the Helios context.
+ * \param[in] prototype_parameters Leaf prototype parameters; the shape it built is recorded on it, and its random shape parameters are resampled.
+ * \param[in] compound_leaf_index Index of the leaflet within the compound leaf (0 for the terminal leaflet).
+ * \return Object ID of the leaf.
+ */
 uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index);
 
 uint GeneralSphericalFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
@@ -90,10 +114,15 @@ void AlmondPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 //! Phytomer callback for an almond model that defines a "spur" shoot type: grows spurs from the lateral buds that did not grow a long shoot.
 void AlmondSpurPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 
+//! Apple fruit prototype. Its primitives carry, as defaults for the radiation model, the primitive data "reflectivity_spectrum" (apple_fruit_reflectivity_0000), "specular_roughness" (0.15) and "specular_n" (1.5).
 uint AppleFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
 uint AppleFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters);
 void ApplePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
 void ApplePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
+//! Phytomer creation function of the "apple_fruitingwall" model: the apple rules, with the basal node of every lateral blind.
+void AppleFruitingWallPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
+//! Phytomer callback of the "apple_fruitingwall" model: the apple rules, and the tall-spindle training of the wall, applied once per time step from the leader.
+void AppleFruitingWallPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 
 uint AsparagusLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index);
 void AsparagusPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
@@ -128,6 +157,10 @@ uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions, co
 void GrapevinePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
 void GrapevinePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 
+//! Maize tassel fruit prototype with resolved spikelets and anthers, shaped by the plant's tassel build parameters (see \ref MaizeTassel)
+/**
+ * The geometry is in meters, so the fruit_prototype_scale that goes with it is 1. The subdivisions argument is not used.
+ */
 uint MaizeTasselPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
 uint MaizeEarPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
 void MaizePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
@@ -150,7 +183,8 @@ uint RedbudFruitPrototype(helios::Context *context_ptr, uint subdivisions, const
 void RedbudPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
 void RedbudPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 
-uint RiceSpikePrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
+uint RicePaniclePrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
+uint RiceFloweringPaniclePrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters);
 void RicePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
 
 void ButterLettucePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);

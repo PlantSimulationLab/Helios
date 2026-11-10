@@ -125,14 +125,34 @@ public:
         return visualizer.contextUUIDs_uploaded.size();
     }
 
+    //! glBufferSubData calls the last transferBufferData() made for changed primitives
+    static size_t getPartialUploadCount(const Visualizer &visualizer) {
+        return visualizer.partial_uploads_last_transfer;
+    }
+
+    //! Walks of the Context made since construction
+    static size_t getContextWalkCount(const Visualizer &visualizer) {
+        return visualizer.context_geometry_walk_count;
+    }
+
+    //! Rebuilds of the annotation pass's face-to-primitive lookup since construction
+    static size_t getFaceLookupBuildCount(const Visualizer &visualizer) {
+        return visualizer.annotation_face_lookup_build_count;
+    }
+
+    //! Context primitives the last build examined for changes
+    static size_t getPrimitivesExaminedLastBuild(const Visualizer &visualizer) {
+        return visualizer.context_primitives_examined_last_build;
+    }
+
+    //! Walks of every displayed primitive made to assign Phong material indices
+    static size_t getPhongMaterialWalkCount(const Visualizer &visualizer) {
+        return visualizer.phong_material_walk_count;
+    }
+
     //! Number of geometry elements the handler will push to the GPU on the next transferBufferData()
     static size_t getDirtyGeometryCount(const Visualizer &visualizer) {
         return visualizer.geometry_handler.getDirtyUUIDs().size();
-    }
-
-    //! Which buffers of one geometry element will be pushed to the GPU on the next transferBufferData()
-    static uint16_t getDirtyGeometryAttributes(const Visualizer &visualizer, size_t geometry_id) {
-        return visualizer.geometry_handler.getDirtyUUIDs().at(geometry_id);
     }
 
     //! Vertices of one geometry element as they currently sit in the geometry handler
@@ -1194,7 +1214,10 @@ TEST_CASE("Visualizer::JPEG texture integration via primitives") {
 }
 
 TEST_CASE("Visualizer::Visualizer") {
-    DOCTEST_CHECK_NOTHROW(Visualizer v1(800, 600, true));
+    // The three-argument constructor always opens a window (its third argument is the anti-aliasing sample count)
+    if (windowedContextAvailable()) {
+        DOCTEST_CHECK_NOTHROW(Visualizer v1(800, 600, 1));
+    }
     DOCTEST_CHECK_NOTHROW(Visualizer v2(1024, 768, 4, false, true));
     DOCTEST_CHECK_NOTHROW(Visualizer v3(1280, 720, 8, false, true));
 }
@@ -1320,7 +1343,7 @@ TEST_CASE("Visualizer::validateTextureFile") {
 }
 
 TEST_CASE("Visualizer::point culling configuration simple") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    Visualizer visualizer(800, 600, 0, false, true); // Headless mode
 
     // Test that the new configuration methods exist and don't crash
     DOCTEST_CHECK_NOTHROW(visualizer.setPointCullingEnabled(true));
@@ -1328,7 +1351,7 @@ TEST_CASE("Visualizer::point culling configuration simple") {
 }
 
 TEST_CASE("Visualizer::addPoint basic functionality") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    Visualizer visualizer(800, 600, 0, false, true); // Headless mode
 
     // Test adding a single point
     size_t point_uuid = visualizer.addPoint(make_vec3(0, 0, 0), RGB::red, 1.0f, Visualizer::COORDINATES_CARTESIAN);
@@ -1336,7 +1359,12 @@ TEST_CASE("Visualizer::addPoint basic functionality") {
 }
 
 TEST_CASE("Visualizer::addPoint with different sizes") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    // Windowed: addPoint() validates and clamps point sizes only when a window exists
+    if (!windowedContextAvailable()) {
+        // Skip test silently when no windowed OpenGL context can be created
+        return;
+    }
+    Visualizer visualizer(800, 600, 0, true, false);
 
     // Test adding points with different sizes
     size_t point1 = visualizer.addPoint(make_vec3(0, 0, 0), RGB::red, 1.0f, Visualizer::COORDINATES_CARTESIAN);
@@ -1359,7 +1387,7 @@ TEST_CASE("Visualizer::addPoint with different sizes") {
 }
 
 TEST_CASE("Visualizer::addPoint RGBA with sizes") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    Visualizer visualizer(800, 600, 0, false, true); // Headless mode
 
     // Test adding RGBA points with different sizes
     size_t point1 = visualizer.addPoint(make_vec3(0, 0, 0), make_RGBAcolor(1.0f, 0.0f, 0.0f, 0.8f), 1.5f, Visualizer::COORDINATES_CARTESIAN);
@@ -1371,7 +1399,7 @@ TEST_CASE("Visualizer::addPoint RGBA with sizes") {
 }
 
 TEST_CASE("Visualizer::point culling metrics functionality") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    Visualizer visualizer(800, 600, 0, false, true); // Headless mode
 
     // Test that metrics can be retrieved
     size_t total, rendered;
@@ -1440,15 +1468,20 @@ TEST_CASE("Visualizer point culling assigns visibility to the point it was compu
 }
 
 TEST_CASE("Visualizer::point size edge cases") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    // Windowed: addPoint() validates and clamps point sizes only when a window exists
+    if (!windowedContextAvailable()) {
+        // Skip test silently when no windowed OpenGL context can be created
+        return;
+    }
+    Visualizer visualizer(800, 600, 0, true, false);
 
-    // Test with very small point size (should trigger warning and not crash in headless mode)
+    // Test with very small point size (should trigger warning and not crash)
     capture_cerr cerr_buffer1;
     size_t point1 = visualizer.addPoint(make_vec3(0, 0, 0), RGB::white, 0.001f, Visualizer::COORDINATES_CARTESIAN);
     DOCTEST_CHECK(point1 != 0);
     DOCTEST_CHECK(cerr_buffer1.has_output()); // Should capture warning about point size clamping
 
-    // Test with very large point size (should trigger warning and not crash in headless mode)
+    // Test with very large point size (should trigger warning and not crash)
     capture_cerr cerr_buffer2;
     size_t point2 = visualizer.addPoint(make_vec3(1, 0, 0), RGB::white, 1000.0f, Visualizer::COORDINATES_CARTESIAN);
     DOCTEST_CHECK(point2 != 0);
@@ -1497,6 +1530,10 @@ TEST_CASE("CI/Offscreen - Geometry Rendering") {
 TEST_CASE("CI/Offscreen - Environment Variable Detection") {
     // Test that environment variables are properly detected
     // Note: This test runs in normal environment, so we just test the code paths
+    if (!windowedContextAvailable()) {
+        // Skip test silently when no windowed OpenGL context can be created
+        return;
+    }
 
     // Test with explicit headless=false but environment might force it
     DOCTEST_CHECK_NOTHROW({
@@ -1741,6 +1778,10 @@ TEST_CASE("Visualizer::headless render after windowed instance destroyed") {
     // original failure was allocator-layout dependent and only manifested reliably
     // within the full suite, so this case guards the ordering rather than guaranteeing
     // reproduction of the exact memory state.
+    if (!windowedContextAvailable()) {
+        // Skip test silently when no windowed OpenGL context can be created
+        return;
+    }
 
     // First, create and destroy a WINDOWED instance to populate freed memory with
     // plausible GL handle values (mirrors the test-suite ordering that exposed the bug).
@@ -2990,33 +3031,31 @@ TEST_CASE("Visualizer resolves its assets independently of the working directory
     std::filesystem::remove_all(scratch_directory, ec);
 }
 
-#ifndef _WIN32
+#ifdef __linux__
+#include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+extern char **environ;
 
 DOCTEST_TEST_CASE("Visualizer::plotOnce does not terminate the process") {
     // The bug this guards against is a SIGSEGV inside the GL driver, which doctest cannot catch:
     // an in-process crash takes down the whole test runner instead of reporting a failure. So the
-    // call is made in a forked child and the parent inspects the wait status. Modeled on the
-    // fork()-based test in plugins/radiation/tests/selfTest.cpp.
+    // call is made in a child process and the parent inspects the wait status.
     //
-    // macOS is excluded rather than merely #ifndef _WIN32. doctest runs this whole file in one
-    // process, and the first test case in it constructs a Visualizer, so by the time we get here
-    // the parent has already initialized GLFW/OpenGL and therefore the Objective-C runtime. Apple's
-    // CoreFoundation aborts a forked child that re-enters it, which would surface below as
-    // WIFSIGNALED and be indistinguishable from the very crash this test exists to detect. The
-    // headless test case above is the portable assertion; this one is the crash backstop on
-    // platforms where forking after GL initialization is safe.
-#ifndef __APPLE__
-    std::cout.flush();
-    std::cerr.flush();
+    // The child is a fresh process -- this test binary started again, running only this test case --
+    // not a fork() of the parent. doctest runs this whole file in one process, so by the time we get
+    // here earlier test cases have initialized OpenGL, and GL drivers are not fork-safe: the NVIDIA
+    // EGL driver aborts a forked child that creates a context of its own, which surfaced below as
+    // WIFSIGNALED and was indistinguishable from the very crash this test exists to detect (Apple's
+    // CoreFoundation does the same to a forked child that re-enters it). /proc/self/exe makes this
+    // Linux-only; the headless test case above is the portable assertion, and this one is the crash
+    // backstop.
+    const char *child_flag_name = "HELIOS_VISUALIZER_PLOTONCE_CHILD";
 
-    pid_t child = fork();
-
-    if (child == 0) {
-        // Child: report status through the exit code only - no doctest macros, and _exit() rather
-        // than exit() so the parent's atexit handlers do not run a second time in the child's
-        // inherited copy of that state.
+    if (std::getenv(child_flag_name) != nullptr) {
+        // Child: report status through the exit code only - no doctest macros, and _exit() so that
+        // doctest does not go on to report on a test case whose outcome is the parent's to judge.
         int status = 0;
         try {
             Visualizer visualizer(200, 200, 0, true, true); // headless
@@ -3029,7 +3068,28 @@ DOCTEST_TEST_CASE("Visualizer::plotOnce does not terminate the process") {
         _exit(status);
     }
 
-    DOCTEST_REQUIRE(child > 0);
+    std::error_code error;
+    std::string test_executable = std::filesystem::read_symlink("/proc/self/exe", error).string();
+    DOCTEST_REQUIRE_MESSAGE(!error, "Could not resolve the test executable from /proc/self/exe: " << error.message());
+
+    std::string test_case_filter = "--test-case=Visualizer::plotOnce does not terminate the process";
+    std::string no_intro = "--no-intro";
+    char *child_arguments[] = {test_executable.data(), test_case_filter.data(), no_intro.data(), nullptr};
+
+    std::vector<char *> child_environment;
+    for (char **variable = environ; *variable != nullptr; variable++) {
+        child_environment.push_back(*variable);
+    }
+    std::string child_flag = std::string(child_flag_name) + "=1";
+    child_environment.push_back(child_flag.data());
+    child_environment.push_back(nullptr);
+
+    std::cout.flush();
+    std::cerr.flush();
+
+    pid_t child = 0;
+    const int spawn_error = posix_spawn(&child, test_executable.c_str(), nullptr, nullptr, child_arguments, child_environment.data());
+    DOCTEST_REQUIRE_MESSAGE(spawn_error == 0, "posix_spawn of " << test_executable << " failed: " << std::strerror(spawn_error));
 
     int wait_status = 0;
     DOCTEST_REQUIRE(waitpid(child, &wait_status, 0) == child);
@@ -3043,9 +3103,8 @@ DOCTEST_TEST_CASE("Visualizer::plotOnce does not terminate the process") {
     if (WIFEXITED(wait_status)) {
         DOCTEST_CHECK(WEXITSTATUS(wait_status) == 0);
     }
-#endif // __APPLE__
 }
-#endif // _WIN32
+#endif // __linux__
 
 int Visualizer::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
@@ -4889,6 +4948,49 @@ DOCTEST_TEST_CASE("Visualizer re-uploads displayed primitives whose material was
     DOCTEST_CHECK(VisualizerTestHelper::getGeometryColor(visualizer, colored_UUID).g == doctest::Approx(1.f));
 }
 
+DOCTEST_TEST_CASE("Visualizer draws a primitive with its color texture") {
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    // A copy of the texture in another color, with exactly the same transparency
+    const std::string shape_texture = "plugins/visualizer/textures/AlmondLeaf.png";
+    uint width = 0;
+    uint height = 0;
+    std::vector<RGBAcolor> pixels;
+    helios::readPNG(shape_texture, width, height, pixels);
+    for (RGBAcolor &pixel: pixels) {
+        pixel = make_RGBAcolor(1.f, 1.f, 0.f, pixel.a);
+    }
+    const std::string color_texture = (std::filesystem::temp_directory_path() / "helios_test_visualizer_color_texture.png").string();
+    helios::writePNG(color_texture, width, height, pixels);
+
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    const int texture_before = VisualizerTestHelper::getGeometryTextureID(visualizer, UUID);
+    DOCTEST_REQUIRE(texture_before >= 0);
+
+    context.markGeometryClean();
+    context.setPrimitiveColorTexture(UUID, color_texture);
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    const int texture_with_color = VisualizerTestHelper::getGeometryTextureID(visualizer, UUID);
+    DOCTEST_CHECK(texture_with_color >= 0);
+    DOCTEST_CHECK(texture_with_color != texture_before);
+
+    context.markGeometryClean();
+    context.setPrimitiveColorTexture(UUID, "");
+    VisualizerTestHelper::buildContextGeometry_private(visualizer);
+    DOCTEST_CHECK(VisualizerTestHelper::getGeometryTextureID(visualizer, UUID) == texture_before);
+
+    std::filesystem::remove(color_texture);
+}
+
 DOCTEST_TEST_CASE("Visualizer recoloring keeps a Context texture color override") {
     // A textured primitive whose Context material overrides the texture color is drawn in its own color, masked by the
     // texture's alpha. Recoloring the displayed scene - here prompted by a colorbar range change - must apply the rule
@@ -5232,321 +5334,6 @@ TEST_CASE("Visualizer instances that are alive together each keep drawing their 
     const int3 red_after_blue = centerColor(red);
     CHECK(red_after_blue.y > 200);
     CHECK(red_after_blue.x > 200);
-}
-
-namespace {
-
-    //! Renders the Context in a new visualizer, for comparing with one that has updated its scene over several frames
-    std::vector<uint> renderPhongScene(Context &context, uint width, uint height) {
-        Visualizer visualizer(width, height, 1, false, true);
-        visualizer.disableMessages();
-        visualizer.hideWatermark();
-        visualizer.hideNavigationGizmo();
-        visualizer.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
-        visualizer.setBackgroundColor(make_RGBcolor(0, 0, 0));
-        visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
-        visualizer.buildContextGeometry(&context);
-        visualizer.plotUpdate(true);
-        std::vector<uint> pixels;
-        uint w, h;
-        visualizer.getWindowPixelsRGB(pixels, w, h);
-        return pixels;
-    }
-
-    //! Two materials of one color that shade differently, so that an image can show only by their Phong parameters which is in use
-    void addDarkAndBrightMaterials(Context &context) {
-        for (const std::string &label: {std::string("dark"), std::string("bright")}) {
-            context.addMaterial(label);
-            context.setMaterialColor(label, make_RGBAcolor(0.5f, 0.5f, 0.5f, 1));
-        }
-        context.setMaterialData("dark", "phong_ambient", 0.05f);
-        context.setMaterialData("dark", "phong_diffuse", 0.05f);
-        context.setMaterialData("bright", "phong_ambient", 0.9f);
-        context.setMaterialData("bright", "phong_diffuse", 0.9f);
-    }
-
-} // namespace
-
-TEST_CASE("Visualizer applies the material of a primitive added after the first frame") {
-    if (!headlessContextAvailable()) {
-        return;
-    }
-    Context context;
-    addDarkAndBrightMaterials(context);
-    const uint first_dark = context.addPatch(make_vec3(-1, 0, 0), make_vec2(0.8f, 0.8f));
-    const uint first_bright = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.8f, 0.8f));
-    context.assignMaterialToPrimitive(first_dark, "dark");
-    context.assignMaterialToPrimitive(first_bright, "bright");
-
-    const uint width = 100;
-    const uint height = 100;
-    Visualizer updated(width, height, 1, false, true);
-    updated.disableMessages();
-    updated.hideWatermark();
-    updated.hideNavigationGizmo();
-    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
-    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
-    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
-    updated.buildContextGeometry(&context);
-    updated.plotUpdate(true);
-
-    // Both materials are already in the table, so adding this primitive changes nothing about the table itself
-    const uint later = context.addPatch(make_vec3(1, 0, 0), make_vec2(0.8f, 0.8f));
-    context.assignMaterialToPrimitive(later, "bright");
-    updated.plotUpdate(true);
-    std::vector<uint> pixels;
-    uint w, h;
-    updated.getWindowPixelsRGB(pixels, w, h);
-
-    CHECK(pixels == renderPhongScene(context, width, height));
-}
-
-TEST_CASE("Visualizer applies a different existing material assigned after the first frame") {
-    if (!headlessContextAvailable()) {
-        return;
-    }
-    Context context;
-    addDarkAndBrightMaterials(context);
-    const uint first_dark = context.addPatch(make_vec3(-1, 0, 0), make_vec2(0.8f, 0.8f));
-    const uint first_bright = context.addPatch(make_vec3(1, 0, 0), make_vec2(0.8f, 0.8f));
-    // Keeps "dark" in use, so that the assignment below leaves the table of materials as it was
-    const uint other_dark = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.8f, 0.8f));
-    context.assignMaterialToPrimitive(first_dark, "dark");
-    context.assignMaterialToPrimitive(first_bright, "bright");
-    context.assignMaterialToPrimitive(other_dark, "dark");
-
-    const uint width = 100;
-    const uint height = 100;
-    Visualizer updated(width, height, 1, false, true);
-    updated.disableMessages();
-    updated.hideWatermark();
-    updated.hideNavigationGizmo();
-    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
-    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
-    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
-    updated.buildContextGeometry(&context);
-    updated.plotUpdate(true);
-    std::vector<uint> before, after;
-    uint w, h;
-    updated.getWindowPixelsRGB(before, w, h);
-
-    context.assignMaterialToPrimitive(first_dark, "bright");
-    updated.plotUpdate(true);
-    updated.getWindowPixelsRGB(after, w, h);
-
-    CHECK(after != before);
-    CHECK(after == renderPhongScene(context, width, height));
-}
-
-TEST_CASE("Visualizer shows a change to the data of a material in use") {
-    // This marks no primitive as changed, so nothing in the geometry says that it happened
-    if (!headlessContextAvailable()) {
-        return;
-    }
-    Context context;
-    addDarkAndBrightMaterials(context);
-    const uint dark = context.addPatch(make_vec3(-1, 0, 0), make_vec2(0.8f, 0.8f));
-    const uint bright = context.addPatch(make_vec3(1, 0, 0), make_vec2(0.8f, 0.8f));
-    context.assignMaterialToPrimitive(dark, "dark");
-    context.assignMaterialToPrimitive(bright, "bright");
-
-    const uint width = 100;
-    const uint height = 100;
-    Visualizer updated(width, height, 1, false, true);
-    updated.disableMessages();
-    updated.hideWatermark();
-    updated.hideNavigationGizmo();
-    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
-    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
-    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
-    updated.buildContextGeometry(&context);
-    updated.plotUpdate(true);
-    std::vector<uint> before, after;
-    uint w, h;
-    updated.getWindowPixelsRGB(before, w, h);
-    context.markGeometryClean();
-
-    context.setMaterialData("dark", "phong_ambient", 0.5f);
-    updated.plotUpdate(true);
-    updated.getWindowPixelsRGB(after, w, h);
-
-    context.markGeometryDirty();
-    CHECK(after != before);
-    CHECK(after == renderPhongScene(context, width, height));
-}
-
-TEST_CASE("GeometryHandler reports only the buffers that an update changed") {
-    if (!headlessContextAvailable()) {
-        return;
-    }
-    Context context;
-    const uint moved = context.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), make_RGBcolor(1, 0, 0));
-    const uint recolored = context.addTriangle(make_vec3(2, 0, 0), make_vec3(3, 0, 0), make_vec3(2, 1, 0), make_RGBcolor(1, 0, 0));
-    const uint untouched = context.addTriangle(make_vec3(4, 0, 0), make_vec3(5, 0, 0), make_vec3(4, 1, 0), make_RGBcolor(1, 0, 0));
-
-    Visualizer visualizer(64, 64, 0, true, true);
-    visualizer.disableMessages();
-    visualizer.buildContextGeometry(&context);
-    visualizer.plotUpdate(true);
-    context.markGeometryClean();
-    DOCTEST_REQUIRE(VisualizerTestHelper::getDirtyGeometryCount(visualizer) == 0);
-
-    context.translatePrimitive(moved, make_vec3(0, 0, 1));
-    context.setPrimitiveColor(recolored, make_RGBcolor(0, 1, 0));
-    VisualizerTestHelper::buildContextGeometry_private(visualizer);
-
-    const uint16_t moved_attributes = VisualizerTestHelper::getDirtyGeometryAttributes(visualizer, moved);
-    CHECK((moved_attributes & GeometryHandler::ATTRIBUTE_VERTEX) != 0);
-    CHECK((moved_attributes & GeometryHandler::ATTRIBUTE_COLOR) == 0);
-    CHECK((moved_attributes & GeometryHandler::ATTRIBUTE_UV) == 0);
-    CHECK((moved_attributes & GeometryHandler::ATTRIBUTE_TEXTURE_ID) == 0);
-
-    const uint16_t recolored_attributes = VisualizerTestHelper::getDirtyGeometryAttributes(visualizer, recolored);
-    CHECK((recolored_attributes & GeometryHandler::ATTRIBUTE_COLOR) != 0);
-    CHECK((recolored_attributes & GeometryHandler::ATTRIBUTE_VERTEX) == 0);
-
-    CHECK(VisualizerTestHelper::getDirtyGeometryCount(visualizer) == 2);
-    static_cast<void>(untouched);
-}
-
-TEST_CASE("Visualizer updating each kind of primitive data separately matches rendering from scratch") {
-    // Each round changes one thing, so that a buffer left out of the upload shows as a difference from a fresh render
-    if (!headlessContextAvailable()) {
-        return;
-    }
-    Context context;
-    const uint triangle = context.addTriangle(make_vec3(-2, -1, 0), make_vec3(-1, -1, 0), make_vec3(-2, 0, 0), make_RGBcolor(1, 0, 0));
-    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 1, 0));
-    const uint textured = context.addPatch(make_vec3(0, 1.5f, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), "plugins/visualizer/textures/AlmondLeaf.png");
-    const uint tube = context.addTubeObject(8, {make_vec3(1.5f, -1, 0), make_vec3(1.5f, 0, 0), make_vec3(1.5f, 1, 0)}, {0.2f, 0.2f, 0.2f}, std::vector<RGBcolor>(3, make_RGBcolor(0, 0, 1)));
-
-    const uint width = 100;
-    const uint height = 100;
-    Visualizer updated(width, height, 1, false, true);
-    updated.disableMessages();
-    updated.hideWatermark();
-    updated.hideNavigationGizmo();
-    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
-    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
-    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
-    updated.buildContextGeometry(&context);
-    updated.plotUpdate(true);
-
-    auto checkMatchesFreshRender = [&](const std::string &round) {
-        updated.plotUpdate(true);
-        std::vector<uint> pixels;
-        uint w, h;
-        updated.getWindowPixelsRGB(pixels, w, h);
-        const std::vector<uint> fresh = renderPhongScene(context, width, height);
-        INFO(round);
-        CHECK(pixels == fresh);
-    };
-
-    context.translatePrimitive(triangle, make_vec3(0.2f, 0.1f, 0));
-    checkMatchesFreshRender("position only");
-    context.setPrimitiveColor(patch, make_RGBcolor(1, 1, 0));
-    checkMatchesFreshRender("color only");
-    context.rotatePrimitive(triangle, 0.3f, "z");
-    checkMatchesFreshRender("position and normal");
-    context.setPrimitiveTextureFile(textured, "plugins/visualizer/textures/GrapeLeaf.png");
-    checkMatchesFreshRender("texture");
-    context.setTubeNodes(tube, {make_vec3(1.5f, -1, 0), make_vec3(1.8f, 0, 0), make_vec3(1.5f, 1, 0.3f)});
-    checkMatchesFreshRender("tube, with smooth normals");
-    context.overridePrimitiveTextureColor(textured);
-    context.setPrimitiveColor(textured, make_RGBcolor(1, 0, 1));
-    checkMatchesFreshRender("texture flag");
-}
-
-TEST_CASE("Visualizer::prepareContextGeometry on other threads matches rendering from scratch") {
-    if (!headlessContextAvailable()) {
-        return;
-    }
-    // Several visualizers, each with its own Context, prepared at once on threads that have no OpenGL context
-    const int tree_count = 4;
-    const uint width = 100;
-    const uint height = 100;
-    std::vector<std::unique_ptr<Context>> contexts;
-    std::vector<std::vector<uint>> patches;
-    std::vector<std::unique_ptr<Visualizer>> visualizers;
-    for (int t = 0; t < tree_count; t++) {
-        contexts.push_back(std::make_unique<Context>());
-        addDarkAndBrightMaterials(*contexts.back());
-        patches.emplace_back();
-        for (int i = 0; i < 40; i++) {
-            const uint UUID = contexts.back()->addPatch(make_vec3(0.2f * float(i - 20), 0.2f * float(t - 2), 0), make_vec2(0.15f, 0.15f));
-            contexts.back()->assignMaterialToPrimitive(UUID, i % 2 == 0 ? "dark" : "bright");
-            patches.back().push_back(UUID);
-        }
-        contexts.back()->addPatch(make_vec3(0, 0, 0.5f), make_vec2(0.3f, 0.3f), make_SphericalCoord(0, 0), "plugins/visualizer/textures/AlmondLeaf.png");
-        visualizers.push_back(std::make_unique<Visualizer>(width, height, 1, false, true));
-        visualizers.back()->disableMessages();
-        visualizers.back()->hideWatermark();
-        visualizers.back()->hideNavigationGizmo();
-        visualizers.back()->setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
-        visualizers.back()->setBackgroundColor(make_RGBcolor(0, 0, 0));
-        visualizers.back()->setLightingModel(Visualizer::LIGHTING_PHONG);
-        visualizers.back()->buildContextGeometry(contexts.back().get());
-    }
-
-    // The first round builds the whole scene, which includes reading the texture and resolving the materials
-    for (int round = 0; round < 3; round++) {
-        std::vector<std::thread> threads;
-        for (int t = 0; t < tree_count; t++) {
-            threads.emplace_back([&, t]() {
-                if (round > 0) {
-                    contexts[t]->translatePrimitive(patches[t][size_t(round) * 3], make_vec3(0, 0.05f, 0));
-                }
-                visualizers[t]->prepareContextGeometry();
-            });
-        }
-        for (std::thread &thread: threads) {
-            thread.join();
-        }
-        for (int t = 0; t < tree_count; t++) {
-            visualizers[t]->plotUpdate(true);
-        }
-        for (int t = 0; t < tree_count; t++) {
-            std::vector<uint> pixels;
-            uint w, h;
-            visualizers[t]->getWindowPixelsRGB(pixels, w, h);
-            const std::vector<uint> fresh = renderPhongScene(*contexts[t], width, height);
-            CHECK(pixels == fresh);
-        }
-    }
-}
-
-TEST_CASE("Visualizer::plotUpdate shows a change made after prepareContextGeometry") {
-    if (!headlessContextAvailable()) {
-        return;
-    }
-    Context context;
-    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 1, 0));
-
-    const uint width = 100;
-    const uint height = 100;
-    Visualizer updated(width, height, 1, false, true);
-    updated.disableMessages();
-    updated.hideWatermark();
-    updated.hideNavigationGizmo();
-    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
-    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
-    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
-    updated.buildContextGeometry(&context);
-    updated.plotUpdate(true);
-
-    updated.prepareContextGeometry();
-    context.translatePrimitive(patch, make_vec3(1, 0, 0));
-    updated.plotUpdate(true);
-    std::vector<uint> pixels;
-    uint w, h;
-    updated.getWindowPixelsRGB(pixels, w, h);
-    CHECK(pixels == renderPhongScene(context, width, height));
-
-    // With no Context there is nothing to prepare, and it is not an error
-    Visualizer without_context(width, height, 1, false, true);
-    without_context.disableMessages();
-    DOCTEST_CHECK_NOTHROW(without_context.prepareContextGeometry());
-    DOCTEST_CHECK_NOTHROW(without_context.plotUpdate(true));
 }
 
 TEST_CASE("Visualizer updating scattered primitives in place matches rendering them from scratch") {
@@ -6048,6 +5835,42 @@ DOCTEST_TEST_CASE("Visualizer pixel-to-primitive map is independent of anti-alia
         DOCTEST_CHECK(color.b == doctest::Approx(patch_color.b));
     }
     DOCTEST_CHECK(context.listAllPrimitiveDataLabels() == data_labels_before);
+}
+
+DOCTEST_TEST_CASE("Visualizer depth map coverage is independent of anti-aliasing") {
+    // The depth pass renders to a single-sampled framebuffer. Polygon smoothing, which an anti-aliased Visualizer enables
+    // for its color passes, made drivers that honor it (NVIDIA) write depth one pixel beyond every edge of every primitive.
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    Context context;
+    for (int i = 0; i < 5; i++) {
+        context.addPatch(make_vec3(-2.f + float(i), 0.3f * float(i), 0.2f * float(i)), make_vec2(1.3f, 0.9f), make_SphericalCoord(0.3f * float(i), 0.5f * float(i)), RGB::green);
+    }
+
+    auto depthMap = [&](int antialiasing_samples) {
+        Visualizer visualizer(160, 120, antialiasing_samples, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.buildContextGeometry(&context);
+        visualizer.setCameraPosition(make_vec3(1, -6, 6), make_vec3(0, 0, 0));
+        std::vector<float> depth_pixels;
+        uint width, height;
+        visualizer.getDepthMap(depth_pixels, width, height);
+        return depth_pixels;
+    };
+
+    const std::vector<float> depth_aliased = depthMap(0);
+    const std::vector<float> depth_antialiased = depthMap(8);
+    DOCTEST_REQUIRE(depth_aliased.size() == depth_antialiased.size());
+
+    // The background is the farthest depth, which getDepthMap() maps to 0
+    auto coveredPixelCount = [](const std::vector<float> &depth_pixels) { return std::count_if(depth_pixels.begin(), depth_pixels.end(), [](float value) { return value > 0.f; }); };
+    const auto covered_aliased = coveredPixelCount(depth_aliased);
+    DOCTEST_REQUIRE(covered_aliased > 0);
+    DOCTEST_CHECK(coveredPixelCount(depth_antialiased) == covered_aliased);
+    DOCTEST_CHECK(depth_aliased == depth_antialiased);
 }
 
 DOCTEST_TEST_CASE("Visualizer pixel-to-primitive map sees through transparent texture pixels") {
@@ -6759,5 +6582,749 @@ DOCTEST_TEST_CASE("Visualizer lights each face of a Context voxel from outside t
         const uint lit = centerGreenLevel(5.f * outward, outward);
         const uint unlit = centerGreenLevel(5.f * outward, -1.f * outward);
         DOCTEST_CHECK(lit > unlit + 40);
+    }
+}
+
+namespace {
+    //! A grid of small triangles over [-1,1]^2 at z=0, added in order so they sit together in the buffers
+    std::vector<uint> addTriangleGrid(Context &context, int per_side) {
+        std::vector<uint> UUIDs;
+        const float step = 2.f / float(per_side);
+        for (int j = 0; j < per_side; j++) {
+            for (int i = 0; i < per_side; i++) {
+                const vec3 corner = make_vec3(-1.f + step * float(i), -1.f + step * float(j), 0.f);
+                UUIDs.push_back(context.addTriangle(corner, corner + make_vec3(0.8f * step, 0, 0), corner + make_vec3(0, 0.8f * step, 0), RGB::green));
+            }
+        }
+        return UUIDs;
+    }
+
+    void setUpView(Visualizer &visualizer) {
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        // Not (0,0,2) looking at the origin: that is the default camera, which the first build re-frames
+        visualizer.setCameraPosition(make_vec3(0.3f, -0.4f, 3.f), make_vec3(0, 0, 0));
+    }
+} // namespace
+
+TEST_CASE("Moving displayed geometry uploads one run per buffer, not one slice per primitive") {
+    // transferBufferData() uploaded each changed primitive's slice of each of its twelve buffers on
+    // its own: moving a 2900-primitive plant cost ~35000 glBufferSubData calls and ~220 ms per frame
+    // through Apple's OpenGL, against ~10 ms when nothing had changed. Primitives added together sit
+    // together in the buffers, so moving them must cost a handful of uploads however many there are.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 40); // 1600 triangles
+
+    Visualizer visualizer(200, 150, 0, false, true);
+    setUpView(visualizer);
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    const std::vector<uint> moved(UUIDs.begin(), UUIDs.begin() + 800);
+    context.translatePrimitive(moved, make_vec3(0.01f, 0, 0));
+    visualizer.buildContextGeometry(&context);
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    // 800 primitives changed in the triangle buffers: one contiguous run in each of twelve buffers
+    DOCTEST_CHECK(VisualizerTestHelper::getPartialUploadCount(visualizer) <= 12);
+    DOCTEST_CHECK(VisualizerTestHelper::getPartialUploadCount(visualizer) > 0);
+
+    // Nothing changed: nothing is uploaded
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPartialUploadCount(visualizer) == 0);
+}
+
+TEST_CASE("Geometry changed after display renders as a fresh build of the changed scene does") {
+    // The partial uploads must leave every buffer the GPU reads equal to the CPU-side arrays, whatever
+    // the pattern of changes: scattered primitives (runs that do not merge), a block (one run), and a
+    // recolor (only the color buffer is meant to change). Compared against a Visualizer that never saw
+    // the old scene, by primitive identity and by color, pixel for pixel.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 60); // 3600 triangles
+    context.addPatch(make_vec3(0, 0, -0.01f), make_vec2(2.5f, 2.5f), make_SphericalCoord(0, 0), RGB::blue);
+
+    Visualizer incremental(240, 180, 0, false, true);
+    setUpView(incremental);
+    incremental.enableExactColorMode();
+    incremental.buildContextGeometry(&context);
+    std::vector<uint> before;
+    uint width = 0, height = 0;
+    incremental.getPixelUUIDs(before, width, height);
+
+    std::vector<uint> scattered, block;
+    for (size_t k = 0; k < UUIDs.size(); k += 997) {
+        scattered.push_back(UUIDs.at(k)); // far enough apart that their runs stay separate
+    }
+    block.assign(UUIDs.begin() + 1000, UUIDs.begin() + 1600);
+    context.translatePrimitive(scattered, make_vec3(0.05f, 0.05f, 0.1f));
+    context.translatePrimitive(block, make_vec3(-0.1f, 0, 0.05f));
+    context.setPrimitiveColor(std::vector<uint>(UUIDs.begin() + 2000, UUIDs.begin() + 2400), RGB::red);
+
+    incremental.buildContextGeometry(&context);
+    std::vector<uint> after;
+    incremental.getPixelUUIDs(after, width, height);
+    DOCTEST_REQUIRE(after != before); // the change is visible, so the comparison below means something
+    std::vector<uint> incremental_rgb;
+    uint rgb_width = 0, rgb_height = 0;
+    incremental.getWindowPixelsRGB(incremental_rgb, rgb_width, rgb_height);
+
+    Visualizer fresh(240, 180, 0, false, true);
+    setUpView(fresh);
+    fresh.enableExactColorMode();
+    fresh.buildContextGeometry(&context);
+    std::vector<uint> expected;
+    fresh.getPixelUUIDs(expected, width, height);
+    std::vector<uint> fresh_rgb;
+    fresh.getWindowPixelsRGB(fresh_rgb, rgb_width, rgb_height);
+
+    DOCTEST_CHECK(after == expected);
+    DOCTEST_CHECK(incremental_rgb == fresh_rgb);
+}
+
+
+namespace {
+    //! Where a pinhole camera puts a world point: (column, row) from the top-left corner, in pixels
+    /** Written from the camera's definition, independently of how the Visualizer builds its matrices. */
+    vec2 pinholePixel(const vec3 &eye, const vec3 &lookat, const vec3 &world_up, float vertical_fov_degrees, uint width, uint height, float principal_column, float principal_row, const vec3 &point) {
+        vec3 forward = lookat - eye;
+        forward.normalize();
+        vec3 right = cross(forward, world_up);
+        right.normalize();
+        vec3 image_down = cross(forward, right); // = -(camera up)
+        const float focal = 0.5f * float(height) / std::tan(0.5f * deg2rad(vertical_fov_degrees));
+        const vec3 d = point - eye;
+        const float depth = d * forward;
+        return make_vec2(principal_column + focal * (d * right) / depth, principal_row + focal * (d * image_down) / depth);
+    }
+
+    //! Centroid of the pixels showing one primitive, from the pixel-to-primitive map; (-1,-1) when none do
+    vec2 pixelCentroid(const std::vector<uint> &pixel_UUIDs, uint width, uint UUID) {
+        double column_sum = 0, row_sum = 0;
+        size_t count = 0;
+        for (size_t k = 0; k < pixel_UUIDs.size(); k++) {
+            if (pixel_UUIDs[k] == UUID + 1) {
+                column_sum += double(k % width) + 0.5;
+                row_sum += double(k / width) + 0.5;
+                count++;
+            }
+        }
+        return count == 0 ? make_vec2(-1, -1) : make_vec2(float(column_sum / count), float(row_sum / count));
+    }
+} // namespace
+
+TEST_CASE("A camera set to the default position is not re-framed to fit the scene") {
+    // The first build fitted the camera to the scene whenever the camera still held its default
+    // position, judged by comparing coordinates: a camera set on purpose to (0,0,2) looking at the
+    // origin was moved to a 20-degree oblique view with no notice.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(0.5f, 0.5f));
+
+    Visualizer visualizer(200, 150, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.setCameraPosition(make_vec3(0, 0, 2), make_vec3(0, 0, 0));
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    const std::vector<vec3> camera = visualizer.getCameraPosition(); // {look-at, eye}
+    DOCTEST_CHECK(camera.at(0) == make_vec3(0, 0, 0));
+    DOCTEST_CHECK(camera.at(1) == make_vec3(0, 0, 2));
+
+    // A camera nobody set is still fitted to the scene
+    Visualizer unset(200, 150, 0, false, true);
+    unset.disableMessages();
+    unset.buildContextGeometry(&context);
+    unset.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(unset.getCameraPosition().at(1) != make_vec3(0, 0, 2));
+}
+
+TEST_CASE("The camera projects as a pinhole with its field of view, up direction and principal point") {
+    // Small squares at known positions must appear where a pinhole camera with the same pose, vertical
+    // field of view, up direction and principal point puts them. Covers the automatic up direction,
+    // a set one that rolls the image, and an off-centre principal point.
+    const uint width = 320, height = 240;
+    const float fov = 40.f;
+    const vec3 eye = make_vec3(0.6f, -0.9f, 2.2f);
+    const vec3 lookat = make_vec3(0.05f, 0.1f, 0.f);
+
+    Context context;
+    const std::vector<vec3> centres = {make_vec3(0, 0, 0), make_vec3(0.35f, 0.1f, 0.05f), make_vec3(-0.3f, 0.3f, 0.f), make_vec3(0.1f, -0.35f, 0.1f), make_vec3(-0.25f, -0.2f, 0.2f)};
+    std::vector<uint> UUIDs;
+    for (const vec3 &c: centres) {
+        UUIDs.push_back(context.addPatch(c, make_vec2(0.04f, 0.04f)));
+    }
+
+    struct Case {
+        const char *name;
+        bool set_up;
+        vec3 up;
+        bool set_principal;
+        float principal_column, principal_row;
+    };
+    const std::vector<Case> cases = {{"automatic up, centred", false, make_vec3(0, 0, 1), false, 0.5f * width, 0.5f * height},
+                                     {"rolled by a set up direction", true, make_vec3(1, 0.3f, 0.2f), false, 0.5f * width, 0.5f * height},
+                                     {"off-centre principal point", true, make_vec3(0, 0, 1), true, 0.5f * width + 37.f, 0.5f * height - 21.f}};
+
+    for (const Case &c: cases) {
+        DOCTEST_CAPTURE(c.name);
+        Visualizer visualizer(width, height, 0, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.setCameraPosition(eye, lookat);
+        visualizer.setCameraFieldOfView(fov);
+        if (c.set_up) {
+            visualizer.setCameraUpDirection(c.up);
+        }
+        if (c.set_principal) {
+            visualizer.setCameraPrincipalPoint(c.principal_column, c.principal_row);
+        }
+        visualizer.buildContextGeometry(&context);
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.getPixelUUIDs(pixels, w, h);
+        DOCTEST_REQUIRE(w == width);
+        DOCTEST_REQUIRE(h == height);
+
+        for (size_t k = 0; k < centres.size(); k++) {
+            DOCTEST_CAPTURE(k);
+            const vec2 expected = pinholePixel(eye, lookat, c.up, fov, width, height, c.principal_column, c.principal_row, centres[k]);
+            const vec2 seen = pixelCentroid(pixels, w, UUIDs[k]);
+            DOCTEST_REQUIRE(seen.x >= 0.f); // the square is in view
+            DOCTEST_CHECK(std::fabs(seen.x - expected.x) < 0.75f);
+            DOCTEST_CHECK(std::fabs(seen.y - expected.y) < 0.75f);
+        }
+    }
+}
+
+TEST_CASE("A camera up direction that cannot fix the roll is refused") {
+    Visualizer visualizer(64, 64, 0, false, true);
+    visualizer.disableMessages();
+    DOCTEST_CHECK_THROWS(visualizer.setCameraUpDirection(make_vec3(0, 0, 0)));
+    DOCTEST_CHECK_THROWS(visualizer.setCameraPrincipalPoint(std::nanf(""), 10.f));
+
+    // Parallel to the view: refused when the frame is rendered, rather than replaced by another roll
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(0.5f, 0.5f));
+    visualizer.setCameraPosition(make_vec3(0, 0, 3), make_vec3(0, 0, 0));
+    visualizer.setCameraUpDirection(make_vec3(0, 0, 1));
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    DOCTEST_CHECK_THROWS(visualizer.getPixelUUIDs(pixels, width, height));
+
+    visualizer.clearCameraUpDirection();
+    DOCTEST_CHECK_NOTHROW(visualizer.getPixelUUIDs(pixels, width, height));
+}
+
+TEST_CASE("getPixelUUIDs walks the Context once per call") {
+    // Context dirty flags stay set until the user clears them, so every walk of the Context visits the
+    // whole scene. renderAnnotationBuffers() walked it and then called plotUpdate(), which walked it
+    // again and found nothing new: about 14 ms of a 47 ms call for an 87000-triangle scene.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 30);
+    Visualizer visualizer(160, 120, 0, false, true);
+    setUpView(visualizer);
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    // After a change, which is when the frame has to be rendered again
+    context.translatePrimitive(std::vector<uint>(UUIDs.begin(), UUIDs.begin() + 100), make_vec3(0.01f, 0, 0));
+    const size_t walks_before_change = VisualizerTestHelper::getContextWalkCount(visualizer);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getContextWalkCount(visualizer) - walks_before_change == 1);
+
+    // And when nothing changed
+    const size_t walks_before_repeat = VisualizerTestHelper::getContextWalkCount(visualizer);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getContextWalkCount(visualizer) - walks_before_repeat == 1);
+}
+
+TEST_CASE("The annotation pass reuses its face lookup until primitives are added or deleted") {
+    // Decoding the annotation pass needs, for each face index the shaders see, the Context UUID behind
+    // it. Rebuilding that lookup visits every displayed primitive, about 6 ms for 87000 triangles, and
+    // it only changes when primitives are added or deleted or the buffers are compacted - not when
+    // they move or change color, which is what a fit does between frames.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 30);
+    Visualizer visualizer(160, 120, 0, false, true);
+    setUpView(visualizer);
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+    const size_t builds_after_first = VisualizerTestHelper::getFaceLookupBuildCount(visualizer);
+
+    context.translatePrimitive(std::vector<uint>(UUIDs.begin(), UUIDs.begin() + 100), make_vec3(0.01f, 0, 0));
+    context.setPrimitiveColor(UUIDs.at(200), RGB::red);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getFaceLookupBuildCount(visualizer) == builds_after_first);
+
+    auto shows = [&](uint UUID) { return std::find(pixels.begin(), pixels.end(), UUID + 1) != pixels.end(); };
+
+    // An added primitive is rebuilt into the lookup and is reported, in front of the grid
+    const uint added = context.addPatch(make_vec3(0, 0, 0.5f), make_vec2(0.4f, 0.4f));
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getFaceLookupBuildCount(visualizer) > builds_after_first);
+    DOCTEST_CHECK(shows(added));
+
+    // A deleted one is no longer reported, and what was behind it is
+    const uint behind = UUIDs.at(UUIDs.size() / 2 + 15);
+    DOCTEST_REQUIRE(!shows(behind));
+    context.deletePrimitive(added);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(!shows(added));
+    DOCTEST_CHECK(shows(behind));
+}
+
+TEST_CASE("A build examines only the Context primitives that changed since the last one") {
+    // Context dirty flags stay set until the user clears them, so a build that took every dirty primitive and fingerprinted it to
+    // find the changed ones examined the whole scene every frame: about 8 ms per build for 87000 triangles.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 30); // 900 triangles
+    Visualizer visualizer(160, 120, 0, false, true);
+    setUpView(visualizer);
+    visualizer.enableExactColorMode();
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    context.translatePrimitive(std::vector<uint>(UUIDs.begin(), UUIDs.begin() + 100), make_vec3(0.01f, 0, 0.02f));
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPrimitivesExaminedLastBuild(visualizer) == 100);
+
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPrimitivesExaminedLastBuild(visualizer) == 0);
+
+    // The user marking the geometry clean does not hide a later change, nor a change made before it
+    context.setPrimitiveColor(std::vector<uint>(UUIDs.begin() + 300, UUIDs.begin() + 340), RGB::red);
+    context.markGeometryClean();
+    context.translatePrimitive(std::vector<uint>(UUIDs.begin() + 500, UUIDs.begin() + 550), make_vec3(-0.02f, 0.01f, 0.03f));
+    std::vector<uint> incremental_pixels, incremental_rgb, fresh_pixels, fresh_rgb;
+    visualizer.getPixelUUIDs(incremental_pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPrimitivesExaminedLastBuild(visualizer) == 90);
+    uint rgb_width = 0, rgb_height = 0;
+    visualizer.getWindowPixelsRGB(incremental_rgb, rgb_width, rgb_height);
+
+    Visualizer fresh(160, 120, 0, false, true);
+    setUpView(fresh);
+    fresh.enableExactColorMode();
+    fresh.buildContextGeometry(&context);
+    fresh.getPixelUUIDs(fresh_pixels, width, height);
+    fresh.getWindowPixelsRGB(fresh_rgb, rgb_width, rgb_height);
+    DOCTEST_CHECK(incremental_pixels == fresh_pixels);
+    DOCTEST_CHECK(incremental_rgb == fresh_rgb);
+}
+
+TEST_CASE("Phong material indices are reassigned only when a material, or a primitive's material, changes") {
+    // Assigning the indices walked every displayed primitive on every build, to collect the materials in use, because material
+    // data can change without touching a primitive. A build after primitives only moved does not need it.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 20);
+    context.addMaterial("glossy");
+    context.setMaterialData("glossy", "phong_specular", 1.f);
+    context.assignMaterialToPrimitive(std::vector<uint>(UUIDs.begin(), UUIDs.begin() + 50), "glossy");
+
+    Visualizer visualizer(160, 120, 0, false, true);
+    setUpView(visualizer);
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+    size_t walks = VisualizerTestHelper::getPhongMaterialWalkCount(visualizer);
+
+    context.translatePrimitive(std::vector<uint>(UUIDs.begin(), UUIDs.begin() + 100), make_vec3(0.01f, 0, 0));
+    visualizer.getPixelUUIDs(pixels, width, height);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPhongMaterialWalkCount(visualizer) == walks);
+
+    // Material data changes without marking any primitive dirty
+    context.setMaterialData("glossy", "phong_specular", 0.25f);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPhongMaterialWalkCount(visualizer) > walks);
+    walks = VisualizerTestHelper::getPhongMaterialWalkCount(visualizer);
+
+    // A primitive given another material, while moving
+    context.assignMaterialToPrimitive(UUIDs.at(150), "glossy");
+    context.translatePrimitive(UUIDs.at(150), make_vec3(0.01f, 0, 0));
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPhongMaterialWalkCount(visualizer) > walks);
+    walks = VisualizerTestHelper::getPhongMaterialWalkCount(visualizer);
+
+    // A primitive given a material that looks the same, so nothing it draws changes and it is not rebuilt: its Phong index still must
+    context.addMaterial("glossy_twin");
+    context.setMaterialColor("glossy_twin", context.getPrimitiveColorRGBA(UUIDs.at(160)));
+    context.setMaterialData("glossy_twin", "phong_specular", 0.5f);
+    visualizer.getPixelUUIDs(pixels, width, height); // the material changes are taken here
+    walks = VisualizerTestHelper::getPhongMaterialWalkCount(visualizer);
+    context.assignMaterialToPrimitive(UUIDs.at(160), "glossy_twin");
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPhongMaterialWalkCount(visualizer) > walks);
+}
+
+TEST_CASE("Changing the global Phong material reshades materials that inherit from it, with no overlays on screen") {
+    // A material's Phong parameters that it does not set itself come from the global material, so the per-material table has to
+    // be rebuilt when setPhongMaterial() changes it, even though no material and no primitive changed. With the navigation gizmo
+    // or watermark on screen their geometry is re-registered often enough to hide a table that is never rebuilt, so this renders
+    // with both off, as a headless capture would.
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(10, 10));
+    context.addMaterial("partial");
+    context.assignMaterialToPrimitive(UUID, "partial");
+    context.setPrimitiveColor(UUID, make_RGBcolor(0.5f, 0.5f, 0.5f));
+    context.setMaterialData("partial", "phong_specular", 0.f);
+
+    Visualizer visualizer(64, 64, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    visualizer.setLightDirection(make_vec3(0.05f, -0.1f, 1));
+    visualizer.setCameraPosition(make_vec3(0.5f, -2.f, 22), make_vec3(0, 0, 0));
+    visualizer.buildContextGeometry(&context);
+
+    auto renderWithGlobalDiffuse = [&](float diffuse) {
+        Visualizer::PhongMaterial material;
+        material.ambient = 0.2f;
+        material.diffuse = diffuse;
+        material.specular = 0.5f;
+        material.shininess = 32.f;
+        visualizer.setPhongMaterial(material);
+        visualizer.plotUpdate(true);
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        return pixels.at(3 * (size_t(h / 2) * size_t(w) + size_t(w / 2)));
+    };
+
+    const uint dim = renderWithGlobalDiffuse(0.1f);
+    const uint bright = renderWithGlobalDiffuse(0.9f);
+    DOCTEST_REQUIRE(dim > 0);
+    DOCTEST_CHECK(bright > dim);
+}
+
+TEST_CASE("Hidden Context primitives are not drawn, and hiding or showing one takes effect on the next build") {
+    // PlantArchitecture hides the leaf prototypes it copies leaves from and the organs it removes, so a hidden primitive must not
+    // be drawn or reported. Hiding and showing do not mark a primitive dirty, so the build must notice them some other way.
+    Context context;
+    const std::vector<uint> grid = addTriangleGrid(context, 20);
+    const uint cover = context.addPatch(make_vec3(0, 0, 0.5f), make_vec2(0.6f, 0.6f));
+    context.hidePrimitive(cover);
+
+    Visualizer visualizer(160, 120, 0, false, true);
+    setUpView(visualizer);
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    auto shows = [&](uint UUID) { return std::find(pixels.begin(), pixels.end(), UUID + 1) != pixels.end(); };
+
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(!shows(cover)); // hidden before it was ever built
+
+    context.showPrimitive(cover);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(shows(cover)); // shown later, with nothing else changed
+
+    context.hidePrimitive(cover);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(!shows(cover)); // hidden while on screen
+
+    // The same through objects
+    const uint object = context.addTileObject(make_vec3(0, 0, 0.6f), make_vec2(0.5f, 0.5f), nullrotation, make_int2(2, 2));
+    context.hideObject(object);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    const std::vector<uint> tiles = context.getObjectPrimitiveUUIDs(object);
+    DOCTEST_CHECK(std::none_of(tiles.begin(), tiles.end(), shows));
+    context.showObject(object);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(std::any_of(tiles.begin(), tiles.end(), shows));
+}
+
+namespace {
+
+    //! Renders the Context in a new visualizer, for comparing with one that has updated its scene over several frames
+    std::vector<uint> renderPhongScene(Context &context, uint width, uint height) {
+        Visualizer visualizer(width, height, 1, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+        visualizer.setBackgroundColor(make_RGBcolor(0, 0, 0));
+        visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+        visualizer.buildContextGeometry(&context);
+        visualizer.plotUpdate(true);
+        std::vector<uint> pixels;
+        uint w, h;
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        return pixels;
+    }
+
+    //! Two materials of one color that shade differently, so that an image can show only by their Phong parameters which is in use
+    void addDarkAndBrightMaterials(Context &context) {
+        for (const std::string &label: {std::string("dark"), std::string("bright")}) {
+            context.addMaterial(label);
+            context.setMaterialColor(label, make_RGBAcolor(0.5f, 0.5f, 0.5f, 1));
+        }
+        context.setMaterialData("dark", "phong_ambient", 0.05f);
+        context.setMaterialData("dark", "phong_diffuse", 0.05f);
+        context.setMaterialData("bright", "phong_ambient", 0.9f);
+        context.setMaterialData("bright", "phong_diffuse", 0.9f);
+    }
+
+} // namespace
+
+TEST_CASE("Visualizer applies a different existing material assigned after the first frame") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    Context context;
+    addDarkAndBrightMaterials(context);
+    const uint first_dark = context.addPatch(make_vec3(-1, 0, 0), make_vec2(0.8f, 0.8f));
+    const uint first_bright = context.addPatch(make_vec3(1, 0, 0), make_vec2(0.8f, 0.8f));
+    // Keeps "dark" in use, so that the assignment below leaves the table of materials as it was
+    const uint other_dark = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.8f, 0.8f));
+    context.assignMaterialToPrimitive(first_dark, "dark");
+    context.assignMaterialToPrimitive(first_bright, "bright");
+    context.assignMaterialToPrimitive(other_dark, "dark");
+
+    const uint width = 100;
+    const uint height = 100;
+    Visualizer updated(width, height, 1, false, true);
+    updated.disableMessages();
+    updated.hideWatermark();
+    updated.hideNavigationGizmo();
+    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
+    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
+    updated.buildContextGeometry(&context);
+    updated.plotUpdate(true);
+    std::vector<uint> before, after;
+    uint w, h;
+    updated.getWindowPixelsRGB(before, w, h);
+
+    context.assignMaterialToPrimitive(first_dark, "bright");
+    updated.plotUpdate(true);
+    updated.getWindowPixelsRGB(after, w, h);
+
+    CHECK(after != before);
+    CHECK(after == renderPhongScene(context, width, height));
+}
+
+TEST_CASE("Visualizer applies the material of a primitive added after the first frame") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    Context context;
+    addDarkAndBrightMaterials(context);
+    const uint first_dark = context.addPatch(make_vec3(-1, 0, 0), make_vec2(0.8f, 0.8f));
+    const uint first_bright = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.8f, 0.8f));
+    context.assignMaterialToPrimitive(first_dark, "dark");
+    context.assignMaterialToPrimitive(first_bright, "bright");
+
+    const uint width = 100;
+    const uint height = 100;
+    Visualizer updated(width, height, 1, false, true);
+    updated.disableMessages();
+    updated.hideWatermark();
+    updated.hideNavigationGizmo();
+    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
+    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
+    updated.buildContextGeometry(&context);
+    updated.plotUpdate(true);
+
+    // Both materials are already in the table, so adding this primitive changes nothing about the table itself
+    const uint later = context.addPatch(make_vec3(1, 0, 0), make_vec2(0.8f, 0.8f));
+    context.assignMaterialToPrimitive(later, "bright");
+    updated.plotUpdate(true);
+    std::vector<uint> pixels;
+    uint w, h;
+    updated.getWindowPixelsRGB(pixels, w, h);
+
+    CHECK(pixels == renderPhongScene(context, width, height));
+}
+
+TEST_CASE("Visualizer shows a change to the data of a material in use") {
+    // This marks no primitive as changed, so nothing in the geometry says that it happened
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    Context context;
+    addDarkAndBrightMaterials(context);
+    const uint dark = context.addPatch(make_vec3(-1, 0, 0), make_vec2(0.8f, 0.8f));
+    const uint bright = context.addPatch(make_vec3(1, 0, 0), make_vec2(0.8f, 0.8f));
+    context.assignMaterialToPrimitive(dark, "dark");
+    context.assignMaterialToPrimitive(bright, "bright");
+
+    const uint width = 100;
+    const uint height = 100;
+    Visualizer updated(width, height, 1, false, true);
+    updated.disableMessages();
+    updated.hideWatermark();
+    updated.hideNavigationGizmo();
+    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
+    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
+    updated.buildContextGeometry(&context);
+    updated.plotUpdate(true);
+    std::vector<uint> before, after;
+    uint w, h;
+    updated.getWindowPixelsRGB(before, w, h);
+    context.markGeometryClean();
+
+    context.setMaterialData("dark", "phong_ambient", 0.5f);
+    updated.plotUpdate(true);
+    updated.getWindowPixelsRGB(after, w, h);
+
+    context.markGeometryDirty();
+    CHECK(after != before);
+    CHECK(after == renderPhongScene(context, width, height));
+}
+
+TEST_CASE("Visualizer updating each kind of primitive data separately matches rendering from scratch") {
+    // Each round changes one thing, so that a buffer left out of the upload shows as a difference from a fresh render
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    Context context;
+    const uint triangle = context.addTriangle(make_vec3(-2, -1, 0), make_vec3(-1, -1, 0), make_vec3(-2, 0, 0), make_RGBcolor(1, 0, 0));
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 1, 0));
+    const uint textured = context.addPatch(make_vec3(0, 1.5f, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), "plugins/visualizer/textures/AlmondLeaf.png");
+    const uint tube = context.addTubeObject(8, {make_vec3(1.5f, -1, 0), make_vec3(1.5f, 0, 0), make_vec3(1.5f, 1, 0)}, {0.2f, 0.2f, 0.2f}, std::vector<RGBcolor>(3, make_RGBcolor(0, 0, 1)));
+
+    const uint width = 100;
+    const uint height = 100;
+    Visualizer updated(width, height, 1, false, true);
+    updated.disableMessages();
+    updated.hideWatermark();
+    updated.hideNavigationGizmo();
+    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
+    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
+    updated.buildContextGeometry(&context);
+    updated.plotUpdate(true);
+
+    auto checkMatchesFreshRender = [&](const std::string &round) {
+        updated.plotUpdate(true);
+        std::vector<uint> pixels;
+        uint w, h;
+        updated.getWindowPixelsRGB(pixels, w, h);
+        const std::vector<uint> fresh = renderPhongScene(context, width, height);
+        INFO(round);
+        CHECK(pixels == fresh);
+    };
+
+    context.translatePrimitive(triangle, make_vec3(0.2f, 0.1f, 0));
+    checkMatchesFreshRender("position only");
+    context.setPrimitiveColor(patch, make_RGBcolor(1, 1, 0));
+    checkMatchesFreshRender("color only");
+    context.rotatePrimitive(triangle, 0.3f, "z");
+    checkMatchesFreshRender("position and normal");
+    context.setPrimitiveTextureFile(textured, "plugins/visualizer/textures/GrapeLeaf.png");
+    checkMatchesFreshRender("texture");
+    context.setTubeNodes(tube, {make_vec3(1.5f, -1, 0), make_vec3(1.8f, 0, 0), make_vec3(1.5f, 1, 0.3f)});
+    checkMatchesFreshRender("tube, with smooth normals");
+    context.overridePrimitiveTextureColor(textured);
+    context.setPrimitiveColor(textured, make_RGBcolor(1, 0, 1));
+    checkMatchesFreshRender("texture flag");
+}
+
+TEST_CASE("Visualizer::plotUpdate shows a change made after prepareContextGeometry") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    Context context;
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 1, 0));
+
+    const uint width = 100;
+    const uint height = 100;
+    Visualizer updated(width, height, 1, false, true);
+    updated.disableMessages();
+    updated.hideWatermark();
+    updated.hideNavigationGizmo();
+    updated.setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+    updated.setBackgroundColor(make_RGBcolor(0, 0, 0));
+    updated.setLightingModel(Visualizer::LIGHTING_PHONG);
+    updated.buildContextGeometry(&context);
+    updated.plotUpdate(true);
+
+    updated.prepareContextGeometry();
+    context.translatePrimitive(patch, make_vec3(1, 0, 0));
+    updated.plotUpdate(true);
+    std::vector<uint> pixels;
+    uint w, h;
+    updated.getWindowPixelsRGB(pixels, w, h);
+    CHECK(pixels == renderPhongScene(context, width, height));
+
+    // With no Context there is nothing to prepare, and it is not an error
+    Visualizer without_context(width, height, 1, false, true);
+    without_context.disableMessages();
+    DOCTEST_CHECK_NOTHROW(without_context.prepareContextGeometry());
+    DOCTEST_CHECK_NOTHROW(without_context.plotUpdate(true));
+}
+
+TEST_CASE("Visualizer::prepareContextGeometry on other threads matches rendering from scratch") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // Several visualizers, each with its own Context, prepared at once on threads that have no OpenGL context
+    const int tree_count = 4;
+    const uint width = 100;
+    const uint height = 100;
+    std::vector<std::unique_ptr<Context>> contexts;
+    std::vector<std::vector<uint>> patches;
+    std::vector<std::unique_ptr<Visualizer>> visualizers;
+    for (int t = 0; t < tree_count; t++) {
+        contexts.push_back(std::make_unique<Context>());
+        addDarkAndBrightMaterials(*contexts.back());
+        patches.emplace_back();
+        for (int i = 0; i < 40; i++) {
+            const uint UUID = contexts.back()->addPatch(make_vec3(0.2f * float(i - 20), 0.2f * float(t - 2), 0), make_vec2(0.15f, 0.15f));
+            contexts.back()->assignMaterialToPrimitive(UUID, i % 2 == 0 ? "dark" : "bright");
+            patches.back().push_back(UUID);
+        }
+        contexts.back()->addPatch(make_vec3(0, 0, 0.5f), make_vec2(0.3f, 0.3f), make_SphericalCoord(0, 0), "plugins/visualizer/textures/AlmondLeaf.png");
+        visualizers.push_back(std::make_unique<Visualizer>(width, height, 1, false, true));
+        visualizers.back()->disableMessages();
+        visualizers.back()->hideWatermark();
+        visualizers.back()->hideNavigationGizmo();
+        visualizers.back()->setCameraPosition(make_vec3(0, 0, 6), make_vec3(0, 0, 0));
+        visualizers.back()->setBackgroundColor(make_RGBcolor(0, 0, 0));
+        visualizers.back()->setLightingModel(Visualizer::LIGHTING_PHONG);
+        visualizers.back()->buildContextGeometry(contexts.back().get());
+    }
+
+    // The first round builds the whole scene, which includes reading the texture and resolving the materials
+    for (int round = 0; round < 3; round++) {
+        std::vector<std::thread> threads;
+        for (int t = 0; t < tree_count; t++) {
+            threads.emplace_back([&, t]() {
+                if (round > 0) {
+                    contexts[t]->translatePrimitive(patches[t][size_t(round) * 3], make_vec3(0, 0.05f, 0));
+                }
+                visualizers[t]->prepareContextGeometry();
+            });
+        }
+        for (std::thread &thread: threads) {
+            thread.join();
+        }
+        for (int t = 0; t < tree_count; t++) {
+            visualizers[t]->plotUpdate(true);
+        }
+        for (int t = 0; t < tree_count; t++) {
+            std::vector<uint> pixels;
+            uint w, h;
+            visualizers[t]->getWindowPixelsRGB(pixels, w, h);
+            const std::vector<uint> fresh = renderPhongScene(*contexts[t], width, height);
+            CHECK(pixels == fresh);
+        }
     }
 }

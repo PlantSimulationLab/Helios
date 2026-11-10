@@ -44,9 +44,6 @@
 | hydraulic_conductance  | \f$K\f$   | mol m\f$^{-2}\f$ s\f$^{-1}\f$ MPa\f$^{-1}\f$ | \htmlonly<span style="color: green;"><tt>float</tt></span>\endhtmlonly    | Hydraulic conductance |
 | hydraulic_capacitance | \f$C\f$    | mol m\f$^{-2}\f$ MPa\f$^{-1}\f$ | \htmlonly<span style="color: green;"><tt>float</tt></span>\endhtmlonly | Hydraulic capacitance |
 
-\section PHissues Known Issues
-Currently, steady-state mode is functional and non-steady-state mode is under construction.
-
 \section PH_Intro Introduction
 The Plant Hydraulics plugin models the water potentials, water contents, hydraulic conductances, and
 hydraulic capacitances within and between leaves, stems, roots, and soil. The plugin operates on a

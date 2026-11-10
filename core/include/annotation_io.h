@@ -237,6 +237,25 @@ namespace helios::annotation {
     void writeLabelSegmentationMasks(const helios::Context *context, const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::vector<std::string> &data_labels, const std::vector<uint> &class_IDs,
                                      const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels, bool append_file, bool use_object_data, const std::string &caller);
 
+    //! Write COCO JSON segmentation masks for the connected regions of chosen classes in a per-pixel class map
+    /**
+     * Each connected region of pixels holding one of the given classes becomes one annotation, whose COCO category ID is the class value. Pixels touching only at a corner are connected, the "bbox" encloses
+     * every pixel of the region, and a region of only one or two pixels is not written, as in writeLabelSegmentationMasks().
+     *
+     * \param[in] context Context holding the primitives named by the pixel-to-primitive map, for the attributes.
+     * \param[in] pixel_classes Class of each pixel (0 for none), row-major with row 0 at the top of the image.
+     * \param[in] pixel_UUIDs Pixel-to-primitive map (UUID+1 per pixel, 0 for none) in the same orientation, from which the attributes are computed.
+     * \param[in] resolution Image dimensions in pixels.
+     * \param[in] class_names Category name of each class to annotate, keyed by class value (1 or more). Classes not listed are not annotated.
+     * \param[in] json_filename Path of the COCO JSON file to write. ".json" is appended if it is missing.
+     * \param[in] image_file Path of the image these masks annotate, which must exist.
+     * \param[in] data_attribute_labels Primitive or object data labels whose mean over the pixels of each mask is written to its "attributes", as in writeLabelSegmentationMasks().
+     * \param[in] append_file If true, annotations are added to the file at `json_filename` if it already exists. If false, a new file is written.
+     * \param[in] caller Name of the calling method, used to attribute error messages.
+     */
+    void writeClassMapSegmentationMasks(const helios::Context *context, const std::vector<uint> &pixel_classes, const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::map<uint, std::string> &class_names,
+                                        const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels, bool append_file, const std::string &caller);
+
 } // namespace helios::annotation
 
 #endif

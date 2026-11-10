@@ -2,10 +2,10 @@
 
 \section NitroIntro Overview
 
-The nitrogen model is an optional feature in the PlantArchitecture plugin that simulates nitrogen uptake, allocation, and stress effects on plant growth. When enabled, the model mechanistically tracks nitrogen in a three-level pool structure (root, available, and per-leaf pools), simulates rate-limited nitrogen accumulation in leaves, directs newly acquired nitrogen to expanding leaves, remobilizes nitrogen from mature to expanding leaves when the plant runs short, resorbs nitrogen from leaves as they senesce before they are shed, and calculates a nitrogen stress factor that calling code can use to modify photosynthesis and growth rates.
+The nitrogen model is an optional feature in the PlantArchitecture plugin that simulates nitrogen uptake, allocation, and stress effects on plant growth. When enabled, the model mechanistically tracks nitrogen in a three-level pool structure (root, available, and per-leaf pools), simulates rate-limited nitrogen accumulation in leaves, directs newly acquired nitrogen to expanding leaves, remobilizes nitrogen from older to younger leaves when the plant runs short, resorbs nitrogen from leaves as they senesce before they are shed, and calculates a nitrogen stress factor that calling code can use to modify photosynthesis and growth rates.
 
 <b>Important architectural note:</b> Nitrogen is tracked on an <b>area basis (g N/m²)</b> rather than a mass basis (g N/g DW). This design choice:
-- Eliminates the need for an SLA parameter (simpler model with 7 parameters instead of 8)
+- Does not require an SLA parameter
 - Provides direct compatibility with PROSPECT leaf optical models
 - Aligns with physiological reality where leaf N content per area remains relatively constant as leaves thicken (LMA increases) while mass-based concentration decreases
 - Matches remote sensing approaches which measure area-based nitrogen
@@ -18,11 +18,10 @@ Key features of the nitrogen model include:
 - Three-level pool structure: root pool → available pool → per-leaf pools
 - Rate-limited nitrogen accumulation in leaves (prevents instantaneous uptake)
 - Newly acquired nitrogen goes to expanding leaves first, shared in proportion to demand
-- Remobilization from mature leaves (oldest first) to expanding leaves and fruit whenever the plant is nitrogen-limited, first-order in time
+- Remobilization from mature leaves (oldest first) to expanding leaves and fruit, and then to younger mature leaves below target, whenever the plant is nitrogen-limited, first-order in time
 - Leaf senescence: over the last part of its lifespan a leaf returns most of its nitrogen to the plant and yellows before it is shed, earlier under nitrogen stress
 - Fruit nitrogen removal during fruit growth
 - Single output: nitrogen stress factor (0-1) for use by other plugins
-- Only 7 user-configurable parameters
 
 \section NitroEnable Enabling the Nitrogen Model
 
@@ -43,7 +42,7 @@ The model can be disabled at any time using \ref PlantArchitecture::disableNitro
 
 \section NitroParameters Model Parameters
 
-The behavior of the nitrogen model is controlled by only 7 parameters stored in the \ref NitrogenParameters structure. Parameters can be set for individual plants or groups of plants using \ref PlantArchitecture::setPlantNitrogenParameters().
+The behavior of the nitrogen model is controlled by the parameters stored in the \ref NitrogenParameters structure. Parameters can be set for individual plants or groups of plants using \ref PlantArchitecture::setPlantNitrogenParameters().
 
 \subsection NitroParamTable Parameter Descriptions
 
@@ -59,7 +58,7 @@ Parameters in the \ref NitrogenParameters structure are organized into several c
 | **Rate Limiting** |||||
 || max_N_accumulation_rate | 0.1 | g N/m²/day | Maximum rate at which leaves can accumulate nitrogen per unit area per day. Prevents instantaneous uptake. |
 | **Remobilization** |||||
-|| leaf_remobilization_rate | 0.03 | 1/day | First-order rate at which a mature leaf releases its nitrogen above `minimum_leaf_N_area` while the plant cannot meet the demand of its expanding leaves and fruit. |
+|| leaf_remobilization_rate | 0.03 | 1/day | First-order rate at which a mature leaf releases its nitrogen above `minimum_leaf_N_area` while the plant cannot meet the demand of its expanding leaves, fruit, and younger mature leaves below target. |
 || leaf_remobilization_efficiency | 0.70 | - | Fraction of a leaf's nitrogen above `minimum_leaf_N_area`, when it begins to senesce, that it resorbs into the plant by the time it is shed at `max_leaf_lifespan` (0-1). |
 | **Leaf Senescence** |||||
 || leaf_senescence_duration_fraction | 0.25 | - | Fraction of `max_leaf_lifespan`, at the end of a leaf's life, over which an unstressed leaf senesces. |
@@ -168,7 +167,7 @@ Nitrogen from the available pool is transferred to individual leaves in a rate-l
 - Each leaf's demand per area is `target_leaf_N_area - current_N_area`, capped at `max_N_accumulation_rate` × dt, and multiplied by its area
 - <b>Expanding leaves are served first.</b> A leaf counts as expanding until it reaches its full size. Their combined demand is met from the available pool, and when the pool cannot cover it every expanding leaf receives the same fraction of its demand
 - <b>Mature leaves below target are topped up only from what the expanding leaves leave over</b>, again in proportion to demand
-- Whatever the expanding leaves could not get from the pool is recorded as unmet demand, for remobilization to supply (step 3)
+- Whatever a leaf, expanding or mature, could not get from the pool is recorded as unmet demand, for remobilization to supply (step 3)
 
 Newly acquired nitrogen is allocated to new leaves in plants (Hikosaka 2005), and a supply shared in proportion to demand matches the relative allocation used by crop models such as APSIM (Brown et al. 2019). Serving mature leaves only from the surplus means a shortage is borne by them, not by the leaves being built, while a mature leaf can still green up again once nitrogen is added.
 
@@ -184,19 +183,24 @@ When fruit grows (detected by increase in fruit scale factor), nitrogen is deduc
 - Nitrogen demand = area increment × `fruit_N_area` (g N/m²)
 - Per-plant fruit demand is aggregated across all fruiting buds before withdrawal
 - Nitrogen is removed from the available pool first (supply-limited), after the leaves have taken theirs
-- Any demand the pool cannot cover is recorded as unmet fruit demand, which remobilization draws from mature leaves (step 3). Demand that even the leaves cannot meet is absorbed
+- Any demand the pool cannot cover is recorded as unmet fruit demand, which remobilization draws from mature leaves (step 3). Demand that even the leaves cannot meet goes unmet: the fruit simply receives less
+- The nitrogen the fruit receives, from the pool and from the leaves, is added up for each plant and returned by \ref PlantArchitecture::getPlantFruitNitrogen(). Together with the root pool (\ref PlantArchitecture::getPlantRootNitrogen()), the available pool (\ref PlantArchitecture::getPlantAvailableNitrogen()) and the nitrogen of the leaves, it accounts for all the nitrogen given to the plant, less what left with leaves that were shed
 
 Fruit nitrogen removal is only active when plants are fruiting.
 
+<b>Limitations.</b> Fruit demand follows the growth of the fruit's surface area, which has two consequences to keep in mind:
+- The area is that of the fruit's mesh, its whole surface. For a compound fruit such as a wheat ear (whose mesh surface is about 97 cm\f$^2\f$, several times its silhouette) this is much more than its projected area, so `fruit_N_area` is a calibration constant per unit mesh area rather than a measurable nitrogen content per unit area.
+- Demand arises only while the fruit is growing in size. Fruit that reaches full size early and then fills, such as a cereal ear, which is full size by anthesis while its grains take up most of their nitrogen afterwards, demands its nitrogen while it expands (for wheat, during booting and heading) and none during grain fill. In a nitrogen-limited plant this draws the upper leaves down around heading and leaves them full during grain fill, the opposite of the field.
+
 \subsection NitroRemob 3. Nitrogen Remobilization
 
-When the plant cannot meet its demand from uptake -- expanding leaves or fruit were left short in steps 1 and 2 -- nitrogen is withdrawn from mature leaves and delivered to them:
+When the plant cannot meet its demand from uptake -- leaves or fruit were left short in steps 1 and 2 -- nitrogen is withdrawn from mature leaves and delivered to them:
 
 <b>Trigger:</b> a shortfall, not leaf age. A plant whose demand is fully met remobilizes nothing.
 
-<b>Sources:</b> mature (fully expanded) leaves, oldest first. Each can release at most `leaf_remobilization_rate` × dt of its nitrogen above `minimum_leaf_N_area` in a step, so the amount moved follows elapsed time rather than the number of steps, and no leaf is drawn below the minimum.
+<b>Sources:</b> mature (fully expanded) leaves, oldest first. Each can release at most `leaf_remobilization_rate` × dt of its nitrogen above `minimum_leaf_N_area` in a step, so the amount moved follows elapsed time rather than the number of steps, and no leaf is drawn below the minimum. At the default rate, which matches the 5-16 % of their nitrogen that mature leaves of nitrogen-limited plants export over ten days (Diaz et al. 2008), remobilization lags the growth of a plant that is short of nitrogen: in a nitrogen-limited wheat plant the leaves formed early hold the most nitrogen per area and the young upper leaves the least for several weeks around heading, the reverse of the profile in field canopies, where nitrogen per area follows light down the canopy (Bertheloot et al. 2008). A faster rate (about 0.1/day) brings the profile closer to the field's, but only later in the season, and exports nitrogen faster than the labelling studies report.
 
-<b>Sinks:</b> the unmet demand of expanding leaves and fruit, served in proportion to it. A leaf never receives more than its accumulation-rate cap allows in the step.
+<b>Sinks:</b> first, the unmet demand of expanding leaves and fruit, served in proportion to it from any source. Then mature leaves still below `target_leaf_N_area`, youngest first, each drawing on what the sources have left, and only from sources older than itself. A leaf that expanded while the plant had nothing to give it, and was diluted by its own growth, is therefore topped up from the leaves below it once it is fully expanded, and nitrogen only ever moves from older leaves to younger ones. A leaf never receives more than its accumulation-rate cap allows in the step.
 
 <b>Physiological basis:</b>
 - Under nitrogen limitation, mature leaves export nitrogen to expanding leaves during vegetative growth, and to seeds during reproduction (Masclaux-Daubresse et al. 2010); remobilization is driven by sink development and plant nitrogen status rather than leaf age as such (Hikosaka 2005)
@@ -335,7 +339,7 @@ int main() {
         // PlantArchitecture accumulates N in leaves and updates stress factor
         plantarch.advanceTime(1.0f);
 
-        // Photosynthesis reads stress factor and scales Vcmax/Jmax
+        // Photosynthesis does not read the stress factor; scale Vcmax/Jmax here first if wanted
         photosynthesis.run();
 
         // Optional: query nitrogen status
@@ -357,9 +361,7 @@ The nitrogen model follows several key design principles:
 
 \subsection NitroSimplicity 1. Simplicity Through Area-Based Tracking
 
-- Only 7 parameters (compared to 8 in mass-based approach)
-- No SLA parameter needed (eliminated)
-- ~450 lines of code
+- No SLA parameter needed
 - No biomass calculations or unit conversions
 - Always numerically stable
 - Direct compatibility with leaf optical models
@@ -420,7 +422,7 @@ The nitrogen model implementation is based on published research:
 
 1. <b>Area-based vs. mass-based nitrogen:</b> Research shows that reflectance spectra are directly sensitive to area-based content rather than mass-based content. The relationship is: N_mass (g/g) = N_area (g/m²) / LMA (g/m²).
 
-2. <b>Remobilization to expanding leaves under nitrogen limitation:</b> Masclaux-Daubresse et al. (2010). "Nitrogen uptake, assimilation and remobilization in plants: challenges for sustainable and productive agriculture." Annals of Botany 105(7): 1141-1157. (Its 50-90 % figure is the share of grain nitrogen that comes from leaf remobilization over grain filling, a total, not a rate.)
+2. <b>Remobilization to expanding leaves under nitrogen limitation:</b> Masclaux-Daubresse et al. (2010). "Nitrogen uptake, assimilation and remobilization in plants: challenges for sustainable and productive agriculture." Annals of Botany 105(7): 1141-1157.
 
 3. <b>Allocation of new nitrogen to new leaves; remobilization driven by sinks and position:</b> Hikosaka (2005). "Leaf canopy as a dynamic system: ecophysiology and optimality in leaf turnover." Annals of Botany 95(3): 521-533.
 
@@ -463,8 +465,8 @@ The nitrogen model implementation is based on published research:
 <b>Problem:</b> Old leaves are not donating nitrogen to young leaves.
 
 <b>Solutions:</b>
-- Remobilization only answers a shortfall: if the available pool covers every expanding leaf's and fruit's demand, nothing is remobilized. Check that the nitrogen supply is actually limiting
-- The plant needs both fully expanded leaves (sources) and expanding leaves or growing fruit (sinks)
+- Remobilization only answers a shortfall: if the available pool covers the demand of every leaf and fruit, nothing is remobilized. Check that the nitrogen supply is actually limiting
+- The plant needs fully expanded leaves (sources) and something short of nitrogen to receive it: expanding leaves, growing fruit, or a mature leaf below target that is younger than the source
 - Old leaves must have nitrogen above `minimum_leaf_N_area` to donate
 - Check that `leaf_remobilization_rate` is not zero; at the default 0.03/day a leaf releases about 3 % of its remobilizable nitrogen per day, so the effect builds over days to weeks
 

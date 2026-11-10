@@ -112,7 +112,7 @@ No gradients, 50+ params?
 
 <b>Example Helios Scenarios:</b>
 
-- <b>Single-leaf biophysics calibration</b> (1-5 params, smooth, AD-differentiable): Use L-BFGS. Converges in ~20 evaluations.
+- <b>Single-leaf biophysics calibration</b> (1-5 params, smooth, AD-differentiable): Use L-BFGS.
 - <b>Leaf angle optimization with ray tracing</b> (2 params per leaf, noisy FD gradients): Use Adam for the noisy case, or L-BFGS if ray count is high enough for clean gradients.
 - <b>Canopy-level optimization</b> (50+ params, multimodal from shading): Use CMA-ES or GA for global search, then L-BFGS or BOBYQA for local refinement.
 - <b>Water-use efficiency optimization</b> (maximize A subject to E < budget): Use SLSQP with the \ref PO_ConstrainedSim API.
@@ -622,7 +622,7 @@ NLopt is MIT-licensed with one exception: the solvers under `src/algs/luksan/` a
 
 L-BFGS (`NLOPT_LD_LBFGS`) is implemented entirely by the Luksan code. BOBYQA (MIT) and SLSQP (BSD-3) are not, and neither are the four algorithms that require no NLopt at all.
 
-The CMake option `HELIOS_NLOPT_LUKSAN` controls this, and **defaults to `ON`** so existing builds are unchanged:
+The CMake option `HELIOS_NLOPT_LUKSAN` controls this, and **defaults to `ON`**:
 
 \verbatim
 cmake .. -DHELIOS_NLOPT_LUKSAN=OFF
@@ -634,7 +634,7 @@ With the option `OFF`:
 - BOBYQA, SLSQP, GA, Bayesian Optimization, CMA-ES, TPE, and Adam are all unaffected
 - The compile-time flag `HELIOS_HAVE_LBFGS` is not defined
 
-Use `HELIOS_HAVE_LBFGS` rather than `HELIOS_HAVE_NLOPT` to test for L-BFGS specifically — since this option exists, NLopt being available no longer implies L-BFGS is.
+Use `HELIOS_HAVE_LBFGS` rather than `HELIOS_HAVE_NLOPT` to test for L-BFGS specifically, since NLopt being available does not imply L-BFGS is.
 
 \note Whether a **system-installed** NLopt was built with the Luksan solvers cannot be detected: `NLOPT_LUKSAN` is private to NLopt's own build, `nlopt.h` declares `NLOPT_LD_LBFGS` unconditionally regardless of what was compiled, and neither `nlopt_config.h` nor `NLoptConfig.cmake` records it. The build therefore assumes the solvers are present, which is correct for every mainstream distribution (Homebrew, Debian, Fedora, conda-forge, vcpkg). If yours was built with `-DNLOPT_LUKSAN=OFF`, set `HELIOS_SYSTEM_NLOPT_HAS_LUKSAN=OFF` so that L-BFGS is reported as unavailable up front rather than failing inside NLopt.
 

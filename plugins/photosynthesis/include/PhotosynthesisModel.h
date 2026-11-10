@@ -464,7 +464,7 @@ public:
     //! Set mesophyll conductance gm (mol CO2 / m^2 / s / bar) of the Farquhar-von Caemmerer-Berry model to a constant value with no temperature response.
     /**
      * \param[in] gm Value of gm.
-     * \note Default is std::numeric_limits<float>::infinity(), which reduces Cc to Ci (legacy behavior with no mesophyll diffusion limitation).
+     * \note Default is std::numeric_limits<float>::infinity(), which reduces Cc to Ci (no mesophyll diffusion limitation).
      */
     void setMesophyllConductance_gm(float gm) {
         this->gmTempResponse = PhotosyntheticTemperatureResponseParameters(gm);
@@ -536,7 +536,7 @@ private:
     PhotosyntheticTemperatureResponseParameters RdTempResponse = PhotosyntheticTemperatureResponseParameters(1.5);
     PhotosyntheticTemperatureResponseParameters alphaTempResponse = PhotosyntheticTemperatureResponseParameters(0.5);
     PhotosyntheticTemperatureResponseParameters thetaTempResponse = PhotosyntheticTemperatureResponseParameters(0.f);
-    //! Mesophyll conductance gm (mol CO2 / m^2 / s / bar). Default = +infinity, meaning Cc ≡ Ci (no mesophyll diffusion limitation — legacy behavior).
+    //! Mesophyll conductance gm (mol CO2 / m^2 / s / bar). Default = +infinity, meaning Cc ≡ Ci (no mesophyll diffusion limitation).
     PhotosyntheticTemperatureResponseParameters gmTempResponse = PhotosyntheticTemperatureResponseParameters(std::numeric_limits<float>::infinity());
 
 
@@ -697,7 +697,6 @@ public:
     float fcyc = 0.45f;               //!< Fraction of linear electron flow that is cyclic (Woodford et al. 2025 Table 1; updated from 0.3 in vC2021 to reflect NDH dominance — Ermakova 2024, Yin & Struik 2012)
     float gbs = 0.003f;               //!< Bundle-sheath conductance to CO2 (mol/m²/s/bar), constant with temperature
     float ao = 0.047f;                //!< O2/CO2 solubility-diffusivity ratio (a_o in Eq. 15)
-    float absorptance = 0.85f;        //!< Leaf PAR absorptance (fraction of incident PAR absorbed)
     float f_spectral = 0.15f;         //!< Spectral-quality correction to absorbed PAR (Eq. 35)
     float theta_etr = 0.7f;           //!< Curvature of the J ~ I2 non-rectangular hyperbola (Eq. 34)
     float h_protons = 4.f;            //!< Protons required per ATP synthesized (Eq. 31)

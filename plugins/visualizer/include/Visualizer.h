@@ -557,11 +557,43 @@ public:
      */
     void setCameraPosition(const helios::SphericalCoord &cameraAngle, const helios::vec3 &lookAt);
 
-    //! Set the camera field of view (angle width) in degrees. Default value is 45 degrees.
+    //! Set the camera's vertical field of view in degrees. Default value is 45 degrees.
     /**
-     * \param[in] angle_FOV Angle of camera field of view in degrees.
+     * The angle spans the image from its top edge to its bottom edge; the horizontal field of view
+     * follows from the framebuffer's aspect ratio. A pinhole camera with a focal length of f pixels
+     * and an image H pixels high has a vertical field of view of 2*atan(H/(2f)).
+     * \param[in] angle_FOV Vertical angle of the camera field of view in degrees.
      */
     void setCameraFieldOfView(float angle_FOV);
+
+    //! Set the world direction that appears up in the image, fixing the camera's roll
+    /**
+     * By default the roll is chosen automatically: world +z is up in the image, except for a camera
+     * looking within about 2.6 degrees of straight up or down, where world +y is up instead. That
+     * rule cannot express every camera, so a camera reproducing a real one sets its up direction
+     * here. Only the component perpendicular to the viewing direction matters. It must not be
+     * parallel to the viewing direction when the frame is rendered, or rendering raises an error.
+     * \param[in] up Direction, in world coordinates, that should point toward the top of the image. Need not be a unit vector.
+     * \sa clearCameraUpDirection()
+     */
+    void setCameraUpDirection(const helios::vec3 &up);
+
+    //! Return to choosing the camera's up direction automatically (the default)
+    /** \sa setCameraUpDirection() */
+    void clearCameraUpDirection();
+
+    //! Set where the camera's optical axis meets the image, in framebuffer pixels
+    /**
+     * By default the optical axis passes through the centre of the image. A calibrated camera's
+     * principal point is usually a few pixels off centre, and a crop moves it further. The position
+     * is given in the pixel coordinates of the images and maps the Visualizer reads back: column from
+     * the left edge and row from the top edge, so that (width/2, height/2) is the default. The field
+     * of view set by setCameraFieldOfView() keeps its meaning as the angle subtended by the image
+     * height; only where the image is centred changes.
+     * \param[in] column Horizontal position of the principal point in pixels, from the left edge of the image.
+     * \param[in] row Vertical position of the principal point in pixels, from the top edge of the image.
+     */
+    void setCameraPrincipalPoint(float column, float row);
 
     //! Set the direction of the light source
     /**
@@ -2220,7 +2252,7 @@ private:
     //! Check that a Context has been given to the Visualizer and return it, for the methods that annotate Context primitives
     [[nodiscard]] helios::Context *getContextForAnnotation(const std::string &caller) const;
 
-    // Offscreen rendering support for CI testing
+    // Offscreen rendering support
     uint offscreenFramebufferID = 0;
     uint offscreenColorTexture = 0;
     uint offscreenDepthTexture = 0;
@@ -2228,8 +2260,7 @@ private:
     //! Multisampled framebuffer that headless rendering draws into, resolved into offscreenFramebufferID
     /**
      * Windowed rendering gets anti-aliasing from the GLFW window's own multisampled default
-     * framebuffer, but the offscreen framebuffer used in headless mode is single-sampled, so every
-     * headless image -- which is what saved figures are made from -- came out fully aliased. These
+     * framebuffer, but the offscreen framebuffer used in headless mode is single-sampled. These
      * attachments give headless rendering the same anti-aliasing: geometry is drawn into the
      * multisampled framebuffer and blit-resolved into the single-sampled color texture before
      * readback. Zero when anti-aliasing is disabled, in which case rendering targets
@@ -2315,53 +2346,56 @@ private:
      */
     void uploadPhongMaterialTable(std::vector<GLfloat> table);
 
-    //! The packed Phong material table as it should be on the GPU
-    std::vector<GLfloat> phong_material_table_data;
-
-    //! Whether \ref phong_material_table_data differs from what is on the GPU. It is uploaded before the next draw rather than when it changes, because building Context geometry must not need OpenGL (see \ref prepareContextGeometry()).
-    bool phong_material_table_upload_pending = false;
-
     //! Resolve per-material Phong parameters and stamp the resulting table index onto each primitive
     /**
      * Called at every exit of \ref buildContextGeometry_private(), including the early return taken
-     * when no primitive is dirty: material data can change without dirtying any primitive, because
+     * when no primitive changed: material data can change without marking any primitive dirty, because
      * \ref helios::Context::setMaterialData() does not touch the primitives that reference the
      * material.
      *
-     * Each call resolves the parameters of the materials in use, which costs in proportion to the
-     * number of materials. The passes over every displayed primitive run only when the set of
-     * displayed primitives, the material of one of them, or the number of materials has changed, or
-     * when the resolved table has moved to different indices, so that an ordinary frame does not cost
-     * in proportion to the size of the scene.
+     * Collecting the materials in use walks every displayed primitive, so it is skipped when nothing it
+     * depends on can have changed: the global Phong material was not set (\ref setPhongMaterial()), no
+     * material changed (\ref helios::Context::getMaterialRevision()), no
+     * geometry was added or deleted (\ref GeometryHandler::getLayoutRevision()), and no primitive modified
+     * since the last build uses a different material than it did. A primitive that only moved or changed color
+     * keeps the index it was given. The per-primitive reassignment is skipped as well when the resolved
+     * Phong data is unchanged.
+     *
+     * \param[in] modified_context_UUIDs Context primitives the calling build found modified, including those it did not rebuild
+     * because their drawn appearance was unchanged
      */
-    void updatePhongMaterialIndices();
+    void updatePhongMaterialIndices(const std::vector<uint> &modified_context_UUIDs);
 
-    //! Fingerprint of the Phong material data resolved into the packed table on the last build
-    /**
-     * Used to skip the per-primitive index assignment when the table has not moved to different
-     * indices since the previous build, which is the overwhelmingly common case. Rebuilding the table
-     * is cheap, but reassigning indices walks every displayed primitive, so it must not run on every
-     * frame of an interactive session.
-     */
-    std::vector<float> phong_material_fingerprint;
+    //! Material of each displayed Context primitive when the indices were last assigned
+    std::unordered_map<uint, uint> phong_material_of;
 
-    //! Whether the per-primitive Phong material indices have ever been assigned
-    bool phong_material_indices_assigned = false;
+    //! Context material revision and geometry layout revision when the indices were last assigned
+    uint64_t phong_material_revision_seen = 0;
+    size_t phong_layout_revision_seen = 0;
 
-    //! Whether a primitive has been displayed, removed, or given a different material since the indices were last assigned
-    bool phong_material_indices_stale = true;
+    //! Set by setPhongMaterial(): the per-material table inherits unset parameters from the global material, so it must be rebuilt
+    bool phong_global_material_changed = false;
 
-    //! The materials used by displayed primitives when the indices were last assigned
-    std::set<uint> phong_referenced_material_IDs;
-
-    //! Number of materials in the Context when the indices were last assigned. A deleted material can have been used by a hidden primitive, which the dirty primitives do not report.
-    uint phong_material_count = 0;
+    //! This Visualizer's mark for helios::Context::getModifiedUUIDs(): 0 means the next build takes every primitive
+    uint64_t context_modification_mark = 0;
 
     //! Whether \ref prepareContextGeometry() has done the work of the next \ref plotUpdate()
     bool context_geometry_prepared = false;
 
     //! Context geometry revision when \ref prepareContextGeometry() was called
     uint64_t prepared_context_geometry_revision = 0;
+
+    //! Fingerprint of the Phong material data resolved into the packed table on the last build
+    /**
+     * Used to skip the whole per-material resolve and per-primitive index assignment when no Phong
+     * material data has changed since the previous build, which is the overwhelmingly common case.
+     * Rebuilding the table is cheap, but reassigning indices walks every displayed primitive, so it
+     * must not run on every frame of an interactive session.
+     */
+    std::vector<float> phong_material_fingerprint;
+
+    //! Whether the per-primitive Phong material indices have ever been assigned
+    bool phong_material_indices_assigned = false;
 
     bool isWatermarkVisible;
 
@@ -2477,6 +2511,38 @@ private:
      */
     std::vector<std::array<GLsizeiptr, 12>> last_uploaded_buffer_sizes;
 
+    //! Partial buffer uploads (glBufferSubData calls) the last transferBufferData() made for changed primitives
+    /**
+     * Each merged run of changed primitives in one buffer costs one call. Kept so a test can hold the
+     * count to the number of runs rather than the number of primitives: one call per primitive per
+     * buffer cost ~75 us each through Apple's OpenGL and dominated every frame after a plant moved.
+     */
+    size_t partial_uploads_last_transfer = 0;
+
+    //! Walks of the Context made by buildContextGeometry_private() since construction
+    /**
+     * Each walk visits every primitive the Context reports as dirty, and Context dirty flags stay set
+     * until the user clears them, so a walk costs time in proportion to the whole scene: about 14 ms
+     * for 87000 triangles. Kept so a test can hold getPixelUUIDs() to one walk per call.
+     */
+    size_t context_geometry_walk_count = 0;
+
+    //! Times the face-to-primitive lookup that decodes the annotation pass has been rebuilt
+    /** Rebuilding it visits every displayed primitive; kept so a test can check it is reused while the layout is unchanged. */
+    size_t annotation_face_lookup_build_count = 0;
+
+    //! Context primitives whose fingerprint the last buildContextGeometry_private() computed, i.e. that it examined for changes
+    size_t context_primitives_examined_last_build = 0;
+
+    //! Times updatePhongMaterialIndices() walked every displayed primitive
+    size_t phong_material_walk_count = 0;
+
+    //! Context UUID plus one of each face, per geometry type, as renderAnnotationBuffers() decodes them
+    std::vector<std::vector<uint>> annotation_face_lookup;
+    //! GeometryHandler::getLayoutRevision() when annotation_face_lookup was built
+    size_t annotation_face_lookup_revision = 0;
+    bool annotation_face_lookup_built = false;
+
     //! Buffer and texture holding the packed per-material Phong parameter table
     /** One RGBA32F texel per material: (ambient, diffuse, specular, shininess). Primitives index
         into this by the integer in material_index_buffer, so the four Phong floats are stored once
@@ -2486,6 +2552,12 @@ private:
 
     //! Number of entries currently in the packed Phong material table
     GLint phong_material_table_size = 0;
+
+    //! The packed Phong material table as it should be on the GPU
+    std::vector<GLfloat> phong_material_table_data;
+
+    //! Whether \ref phong_material_table_data differs from what is on the GPU. It is uploaded before the next draw rather than when it changes, because building Context geometry must not need OpenGL (see \ref prepareContextGeometry()).
+    bool phong_material_table_upload_pending = false;
 
     //! Rescaling factor for texture (u,v)'s for when the texture size is smaller than the maximum texture size
     GLuint uv_rescale_buffer;
@@ -2525,16 +2597,33 @@ private:
 
     glm::mat4 customTransformationMatrix;
 
-    //! Field of view of the camera in degrees
+    //! Vertical field of view of the camera in degrees
     float camera_FOV;
 
-    bool build_all_context_geometry = false;
+    //! True once setCameraPosition() has been called, so the first build does not re-frame the view
+    /**
+     * The first build used to place the camera to fit the scene whenever the camera still held the
+     * default position, judged by comparing coordinates. A camera deliberately set to that position,
+     * (0,0,2) looking at the origin, was therefore moved without notice.
+     */
+    bool camera_position_set_by_user = false;
 
-    //! What is known of a Context primitive when it was last uploaded to the geometry handler
-    struct ContextPrimitiveUploadState {
-        uint64_t fingerprint = 0;
-        uint materialID = 0;
-    };
+    //! World direction set by setCameraUpDirection(), used when camera_up_direction_set is true
+    helios::vec3 camera_up_direction = helios::make_vec3(0, 0, 1);
+    bool camera_up_direction_set = false;
+
+    //! Principal point set by setCameraPrincipalPoint(), in framebuffer pixels from the top-left corner
+    float camera_principal_column = 0.f;
+    float camera_principal_row = 0.f;
+    bool camera_principal_point_set = false;
+
+    //! World up vector the view matrix is built from: the user's, or the automatic choice
+    [[nodiscard]] glm::vec3 cameraUpVector() const;
+
+    //! Offset of the principal point from the image centre in normalized device coordinates (x right, y up)
+    [[nodiscard]] glm::vec2 principalPointOffsetNDC() const;
+
+    bool build_all_context_geometry = false;
 
     //! UUIDs that have already been built into the geometry handler, each with a fingerprint of the Context state it was built from
     /**
@@ -2552,11 +2641,9 @@ private:
      * primitive whose fingerprint still matches is skipped; one whose fingerprint differs was modified in place - moved,
      * recolored, retextured, or given new color-by data - and is rebuilt.
      *
-     * The material is stored too, since changing it is not always seen in the fingerprint and it decides the primitive's Phong parameters.
-     *
      * \sa buildContextGeometry_private(), computeContextPrimitiveFingerprint()
      */
-    std::unordered_map<uint, ContextPrimitiveUploadState> contextUUIDs_uploaded;
+    std::unordered_map<uint, uint64_t> contextUUIDs_uploaded;
 
     //! Fingerprint of the Context state of a primitive that determines what the geometry handler holds for it
     /**
@@ -2623,6 +2710,14 @@ private:
     //! Function to actually update Context geometry (if needed), which is called by the visualizer before plotting
     void buildContextGeometry_private();
 
+    //! plotUpdate(), optionally without walking the Context first
+    /**
+     * \param[in] hide_window As for plotUpdate().
+     * \param[in] context_geometry_is_current True when the caller has just called buildContextGeometry_private() and changed
+     * nothing since, so that the walk, which visits every dirty primitive of the Context, is not repeated.
+     */
+    void plotUpdate_private(bool hide_window, bool context_geometry_is_current);
+
     //! Update navigation gizmo geometry to match current camera orientation
     void updateNavigationGizmo();
 
@@ -2651,7 +2746,7 @@ private:
 
     //! Whether the colorbar range was set explicitly by the user
     /**
-     * Distinguishes an explicit range from an unset one. Inferring this from `colorbar_min == 0 && colorbar_max == 0` made a legitimate setColorbarRange(0, 0) indistinguishable from "never set", so it was silently replaced by the auto-detected data range.
+     * Distinguishes an explicit range, including setColorbarRange(0, 0), from an unset one, which is auto-detected from the data.
      */
     bool colorbar_range_set = false;
     std::vector<float> colorbar_ticks;

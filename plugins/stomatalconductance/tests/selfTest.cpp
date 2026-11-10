@@ -377,6 +377,9 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Unknown Species") {
     DOCTEST_CHECK(error_message.find("Almond") != std::string::npos);
     DOCTEST_CHECK(error_message.find("Walnut") != std::string::npos);
     DOCTEST_CHECK(error_message.find("EasternRedbud") != std::string::npos);
+    DOCTEST_CHECK(error_message.find("Cowpea") != std::string::npos);
+    DOCTEST_CHECK(error_message.find("CommonBean") != std::string::npos);
+    DOCTEST_CHECK(error_message.find("Sorghum") != std::string::npos);
 
     uint UUID = context.addPatch();
     context.addMaterial("leaf_material");
@@ -415,6 +418,9 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Every library species returns its 
             {{"Baylaurel", "baylaurel", "Bay_Laurel", "bay_laurel", "bay", "Bay"}, 1.6f, 1.359f, 849.4f, 6.485f},
             {{"Olive", "olive"}, 3.9210f, 0.f, 2294.8f, 2.6058f},
             {{"EasternRedbud", "easternredbud"}, 21.88f, 11.47f, 1.387e+05f, 1.051e-06f},
+            {{"Cowpea", "cowpea"}, 37.24f, 289.7f, 40074.f, 0.f},
+            {{"CommonBean", "commonbean", "common_bean", "Common_Bean", "Bean", "bean"}, 23.28f, 433.5f, 23008.f, 0.f},
+            {{"Sorghum", "sorghum"}, 1.0e5f, 425.4f, 5.109e8f, 0.f},
     };
 
     for (const auto &entry: library) {
@@ -551,42 +557,32 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Edge Cases and Error Conditions") 
     context.setPrimitiveData(UUID, "air_humidity", 2.0f);
     context.setPrimitiveData(UUID, "air_pressure", 10000.0f);
 
-    std::string captured_warnings;
-
-    // These extreme values will likely cause fzero convergence issues
-    // WarningAggregator.report() outputs to stderr
+    // Every model must still give a finite, non-negative conductance. (Before negative conductances were floored at zero, the strong respiration here gave the
+    // Ball-Berry-type models a negative conductance, for which the surface-vapor-pressure balance has no root, and the solve failed.)
+    std::vector<float> conductances;
     {
-        capture_cout cout_buffer; // Also capture stdout to suppress any other output
+        capture_cout cout_buffer;
         capture_cerr cerr_buffer;
-
-        BWBcoefficients bwb_coeffs;
-        gsm.setModelCoefficients(bwb_coeffs);
-        gsm.run(std::vector<uint>{UUID});
-
-        BBLcoefficients bbl_coeffs;
-        gsm.setModelCoefficients(bbl_coeffs);
-        gsm.run(std::vector<uint>{UUID});
-
-        MOPTcoefficients mopt_coeffs;
-        gsm.setModelCoefficients(mopt_coeffs);
-        gsm.run(std::vector<uint>{UUID});
-
-        BMFcoefficients bmf_coeffs;
-        gsm.setModelCoefficients(bmf_coeffs);
-        gsm.run(std::vector<uint>{UUID});
-
-        BBcoefficients bb_coeffs;
-        gsm.setModelCoefficients(bb_coeffs);
+        auto run_model = [&](auto coeffs) {
+            gsm.setModelCoefficients(coeffs);
+            gsm.run(std::vector<uint>{UUID});
+            float gs = -1.f;
+            context.getPrimitiveData(UUID, "moisture_conductance", gs);
+            conductances.push_back(gs);
+        };
+        run_model(BWBcoefficients());
+        run_model(BBLcoefficients());
+        run_model(MOPTcoefficients());
+        run_model(BMFcoefficients());
         context.setPrimitiveData(UUID, "xylem_water_potential", -2.0f);
-        gsm.run(std::vector<uint>{UUID});
-
-        // Get the captured output before the captures go out of scope
-        // WarningAggregator.report() writes to stderr
-        captured_warnings = cerr_buffer.get_captured_output();
+        run_model(BBcoefficients());
     } // captures go out of scope here, restoring normal output
 
-    // Verify we captured some fzero warnings (expected for these extreme conditions)
-    DOCTEST_CHECK(captured_warnings.find("fzero") != std::string::npos);
+    DOCTEST_REQUIRE(conductances.size() == 5);
+    for (float gs: conductances) {
+        DOCTEST_CHECK(std::isfinite(gs));
+        DOCTEST_CHECK(gs >= 0.f);
+    }
 }
 
 DOCTEST_TEST_CASE("StomatalConductanceModel - Constructor Edge Cases") {
@@ -1061,6 +1057,45 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Night-time respiration still yield
     context.getPrimitiveData(UUID, "moisture_conductance", gs);
     DOCTEST_CHECK(gs > 0.f);
     DOCTEST_CHECK(std::isfinite(gs));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Strong respiration does not give a negative conductance") {
+    // Regression test. The Ball-Woodrow-Berry, Ball-Berry-Leuning and Medlyn models add a term proportional to An to gs0, so a leaf whose respiration far exceeds
+    // its photosynthesis had a negative conductance. A negative "moisture_conductance" was clipped to zero by the photosynthesis model (with a warning for every
+    // such leaf) and reversed the transpiration of the energy balance model. The conductance is now floored at zero. Milder respiration still lowers gs below gs0,
+    // as the models were fitted (gs0 is a fitted intercept; measured dark conductances lie below it, see the original self-test).
+    auto conductance = [](auto coeffs, float An) {
+        Context context;
+        StomatalConductanceModel gsm(&context);
+        gsm.disableMessages();
+        uint UUID = context.addPatch();
+        context.setPrimitiveData(UUID, "net_photosynthesis", An);
+        context.setPrimitiveData(UUID, "radiation_flux_PAR", 0.f);
+        context.setPrimitiveData(UUID, "boundarylayer_conductance", 3.5f);
+        context.setPrimitiveData(UUID, "air_CO2", 400.f);
+        context.setPrimitiveData(UUID, "air_humidity", 0.8f);
+        gsm.setModelCoefficients(coeffs);
+        gsm.run(std::vector<uint>{UUID});
+        float gs = -1.f;
+        context.getPrimitiveData(UUID, "moisture_conductance", gs);
+        return gs;
+    };
+    BWBcoefficients bwb;
+    BBLcoefficients bbl;
+    MOPTcoefficients mopt;
+    DOCTEST_CHECK(conductance(bwb, -10.f) == 0.f);
+    DOCTEST_CHECK(conductance(bbl, -10.f) == 0.f);
+    DOCTEST_CHECK(conductance(mopt, -10.f) == 0.f);
+
+    const float gs_bwb = conductance(bwb, -2.f);
+    const float gs_bbl = conductance(bbl, -2.f);
+    const float gs_mopt = conductance(mopt, -2.f);
+    DOCTEST_CHECK(gs_bwb > 0.f);
+    DOCTEST_CHECK(gs_bwb < bwb.gs0);
+    DOCTEST_CHECK(gs_bbl > 0.f);
+    DOCTEST_CHECK(gs_bbl < bbl.gs0);
+    DOCTEST_CHECK(gs_mopt > 0.f);
+    DOCTEST_CHECK(gs_mopt < mopt.gs0);
 }
 
 DOCTEST_TEST_CASE("StomatalConductanceModel - Non-positive dynamic time constants are rejected") {

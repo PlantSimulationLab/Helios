@@ -264,11 +264,11 @@ void Visualizer::resetCachedGeometryIDs() {
 void Visualizer::clearGeometry() {
     geometry_handler.clearAllGeometry();
     resetCachedGeometryIDs();
+    context_modification_mark = 0; // every primitive is built again
+    context_geometry_prepared = false;
 
     contextUUIDs_build.clear();
     contextUUIDs_uploaded.clear();
-    context_geometry_prepared = false;
-    phong_material_indices_stale = true;
     colorPrimitives_UUIDs.clear();
     colorPrimitives_objIDs.clear();
     depth_buffer_data.clear();
@@ -1547,7 +1547,7 @@ void Visualizer::updateNavigationGizmo() {
 
     // Compute camera view matrix directly from current camera position
     // This avoids relying on potentially uninitialized cameraViewMatrix
-    glm::mat4 view_matrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), glm::vec3(0, 0, 1));
+    glm::mat4 view_matrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), cameraUpVector());
 
     // Extract camera right, up, and forward vectors from the view matrix
     // The view matrix transforms world coordinates to camera coordinates

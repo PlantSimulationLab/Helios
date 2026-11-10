@@ -55,6 +55,7 @@ layout(push_constant) uniform PushConstants {
     uint face_absorption_enabled; // 1 = also accumulate the absorption that arrived on the top face into radiation_in_top
     uint below_horizon_diffuse_enabled; // 1 = the diffuse sky also reaches rays leaving below the horizon
     uint specular_reflection_enabled; // 1 = this launch evaluates the surface layers' reflection lobe of the direct radiation
+    uint forward_scatter_enabled; // 1 = accumulate the forward scattering estimate into forward_scatter (scattering launches)
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -184,6 +185,11 @@ layout(set = 2, binding = 0) buffer RadiationInBuffer {
 
 // Absorption that arrived on the top face (the side the normal points to), same layout as radiation_in. Written only when
 // pc.face_absorption_enabled is set; otherwise it is a one-element placeholder.
+// Forward scattering estimate [primitive * band_count + band] (see RadiationModel::runBand()); written only when pc.forward_scatter_enabled
+layout(set = 2, binding = 20) buffer ForwardScatterBuffer {
+    float forward_scatter[];
+} forward_scatter_buf;
+
 layout(set = 2, binding = 15) buffer RadiationInTopBuffer {
     float radiation_in_top[]; // [primitive * band_count + band]
 } rad_in_top_buf;
@@ -265,6 +271,7 @@ layout(set = 3, binding = 4) readonly buffer SkyRadianceParamsBuffer {
 #include "common/sky_distribution.glsl"
 #include "common/texture_mask.glsl"
 #include "common/surface_layer.glsl"
+#include "common/spectral_texture.glsl"
 
 // Direct flux reaching primitives with a surface layer [source * primitive * band], for their reflection lobe of it
 layout(set = 2, binding = 10) readonly buffer RadiationSpecularBuffer {
@@ -512,6 +519,9 @@ void main() {
                 // If all attempts hit transparent texels, launch from the last sample rather than drop the ray and its energy
             }
 
+            // The class of a spectral texture at the launch point, whose reflectivity and transmissivity the rays from it use
+            uint origin_palette_entry = spectral_palette_entry(prim_idx, spectral_origin_texel_uv(prim_idx, prim_type, sp_local));
+
             // Transform to world space
             vec3 ray_origin = transform_point(transform, sp_local);
 
@@ -546,9 +556,12 @@ void main() {
             // Per-band radiance leaving the covers the ray passes (their reflection and emission), each attenuated by
             // the covers in front of it. It reaches this primitive like the radiance of the surface the ray ends on.
             float cover_radiance[GLASS_MAX_BANDS];
+            // Per-band share of this ray's flux that the covers it passes reflect, for the forward scattering estimate
+            float cover_rescattered[GLASS_MAX_BANDS];
             for (uint cb = 0; cb < pc.band_count && cb < uint(GLASS_MAX_BANDS); ++cb) {
                 cover_tau[cb] = 1.0;
                 cover_radiance[cb] = 0.0;
+                cover_rescattered[cb] = 0.0;
             }
 
             // Trace ray through BVH with periodic-boundary wrap and translucent-cover pass-through.
@@ -617,7 +630,9 @@ void main() {
                     uint cov_rad_idx = index_prim_band(hit_prim_idx, band, pc.band_count);
                     float cover_out = cov_top ? rad_out_top_buf.radiation_out_top[cov_rad_idx] : rad_out_bottom_buf.radiation_out_bottom[cov_rad_idx];
                     cover_radiance[band] += cover_out * cover_tau[band];
-                    cover_tau[band] *= glass_cover_tau_rho_alpha(hit_prim_idx, band, pc.material_band_count, cov_cos).x;
+                    vec3 cover_tra = glass_cover_tau_rho_alpha(hit_prim_idx, band, pc.material_band_count, cov_cos);
+                    cover_rescattered[band] += cover_tau[band] * cover_tra.y;
+                    cover_tau[band] *= cover_tra.x;
                 }
 
                 trace_origin = trace_origin + ray_direction * (closest_t + 1e-4);
@@ -643,8 +658,9 @@ void main() {
                 uint global_b = band_map_buf.map[band];
                 uint global_idx = index_prim_band(prim_idx, band, pc.band_count);
                 uint mat_idx = (pc.source_count * pc.primitive_count + prim_idx) * pc.material_band_count + global_b; // diffuse/scatter slot
-                float rho = reflectivity_buf.reflectivity[mat_idx];
-                float tau = transmissivity_buf.transmissivity[mat_idx];
+                bool use_palette = spectral_palette_applies(origin_palette_entry, global_b);
+                float rho = use_palette ? spectral_palette_rho(pc.source_count, origin_palette_entry, global_b) : reflectivity_buf.reflectivity[mat_idx];
+                float tau = use_palette ? spectral_palette_tau(pc.source_count, origin_palette_entry, global_b) : transmissivity_buf.transmissivity[mat_idx];
                 float absorption_factor = 1.0 - rho - tau;
 
                 // A translucent cover absorbs alpha(theta) and reflects rho(theta) back out of the launch face. The
@@ -787,6 +803,33 @@ void main() {
                     scatter_top_val    += cover_energy * tau;
                 }
 
+                // Forward scattering estimate (see RadiationModel::runBand()): the flux this ray carries away from this primitive along
+                // its path, times the fraction of it the covers it passes and the surface it reaches scatter again. A hit surface's own
+                // reflectivity is used, not that of a spectral-texture class at the hit point: the estimate need only be unbiased over
+                // the scene, not per texel.
+                float forward_val = 0.0;
+                if (pc.forward_scatter_enabled != 0u) {
+                    float launched = pc.launch_face == 1u ? rad_out_top_buf.radiation_out_top[global_idx] : rad_out_bottom_buf.radiation_out_bottom[global_idx];
+                    int origin_layer = surface_layer_table(prim_idx, global_b);
+                    if (origin_layer >= 0) {
+                        uint layer_offset = pc.primitive_count * pc.band_count;
+                        float second = pc.launch_face == 1u ? rad_out_top_buf.radiation_out_top[layer_offset + global_idx] : rad_out_bottom_buf.radiation_out_bottom[layer_offset + global_idx];
+                        launched = surface_layer_outgoing(launched, second, origin_layer, abs(dot(ray_direction, normalize(normal))));
+                    }
+                    float rescattered = (band < uint(GLASS_MAX_BANDS)) ? cover_rescattered[band] : 0.0;
+                    if (hit_found) {
+                        uint hit_mat_idx = (pc.source_count * pc.primitive_count + hit_prim_idx) * pc.material_band_count + global_b; // diffuse/scatter slot
+                        float hit_rescattered = reflectivity_buf.reflectivity[hit_mat_idx] + transmissivity_buf.transmissivity[hit_mat_idx];
+                        int hit_layer_fwd = surface_layer_table(hit_prim_idx, global_b);
+                        if (hit_layer_fwd >= 0) {
+                            float hit_albedo = surface_layer_albedo(hit_layer_fwd, abs(dot(normalize(hit_normal), ray_direction)));
+                            hit_rescattered = hit_albedo + (1.0 - hit_albedo) * hit_rescattered;
+                        }
+                        rescattered += ((band < uint(GLASS_MAX_BANDS)) ? cover_tau[band] : 1.0) * hit_rescattered;
+                    }
+                    forward_val = abs(launched) * strength * rescattered;
+                }
+
                 // Subgroup reductions called uniformly by all threads (inactive paths contribute 0)
                 float absorption_sum    = subgroupAdd(absorption_val);
                 float scatter_top_sum   = subgroupAdd(scatter_top_val);
@@ -802,6 +845,12 @@ void main() {
                     if (scatter_bottom_sum != 0.0)
                         atomicAdd(scatter_bottom_buf.scatter_bottom[global_idx], scatter_bottom_sum);
                 }
+                // The push constant is the same for every invocation, so the reduction is reached uniformly
+                if (pc.forward_scatter_enabled != 0u) {
+                    float forward_sum = subgroupAdd(forward_val);
+                    if (subgroupElect() && forward_sum != 0.0)
+                        atomicAdd(forward_scatter_buf.forward_scatter[global_idx], forward_sum);
+                }
 
                 // Camera-weighted scatter, once per camera against that camera's rho_cam/tau_cam. This
                 // launch runs once per dispatch rather than once per camera, so weighting by a single
@@ -809,10 +858,21 @@ void main() {
                 // push constant, so control flow stays uniform and the subgroup reductions are reached
                 // by every active invocation.
                 uint cam_scatter_stride = pc.primitive_count * pc.band_count;
+
+                // What reaches a primitive with a spectral texture, from which each camera computes the outgoing radiation of its classes.
+                // The condition is the same for every invocation, so the subgroupAdd is reached by all of them.
+                if (pc.camera_count > 0u && palette_buf.words[0] != 0u) {
+                    float incident_sum = subgroupAdd(camera_energy);
+                    if (subgroupElect() && incident_sum != 0.0 && spectral_texture_on(prim_idx)) {
+                        uint face_slot = (pc.launch_face == 1 ? 0u : pc.source_count + 1u) + pc.source_count;
+                        atomicAdd(spectral_incident_buf.values[face_slot * cam_scatter_stride + global_idx], incident_sum);
+                    }
+                }
+
                 for (uint cam = 0u; cam < pc.camera_count; cam++) {
                     uint cam_mat_idx = mat_idx * pc.camera_count + cam;
-                    float rho_cam = reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
-                    float tau_cam = transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
+                    float rho_cam = use_palette ? spectral_palette_rho_cam(pc.source_count, origin_palette_entry, global_b, cam) : reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
+                    float tau_cam = use_palette ? spectral_palette_tau_cam(pc.source_count, origin_palette_entry, global_b, cam) : transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
                     if (layer >= 0) {
                         rho_cam *= body_fraction;
                         tau_cam *= body_fraction;

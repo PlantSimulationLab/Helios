@@ -2100,15 +2100,44 @@ void Visualizer::disableMessages() {
 void Visualizer::setCameraPosition(const helios::vec3 &cameraPosition, const helios::vec3 &lookAt) {
     camera_eye_location = cameraPosition;
     camera_lookat_center = lookAt;
+    camera_position_set_by_user = true;
 }
 
 void Visualizer::setCameraPosition(const helios::SphericalCoord &cameraAngle, const helios::vec3 &lookAt) {
     camera_lookat_center = lookAt;
     camera_eye_location = camera_lookat_center + sphere2cart(cameraAngle);
+    camera_position_set_by_user = true;
 }
 
 void Visualizer::setCameraFieldOfView(float angle_FOV) {
     camera_FOV = angle_FOV;
+    // The view angle changes what would be drawn, which rendered_frame_is_current must not survive;
+    // cameraHasChanged() looks only at the eye and look-at points.
+    rendered_frame_is_current = false;
+}
+
+void Visualizer::setCameraUpDirection(const helios::vec3 &up) {
+    if (!std::isfinite(up.x) || !std::isfinite(up.y) || !std::isfinite(up.z) || up.magnitude() == 0.f) {
+        helios_runtime_error("ERROR (Visualizer::setCameraUpDirection): the up direction must be a finite, non-zero vector; got (" + std::to_string(up.x) + ", " + std::to_string(up.y) + ", " + std::to_string(up.z) + ").");
+    }
+    camera_up_direction = up;
+    camera_up_direction_set = true;
+    rendered_frame_is_current = false;
+}
+
+void Visualizer::clearCameraUpDirection() {
+    camera_up_direction_set = false;
+    rendered_frame_is_current = false;
+}
+
+void Visualizer::setCameraPrincipalPoint(float column, float row) {
+    if (!std::isfinite(column) || !std::isfinite(row)) {
+        helios_runtime_error("ERROR (Visualizer::setCameraPrincipalPoint): the principal point must be finite; got (" + std::to_string(column) + ", " + std::to_string(row) + ").");
+    }
+    camera_principal_column = column;
+    camera_principal_row = row;
+    camera_principal_point_set = true;
+    rendered_frame_is_current = false;
 }
 
 void Visualizer::setLightDirection(const helios::vec3 &direction) {
@@ -2175,6 +2204,7 @@ void Visualizer::setPhongMaterial(const PhongMaterial &material) {
     }
 
     phong_material = material;
+    phong_global_material_changed = true;
 }
 
 Visualizer::PhongMaterial Visualizer::getPhongMaterial() const {
@@ -2263,7 +2293,8 @@ std::unordered_map<uint, int> Visualizer::buildPhongMaterialTable(const helios::
     }
 
     phong_material_table_size = static_cast<GLint>(table.size() / 4);
-    if (table != phong_material_table_data) {
+    // Uploaded before the next draw rather than here, because building Context geometry must not need OpenGL (see prepareContextGeometry())
+    if (table != phong_material_table_data || phong_material_table_buffer == 0) {
         phong_material_table_data = std::move(table);
         phong_material_table_upload_pending = true;
     }
@@ -2691,7 +2722,7 @@ bool Visualizer::cameraHasChanged() const {
  * roll of the image. +z is kept wherever it works so that ordinary oblique views are unchanged,
  * and a near-vertical view falls back to +y, which puts world +y at the top of the frame.
  */
-static glm::vec3 cameraUpVector(const helios::vec3 &eye, const helios::vec3 &lookat) {
+static glm::vec3 automaticCameraUpVector(const helios::vec3 &eye, const helios::vec3 &lookat) {
     const helios::vec3 forward = lookat - eye;
     const float length = forward.magnitude();
     if (length < 1e-9f) {
@@ -2701,6 +2732,30 @@ static glm::vec3 cameraUpVector(const helios::vec3 &eye, const helios::vec3 &loo
     return vertical_component > 0.999f ? glm::vec3(0, 1, 0) : glm::vec3(0, 0, 1);
 }
 
+glm::vec3 Visualizer::cameraUpVector() const {
+    if (!camera_up_direction_set) {
+        return automaticCameraUpVector(camera_eye_location, camera_lookat_center);
+    }
+    // A set up direction is the caller's statement of the camera's roll; a direction parallel to
+    // the view gives no roll at all, and substituting the automatic one would draw a different image
+    // than the one asked for.
+    const helios::vec3 forward = camera_lookat_center - camera_eye_location;
+    const float forward_length = forward.magnitude();
+    const float up_length = camera_up_direction.magnitude();
+    if (forward_length > 1e-9f && cross(forward, camera_up_direction).magnitude() <= 1e-6f * forward_length * up_length) {
+        helios_runtime_error("ERROR (Visualizer): the camera up direction set by setCameraUpDirection() is parallel to the viewing direction, so it does not fix the camera's roll. Set an up direction perpendicular to the view, or call clearCameraUpDirection().");
+    }
+    return glm_vec3(camera_up_direction);
+}
+
+glm::vec2 Visualizer::principalPointOffsetNDC() const {
+    if (!camera_principal_point_set || Wframebuffer == 0 || Hframebuffer == 0) {
+        return {0.f, 0.f};
+    }
+    // Image rows count down from the top; normalized device y counts up from the bottom.
+    return {2.f * camera_principal_column / float(Wframebuffer) - 1.f, 1.f - 2.f * camera_principal_row / float(Hframebuffer)};
+}
+
 float Visualizer::cameraNearPlane() const {
     float dist = glm::distance(glm_vec3(camera_lookat_center), glm_vec3(camera_eye_location));
     return std::max(0.1f, 0.05f * dist); // avoid 0
@@ -2708,7 +2763,14 @@ float Visualizer::cameraNearPlane() const {
 
 void Visualizer::updatePerspectiveTransformation() {
     cameraProjectionMatrix = glm::infinitePerspective(glm::radians(camera_FOV), float(Wframebuffer) / float(Hframebuffer), cameraNearPlane());
-    cameraViewMatrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), cameraUpVector(camera_eye_location, camera_lookat_center));
+    // An off-centre principal point shifts the image without changing its scale: a point on the
+    // optical axis must land at the principal point in normalized device coordinates. Clip x gains
+    // a term in eye-space z, which is -depth, so after the perspective divide every point moves by
+    // the same offset.
+    const glm::vec2 principal_offset = principalPointOffsetNDC();
+    cameraProjectionMatrix[2][0] -= principal_offset.x;
+    cameraProjectionMatrix[2][1] -= principal_offset.y;
+    cameraViewMatrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), cameraUpVector());
 
     perspectiveTransformationMatrix = cameraProjectionMatrix * cameraViewMatrix;
 }
@@ -3269,10 +3331,14 @@ void Visualizer::computeShadowCascades() {
     // Camera basis, matching the view matrix built in updatePerspectiveTransformation()
     const glm::vec3 eye = glm_vec3(camera_eye_location);
     const glm::vec3 forward = glm::normalize(glm_vec3(camera_lookat_center) - eye);
-    const glm::vec3 right = glm::normalize(glm::cross(forward, cameraUpVector(camera_eye_location, camera_lookat_center)));
+    const glm::vec3 right = glm::normalize(glm::cross(forward, cameraUpVector()));
     const glm::vec3 up = glm::cross(right, forward);
-    const float tan_half_fov_vertical = std::tan(glm::radians(camera_FOV) * 0.5f);
-    const float tan_half_fov_horizontal = tan_half_fov_vertical * float(Wframebuffer) / float(Hframebuffer);
+    // An off-centre principal point makes the frustum asymmetric. The search below takes a symmetric
+    // one, so it is widened to contain the shifted frustum: the cascades may then reach a little
+    // farther than needed, never short of what is visible.
+    const glm::vec2 principal_offset = principalPointOffsetNDC();
+    const float tan_half_fov_vertical = std::tan(glm::radians(camera_FOV) * 0.5f) * (1.f + std::fabs(principal_offset.y));
+    const float tan_half_fov_horizontal = std::tan(glm::radians(camera_FOV) * 0.5f) * float(Wframebuffer) / float(Hframebuffer) * (1.f + std::fabs(principal_offset.x));
 
     // The cascades span from the near plane to the farthest point of the shadow casters' bounds that is
     // in view. Nothing beyond that is visible to receive a shadow, so no fixed distance limits shadowing,
@@ -3697,7 +3763,7 @@ glm::mat4 Visualizer::getPerspectiveTransformationMatrix() const {
 glm::mat4 Visualizer::getViewMatrix() const {
     // Built from the same world up vector as updatePerspectiveTransformation(), so that the two
     // agree; cross() against a fixed +z is the zero vector for a camera looking straight down.
-    const glm::vec3 world_up = cameraUpVector(camera_eye_location, camera_lookat_center);
+    const glm::vec3 world_up = cameraUpVector();
 
     vec3 forward = camera_lookat_center - camera_eye_location;
     forward = forward.normalize();

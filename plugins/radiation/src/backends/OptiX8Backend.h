@@ -123,6 +123,8 @@ namespace helios {
         void getWhiteReferenceResults(std::vector<float> &white_reference_top,
                                       std::vector<float> &white_reference_bottom) override;
         void getRadiationInTopResults(std::vector<float> &radiation_in_top) override;
+        void getForwardScatterResults(std::vector<float> &forward_scatter, size_t launch_band_count) override;
+        void getDirectFluxResults(std::vector<float> &direct_flux, size_t launch_band_count) override;
         [[nodiscard]] size_t getRadiationInTopBufferSize() const override;
         [[nodiscard]] size_t getAbandonedRayCount() override;
 
@@ -134,8 +136,13 @@ namespace helios {
         void copyScatterToRadiation() override;
         void uploadRadiationOut(const std::vector<float> &radiation_out_top,
                                 const std::vector<float> &radiation_out_bottom) override;
+        void uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) override;
+        void getCameraPixelSpectralClasses(std::vector<uint> &pixel_classes, const helios::int2 &resolution) override;
+        void uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) override;
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top,
                                       const std::vector<float> &vertex_radiation_out_bottom) override;
+        void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
+        void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
         void zeroCameraScatterBuffers(size_t launch_band_count) override;
         void uploadSourceFluxes(const std::vector<float> &fluxes) override;
         void uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) override;
@@ -238,8 +245,11 @@ namespace helios {
         CUdeviceptr d_smoothing_vertex_indices = 0;
         CUdeviceptr d_vertex_radiation_out_top = 0;
         CUdeviceptr d_vertex_radiation_out_bottom = 0;
+        CUdeviceptr d_vertex_normals = 0; //!< Shading normal per smoothing vertex; allocated only while smoothing is enabled and there is a source or a surface layer
+        CUdeviceptr d_vertex_direct_irradiance = 0; //!< Unoccluded direct irradiance per [source][smoothing vertex][band]; allocated only while smoothing is enabled and there is a source
         CUdeviceptr d_scatter_buff_top       = 0;
         CUdeviceptr d_scatter_buff_bottom    = 0;
+        CUdeviceptr d_forward_scatter        = 0; //!< Forward scattering estimate [prim][launch band] (see getForwardScatterResults())
         CUdeviceptr d_radiation_in_camera    = 0;
         CUdeviceptr d_scatter_buff_top_cam   = 0;
         CUdeviceptr d_scatter_buff_bottom_cam= 0;
@@ -283,6 +293,25 @@ namespace helios {
         CUdeviceptr d_mask_IDs               = 0; //!< per-primitive mask ID (-1 = no mask)
         CUdeviceptr d_uv_data                = 0; //!< uv_data[pos*4 + vtx]: flat UV, 4 verts per prim
         CUdeviceptr d_uv_IDs                 = 0; //!< per-primitive: -1=parametric, >=0=custom UV
+
+        // ---- Spectral texture device buffers ----
+        CUdeviceptr d_class_map_data         = 0; //!< flat uint16 classes, rows from the top
+        CUdeviceptr d_class_map_offsets      = 0; //!< start index of each class map in class_map_data
+        CUdeviceptr d_class_map_sizes        = 0; //!< 2 ints per class map: width, height
+        CUdeviceptr d_class_map_IDs          = 0; //!< per-primitive class map (-1 = none)
+        CUdeviceptr d_palette_offset         = 0; //!< per-primitive first palette entry (UINT32_MAX = none)
+        CUdeviceptr d_palette_rho            = 0;
+        CUdeviceptr d_palette_tau            = 0;
+        CUdeviceptr d_palette_rho_cam        = 0;
+        CUdeviceptr d_palette_tau_cam        = 0;
+        CUdeviceptr d_palette_band_active    = 0;
+        CUdeviceptr d_spectral_incident      = 0; //!< radiation reaching primitives with a spectral texture (see RayTracingResults::spectral_incident)
+        size_t      spectral_incident_count  = 0;
+        CUdeviceptr d_class_flux_offset      = 0; //!< per-primitive first class-flux slot for the current camera
+        CUdeviceptr d_class_flux             = 0; //!< camera-weighted outgoing radiation of each class
+        CUdeviceptr d_camera_pixel_class     = 0; //!< class of the spectral texture seen in each pixel
+        CUdeviceptr d_vertex_spectral        = 0; //!< smoothing-vertex radiation of primitives with a spectral texture
+        size_t      camera_pixel_class_count = 0;
 
         // ---- State ----
         bool     is_initialized          = false;

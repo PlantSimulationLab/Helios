@@ -277,4 +277,107 @@ namespace helios {
         return table;
     }
 
+    std::vector<uint32_t> packSpectralClassMaps(const RayTracingGeometry &geometry) {
+        std::vector<uint32_t> packed = {0u, 0u};
+        if (geometry.class_map_sizes.empty()) {
+            return packed;
+        }
+        if (geometry.class_map_IDs.size() != geometry.primitive_count) {
+            helios_runtime_error("ERROR (packSpectralClassMaps): There are " + std::to_string(geometry.class_map_IDs.size()) + " class map IDs for " + std::to_string(geometry.primitive_count) + " primitives.");
+        }
+        packed.at(0) = uint32_t(geometry.primitive_count);
+        packed.at(1) = uint32_t(geometry.class_map_sizes.size());
+        for (int class_map_ID: geometry.class_map_IDs) {
+            packed.push_back(class_map_ID < 0 ? 0xFFFFFFFFu : uint32_t(class_map_ID));
+        }
+        uint32_t first_texel = 0;
+        for (const helios::int2 &size: geometry.class_map_sizes) {
+            packed.push_back(uint32_t(size.x));
+            packed.push_back(uint32_t(size.y));
+            packed.push_back(first_texel);
+            first_texel += uint32_t(size.x) * uint32_t(size.y);
+        }
+        for (size_t t = 0; t < geometry.class_map_data.size(); t += 2) {
+            const uint32_t low = geometry.class_map_data[t];
+            const uint32_t high = t + 1 < geometry.class_map_data.size() ? geometry.class_map_data[t + 1] : 0u;
+            packed.push_back(low | (high << 16));
+        }
+        return packed;
+    }
+
+    std::vector<uint32_t> packSpectralPalettes(const RayTracingMaterial &materials) {
+        std::vector<uint32_t> packed(9, 0u);
+        if (materials.num_palette_entries == 0) {
+            return packed;
+        }
+        auto append_floats = [&packed](const std::vector<float> &values) {
+            for (float value: values) {
+                uint32_t bits;
+                std::memcpy(&bits, &value, sizeof(bits));
+                packed.push_back(bits);
+            }
+        };
+        packed.at(0) = uint32_t(materials.num_palette_entries);
+        packed.at(1) = uint32_t(materials.num_bands);
+        packed.at(2) = uint32_t(materials.num_cameras);
+        packed.at(3) = uint32_t(packed.size());
+        packed.insert(packed.end(), materials.palette_offset.begin(), materials.palette_offset.end());
+        packed.at(4) = uint32_t(packed.size());
+        packed.insert(packed.end(), materials.palette_band_active.begin(), materials.palette_band_active.end());
+        packed.at(5) = uint32_t(packed.size());
+        append_floats(materials.palette_reflectivity);
+        packed.at(6) = uint32_t(packed.size());
+        append_floats(materials.palette_transmissivity);
+        packed.at(7) = uint32_t(packed.size());
+        append_floats(materials.palette_reflectivity_cam);
+        packed.at(8) = uint32_t(packed.size());
+        append_floats(materials.palette_transmissivity_cam);
+        return packed;
+    }
+
+    std::vector<uint32_t> packSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux, size_t launch_band_count) {
+        std::vector<uint32_t> packed = {0u, 0u, 0u};
+        if (class_flux_offset.empty() || launch_band_count == 0) {
+            return packed;
+        }
+        if (class_flux.size() % (2 * launch_band_count) != 0) {
+            helios_runtime_error("ERROR (packSpectralCameraFlux): " + std::to_string(class_flux.size()) + " class-flux values are not two faces of " + std::to_string(launch_band_count) + " bands for a whole number of slots.");
+        }
+        packed.at(0) = uint32_t(class_flux.size() / (2 * launch_band_count));
+        packed.at(1) = uint32_t(launch_band_count);
+        packed.at(2) = uint32_t(class_flux_offset.size());
+        packed.insert(packed.end(), class_flux_offset.begin(), class_flux_offset.end());
+        for (float value: class_flux) {
+            uint32_t bits;
+            std::memcpy(&bits, &value, sizeof(bits));
+            packed.push_back(bits);
+        }
+        return packed;
+    }
+
+    std::vector<uint32_t> packSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, size_t launch_band_count, uint32_t camera) {
+        std::vector<uint32_t> packed = {0u, 0u, 0u, 0u};
+        if (vertex_values.empty() || layer_count == 0) {
+            return packed;
+        }
+        if (layer_count != 2) {
+            helios_runtime_error("ERROR (packSpectralVertexIncident): The vertex values have " + std::to_string(layer_count) +
+                                 " layers, but the camera programs read exactly two: the radiation from the sky and other surfaces, and the emitted radiation.");
+        }
+        if (launch_band_count == 0 || vertex_values.size() % (2 * size_t(layer_count) * launch_band_count) != 0) {
+            helios_runtime_error("ERROR (packSpectralVertexIncident): " + std::to_string(vertex_values.size()) + " vertex values are not two faces of " + std::to_string(layer_count) + " layers of " + std::to_string(launch_band_count) +
+                                 " bands for a whole number of vertices.");
+        }
+        packed.at(0) = layer_count;
+        packed.at(1) = uint32_t(launch_band_count);
+        packed.at(2) = uint32_t(vertex_values.size() / (2 * size_t(layer_count) * launch_band_count));
+        packed.at(3) = camera;
+        for (float value: vertex_values) {
+            uint32_t bits;
+            std::memcpy(&bits, &value, sizeof(bits));
+            packed.push_back(bits);
+        }
+        return packed;
+    }
+
 } // namespace helios

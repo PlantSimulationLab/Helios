@@ -159,15 +159,14 @@ int main() {
         context.setPrimitiveData(all_UUIDs, "air_humidity", air_humidity);
         context.setPrimitiveData(all_UUIDs, "wind_speed", wind_speed);
 
-        float LW = solar_position.getAmbientLongwaveFlux(air_temperature, air_humidity);
-        float PAR = solar_position.getSolarFluxPAR(pressure, air_temperature, air_humidity, turbidity);
-        float NIR = solar_position.getSolarFluxNIR(pressure, air_temperature, air_humidity, turbidity);
-        float f_diff = solar_position.getDiffuseFraction(pressure, air_temperature, air_humidity, turbidity);
+        solar_position.setAtmosphericConditions(pressure, air_temperature, air_humidity, turbidity);
+        float LW = solar_position.getAmbientLongwaveFlux();
 
-        radiation.setSourceFlux(SunSource, "NIR", NIR * (1.f - f_diff));
-        radiation.setDiffuseRadiationFlux("NIR", NIR * f_diff);
-        radiation.setSourceFlux(SunSource, "PAR", PAR * (1.f - f_diff));
-        radiation.setDiffuseRadiationFlux("PAR", PAR * f_diff);
+        // direct flux is perpendicular to the sun (source flux); diffuse flux is on a horizontal surface
+        radiation.setSourceFlux(SunSource, "NIR", solar_position.getDirectSolarFluxNIR());
+        radiation.setDiffuseRadiationFlux("NIR", solar_position.getDiffuseSolarFluxNIR());
+        radiation.setSourceFlux(SunSource, "PAR", solar_position.getDirectSolarFluxPAR());
+        radiation.setDiffuseRadiationFlux("PAR", solar_position.getDiffuseSolarFluxPAR());
         radiation.setDiffuseRadiationFlux("LW", LW);
 
         radiation.setSourcePosition(SunSource, solar_position.getSunDirectionVector());
@@ -216,7 +215,7 @@ int main() {
         visualizer.setColorbarRange(0.f, 15.f);
         visualizer.setColorbarPosition(make_vec3(0.75, 0.9, 0));
         char time_string[6];
-        sprintf(time_string, "%02d:%02d", time.hour, time.minute);
+        snprintf(time_string, sizeof(time_string), "%02d:%02d", time.hour, time.minute);
         visualizer.addTextboxByCenter(time_string, make_vec3(0.5, 0.9, 0), nullrotation, RGB::black, 16, "Arial", Visualizer::COORDINATES_WINDOW_NORMALIZED);
         visualizer.plotInteractive(); // !!! Close the window to advance to the next time step
     }

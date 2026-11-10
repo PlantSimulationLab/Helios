@@ -2558,7 +2558,11 @@ bool CompoundObject::hasTexture() const {
 }
 
 std::string CompoundObject::getTextureFile() const {
-    return texturefile;
+    // A primitive's texture comes from its material, which can change after the object is created
+    if (UUIDs.empty()) {
+        return "";
+    }
+    return context->getPrimitiveTextureFile(UUIDs.front());
 }
 
 // Left-multiplication by a translation matrix, without forming the matrix or running the general 4x4

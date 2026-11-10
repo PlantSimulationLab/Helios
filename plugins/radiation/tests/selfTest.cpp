@@ -966,6 +966,53 @@ GPU_TEST_CASE("RadiationModel::runBand gives a band without wavelength bounds th
     DOCTEST_CHECK_THROWS_WITH_AS(run(0.02f, true, band_reflectivity, absorbed_flux), doctest::Contains("alone reflects at normal incidence"), std::runtime_error);
 }
 
+GPU_TEST_CASE("RadiationModel::runBand gives a band without wavelength bounds the transmissivity seen through the camera response") {
+    // Regression test. In a band without wavelength bounds, a primitive's reflectivity spectrum is weighted by the camera response to give
+    // the band reflectivity used in scattering, but its transmissivity spectrum was not: the band transmissivity stayed 0, so a leaf was
+    // opaque in the scattering solution. A sheet with reflectivity 0.3 and transmissivity 0.4 absorbed 700 W/m^2 of 1000 instead of 300.
+    Context context;
+    const std::vector<vec2> flat_sun = {make_vec2(400, 1.f), make_vec2(800, 1.f)};
+    const std::vector<vec2> response = {make_vec2(500, 0.1f), make_vec2(700, 0.1f)};
+    const std::vector<vec2> gray_rho = {make_vec2(400, 0.3f), make_vec2(800, 0.3f)};
+    const std::vector<vec2> gray_tau = {make_vec2(400, 0.4f), make_vec2(800, 0.4f)};
+    context.setGlobalData("unbounded_flat_sun", flat_sun);
+    context.setGlobalData("unbounded_response", response);
+    context.setGlobalData("unbounded_gray_rho", gray_rho);
+    context.setGlobalData("unbounded_gray_tau", gray_tau);
+    uint sheet = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(sheet, "reflectivity_spectrum", "unbounded_gray_rho");
+    context.setPrimitiveData(sheet, "transmissivity_spectrum", "unbounded_gray_tau");
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    model.setSourceSpectrum(sun, "unbounded_flat_sun");
+    model.addRadiationBand("R");
+    model.disableEmission("R");
+    model.setScatteringDepth("R", 1);
+    model.setDirectRayCount("R", 100);
+    model.setDiffuseRayCount("R", 100);
+    model.setSourceFlux(sun, "R", 1000.f);
+    model.setDiffuseRadiationFlux("R", 0.f);
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(4, 4);
+    camera_properties.HFOV = 20;
+    model.addRadiationCamera("cam", {"R"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_properties, 1);
+    model.setCameraSpectralResponse("cam", "R", "unbounded_response");
+    model.updateGeometry();
+    model.runBand("R");
+
+    const float band_reflectivity = RadiationModelTestHelper::getMaterialData(model).reflectivity.at(0);
+    const float band_transmissivity = RadiationModelTestHelper::getMaterialData(model).transmissivity.at(0);
+    float absorbed_flux = 0.f;
+    context.getPrimitiveData(sheet, "radiation_flux_R", absorbed_flux);
+
+    DOCTEST_CHECK(std::abs(band_reflectivity - 0.3f) < 1e-4f);
+    DOCTEST_CHECK(std::abs(band_transmissivity - 0.4f) < 1e-4f);
+    DOCTEST_CHECK(std::abs(absorbed_flux - 300.f) < 1.f);
+}
+
 GPU_TEST_CASE("RadiationModel::runBand ray sampling follows the Context random seed") {
     // Seeding the Context must make the ray tracer reproducible, as it does for every other stochastic plugin. The ray
     // counts are deliberately tiny so that the Monte Carlo noise in each result is large: two runs from the same seed
@@ -1463,6 +1510,53 @@ GPU_TEST_CASE("RadiationModel no direct or diffuse radiation leaks into a closed
         }
         DOCTEST_INFO(light << " radiation inside the cube");
         DOCTEST_CHECK(mean_flux < 0.01);
+    }
+}
+
+GPU_TEST_CASE("RadiationModel diffuse rays launched in the plane of another surface do not hit it") {
+    // Rays start with no minimum distance, so a ray launched in the plane of another surface meets it at a distance of zero, which
+    // the intersection arithmetic may produce as -0. A hit at zero distance is not a hit, but the OptiX 8 backend accepted it, and
+    // OptiX does not take -0 as a hit distance: it ended the trace in the direct-ray miss program instead of the diffuse ray's own,
+    // which read past the end of the source flux buffer. In large scenes (a wheat canopy of a million primitives, where rays leave
+    // from the shared edges of tube triangles) this crashed runBand() with an illegal memory access. A black primitive at 0 K lying
+    // exactly on a black primitive at 400 K therefore receives nothing from it, as in the other backends; the OptiX 8 backend gave
+    // it sigma T^4 (hits at +0 from one face, nothing from the rays lost at -0 from the other). Raised 1 mm above it, the hot
+    // primitive fills nearly all of the view from its top face.
+    const float sigma = 5.670374419e-8f;
+    const float hot_emission = sigma * powf(400.f, 4);
+    for (const std::string &shape: {"patch", "triangle"}) {
+        for (const float gap: {0.f, 0.001f}) {
+            Context context;
+            std::vector<uint> UUIDs;
+            for (const float z: {0.f, gap}) {
+                UUIDs.push_back(shape == "patch" ? context.addPatch(make_vec3(0, 0, z), make_vec2(1, 1)) : context.addTriangle(make_vec3(-0.5f, -0.5f, z), make_vec3(0.5f, -0.5f, z), make_vec3(0.5f, 0.5f, z)));
+            }
+            context.setPrimitiveData(UUIDs, "reflectivity_LW", 0.f);
+            context.setPrimitiveData(UUIDs, "transmissivity_LW", 0.f);
+            context.setPrimitiveData(UUIDs, "emissivity_LW", 1.f);
+            const uint cold = UUIDs.at(0);
+            context.setPrimitiveData(cold, "temperature", 0.f);
+            context.setPrimitiveData(UUIDs.at(1), "temperature", 400.f);
+
+            RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+            radiation.disableMessages();
+            radiation.addRadiationBand("LW");
+            radiation.setScatteringDepth("LW", 0);
+            radiation.setDiffuseRadiationFlux("LW", 0.f);
+            radiation.setDiffuseRayCount("LW", 1024);
+            radiation.updateGeometry();
+            radiation.runBand("LW");
+
+            float absorbed;
+            context.getPrimitiveData(cold, "radiation_flux_LW", absorbed);
+            DOCTEST_INFO("shape: " << shape << ", gap: " << gap << " m");
+            if (gap == 0.f) {
+                DOCTEST_CHECK(absorbed < 1e-3f * hot_emission);
+            } else {
+                DOCTEST_CHECK(absorbed > 0.95f * hot_emission);
+                DOCTEST_CHECK(absorbed <= 1.0001f * hot_emission);
+            }
+        }
     }
 }
 
@@ -3096,6 +3190,154 @@ GPU_TEST_CASE("RadiationModel scattering truncation - a few scattering iteration
     DOCTEST_CHECK(fabsf(ground_diffuse_full_rays - reference_ground_diffuse) / reference_ground_diffuse < 0.015f);
 }
 
+GPU_TEST_CASE("RadiationModel scattering tail - a sheet over the ground converges at every depth") {
+    // Regression test. The scattering tail summed the remaining iterations as a geometric series in the ratio q measured on the
+    // last launch alone. Between a sheet and the ground q alternates: everything the ground scatters up reaches the sheet, but half
+    // of what the sheet scatters escapes upward. The series then over- or underestimated the sheet's absorption depending on whether
+    // the depth was even or odd (+400% at a depth of 2, -15% at 3, +10% at 10 for this scene). Summing over the last two launches
+    // with the product of their ratios is exact for such alternating scenes as well as for uniformly decaying ones.
+    const float rho = 0.45f;
+    const float tau = 0.45f;
+    const float rho_ground = 0.8f;
+    const float sheet_analytic = (1.f - rho - tau) * (1.f + tau * rho_ground / (1.f - rho * rho_ground));
+    const float ground_analytic = tau * (1.f - rho_ground) / (1.f - rho * rho_ground);
+
+    Context context;
+    uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    context.setPrimitiveData(ground, "twosided_flag", uint(0));
+    context.setPrimitiveData(ground, "reflectivity_NIR", rho_ground);
+    uint sheet = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+    context.setPrimitiveData(sheet, "reflectivity_NIR", rho);
+    context.setPrimitiveData(sheet, "transmissivity_NIR", tau);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("NIR");
+    radiation.disableEmission("NIR");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "NIR", 1.f);
+    radiation.setDiffuseRadiationFlux("NIR", 0.f);
+    radiation.setDirectRayCount("NIR", 100);
+    radiation.setDiffuseRayCount("NIR", 1000);
+    radiation.enforcePeriodicBoundary("xy");
+    radiation.updateGeometry();
+
+    for (uint depth: {3u, 4u, 5u, 10u}) {
+        radiation.setScatteringDepth("NIR", depth);
+        radiation.runBand("NIR");
+        float sheet_absorbed = 0.f;
+        float ground_absorbed = 0.f;
+        context.getPrimitiveData(sheet, "radiation_flux_NIR", sheet_absorbed);
+        context.getPrimitiveData(ground, "radiation_flux_NIR", ground_absorbed);
+        DOCTEST_INFO("scattering depth " << depth);
+        DOCTEST_CHECK(std::abs(sheet_absorbed - sheet_analytic) < 0.01f * sheet_analytic);
+        DOCTEST_CHECK(std::abs(ground_absorbed - ground_analytic) < 0.01f * ground_analytic);
+    }
+}
+
+GPU_TEST_CASE("RadiationModel scattering tail - camera images include the radiation scattered beyond the scattering depth") {
+    // Regression test. The radiation left in flight after the last scattering iteration was added to the absorbed flux as a summed
+    // series, but not to camera images, which missed it: a strongly scattering scene looked darker than it is unless the depth
+    // was raised far beyond what the absorbed flux needs. A camera above a sheet over the ground must see the sheet's analytic
+    // reflectance, rho + tau^2 rho_g / (1 - rho rho_g), at the same depths at which the absorbed flux has converged.
+    const float rho = 0.45f;
+    const float tau = 0.45f;
+    const float rho_ground = 0.8f;
+    const float reflectance_analytic = rho + tau * tau * rho_ground / (1.f - rho * rho_ground);
+
+    Context context;
+    uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    context.setPrimitiveData(ground, "twosided_flag", uint(0));
+    context.setPrimitiveData(ground, "reflectivity_NIR", rho_ground);
+    uint sheet = context.addPatch(make_vec3(0, 0, 1), make_vec2(4, 4));
+    context.setPrimitiveData(sheet, "reflectivity_NIR", rho);
+    context.setPrimitiveData(sheet, "transmissivity_NIR", tau);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("NIR");
+    radiation.disableEmission("NIR");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "NIR", 1.f);
+    radiation.setDiffuseRadiationFlux("NIR", 0.f);
+    radiation.setDirectRayCount("NIR", 100);
+    radiation.setDiffuseRayCount("NIR", 1000);
+    radiation.enforcePeriodicBoundary("xy");
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(4, 4);
+    camera_properties.HFOV = 10;
+    camera_properties.exposure = "manual";
+    radiation.addRadiationCamera("cam", {"NIR"}, make_vec3(0.01f, 0, 3), make_vec3(0, 0, 0), camera_properties, 4);
+    radiation.updateGeometry();
+
+    for (uint depth: {3u, 5u, 10u}) {
+        radiation.setScatteringDepth("NIR", depth);
+        radiation.runBand("NIR");
+        const std::vector<float> pixels = radiation.getCameraPixelData("cam", "NIR");
+        double sum = 0.0;
+        for (float pixel: pixels) {
+            sum += pixel;
+        }
+        const float reflectance = float(sum / double(pixels.size())) * PI_F; // radiance of a Lambertian surface under unit irradiance is R/pi
+        DOCTEST_INFO("scattering depth " << depth);
+        DOCTEST_CHECK(std::abs(reflectance - reflectance_analytic) < 0.01f * reflectance_analytic);
+    }
+}
+
+GPU_TEST_CASE("RadiationModel scattering tail - a large primitive gathering with few rays does not stop the run") {
+    // Scattered radiation is gathered: each primitive launches its own rays and is credited 1/N of the outgoing flux of
+    // whatever each one hits. A single large ground patch under a few small leaves therefore gathers the leaves' scattered
+    // light from rare hits, each worth (ground area / N) x the leaf flux. With the reduced ray count of a late scattering
+    // iteration (16), one hit credited the ground with more power than the leaves launched, the ratio q of the energy left to
+    // scatter to the energy launched exceeded 1, and runBand() stopped with "did not decrease". The scene's surfaces all
+    // absorb at least 15%, so the true q is well below 1.
+    Context context;
+    const float domain_width = 5.f;
+    // 25 leaves of 8 x 8 cm, 1/160 of the ground area, 0.5-1.5 m above it. One ground ray in 16 hitting a leaf credits the
+    // ground with ground area / 16 x reflectivity 0.5 x the leaf flux, about 2.5 times what all the leaves launch.
+    std::vector<uint> UUIDs_leaf;
+    for (int i = 0; i < 25; i++) {
+        const vec3 position((-0.5f + context.randu()) * domain_width, (-0.5f + context.randu()) * domain_width, 0.5f + context.randu());
+        UUIDs_leaf.push_back(context.addPatch(position, make_vec2(0.08f, 0.08f)));
+    }
+    context.setPrimitiveData(UUIDs_leaf, "twosided_flag", uint(1));
+    context.setPrimitiveData(UUIDs_leaf, "reflectivity_nir", 0.45f);
+    context.setPrimitiveData(UUIDs_leaf, "transmissivity_nir", 0.40f);
+    const uint UUID_ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(domain_width, domain_width));
+    context.setPrimitiveData(UUID_ground, "twosided_flag", uint(0));
+    context.setPrimitiveData(UUID_ground, "reflectivity_nir", 0.5f);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("nir");
+    radiation.disableEmission("nir");
+    radiation.setDirectRayCount("nir", 16);
+    radiation.setDiffuseRayCount("nir", 100);
+    radiation.setScatteringDepth("nir", 2);
+    const float sun_zenith = deg2rad(30.f);
+    const uint sun = radiation.addCollimatedRadiationSource(make_vec3(sinf(sun_zenith), 0.f, cosf(sun_zenith)));
+    radiation.setSourceFlux(sun, "nir", 1.f);
+    radiation.setDiffuseRadiationFlux("nir", 0.f);
+    radiation.enforcePeriodicBoundary("xy");
+    radiation.updateGeometry();
+
+    // Each run draws new random numbers; on the old estimate about one run in ten stopped
+    int stopped_runs = 0;
+    std::string first_error;
+    for (int run = 0; run < 100; run++) {
+        try {
+            radiation.runBand("nir");
+        } catch (const std::exception &error) {
+            if (stopped_runs++ == 0) {
+                first_error = error.what();
+            }
+        }
+    }
+    DOCTEST_INFO("first error: " << first_error);
+    DOCTEST_CHECK(stopped_runs == 0);
+}
+
 GPU_TEST_CASE("RadiationModel scattering - a one-sided primitive scatters its direct radiation only from the face it leaves through") {
     // A one-sided leaf that transmits half the sun and reflects nothing sends no scattered radiation upward. Its scattered direct
     // energy was copied into both of its face buffers before the first scattering launch, so its top face also emitted the
@@ -3806,6 +4048,100 @@ GPU_TEST_CASE("RadiationModel emission reference field leaves fluxes unchanged o
     DOCTEST_CHECK(max_difference < 25.f);
 }
 
+GPU_TEST_CASE("RadiationModel emission reference field leaves thermal camera images unchanged on average") {
+    // As for the fluxes, the reference field only changes what the rays sample, so a thermal camera over a canopy with a range of
+    // temperatures under a cold sky must record the same image with and without it. Under the reference field the traced radiation is
+    // the departure from the reference, which is negative for rays reaching the cold sky or a surface colder than the reference: a
+    // camera that kept only positive departures would see every surface brighter, by tens of W/m^2 of outgoing flux.
+    Context context;
+    const ThermalTestScene surfaces = buildThermalTestScene(context, "canopy", [&](size_t, bool is_leaf) { return is_leaf ? 295.f + 10.f * context.randu() : 305.f + 10.f * context.randu(); });
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("LW");
+    radiation.setDiffuseRadiationFlux("LW", 250.f);
+    radiation.setDiffuseRayCount("LW", 1024);
+    radiation.setScatteringDepth("LW", 4);
+    CameraProperties properties;
+    properties.camera_resolution = make_int2(48, 48);
+    properties.HFOV = 50.f;
+    properties.lens_diameter = 0.f;
+    properties.focal_plane_distance = 4.f;
+    properties.exposure = "manual"; // auto exposure would rescale both images to the same brightness
+    radiation.addRadiationCamera("thermal", {"LW"}, make_vec3(0.1f, 0.1f, 4.f), make_vec3(0, 0, 0.5f), properties, 4);
+    radiation.updateGeometry();
+
+    radiation.runBand("LW");
+    const std::vector<float> image_plain = radiation.getCameraPixelData("thermal", "LW");
+    radiation.enableEmissionReferenceField("LW");
+    radiation.runBand("LW");
+    const std::vector<float> image_reference = radiation.getCameraPixelData("thermal", "LW");
+
+    DOCTEST_REQUIRE(image_plain.size() == image_reference.size());
+    double mean_plain = 0.0;
+    double mean_reference = 0.0;
+    for (size_t i = 0; i < image_plain.size(); i++) {
+        mean_plain += image_plain.at(i) / double(image_plain.size());
+        mean_reference += image_reference.at(i) / double(image_plain.size());
+    }
+    DOCTEST_CAPTURE(mean_plain);
+    DOCTEST_CAPTURE(mean_reference);
+    DOCTEST_REQUIRE(mean_plain > 0.0);
+    DOCTEST_CHECK(std::fabs(mean_reference - mean_plain) < 0.02 * mean_plain); // ray noise is a few tenths of a percent
+
+}
+
+GPU_TEST_CASE("RadiationModel emission reference field leaves the thermal camera image of a surface reflecting a colder one unchanged") {
+    // A hot reflective floor (300 K, rho = 0.5) under a cold black ceiling (250 K) half a metre above it, seen by a thermal camera between
+    // them. The reference is close to the mean of the two blackbody fluxes, so the ceiling's departure from it is strongly negative, and
+    // most of the floor's rays reach the ceiling: the floor reflects that negative departure toward the camera. Without it, the floor
+    // would look brighter by about half the departure (tens of W/m^2).
+    Context context;
+    context.seedRandomGenerator(9);
+    const uint floor = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    const uint ceiling = context.addPatch(make_vec3(0, 0, 0.5f), make_vec2(2, 2), make_SphericalCoord(float(M_PI), 0)); // facing down
+    context.setPrimitiveData(floor, "reflectivity_LW", 0.5f);
+    context.setPrimitiveData(floor, "emissivity_LW", 0.5f);
+    context.setPrimitiveData(floor, "temperature", 300.f);
+    context.setPrimitiveData(ceiling, "reflectivity_LW", 0.f);
+    context.setPrimitiveData(ceiling, "emissivity_LW", 1.f);
+    context.setPrimitiveData(ceiling, "temperature", 250.f);
+    context.setPrimitiveData(std::vector<uint>{floor, ceiling}, "twosided_flag", uint(0));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("LW");
+    radiation.setDiffuseRadiationFlux("LW", 300.f);
+    radiation.setDiffuseRayCount("LW", 4096);
+    radiation.setScatteringDepth("LW", 3);
+    CameraProperties properties;
+    properties.camera_resolution = make_int2(32, 32);
+    properties.HFOV = 40.f;
+    properties.lens_diameter = 0.f;
+    properties.focal_plane_distance = 0.5f;
+    properties.exposure = "manual"; // auto exposure would rescale both images to the same brightness
+    radiation.addRadiationCamera("thermal", {"LW"}, make_vec3(0, -0.5f, 0.35f), make_vec3(0, 0.1f, 0), properties, 4);
+    radiation.updateGeometry();
+
+    radiation.runBand("LW");
+    const std::vector<float> image_plain = radiation.getCameraPixelData("thermal", "LW");
+    radiation.enableEmissionReferenceField("LW");
+    radiation.runBand("LW");
+    const std::vector<float> image_reference = radiation.getCameraPixelData("thermal", "LW");
+
+    DOCTEST_REQUIRE(image_plain.size() == image_reference.size());
+    double mean_plain = 0.0;
+    double mean_reference = 0.0;
+    for (size_t i = 0; i < image_plain.size(); i++) {
+        mean_plain += image_plain.at(i) / double(image_plain.size());
+        mean_reference += image_reference.at(i) / double(image_plain.size());
+    }
+    DOCTEST_CAPTURE(mean_plain);
+    DOCTEST_CAPTURE(mean_reference);
+    DOCTEST_REQUIRE(mean_plain > 0.0);
+    DOCTEST_CHECK(std::fabs(mean_reference - mean_plain) < 0.02 * mean_plain); // ray noise is a few tenths of a percent
+}
+
 GPU_TEST_CASE("RadiationModel emission reference field requires a thermal band that scatters") {
     Context context;
     const ThermalTestScene surfaces = buildThermalTestScene(context, "cube", [](size_t, bool) { return 300.f; });
@@ -4377,9 +4713,10 @@ GPU_TEST_CASE("RadiationModel surface layer parameters") {
                   }).empty());
 }
 
-GPU_TEST_CASE("RadiationModel camera sees no sky below the horizon") {
-    // With nothing in view, a camera looking up sees the longwave sky. A camera looking down sees nothing by
-    // default, and sees the sky once enableBelowHorizonDiffuseRadiation() is called.
+GPU_TEST_CASE("RadiationModel camera continues the horizon sky below the horizon") {
+    // With nothing in view, a camera looking up sees the isotropic longwave sky. A camera looking down sees the same
+    // sky continued below the horizon, whether or not enableBelowHorizonDiffuseRadiation() is called, so a finite
+    // domain does not render a black strip between its edge and the horizon.
     Context context;
 
     // RadiationModel requires geometry; keep it well outside both frusta.
@@ -4412,7 +4749,8 @@ GPU_TEST_CASE("RadiationModel camera sees no sky below the horizon") {
     DOCTEST_REQUIRE(up_pixels.size() == 64);
     DOCTEST_REQUIRE(down_pixels.size() == 64);
     DOCTEST_CHECK(*std::min_element(up_pixels.begin(), up_pixels.end()) > 0.f);
-    DOCTEST_CHECK(*std::max_element(down_pixels.begin(), down_pixels.end()) == 0.f);
+    DOCTEST_CHECK(*std::min_element(down_pixels.begin(), down_pixels.end()) > 0.f);
+    DOCTEST_CHECK(fabsf(up_pixels.front() - down_pixels.front()) < 1e-3f * up_pixels.front());
 
     radiation.enableBelowHorizonDiffuseRadiation();
     radiation.runBand("LW");
@@ -4982,6 +5320,49 @@ GPU_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") {
             DOCTEST_CHECK(has_spectrum);
         }
     }
+}
+
+DOCTEST_TEST_CASE("Radiation spectral libraries contain only valid spectra") {
+    // RadiationModel rejects a spectrum whose wavelengths do not strictly increase, so a shipped spectrum that breaks this cannot be used at all.
+    // Every spectrum in every library file under spectral_data, colour boards included, must be usable.
+    const std::filesystem::path spectral_data = helios::resolvePluginAsset("radiation", "spectral_data");
+    std::vector<std::filesystem::path> files;
+    for (const auto &directory: {spectral_data, spectral_data / "color_board"}) {
+        for (const auto &entry: std::filesystem::directory_iterator(directory)) {
+            if (entry.path().extension() == ".xml") {
+                files.push_back(entry.path());
+            }
+        }
+    }
+    DOCTEST_REQUIRE(!files.empty());
+
+    std::vector<std::string> invalid;
+    size_t checked = 0;
+    for (const auto &file: files) {
+        Context context;
+        context.loadXML(file.string().c_str(), true);
+        for (const std::string &label: context.listGlobalData()) {
+            if (context.getGlobalDataType(label.c_str()) != HELIOS_TYPE_VEC2) {
+                continue;
+            }
+            std::vector<vec2> spectrum;
+            context.getGlobalData(label.c_str(), spectrum);
+            checked++;
+            for (size_t i = 1; i < spectrum.size(); i++) {
+                if (spectrum.at(i).x <= spectrum.at(i - 1).x) {
+                    invalid.push_back(file.filename().string() + ": " + label + " (" + std::to_string(spectrum.at(i - 1).x) + " nm then " + std::to_string(spectrum.at(i).x) + " nm)");
+                    break;
+                }
+            }
+        }
+    }
+    DOCTEST_CHECK(checked > 100);
+    std::string invalid_list;
+    for (const std::string &spectrum: invalid) {
+        invalid_list += "\n  " + spectrum;
+    }
+    DOCTEST_INFO("spectra whose wavelengths do not strictly increase:" << invalid_list);
+    DOCTEST_CHECK(invalid.empty());
 }
 
 GPU_TEST_CASE("RadiationModel Spectral Library Integration") {
@@ -7212,7 +7593,7 @@ GPU_TEST_CASE("RadiationModel - Camera Metadata Export") {
     // Set context properties for metadata
     context.setDate(30, 9, 2025); // day, month, year
     context.setTime(0, 30, 10); // second, minute, hour
-    context.setLocation(make_Location(34.0522, -118.2437, 8.0)); // Los Angeles
+    context.setLocation(make_Location(34.0522, 118.2437, 8.0)); // Los Angeles (118.24 W, UTC-8; both positive West in Helios)
 
     RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
@@ -7273,7 +7654,7 @@ GPU_TEST_CASE("RadiationModel - Camera Metadata Export") {
 
         // Check location properties
         DOCTEST_CHECK(metadata.location_properties.latitude == doctest::Approx(34.0522).epsilon(0.0001));
-        DOCTEST_CHECK(metadata.location_properties.longitude == doctest::Approx(-118.2437).epsilon(0.0001));
+        DOCTEST_CHECK(metadata.location_properties.longitude == doctest::Approx(118.2437).epsilon(0.0001));
 
         // Check acquisition properties
         DOCTEST_CHECK(metadata.acquisition_properties.date == "2025-09-30");
@@ -9423,6 +9804,53 @@ GPU_TEST_CASE("RadiationModel camera sees the power-law angular distribution of 
     DOCTEST_CHECK(near_peak / far_from_peak == doctest::Approx(3.f).epsilon(0.02));
 }
 
+GPU_TEST_CASE("RadiationModel camera sees the horizon sky of the same azimuth below the horizon") {
+    // A camera ray that leaves all geometry below the horizon sees the sky radiance at the horizon in the same azimuth, so the rendered sky
+    // is continuous across the horizon and keeps its azimuthal pattern. With K = 1 and the peak 30 degrees above the horizon toward +y, the
+    // horizon toward +y is 30 degrees from the peak and the horizon toward -y is 150 degrees from it, a factor of 5 in radiance.
+    Context context;
+    context.addPatch(make_vec3(0, 0, -50), make_vec2(0.1f, 0.1f)); // out of view
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("VIS");
+    radiation.disableEmission("VIS");
+    radiation.setDiffuseRayCount("VIS", 1000);
+    radiation.setDiffuseRadiationFlux("VIS", 100.f);
+    radiation.setScatteringDepth("VIS", 1);
+    const float peak_elevation = deg2rad(30.f);
+    radiation.setDiffuseRadiationExtinctionCoeff("VIS", 1.f, make_vec3(0, std::cos(peak_elevation), std::sin(peak_elevation)));
+
+    // Both views are 60 degrees below the horizon: toward the peak's azimuth and away from it
+    const float view_elevation = deg2rad(-60.f);
+    radiation.addRadiationCamera("toward_peak_cam", {"VIS"}, make_vec3(0, 0, 0), make_vec3(0, std::cos(view_elevation), std::sin(view_elevation)), skyTestCameraProperties(), 4);
+    radiation.addRadiationCamera("away_from_peak_cam", {"VIS"}, make_vec3(0, 0, 0), make_vec3(0, -std::cos(view_elevation), std::sin(view_elevation)), skyTestCameraProperties(), 4);
+    // A horizontal view 90 degrees in azimuth from the peak, whose image is split by the horizon
+    radiation.addRadiationCamera("horizon_cam", {"VIS"}, make_vec3(0, 0, 0), make_vec3(1, 0, 0), skyTestCameraProperties(), 4);
+
+    radiation.updateGeometry();
+    radiation.runBand("VIS");
+
+    const float toward_peak = meanCameraPixel(radiation, "toward_peak_cam", "VIS");
+    const float away_from_peak = meanCameraPixel(radiation, "away_from_peak_cam", "VIS");
+    DOCTEST_CHECK(away_from_peak > 0.f);
+    DOCTEST_CHECK(toward_peak / std::max(away_from_peak, 1e-12f) == doctest::Approx(5.f).epsilon(0.02));
+
+    // In each pixel column, the two middle rows lie half a pixel (0.5 degrees) above and below the horizon. The sky at the horizon is
+    // continuous, so they differ by well under 1% (the image's columns differ by a few percent, from the sky's variation in azimuth).
+    const std::vector<float> horizon_pixels = radiation.getCameraPixelData("horizon_cam", "VIS");
+    const int2 resolution = skyTestCameraProperties().camera_resolution;
+    DOCTEST_REQUIRE(horizon_pixels.size() == size_t(resolution.x * resolution.y));
+    const int row_above_center = resolution.y / 2 - 1;
+    for (int column = 0; column < resolution.x; column++) {
+        const float first_row = horizon_pixels.at(row_above_center * resolution.x + column);
+        const float second_row = horizon_pixels.at((row_above_center + 1) * resolution.x + column);
+        DOCTEST_CHECK(first_row > 0.f);
+        DOCTEST_CHECK(second_row > 0.f);
+        DOCTEST_CHECK(first_row == doctest::Approx(second_row).epsilon(0.01));
+    }
+}
+
 GPU_TEST_CASE("RadiationModel loads library spectra on demand and rejects spectra that do not exist") {
     // A reflectivity spectrum or camera response that is not in the Context must be loaded from the radiation plug-in's spectral libraries when it
     // is one of theirs, and must raise an error naming it when it is found nowhere. Both used to be replaced by reflectivity 0 or a flat response
@@ -9538,6 +9966,808 @@ GPU_TEST_CASE("RadiationModel loads library spectra on demand and rejects spectr
     }
 }
 
+namespace {
+
+    //! Value of a tabulated spectrum at a wavelength, linearly interpolated and zero outside its range (the radiation model's convention)
+    float spectrumValueAt(const std::vector<vec2> &spectrum, float wavelength) {
+        if (spectrum.empty() || wavelength < spectrum.front().x || wavelength > spectrum.back().x) {
+            return 0.f;
+        }
+        for (size_t i = 1; i < spectrum.size(); i++) {
+            if (wavelength <= spectrum.at(i).x) {
+                const float fraction = (wavelength - spectrum.at(i - 1).x) / (spectrum.at(i).x - spectrum.at(i - 1).x);
+                return spectrum.at(i - 1).y + fraction * (spectrum.at(i).y - spectrum.at(i - 1).y);
+            }
+        }
+        return spectrum.back().y;
+    }
+
+    //! Colorimetric linear sRGB of a reflectance spectrum under CIE D65, for the CIE 1931 2-degree observer, scaled so that a perfect white has Y = 1
+    vec3 colorimetricLinearSRGB(Context &context, const std::string &reflectance_label) {
+        std::vector<vec2> reflectance, xbar, ybar, zbar, d65;
+        context.getGlobalData(reflectance_label.c_str(), reflectance);
+        context.getGlobalData("CIE1931_2deg_xbar", xbar);
+        context.getGlobalData("CIE1931_2deg_ybar", ybar);
+        context.getGlobalData("CIE1931_2deg_zbar", zbar);
+        context.getGlobalData("CIE_D65", d65);
+        double X = 0, Y = 0, Z = 0, Y_white = 0;
+        for (float wavelength = 300.f; wavelength <= 830.f; wavelength += 1.f) {
+            const double light = spectrumValueAt(d65, wavelength);
+            const double rho = spectrumValueAt(reflectance, wavelength);
+            X += rho * light * spectrumValueAt(xbar, wavelength);
+            Y += rho * light * spectrumValueAt(ybar, wavelength);
+            Z += rho * light * spectrumValueAt(zbar, wavelength);
+            Y_white += light * spectrumValueAt(ybar, wavelength);
+        }
+        X /= Y_white;
+        Y /= Y_white;
+        Z /= Y_white;
+        return make_vec3(float(3.2404542 * X - 1.5371385 * Y - 0.4985314 * Z), float(-0.9692660 * X + 1.8760108 * Y + 0.0415560 * Z), float(0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z));
+    }
+
+    //! CIE76 colour difference between two linear sRGB colours, in CIELAB with the reference white (1, 1, 1)
+    float deltaE76(const vec3 &rgb_a, const vec3 &rgb_b) {
+        const auto to_lab = [](const vec3 &rgb) {
+            const float XYZ[3] = {0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb.z, 0.2126729f * rgb.x + 0.7151522f * rgb.y + 0.0721750f * rgb.z, 0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z};
+            const float white[3] = {0.95047f, 1.f, 1.08883f};
+            float f[3];
+            for (int i = 0; i < 3; i++) {
+                const float t = XYZ[i] / white[i];
+                f[i] = t > 0.008856f ? std::cbrt(t) : t / 0.128418f + 4.f / 29.f;
+            }
+            return make_vec3(116.f * f[1] - 16.f, 500.f * (f[0] - f[1]), 200.f * (f[1] - f[2]));
+        };
+        return (to_lab(rgb_a) - to_lab(rgb_b)).magnitude();
+    }
+
+    //! A scene of coloured patches lit by CIE D65 from overhead, each seen by its own downward-looking camera
+    struct ColourPatchScene {
+        Context context;
+        std::vector<std::string> patch_spectra;
+        std::vector<vec3> patch_positions;
+
+        explicit ColourPatchScene(const std::vector<std::string> &spectra) : patch_spectra(spectra) {
+            context.loadXML(helios::resolvePluginAsset("radiation", "spectral_data/cie_colorimetry.xml").string().c_str(), true);
+            context.loadXML(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml").string().c_str(), true);
+            context.loadXML(helios::resolvePluginAsset("radiation", "spectral_data/leaf_surface_spectral_library.xml").string().c_str(), true);
+            context.setGlobalData("flat_white", std::vector<vec2>{make_vec2(300, 0.8f), make_vec2(1100, 0.8f)});
+            for (size_t i = 0; i < spectra.size(); i++) {
+                patch_positions.push_back(make_vec3(10.f * float(i), 0, 0)); // far enough apart that each camera sees only its own patch
+                const uint UUID = context.addPatch(patch_positions.back(), make_vec2(1, 1));
+                context.setPrimitiveData(UUID, "reflectivity_spectrum", spectra.at(i));
+            }
+        }
+
+        //! Bands spanning the cameras' responses, lit only by a collimated D65 source at the zenith
+        static void setUpLighting(RadiationModel &radiation) {
+            const uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+            radiation.setSourceSpectrum(sun, "CIE_D65");
+            for (const char *band: {"red", "green", "blue"}) {
+                radiation.addRadiationBand(band, 300.f, 830.f);
+                radiation.disableEmission(band);
+                radiation.setScatteringDepth(band, 1);
+                radiation.setSourceFlux(sun, band, 1000.f);
+            }
+        }
+
+        //! Add a camera looking straight down at patch i
+        void addPatchCamera(RadiationModel &radiation, const std::string &camera, size_t i, const std::string &response_prefix, const std::string &color_correction = "auto") const {
+            CameraProperties properties = skyTestCameraProperties();
+            properties.HFOV = 10.f;
+            properties.white_balance = "auto";
+            if (color_correction != "auto") {
+                properties.color_correction = color_correction;
+            }
+            radiation.addRadiationCamera(camera, {"red", "green", "blue"}, patch_positions.at(i) + make_vec3(0, 0, 1), patch_positions.at(i), properties, 4);
+            if (!response_prefix.empty()) {
+                for (const char *band: {"red", "green", "blue"}) {
+                    radiation.setCameraSpectralResponse(camera, band, response_prefix + "_" + band);
+                }
+            }
+        }
+    };
+
+    vec3 meanCameraRGB(RadiationModel &radiation, const std::string &camera) {
+        return make_vec3(meanCameraPixel(radiation, camera, "red"), meanCameraPixel(radiation, camera, "green"), meanCameraPixel(radiation, camera, "blue"));
+    }
+
+    float luminance(const vec3 &rgb) {
+        return 0.2126f * rgb.x + 0.7152f * rgb.y + 0.0722f * rgb.z;
+    }
+
+} // namespace
+
+GPU_TEST_CASE("RadiationModel cameras with spectral responses reproduce colorimetric colour by default") {
+    // A camera's own RGB is not a display colour space: its red, green and blue responses overlap, so colours come out desaturated unless they
+    // are converted, as every real camera does, with a colour correction matrix. With default settings, a library camera viewing coloured
+    // surfaces under CIE D65 must record linear sRGB close to the colorimetric value of the CIE 1931 observer. Both are normalized by the
+    // white patch, so exposure plays no part. Without the conversion the mean error is about 18 CIE76 units; with it, about 2.
+    const std::vector<std::string> colours = {"ColorReference_Calibrite_02", "ColorReference_Calibrite_04", "ColorReference_Calibrite_13", "ColorReference_Calibrite_14",  "ColorReference_Calibrite_15",
+                                              "ColorReference_Calibrite_16", "ColorReference_Calibrite_17", "ColorReference_Calibrite_18", "tomato_leaf_reflectivity_0000"};
+    std::vector<std::string> spectra = colours;
+    spectra.push_back("ColorReference_Calibrite_19"); // white, for normalization
+    ColourPatchScene scene(spectra);
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&scene.context);
+    radiation.disableMessages();
+    ColourPatchScene::setUpLighting(radiation);
+    const std::vector<std::string> camera_models = {"Canon_20D", "iPhone11"};
+    for (const std::string &model: camera_models) {
+        for (size_t i = 0; i < spectra.size(); i++) {
+            scene.addPatchCamera(radiation, model + "_patch" + std::to_string(i), i, model);
+        }
+    }
+    radiation.updateGeometry();
+    radiation.runBand(std::vector<std::string>{"red", "green", "blue"});
+
+    const size_t white = spectra.size() - 1;
+    const float truth_white = luminance(colorimetricLinearSRGB(scene.context, spectra.at(white)));
+    for (const std::string &model: camera_models) {
+        const float camera_white = luminance(meanCameraRGB(radiation, model + "_patch" + std::to_string(white)));
+        DOCTEST_REQUIRE(camera_white > 0.f);
+        float sum = 0.f;
+        float largest = 0.f;
+        for (size_t i = 0; i < colours.size(); i++) {
+            const vec3 recorded = meanCameraRGB(radiation, model + "_patch" + std::to_string(i)) / camera_white;
+            const vec3 truth = colorimetricLinearSRGB(scene.context, colours.at(i)) / truth_white;
+            const float error = deltaE76(recorded, truth);
+            sum += error;
+            largest = std::max(largest, error);
+        }
+        DOCTEST_INFO(model << ": mean CIE76 error " << sum / float(colours.size()) << ", largest " << largest);
+        DOCTEST_CHECK(sum / float(colours.size()) < 4.f);
+        DOCTEST_CHECK(largest < 8.f);
+    }
+}
+
+GPU_TEST_CASE("RadiationModel camera colour correction keeps white, can be turned off, and is not applied twice") {
+    // The automatic colour correction is the matrix reported by getCameraColorCorrectionMatrix(), applied after white balance, so a spectrally
+    // flat surface stays neutral. With color_correction "off" the camera keeps its own RGB. A camera with no spectral responses has nothing to
+    // correct, and a camera whose image was corrected automatically refuses a second matrix from applyCameraColorCorrectionMatrix().
+    ColourPatchScene scene({"ColorReference_Calibrite_15", "flat_white"});
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&scene.context);
+    radiation.disableMessages();
+    ColourPatchScene::setUpLighting(radiation);
+    scene.addPatchCamera(radiation, "red_auto", 0, "Canon_20D");
+    scene.addPatchCamera(radiation, "red_off", 0, "Canon_20D", "off");
+    scene.addPatchCamera(radiation, "white_auto", 1, "Canon_20D");
+    scene.addPatchCamera(radiation, "no_response", 0, "");
+    radiation.updateGeometry();
+    radiation.runBand(std::vector<std::string>{"red", "green", "blue"});
+
+    const std::vector<std::vector<float>> matrix = radiation.getCameraColorCorrectionMatrix("red_auto");
+    DOCTEST_REQUIRE(matrix.size() == 3);
+    for (const auto &row: matrix) {
+        DOCTEST_REQUIRE(row.size() == 3);
+        DOCTEST_CHECK(row.at(0) + row.at(1) + row.at(2) == doctest::Approx(1.f).epsilon(1e-4)); // white is preserved
+    }
+
+    const vec3 corrected = meanCameraRGB(radiation, "red_auto");
+    const vec3 own = meanCameraRGB(radiation, "red_off");
+    const vec3 expected = make_vec3(matrix[0][0] * own.x + matrix[0][1] * own.y + matrix[0][2] * own.z, matrix[1][0] * own.x + matrix[1][1] * own.y + matrix[1][2] * own.z, matrix[2][0] * own.x + matrix[2][1] * own.y + matrix[2][2] * own.z);
+    DOCTEST_CHECK(corrected.x == doctest::Approx(expected.x).epsilon(0.005));
+    DOCTEST_CHECK(corrected.y == doctest::Approx(expected.y).epsilon(0.005));
+    DOCTEST_CHECK(corrected.z == doctest::Approx(expected.z).epsilon(0.005));
+    DOCTEST_CHECK(corrected.x / corrected.y > own.x / own.y); // the correction makes the red patch redder
+
+    const vec3 white = meanCameraRGB(radiation, "white_auto");
+    DOCTEST_CHECK(white.x == doctest::Approx(white.y).epsilon(0.01));
+    DOCTEST_CHECK(white.z == doctest::Approx(white.y).epsilon(0.01));
+
+    DOCTEST_CHECK_THROWS([&] { [[maybe_unused]] const auto matrix = radiation.getCameraColorCorrectionMatrix("no_response"); }());
+
+    std::string message;
+    {
+        capture_cerr capture;
+        try {
+            radiation.applyCameraColorCorrectionMatrix("red_auto", "red", "green", "blue", "no_file_needed.xml");
+        } catch (const std::runtime_error &error) {
+            message = error.what();
+        }
+    }
+    DOCTEST_CHECK(message.find("color_correction") != std::string::npos);
+}
+
+GPU_TEST_CASE("RadiationModel camera colour correction leaves a camera that cannot see colour uncorrected, with a warning") {
+    // A camera with the same spectral response in its red, green and blue bands records no colour, so it has no colour correction matrix.
+    // Rendering with it must still work: the image is left as rendered and a warning says why, while asking for the matrix is an error.
+    ColourPatchScene scene({"ColorReference_Calibrite_15"});
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&scene.context);
+    radiation.disableMessages();
+    ColourPatchScene::setUpLighting(radiation);
+    scene.addPatchCamera(radiation, "same_auto", 0, "");
+    scene.addPatchCamera(radiation, "same_off", 0, "", "off");
+    for (const char *camera: {"same_auto", "same_off"}) {
+        for (const char *band: {"red", "green", "blue"}) {
+            radiation.setCameraSpectralResponse(camera, band, "Canon_20D_green");
+        }
+    }
+    radiation.updateGeometry();
+    std::string warnings;
+    radiation.enableMessages();
+    {
+        capture_cout cout_buffer;
+        capture_cerr cerr_buffer;
+        radiation.runBand(std::vector<std::string>{"red", "green", "blue"});
+        warnings = cerr_buffer.get_captured_output();
+    }
+    radiation.disableMessages();
+
+    DOCTEST_CHECK(warnings.find("'same_auto' were not colour corrected") != std::string::npos);
+    DOCTEST_CHECK(warnings.find("'same_off'") == std::string::npos);
+    const vec3 automatic = meanCameraRGB(radiation, "same_auto");
+    const vec3 off = meanCameraRGB(radiation, "same_off");
+    DOCTEST_CHECK(automatic.x == doctest::Approx(off.x).epsilon(1e-5));
+    DOCTEST_CHECK(automatic.y == doctest::Approx(off.y).epsilon(1e-5));
+    DOCTEST_CHECK(automatic.z == doctest::Approx(off.z).epsilon(1e-5));
+    DOCTEST_CHECK_THROWS([&] { [[maybe_unused]] const auto matrix = radiation.getCameraColorCorrectionMatrix("same_auto"); }());
+}
+
+GPU_TEST_CASE("RadiationModel identifies a camera's red, green and blue bands by their spectral responses") {
+    // The colour correction mixes a camera's red, green and blue bands and writes the result back into them, so it must know which band is which.
+    // That is decided from the bands' spectral responses, not from their names or order: a multispectral camera's red-edge band is not its red
+    // band, a camera listed blue-green-red is still an RGB camera, and a colour-infrared camera (near-infrared, red, green) is not one at all.
+    ColourPatchScene scene({"tomato_leaf_reflectivity_0000"}); // a leaf reflects strongly in the near-infrared, so every band records something
+    scene.context.setGlobalData("test_red_edge_response", std::vector<vec2>{make_vec2(700, 0), make_vec2(717, 1), make_vec2(734, 0)});
+    scene.context.setGlobalData("test_nir_response", std::vector<vec2>{make_vec2(760, 0), make_vec2(800, 1), make_vec2(830, 0)});
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&scene.context);
+    radiation.disableMessages();
+    const uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceSpectrum(sun, "CIE_D65");
+    const std::vector<std::string> bands = {"red", "green", "blue", "B", "G", "R", "red_edge", "nir"};
+    for (const std::string &band: bands) {
+        radiation.addRadiationBand(band, 300.f, 830.f);
+        radiation.disableEmission(band);
+        radiation.setScatteringDepth(band, 1);
+        radiation.setSourceFlux(sun, band, 1000.f);
+    }
+    const auto add_camera = [&](const std::string &camera, const std::vector<std::string> &camera_bands, const std::vector<std::string> &responses, const std::string &color_correction) {
+        CameraProperties properties = skyTestCameraProperties(); // manual exposure, so that pixel values can be compared between cameras
+        properties.HFOV = 10.f;
+        properties.white_balance = "auto";
+        properties.color_correction = color_correction;
+        radiation.addRadiationCamera(camera, camera_bands, scene.patch_positions.at(0) + make_vec3(0, 0, 1), scene.patch_positions.at(0), properties, 4);
+        for (size_t b = 0; b < camera_bands.size(); b++) {
+            radiation.setCameraSpectralResponse(camera, camera_bands.at(b), responses.at(b));
+        }
+    };
+    add_camera("reference", {"red", "green", "blue"}, {"Canon_20D_red", "Canon_20D_green", "Canon_20D_blue"}, "auto");
+    for (const std::string &mode: {std::string("auto"), std::string("off")}) {
+        add_camera("five_band_" + mode, {"blue", "green", "red", "red_edge", "nir"}, {"Canon_20D_blue", "Canon_20D_green", "Canon_20D_red", "test_red_edge_response", "test_nir_response"}, mode);
+        add_camera("colour_infrared_" + mode, {"nir", "red", "green"}, {"test_nir_response", "Canon_20D_red", "Canon_20D_green"}, mode);
+    }
+    add_camera("bgr", {"B", "G", "R"}, {"Canon_20D_blue", "Canon_20D_green", "Canon_20D_red"}, "auto");
+    radiation.updateGeometry();
+
+    // Two cameras render separately, and the radiation each one sees is accumulated on the GPU in no fixed order, so the same image can differ between them in the last bit. A band the colour
+    // correction touched would differ by far more than this tolerance.
+    const auto same_image = [&](const std::string &camera_a, const std::string &camera_b, const std::string &band) {
+        const std::vector<float> image_a = radiation.getCameraPixelData(camera_a, band);
+        const std::vector<float> image_b = radiation.getCameraPixelData(camera_b, band);
+        if (image_a.size() != image_b.size()) {
+            return false;
+        }
+        for (size_t pixel = 0; pixel < image_a.size(); pixel++) {
+            if (std::fabs(image_a[pixel] - image_b[pixel]) > 1e-5f * std::max(std::fabs(image_a[pixel]), std::fabs(image_b[pixel]))) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    std::string warnings;
+    radiation.enableMessages();
+    {
+        capture_cout cout_buffer;
+        capture_cerr cerr_buffer;
+        radiation.runBand(bands);
+        warnings = cerr_buffer.get_captured_output();
+    }
+    radiation.disableMessages();
+
+    // The same three responses give the same matrix, whatever the bands are called, in whatever order, and whatever other bands the camera has
+    const std::vector<std::vector<float>> reference = radiation.getCameraColorCorrectionMatrix("reference");
+    for (const std::string &camera: {std::string("five_band_auto"), std::string("bgr")}) {
+        const std::vector<std::vector<float>> matrix = radiation.getCameraColorCorrectionMatrix(camera);
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                DOCTEST_INFO(camera << " element (" << i << ", " << j << ")");
+                DOCTEST_CHECK(matrix.at(i).at(j) == doctest::Approx(reference.at(i).at(j)).epsilon(1e-5));
+            }
+        }
+    }
+
+    // ...and the corrected colour lands in the band that recorded it
+    const vec3 reference_rgb = meanCameraRGB(radiation, "reference");
+    DOCTEST_CHECK(meanCameraPixel(radiation, "bgr", "R") == doctest::Approx(reference_rgb.x).epsilon(1e-4));
+    DOCTEST_CHECK(meanCameraPixel(radiation, "bgr", "G") == doctest::Approx(reference_rgb.y).epsilon(1e-4));
+    DOCTEST_CHECK(meanCameraPixel(radiation, "bgr", "B") == doctest::Approx(reference_rgb.z).epsilon(1e-4));
+    DOCTEST_CHECK(meanCameraPixel(radiation, "five_band_auto", "red") == doctest::Approx(reference_rgb.x).epsilon(1e-4));
+
+    // The multispectral camera's other bands are not touched by the correction
+    for (const std::string &band: {std::string("red_edge"), std::string("nir")}) {
+        DOCTEST_INFO("band " << band);
+        DOCTEST_CHECK(meanCameraPixel(radiation, "five_band_off", band) > 0.f);
+        DOCTEST_CHECK(same_image("five_band_auto", "five_band_off", band));
+    }
+
+    // A colour-infrared camera has no blue band, so it is not colour corrected, and the warning names the near-infrared band
+    DOCTEST_CHECK_THROWS([&] { [[maybe_unused]] const auto matrix = radiation.getCameraColorCorrectionMatrix("colour_infrared_auto"); }());
+    for (const std::string &band: {std::string("nir"), std::string("red"), std::string("green")}) {
+        DOCTEST_INFO("band " << band);
+        DOCTEST_CHECK(same_image("colour_infrared_auto", "colour_infrared_off", band));
+    }
+    DOCTEST_INFO("warnings: " << warnings);
+    DOCTEST_CHECK(warnings.find("'colour_infrared_auto'") != std::string::npos);
+    DOCTEST_CHECK(warnings.find("near-infrared") != std::string::npos);
+    DOCTEST_CHECK(warnings.find("'colour_infrared_off'") == std::string::npos);
+    DOCTEST_CHECK(warnings.find("'five_band_auto'") == std::string::npos);
+    DOCTEST_CHECK(warnings.find("'bgr'") == std::string::npos);
+}
+
+GPU_TEST_CASE("RadiationModel raises an error for a camera band named for one colour whose spectral response is another") {
+    // A band named "red" whose spectral response is blue is a mistake in setting up the camera, not a camera to be corrected around
+    ColourPatchScene scene({"ColorReference_Calibrite_15"});
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&scene.context);
+    radiation.disableMessages();
+    ColourPatchScene::setUpLighting(radiation);
+    scene.addPatchCamera(radiation, "swapped", 0, "Canon_20D");
+    radiation.setCameraSpectralResponse("swapped", "red", "Canon_20D_blue");
+    radiation.setCameraSpectralResponse("swapped", "blue", "Canon_20D_red");
+    radiation.updateGeometry();
+
+    std::string message;
+    try {
+        [[maybe_unused]] const auto matrix = radiation.getCameraColorCorrectionMatrix("swapped");
+    } catch (const std::runtime_error &error) {
+        message = error.what();
+    }
+    DOCTEST_INFO("message: " << message);
+    DOCTEST_CHECK(message.find("'red'") != std::string::npos);
+    DOCTEST_CHECK(message.find("Canon_20D_blue") != std::string::npos);
+
+    bool render_failed = false;
+    {
+        capture_cout cout_buffer;
+        capture_cerr cerr_buffer;
+        try {
+            radiation.runBand(std::vector<std::string>{"red", "green", "blue"});
+        } catch (const std::runtime_error &) {
+            render_failed = true;
+        }
+    }
+    DOCTEST_CHECK(render_failed);
+}
+
+namespace {
+    //! Colour correction matrix of a camera's red, green and blue responses fitted on a set of reflectance spectra, as documented for getCameraColorCorrectionMatrix(): under CIE D65, the least-squares
+    //! map, with rows summing to 1, from the white-balanced camera RGB of each spectrum to its colorimetric linear sRGB
+    std::vector<std::vector<double>> fitColorCorrectionMatrix(Context &context, const std::vector<std::string> &responses, const std::vector<std::string> &reflectances) {
+        std::vector<vec2> d65, xbar, ybar, zbar;
+        context.getGlobalData("CIE_D65", d65);
+        context.getGlobalData("CIE1931_2deg_xbar", xbar);
+        context.getGlobalData("CIE1931_2deg_ybar", ybar);
+        context.getGlobalData("CIE1931_2deg_zbar", zbar);
+        std::vector<std::vector<vec2>> response(3);
+        for (int k = 0; k < 3; k++) {
+            context.getGlobalData(responses.at(k).c_str(), response.at(k));
+        }
+        double white[3] = {0, 0, 0};
+        double white_luminance = 0;
+        for (float wavelength = 300.f; wavelength <= 830.f; wavelength += 1.f) {
+            for (int k = 0; k < 3; k++) {
+                white[k] += double(spectrumValueAt(d65, wavelength)) * spectrumValueAt(response.at(k), wavelength);
+            }
+            white_luminance += double(spectrumValueAt(d65, wavelength)) * spectrumValueAt(ybar, wavelength);
+        }
+        double AtA[2][2] = {{0, 0}, {0, 0}};
+        double Atb[3][2] = {{0, 0}, {0, 0}, {0, 0}};
+        for (const std::string &label: reflectances) {
+            std::vector<vec2> reflectance;
+            context.getGlobalData(label.c_str(), reflectance);
+            double c[3] = {0, 0, 0};
+            double XYZ[3] = {0, 0, 0};
+            for (float wavelength = 300.f; wavelength <= 830.f; wavelength += 1.f) {
+                const double light = double(spectrumValueAt(reflectance, wavelength)) * spectrumValueAt(d65, wavelength);
+                for (int k = 0; k < 3; k++) {
+                    c[k] += light * spectrumValueAt(response.at(k), wavelength);
+                }
+                XYZ[0] += light * spectrumValueAt(xbar, wavelength);
+                XYZ[1] += light * spectrumValueAt(ybar, wavelength);
+                XYZ[2] += light * spectrumValueAt(zbar, wavelength);
+            }
+            for (int k = 0; k < 3; k++) {
+                c[k] /= white[k];
+                XYZ[k] /= white_luminance;
+            }
+            const double t[3] = {3.2404542 * XYZ[0] - 1.5371385 * XYZ[1] - 0.4985314 * XYZ[2], -0.9692660 * XYZ[0] + 1.8760108 * XYZ[1] + 0.0415560 * XYZ[2],
+                                 0.0556434 * XYZ[0] - 0.2040259 * XYZ[1] + 1.0572252 * XYZ[2]};
+            const double a[2] = {c[0] - c[2], c[1] - c[2]};
+            AtA[0][0] += a[0] * a[0];
+            AtA[0][1] += a[0] * a[1];
+            AtA[1][1] += a[1] * a[1];
+            for (int k = 0; k < 3; k++) {
+                Atb[k][0] += a[0] * (t[k] - c[2]);
+                Atb[k][1] += a[1] * (t[k] - c[2]);
+            }
+        }
+        const double determinant = AtA[0][0] * AtA[1][1] - AtA[0][1] * AtA[0][1];
+        std::vector<std::vector<double>> matrix(3, std::vector<double>(3));
+        for (int k = 0; k < 3; k++) {
+            matrix[k][0] = (AtA[1][1] * Atb[k][0] - AtA[0][1] * Atb[k][1]) / determinant;
+            matrix[k][1] = (AtA[0][0] * Atb[k][1] - AtA[0][1] * Atb[k][0]) / determinant;
+            matrix[k][2] = 1.0 - matrix[k][0] - matrix[k][1];
+        }
+        return matrix;
+    }
+} // namespace
+
+GPU_TEST_CASE("RadiationModel camera colour correction matrices are fitted on reflectance spectra only") {
+    // The matrix is fitted on what a camera records from surfaces, so only the libraries' reflectance spectra belong in the fit; the leaf library
+    // also holds transmittance spectra, which are not the colour of any surface the camera sees.
+    Context context;
+    context.loadXML(helios::resolvePluginAsset("radiation", "spectral_data/cie_colorimetry.xml").string().c_str(), true);
+    context.loadXML(helios::resolvePluginAsset("radiation", "spectral_data/camera_spectral_library.xml").string().c_str(), true);
+    std::vector<std::string> reflectances, transmittances;
+    for (const char *file: {"color_board/Calibrite_ColorChecker_Classic_colorboard.xml", "color_board/DGK_DKK_colorboard.xml", "color_board/Datacolor_SpyderCHECKR_24_colorboard.xml", "leaf_surface_spectral_library.xml",
+                            "soil_surface_spectral_library.xml", "bark_surface_spectral_library.xml", "fruit_surface_spectral_library.xml"}) {
+        Context library;
+        library.loadXML(helios::resolvePluginAsset("radiation", std::string("spectral_data/") + file).string().c_str(), true);
+        for (const std::string &label: library.listGlobalData()) {
+            if (library.getGlobalDataType(label.c_str()) != HELIOS_TYPE_VEC2) {
+                continue;
+            }
+            std::vector<vec2> spectrum;
+            library.getGlobalData(label.c_str(), spectrum);
+            context.setGlobalData(label.c_str(), spectrum);
+            (label.find("transmissivity") != std::string::npos ? transmittances : reflectances).push_back(label);
+        }
+    }
+    DOCTEST_REQUIRE(!transmittances.empty());
+    std::vector<std::string> all_spectra = reflectances;
+    all_spectra.insert(all_spectra.end(), transmittances.begin(), transmittances.end());
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    for (const char *band: {"red", "green", "blue"}) {
+        radiation.addRadiationBand(band, 300.f, 830.f);
+    }
+    radiation.addRadiationCamera("canon", {"red", "green", "blue"}, make_vec3(0, 0, 1), make_vec3(0, 0, 0), skyTestCameraProperties(), 1);
+    const std::vector<std::string> responses = {"Canon_20D_red", "Canon_20D_green", "Canon_20D_blue"};
+    radiation.setCameraSpectralResponse("canon", "red", responses.at(0));
+    radiation.setCameraSpectralResponse("canon", "green", responses.at(1));
+    radiation.setCameraSpectralResponse("canon", "blue", responses.at(2));
+    const std::vector<std::vector<float>> derived = radiation.getCameraColorCorrectionMatrix("canon");
+
+    const std::vector<std::vector<double>> reflectance_fit = fitColorCorrectionMatrix(context, responses, reflectances);
+    const std::vector<std::vector<double>> all_spectra_fit = fitColorCorrectionMatrix(context, responses, all_spectra);
+    double largest_effect_of_transmittances = 0;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            DOCTEST_INFO("element (" << i << ", " << j << "): derived " << derived.at(i).at(j) << ", reflectances only " << reflectance_fit[i][j] << ", with transmittances " << all_spectra_fit[i][j]);
+            DOCTEST_CHECK(std::fabs(derived.at(i).at(j) - reflectance_fit[i][j]) < 1e-4);
+            largest_effect_of_transmittances = std::max(largest_effect_of_transmittances, std::fabs(all_spectra_fit[i][j] - reflectance_fit[i][j]));
+        }
+    }
+    DOCTEST_CHECK(largest_effect_of_transmittances > 1e-3); // the test can tell the two fits apart
+}
+
+GPU_TEST_CASE("RadiationModel autoCalibrateCameraImage calibrates the camera's own RGB whether or not the camera colour corrects it") {
+    // autoCalibrateCameraImage() fits a matrix from a colour board in view and exports it for applyCameraColorCorrectionMatrix(), which takes the camera's own RGB
+    // (CameraProperties::color_correction "off"). The matrix must therefore not depend on whether the camera's image was colour corrected automatically.
+    Context context;
+    CameraCalibration calibration(&context);
+    [[maybe_unused]] const std::vector<uint> board = calibration.addCalibriteColorboard(make_vec3(0, 0, 0), 0.05f);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    ColourPatchScene::setUpLighting(radiation);
+    for (const std::string &mode: {std::string("auto"), std::string("off")}) {
+        CameraProperties properties = skyTestCameraProperties();
+        properties.camera_resolution = make_int2(120, 90);
+        properties.HFOV = 45.f;
+        properties.white_balance = "auto";
+        properties.color_correction = mode;
+        radiation.addRadiationCamera("board_" + mode, {"red", "green", "blue"}, make_vec3(0, 0, 0.6f), make_vec3(0, 0, 0), properties, 4);
+        for (const char *band: {"red", "green", "blue"}) {
+            radiation.setCameraSpectralResponse("board_" + mode, band, std::string("Canon_20D_") + band);
+        }
+    }
+    radiation.updateGeometry();
+    radiation.runBand(std::vector<std::string>{"red", "green", "blue"});
+
+    const std::filesystem::path directory = std::filesystem::temp_directory_path() / "helios_autocalibrate_color_correction_test";
+    std::filesystem::create_directories(directory);
+    std::map<std::string, std::vector<std::vector<float>>> exported;
+    for (const std::string &mode: {std::string("auto"), std::string("off")}) {
+        const std::string camera = "board_" + mode;
+        {
+            capture_cout cout_buffer;
+            [[maybe_unused]] const std::string image = radiation.autoCalibrateCameraImage(camera, "red", "green", "blue", (directory / (camera + ".jpg")).string(), false, RadiationModel::ColorCorrectionAlgorithm::MATRIX_3X3_FORCE,
+                                                                                          (directory / (camera + ".xml")).string());
+        }
+        std::string label;
+        exported[mode] = RadiationModelTestHelper::loadColorCorrectionMatrixXML(radiation, (directory / (camera + ".xml")).string(), label);
+    }
+    std::filesystem::remove_all(directory);
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            DOCTEST_INFO("element (" << i << ", " << j << "): auto " << exported["auto"].at(i).at(j) << ", off " << exported["off"].at(i).at(j));
+            // The two cameras sample the same scene with different ray noise, so the matrices agree closely but not exactly
+            DOCTEST_CHECK(std::fabs(exported["auto"].at(i).at(j) - exported["off"].at(i).at(j)) < 0.02f * std::max(1.f, std::fabs(exported["off"].at(i).at(j))));
+        }
+    }
+}
+
+GPU_TEST_CASE("RadiationModel autoCalibrateCameraImage fits a matrix that reproduces the colour board's colours") {
+    // A camera's own RGB of a rendered colour board, multiplied by the matrix autoCalibrateCameraImage() exports, must reproduce each patch's colorimetric
+    // linear sRGB (CIE D65, the patch's own reflectance spectrum), which is what applyCameraColorCorrectionMatrix() and writeCameraImage() assume. The
+    // default algorithm must find a full 3x3 matrix on a well-lit board, and the corrected image must be written sRGB encoded.
+    Context context;
+    context.loadXML(helios::resolvePluginAsset("radiation", "spectral_data/cie_colorimetry.xml").string().c_str(), true);
+    CameraCalibration calibration(&context);
+    const std::vector<uint> board = calibration.addCalibriteColorboard(make_vec3(0, 0, 0), 0.05f);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    ColourPatchScene::setUpLighting(radiation);
+    CameraProperties properties = skyTestCameraProperties();
+    properties.camera_resolution = make_int2(120, 90);
+    properties.HFOV = 45.f;
+    properties.white_balance = "auto";
+    properties.color_correction = "off";
+    radiation.addRadiationCamera("board", {"red", "green", "blue"}, make_vec3(0, 0, 0.6f), make_vec3(0, 0, 0), properties, 4);
+    for (const char *band: {"red", "green", "blue"}) {
+        radiation.setCameraSpectralResponse("board", band, std::string("Canon_20D_") + band);
+    }
+    radiation.updateGeometry();
+    radiation.runBand(std::vector<std::string>{"red", "green", "blue"});
+
+    const std::filesystem::path directory = std::filesystem::temp_directory_path() / "helios_autocalibrate_colours_test";
+    std::filesystem::create_directories(directory);
+    std::map<RadiationModel::ColorCorrectionAlgorithm, std::vector<std::vector<float>>> matrices;
+    for (const auto algorithm: {RadiationModel::ColorCorrectionAlgorithm::MATRIX_3X3_FORCE, RadiationModel::ColorCorrectionAlgorithm::MATRIX_3X3_AUTO}) {
+        const std::string name = algorithm == RadiationModel::ColorCorrectionAlgorithm::MATRIX_3X3_FORCE ? "force" : "auto";
+        {
+            capture_cout cout_buffer;
+            [[maybe_unused]] const std::string image = radiation.autoCalibrateCameraImage("board", "red", "green", "blue", (directory / (name + ".jpg")).string(), false, algorithm, (directory / (name + ".xml")).string());
+        }
+        std::string label;
+        matrices[algorithm] = RadiationModelTestHelper::loadColorCorrectionMatrixXML(radiation, (directory / (name + ".xml")).string(), label);
+    }
+    uint image_width = 0, image_height = 0;
+    std::vector<RGBcolor> image_pixels;
+    helios::readJPEG((directory / "force.jpg").string(), image_width, image_height, image_pixels);
+    std::filesystem::remove_all(directory);
+
+    // The camera's mean RGB over each patch's pixels
+    std::vector<uint> pixel_UUIDs;
+    context.getGlobalData("camera_board_pixel_UUID", pixel_UUIDs);
+    const std::vector<float> red = radiation.getCameraPixelData("board", "red");
+    const std::vector<float> green = radiation.getCameraPixelData("board", "green");
+    const std::vector<float> blue = radiation.getCameraPixelData("board", "blue");
+    std::map<uint, vec3> patch_sum;
+    std::map<uint, int> patch_count;
+    for (size_t p = 0; p < pixel_UUIDs.size(); p++) {
+        if (pixel_UUIDs[p] == 0 || std::find(board.begin(), board.end(), pixel_UUIDs[p] - 1) == board.end()) {
+            continue;
+        }
+        patch_sum[pixel_UUIDs[p] - 1] = patch_sum[pixel_UUIDs[p] - 1] + make_vec3(red[p], green[p], blue[p]);
+        patch_count[pixel_UUIDs[p] - 1]++;
+    }
+    DOCTEST_REQUIRE(patch_count.size() == board.size()); // every patch is in view
+
+    const std::vector<std::vector<float>> &M = matrices.at(RadiationModel::ColorCorrectionAlgorithm::MATRIX_3X3_FORCE);
+    float sum_error = 0.f;
+    float largest_error = 0.f;
+    vec3 neutral_5_reference;
+    for (uint UUID: board) {
+        const vec3 own = patch_sum.at(UUID) / float(patch_count.at(UUID));
+        const vec3 corrected = make_vec3(M[0][0] * own.x + M[0][1] * own.y + M[0][2] * own.z, M[1][0] * own.x + M[1][1] * own.y + M[1][2] * own.z, M[2][0] * own.x + M[2][1] * own.y + M[2][2] * own.z);
+        std::string spectrum;
+        context.getPrimitiveData(UUID, "reflectivity_spectrum", spectrum);
+        const vec3 reference = colorimetricLinearSRGB(context, spectrum);
+        if (spectrum == "ColorReference_Calibrite_22") {
+            neutral_5_reference = reference;
+        }
+        const float error = deltaE76(corrected, reference);
+        DOCTEST_INFO(spectrum << ": corrected " << corrected << ", reference " << reference << ", CIE76 " << error);
+        DOCTEST_CHECK(error < 8.f);
+        sum_error += error;
+        largest_error = std::max(largest_error, error);
+    }
+    DOCTEST_INFO("largest CIE76 error " << largest_error);
+    DOCTEST_CHECK(sum_error / float(board.size()) < 3.f);
+
+    // The default algorithm keeps the full matrix on a well-lit board rather than falling back to a diagonal one
+    const std::vector<std::vector<float>> &automatic = matrices.at(RadiationModel::ColorCorrectionAlgorithm::MATRIX_3X3_AUTO);
+    // (relative to the diagonal: with manual exposure the camera's values are radiances, so the whole matrix is small)
+    const float largest_diagonal = std::max({std::fabs(automatic[0][0]), std::fabs(automatic[1][1]), std::fabs(automatic[2][2])});
+    const float largest_off_diagonal = std::max({std::fabs(automatic[0][1]), std::fabs(automatic[0][2]), std::fabs(automatic[1][0]), std::fabs(automatic[1][2]), std::fabs(automatic[2][0]), std::fabs(automatic[2][1])});
+    DOCTEST_CHECK(largest_off_diagonal > 0.1f * largest_diagonal);
+
+    // The image is sRGB encoded: the mid-grey patch (Neutral 5, about 19% reflectance) appears at its encoded level, about 120 of 255, not at its linear level, about 50
+    const float expected_level = 255.f * RadiationCamera::lin_to_srgb(neutral_5_reference.y);
+    int grey_pixels = 0;
+    for (const RGBcolor &pixel: image_pixels) {
+        if (std::fabs(pixel.r * 255.f - expected_level) < 8.f && std::fabs(pixel.g * 255.f - expected_level) < 8.f && std::fabs(pixel.b * 255.f - expected_level) < 8.f) {
+            grey_pixels++;
+        }
+    }
+    DOCTEST_INFO("expected level " << expected_level);
+    DOCTEST_CHECK(grey_pixels > 10);
+}
+
+GPU_TEST_CASE("RadiationModel camera bands re-rendered one at a time are processed once the image is complete") {
+    // White balance, colour correction and exposure act on a camera's whole image. Re-rendering its bands one at a time must not process the bands that
+    // are not yet re-rendered a second time, and an image with some bands re-rendered and others not cannot be read.
+    ColourPatchScene scene({"ColorReference_Calibrite_15"});
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&scene.context);
+    radiation.disableMessages();
+    ColourPatchScene::setUpLighting(radiation);
+    scene.addPatchCamera(radiation, "camera", 0, "Canon_20D");
+    CameraProperties properties = radiation.getCameraParameters("camera");
+    properties.exposure = "ISO100"; // a fixed gain, which applying twice would show plainly
+    properties.lens_focal_length = 0.05f;
+    properties.lens_diameter = 0.01f;
+    radiation.updateCameraParameters("camera", properties);
+    radiation.updateGeometry();
+
+    radiation.runBand(std::vector<std::string>{"red", "green", "blue"});
+    const vec3 first = meanCameraRGB(radiation, "camera");
+    DOCTEST_REQUIRE(first.y > 0.f);
+
+    radiation.runBand("red");
+    DOCTEST_CHECK_THROWS(static_cast<void>(radiation.getCameraPixelData("camera", "green")));
+    radiation.runBand("green");
+    radiation.runBand("blue");
+    const vec3 second = meanCameraRGB(radiation, "camera");
+    DOCTEST_CHECK(second.x == doctest::Approx(first.x).epsilon(0.01));
+    DOCTEST_CHECK(second.y == doctest::Approx(first.y).epsilon(0.01));
+    DOCTEST_CHECK(second.z == doctest::Approx(first.z).epsilon(0.01));
+}
+
+GPU_TEST_CASE("RadiationModel camera colour correction matrices agree with Adobe's measured matrices") {
+    // Adobe measures a colour matrix for each raw-shooting camera model (published in DNG files and LibRaw's adobe_coeff table). Converted the
+    // way dcraw does (XYZ->camera to white-balanced camera RGB->linear sRGB), the matrices of two library cameras are below. The matrix derived
+    // from the library's spectral responses must be close to them; elementwise they differ by at most about 0.17.
+    Context context;
+    context.addPatch();
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    for (const char *band: {"red", "green", "blue"}) {
+        radiation.addRadiationBand(band, 300.f, 830.f);
+    }
+    const std::map<std::string, std::vector<std::vector<float>>> adobe = {{"Canon_20D", {{1.8540f, -0.9159f, 0.0620f}, {-0.0297f, 1.3293f, -0.2995f}, {0.0611f, -0.3692f, 1.3080f}}}, // Canon EOS 20D
+                                                                          {"SONY_NEX5N", {{1.8202f, -0.7267f, -0.0935f}, {-0.1674f, 1.7042f, -0.5368f}, {0.0009f, -0.4043f, 1.4033f}}}}; // Sony NEX-5N
+    for (const auto &adobe_entry: adobe) {
+        // Plain references rather than structured bindings, which DOCTEST_INFO's lambda cannot capture before C++20
+        const std::string &model = adobe_entry.first;
+        const std::vector<std::vector<float>> &expected = adobe_entry.second;
+        radiation.addRadiationCamera(model, {"red", "green", "blue"}, make_vec3(0, 0, 1), make_vec3(0, 0, 0), skyTestCameraProperties(), 1);
+        for (const char *band: {"red", "green", "blue"}) {
+            radiation.setCameraSpectralResponse(model, band, model + "_" + band);
+        }
+        const std::vector<std::vector<float>> derived = radiation.getCameraColorCorrectionMatrix(model);
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                DOCTEST_INFO(model << " element (" << i << ", " << j << "): derived " << derived.at(i).at(j) << ", Adobe " << expected.at(i).at(j));
+                DOCTEST_CHECK(std::fabs(derived.at(i).at(j) - expected.at(i).at(j)) < 0.25f);
+            }
+        }
+    }
+}
+
+GPU_TEST_CASE("RadiationModel auto exposure meters the centre-weighted mean luminance of the final image") {
+    // Auto exposure scales an RGB camera's image so that its centre-weighted mean luminance (Gaussian weights exp(-(dx^2 + dy^2)), with dx and
+    // dy the offsets from the image centre in units of 0.35 of the image width and height) equals CameraProperties::exposure_target, 0.235 by
+    // default. That rule and value were calibrated on 413 camera models' own JPEGs, measured on the final linear sRGB image, so the meter
+    // must read the image after white balance and colour correction. The scene, a bright patch in the middle of dark ground, makes the
+    // median luminance (the earlier rule) far from the centre-weighted mean.
+    DOCTEST_CHECK(CameraProperties().exposure_target == doctest::Approx(0.235f));
+
+    Context context;
+    context.loadXML(helios::resolvePluginAsset("radiation", "spectral_data/cie_colorimetry.xml").string().c_str(), true);
+    context.setGlobalData("dark_ground", std::vector<vec2>{make_vec2(300, 0.05f), make_vec2(1100, 0.05f)});
+    context.setGlobalData("bright_patch", std::vector<vec2>{make_vec2(300, 0.8f), make_vec2(1100, 0.8f)});
+    const uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    context.setPrimitiveData(ground, "reflectivity_spectrum", "dark_ground");
+    const uint patch = context.addPatch(make_vec3(0, 0, 0.01f), make_vec2(0.6f, 0.6f));
+    context.setPrimitiveData(patch, "reflectivity_spectrum", "bright_patch");
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    const uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceSpectrum(sun, "CIE_D65");
+    for (const char *band: {"red", "green", "blue"}) {
+        radiation.addRadiationBand(band, 300.f, 830.f);
+        radiation.disableEmission(band);
+        radiation.setScatteringDepth(band, 1);
+        radiation.setSourceFlux(sun, band, 1000.f);
+    }
+    CameraProperties properties = skyTestCameraProperties();
+    properties.camera_resolution = make_int2(40, 30);
+    properties.HFOV = 40.f;
+    properties.exposure = "auto";
+    properties.exposure_target = CameraProperties().exposure_target;
+    // a camera without spectral responses, and a library camera that is white balanced and colour corrected before it is metered
+    radiation.addRadiationCamera("plain", {"red", "green", "blue"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), properties, 4);
+    properties.white_balance = "auto";
+    radiation.addRadiationCamera("canon", {"red", "green", "blue"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), properties, 4);
+    for (const char *band: {"red", "green", "blue"}) {
+        radiation.setCameraSpectralResponse("canon", band, std::string("Canon_20D_") + band);
+    }
+    radiation.updateGeometry();
+    radiation.runBand(std::vector<std::string>{"red", "green", "blue"});
+
+    for (const std::string camera: {"plain", "canon"}) {
+        DOCTEST_CAPTURE(camera);
+        const std::vector<float> red = radiation.getCameraPixelData(camera, "red");
+        const std::vector<float> green = radiation.getCameraPixelData(camera, "green");
+        const std::vector<float> blue = radiation.getCameraPixelData(camera, "blue");
+        const int width = properties.camera_resolution.x;
+        const int height = properties.camera_resolution.y;
+        DOCTEST_REQUIRE(red.size() == size_t(width * height));
+        double weighted_sum = 0, weight_sum = 0;
+        std::vector<float> luminances;
+        for (int j = 0; j < height; j++) {
+            for (int i = 0; i < width; i++) {
+                const size_t p = size_t(j) * width + i;
+                const float Y = 0.2126f * red[p] + 0.7152f * green[p] + 0.0722f * blue[p];
+                const double dx = (i + 0.5 - 0.5 * width) / (0.35 * width);
+                const double dy = (j + 0.5 - 0.5 * height) / (0.35 * height);
+                const double weight = std::exp(-(dx * dx + dy * dy));
+                weighted_sum += weight * Y;
+                weight_sum += weight;
+                luminances.push_back(Y);
+            }
+        }
+        std::nth_element(luminances.begin(), luminances.begin() + luminances.size() / 2, luminances.end());
+        const float median = luminances[luminances.size() / 2];
+        DOCTEST_CHECK(weighted_sum / weight_sum == doctest::Approx(0.235).epsilon(0.005));
+        DOCTEST_CHECK(std::fabs(median - 0.235f) > 0.05f); // the scene does distinguish the two rules
+    }
+}
+
+GPU_TEST_CASE("RadiationModel writes RGB camera images through the typical camera tone curve") {
+    // writeCameraImage() passes an RGB camera's linear image through the typical in-camera tone curve (CameraProperties::tone_curve "auto")
+    // before sRGB encoding, and with tone_curve "off" encodes it as it is. The curve was measured on 413 camera models' own JPEGs; the inputs
+    // below are points of its table, so the expected 8-bit values follow from the table alone. The camera's pixel data stays linear.
+    const std::vector<float> inputs = {0.0110485f, 0.0625f, 0.176777f, 0.707107f, 2.0f};
+    const std::vector<float> with_curve = {9.6f, 52.5f, 113.0f, 210.5f, 247.5f}; // 255 * sRGB(curve(x))
+    const std::vector<float> without_curve = {27.1f, 70.7f, 116.7f, 218.8f, 255.f}; // 255 * sRGB(x)
+
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    CameraProperties properties = skyTestCameraProperties();
+    properties.camera_resolution = make_int2(8, 8);
+    const std::filesystem::path directory = std::filesystem::temp_directory_path() / "helios_tone_curve_test";
+    std::filesystem::create_directories(directory);
+    for (size_t k = 0; k < inputs.size(); k++) {
+        for (const std::string mode: {"auto", "off"}) {
+            const std::string camera = "tone_" + mode + "_" + std::to_string(k);
+            properties.tone_curve = mode;
+            radiation.addRadiationCamera(camera, {"red", "green", "blue"}, make_vec3(0, 0, 1), make_vec3(0, 0, 0), properties, 1);
+            for (const char *band: {"red", "green", "blue"}) {
+                radiation.setCameraPixelData(camera, band, std::vector<float>(64, inputs[k]));
+            }
+            const std::string file = radiation.writeCameraImage(camera, {"red", "green", "blue"}, "tone", directory.string() + "/");
+            DOCTEST_REQUIRE(!file.empty());
+            uint width, height;
+            std::vector<RGBcolor> pixels;
+            readJPEG(file, width, height, pixels);
+            DOCTEST_REQUIRE(pixels.size() == 64);
+            const float expected = mode == "auto" ? with_curve[k] : without_curve[k];
+            DOCTEST_CAPTURE(camera);
+            DOCTEST_CHECK(std::fabs(pixels[27].r * 255.f - expected) <= 1.5f); // JPEG rounding on a uniform image
+            DOCTEST_CHECK(std::fabs(pixels[27].g * 255.f - expected) <= 1.5f);
+            DOCTEST_CHECK(radiation.getCameraPixelData(camera, "green")[27] == inputs[k]);
+        }
+    }
+    std::filesystem::remove_all(directory);
+}
+
 GPU_TEST_CASE("RadiationModel - Camera samples sky longwave on emission band miss") {
     // Cameras must sample the same isotropic sky longwave flux that regular diffuse ray
     // transport already sees when emission is enabled. This smoke-tests that the
@@ -9590,6 +10820,124 @@ GPU_TEST_CASE("RadiationModel - Camera samples sky longwave on emission band mis
     }
     DOCTEST_CHECK(all_finite);
     DOCTEST_CHECK(max_pixel > 0.f);
+}
+
+GPU_TEST_CASE("RadiationModel - Camera images emission in a band with a scattering depth of 0") {
+    // Regression test. Cameras were rendered only when a band in the dispatch had a scattering depth of at least 1, so a thermal camera
+    // imaging a blackbody at a scattering depth of 0 recorded nothing, although the flux solution includes emission at that depth. Without
+    // scattering every surface is black: it emits as a blackbody and reflects nothing, so the camera sees sigma*T^4*F/pi from a tile of
+    // any emissivity, and none of the sky it would otherwise reflect.
+    Context context;
+    uint tile = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    context.setPrimitiveData(tile, "twosided_flag", uint(0));
+    context.setPrimitiveData(tile, "temperature", 300.f);
+    context.setPrimitiveData(tile, "emissivity_TIR", 0.5f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.addRadiationBand("TIR", 8000, 14000);
+    model.setDirectRayCount("TIR", 0);
+    model.setDiffuseRayCount("TIR", 400);
+    model.setDiffuseRadiationFlux("TIR", 100.f);
+    model.setScatteringDepth("TIR", 0);
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(4, 4);
+    camera_properties.HFOV = 10;
+    camera_properties.exposure = "manual";
+    model.addRadiationCamera("thermal", {"TIR"}, make_vec3(0.01f, 0, 2), make_vec3(0, 0, 0), camera_properties, 4);
+    model.updateGeometry();
+
+    auto mean_pixel = [&]() {
+        model.runBand("TIR");
+        const std::vector<float> pixels = model.getCameraPixelData("thermal", "TIR");
+        double sum = 0.0;
+        for (float pixel: pixels) {
+            sum += pixel;
+        }
+        return float(sum / double(pixels.size()));
+    };
+
+    const float blackbody_radiance = 5.670374419e-8f * std::pow(300.f, 4.f) * blackbodyBandFraction(8000, 14000, 300.f) / PI_F;
+    const float depth0_radiance = mean_pixel();
+    DOCTEST_CHECK(std::abs(depth0_radiance - blackbody_radiance) < 0.01f * blackbody_radiance);
+
+    // At depth 1 the tile emits half the blackbody radiance and reflects half the sky (100 W/m^2 / pi)
+    model.setScatteringDepth("TIR", 1);
+    const float depth1_radiance = mean_pixel();
+    const float gray_radiance = 0.5f * blackbody_radiance + 0.5f * 100.f / PI_F;
+    DOCTEST_CHECK(std::abs(depth1_radiance - gray_radiance) < 0.02f * gray_radiance);
+
+    // Returning the same model to depth 0 makes the tile black again
+    model.setScatteringDepth("TIR", 0);
+    const float depth0_again_radiance = mean_pixel();
+    DOCTEST_CHECK(std::abs(depth0_again_radiance - blackbody_radiance) < 0.01f * blackbody_radiance);
+}
+
+GPU_TEST_CASE("RadiationModel::getCameraPixelBrightnessTemperature") {
+    // A blackbody tile at a known temperature, imaged in an emission band, must come back at that temperature: in a band with
+    // wavelength bounds the pixels hold the in-band radiance sigma*T^4*F(T)/pi, and in a band without bounds sigma*T^4/pi.
+    // Through a sensor atmosphere, pixels hold the radiance weighted by the camera's spectral response; with a transparent
+    // atmosphere and no upwelling radiance the brightness temperature above it is still the tile's.
+    Context context;
+    uint tile = context.addPatch(make_vec3(0, 0, 0), make_vec2(200, 200));
+    context.setPrimitiveData(tile, "twosided_flag", uint(0));
+    const float temperature = 300.f;
+    context.setPrimitiveData(tile, "temperature", temperature);
+    context.setGlobalData("clear_thermal_transmittance", std::vector<vec2>{make_vec2(7000.f, 1.f), make_vec2(14000.f, 1.f)});
+    context.setGlobalData("clear_thermal_upwelling_radiance", std::vector<vec2>{make_vec2(7000.f, 0.f), make_vec2(14000.f, 0.f)});
+    context.setGlobalData("clear_direction_to_sensor", make_vec3(0, 0, 1));
+    context.setGlobalData("ramp_response", std::vector<vec2>{make_vec2(10500.f, 0.f), make_vec2(11500.f, 1.f)});
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("TIR", 10500.f, 11500.f);
+    radiation.addRadiationBand("LW");
+    radiation.addRadiationBand("red", 600.f, 700.f);
+    radiation.disableEmission("red");
+    for (const std::string &band: std::vector<std::string>{"TIR", "LW", "red"}) {
+        radiation.setScatteringDepth(band, 1);
+        radiation.setDiffuseRayCount(band, 100);
+        radiation.setDiffuseRadiationFlux(band, 0.f);
+    }
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(4, 4);
+    camera_properties.HFOV = 10.f;
+    camera_properties.exposure = "manual";
+    camera_properties.white_balance = "off";
+    radiation.addRadiationCamera("plain", {"TIR", "LW"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_properties, 1);
+    radiation.addRadiationCamera("visible", {"red"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_properties, 1);
+    radiation.addRadiationCamera("satellite", {"TIR"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_properties, 1);
+    radiation.addRadiationCamera("satellite_response", {"TIR"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_properties, 1);
+    radiation.setCameraSpectralResponse("satellite_response", "TIR", "ramp_response");
+    radiation.enableCameraAtmosphere("satellite", "clear");
+    radiation.enableCameraAtmosphere("satellite_response", "clear");
+    // With automatic exposure, a camera whose bands all emit is a thermal camera, whose pixels are left as radiances; one that also has a band without emission is exposed
+    camera_properties.exposure = "auto";
+    radiation.addRadiationCamera("auto_thermal", {"TIR"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_properties, 1);
+    radiation.addRadiationCamera("auto_exposed", {"TIR", "red"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), camera_properties, 1);
+    radiation.updateGeometry();
+    radiation.runBand(std::vector<std::string>{"TIR", "LW", "red"});
+
+    for (const auto &camera_band: std::vector<std::pair<std::string, std::string>>{{"plain", "TIR"}, {"plain", "LW"}, {"satellite", "TIR"}, {"satellite_response", "TIR"}, {"auto_thermal", "TIR"}}) {
+        std::vector<float> brightness;
+        DOCTEST_REQUIRE_NOTHROW(brightness = radiation.getCameraPixelBrightnessTemperature(camera_band.first, camera_band.second));
+        DOCTEST_REQUIRE(brightness.size() == 16);
+        for (float pixel_temperature: brightness) {
+            DOCTEST_INFO("camera " << camera_band.first << " band " << camera_band.second << ": " << pixel_temperature << " K");
+            DOCTEST_CHECK(std::abs(pixel_temperature - temperature) < 0.05f);
+        }
+    }
+
+    // Pixels that are not radiances, or bands that do not emit, are refused
+    DOCTEST_CHECK_THROWS_WITH_AS(static_cast<void>(radiation.getCameraPixelBrightnessTemperature("auto_exposed", "TIR")), doctest::Contains("exposure"), std::runtime_error);
+    DOCTEST_CHECK_THROWS_WITH_AS(static_cast<void>(radiation.getCameraPixelBrightnessTemperature("visible", "red")), doctest::Contains("emission"), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(static_cast<void>(radiation.getCameraPixelBrightnessTemperature("missing", "TIR")), std::runtime_error);
+    std::vector<float> negative_pixels(16, 10.f);
+    negative_pixels.at(3) = -1.f;
+    radiation.setCameraPixelData("plain", "TIR", negative_pixels);
+    DOCTEST_CHECK_THROWS_WITH_AS(static_cast<void>(radiation.getCameraPixelBrightnessTemperature("plain", "TIR")), doctest::Contains("negative"), std::runtime_error);
 }
 
 GPU_TEST_CASE("RadiationModel - Camera White Balance") {
@@ -9817,6 +11165,7 @@ GPU_TEST_CASE("RadiationModel - Auto white balance neutralizes the light reachin
         camera_properties.lens_diameter = 0.f;
         camera_properties.exposure = "manual";
         camera_properties.white_balance = "auto";
+        camera_properties.color_correction = "off"; // white balance alone, so that the balanced/raw ratio is the white balance gain
         radiation.addRadiationCamera("balanced", bands, position, lookat, camera_properties, 1);
         camera_properties.white_balance = "off";
         radiation.addRadiationCamera("raw", bands, position, lookat, camera_properties, 1);
@@ -16071,6 +17420,12 @@ GPU_TEST_CASE("Backend Invariant - Camera Added Between runBand Calls") {
 // Smoothing reconstructs a camera image by interpolating the outgoing flux across each facet instead of holding it constant. The tests below pin the three properties that make that safe: it is exactly the
 // identity on a field that is already uniform, it leaves geometry that does not take part untouched, and it does not average across an edge the mesh genuinely resolved.
 
+//! A camera image of a scene and the map of which primitive each pixel sees, for the camera flux smoothing tests
+struct LayeredSmoothingRender {
+    std::vector<float> pixels;
+    std::vector<uint> pixel_UUIDs;
+};
+
 //! Largest radiance difference between neighbouring pixels of the object in view
 /**
  * Faceting shows up as a step at every facet edge, so the largest step between neighbouring pixels is a direct measure of how faceted the image looks. Both image directions are considered, because which one
@@ -16080,12 +17435,12 @@ GPU_TEST_CASE("Backend Invariant - Camera Added Between runBand Calls") {
  * that also sees sky, which is not black, counts the step from the object to the sky as well, so a test that passes no map must rely on the steps it measures being larger than that one.
  *
  * The map labels each pixel by the ray through its centre, while the radiance ray is jittered within the pixel, so a pixel on the object's outline can be labelled as the object yet read the background; only
- * pixels whose four neighbours also see the object count as inside it. The map's rows are stored in the opposite vertical order to the pixel data: writeCameraImage() flips the pixel data both ways and the
- * label writers flip the map horizontally only, which puts the two in the same orientation.
+ * pixels whose four neighbours also see the object count as inside it. The map and the pixel data (getCameraPixelData()) are stored in the same pixel order, so a pixel's index is the same in both
+ * (see the test "Radiation camera - pixel data and the pixel UUID map share one pixel order").
  */
 static float maxAdjacentPixelJump(const std::vector<float> &pixels, const helios::int2 &resolution, const std::vector<uint> &pixel_UUIDs = {}) {
     auto pixel_at = [&](int i, int j) { return pixels.at(size_t(j) * size_t(resolution.x) + size_t(i)); };
-    auto sees_object = [&](int i, int j) { return i >= 0 && j >= 0 && i < resolution.x && j < resolution.y && pixel_UUIDs.at(size_t(resolution.y - 1 - j) * size_t(resolution.x) + size_t(i)) != 0; };
+    auto sees_object = [&](int i, int j) { return i >= 0 && j >= 0 && i < resolution.x && j < resolution.y && pixel_UUIDs.at(size_t(j) * size_t(resolution.x) + size_t(i)) != 0; };
     auto on_object = [&](int i, int j) {
         if (pixel_UUIDs.empty()) {
             return pixel_at(i, j) > 0.f;
@@ -16109,6 +17464,58 @@ static float maxAdjacentPixelJump(const std::vector<float> &pixels, const helios
         }
     }
     return largest_jump;
+}
+
+GPU_TEST_CASE("Radiation camera - pixel data and the pixel UUID map share one pixel order") {
+    // A black sphere above the centre of the view, against a bright sky: the pixels the map labels as the sphere must read black at the same index in the pixel data. The sphere is placed off
+    // centre so that the map read upside down would label sky pixels instead, which the test also checks, so that it can tell the two orders apart.
+    Context context;
+    const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(context.addSphereObject(20, make_vec3(0, 0, 0.6f), 0.35f));
+    context.setPrimitiveData(UUIDs, "reflectivity_SW", 0.f);
+    context.setPrimitiveData(UUIDs, "transmissivity_SW", 0.f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.disableEmission("SW");
+    model.setScatteringDepth("SW", 1);
+    model.setDiffuseRayCount("SW", 100);
+    model.setDiffuseRadiationFlux("SW", 100.f);
+
+    const int resolution = 64;
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(resolution, resolution);
+    camera_properties.HFOV = 40.f;
+    camera_properties.lens_diameter = 0.f;
+    camera_properties.exposure = "manual";
+    camera_properties.white_balance = "off";
+    model.addRadiationCamera("order_cam", {"SW"}, make_vec3(0, -3, 0), make_vec3(0, 0, 0), camera_properties, 1);
+    model.updateGeometry();
+    model.runBand("SW");
+
+    const std::vector<float> pixels = model.getCameraPixelData("order_cam", "SW");
+    std::vector<uint> pixel_UUIDs;
+    context.getGlobalData("camera_order_cam_pixel_UUID", pixel_UUIDs);
+    DOCTEST_REQUIRE(pixels.size() == size_t(resolution * resolution));
+    DOCTEST_REQUIRE(pixel_UUIDs.size() == pixels.size());
+
+    // A pixel disagrees with the map when the map labels it as the sphere but it reads sky, or the reverse. Only the outline, where the jittered radiance ray and the label ray through the pixel
+    // centre can land on different sides, may disagree.
+    size_t sphere_pixels = 0, disagree_same_index = 0, disagree_mirrored = 0;
+    for (int j = 0; j < resolution; j++) {
+        for (int i = 0; i < resolution; i++) {
+            const bool reads_sky = pixels.at(size_t(j) * resolution + i) > 0.f;
+            const bool labelled_sphere = pixel_UUIDs.at(size_t(j) * resolution + i) != 0;
+            const bool mirrored_label_sphere = pixel_UUIDs.at(size_t(resolution - 1 - j) * resolution + i) != 0;
+            sphere_pixels += labelled_sphere ? 1 : 0;
+            disagree_same_index += (labelled_sphere == reads_sky) ? 1 : 0;
+            disagree_mirrored += (mirrored_label_sphere == reads_sky) ? 1 : 0;
+        }
+    }
+    DOCTEST_INFO("sphere pixels " << sphere_pixels << ", disagreeing at the same index " << disagree_same_index << ", disagreeing with the map mirrored " << disagree_mirrored);
+    DOCTEST_REQUIRE(sphere_pixels > size_t(resolution * resolution / 20));
+    DOCTEST_CHECK(disagree_same_index < sphere_pixels / 5);
+    DOCTEST_CHECK(disagree_mirrored > sphere_pixels / 2);
 }
 
 GPU_TEST_CASE("Camera Flux Smoothing - defaults to off and validates its crease angle") {
@@ -16475,19 +17882,26 @@ GPU_TEST_CASE("Camera Flux Smoothing - keeps a crease sharp that the mesh actual
         model.updateGeometry();
         model.runBand("SW");
 
-        std::vector<float> pixels = model.getCameraPixelData("crease_cam", "SW");
-        DOCTEST_REQUIRE(pixels.size() == 80 * 80);
-        for (float pixel: pixels) {
+        LayeredSmoothingRender render;
+        render.pixels = model.getCameraPixelData("crease_cam", "SW");
+        context.getGlobalData("camera_crease_cam_pixel_UUID", render.pixel_UUIDs);
+        DOCTEST_REQUIRE(render.pixels.size() == 80 * 80);
+        DOCTEST_REQUIRE(render.pixel_UUIDs.size() == render.pixels.size());
+        for (float pixel: render.pixels) {
             DOCTEST_REQUIRE(std::isfinite(pixel));
         }
-        return pixels;
+        return render;
     };
 
     const helios::int2 resolution = make_int2(80, 80);
 
-    const float flat_jump = maxAdjacentPixelJump(render(false, 30.f), resolution);
-    const float creased_jump = maxAdjacentPixelJump(render(true, 30.f), resolution);
-    const float blended_jump = maxAdjacentPixelJump(render(true, 180.f), resolution);
+    // The steps are measured on the cube only: the sky around it is not black, so without the pixel map the step from the cube to the sky would count too
+    const LayeredSmoothingRender flat = render(false, 30.f);
+    const LayeredSmoothingRender creased = render(true, 30.f);
+    const LayeredSmoothingRender blended = render(true, 180.f);
+    const float flat_jump = maxAdjacentPixelJump(flat.pixels, resolution, flat.pixel_UUIDs);
+    const float creased_jump = maxAdjacentPixelJump(creased.pixels, resolution, creased.pixel_UUIDs);
+    const float blended_jump = maxAdjacentPixelJump(blended.pixels, resolution, blended.pixel_UUIDs);
 
     DOCTEST_REQUIRE(flat_jump > 0.f);
     DOCTEST_INFO("step across the cube edge: flat " << flat_jump << ", crease 30 degrees " << creased_jump << ", crease 180 degrees " << blended_jump);
@@ -16495,8 +17909,8 @@ GPU_TEST_CASE("Camera Flux Smoothing - keeps a crease sharp that the mesh actual
     // At the default crease angle the cube's 90-degree edges are above the threshold, so no vertex is shared across them and the edge survives essentially untouched.
     DOCTEST_CHECK(creased_jump == doctest::Approx(flat_jump).epsilon(0.2));
 
-    // With no angle counting as a crease, the faces share their corners and the edge blurs.
-    DOCTEST_CHECK_MESSAGE(blended_jump < 0.6f * flat_jump, "a crease angle of 180 degrees should have blended the cube faces together");
+    // With no angle counting as a crease, the faces share their corners and the edge blurs: the step falls to about 0.14 of the flat one.
+    DOCTEST_CHECK_MESSAGE(blended_jump < 0.3f * flat_jump, "a crease angle of 180 degrees should have blended the cube faces together");
 }
 
 GPU_TEST_CASE("Camera Flux Smoothing - an adaptive tile stays continuous across its refinement boundaries") {
@@ -16522,19 +17936,18 @@ GPU_TEST_CASE("Camera Flux Smoothing - an adaptive tile stays continuous across 
             model.enableCameraFluxSmoothing();
         }
 
-        // A small occluder above the tile casts a shadow whose edge runs across sub-patches of both sizes, so the reconstruction is exercised where the flux actually varies.
+        // A small occluder above the tile shades it from part of the sky, so the flux varies across sub-patches of both sizes and the reconstruction is exercised where it actually varies. The light is
+        // the sky's only: the direct radiation of a source is evaluated per facet rather than interpolated from the vertices, so a source's shadow edge stays where the facets put it and would not test
+        // the vertices at a refinement boundary.
         const uint occluder = context.addPatch(make_vec3(0.5f, 0.5f, 1.5f), make_vec2(1.2f, 1.2f));
         context.setPrimitiveData(occluder, "reflectivity_SW", 0.f);
         context.setPrimitiveData(occluder, "transmissivity_SW", 0.f);
 
-        const uint sun = model.addCollimatedRadiationSource(make_vec3(0.3f, 0.3f, 1.f));
         model.addRadiationBand("SW");
         model.disableEmission("SW");
         model.setScatteringDepth("SW", 1);
-        model.setDirectRayCount("SW", 300);
-        model.setDiffuseRayCount("SW", 300);
-        model.setSourceFlux(sun, "SW", 1000.f);
-        model.setDiffuseRadiationFlux("SW", 100.f);
+        model.setDiffuseRayCount("SW", 1000);
+        model.setDiffuseRadiationFlux("SW", 500.f);
 
         CameraProperties camera_properties;
         camera_properties.camera_resolution = make_int2(72, 72);
@@ -16629,15 +18042,825 @@ GPU_TEST_CASE("Camera Flux Smoothing - can be switched on and off after the geom
     DOCTEST_CHECK(after == doctest::Approx(expected_radiance).epsilon(0.05));
 }
 
+//! Settings of a camera flux smoothing render of an object with a specular surface layer
+struct LayeredSmoothingScene {
+    bool smoothing = false;
+    float crease_angle_degrees = 30.f;
+    helios::vec3 sun_direction = helios::make_vec3(1.f, -1.2f, 0.25f);
+    float sun_flux = 1000.f;
+    float diffuse_flux = 0.f;
+    helios::vec3 camera_position = helios::make_vec3(0, -4, 0.3f);
+    helios::vec3 camera_lookat = helios::make_vec3(0, 0, 0);
+    int resolution = 96;
+    float HFOV = 26.f;
+    size_t diffuse_rays = 400;
+};
+
+//! Antialiasing samples per pixel of the camera flux smoothing tests of surface layers. A smoothed image has a gradient everywhere, which jittered samples within a pixel turn into noise; with few samples
+//! that noise is larger than the differences some of the tests compare.
+static constexpr uint layer_test_antialiasing = 16;
+
+//! Render the object that build() adds to a fresh context, giving it a GGX surface layer (refractive index 1.5) of the given roughness over a body that reflects almost nothing, so that the camera sees mostly the layer
+/**
+ * The body's reflectivity is set just above what the layer alone reflects at normal incidence, the smallest the model accepts, so that the smoothed Lambertian part, which the existing flux smoothing already
+ * handles, contributes almost nothing and the image measures the layer's own terms.
+ */
+static LayeredSmoothingRender renderLayeredSmoothingScene(const std::function<std::vector<uint>(helios::Context &)> &build, float roughness, const LayeredSmoothingScene &scene) {
+    Context context;
+    const std::vector<uint> UUIDs = build(context);
+    context.setPrimitiveData(UUIDs, "reflectivity_SW", 0.04f);
+    context.setPrimitiveData(UUIDs, "transmissivity_SW", 0.f);
+    context.setPrimitiveData(UUIDs, "specular_roughness", roughness);
+    context.setPrimitiveData(UUIDs, "specular_n", 1.5f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    if (scene.smoothing) {
+        model.enableCameraFluxSmoothing(scene.crease_angle_degrees);
+    }
+    model.addRadiationBand("SW");
+    model.disableEmission("SW");
+    model.setScatteringDepth("SW", 1);
+    model.setDirectRayCount("SW", 100);
+    model.setDiffuseRayCount("SW", scene.diffuse_rays);
+    model.setDiffuseRadiationFlux("SW", scene.diffuse_flux);
+    if (scene.sun_flux > 0.f) {
+        const uint sun = model.addCollimatedRadiationSource(scene.sun_direction);
+        model.setSourceFlux(sun, "SW", scene.sun_flux);
+    }
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(scene.resolution, scene.resolution);
+    camera_properties.HFOV = scene.HFOV;
+    camera_properties.lens_diameter = 0.f;
+    camera_properties.exposure = "manual";
+    camera_properties.white_balance = "off";
+    model.addRadiationCamera("layer_cam", {"SW"}, scene.camera_position, scene.camera_lookat, camera_properties, layer_test_antialiasing);
+    model.updateGeometry();
+    model.runBand("SW");
+
+    LayeredSmoothingRender render;
+    render.pixels = model.getCameraPixelData("layer_cam", "SW");
+    context.getGlobalData("camera_layer_cam_pixel_UUID", render.pixel_UUIDs);
+    DOCTEST_REQUIRE(render.pixels.size() == size_t(scene.resolution * scene.resolution));
+    DOCTEST_REQUIRE(render.pixel_UUIDs.size() == render.pixels.size());
+    for (float pixel: render.pixels) {
+        DOCTEST_REQUIRE(std::isfinite(pixel));
+    }
+    return render;
+}
+
+//! The lowest reference pixel value that meanRelativeDifference() and relativeBrightness() compare: the given fraction of the brightest reference pixel well inside the object in both renders
+/**
+ * A coarse curved surface lit from one side ends in a last facet that is still lit where the finely tessellated reference has already turned past the terminator and gone dark, and camera flux
+ * smoothing deliberately fades the light of the lit facets across that terminator. The dark pixels past it then dominate a relative comparison, although they say nothing about how well the lit body
+ * of the surface is reproduced. A floor leaves them out; a fraction of 0 compares every pixel.
+ */
+static float referencePixelFloor(const LayeredSmoothingRender &render, const LayeredSmoothingRender &reference, int resolution, float min_reference_fraction) {
+    if (min_reference_fraction <= 0.f) {
+        return -std::numeric_limits<float>::infinity();
+    }
+    auto inside = [&](const LayeredSmoothingRender &r, int i, int j) {
+        auto sees = [&](int a, int b) { return a >= 0 && b >= 0 && a < resolution && b < resolution && r.pixel_UUIDs.at(size_t(b) * resolution + a) != 0; };
+        return sees(i, j) && sees(i - 1, j) && sees(i + 1, j) && sees(i, j - 1) && sees(i, j + 1);
+    };
+    float brightest = 0.f;
+    for (int j = 0; j < resolution; j++) {
+        for (int i = 0; i < resolution; i++) {
+            if (inside(render, i, j) && inside(reference, i, j)) {
+                brightest = std::max(brightest, reference.pixels.at(size_t(j) * resolution + i));
+            }
+        }
+    }
+    DOCTEST_REQUIRE(brightest > 0.f);
+    return min_reference_fraction * brightest;
+}
+
+//! Mean absolute difference between two renders of the same view, over the pixels well inside the object in both, relative to the mean of the reference over those pixels
+/**
+ * Used to compare a coarse mesh with a finely tessellated one of the same shape, whose outlines differ; pixels near either outline are left out (see maxAdjacentPixelJump() for how the map is read).
+ * With min_reference_fraction above zero, only the pixels where the reference reads at least that fraction of its brightest pixel inside the object are compared (see referencePixelFloor()).
+ */
+static float meanRelativeDifference(const LayeredSmoothingRender &render, const LayeredSmoothingRender &reference, int resolution, float min_reference_fraction = 0.f) {
+    auto inside = [&](const LayeredSmoothingRender &r, int i, int j) {
+        auto sees = [&](int a, int b) { return a >= 0 && b >= 0 && a < resolution && b < resolution && r.pixel_UUIDs.at(size_t(b) * resolution + a) != 0; };
+        return sees(i, j) && sees(i - 1, j) && sees(i + 1, j) && sees(i, j - 1) && sees(i, j + 1);
+    };
+    const float reference_floor = referencePixelFloor(render, reference, resolution, min_reference_fraction);
+    double difference = 0.0, reference_sum = 0.0;
+    size_t count = 0;
+    for (int j = 0; j < resolution; j++) {
+        for (int i = 0; i < resolution; i++) {
+            if (!inside(render, i, j) || !inside(reference, i, j)) {
+                continue;
+            }
+            const size_t index = size_t(j) * resolution + i;
+            if (reference.pixels.at(index) < reference_floor) {
+                continue;
+            }
+            difference += std::fabs(render.pixels.at(index) - reference.pixels.at(index));
+            reference_sum += reference.pixels.at(index);
+            count++;
+        }
+    }
+    DOCTEST_REQUIRE(count > size_t(resolution));
+    DOCTEST_REQUIRE(reference_sum > 0.0);
+    return float(difference / reference_sum);
+}
+
+//! Add a vertical tube of radius 0.4 and length 2 about the origin with the given number of radial divisions
+static std::vector<uint> addLayerTestTube(helios::Context &context, uint divisions) {
+    return context.getObjectPrimitiveUUIDs(context.addTubeObject(divisions, {make_vec3(0, 0, -1), make_vec3(0, 0, 1)}, {0.4f, 0.4f}));
+}
+
+//! Add a welded, two-sided strip curled through 150 degrees about the x axis, built as a polymesh with no stored normals
+static std::vector<uint> addCurledStrip(helios::Context &context, int segments) {
+    const float radius = 0.4f;
+    const float arc = deg2rad(150.f);
+    const int along = 4;
+    std::vector<vec3> vertices;
+    for (int i = 0; i <= segments; i++) {
+        for (int j = 0; j <= along; j++) {
+            const float theta = -0.5f * arc + arc * float(i) / float(segments);
+            vertices.push_back(make_vec3(-0.8f + 1.6f * float(j) / float(along), -radius * std::sin(theta), radius * std::cos(theta) - radius));
+        }
+    }
+    std::vector<int3> faces;
+    for (int i = 0; i < segments; i++) {
+        for (int j = 0; j < along; j++) {
+            const int corner = i * (along + 1) + j;
+            faces.push_back(make_int3(corner, corner + along + 1, corner + along + 2));
+            faces.push_back(make_int3(corner, corner + along + 2, corner + 1));
+        }
+    }
+    std::vector<uint> UUIDs;
+    for (const int3 &face: faces) {
+        UUIDs.push_back(context.addTriangle(vertices.at(face.x), vertices.at(face.y), vertices.at(face.z)));
+    }
+    const uint ObjID = context.addPolymeshObject(UUIDs);
+    context.setPolymeshObjectTopology(ObjID, vertices, faces, UUIDs, {}, {}, helios::NORMAL_SOURCE_NONE);
+    context.setPrimitiveData(UUIDs, "twosided_flag", uint(1));
+    return UUIDs;
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - smooths the direct highlight of a specular surface layer") {
+    // The highlight of a surface layer depends on the direction of the surface, which a scalar flux cannot carry: with only the flux smoothed, a coarse tube still shows its highlight as one bright facet
+    // with a step at each edge. Smoothing must interpolate a shading normal for the lobe and carry the incident flux over to it, so that the coarse tube looks like a finely tessellated one.
+    LayeredSmoothingScene scene;
+    const auto coarse = [](Context &context) { return addLayerTestTube(context, 6); };
+    const auto fine = [](Context &context) { return addLayerTestTube(context, 96); };
+
+    const LayeredSmoothingRender reference = renderLayeredSmoothingScene(fine, 0.4f, scene);
+    const LayeredSmoothingRender flat = renderLayeredSmoothingScene(coarse, 0.4f, scene);
+    scene.smoothing = true;
+    const LayeredSmoothingRender smoothed = renderLayeredSmoothingScene(coarse, 0.4f, scene);
+
+    const helios::int2 resolution = make_int2(scene.resolution, scene.resolution);
+    const float flat_jump = maxAdjacentPixelJump(flat.pixels, resolution, flat.pixel_UUIDs);
+    const float smoothed_jump = maxAdjacentPixelJump(smoothed.pixels, resolution, smoothed.pixel_UUIDs);
+    const float flat_error = meanRelativeDifference(flat, reference, scene.resolution);
+    const float smoothed_error = meanRelativeDifference(smoothed, reference, scene.resolution);
+
+    DOCTEST_INFO("largest step: flat " << flat_jump << ", smoothed " << smoothed_jump << "; difference from the fine tube: flat " << flat_error << ", smoothed " << smoothed_error);
+    DOCTEST_CHECK_MESSAGE(smoothed_jump < 0.3f * flat_jump, "the highlight still steps at the facet edges");
+    DOCTEST_CHECK_MESSAGE(smoothed_error < 0.75f * flat_error, "the smoothed highlight is no closer to that of a finely tessellated tube");
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - smooths a surface layer's reflection of the sky and its viewing-angle split") {
+    // Under sky light alone, what a camera sees of a surface layer is the layer's own outgoing component, weighted by a viewing-angle term. Both used to be taken from the facet, so a horizontal tube, whose
+    // facets see different amounts of sky and face the camera at different angles, kept a step at every facet edge with smoothing on. Its largest step is not a fair measure here: a smooth tube brightens
+    // steeply towards its outline, where the layer is seen at grazing angles, so the image is compared with that of a finely tessellated tube instead.
+    LayeredSmoothingScene scene;
+    scene.sun_flux = 0.f;
+    scene.diffuse_flux = 500.f;
+    scene.diffuse_rays = 2000;
+    scene.camera_position = make_vec3(0, -4, 1.f);
+    const auto horizontal_tube = [](uint divisions) { return [divisions](Context &context) { return context.getObjectPrimitiveUUIDs(context.addTubeObject(divisions, {make_vec3(-1, 0, 0), make_vec3(1, 0, 0)}, {0.4f, 0.4f})); }; };
+
+    const LayeredSmoothingRender reference = renderLayeredSmoothingScene(horizontal_tube(96), 0.3f, scene);
+    const LayeredSmoothingRender flat = renderLayeredSmoothingScene(horizontal_tube(6), 0.3f, scene);
+    scene.smoothing = true;
+    const LayeredSmoothingRender smoothed = renderLayeredSmoothingScene(horizontal_tube(6), 0.3f, scene);
+
+    const float flat_error = meanRelativeDifference(flat, reference, scene.resolution);
+    const float smoothed_error = meanRelativeDifference(smoothed, reference, scene.resolution);
+    DOCTEST_INFO("difference from the fine tube: flat " << flat_error << ", smoothed " << smoothed_error);
+    DOCTEST_CHECK_MESSAGE(smoothed_error < 0.75f * flat_error, "the layer's reflection of the sky is no closer to that of a finely tessellated tube");
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - keeps a sphere's highlight continuous across its latitude rings") {
+    // The flux is smoothed only within each band of a sphere, so that a real gradient from pole to pole is not averaged away. The shading normals must not inherit that: averaged within a band only, they
+    // tilt one way at the top of a ring and the other way at the bottom of the next, and the highlight steps at every ring. They are averaged over the fully welded sphere instead.
+    LayeredSmoothingScene scene;
+    const auto coarse = [](Context &context) { return context.getObjectPrimitiveUUIDs(context.addSphereObject(6, make_vec3(0, 0, 0), 0.6f)); };
+    const auto fine = [](Context &context) { return context.getObjectPrimitiveUUIDs(context.addSphereObject(64, make_vec3(0, 0, 0), 0.6f)); };
+
+    const LayeredSmoothingRender reference = renderLayeredSmoothingScene(fine, 0.4f, scene);
+    const LayeredSmoothingRender flat = renderLayeredSmoothingScene(coarse, 0.4f, scene);
+    scene.smoothing = true;
+    const LayeredSmoothingRender smoothed = renderLayeredSmoothingScene(coarse, 0.4f, scene);
+
+    const float flat_error = meanRelativeDifference(flat, reference, scene.resolution);
+    const float smoothed_error = meanRelativeDifference(smoothed, reference, scene.resolution);
+    DOCTEST_INFO("difference from the fine sphere: flat " << flat_error << ", smoothed " << smoothed_error);
+    DOCTEST_CHECK_MESSAGE(smoothed_error < 0.55f * flat_error, "the smoothed sphere's highlight is not close to that of a finely tessellated sphere");
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - keeps a surface layer's highlight sharp at a crease the mesh resolved") {
+    // The edge of a cube is a real edge, and the normals of its faces must not be averaged across it, or the highlight would spill from one face onto the next. At the default crease angle the image must
+    // therefore be the same with smoothing on and off; at 180 degrees, where no edge counts as a crease, the normals blend and the highlight moves.
+    LayeredSmoothingScene scene;
+    scene.sun_direction = make_vec3(1.f, -0.6f, 0.4f);
+    scene.camera_position = make_vec3(3.f, -3.f, 0.5f);
+    scene.HFOV = 35.f;
+    const auto cube = [](Context &context) { return context.getObjectPrimitiveUUIDs(buildWeldedCubePolymesh(context, 0.5f)); };
+
+    const LayeredSmoothingRender flat = renderLayeredSmoothingScene(cube, 0.3f, scene);
+    scene.smoothing = true;
+    const LayeredSmoothingRender creased = renderLayeredSmoothingScene(cube, 0.3f, scene);
+    scene.crease_angle_degrees = 180.f;
+    const LayeredSmoothingRender blended = renderLayeredSmoothingScene(cube, 0.3f, scene);
+
+    const float creased_difference = meanRelativeDifference(creased, flat, scene.resolution);
+    const float blended_difference = meanRelativeDifference(blended, flat, scene.resolution);
+    DOCTEST_INFO("difference from the unsmoothed cube: default crease angle " << creased_difference << ", 180 degrees " << blended_difference);
+    DOCTEST_CHECK_MESSAGE(creased_difference < 0.02f, "smoothing changed the highlight of a cube whose edges are all creases");
+    DOCTEST_CHECK_MESSAGE(blended_difference > 0.2f, "with no edge counted as a crease, the cube's normals were not blended");
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - leaves a flat surface layer unchanged") {
+    // On a flat tile every facet has the same normal and receives the same light, so smoothing has nothing to change: the interpolated normal is the facet's own and the rescaled incident flux is the
+    // facet's own. Any difference would mean the smoothed terms are biased rather than redistributed.
+    LayeredSmoothingScene scene;
+    scene.diffuse_flux = 200.f;
+    scene.diffuse_rays = 4000;
+    scene.sun_direction = make_vec3(0.3f, -1.f, 0.6f);
+    scene.camera_position = make_vec3(0, -2.5f, 2.5f);
+    scene.HFOV = 30.f;
+    const auto tile = [](Context &context) { return context.getObjectPrimitiveUUIDs(context.addTileObject(make_vec3(0, 0, 0), make_vec2(1.5f, 1.5f), make_SphericalCoord(0, 0), make_int2(5, 5))); };
+
+    const LayeredSmoothingRender flat = renderLayeredSmoothingScene(tile, 0.3f, scene);
+    scene.smoothing = true;
+    const LayeredSmoothingRender smoothed = renderLayeredSmoothingScene(tile, 0.3f, scene);
+
+    const float difference = meanRelativeDifference(smoothed, flat, scene.resolution);
+    DOCTEST_INFO("difference between the smoothed and unsmoothed tile: " << difference);
+    DOCTEST_CHECK(difference < 0.01f);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - does not dim a surface layer's reflection where it meets facets without a layer") {
+    // Facets without a layer have no second outgoing component. Averaged in at the vertices they share with layered facets, their zeros would dim the layer's reflection along the seam between the two. On a
+    // flat tile under a uniform sky every layered facet reflects the same, so the smoothed image of the layered half must match the unsmoothed one right up to the seam. Both halves have the same nearly
+    // black body, so that the seam is not also a step in the Lambertian flux, which smoothing blends by design.
+    auto render = [](bool smoothing) {
+        Context context;
+        const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(context.addTileObject(make_vec3(0, 0, 0), make_vec2(1.5f, 1.5f), make_SphericalCoord(0, 0), make_int2(6, 6)));
+        std::vector<uint> layered;
+        for (uint UUID: UUIDs) {
+            const std::vector<vec3> corners = context.getPrimitiveVertices(UUID);
+            const float centre_x = 0.25f * (corners.at(0).x + corners.at(1).x + corners.at(2).x + corners.at(3).x);
+            if (centre_x < 0.f) {
+                layered.push_back(UUID);
+            }
+        }
+        DOCTEST_REQUIRE(layered.size() == 18);
+        context.setPrimitiveData(UUIDs, "reflectivity_SW", 0.001f);
+        context.setPrimitiveData(UUIDs, "transmissivity_SW", 0.f);
+        // A layered primitive's reflectivity is its total reflectance, so it carries the layer's own on top of the same body
+        context.setPrimitiveData(layered, "reflectivity_SW", 0.04f);
+        context.setPrimitiveData(layered, "specular_roughness", 0.3f);
+        context.setPrimitiveData(layered, "specular_n", 1.5f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        if (smoothing) {
+            model.enableCameraFluxSmoothing();
+        }
+        model.addRadiationBand("SW");
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 1);
+        model.setDiffuseRayCount("SW", 4000);
+        model.setDiffuseRadiationFlux("SW", 500.f);
+
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(96, 96);
+        camera_properties.HFOV = 30.f;
+        camera_properties.lens_diameter = 0.f;
+        camera_properties.exposure = "manual";
+        camera_properties.white_balance = "off";
+        model.addRadiationCamera("seam_cam", {"SW"}, make_vec3(0, -2.5f, 2.5f), make_vec3(0, 0, 0), camera_properties, layer_test_antialiasing);
+        model.updateGeometry();
+        model.runBand("SW");
+
+        LayeredSmoothingRender render;
+        render.pixels = model.getCameraPixelData("seam_cam", "SW");
+        context.getGlobalData("camera_seam_cam_pixel_UUID", render.pixel_UUIDs);
+        // Keep only the layered half in the map, so that the comparison below covers it alone
+        const std::set<uint> layered_set(layered.begin(), layered.end());
+        for (uint &label: render.pixel_UUIDs) {
+            label = (label != 0 && layered_set.count(label - 1)) ? label : 0;
+        }
+        return render;
+    };
+
+    const LayeredSmoothingRender flat = render(false);
+    const LayeredSmoothingRender smoothed = render(true);
+    const float difference = meanRelativeDifference(smoothed, flat, 96);
+    DOCTEST_INFO("difference between the smoothed and unsmoothed layered half: " << difference);
+    DOCTEST_CHECK(difference < 0.02f);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - smooths the highlight seen on the bottom face of a two-sided mesh") {
+    // Each vertex normal is turned to the side of the facet before it is interpolated, and the result to the side the camera sees. A camera and a sun below a curled two-sided strip see its convex bottom
+    // face, which must be smoothed as its top face would be. Its difference from a finely tessellated strip is compared over the lit body, without the pixels past the terminator (see
+    // referencePixelFloor()).
+    LayeredSmoothingScene scene;
+    scene.sun_direction = make_vec3(0.3f, -0.4f, -1.f);
+    scene.camera_position = make_vec3(0.4f, -3.5f, -2.f);
+    scene.camera_lookat = make_vec3(0, 0, -0.15f);
+    const auto coarse = [](Context &context) { return addCurledStrip(context, 6); };
+    const auto fine = [](Context &context) { return addCurledStrip(context, 96); };
+
+    const LayeredSmoothingRender reference = renderLayeredSmoothingScene(fine, 0.3f, scene);
+    const LayeredSmoothingRender flat = renderLayeredSmoothingScene(coarse, 0.3f, scene);
+    scene.smoothing = true;
+    const LayeredSmoothingRender smoothed = renderLayeredSmoothingScene(coarse, 0.3f, scene);
+
+    const helios::int2 resolution = make_int2(scene.resolution, scene.resolution);
+    const float flat_jump = maxAdjacentPixelJump(flat.pixels, resolution, flat.pixel_UUIDs);
+    const float smoothed_jump = maxAdjacentPixelJump(smoothed.pixels, resolution, smoothed.pixel_UUIDs);
+    const float flat_error = meanRelativeDifference(flat, reference, scene.resolution, 0.25f);
+    const float smoothed_error = meanRelativeDifference(smoothed, reference, scene.resolution, 0.25f);
+    DOCTEST_INFO("largest step: flat " << flat_jump << ", smoothed " << smoothed_jump << "; difference from the fine strip: flat " << flat_error << ", smoothed " << smoothed_error);
+    DOCTEST_CHECK_MESSAGE(smoothed_jump < 0.6f * flat_jump, "the bottom face still steps at the facet edges");
+    DOCTEST_CHECK_MESSAGE(smoothed_error < 0.6f * flat_error, "the smoothed bottom face is no closer to that of a finely tessellated strip");
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - follows a surface layer being added and removed") {
+    // The vertex normals and the second vertex component are held only while smoothing is on and some primitive has a layer. Removing the layer, adding it back and switching smoothing off must each give
+    // the image a model set up that way from the start would give: a stale normal buffer would make the camera read a second component that no longer exists.
+    LayeredSmoothingScene scene;
+    const int resolution = scene.resolution;
+    const auto render_fresh = [&](bool layer, bool smoothing) {
+        LayeredSmoothingScene fresh_scene = scene;
+        fresh_scene.smoothing = smoothing;
+        if (layer) {
+            return renderLayeredSmoothingScene([](Context &context) { return addLayerTestTube(context, 6); }, 0.4f, fresh_scene);
+        }
+        // The same tube without a layer: a plain Lambertian reflector
+        Context context;
+        const std::vector<uint> UUIDs = addLayerTestTube(context, 6);
+        context.setPrimitiveData(UUIDs, "reflectivity_SW", 0.04f);
+        context.setPrimitiveData(UUIDs, "transmissivity_SW", 0.f);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        if (smoothing) {
+            model.enableCameraFluxSmoothing();
+        }
+        model.addRadiationBand("SW");
+        model.disableEmission("SW");
+        model.setScatteringDepth("SW", 1);
+        model.setDirectRayCount("SW", 100);
+        model.setDiffuseRayCount("SW", 400);
+        model.setDiffuseRadiationFlux("SW", 0.f);
+        const uint sun = model.addCollimatedRadiationSource(scene.sun_direction);
+        model.setSourceFlux(sun, "SW", scene.sun_flux);
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(resolution, resolution);
+        camera_properties.HFOV = scene.HFOV;
+        camera_properties.lens_diameter = 0.f;
+        camera_properties.exposure = "manual";
+        camera_properties.white_balance = "off";
+        model.addRadiationCamera("layer_cam", {"SW"}, scene.camera_position, scene.camera_lookat, camera_properties, layer_test_antialiasing);
+        model.updateGeometry();
+        model.runBand("SW");
+        LayeredSmoothingRender render;
+        render.pixels = model.getCameraPixelData("layer_cam", "SW");
+        context.getGlobalData("camera_layer_cam_pixel_UUID", render.pixel_UUIDs);
+        return render;
+    };
+
+    // One model taken through every state in turn
+    Context context;
+    const std::vector<uint> UUIDs = addLayerTestTube(context, 6);
+    context.setPrimitiveData(UUIDs, "reflectivity_SW", 0.04f);
+    context.setPrimitiveData(UUIDs, "transmissivity_SW", 0.f);
+    context.setPrimitiveData(UUIDs, "specular_roughness", 0.4f);
+    context.setPrimitiveData(UUIDs, "specular_n", 1.5f);
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.disableEmission("SW");
+    model.setScatteringDepth("SW", 1);
+    model.setDirectRayCount("SW", 100);
+    model.setDiffuseRayCount("SW", 400);
+    model.setDiffuseRadiationFlux("SW", 0.f);
+    const uint sun = model.addCollimatedRadiationSource(scene.sun_direction);
+    model.setSourceFlux(sun, "SW", scene.sun_flux);
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(resolution, resolution);
+    camera_properties.HFOV = scene.HFOV;
+    camera_properties.lens_diameter = 0.f;
+    camera_properties.exposure = "manual";
+    camera_properties.white_balance = "off";
+    model.addRadiationCamera("layer_cam", {"SW"}, scene.camera_position, scene.camera_lookat, camera_properties, layer_test_antialiasing);
+    model.updateGeometry();
+    model.enableCameraFluxSmoothing();
+
+    const auto render_current = [&]() {
+        model.runBand("SW");
+        LayeredSmoothingRender render;
+        render.pixels = model.getCameraPixelData("layer_cam", "SW");
+        context.getGlobalData("camera_layer_cam_pixel_UUID", render.pixel_UUIDs);
+        for (float pixel: render.pixels) {
+            DOCTEST_REQUIRE(std::isfinite(pixel));
+        }
+        return render;
+    };
+
+    const LayeredSmoothingRender with_layer = render_current();
+    context.clearPrimitiveData(UUIDs, "specular_roughness");
+    context.clearPrimitiveData(UUIDs, "specular_n");
+    const LayeredSmoothingRender layer_removed = render_current();
+    context.setPrimitiveData(UUIDs, "specular_roughness", 0.4f);
+    context.setPrimitiveData(UUIDs, "specular_n", 1.5f);
+    const LayeredSmoothingRender layer_restored = render_current();
+    model.disableCameraFluxSmoothing();
+    const LayeredSmoothingRender smoothing_off = render_current();
+
+    const float with_layer_difference = meanRelativeDifference(with_layer, render_fresh(true, true), resolution);
+    const float removed_difference = meanRelativeDifference(layer_removed, render_fresh(false, true), resolution);
+    const float restored_difference = meanRelativeDifference(layer_restored, render_fresh(true, true), resolution);
+    const float off_difference = meanRelativeDifference(smoothing_off, render_fresh(true, false), resolution);
+    DOCTEST_INFO("difference from a fresh model: with the layer " << with_layer_difference << ", layer removed " << removed_difference << ", layer restored " << restored_difference << ", smoothing off " << off_difference);
+    DOCTEST_CHECK(with_layer_difference < 0.03f);
+    DOCTEST_CHECK(removed_difference < 0.03f);
+    DOCTEST_CHECK(restored_difference < 0.03f);
+    DOCTEST_CHECK(off_difference < 0.03f);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - smooths surface layers in a scene with several sources, bands, cameras and objects") {
+    // Layered and unlayered smoothed objects, an unsmoothed ground, a collimated and a sphere source, and two shortwave bands seen by one camera and an emission band seen by another. Every image must stay
+    // finite, smoothing must redistribute the light over the layered tube rather than add or remove it, and the tube must lose its facet steps in the shortwave bands. The scene is rendered once more with
+    // periodic boundaries, where the camera also sees the wrapped copies of the objects at other distances, so only finiteness and brightness are compared there. In the emission band the facets of the tube
+    // differ by less than the sampling noise, so only its brightness is compared.
+    auto render = [](bool smoothing, bool periodic) {
+        Context context;
+        const std::vector<uint> tube = context.getObjectPrimitiveUUIDs(context.addTubeObject(6, {make_vec3(-0.6f, 0, -0.8f), make_vec3(-0.6f, 0, 0.8f)}, {0.3f, 0.3f}));
+        const std::vector<uint> sphere = context.getObjectPrimitiveUUIDs(context.addSphereObject(8, make_vec3(0.6f, 0, 0), 0.4f));
+        const uint ground = context.addPatch(make_vec3(0, 0, -0.9f), make_vec2(3, 3));
+        for (const char *band: {"red", "green"}) {
+            context.setPrimitiveData(tube, (std::string("reflectivity_") + band).c_str(), 0.1f);
+            context.setPrimitiveData(sphere, (std::string("reflectivity_") + band).c_str(), 0.4f);
+            context.setPrimitiveData(ground, (std::string("reflectivity_") + band).c_str(), 0.2f);
+        }
+        context.setPrimitiveData(tube, "specular_roughness", 0.35f);
+        context.setPrimitiveData(tube, "specular_n", 1.5f);
+        context.setPrimitiveData(tube, "emissivity_TH", 0.9f);
+        context.setPrimitiveData(tube, "temperature", 310.f);
+        context.setPrimitiveData(sphere, "emissivity_TH", 0.95f);
+        context.setPrimitiveData(sphere, "temperature", 300.f);
+        context.setPrimitiveData(ground, "emissivity_TH", 0.95f);
+        context.setPrimitiveData(ground, "temperature", 295.f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        if (smoothing) {
+            model.enableCameraFluxSmoothing();
+        }
+        if (periodic) {
+            model.enforcePeriodicBoundary("xy");
+        }
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(1.f, -1.2f, 0.6f));
+        const uint lamp = model.addSphereRadiationSource(make_vec3(-0.2f, -1.2f, 0.9f), 0.05f);
+        for (const char *band: {"red", "green"}) {
+            model.addRadiationBand(band);
+            model.disableEmission(band);
+            model.setScatteringDepth(band, 2);
+            model.setDirectRayCount(band, 100);
+            model.setDiffuseRayCount(band, 300);
+            model.setDiffuseRadiationFlux(band, 60.f);
+            model.setSourceFlux(sun, band, 500.f);
+            model.setSourceFlux(lamp, band, 20.f);
+        }
+        model.addRadiationBand("TH");
+        model.setScatteringDepth("TH", 1);
+        model.setDiffuseRayCount("TH", 300);
+        model.setDiffuseRadiationFlux("TH", 300.f);
+        model.setSourceFlux(sun, "TH", 0.f);
+        model.setSourceFlux(lamp, "TH", 0.f);
+
+        CameraProperties camera_properties;
+        camera_properties.camera_resolution = make_int2(96, 72);
+        camera_properties.HFOV = 50.f;
+        camera_properties.lens_diameter = 0.f;
+        camera_properties.exposure = "manual";
+        camera_properties.white_balance = "off";
+        model.addRadiationCamera("rgb_cam", {"red", "green"}, make_vec3(0, -3.5f, 0.4f), make_vec3(0, 0, 0), camera_properties, 4);
+        model.addRadiationCamera("thermal_cam", {"TH"}, make_vec3(0.3f, -3.5f, 0.2f), make_vec3(0, 0, 0), camera_properties, 4);
+        model.updateGeometry();
+        model.runBand(std::vector<std::string>{"red", "green"});
+        model.runBand("TH");
+
+        std::map<std::string, std::pair<std::vector<float>, std::vector<uint>>> images;
+        for (const auto &[camera, band]: std::vector<std::pair<std::string, std::string>>{{"rgb_cam", "red"}, {"rgb_cam", "green"}, {"thermal_cam", "TH"}}) {
+            std::vector<float> pixels = model.getCameraPixelData(camera, band);
+            std::vector<uint> pixel_UUIDs;
+            context.getGlobalData(("camera_" + camera + "_pixel_UUID").c_str(), pixel_UUIDs);
+            DOCTEST_REQUIRE(pixels.size() == 96 * 72);
+            for (float pixel: pixels) {
+                DOCTEST_REQUIRE(std::isfinite(pixel));
+                DOCTEST_REQUIRE(pixel >= 0.f);
+            }
+            // Keep only the tube in the map, so that the steps and means below are the tube's
+            std::set<uint> tube_set(tube.begin(), tube.end());
+            for (uint &label: pixel_UUIDs) {
+                label = (label != 0 && tube_set.count(label - 1)) ? label : 0;
+            }
+            // Leave out one more ring of pixels around the tube's outline than maxAdjacentPixelJump() does: the sub-pixel samples of a pixel there can see the ground behind, and the step from the
+            // tube's shaded side to the bright ground is not a step on the tube
+            std::vector<uint> eroded = pixel_UUIDs;
+            for (int j = 0; j < 72; j++) {
+                for (int i = 0; i < 96; i++) {
+                    const auto label_at = [&](int a, int b) { return (a < 0 || b < 0 || a >= 96 || b >= 72) ? 0u : pixel_UUIDs.at(size_t(b) * 96 + a); };
+                    if (label_at(i - 1, j) == 0 || label_at(i + 1, j) == 0 || label_at(i, j - 1) == 0 || label_at(i, j + 1) == 0) {
+                        eroded.at(size_t(j) * 96 + i) = 0;
+                    }
+                }
+            }
+            images[camera + "/" + band] = {pixels, eroded};
+        }
+        return images;
+    };
+
+    const helios::int2 resolution = make_int2(96, 72);
+    for (bool periodic: {false, true}) {
+        const auto flat = render(false, periodic);
+        const auto smoothed = render(true, periodic);
+        for (const auto &[key, flat_image]: flat) {
+            const auto &smoothed_image = smoothed.at(key);
+            double flat_sum = 0.0, smoothed_sum = 0.0;
+            for (size_t p = 0; p < flat_image.first.size(); p++) {
+                if (flat_image.second.at((size_t(resolution.y - 1 - p / resolution.x)) * resolution.x + p % resolution.x) != 0) {
+                    flat_sum += flat_image.first.at(p);
+                    smoothed_sum += smoothed_image.first.at(p);
+                }
+            }
+            const float flat_jump = maxAdjacentPixelJump(flat_image.first, resolution, flat_image.second);
+            const float smoothed_jump = maxAdjacentPixelJump(smoothed_image.first, resolution, smoothed_image.second);
+            const std::string label = key + (periodic ? " with periodic boundaries" : "");
+            DOCTEST_INFO(label << ": tube brightness flat " << flat_sum << ", smoothed " << smoothed_sum << "; largest step flat " << flat_jump << ", smoothed " << smoothed_jump);
+            DOCTEST_REQUIRE(flat_sum > 0.0);
+            // Smoothing a convex object darkens the face turned to the camera somewhat, because each vertex averages it with the facets around it; this holds for a Lambertian surface as much as for a layer
+            DOCTEST_CHECK(smoothed_sum == doctest::Approx(flat_sum).epsilon(0.25));
+            if (!periodic && key != "thermal_cam/TH") {
+                DOCTEST_CHECK(smoothed_jump < 0.6f * flat_jump);
+            }
+        }
+    }
+}
+
+//! Settings of a camera flux smoothing render of a Lambertian object, for the tests of the direct radiation evaluated with the shading normal
+struct DirectSmoothingScene {
+    bool smoothing = false;
+    float crease_angle_degrees = 30.f;
+    float reflectivity = 0.5f;
+    float transmissivity = 0.f;
+    float roughness = 0.f; //!< GGX roughness of a surface layer (refractive index 1.5), or 0 for none
+    std::vector<std::pair<helios::vec3, float>> collimated = {{helios::make_vec3(1.f, -1.2f, 0.25f), 1000.f}}; //!< Direction and flux of each collimated source
+    std::vector<std::pair<helios::vec3, float>> lamps; //!< Position and flux of each sphere source of radius 0.05
+    float diffuse_flux = 0.f;
+    helios::vec3 camera_position = helios::make_vec3(0, -4, 0.3f);
+    helios::vec3 camera_lookat = helios::make_vec3(0, 0, 0);
+    int resolution = 96;
+    float HFOV = 30.f;
+    std::function<void(helios::Context &, const std::vector<uint> &)> extra; //!< Adds anything else to the scene, given the object's primitives
+};
+
+//! Render the object that build() adds to a fresh context under the sources of `scene`, giving it the scene's reflectivity, transmissivity and surface layer
+static LayeredSmoothingRender renderDirectSmoothingScene(const std::function<std::vector<uint>(helios::Context &)> &build, const DirectSmoothingScene &scene) {
+    Context context;
+    const std::vector<uint> UUIDs = build(context);
+    context.setPrimitiveData(UUIDs, "reflectivity_SW", scene.reflectivity);
+    context.setPrimitiveData(UUIDs, "transmissivity_SW", scene.transmissivity);
+    if (scene.roughness > 0.f) {
+        context.setPrimitiveData(UUIDs, "specular_roughness", scene.roughness);
+        context.setPrimitiveData(UUIDs, "specular_n", 1.5f);
+    }
+    if (scene.extra) {
+        scene.extra(context, UUIDs);
+    }
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    if (scene.smoothing) {
+        model.enableCameraFluxSmoothing(scene.crease_angle_degrees);
+    }
+    model.addRadiationBand("SW");
+    model.disableEmission("SW");
+    model.setScatteringDepth("SW", 2);
+    model.setDirectRayCount("SW", 200);
+    model.setDiffuseRayCount("SW", 1000);
+    model.setDiffuseRadiationFlux("SW", scene.diffuse_flux);
+    for (const auto &[direction, flux]: scene.collimated) {
+        const uint source = model.addCollimatedRadiationSource(direction);
+        model.setSourceFlux(source, "SW", flux);
+    }
+    for (const auto &[position, flux]: scene.lamps) {
+        const uint source = model.addSphereRadiationSource(position, 0.05f);
+        model.setSourceFlux(source, "SW", flux);
+    }
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(scene.resolution, scene.resolution);
+    camera_properties.HFOV = scene.HFOV;
+    camera_properties.lens_diameter = 0.f;
+    camera_properties.exposure = "manual";
+    camera_properties.white_balance = "off";
+    model.addRadiationCamera("direct_cam", {"SW"}, scene.camera_position, scene.camera_lookat, camera_properties, layer_test_antialiasing);
+    model.updateGeometry();
+    model.runBand("SW");
+
+    LayeredSmoothingRender render;
+    render.pixels = model.getCameraPixelData("direct_cam", "SW");
+    std::vector<uint> pixel_UUIDs;
+    context.getGlobalData("camera_direct_cam_pixel_UUID", pixel_UUIDs);
+    // Only the object counts: anything else the scene added reads as background
+    const std::set<uint> object(UUIDs.begin(), UUIDs.end());
+    for (uint &label: pixel_UUIDs) {
+        label = (label != 0 && object.count(label - 1)) ? label : 0;
+    }
+    render.pixel_UUIDs = pixel_UUIDs;
+    DOCTEST_REQUIRE(render.pixels.size() == size_t(scene.resolution * scene.resolution));
+    for (float pixel: render.pixels) {
+        DOCTEST_REQUIRE(std::isfinite(pixel));
+    }
+    return render;
+}
+
+//! Brightness of a render relative to a reference of the same view, summed over the pixels well inside the object in both (and, with min_reference_fraction above zero, above referencePixelFloor())
+static float relativeBrightness(const LayeredSmoothingRender &render, const LayeredSmoothingRender &reference, int resolution, float min_reference_fraction = 0.f) {
+    auto inside = [&](const LayeredSmoothingRender &r, int i, int j) {
+        auto sees = [&](int a, int b) { return a >= 0 && b >= 0 && a < resolution && b < resolution && r.pixel_UUIDs.at(size_t(b) * resolution + a) != 0; };
+        return sees(i, j) && sees(i - 1, j) && sees(i + 1, j) && sees(i, j - 1) && sees(i, j + 1);
+    };
+    const float reference_floor = referencePixelFloor(render, reference, resolution, min_reference_fraction);
+    double sum = 0.0, reference_sum = 0.0;
+    for (int j = 0; j < resolution; j++) {
+        for (int i = 0; i < resolution; i++) {
+            if (inside(render, i, j) && inside(reference, i, j) && reference.pixels.at(size_t(j) * resolution + i) >= reference_floor) {
+                sum += render.pixels.at(size_t(j) * resolution + i);
+                reference_sum += reference.pixels.at(size_t(j) * resolution + i);
+            }
+        }
+    }
+    DOCTEST_REQUIRE(reference_sum > 0.0);
+    return float(sum / reference_sum);
+}
+
+//! Coarse, fine and smoothed coarse renders of the same scene, with the coarse render's difference from the fine one with and without smoothing and the smoothed one's brightness relative to it
+struct DirectSmoothingComparison {
+    float flat_error;
+    float smoothed_error;
+    float smoothed_brightness;
+    float flat_jump;
+    float smoothed_jump;
+};
+
+static DirectSmoothingComparison compareDirectSmoothing(const std::function<std::vector<uint>(helios::Context &)> &coarse, const std::function<std::vector<uint>(helios::Context &)> &fine, DirectSmoothingScene scene,
+                                                        float min_reference_fraction = 0.f) {
+    scene.smoothing = false;
+    const LayeredSmoothingRender reference = renderDirectSmoothingScene(fine, scene);
+    const LayeredSmoothingRender flat = renderDirectSmoothingScene(coarse, scene);
+    scene.smoothing = true;
+    const LayeredSmoothingRender smoothed = renderDirectSmoothingScene(coarse, scene);
+    const helios::int2 resolution = make_int2(scene.resolution, scene.resolution);
+    return {meanRelativeDifference(flat, reference, scene.resolution, min_reference_fraction), meanRelativeDifference(smoothed, reference, scene.resolution, min_reference_fraction),
+            relativeBrightness(smoothed, reference, scene.resolution, min_reference_fraction),
+            maxAdjacentPixelJump(flat.pixels, resolution, flat.pixel_UUIDs), maxAdjacentPixelJump(smoothed.pixels, resolution, smoothed.pixel_UUIDs)};
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - does not darken a coarse surface in sunlight, and fades it across the terminator") {
+    // Averaging the flux of neighbouring facets onto their vertices lowers the peak of a curved, sunlit surface: a tube of six divisions came out about cos(30 degrees) darker than a finely tessellated
+    // one where it faces the camera. The direct radiation is now evaluated per facet with the shading normal, which follows the curvature exactly, and a face turned away from the sun takes the
+    // irradiance of its sunlit neighbours, so the light also fades smoothly across the terminator.
+    const auto coarse = [](Context &context) { return addLayerTestTube(context, 6); };
+    const auto fine = [](Context &context) { return addLayerTestTube(context, 96); };
+    const DirectSmoothingComparison result = compareDirectSmoothing(coarse, fine, DirectSmoothingScene{});
+    DOCTEST_INFO("difference from the fine tube: flat " << result.flat_error << ", smoothed " << result.smoothed_error << "; smoothed brightness " << result.smoothed_brightness << "; largest step: flat " << result.flat_jump << ", smoothed "
+                                                        << result.smoothed_jump);
+    DOCTEST_CHECK(result.smoothed_brightness > 0.94f);
+    DOCTEST_CHECK(result.smoothed_error < 0.6f * result.flat_error);
+    DOCTEST_CHECK(result.smoothed_jump < 0.3f * result.flat_jump);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - smooths a sphere across its rings under the sky") {
+    // Under the sky the flux of a sphere varies from pole to pole, across its rings. The flux was averaged only within each ring, so the steps between them stayed; it is now averaged across them.
+    DirectSmoothingScene scene;
+    scene.collimated.clear();
+    scene.diffuse_flux = 500.f;
+    const auto coarse = [](Context &context) { return context.getObjectPrimitiveUUIDs(context.addSphereObject(6, make_vec3(0, 0, 0), 0.6f)); };
+    const auto fine = [](Context &context) { return context.getObjectPrimitiveUUIDs(context.addSphereObject(64, make_vec3(0, 0, 0), 0.6f)); };
+    const DirectSmoothingComparison result = compareDirectSmoothing(coarse, fine, scene);
+    DOCTEST_INFO("difference from the fine sphere: flat " << result.flat_error << ", smoothed " << result.smoothed_error << "; largest step: flat " << result.flat_jump << ", smoothed " << result.smoothed_jump);
+    DOCTEST_CHECK(result.smoothed_error < 0.7f * result.flat_error);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - keeps a cast shadow where the facets put it") {
+    // A plate above a tube casts a shadow edge across it. Averaging the flux onto the vertices spread the shadow over the neighbouring facets, which made the smoothed image further from a finely
+    // tessellated tube than the unsmoothed one. The direct radiation, which carries the shadow, is evaluated per facet.
+    DirectSmoothingScene scene;
+    scene.collimated = {{make_vec3(0.6f, -1.f, 1.2f), 1000.f}};
+    scene.extra = [](Context &context, const std::vector<uint> &) {
+        const uint plate = context.addPatch(make_vec3(0.4f, -0.6f, 0.55f), make_vec2(2.f, 1.f));
+        context.setPrimitiveData(plate, "reflectivity_SW", 0.f);
+        context.setPrimitiveData(plate, "transmissivity_SW", 0.f);
+    };
+    const auto segmented_tube = [](uint radial, int segments) {
+        return [radial, segments](Context &context) {
+            std::vector<vec3> nodes;
+            std::vector<float> radii;
+            for (int i = 0; i <= segments; i++) {
+                nodes.push_back(make_vec3(0, 0, -1.f + 2.f * float(i) / float(segments)));
+                radii.push_back(0.4f);
+            }
+            return context.getObjectPrimitiveUUIDs(context.addTubeObject(radial, nodes, radii));
+        };
+    };
+    const DirectSmoothingComparison result = compareDirectSmoothing(segmented_tube(8, 10), segmented_tube(96, 100), scene);
+    DOCTEST_INFO("difference from the fine tube: flat " << result.flat_error << ", smoothed " << result.smoothed_error);
+    DOCTEST_CHECK(result.smoothed_error < 0.85f * result.flat_error);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - evaluates the light of a nearby sphere source with the shading normal") {
+    // A finite source is seen from each point of the surface in its own direction, which the camera takes from the hit point
+    DirectSmoothingScene scene;
+    scene.collimated.clear();
+    scene.lamps = {{make_vec3(0.35f, -0.9f, 0.45f), 50.f}};
+    scene.diffuse_flux = 20.f;
+    const auto coarse = [](Context &context) { return context.getObjectPrimitiveUUIDs(context.addSphereObject(8, make_vec3(0, 0, 0), 0.6f)); };
+    const auto fine = [](Context &context) { return context.getObjectPrimitiveUUIDs(context.addSphereObject(64, make_vec3(0, 0, 0), 0.6f)); };
+    const DirectSmoothingComparison result = compareDirectSmoothing(coarse, fine, scene);
+    DOCTEST_INFO("difference from the fine sphere: flat " << result.flat_error << ", smoothed " << result.smoothed_error << "; smoothed brightness " << result.smoothed_brightness);
+    DOCTEST_CHECK(result.smoothed_error < 0.6f * result.flat_error);
+    DOCTEST_CHECK(result.smoothed_brightness == doctest::Approx(1.f).epsilon(0.06));
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - does not darken the body of a surface with a specular layer") {
+    // The body of a surface with a layer receives 1 - a(mu) of the direct radiation, which the camera evaluates with the cosine of the shading normal like the rest
+    DirectSmoothingScene scene;
+    scene.reflectivity = 0.3f;
+    scene.roughness = 0.4f;
+    scene.diffuse_flux = 100.f;
+    const auto coarse = [](Context &context) { return addLayerTestTube(context, 6); };
+    const auto fine = [](Context &context) { return addLayerTestTube(context, 96); };
+    const DirectSmoothingComparison result = compareDirectSmoothing(coarse, fine, scene);
+    DOCTEST_INFO("difference from the fine tube: flat " << result.flat_error << ", smoothed " << result.smoothed_error << "; smoothed brightness " << result.smoothed_brightness);
+    DOCTEST_CHECK(result.smoothed_brightness > 0.94f);
+    DOCTEST_CHECK(result.smoothed_error < 0.6f * result.flat_error);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - evaluates transmitted sunlight with the shading normal") {
+    // A curled two-sided strip lit from below and seen from above shows the sunlight it transmits, which reached its lower faces with the cosine of their facet normals. With six facets across the curl
+    // the averaging that the shading normal replaces darkened the strip by about 3%, so the brightness of its lit body may fall no more than 1.5% below that of a finely tessellated strip. It comes out
+    // about 1.5% brighter, which the upper bound allows. Past the terminator the coarse strip's last facet is still lit where the fine strip is dark, and smoothing fades that light further, so those pixels
+    // are left out (see referencePixelFloor()).
+    DirectSmoothingScene scene;
+    scene.reflectivity = 0.1f;
+    scene.transmissivity = 0.5f;
+    scene.collimated = {{make_vec3(0.3f, -0.4f, -1.f), 1000.f}};
+    scene.camera_position = make_vec3(0.4f, -3.5f, 2.f);
+    scene.camera_lookat = make_vec3(0, 0, -0.15f);
+    const auto coarse = [](Context &context) { return addCurledStrip(context, 6); };
+    const auto fine = [](Context &context) { return addCurledStrip(context, 96); };
+    const DirectSmoothingComparison result = compareDirectSmoothing(coarse, fine, scene, 0.25f);
+    DOCTEST_INFO("difference from the fine strip: flat " << result.flat_error << ", smoothed " << result.smoothed_error << "; smoothed brightness " << result.smoothed_brightness);
+    DOCTEST_CHECK(result.smoothed_error < 0.6f * result.flat_error);
+    DOCTEST_CHECK(result.smoothed_brightness > 0.985f);
+    DOCTEST_CHECK(result.smoothed_brightness < 1.03f);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - evaluates each source in its own direction") {
+    // Two suns from either side of a tube: each source's radiation is carried over to the shading normal with its own cosine
+    DirectSmoothingScene scene;
+    scene.collimated = {{make_vec3(1.f, -1.2f, 0.25f), 700.f}, {make_vec3(-1.f, -0.5f, 0.5f), 500.f}};
+    const auto coarse = [](Context &context) { return addLayerTestTube(context, 6); };
+    const auto fine = [](Context &context) { return addLayerTestTube(context, 96); };
+    const DirectSmoothingComparison result = compareDirectSmoothing(coarse, fine, scene);
+    DOCTEST_INFO("difference from the fine tube: flat " << result.flat_error << ", smoothed " << result.smoothed_error << "; smoothed brightness " << result.smoothed_brightness);
+    DOCTEST_CHECK(result.smoothed_brightness > 0.94f);
+    DOCTEST_CHECK(result.smoothed_error < 0.6f * result.flat_error);
+}
+
 GPU_TEST_CASE("Camera auto-exposure honours exposure_target") {
-    // Auto exposure scales every band so the median pixel luminance lands on a target, which was a
-    // hardcoded 0.18 -- the middle-grey convention, which assumes a scene whose mean reflectance is
-    // that of a grey card. A plant canopy imaged from above is darker than that, so reproducing a
-    // real camera's output can require a different target, and there was no way to ask for one.
+    // Auto exposure scales every band so the metered luminance (a centre-weighted mean) lands on a target,
+    // which was once hardcoded. A plant canopy imaged from above is darker than a typical photograph, so
+    // reproducing a real camera's output can require a different target, and there was no way to ask for one.
     //
-    // The check is the defining property rather than a recorded value: the median luminance of the
-    // exposed image must equal the requested target, whatever that target is. A second target at
-    // half the first must also halve the median, which no constant-gain implementation can satisfy.
+    // The check is the defining property rather than a recorded value: the luminance of the exposed image
+    // must equal the requested target, whatever that target is. The image is uniform, so its median equals
+    // its centre-weighted mean. A second target at half the first must also halve the image, which no
+    // constant-gain implementation can satisfy.
 
     Context context;
     // A textureless patch under one collimated source: uniform enough that the median is stable,
@@ -17781,6 +20004,1413 @@ GPU_TEST_CASE("RadiationModel - a scene containing a voxel is rejected") {
     DOCTEST_CHECK_THROWS_AS(model.updateGeometry(), std::runtime_error);
 }
 
+namespace spectral_texture_test {
+
+    // A spectrum of one value from 300 to 800 nm, wider than the 400-700 nm test band, so its band-weighted value is exactly that value
+    void addFlatSpectrum(Context &context, const std::string &label, float value) {
+        context.setGlobalData(label.c_str(), std::vector<vec2>{make_vec2(300, value), make_vec2(800, value)});
+    }
+
+    std::string writeClassMap(const std::string &name, uint width, uint height, const std::vector<uint16_t> &classes) {
+        const std::string file = (std::filesystem::temp_directory_path() / name).string();
+        helios::writePNGSingleChannel(file, width, height, classes, 8);
+        return file;
+    }
+
+    // An overhead beam of 1000 W/m^2 in a 400-700 nm band, without diffuse radiation. The scattering depth of 2 lets a primitive's own
+    // reflectivity show in what it absorbs of the direct beam.
+    void addOverheadBeam(RadiationModel &model, uint direct_rays = 100000) {
+        model.disableMessages();
+        model.addRadiationBand("VIS", 400, 700);
+        model.disableEmission("VIS");
+        model.setScatteringDepth("VIS", 2);
+        model.setDirectRayCount("VIS", direct_rays);
+        model.setDiffuseRadiationFlux("VIS", 0.f);
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        model.setSourceFlux(sun, "VIS", 1000.f);
+    }
+
+    // A black patch over the half x > 0 of the unit square centred on the origin, so that only the half x < 0 is lit
+    uint addOccluderOverRightHalf(Context &context) {
+        return context.addPatch(make_vec3(0.25f, 0, 0.5f), make_vec2(0.5f, 1.5f));
+    }
+
+    float flux(Context &context, uint UUID) {
+        float value;
+        context.getPrimitiveData(UUID, "radiation_flux_VIS", value);
+        return value;
+    }
+
+} // namespace spectral_texture_test
+
+namespace surface_class_map_test {
+
+    // A 5 x 5 class map for the opaque 5 x 5 texture lib/images/solid.jpg, with columns 0-1 in class 1 and columns 2-4 in class 2, and its
+    // definitions, in the temporary directory; returns the class map's path
+    std::string writeSurfaceClassMap(const std::string &stem, const std::string &definitions) {
+        const std::filesystem::path dir = std::filesystem::temp_directory_path();
+        std::vector<uint16_t> classes(25);
+        for (uint i = 0; i < 25; i++) {
+            classes.at(i) = (i % 5) < 2 ? 1 : 2;
+        }
+        const std::string class_map = (dir / (stem + "_classes.png")).string();
+        helios::writePNGSingleChannel(class_map, 5, 5, classes, 8);
+        std::ofstream xml((dir / (stem + "_classes.xml")).string());
+        xml << definitions;
+        return class_map;
+    }
+
+    void removeSurfaceClassMap(const std::string &stem) {
+        const std::filesystem::path dir = std::filesystem::temp_directory_path();
+        for (const char *suffix: {"_classes.png", "_classes.xml"}) {
+            std::filesystem::remove(dir / (stem + suffix));
+        }
+    }
+
+} // namespace surface_class_map_test
+
+GPU_TEST_CASE("RadiationModel::applySpectralClassMaps builds a palette from a surface class map") {
+    // A patch textured with an opaque 5 x 5 image whose class map puts class 1 on texel columns 0-1, which under the radiation model's
+    // texel convention (column floor(4u)) is the half u < 0.5, and class 2 on the rest. The definitions scale a flat 0.4 reflectivity and
+    // 0.1 transmissivity by 0.5 (class 1 absorbs 0.75) and by 3 (which would give a reflectivity of 1.2, so the class is held at
+    // 1 - 0.3 = 0.7 and absorbs nothing).
+    using namespace spectral_texture_test;
+    using namespace surface_class_map_test;
+    Context context;
+    addFlatSpectrum(context, "surface_test_rho", 0.4f);
+    addFlatSpectrum(context, "surface_test_tau", 0.1f);
+    const std::string class_map = writeSurfaceClassMap("helios_radiation_surface", R"(<helios>
+  <surface_class_map reflectivity_spectrum="surface_test_rho" transmissivity_spectrum="surface_test_tau" provenance="test">
+    <class id="1" reflectance_scale="0.5"/>
+    <class id="2" reflectance_scale="3"/>
+  </surface_class_map>
+</helios>
+)");
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/solid.jpg");
+    const uint plain = context.addPatch(make_vec3(3, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/solid.jpg");
+    context.setPrimitiveData(patch, "spectral_class_map", class_map);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.applySpectralClassMaps();
+
+    DOCTEST_CHECK(context.primitiveHasSpectralTexture(patch));
+    DOCTEST_CHECK(!context.primitiveHasSpectralTexture(plain));
+    DOCTEST_REQUIRE(context.doesSpectralPaletteExist("surface_helios_radiation_surface_classes"));
+    DOCTEST_CHECK(context.getPrimitiveSpectralPalette(patch) == "surface_helios_radiation_surface_classes");
+    const std::vector<SpectralTextureClass> &palette = context.getSpectralPalette("surface_helios_radiation_surface_classes");
+    DOCTEST_REQUIRE(palette.size() == 2);
+    DOCTEST_CHECK(palette.at(0).reflectivity_spectrum == "surface_test_rho_helios_radiation_surface_classes_class1");
+    DOCTEST_CHECK(palette.at(1).transmissivity_spectrum == "surface_test_tau_helios_radiation_surface_classes_class2");
+    DOCTEST_CHECK(palette.at(0).provenance == "test");
+    std::vector<vec2> rho1, rho2, tau2;
+    context.getGlobalData("surface_test_rho_helios_radiation_surface_classes_class1", rho1);
+    context.getGlobalData("surface_test_rho_helios_radiation_surface_classes_class2", rho2);
+    context.getGlobalData("surface_test_tau_helios_radiation_surface_classes_class2", tau2);
+    DOCTEST_REQUIRE(rho1.size() == 2);
+    DOCTEST_CHECK(rho1.front().y == doctest::Approx(0.2f));
+    DOCTEST_CHECK(tau2.front().y == doctest::Approx(0.3f));
+    DOCTEST_CHECK(rho2.front().y == doctest::Approx(0.7f)); // 1.2 held to 1 - 0.3
+
+    // Under a 1000 W/m^2 beam the patch absorbs 0.75 of what falls on its left half: 375 W/m^2
+    addOverheadBeam(model);
+    model.updateGeometry();
+    model.runBand("VIS");
+    const float absorbed = flux(context, patch);
+    DOCTEST_CAPTURE(absorbed);
+    DOCTEST_CHECK(std::fabs(absorbed - 375.f) < 10.f);
+
+    // Calling it again registers the same palette and spectra without complaint
+    DOCTEST_CHECK_NOTHROW(model.applySpectralClassMaps(std::vector<uint>{patch}));
+    removeSurfaceClassMap("helios_radiation_surface");
+}
+
+GPU_TEST_CASE("RadiationModel::applySpectralClassMaps leaves a leaf class map alone and rejects bad definitions") {
+    using namespace spectral_texture_test;
+    using namespace surface_class_map_test;
+    Context context;
+    addFlatSpectrum(context, "surface_test_rho", 0.4f);
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+
+    // A leaf class map is for LeafOptics: the primitive is left alone, without an error, so that a plant can be given whole
+    std::string class_map = writeSurfaceClassMap("helios_radiation_surface_bad", "<helios><leaf_class_map><class id=\"1\" chlorophyll_scale=\"1\" visible_reflectance_scale=\"1\"/></leaf_class_map></helios>\n");
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/solid.jpg");
+    context.setPrimitiveData(patch, "spectral_class_map", class_map);
+    DOCTEST_CHECK_NOTHROW(model.applySpectralClassMaps(std::vector<uint>{patch}));
+    DOCTEST_CHECK(!context.primitiveHasSpectralTexture(patch));
+
+    // A class the map uses but the definitions lack
+    class_map = writeSurfaceClassMap("helios_radiation_surface_bad", "<helios><surface_class_map reflectivity_spectrum=\"surface_test_rho\"><class id=\"1\" reflectance_scale=\"1\"/></surface_class_map></helios>\n");
+    DOCTEST_CHECK_THROWS(model.applySpectralClassMaps(std::vector<uint>{patch}));
+
+    // A spectrum that exists nowhere
+    class_map = writeSurfaceClassMap("helios_radiation_surface_bad", "<helios><surface_class_map reflectivity_spectrum=\"no_such_spectrum\"><class id=\"1\" reflectance_scale=\"1\"/><class id=\"2\" reflectance_scale=\"1\"/></surface_class_map></helios>\n");
+    DOCTEST_CHECK_THROWS(model.applySpectralClassMaps(std::vector<uint>{patch}));
+    removeSurfaceClassMap("helios_radiation_surface_bad");
+}
+
+GPU_TEST_CASE("RadiationModel - a spectral texture sets the reflectivity of each part of a primitive") {
+    // A unit square whose left half (class 1) reflects 5% and whose right half (class 2) reflects 80%, under an overhead beam, with
+    // its right half shaded. Only the lit left half absorbs: 0.5 x 0.95 x 1000 = 475 W/m^2 over the square. A model that gave the
+    // whole square its mean reflectivity (0.425) would give 0.5 x 0.575 x 1000 = 287.5 W/m^2.
+    using namespace spectral_texture_test;
+    Context context;
+    addFlatSpectrum(context, "rho_low", 0.05f);
+    addFlatSpectrum(context, "rho_high", 0.8f);
+    context.addSpectralPalette("halves", {{"rho_low", "", ""}, {"rho_high", "", ""}});
+    // Width 3: texture coordinates below 0.5 fall in column 0 and the rest in column 1 (column 2 is reached only at u = 1)
+    const std::string class_map = writeClassMap("helios_radiation_halves.png", 3, 1, {1, 2, 2});
+
+    const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveSpectralTexture(square, class_map, "halves");
+    addOccluderOverRightHalf(context);
+
+    // The same square made of two half patches with the two spectra, for comparison
+    const uint left_half = context.addPatch(make_vec3(-0.25f, 3, 0), make_vec2(0.5f, 1));
+    const uint right_half = context.addPatch(make_vec3(0.25f, 3, 0), make_vec2(0.5f, 1));
+    context.setPrimitiveData(left_half, "reflectivity_spectrum", "rho_low");
+    context.setPrimitiveData(right_half, "reflectivity_spectrum", "rho_high");
+    context.addPatch(make_vec3(0.25f, 3, 0.5f), make_vec2(0.5f, 1.5f)); // occluder of the half patches
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    addOverheadBeam(model);
+    model.updateGeometry();
+    model.runBand("VIS");
+
+    const float textured_flux = flux(context, square);
+    const float halves_flux = 0.5f * (flux(context, left_half) + flux(context, right_half));
+    DOCTEST_CAPTURE(textured_flux);
+    DOCTEST_CAPTURE(halves_flux);
+    DOCTEST_CHECK(std::fabs(textured_flux - 475.f) < 5.f);
+    DOCTEST_CHECK(std::fabs(halves_flux - 475.f) < 5.f);
+
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - a spectral texture with one class is the same as giving the primitive that spectrum") {
+    // The class's spectra go through the same spectral integration as a primitive's, and the class lookup draws no random numbers,
+    // so with the same seed the two scenes are traced with the same rays and absorb the same, up to the order of the GPU's
+    // floating-point additions.
+    using namespace spectral_texture_test;
+    const std::string class_map = writeClassMap("helios_radiation_one_class.png", 3, 2, {1, 1, 1, 1, 1, 1});
+    std::vector<float> fluxes[2];
+    for (int textured = 0; textured < 2; textured++) {
+        Context context;
+        context.seedRandomGenerator(7);
+        addFlatSpectrum(context, "rho_leaf", 0.3f);
+        addFlatSpectrum(context, "tau_leaf", 0.2f);
+        const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        const uint ground = context.addPatch(make_vec3(0, 0, -0.5f), make_vec2(2, 2));
+        const uint occluder = addOccluderOverRightHalf(context);
+        context.setPrimitiveData(ground, "reflectivity_spectrum", "rho_leaf");
+        if (textured == 1) {
+            context.addSpectralPalette("one", {{"rho_leaf", "tau_leaf", ""}});
+            context.setPrimitiveSpectralTexture(square, class_map, "one");
+        } else {
+            context.setPrimitiveData(square, "reflectivity_spectrum", "rho_leaf");
+            context.setPrimitiveData(square, "transmissivity_spectrum", "tau_leaf");
+        }
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        addOverheadBeam(model, 2000);
+        model.setDiffuseRadiationFlux("VIS", 100.f);
+        model.updateGeometry();
+        model.runBand("VIS");
+        fluxes[textured] = {flux(context, square), flux(context, ground), flux(context, occluder)};
+    }
+    for (size_t i = 0; i < fluxes[0].size(); i++) {
+        DOCTEST_CAPTURE(i);
+        DOCTEST_CAPTURE(fluxes[0].at(i));
+        DOCTEST_CAPTURE(fluxes[1].at(i));
+        DOCTEST_CHECK(std::fabs(fluxes[1].at(i) - fluxes[0].at(i)) <= 1e-4f * std::fabs(fluxes[0].at(i)) + 1e-4f);
+    }
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - a spectral texture follows the texture coordinates of triangles with an opaque texture") {
+    // A unit square of two triangles textured with an opaque (JPEG) image, with a 5 x 5 class map whose columns 0-1 are class 1
+    // (5% reflective) and columns 2-4 class 2 (80%), so texture coordinates u < 0.5 are class 1. The right half is shaded. The
+    // lower-right triangle (v <= u) has a quarter of its area at u < 0.5 and the upper-left one three quarters, so they absorb
+    // 0.25 x 950 and 0.75 x 950 W/m^2.
+    using namespace spectral_texture_test;
+    Context context;
+    addFlatSpectrum(context, "rho_low", 0.05f);
+    addFlatSpectrum(context, "rho_high", 0.8f);
+    context.addSpectralPalette("halves", {{"rho_low", "", ""}, {"rho_high", "", ""}});
+    std::vector<uint16_t> classes(25);
+    for (uint i = 0; i < 25; i++) {
+        classes.at(i) = (i % 5) < 2 ? 1 : 2;
+    }
+    const std::string class_map = writeClassMap("helios_radiation_jpeg_halves.png", 5, 5, classes);
+
+    const vec3 v0 = make_vec3(-0.5, -0.5, 0), v1 = make_vec3(0.5, -0.5, 0), v2 = make_vec3(0.5, 0.5, 0), v3 = make_vec3(-0.5, 0.5, 0);
+    const uint lower_right = context.addTriangle(v0, v1, v2, "lib/images/solid.jpg", make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+    const uint upper_left = context.addTriangle(v0, v2, v3, "lib/images/solid.jpg", make_vec2(0, 0), make_vec2(1, 1), make_vec2(0, 1));
+    context.setPrimitiveSpectralTexture(std::vector<uint>{lower_right, upper_left}, class_map, "halves");
+    addOccluderOverRightHalf(context);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    addOverheadBeam(model);
+    model.updateGeometry();
+    model.runBand("VIS");
+
+    DOCTEST_CAPTURE(flux(context, lower_right));
+    DOCTEST_CAPTURE(flux(context, upper_left));
+    DOCTEST_CHECK(std::fabs(flux(context, lower_right) - 237.5f) < 5.f);
+    DOCTEST_CHECK(std::fabs(flux(context, upper_left) - 712.5f) < 5.f);
+
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - changing the palette of a spectral texture takes effect without rebuilding the geometry") {
+    using namespace spectral_texture_test;
+    Context context;
+    addFlatSpectrum(context, "rho_low", 0.05f);
+    addFlatSpectrum(context, "rho_high", 0.8f);
+    context.addSpectralPalette("lit_dark", {{"rho_low", "", ""}, {"rho_high", "", ""}});
+    context.addSpectralPalette("lit_bright", {{"rho_high", "", ""}, {"rho_low", "", ""}});
+    const std::string class_map = writeClassMap("helios_radiation_swap.png", 3, 1, {1, 2, 2});
+    const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveSpectralTexture(square, class_map, "lit_dark");
+    addOccluderOverRightHalf(context);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    addOverheadBeam(model);
+    model.updateGeometry();
+    model.runBand("VIS");
+    DOCTEST_CHECK(std::fabs(flux(context, square) - 475.f) < 5.f);
+
+    // The lit half now reflects 80%: 0.5 x 0.2 x 1000 = 100 W/m^2
+    const uint64_t shape_revision = context.getShapeRevision();
+    context.setPrimitiveSpectralPalette(square, "lit_bright");
+    DOCTEST_CHECK(context.getShapeRevision() == shape_revision);
+    model.runBand("VIS");
+    DOCTEST_CAPTURE(flux(context, square));
+    DOCTEST_CHECK(std::fabs(flux(context, square) - 100.f) < 2.f);
+
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - the reflectivity reported for a primitive with a spectral texture is its area-weighted mean") {
+    // The optional output "reflectivity" holds one value per primitive. For a square that is half 5% and half 80% reflective it is
+    // the mean, 0.425; for the lower-right triangle of the square (a quarter of it at u < 0.5) it is 0.25 x 0.05 + 0.75 x 0.8.
+    using namespace spectral_texture_test;
+    Context context;
+    addFlatSpectrum(context, "rho_low", 0.05f);
+    addFlatSpectrum(context, "rho_high", 0.8f);
+    context.addSpectralPalette("halves", {{"rho_low", "", ""}, {"rho_high", "", ""}});
+    const std::string class_map = writeClassMap("helios_radiation_mean.png", 3, 1, {1, 2, 2});
+    const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveSpectralTexture(square, class_map, "halves");
+    // An untextured triangle has no (u,v) coordinates, so the triangle is given an opaque texture for them
+    std::vector<uint16_t> classes(25);
+    for (uint i = 0; i < 25; i++) {
+        classes.at(i) = (i % 5) < 2 ? 1 : 2;
+    }
+    const std::string jpeg_class_map = writeClassMap("helios_radiation_mean_jpeg.png", 5, 5, classes);
+    const uint triangle = context.addTriangle(make_vec3(-0.5, -0.5, 2), make_vec3(0.5, -0.5, 2), make_vec3(0.5, 0.5, 2), "lib/images/solid.jpg", make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+    context.setPrimitiveSpectralTexture(triangle, jpeg_class_map, "halves");
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    addOverheadBeam(model, 100);
+    model.optionalOutputPrimitiveData("reflectivity");
+    model.updateGeometry();
+    model.runBand("VIS");
+
+    float square_rho;
+    float triangle_rho;
+    context.getPrimitiveData(square, "reflectivity_0_VIS", square_rho);
+    context.getPrimitiveData(triangle, "reflectivity_0_VIS", triangle_rho);
+    DOCTEST_CHECK(square_rho == doctest::Approx(0.425f).epsilon(1e-5));
+    DOCTEST_CHECK(triangle_rho == doctest::Approx(0.25f * 0.05f + 0.75f * 0.8f).epsilon(1e-5));
+
+    std::filesystem::remove(class_map);
+    std::filesystem::remove(jpeg_class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - a spectral texture gives the same values as an untextured primitive in every band and slot") {
+    // The source and sky spectra cover different parts of the visible band, and the class spectra step between them, so the class's
+    // value differs between the direct (source) slot (0.1) and the diffuse slot (0.7), and again in a second band (0.3). The second
+    // textured square uses class 2 of a palette registered after another, so its palette entry has a nonzero offset; a primitive is
+    // deleted first so that UUIDs differ from positions. Each textured square must absorb what an untextured square with the same
+    // spectra absorbs.
+    using namespace spectral_texture_test;
+    Context context;
+    context.seedRandomGenerator(3);
+    context.deletePrimitive(context.addPatch());
+    context.setGlobalData("rho_steps", std::vector<vec2>{make_vec2(300, 0.1f), make_vec2(499, 0.1f), make_vec2(501, 0.7f), make_vec2(719, 0.7f), make_vec2(721, 0.3f), make_vec2(1100, 0.3f)});
+    context.setGlobalData("tau_steps", std::vector<vec2>{make_vec2(300, 0.05f), make_vec2(499, 0.05f), make_vec2(501, 0.2f), make_vec2(1100, 0.2f)});
+    context.setGlobalData("source_blue_nir", std::vector<vec2>{make_vec2(300, 0), make_vec2(399, 0), make_vec2(401, 1), make_vec2(489, 1), make_vec2(491, 0), make_vec2(739, 0), make_vec2(741, 1), make_vec2(1100, 1)});
+    context.setGlobalData("sky_green_nir", std::vector<vec2>{make_vec2(300, 0), make_vec2(509, 0), make_vec2(511, 1), make_vec2(649, 1), make_vec2(651, 0), make_vec2(739, 0), make_vec2(741, 1), make_vec2(1100, 1)});
+    addFlatSpectrum(context, "rho_other", 0.6f);
+    context.addSpectralPalette("first", {{"rho_steps", "tau_steps", ""}});
+    context.addSpectralPalette("second", {{"rho_other", "", ""}, {"rho_steps", "tau_steps", ""}});
+    const std::string class_one = writeClassMap("helios_radiation_slots_one.png", 3, 1, {1, 1, 1});
+    const std::string class_two = writeClassMap("helios_radiation_slots_two.png", 3, 1, {2, 2, 2});
+
+    const uint textured_first = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    const uint textured_second = context.addPatch(make_vec3(3, 0, 0), make_vec2(1, 1));
+    const uint reference = context.addPatch(make_vec3(6, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveSpectralTexture(textured_first, class_one, "first");
+    context.setPrimitiveSpectralTexture(textured_second, class_two, "second");
+    context.setPrimitiveData(reference, "reflectivity_spectrum", "rho_steps");
+    context.setPrimitiveData(reference, "transmissivity_spectrum", "tau_steps");
+    DOCTEST_REQUIRE(textured_first != 0);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    for (const auto &band: std::vector<std::pair<std::string, vec2>>{{"VIS", make_vec2(400, 650)}, {"NIR", make_vec2(750, 1000)}}) {
+        model.addRadiationBand(band.first, band.second.x, band.second.y);
+        model.disableEmission(band.first);
+        model.setScatteringDepth(band.first, 2);
+        model.setDirectRayCount(band.first, 20000);
+        model.setDiffuseRayCount(band.first, 20000);
+        model.setDiffuseRadiationFlux(band.first, 200.f);
+    }
+    const uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    model.setSourceSpectrum(sun, "source_blue_nir");
+    model.setSourceFlux(sun, "VIS", 1000.f);
+    model.setSourceFlux(sun, "NIR", 500.f);
+    model.setDiffuseSpectrum("sky_green_nir");
+    model.updateGeometry();
+    model.runBand(std::vector<std::string>{"VIS", "NIR"});
+
+    for (const std::string band: {"VIS", "NIR"}) {
+        float reference_flux;
+        float first_flux;
+        float second_flux;
+        context.getPrimitiveData(reference, ("radiation_flux_" + band).c_str(), reference_flux);
+        context.getPrimitiveData(textured_first, ("radiation_flux_" + band).c_str(), first_flux);
+        context.getPrimitiveData(textured_second, ("radiation_flux_" + band).c_str(), second_flux);
+        DOCTEST_CAPTURE(band);
+        DOCTEST_CAPTURE(reference_flux);
+        DOCTEST_CAPTURE(first_flux);
+        DOCTEST_CAPTURE(second_flux);
+        DOCTEST_CHECK(std::fabs(first_flux - reference_flux) < 0.015f * reference_flux);
+        DOCTEST_CHECK(std::fabs(second_flux - reference_flux) < 0.015f * reference_flux);
+    }
+
+    std::filesystem::remove(class_one);
+    std::filesystem::remove(class_two);
+}
+
+GPU_TEST_CASE("RadiationModel - a spectral texture works with a transparency mask and on the sub-patches of a tile") {
+    using namespace spectral_texture_test;
+    Context context;
+    addFlatSpectrum(context, "rho_low", 0.05f);
+    addFlatSpectrum(context, "rho_high", 0.8f);
+    context.addSpectralPalette("halves", {{"rho_low", "", ""}, {"rho_high", "", ""}});
+
+    // A 4 x 2 texture whose first column is transparent: texture coordinates u < 1/3 are transparent, 1/3 to 2/3 class 1 and the
+    // rest class 2. With the class 2 part (x > 1/6) shaded, only class 1 absorbs: 1/3 x 0.95 x 1000 over the 2/3 of the square that
+    // is opaque, 475 W/m^2. (The Context gives a texture one texel high no opaque area, so it has two rows.)
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_radiation_masked_texture.png").string();
+    std::vector<RGBAcolor> pixels(8, make_RGBAcolor(0.2f, 0.6f, 0.2f, 1.f));
+    pixels.at(0).a = 0.f;
+    pixels.at(4).a = 0.f;
+    helios::writePNG(texture, 4, 2, pixels);
+    const std::string masked_class_map = writeClassMap("helios_radiation_masked_classes.png", 4, 2, {0, 1, 2, 2, 0, 1, 2, 2});
+    const uint masked = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, texture.c_str());
+    context.setPrimitiveSpectralTexture(masked, masked_class_map, "halves");
+    context.addPatch(make_vec3(1.f / 3.f, 0, 0.5f), make_vec2(1.f / 3.f, 1.5f));
+
+    // A tile of two sub-patches with an opaque texture. The 9-texel-wide class map has class 1 for u < 0.25 and 0.5 <= u < 0.75, so
+    // each sub-patch is half class 1 and half class 2 within its own (u,v) range. With the class 2 half of each shaded, each absorbs
+    // 0.5 x 0.95 x 1000 = 475 W/m^2. A sub-patch that mapped the whole class map would absorb 287.5.
+    std::vector<uint16_t> classes(9 * 9);
+    for (uint i = 0; i < classes.size(); i++) {
+        const uint column = i % 9;
+        classes.at(i) = (column < 2 || column == 4 || column == 5) ? 1 : 2;
+    }
+    const std::string tile_class_map = writeClassMap("helios_radiation_tile_classes.png", 9, 9, classes);
+    const std::string tile_texture = (std::filesystem::temp_directory_path() / "helios_radiation_tile_texture.jpg").string();
+    helios::writeJPEG(tile_texture, 9, 9, std::vector<RGBcolor>(81, make_RGBcolor(0.2f, 0.6f, 0.2f)));
+    const uint tile = context.addTileObject(make_vec3(0, 4, 0), make_vec2(1, 1), nullrotation, make_int2(2, 1), tile_texture.c_str());
+    const std::vector<uint> sub_patches = context.getObjectPrimitiveUUIDs(tile);
+    DOCTEST_REQUIRE(sub_patches.size() == 2);
+    context.setPrimitiveSpectralTexture(sub_patches, tile_class_map, "halves");
+    context.addPatch(make_vec3(-0.125f, 4, 0.5f), make_vec2(0.25f, 1.5f));
+    context.addPatch(make_vec3(0.375f, 4, 0.5f), make_vec2(0.25f, 1.5f));
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    addOverheadBeam(model);
+    model.updateGeometry();
+    model.runBand("VIS");
+
+    DOCTEST_CAPTURE(flux(context, masked));
+    DOCTEST_CHECK(std::fabs(flux(context, masked) - 475.f) < 5.f);
+    for (uint UUID: sub_patches) {
+        DOCTEST_CAPTURE(flux(context, UUID));
+        DOCTEST_CHECK(std::fabs(flux(context, UUID) - 475.f) < 5.f);
+    }
+
+    std::filesystem::remove(texture);
+    std::filesystem::remove(masked_class_map);
+    std::filesystem::remove(tile_class_map);
+    std::filesystem::remove(tile_texture);
+}
+
+GPU_TEST_CASE("RadiationModel - each class of a spectral texture is checked on its own") {
+    using namespace spectral_texture_test;
+    const std::string halves_map = writeClassMap("helios_radiation_checked.png", 3, 1, {1, 2, 2});
+
+    auto runMessage = [](const std::function<void()> &call) {
+        std::string message;
+        try {
+            call();
+        } catch (const std::runtime_error &error) {
+            message = error.what();
+        }
+        return message;
+    };
+
+    SUBCASE("a class that does not conserve energy is rejected even if the mean does") {
+        Context context;
+        addFlatSpectrum(context, "rho_bright", 0.6f);
+        addFlatSpectrum(context, "tau_bright", 0.6f);
+        addFlatSpectrum(context, "rho_dark", 0.05f);
+        context.addSpectralPalette("unbalanced", {{"rho_dark", "rho_dark", ""}, {"rho_bright", "tau_bright", ""}});
+        const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveSpectralTexture(square, halves_map, "unbalanced");
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        addOverheadBeam(model, 100);
+        model.updateGeometry();
+        const std::string message = runMessage([&]() { model.runBand("VIS"); });
+        DOCTEST_CAPTURE(message);
+        DOCTEST_CHECK(message.find("class 2") != std::string::npos);
+    }
+
+    SUBCASE("only the classes a primitive covers must have values in a band") {
+        // Class 3 has a spectrum that ends below the NIR band, but no class map holds class 3
+        Context context;
+        addFlatSpectrum(context, "rho_low", 0.05f);
+        addFlatSpectrum(context, "rho_high", 0.8f);
+        context.setGlobalData("rho_blue_only", std::vector<vec2>{make_vec2(300, 0.1f), make_vec2(500, 0.1f)});
+        context.setGlobalData("rho_wide", std::vector<vec2>{make_vec2(300, 0.2f), make_vec2(1100, 0.2f)});
+        context.addSpectralPalette("three", {{"rho_wide", "", ""}, {"rho_wide", "", ""}, {"rho_blue_only", "", ""}});
+        const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveSpectralTexture(square, halves_map, "three");
+        // The primitive's own spectrum is not used, so a label that names nothing is not an error
+        context.setPrimitiveData(square, "reflectivity_spectrum", "no_such_spectrum");
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.addRadiationBand("NIR", 750, 1000);
+        model.disableEmission("NIR");
+        model.setDirectRayCount("NIR", 100);
+        model.setDiffuseRadiationFlux("NIR", 0.f);
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        model.setSourceFlux(sun, "NIR", 1000.f);
+        model.updateGeometry();
+        DOCTEST_CHECK_NOTHROW(model.runBand("NIR"));
+    }
+
+    SUBCASE("in a band with emission the primitive's own values are used") {
+        // The class spectra end below the longwave band, so they have no value in it. As for an untextured primitive, constant
+        // values for the band are then needed, and allowed, since rays use the primitive's own values in a band with emission.
+        Context context;
+        addFlatSpectrum(context, "rho_low", 0.05f);
+        addFlatSpectrum(context, "rho_high", 0.8f);
+        context.addSpectralPalette("halves", {{"rho_low", "", ""}, {"rho_high", "", ""}});
+        const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveSpectralTexture(square, halves_map, "halves");
+        context.setPrimitiveData(square, "temperature", 300.f);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.addRadiationBand("LW", 5000, 15000);
+        model.setScatteringDepth("LW", 1);
+        model.setDirectRayCount("LW", 100);
+        model.setDiffuseRayCount("LW", 100);
+        model.setDiffuseRadiationFlux("LW", 0.f);
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1)); // the "reflectivity" output is written for each source
+        model.setSourceFlux(sun, "LW", 0.f);
+        model.optionalOutputPrimitiveData("reflectivity");
+        model.updateGeometry();
+
+        const std::string message = runMessage([&]() { model.runBand("LW"); });
+        DOCTEST_CAPTURE(message);
+        DOCTEST_CHECK(message.find("rho_low") != std::string::npos);
+
+        context.setPrimitiveData(square, "reflectivity_LW", 0.25f);
+        context.setPrimitiveData(square, "transmissivity_LW", 0.f);
+        context.setPrimitiveData(square, "emissivity_LW", 0.75f);
+        DOCTEST_CHECK_NOTHROW(model.runBand("LW"));
+        float source_rho;
+        context.getPrimitiveData(square, "reflectivity_0_LW", source_rho);
+        DOCTEST_CHECK(source_rho == 0.25f);
+    }
+
+    SUBCASE("a spectral texture given after a geometry built from a list is rejected") {
+        // A geometry built from a list of fewer primitives than the Context holds is not rebuilt automatically, so its class maps can be out of date
+        Context context;
+        addFlatSpectrum(context, "rho_low", 0.05f);
+        addFlatSpectrum(context, "rho_high", 0.8f);
+        context.addSpectralPalette("halves", {{"rho_low", "", ""}, {"rho_high", "", ""}});
+        const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.addPatch(make_vec3(0, 0, 3), make_vec2(1, 1)); // left out of the geometry
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        addOverheadBeam(model, 100);
+        model.updateGeometry({square});
+        context.setPrimitiveSpectralTexture(square, halves_map, "halves");
+        const std::string message = runMessage([&]() { model.runBand("VIS"); });
+        DOCTEST_CAPTURE(message);
+        DOCTEST_CHECK(message.find("updateGeometry") != std::string::npos);
+    }
+
+    std::filesystem::remove(halves_map);
+}
+
+namespace spectral_texture_test {
+
+    // A camera 1 m above the origin looking straight down with a 40 degree field of view, so that its image lies within the unit square.
+    // Its exposure is fixed, so that images compare in absolute terms (auto exposure would hide any error that scales the whole image).
+    void addOverheadCamera(RadiationModel &model, const std::vector<std::string> &bands) {
+        CameraProperties properties;
+        properties.exposure = "manual";
+        properties.camera_resolution = make_int2(20, 20);
+        properties.HFOV = 40.f;
+        properties.lens_diameter = 0.f;
+        properties.focal_plane_distance = 1.f;
+        model.addRadiationCamera("overhead", bands, make_vec3(0, -0.001f, 1), make_vec3(0, 0, 0), properties, 4);
+    }
+
+    // Pixel values at the centres of the four quadrants of the 20 x 20 image
+    std::vector<float> quadrantPixels(RadiationModel &model, const std::string &band) {
+        const std::vector<float> pixels = model.getCameraPixelData("overhead", band);
+        return {pixels.at(4 * 20 + 4), pixels.at(4 * 20 + 15), pixels.at(15 * 20 + 4), pixels.at(15 * 20 + 15)};
+    }
+
+    // A 3 x 3 class map whose quadrants (as the backends sample it) form a checkerboard: classes 1, 2 on the top row and 2, 1 below
+    std::string writeCheckerboard(const std::string &name) {
+        return writeClassMap(name, 3, 3, {1, 2, 2, 2, 1, 1, 2, 1, 1});
+    }
+
+} // namespace spectral_texture_test
+
+GPU_TEST_CASE("RadiationModel - a camera sees the same image of a one-class spectral texture as of the same spectra") {
+    // As for the absorbed flux, a one-class palette must give exactly what the class's spectra give an untextured primitive, here
+    // for a camera in two bands, with direct (source) and diffuse light weighted by different spectra so that the slots differ.
+    using namespace spectral_texture_test;
+    const std::string class_map = writeClassMap("helios_radiation_camera_one_class.png", 3, 1, {1, 1, 1});
+    std::vector<float> images[2];
+    for (int textured = 0; textured < 2; textured++) {
+        Context context;
+        context.seedRandomGenerator(11);
+        context.setGlobalData("rho_steps", std::vector<vec2>{make_vec2(300, 0.1f), make_vec2(499, 0.1f), make_vec2(501, 0.7f), make_vec2(719, 0.7f), make_vec2(721, 0.3f), make_vec2(1100, 0.3f)});
+        context.setGlobalData("tau_steps", std::vector<vec2>{make_vec2(300, 0.05f), make_vec2(499, 0.05f), make_vec2(501, 0.2f), make_vec2(1100, 0.2f)});
+        context.setGlobalData("source_blue_nir", std::vector<vec2>{make_vec2(300, 0), make_vec2(399, 0), make_vec2(401, 1), make_vec2(489, 1), make_vec2(491, 0), make_vec2(739, 0), make_vec2(741, 1), make_vec2(1100, 1)});
+        context.setGlobalData("sky_green_nir", std::vector<vec2>{make_vec2(300, 0), make_vec2(509, 0), make_vec2(511, 1), make_vec2(649, 1), make_vec2(651, 0), make_vec2(739, 0), make_vec2(741, 1), make_vec2(1100, 1)});
+        const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.addPatch(make_vec3(0.25f, 0, 0.5f), make_vec2(0.5f, 1.5f)); // shades half of the square
+        if (textured == 1) {
+            context.addSpectralPalette("one", {{"rho_steps", "tau_steps", ""}});
+            context.setPrimitiveSpectralTexture(square, class_map, "one");
+        } else {
+            context.setPrimitiveData(square, "reflectivity_spectrum", "rho_steps");
+            context.setPrimitiveData(square, "transmissivity_spectrum", "tau_steps");
+        }
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        for (const auto &band: std::vector<std::pair<std::string, vec2>>{{"VIS", make_vec2(400, 650)}, {"NIR", make_vec2(750, 1000)}}) {
+            model.addRadiationBand(band.first, band.second.x, band.second.y);
+            model.disableEmission(band.first);
+            model.setScatteringDepth(band.first, 2);
+            model.setDirectRayCount(band.first, 2000);
+            model.setDiffuseRayCount(band.first, 2000);
+            model.setDiffuseRadiationFlux(band.first, 200.f);
+        }
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(0.3f, 0, 1));
+        model.setSourceSpectrum(sun, "source_blue_nir");
+        model.setSourceFlux(sun, "VIS", 1000.f);
+        model.setSourceFlux(sun, "NIR", 500.f);
+        model.setDiffuseSpectrum("sky_green_nir");
+        addOverheadCamera(model, {"VIS", "NIR"});
+        model.updateGeometry();
+        model.runBand(std::vector<std::string>{"VIS", "NIR"});
+        for (const std::string band: {"VIS", "NIR"}) {
+            const std::vector<float> pixels = model.getCameraPixelData("overhead", band);
+            images[textured].insert(images[textured].end(), pixels.begin(), pixels.end());
+        }
+    }
+    DOCTEST_REQUIRE(images[0].size() == images[1].size());
+    float largest = 0.f;
+    float largest_difference = 0.f;
+    for (size_t i = 0; i < images[0].size(); i++) {
+        largest = std::max(largest, images[0].at(i));
+        largest_difference = std::max(largest_difference, std::fabs(images[1].at(i) - images[0].at(i)));
+    }
+    DOCTEST_CAPTURE(largest);
+    DOCTEST_CAPTURE(largest_difference);
+    DOCTEST_CHECK(largest > 0.f);
+    DOCTEST_CHECK(largest_difference <= 1e-4f * largest);
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - camera flux smoothing gives a one-class spectral texture the image of the same spectra") {
+    // A textured tile of 8 x 8 sub-patches, half shaded by a strip above it, seen from above (top face, mostly reflection) and below
+    // (bottom face, mostly transmission) with camera flux smoothing on. Smoothing blends the radiation across the shadow edge, and a
+    // one-class spectral texture must be blended exactly as the same spectra are on an untextured tile. The sun and sky have different
+    // spectra, so the two source slots weight the class differently, and the cameras respond to different halves of the band.
+    using namespace spectral_texture_test;
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_radiation_smooth_texture.jpg").string();
+    helios::writeJPEG(texture, 9, 9, std::vector<RGBcolor>(81, make_RGBcolor(0.2f, 0.6f, 0.2f)));
+    const std::string class_map = writeClassMap("helios_radiation_smooth_one_class.png", 9, 9, std::vector<uint16_t>(81, 1));
+    std::vector<float> images[2];
+    for (int textured = 0; textured < 2; textured++) {
+        Context context;
+        context.seedRandomGenerator(13);
+        context.setGlobalData("rho_steps", std::vector<vec2>{make_vec2(300, 0.1f), make_vec2(499, 0.1f), make_vec2(501, 0.5f), make_vec2(1100, 0.5f)});
+        context.setGlobalData("tau_steps", std::vector<vec2>{make_vec2(300, 0.05f), make_vec2(549, 0.05f), make_vec2(551, 0.3f), make_vec2(1100, 0.3f)});
+        context.setGlobalData("source_blue", std::vector<vec2>{make_vec2(300, 1), make_vec2(519, 1), make_vec2(521, 0.2f), make_vec2(1100, 0.2f)});
+        context.setGlobalData("sky_red", std::vector<vec2>{make_vec2(300, 0.2f), make_vec2(579, 0.2f), make_vec2(581, 1), make_vec2(1100, 1)});
+        context.setGlobalData("response_short", std::vector<vec2>{make_vec2(300, 1), make_vec2(539, 1), make_vec2(541, 0), make_vec2(1100, 0)});
+        context.setGlobalData("response_long", std::vector<vec2>{make_vec2(300, 0), make_vec2(539, 0), make_vec2(541, 1), make_vec2(1100, 1)});
+        const uint tile = context.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(8, 8), texture.c_str());
+        const std::vector<uint> tile_UUIDs = context.getObjectPrimitiveUUIDs(tile);
+        context.addPatch(make_vec3(0.3f, 0, 0.3f), make_vec2(0.6f, 1.6f)); // casts a shadow edge across the tile
+        if (textured == 1) {
+            context.addSpectralPalette("one", {{"rho_steps", "tau_steps", ""}});
+            context.setPrimitiveSpectralTexture(tile_UUIDs, class_map, "one");
+        } else {
+            context.setPrimitiveData(tile_UUIDs, "reflectivity_spectrum", "rho_steps");
+            context.setPrimitiveData(tile_UUIDs, "transmissivity_spectrum", "tau_steps");
+        }
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.enableCameraFluxSmoothing();
+        model.addRadiationBand("VIS", 400, 700);
+        model.disableEmission("VIS");
+        model.setScatteringDepth("VIS", 2);
+        model.setDirectRayCount("VIS", 2000);
+        model.setDiffuseRayCount("VIS", 2000);
+        model.setDiffuseRadiationFlux("VIS", 200.f);
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(0.2f, 0, 1));
+        model.setSourceSpectrum(sun, "source_blue");
+        model.setSourceFlux(sun, "VIS", 1000.f);
+        model.setDiffuseSpectrum("sky_red");
+        CameraProperties properties;
+        properties.camera_resolution = make_int2(40, 40);
+        properties.HFOV = 40.f;
+        properties.lens_diameter = 0.f;
+        properties.focal_plane_distance = 1.f;
+        properties.exposure = "manual";
+        model.addRadiationCamera("above", {"VIS"}, make_vec3(0, -0.001f, 1.2f), make_vec3(0, 0, 0), properties, 4);
+        model.addRadiationCamera("below", {"VIS"}, make_vec3(0, 0.001f, -1.2f), make_vec3(0, 0, 0), properties, 4);
+        // Different responses, so that each camera must weight the class by its own camera-weighted spectra
+        model.setCameraSpectralResponse("above", "VIS", "response_short");
+        model.setCameraSpectralResponse("below", "VIS", "response_long");
+        model.updateGeometry();
+        model.runBand("VIS");
+        for (const std::string camera: {"above", "below"}) {
+            const std::vector<float> pixels = model.getCameraPixelData(camera, "VIS");
+            images[textured].insert(images[textured].end(), pixels.begin(), pixels.end());
+        }
+    }
+    DOCTEST_REQUIRE(images[0].size() == images[1].size());
+    float largest = 0.f;
+    float largest_difference = 0.f;
+    for (size_t i = 0; i < images[0].size(); i++) {
+        largest = std::max(largest, images[0].at(i));
+        largest_difference = std::max(largest_difference, std::fabs(images[1].at(i) - images[0].at(i)));
+    }
+    DOCTEST_CAPTURE(largest);
+    DOCTEST_CAPTURE(largest_difference);
+    DOCTEST_REQUIRE(largest > 0.f);
+    DOCTEST_CHECK(largest_difference <= 1e-3f * largest);
+    std::filesystem::remove(texture);
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - camera flux smoothing of a spectral texture is not diluted by untextured neighbours") {
+    // A uniformly lit tile of 8 x 8 sub-patches whose left half has a one-class spectral texture and right half the same spectra without
+    // one. Every sub-patch receives the same radiation, so with smoothing the image must be that of the tile without any spectral texture.
+    // The radiation the textured half's vertices carry must be averaged over the textured sub-patches only: the untextured ones record
+    // none, and counting their area would darken the textured half toward the middle of the tile.
+    using namespace spectral_texture_test;
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_radiation_mixed_texture.jpg").string();
+    helios::writeJPEG(texture, 9, 9, std::vector<RGBcolor>(81, make_RGBcolor(0.2f, 0.6f, 0.2f)));
+    const std::string class_map = writeClassMap("helios_radiation_mixed_one_class.png", 9, 9, std::vector<uint16_t>(81, 1));
+    std::vector<float> images[2];
+    for (int textured = 0; textured < 2; textured++) {
+        Context context;
+        context.seedRandomGenerator(17);
+        addFlatSpectrum(context, "rho_flat", 0.4f);
+        addFlatSpectrum(context, "tau_flat", 0.1f);
+        const uint tile = context.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(8, 8), texture.c_str());
+        std::vector<uint> left_half, right_half;
+        for (uint UUID: context.getObjectPrimitiveUUIDs(tile)) {
+            (context.getPatchCenter(UUID).x < 0 ? left_half : right_half).push_back(UUID);
+        }
+        DOCTEST_REQUIRE(left_half.size() == 32);
+        context.setPrimitiveData(right_half, "reflectivity_spectrum", "rho_flat");
+        context.setPrimitiveData(right_half, "transmissivity_spectrum", "tau_flat");
+        if (textured == 1) {
+            context.addSpectralPalette("one", {{"rho_flat", "tau_flat", ""}});
+            context.setPrimitiveSpectralTexture(left_half, class_map, "one");
+        } else {
+            context.setPrimitiveData(left_half, "reflectivity_spectrum", "rho_flat");
+            context.setPrimitiveData(left_half, "transmissivity_spectrum", "tau_flat");
+        }
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        addOverheadBeam(model, 1000);
+        model.setDiffuseRadiationFlux("VIS", 200.f);
+        model.setDiffuseRayCount("VIS", 1000);
+        model.enableCameraFluxSmoothing();
+        addOverheadCamera(model, {"VIS"});
+        model.updateGeometry();
+        model.runBand("VIS");
+        images[textured] = model.getCameraPixelData("overhead", "VIS");
+    }
+    DOCTEST_REQUIRE(images[0].size() == images[1].size());
+    float largest = 0.f;
+    float largest_difference = 0.f;
+    for (size_t i = 0; i < images[0].size(); i++) {
+        largest = std::max(largest, images[0].at(i));
+        largest_difference = std::max(largest_difference, std::fabs(images[1].at(i) - images[0].at(i)));
+    }
+    DOCTEST_CAPTURE(largest);
+    DOCTEST_CAPTURE(largest_difference);
+    DOCTEST_REQUIRE(largest > 0.f);
+    DOCTEST_CHECK(largest_difference <= 1e-3f * largest);
+    std::filesystem::remove(texture);
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - gives a one-class spectral texture on a curved surface the image of the same spectra") {
+    // A spectral texture is seen in the outgoing radiation of its classes, which the camera assembles from the radiation reaching each face. With one class of the same spectra as an untextured
+    // tube, the smoothed image must be the same, including the direct radiation carried over to the shading normal on the curved surface. The scene is rendered under the sun and sky and under the
+    // sky alone, where the only material slot the vertices carry is the first.
+    using namespace spectral_texture_test;
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_radiation_curved_texture.jpg").string();
+    helios::writeJPEG(texture, 9, 9, std::vector<RGBcolor>(81, make_RGBcolor(0.2f, 0.6f, 0.2f)));
+    const std::string class_map = writeClassMap("helios_radiation_curved_one_class.png", 9, 9, std::vector<uint16_t>(81, 1));
+    for (bool sun_on: {true, false}) {
+        LayeredSmoothingRender renders[2];
+        for (int textured = 0; textured < 2; textured++) {
+            Context context;
+            context.seedRandomGenerator(23);
+            addFlatSpectrum(context, "rho_flat", 0.4f);
+            addFlatSpectrum(context, "tau_flat", 0.1f);
+            const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(context.addTubeObject(6, {make_vec3(0, 0, -1), make_vec3(0, 0, 1)}, {0.4f, 0.4f}, texture.c_str()));
+            if (textured == 1) {
+                context.addSpectralPalette("one", {{"rho_flat", "tau_flat", ""}});
+                context.setPrimitiveSpectralTexture(UUIDs, class_map, "one");
+            } else {
+                context.setPrimitiveData(UUIDs, "reflectivity_spectrum", "rho_flat");
+                context.setPrimitiveData(UUIDs, "transmissivity_spectrum", "tau_flat");
+            }
+            RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+            model.disableMessages();
+            model.enableCameraFluxSmoothing();
+            model.addRadiationBand("VIS", 400, 700);
+            model.disableEmission("VIS");
+            model.setScatteringDepth("VIS", 1);
+            model.setDirectRayCount("VIS", 200);
+            model.setDiffuseRayCount("VIS", 400);
+            model.setDiffuseRadiationFlux("VIS", 100.f);
+            if (sun_on) {
+                const uint sun = model.addCollimatedRadiationSource(make_vec3(1.f, -1.2f, 0.25f));
+                model.setSourceFlux(sun, "VIS", 1000.f);
+            }
+            CameraProperties properties;
+            properties.camera_resolution = make_int2(64, 64);
+            properties.HFOV = 30.f;
+            properties.lens_diameter = 0.f;
+            properties.exposure = "manual";
+            properties.white_balance = "off";
+            model.addRadiationCamera("tube_cam", {"VIS"}, make_vec3(0, -4, 0.3f), make_vec3(0, 0, 0), properties, 4);
+            model.updateGeometry();
+            model.runBand("VIS");
+            renders[textured].pixels = model.getCameraPixelData("tube_cam", "VIS");
+            context.getGlobalData("camera_tube_cam_pixel_UUID", renders[textured].pixel_UUIDs);
+        }
+        const float difference = meanRelativeDifference(renders[1], renders[0], 64);
+        const std::string lighting = sun_on ? "under the sun and sky" : "under the sky alone";
+        DOCTEST_INFO("difference between the textured and untextured tube " << lighting << ": " << difference);
+        DOCTEST_CHECK(difference < 0.005f);
+    }
+    std::filesystem::remove(texture);
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - a camera sees the pattern of a spectral texture") {
+    // A square under an overhead beam whose quadrants alternate between a class reflecting (or transmitting) 10% and one reflecting
+    // (or transmitting) 50%. The square is lit evenly, so the pixels over the two classes are in the ratio of their reflectivities
+    // (seen from above with the beam from above) or transmissivities (seen from above with the beam from below), 5. An untextured
+    // square with the same mean properties gives a uniform image.
+    using namespace spectral_texture_test;
+    const std::string checkerboard = writeCheckerboard("helios_radiation_checkerboard.png");
+
+    for (int transmission = 0; transmission < 2; transmission++) {
+        DOCTEST_CAPTURE(transmission);
+        Context context;
+        addFlatSpectrum(context, "dim", 0.1f);
+        addFlatSpectrum(context, "bright", 0.5f);
+        addFlatSpectrum(context, "zero", 0.f);
+        if (transmission == 1) {
+            context.addSpectralPalette("checker", {{"zero", "dim", ""}, {"zero", "bright", ""}});
+        } else {
+            context.addSpectralPalette("checker", {{"dim", "", ""}, {"bright", "", ""}});
+        }
+        const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveSpectralTexture(square, checkerboard, "checker");
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.addRadiationBand("VIS", 400, 700);
+        model.disableEmission("VIS");
+        model.setScatteringDepth("VIS", 1);
+        model.setDirectRayCount("VIS", 1000);
+        model.setDiffuseRadiationFlux("VIS", 0.f);
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, transmission == 1 ? -1.f : 1.f));
+        model.setSourceFlux(sun, "VIS", 1000.f);
+        addOverheadCamera(model, {"VIS"});
+        model.updateGeometry();
+        model.runBand("VIS");
+
+        const std::vector<float> quadrants = quadrantPixels(model, "VIS");
+        DOCTEST_CAPTURE(quadrants.at(0));
+        DOCTEST_CAPTURE(quadrants.at(1));
+        DOCTEST_CAPTURE(quadrants.at(2));
+        DOCTEST_CAPTURE(quadrants.at(3));
+        // Diagonal quadrants have the same class
+        DOCTEST_CHECK(quadrants.at(0) == doctest::Approx(quadrants.at(3)).epsilon(1e-4));
+        DOCTEST_CHECK(quadrants.at(1) == doctest::Approx(quadrants.at(2)).epsilon(1e-4));
+        const float ratio = std::max(quadrants.at(0), quadrants.at(1)) / std::min(quadrants.at(0), quadrants.at(1));
+        DOCTEST_CAPTURE(ratio);
+        DOCTEST_CHECK(std::fabs(ratio - 5.f) < 0.05f);
+    }
+
+    std::filesystem::remove(checkerboard);
+}
+
+GPU_TEST_CASE("RadiationModel - a camera sees the fluorescence of a leaf with a spectral texture") {
+    // In an SIF band the palette applies, so a camera sees each class's reflected and transmitted radiation, and must also see the
+    // leaf's fluorescence. The leaf reflects and transmits only 1% in the band, so a camera that missed the fluorescence would see a
+    // textured leaf far darker than the same leaf untextured.
+    using namespace spectral_texture_test;
+    const std::string class_map = writeClassMap("helios_radiation_sif_one_class.png", 2, 2, {1, 1, 1, 1});
+    // With camera flux smoothing, the fluorescence each face emits is averaged onto the leaf's vertices with the radiation reaching it,
+    // and must be seen in the same way.
+    for (const bool smoothing: {false, true}) {
+        DOCTEST_CAPTURE(smoothing);
+        std::vector<float> images[2];
+        for (int textured = 0; textured < 2; textured++) {
+            Context context;
+            context.seedRandomGenerator(5);
+            addFlatSpectrum(context, "leaf_one_percent", 0.01f);
+            const std::vector<uint> leaf = context.getObjectPrimitiveUUIDs(context.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2)));
+            sif_stamp_biochem(context, leaf, "textured_sif");
+            context.setPrimitiveData(leaf, "electron_transport_ratio", 1.f);
+            context.setPrimitiveData(leaf, "temperature", 298.15f);
+            if (textured == 1) {
+                context.addSpectralPalette("one", {{"leaf_one_percent", "leaf_one_percent", ""}});
+                context.setPrimitiveSpectralTexture(leaf, class_map, "one");
+            } else {
+                context.setPrimitiveData(leaf, "reflectivity_spectrum", "leaf_one_percent");
+                context.setPrimitiveData(leaf, "transmissivity_spectrum", "leaf_one_percent");
+            }
+            RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+            model.disableMessages();
+            if (smoothing) {
+                model.enableCameraFluxSmoothing();
+            }
+            model.addRadiationBand("SIF_farred", 740.f, 760.f);
+            model.setDirectRayCount("SIF_farred", 1000);
+            model.setDiffuseRayCount("SIF_farred", 1000);
+            model.setScatteringDepth("SIF_farred", 1);
+            const uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+            model.setSourceSpectrum(sun, "solar_spectrum_direct_ASTMG173");
+            SIFCameraProperties properties;
+            properties.camera_resolution = make_int2(8, 8);
+            properties.HFOV = 10.f;
+            properties.excitation_bin_width_nm = 50.f;
+            properties.exposure = "manual"; // auto exposure would scale both uniform images to the same brightness
+            model.addSIFCamera("sif_overhead", {"SIF_farred"}, make_vec3(0, -0.001f, 3), make_vec3(0, 0, 0), properties, 1);
+            model.updateGeometry();
+            model.runBand(std::vector<std::string>{"SIF_farred"});
+            images[textured] = model.getCameraPixelData("sif_overhead", "SIF_farred");
+        }
+        DOCTEST_REQUIRE(images[0].size() == images[1].size());
+        double untextured_sum = 0;
+        double textured_sum = 0;
+        for (size_t i = 0; i < images[0].size(); i++) {
+            untextured_sum += images[0].at(i);
+            textured_sum += images[1].at(i);
+        }
+        DOCTEST_CAPTURE(untextured_sum);
+        DOCTEST_CAPTURE(textured_sum);
+        DOCTEST_REQUIRE(untextured_sum > 0);
+        DOCTEST_CHECK(textured_sum / untextured_sum == doctest::Approx(1.0).epsilon(1e-3));
+    }
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - direct radiation reaching both faces of a primitive is scattered from the face it reached") {
+    // A sphere source centred in the plane of a two-sided reflective patch, off to one side, lights both faces of the patch exactly alike,
+    // with rays from the same primitive reaching different faces. What each face reflects must leave from that face: black sensors above
+    // and below the patch receive the same reflected radiation (measured as the difference with the patch black), and cameras above and
+    // below see the same patch. At this ray count the two agree within about 2%; summing a group of rays onto the face of one of them
+    // put 10-20% more on one face.
+    struct Result {
+        float flux_above, flux_below, camera_above, camera_below;
+    };
+    auto render = [](float reflectivity) {
+        Context context;
+        context.seedRandomGenerator(21);
+        const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.2f, 0.2f));
+        context.setPrimitiveData(patch, "reflectivity_VIS", reflectivity);
+        // One-sided black sensors facing the patch from above and below
+        const uint above = context.addPatch(make_vec3(0, 0, 0.3f), make_vec2(1, 1), make_SphericalCoord(float(M_PI), 0));
+        const uint below = context.addPatch(make_vec3(0, 0, -0.3f), make_vec2(1, 1));
+        context.setPrimitiveData(std::vector<uint>{above, below}, "twosided_flag", uint(0));
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.addRadiationBand("VIS");
+        model.disableEmission("VIS");
+        model.setScatteringDepth("VIS", 1);
+        model.setDirectRayCount("VIS", 40000);
+        model.setDiffuseRayCount("VIS", 40000);
+        model.setDiffuseRadiationFlux("VIS", 0.f);
+        const uint sun = model.addSphereRadiationSource(make_vec3(0.8f, 0, 0), 0.4f);
+        model.setSourceFlux(sun, "VIS", 1000.f);
+        CameraProperties properties;
+        properties.camera_resolution = make_int2(16, 16);
+        properties.HFOV = 20.f;
+        properties.lens_diameter = 0.f;
+        properties.focal_plane_distance = 0.25f;
+        properties.exposure = "manual";
+        model.addRadiationCamera("up", {"VIS"}, make_vec3(0, -0.0001f, 0.25f), make_vec3(0, 0, 0), properties, 4);
+        model.addRadiationCamera("down", {"VIS"}, make_vec3(0, 0.0001f, -0.25f), make_vec3(0, 0, 0), properties, 4);
+        model.updateGeometry();
+        model.runBand("VIS");
+        Result result{};
+        context.getPrimitiveData(above, "radiation_flux_VIS", result.flux_above);
+        context.getPrimitiveData(below, "radiation_flux_VIS", result.flux_below);
+        for (const std::string camera: {"up", "down"}) {
+            const std::vector<float> pixels = model.getCameraPixelData(camera, "VIS");
+            const float mean = std::accumulate(pixels.begin(), pixels.end(), 0.f) / float(pixels.size());
+            (camera == "up" ? result.camera_above : result.camera_below) = mean;
+        }
+        return result;
+    };
+    const Result reflective = render(0.5f);
+    const Result black = render(0.f);
+    const float reflected_above = reflective.flux_above - black.flux_above;
+    const float reflected_below = reflective.flux_below - black.flux_below;
+    DOCTEST_CAPTURE(reflected_above);
+    DOCTEST_CAPTURE(reflected_below);
+    DOCTEST_CAPTURE(reflective.camera_above);
+    DOCTEST_CAPTURE(reflective.camera_below);
+    DOCTEST_REQUIRE(reflected_above > 0.f);
+    DOCTEST_REQUIRE(reflective.camera_above > 0.f);
+    DOCTEST_CHECK(reflected_below == doctest::Approx(reflected_above).epsilon(0.05));
+    DOCTEST_CHECK(reflective.camera_below == doctest::Approx(reflective.camera_above).epsilon(0.05));
+}
+
+GPU_TEST_CASE("RadiationModel - the class of a spectral texture seen in each pixel gives segmentation masks by class") {
+    // A square whose centre (texture coordinates 0.25 to 0.75 in u and v, on a 5 x 5 class map) is class 2 and whose surround is
+    // class 1, seen by the overhead camera, whose image spans x and y from -0.364 to 0.364. Each class is then one connected region:
+    // class 2 covers (0.5 / 0.728)^2 = 47% of the image and class 1 the rest.
+    using namespace spectral_texture_test;
+    std::vector<uint16_t> classes(25, 1);
+    for (int row = 1; row <= 2; row++) {
+        for (int column = 1; column <= 2; column++) {
+            classes.at(row * 5 + column) = 2;
+        }
+    }
+    const std::string class_map = writeClassMap("helios_radiation_centre_class.png", 5, 5, classes);
+
+    Context context;
+    addFlatSpectrum(context, "dim", 0.1f);
+    addFlatSpectrum(context, "bright", 0.5f);
+    context.addSpectralPalette("centre", {{"dim", "", ""}, {"bright", "", ""}});
+    const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveSpectralTexture(square, class_map, "centre");
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.addRadiationBand("VIS", 400, 700);
+    model.disableEmission("VIS");
+    model.setScatteringDepth("VIS", 1);
+    model.setDirectRayCount("VIS", 100);
+    model.setDiffuseRadiationFlux("VIS", 0.f);
+    const uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    model.setSourceFlux(sun, "VIS", 1000.f);
+    addOverheadCamera(model, {"VIS"});
+    model.updateGeometry();
+    model.runBand("VIS");
+
+    std::vector<uint> pixel_classes;
+    context.getGlobalData("camera_overhead_pixel_spectral_class", pixel_classes);
+    DOCTEST_REQUIRE(pixel_classes.size() == 400);
+    DOCTEST_CHECK(pixel_classes.at(10 * 20 + 10) == 2);
+    DOCTEST_CHECK(pixel_classes.at(0) == 1);
+    DOCTEST_CHECK(pixel_classes.at(399) == 1);
+    const size_t class_two_pixels = std::count(pixel_classes.begin(), pixel_classes.end(), 2u);
+    DOCTEST_CAPTURE(class_two_pixels);
+    DOCTEST_CHECK(std::fabs(float(class_two_pixels) / 400.f - 0.472f) < 0.06f);
+
+    const std::string outdir = (std::filesystem::temp_directory_path() / "helios_spectral_class_masks/").string();
+    std::filesystem::remove_all(outdir);
+    std::filesystem::create_directories(outdir);
+    const std::string image_file = model.writeCameraImage("overhead", {"VIS"}, "classes", outdir);
+    const std::string json_file = outdir + "class_masks.json";
+    model.writeImageSegmentationMasksBySpectralClass("overhead", {{1, "lamina"}, {2, "lesion"}}, json_file, image_file);
+
+    nlohmann::json coco;
+    {
+        std::ifstream file(json_file);
+        DOCTEST_REQUIRE(file.good());
+        file >> coco;
+    }
+    std::map<int, int> annotations_per_category;
+    std::map<int, double> area_per_category;
+    for (const auto &annotation: coco["annotations"]) {
+        annotations_per_category[annotation["category_id"].get<int>()]++;
+        area_per_category[annotation["category_id"].get<int>()] += annotation["area"].get<double>();
+    }
+    DOCTEST_CHECK(annotations_per_category[1] == 1);
+    DOCTEST_CHECK(annotations_per_category[2] == 1);
+    DOCTEST_CHECK(area_per_category[2] == doctest::Approx(double(class_two_pixels)));
+    DOCTEST_CHECK(area_per_category[1] == doctest::Approx(400.0 - double(class_two_pixels)));
+    std::map<int, std::string> category_names;
+    for (const auto &category: coco["categories"]) {
+        category_names[category["id"].get<int>()] = category["name"].get<std::string>();
+    }
+    DOCTEST_CHECK(category_names[1] == "lamina");
+    DOCTEST_CHECK(category_names[2] == "lesion");
+
+    // Class 0 marks pixels without a class
+    DOCTEST_CHECK_THROWS(model.writeImageSegmentationMasksBySpectralClass("overhead", {{0, "nothing"}}, json_file, image_file));
+
+    std::filesystem::remove_all(outdir);
+    std::filesystem::remove(class_map);
+}
+
+namespace spectral_texture_test {
+
+    // Spectra that change within the 400-700 nm band at 550 nm, so that the two cameras below, one responding only below 550 nm and one
+    // only above, weight the same class differently; and a source and sky whose spectra differ, so that the two slots weight it differently too
+    void addCornerSpectra(Context &context) {
+        auto step = [&](const std::string &label, float below, float above) { context.setGlobalData(label.c_str(), std::vector<vec2>{make_vec2(300, below), make_vec2(549, below), make_vec2(551, above), make_vec2(800, above)}); };
+        step("corner_rho_1", 0.1f, 0.3f);
+        step("corner_tau_1", 0.05f, 0.2f);
+        step("corner_rho_2", 0.6f, 0.2f);
+        step("corner_tau_2", 0.3f, 0.1f);
+        step("response_blue", 1.f, 0.f);
+        step("response_red", 0.f, 1.f);
+        step("source_blueish", 1.f, 0.3f);
+        step("sky_reddish", 0.2f, 1.f);
+        context.addSpectralPalette("corner", {{"corner_rho_1", "corner_tau_1", ""}, {"corner_rho_2", "corner_tau_2", ""}});
+    }
+
+    // An overhead beam and a sky in a 400-700 nm band, and two cameras over the unit square at the origin: "top" 1 m above it looking down,
+    // responding below 550 nm, and "bottom" 1 m below it looking up, responding above 550 nm. Both have fixed exposure and no white balance.
+    void addTopAndBottomCameras(RadiationModel &model) {
+        model.disableMessages();
+        model.addRadiationBand("VIS", 400, 700);
+        model.disableEmission("VIS");
+        model.setScatteringDepth("VIS", 2);
+        model.setDirectRayCount("VIS", 1000);
+        model.setDiffuseRayCount("VIS", 1000);
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        model.setSourceSpectrum(sun, "source_blueish");
+        model.setSourceFlux(sun, "VIS", 1000.f);
+        model.setDiffuseRadiationFlux("VIS", 200.f);
+        model.setDiffuseSpectrum("sky_reddish");
+        CameraProperties properties;
+        properties.camera_resolution = make_int2(20, 20);
+        properties.HFOV = 40.f;
+        properties.lens_diameter = 0.f;
+        properties.focal_plane_distance = 1.f;
+        properties.exposure = "manual";
+        properties.white_balance = "off";
+        model.addRadiationCamera("top", {"VIS"}, make_vec3(0, -0.001f, 1), make_vec3(0, 0, 0), properties, 4);
+        model.addRadiationCamera("bottom", {"VIS"}, make_vec3(0, 0.001f, -1), make_vec3(0, 0, 0), properties, 4);
+        model.setCameraSpectralResponse("top", "VIS", "response_blue");
+        model.setCameraSpectralResponse("bottom", "VIS", "response_red");
+    }
+
+    //! What one camera recorded of a scene
+    struct CameraView {
+        std::vector<uint> pixel_classes; //!< empty for a scene without spectral textures
+        std::vector<uint> pixel_UUIDs;
+        std::vector<float> pixels;
+    };
+
+    CameraView recordCameraView(Context &context, RadiationModel &model, const std::string &camera) {
+        CameraView view;
+        const std::string class_label = "camera_" + camera + "_pixel_spectral_class";
+        if (context.doesGlobalDataExist(class_label.c_str())) {
+            context.getGlobalData(class_label.c_str(), view.pixel_classes);
+        }
+        context.getGlobalData(("camera_" + camera + "_pixel_UUID").c_str(), view.pixel_UUIDs);
+        view.pixels = model.getCameraPixelData(camera, "VIS");
+        return view;
+    }
+
+    // Compare a camera's view of a primitive with a spectral texture against its view of the same pattern built from separate untextured
+    // primitives, in which the pixels showing class_two_UUID are class 2 and all others class 1. Every pixel must see the expected class,
+    // and every pixel away from the edges between classes (which mix the two over their antialiasing samples) the same radiance.
+    void checkAgainstSeparatePrimitives(const CameraView &textured, const CameraView &separate, uint class_two_UUID) {
+        DOCTEST_REQUIRE(textured.pixel_classes.size() == 400);
+        DOCTEST_REQUIRE(separate.pixel_UUIDs.size() == 400);
+        std::vector<uint> expected_classes(400);
+        for (size_t i = 0; i < 400; i++) {
+            expected_classes.at(i) = separate.pixel_UUIDs.at(i) == class_two_UUID + 1 ? 2u : 1u;
+        }
+        const size_t class_two_pixels = std::count(expected_classes.begin(), expected_classes.end(), 2u);
+        DOCTEST_CAPTURE(class_two_pixels);
+        DOCTEST_REQUIRE(class_two_pixels > 40);
+        DOCTEST_REQUIRE(class_two_pixels < 360);
+        int class_mismatches = 0;
+        for (size_t i = 0; i < 400; i++) {
+            class_mismatches += textured.pixel_classes.at(i) != expected_classes.at(i);
+        }
+        DOCTEST_CHECK(class_mismatches == 0);
+
+        float largest_difference = 0.f;
+        float largest_pixel = 0.f;
+        int compared_pixels = 0;
+        for (int j = 1; j < 19; j++) {
+            for (int i = 1; i < 19; i++) {
+                bool interior = true;
+                for (int dj = -1; dj <= 1; dj++) {
+                    for (int di = -1; di <= 1; di++) {
+                        interior = interior && expected_classes.at((j + dj) * 20 + i + di) == expected_classes.at(j * 20 + i);
+                    }
+                }
+                if (interior) {
+                    const size_t pixel = j * 20 + i;
+                    compared_pixels++;
+                    largest_pixel = std::max(largest_pixel, separate.pixels.at(pixel));
+                    largest_difference = std::max(largest_difference, std::fabs(textured.pixels.at(pixel) - separate.pixels.at(pixel)));
+                }
+            }
+        }
+        DOCTEST_CAPTURE(compared_pixels);
+        DOCTEST_CAPTURE(largest_pixel);
+        DOCTEST_CAPTURE(largest_difference);
+        DOCTEST_REQUIRE(compared_pixels > 150);
+        DOCTEST_REQUIRE(largest_pixel > 0.f);
+        DOCTEST_CHECK(largest_difference <= 1e-3f * largest_pixel);
+    }
+
+} // namespace spectral_texture_test
+
+GPU_TEST_CASE("RadiationModel - cameras see an asymmetric spectral texture where the same pattern of separate primitives would be") {
+    // On a 9 x 9 class map, class 2 fills the texels of columns 0-3 and rows 0-2, which the texel convention maps to u < 0.5 and
+    // v > 0.625, a pattern changed by any mirror or swap of u and v. Two cameras with different spectral responses see the unit square from
+    // above (its top face, mostly reflection) and below (its bottom face, mostly transmission). Each scene with the class map is compared with
+    // the same pattern built from separate untextured primitives:
+    //   - a patch, whose class 2 lies at x < 0, y > 0.125;
+    //   - two uv-mapped triangles covering the same square, with the same pattern;
+    //   - a patch whose texture coordinates span only v from 0.5 to 1, whose class 2 lies at x < 0, y > -0.25.
+    // This checks the class found from each backend's hit attributes, for patches, triangles and patches with their own (u,v), on both
+    // faces, and each camera's own weighting of each class's spectra for the source and the sky.
+    using namespace spectral_texture_test;
+    std::vector<uint16_t> classes(81, 1);
+    for (int row = 0; row <= 2; row++) {
+        for (int column = 0; column <= 3; column++) {
+            classes.at(row * 9 + column) = 2;
+        }
+    }
+    const std::string class_map = writeClassMap("helios_radiation_corner_class.png", 9, 9, classes);
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_radiation_corner_texture.jpg").string();
+    helios::writeJPEG(texture, 9, 9, std::vector<RGBcolor>(81, make_RGBcolor(0.2f, 0.6f, 0.2f)));
+
+    enum class Scene { patch, patch_pieces, triangles, partial_uv_patch, partial_uv_pieces };
+    struct Views {
+        CameraView top;
+        CameraView bottom;
+        uint class_two_UUID = 0;
+    };
+    auto render = [&](Scene scene) {
+        Context context;
+        context.seedRandomGenerator(3);
+        addCornerSpectra(context);
+        Views views;
+        // The separate primitives: the region of class 2 and the rest of the square, as (centre, size) in the plane z = 0
+        auto addPieces = [&](float class_two_ymin) {
+            const float height = 0.5f - class_two_ymin;
+            views.class_two_UUID = context.addPatch(make_vec3(-0.25f, 0.5f - 0.5f * height, 0), make_vec2(0.5f, height));
+            const uint beside = context.addPatch(make_vec3(0.25f, 0.5f - 0.5f * height, 0), make_vec2(0.5f, height));
+            const uint below = context.addPatch(make_vec3(0, -0.5f + 0.5f * (1.f - height), 0), make_vec2(1, 1.f - height));
+            context.setPrimitiveData(views.class_two_UUID, "reflectivity_spectrum", "corner_rho_2");
+            context.setPrimitiveData(views.class_two_UUID, "transmissivity_spectrum", "corner_tau_2");
+            for (const uint piece: {beside, below}) {
+                context.setPrimitiveData(piece, "reflectivity_spectrum", "corner_rho_1");
+                context.setPrimitiveData(piece, "transmissivity_spectrum", "corner_tau_1");
+            }
+        };
+        if (scene == Scene::patch) {
+            context.setPrimitiveSpectralTexture(context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)), class_map, "corner");
+        } else if (scene == Scene::patch_pieces) {
+            addPieces(0.125f);
+        } else if (scene == Scene::triangles) {
+            const vec3 v0 = make_vec3(-0.5f, -0.5f, 0);
+            const vec3 v1 = make_vec3(0.5f, -0.5f, 0);
+            const vec3 v2 = make_vec3(0.5f, 0.5f, 0);
+            const vec3 v3 = make_vec3(-0.5f, 0.5f, 0);
+            const uint lower_right = context.addTriangle(v0, v1, v2, texture.c_str(), make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+            const uint upper_left = context.addTriangle(v0, v2, v3, texture.c_str(), make_vec2(0, 0), make_vec2(1, 1), make_vec2(0, 1));
+            context.setPrimitiveSpectralTexture({lower_right, upper_left}, class_map, "corner");
+        } else if (scene == Scene::partial_uv_patch) {
+            const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, texture.c_str(), make_vec2(0.5f, 0.75f), make_vec2(1.f, 0.5f));
+            context.setPrimitiveSpectralTexture(patch, class_map, "corner");
+        } else {
+            addPieces(-0.25f);
+        }
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        addTopAndBottomCameras(model);
+        model.updateGeometry();
+        model.runBand("VIS");
+        views.top = recordCameraView(context, model, "top");
+        views.bottom = recordCameraView(context, model, "bottom");
+        return views;
+    };
+
+    const Views patch_pieces = render(Scene::patch_pieces);
+    const Views partial_uv_pieces = render(Scene::partial_uv_pieces);
+    const std::vector<std::tuple<std::string, Views, const Views *>> comparisons{
+            {"patch", render(Scene::patch), &patch_pieces}, {"triangles", render(Scene::triangles), &patch_pieces}, {"patch with its own (u,v)", render(Scene::partial_uv_patch), &partial_uv_pieces}};
+    for (const auto &[label, textured, separate]: comparisons) {
+        // DOCTEST_INFO captures its arguments in a lambda, and capturing a structured binding is C++20-only, so copy the label first.
+        const std::string scene_label = label;
+        DOCTEST_INFO("scene: " << scene_label);
+        {
+            DOCTEST_INFO("camera above, seeing the top face");
+            checkAgainstSeparatePrimitives(textured.top, separate->top, separate->class_two_UUID);
+        }
+        {
+            DOCTEST_INFO("camera below, seeing the bottom face");
+            checkAgainstSeparatePrimitives(textured.bottom, separate->bottom, separate->class_two_UUID);
+        }
+    }
+
+    std::filesystem::remove(class_map);
+    std::filesystem::remove(texture);
+}
+
+GPU_TEST_CASE("RadiationModel - segmentation masks by spectral class line up with the primitives in the image") {
+    // The left half of the camera's view is a patch of class 1 whose primitive data "side" is 1, the right half a patch of class 2 whose
+    // "side" is 2. The mean of "side" over each class's mask (from the pixel-to-primitive map) must be that class's own side, which holds
+    // only if the class map and the pixel-to-primitive map are oriented alike in the image.
+    using namespace spectral_texture_test;
+    const std::string class_one_map = writeClassMap("helios_radiation_class_one.png", 2, 2, {1, 1, 1, 1});
+    const std::string class_two_map = writeClassMap("helios_radiation_class_two.png", 2, 2, {2, 2, 2, 2});
+
+    Context context;
+    addFlatSpectrum(context, "dim", 0.1f);
+    addFlatSpectrum(context, "bright", 0.5f);
+    context.addSpectralPalette("sides", {{"dim", "", ""}, {"bright", "", ""}});
+    const uint left = context.addPatch(make_vec3(-0.25f, 0, 0), make_vec2(0.5f, 1));
+    const uint right = context.addPatch(make_vec3(0.25f, 0, 0), make_vec2(0.5f, 1));
+    context.setPrimitiveSpectralTexture(left, class_one_map, "sides");
+    context.setPrimitiveSpectralTexture(right, class_two_map, "sides");
+    context.setPrimitiveData(left, "side", 1.f);
+    context.setPrimitiveData(right, "side", 2.f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    addOverheadBeam(model, 100);
+    addOverheadCamera(model, {"VIS"});
+    model.updateGeometry();
+    model.runBand("VIS");
+
+    const std::string outdir = (std::filesystem::temp_directory_path() / "helios_spectral_class_sides/").string();
+    std::filesystem::remove_all(outdir);
+    std::filesystem::create_directories(outdir);
+    const std::string image_file = model.writeCameraImage("overhead", {"VIS"}, "sides", outdir);
+    const std::string json_file = outdir + "side_masks.json";
+    model.writeImageSegmentationMasksBySpectralClass("overhead", {{1, "left"}, {2, "right"}}, json_file, image_file, {"side"});
+
+    nlohmann::json coco;
+    {
+        std::ifstream file(json_file);
+        DOCTEST_REQUIRE(file.good());
+        file >> coco;
+    }
+    std::map<int, double> side_of_category;
+    std::map<int, int> annotations_per_category;
+    for (const auto &annotation: coco["annotations"]) {
+        const int category = annotation["category_id"].get<int>();
+        annotations_per_category[category]++;
+        side_of_category[category] = annotation["attributes"]["side"].get<double>();
+    }
+    DOCTEST_CHECK(annotations_per_category[1] == 1);
+    DOCTEST_CHECK(annotations_per_category[2] == 1);
+    DOCTEST_CHECK(side_of_category[1] == doctest::Approx(1.0));
+    DOCTEST_CHECK(side_of_category[2] == doctest::Approx(2.0));
+
+    std::filesystem::remove_all(outdir);
+    std::filesystem::remove(class_one_map);
+    std::filesystem::remove(class_two_map);
+}
+
+GPU_TEST_CASE("RadiationModel - segmentation masks by spectral class need a scene with spectral textures") {
+    using namespace spectral_texture_test;
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    addOverheadBeam(model, 100);
+    addOverheadCamera(model, {"VIS"});
+    model.updateGeometry();
+    model.runBand("VIS");
+    DOCTEST_CHECK(!context.doesGlobalDataExist("camera_overhead_pixel_spectral_class"));
+    DOCTEST_CHECK_THROWS(model.writeImageSegmentationMasksBySpectralClass("overhead", {{1, "lamina"}}, "unused.json", "unused.jpeg"));
+}
+
+GPU_TEST_CASE("RadiationModel - spectral textures that cannot be traced correctly are rejected") {
+    using namespace spectral_texture_test;
+    const std::string class_map = writeClassMap("helios_radiation_rejected.png", 3, 1, {1, 2, 2});
+
+    // The error must be the one about the spectral texture, not another check that happens to fail on the same scene
+    auto rejectsWith = [](const std::function<void()> &call, const std::string &reason) {
+        std::string message;
+        try {
+            call();
+        } catch (const std::runtime_error &error) {
+            message = error.what();
+        }
+        DOCTEST_CAPTURE(message);
+        return message.find("spectral texture") != std::string::npos && message.find(reason) != std::string::npos;
+    };
+
+    Context context;
+    addFlatSpectrum(context, "rho_low", 0.05f);
+    addFlatSpectrum(context, "rho_high", 0.8f);
+    context.addSpectralPalette("halves", {{"rho_low", "", ""}, {"rho_high", "", ""}});
+    context.addSpectralPalette("missing_spectrum", {{"rho_low", "", ""}, {"no_such_spectrum", "", ""}});
+    const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveSpectralTexture(square, class_map, "halves");
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    addOverheadBeam(model, 100);
+    model.updateGeometry();
+
+    SUBCASE("a palette naming a spectrum that is not global data") {
+        context.setPrimitiveSpectralPalette(square, "missing_spectrum");
+        DOCTEST_CHECK(rejectsWith([&]() { model.runBand("VIS"); }, "no_such_spectrum"));
+    }
+    SUBCASE("a constant reflectivity for the band") {
+        context.setPrimitiveData(square, "reflectivity_VIS", 0.1f);
+        DOCTEST_CHECK(rejectsWith([&]() { model.runBand("VIS"); }, "reflectivity_VIS"));
+    }
+    SUBCASE("a translucent cover") {
+        context.setPrimitiveData(square, "glass_n_VIS", 1.5f);
+        DOCTEST_CHECK(rejectsWith([&]() { model.runBand("VIS"); }, "glass_n_VIS"));
+    }
+    SUBCASE("a specular surface layer") {
+        context.setPrimitiveData(square, "specular_roughness", 0.2f);
+        DOCTEST_CHECK(rejectsWith([&]() { model.runBand("VIS"); }, "surface layer"));
+    }
+    SUBCASE("classes that differ in a band with emission") {
+        model.enableEmission("VIS");
+        context.setPrimitiveData(square, "emissivity_VIS", 0.f);
+        DOCTEST_CHECK(rejectsWith([&]() { model.runBand("VIS"); }, "emission"));
+    }
+    std::filesystem::remove(class_map);
+}
+
 GPU_TEST_CASE("RadiationModel - the area a masked primitive blocks matches its solid fraction") {
     // Regression test. A texture-masked primitive absorbs radiation over the opaque part of its mask, and its area is reduced by
     // the solid fraction the Context computes from the mask. The ray-intersection tests must find the same opaque part. For
@@ -18013,4 +21643,60 @@ GPU_TEST_CASE("RadiationModel - rays from a masked triangle in a plane through t
     DOCTEST_CHECK(flux == doctest::Approx(1000.f).epsilon(0.01));
 
     std::filesystem::remove(mask_file);
+}
+
+GPU_TEST_CASE("RadiationModel - light and camera model visualization") {
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    radiation.addSphereRadiationSource(make_vec3(1, 2, 3), 0.5f);
+    radiation.addRectangleRadiationSource(make_vec3(0, 0, 2), make_vec2(1, 0.5), make_vec3(0, 0, 0));
+    radiation.addDiskRadiationSource(make_vec3(0, 0, 2), 0.5f, make_vec3(0, 0, 0));
+    radiation.addCollimatedRadiationSource();
+    const size_t base_count = context.getPrimitiveCount();
+    const std::vector<uint> base_UUIDs = context.getAllUUIDs();
+
+    // model files resolve from the plugin asset directory
+    DOCTEST_CHECK_NOTHROW(radiation.enableLightModelVisualization());
+    const size_t lit_count = context.getPrimitiveCount();
+    DOCTEST_CHECK(lit_count > base_count);
+
+    for (uint UUID: context.getAllUUIDs()) {
+        if (std::find(base_UUIDs.begin(), base_UUIDs.end(), UUID) != base_UUIDs.end()) {
+            continue;
+        }
+        uint flag = 0;
+        DOCTEST_REQUIRE(context.doesPrimitiveDataExist(UUID, "invisibility_flag"));
+        context.getPrimitiveData(UUID, "invisibility_flag", flag);
+        DOCTEST_CHECK(flag == 1u);
+    }
+
+    // enabling again rebuilds rather than duplicating
+    radiation.enableLightModelVisualization();
+    DOCTEST_CHECK(context.getPrimitiveCount() == lit_count);
+
+    // a source added while enabled gets a model
+    radiation.addSphereRadiationSource(make_vec3(0, 0, 4), 0.25f);
+    DOCTEST_CHECK(context.getPrimitiveCount() > lit_count);
+
+    // disabling removes every model, and is safe to repeat
+    radiation.disableLightModelVisualization();
+    DOCTEST_CHECK(context.getPrimitiveCount() == base_count);
+    DOCTEST_CHECK_NOTHROW(radiation.disableLightModelVisualization());
+    DOCTEST_CHECK(context.getPrimitiveCount() == base_count);
+
+    radiation.addRadiationBand("red");
+    CameraProperties props;
+    props.camera_resolution = make_int2(2, 2);
+    radiation.addRadiationCamera("cam", {"red"}, make_vec3(0, 0, 5), make_vec3(0, 0, 0), props, 1);
+    DOCTEST_CHECK_NOTHROW(radiation.enableCameraModelVisualization());
+    const size_t cam_count = context.getPrimitiveCount();
+    DOCTEST_CHECK(cam_count > base_count);
+    radiation.enableCameraModelVisualization();
+    DOCTEST_CHECK(context.getPrimitiveCount() == cam_count);
+    radiation.disableCameraModelVisualization();
+    DOCTEST_CHECK(context.getPrimitiveCount() == base_count);
+    DOCTEST_CHECK_NOTHROW(radiation.disableCameraModelVisualization());
 }

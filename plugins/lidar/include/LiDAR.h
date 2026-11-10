@@ -101,9 +101,7 @@ struct HitPoint {
     helios::RGBcolor color;
     int gridcell;
     int scanID;
-    // NOTE: the hit's (row,column) scan-grid index is deliberately NOT stored. It was written by every
-    // construction path and read by none, costing 8 bytes on every point in the cloud plus a
-    // direction2rc() call per hit. Where a scan-grid index is actually needed it is either recovered
+    // NOTE: the hit's (row,column) scan-grid index is deliberately NOT stored. Where a scan-grid index is needed it is either recovered
     // from the direction (ScanMetadata::direction2rc) or carried as "row"/"column" hit data by the
     // importer and the gap filler.
     //
@@ -111,12 +109,10 @@ struct HitPoint {
     // direction from (position - origin): for a synthetic scan with a finite beam footprint the two
     // differ. syntheticScan() stores the beam's central sub-ray here, while the recorded position is
     // the merged return of all sub-rays across the footprint, so substituting one for the other shifts
-    // the leaf-angle inversion (measurably: G(theta) and LAD move by ~30% on a spread-beam scan).
+    // the leaf-angle inversion.
     // NOTE: per-hit scalar data (intensity, distance, timestamp, custom labels, ...) is NOT stored
     // here. It lives in cloud-level columnar storage on LiDARcloud (hit_data_columns/hit_data_present),
-    // indexed by the hit's position in the `hits` vector. Storing it as N independent
-    // std::map<std::string,double> trees (one per hit) made bulk field extraction O(K*N) cache-cold
-    // tree descents and dominated export time. See LiDARcloud::getHitData / getHitDataColumn.
+    // indexed by the hit's position in the `hits` vector. See LiDARcloud::getHitData / getHitDataColumn.
     //! Beam direction as a helios::SphericalCoord (reconstituted from the stored components).
     helios::SphericalCoord getDirection() const {
         return helios::make_SphericalCoord(dir_radius, dir_elevation, dir_azimuth);
@@ -240,7 +236,7 @@ struct GridCell {
 //! Geometric pattern that maps a scan's (row,column) table indices to beam directions
 /**
  * Determines how the (row, column) scan-table indices are converted to beam directions. The default \ref SCAN_PATTERN_RASTER
- * reproduces the original Helios behavior of a uniform angular grid in zenith and azimuth (panoramic terrestrial laser scanner).
+ * is a uniform angular grid in zenith and azimuth (panoramic terrestrial laser scanner).
  * \ref SCAN_PATTERN_SPINNING_MULTIBEAM models a rotating multi-channel sensor (e.g. Velodyne, Ouster, Hesai) where each table
  * row corresponds to a laser channel fired at a fixed - and generally non-uniformly spaced - zenith angle, while each column is
  * a uniform azimuth step. \ref SCAN_PATTERN_RISLEY_PRISM models a rotating-Risley-prism scanner (the optical mechanism used by
@@ -653,7 +649,7 @@ struct ScanMetadata {
     // synthetic scan generates a per-pulse origin and orientation instead of a single static origin. The
     // static scanTilt_roll/pitch/azimuth fields are NOT applied in this mode: attitude comes entirely from
     // the trajectory quaternions composed with the fixed boresight misalignment. When isMoving is false the
-    // scan behaves exactly as before (single static origin). Populated via \ref LiDARcloud::addScanMoving().
+    // scan uses a single static origin. Populated via \ref LiDARcloud::addScanMoving().
 
     //! Whether this scan uses a moving-platform trajectory (true) or a single static origin (false)
     bool isMoving = false;
@@ -678,7 +674,7 @@ struct ScanMetadata {
     helios::vec3 boresight_rpy = helios::make_vec3(0, 0, 0);
 
     //! Time between consecutive pulses in seconds (= 1 / pulse_rate_hz). For static scans this defaults to 1.0
-    //! so per-pulse timestamps equal the historical pulse ordinal (i.e. no change to existing behavior).
+    //! so per-pulse timestamps equal the pulse ordinal.
     double pulse_period = 1.0;
 
     //! Time of the first pulse (pulse ordinal 0) in seconds. Relative time; no absolute GPS epoch.
@@ -754,9 +750,8 @@ private:
     //
     // Each column has a fixed storage type chosen when it is created (see \ref HitDataType and
     // \ref createHitDataColumn): 8-byte double for labels that need it (timestamps), 4-byte float for
-    // measurements, 4-byte integer for counts and indices. Presence is one bit per hit. Against the
-    // previous dense double + byte layout (9 bytes per hit per label) a float or integer label costs
-    // 4.125 bytes per hit, which on a 100-million-return cloud with five labels is 2 GB instead of 4.5.
+    // measurements, 4-byte integer for counts and indices. Presence is one bit per hit, so a float or integer
+    // label costs 4.125 bytes per hit.
     //
     // THREADING: values may be scattered into distinct rows from several threads, but presence bits
     // share 64-bit words between neighbouring rows, so presence is always written serially
@@ -948,17 +943,6 @@ private:
         random sample of the returns (see \ref fitScanGridModel), which is what lets a gap-fill decide a
         cell's direction without having seen the rest of the grid.
 
-        This replaced a per-row fit -- a median zenith and a Theil-Sen azimuth line for each row, some
-        7,500 coefficients for a 2,500-row scan, every row needing enough returns of its own before any
-        miss could be emitted. Measured against the scanner's own row/column indices on four scans from
-        two instruments (RIEGL VZ-600i at 7200x2501 and VZ-2000i at 4500x2512), the four-coefficient
-        model reconstructs directions to 0.016-0.022 degrees mean error, against 0.029-0.090 for the
-        per-row fit, and its 99th percentile is 0.03-0.04 degrees against 0.08-1.80. The per-row fit's
-        tail comes from rows too sparse to fit -- 12% of rows on one scan -- which fall back on
-        interpolation from their neighbours; a model fitted across the whole grid has no equivalent
-        failure. As a check that the fit recovers real instrument geometry rather than fitting noise,
-        the recovered azimuth step came out as exactly \f$-2\pi/N_\phi\f$ on both instruments.
-
         For \ref SCAN_PATTERN_SPINNING_MULTIBEAM the zenith angles are per-channel and deliberately
         non-uniform, so \ref zenith_per_row holds them instead and the linear form is not used. */
     struct ScanGridModel {
@@ -1047,26 +1031,23 @@ private:
     CroppedReturnStats cropped_return_stats;
 
     //! Returns sampled when fitting a \ref ScanGridModel. The model has four coefficients over a highly
-    //! redundant grid, so this is far more than needed: 5,000 and 50,000 agreed to five decimal places
-    //! on a 10-million-return scan.
+    //! redundant grid, so a sample of this size is ample.
     static constexpr size_t SCAN_GRID_FIT_SAMPLE_LIMIT = 20000;
 
     //! Floor on the acceptable scan-grid fit residual, in radians, below which no origin warning is
-    //! raised regardless of the angular step. Real scans measured 2e-4 rad with a correct origin.
+    //! raised regardless of the angular step.
     static constexpr double SCAN_GRID_RESIDUAL_FLOOR = 2.0e-3;
 
     //! Fit a \ref ScanGridModel to a scan's returns from a bounded sample
     /** Least squares on at most \p sample_limit returns drawn deterministically across the scan.
-        The sample size does not need to be large: on a 10-million-return scan, fitting on 5,000 points
-        and on 50,000 agreed to five decimal places, because the model has four coefficients and the
+        The sample size does not need to be large, because the model has four coefficients and the
         grid is highly redundant.
 
         \p zenith_residual on the result is the RMS of the zenith fit and doubles as a correctness
         check on the scan origin. Beam directions are recovered as `position - origin`, so a wrong
         origin perturbs each one by roughly `origin_error / range` -- a range-dependent error, not a
-        rigid rotation, which no angular model can absorb. It shows up directly in this residual:
-        measured on a real scan, 0.0002 rad with the correct origin against 0.0049 rad with the origin
-        1 cm out and 0.10 rad with it 1 m out.
+        rigid rotation, which no angular model can absorb. It shows up directly in this residual, which
+        grows with the size of the origin error.
 
      * \param[in] scanID Scan to fit
      * \param[in] sample_limit Maximum returns to use
@@ -1231,7 +1212,6 @@ private:
     //! tessellation, applies the edge-length/aspect/separation filters, and appends the surviving triangles to
     //! \ref triangles while accumulating the triangulation_* diagnostics counters.
     /**
-     * Both overloads previously duplicated this body verbatim; the shared helper keeps them from drifting.
      * \param[in] s Scan index to triangulate.
      * \param[in] Lmax Maximum triangle edge length; longer triangles are dropped.
      * \param[in] max_aspect_ratio Maximum triangle aspect ratio; more elongated triangles are dropped.
@@ -1408,9 +1388,7 @@ private:
         mean is used as its representative value rather than the bin centre -- worth roughly an order of
         magnitude of accuracy for free.
 
-        Measured on real path lengths from the `leafcube_multi` fixture (one voxel, and a 4x4x4 grid
-        giving 64 voxels with differing distributions), 256 bins recovers \f$a\f$ to within 4e-7
-        relative -- about a hundredfold inside the secant solver's own 5e-5 convergence tolerance. The
+        256 bins recovers \f$a\f$ well inside the secant solver's own 5e-5 convergence tolerance. The
         distribution is favourable for binning: most beams cross a voxel nearly axially, so path lengths
         cluster tightly near the voxel size with a thin tail from grazing beams. Set
         \ref setExactPathLengths() to keep every sample if a scan's geometry is ever less benign. */
@@ -1573,7 +1551,7 @@ private:
         per-return path length \p dr (\c |t1-t0|, 0 if the return's ray misses the voxel) and \p hit_location
         (0=miss-voxel, 1=before, 2=inside, 3=after). This helper folds those into the per-beam transmittance fraction
         P = E_after/(E_inside+E_after) (Eq. 7) and the per-voxel path-length sample (mean dr over the beam's intersecting
-        returns), exactly mirroring the original inlined logic.
+        returns).
         \param[in] return_indices Pointer to this beam's return indices (into \p dr / \p hit_location)
         \param[in] Nreturns Number of returns belonging to this beam
         \param[in] dr Path length through the voxel per return index [m] (0 if that return's ray does not intersect the voxel)
@@ -1695,18 +1673,13 @@ private:
     //! Row/column-based implementation of gap filling (see \ref gapfillMisses).
     /**
      * Reconstructs miss-pulse directions from the native scan-grid row/column indices when per-hit timestamps are
-     * unavailable. A robust per-row generative model is fit from the returns: each row's zenith is the median of the
-     * measured zeniths of its returns, and each row's azimuth is a robust (Theil-Sen) line fit azimuth = intercept + slope*column,
-     * which absorbs scanner tilt and the continuous azimuth sweep (azimuth shear across rows). Rows with too few returns
-     * inherit their model parameters by robustly extrapolating the per-row parameters across the row axis, which allows
-     * large blank near-zenith regions to be extrapolated rather than only interpolated. Every empty grid cell is then
-     * emitted as a miss along its reconstructed direction.
+     * unavailable. A scan-grid model (see \ref ScanGridModel) is fitted across the whole scan from the returns, and every
+     * empty grid cell is then emitted as a miss along the direction the model gives for that cell.
      *
      * This is the shared core of both gap-filling paths: the timestamp path assigns every return its scan-grid cell
      * from the pulse clock, records it as row/column hit data, and then calls this.
      * \param[in] scanID ID of scan to gapfill
-     * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data (0 = original points, 1 = gapfilled). Code 4 ("extrapolated row") is retired: the scan-grid model is fitted across the whole scan
-     *                        rather than row by row, so a row with no returns of its own is evaluated from the same coefficients as any other and is no longer a distinct case.
+     * \param[in] add_flags if true, gapfillMisses_code is added as hitpoint data (0 = original points, 1 = gapfilled).
      * \param[in] collect_positions if true, the filled positions are reconstructed and returned
      * \param[out] filled_count Number of misses synthesized
      * \param[in] allow_moving Accept a moving-platform scan (each miss is then emitted from the platform pose at its reconstructed time); the row/column-only entry rejects them
@@ -1766,8 +1739,7 @@ public:
      * When the pointed-to int becomes non-zero, the current long-running operation aborts at the
      * next poll point. \ref syntheticScan() stops its parallel ray loop and returns early with
      * whatever hits were recorded so far; \ref triangulateHitPoints() discards any partial mesh
-     * and returns an empty triangulation. The flag is owned by the caller (e.g. a ctypes int
-     * shared with Python) and must outlive the operation; pass nullptr to clear. Set this before
+     * and returns an empty triangulation. The flag is owned by the caller and must outlive the operation; pass nullptr to clear. Set this before
      * calling the operation to be cancelled.
      * \param[in] flag Pointer to a 0/non-zero cancellation flag, or nullptr.
      */
@@ -1777,8 +1749,7 @@ public:
     /**
      * syntheticScan writes the 0-based index of the scan it is currently ray-tracing
      * into the pointed-to int, updated at the start of each scan, and sets it to
-     * getScanCount() when the batch finishes. The counter is owned by the caller
-     * (e.g. a ctypes int shared with Python) and must outlive the scan; pass nullptr
+     * getScanCount() when the batch finishes. The counter is owned by the caller and must outlive the scan; pass nullptr
      * to clear. Set this before calling syntheticScan().
      * \param[in] ptr Pointer to a caller-owned progress counter, or nullptr.
      */
@@ -1787,7 +1758,7 @@ public:
     //! Initialize collision detection plugin for unified ray-tracing (called automatically when needed)
     void initializeCollisionDetection(helios::Context *context);
 
-    //! Perform unified ray-tracing using collision detection plugin (replaces CUDA kernels)
+    //! Perform unified ray-tracing using collision detection plugin
     void performUnifiedRayTracing(helios::Context *context, size_t N, int Npulse, helios::vec3 *ray_origins, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID);
 
     //! Normalize a synthetic return intensity for range
@@ -2993,7 +2964,6 @@ public:
      */
     void triangulateHitPoints(float Lmax, float max_aspect_ratio);
 
-    // ERK
     //! Perform triangulation on hit points in point cloud that meet some filtering criteria based on scalar data
     /**
      * \param[in] Lmax Maximum allowable length of triangle sides.
@@ -3426,8 +3396,7 @@ public:
         then scanning that row's occupancy bits to find its column -- fine for a single lookup, but
         O(Nphi) per call, which is ruinous as the inner step of a loop over the whole cloud. This walks
         each scan's occupancy bitset in row-major order instead, which IS index order, so every hit
-        costs O(1). Measured on 576k virtualized misses: 0.31 s through the per-index accessors against
-        0.3 ms here.
+        costs O(1).
 
         Prefer this (and \ref getHitScanIDColumn) to a `for r in 0..getHitCount()` loop of accessor
         calls whenever the whole cloud is being read.
@@ -3542,9 +3511,8 @@ public:
     /** The leaf-area inversion needs the distribution of per-beam path lengths through each voxel, not
         just its moments, so the samples cannot be reduced to a running sum. They are therefore binned
         once a voxel exceeds an internal threshold, which bounds the memory a voxel can consume no matter
-        how many beams cross it. Binning was measured to recover the extinction coefficient to about
-        4e-7 relative on real scan geometry -- far inside the solver's own tolerance -- but this switch
-        restores exact accumulation for a scan whose geometry might be less favourable, or to confirm
+        how many beams cross it. Binning recovers the extinction coefficient well inside the solver's
+        own tolerance for typical geometry, but this switch restores exact accumulation for a scan whose geometry might be less favourable, or to confirm
         that binning is not responsible for a difference in results.
      * \param[in] exact True to keep every sample; false (the default) to bin above the threshold
      */

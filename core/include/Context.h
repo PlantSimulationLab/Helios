@@ -565,6 +565,29 @@ namespace helios {
         }
     };
 
+    //! One class of a spectral palette: the optical spectra of a surface wherever its class map holds this class
+    /**
+     * A spectral texture gives a primitive spatially varying optical properties. A class map (a single-channel image laid over the primitive like its texture) holds a class at each texel, and a spectral palette lists the spectra of each class. See
+     * \ref Context::setPrimitiveSpectralTexture().
+     */
+    struct SpectralTextureClass {
+        //! Label of the global data (a std::vector<helios::vec2> of wavelength in nm and value) giving the reflectivity spectrum, as for the primitive data "reflectivity_spectrum"
+        std::string reflectivity_spectrum;
+        //! Label of the global data giving the transmissivity spectrum, as for the primitive data "transmissivity_spectrum". Empty for a class that transmits nothing.
+        std::string transmissivity_spectrum;
+        //! Free text recording where the spectra came from (for example "measured" or "assumed"). It is stored and written to XML but not otherwise used.
+        std::string provenance;
+
+        //! Two classes are equal when their spectrum labels and provenance are all equal
+        bool operator==(const SpectralTextureClass &other) const {
+            return reflectivity_spectrum == other.reflectivity_spectrum && transmissivity_spectrum == other.transmissivity_spectrum && provenance == other.provenance;
+        }
+        //! Two classes differ when any of their spectrum labels or their provenance differ
+        bool operator!=(const SpectralTextureClass &other) const {
+            return !(*this == other);
+        }
+    };
+
     //! \brief Structure for Global Data Entities
     struct GlobalData {
 
@@ -711,6 +734,9 @@ namespace helios {
         [[nodiscard]] bool hasTexture() const;
 
         //! Method to return the texture map file of an Object
+        /**
+         * \return Texture file of the object's first primitive, which is empty if it has no texture or the object has no primitives. The primitives of an object can have different textures, as with a polymesh leaf textured differently on each side.
+         */
         [[nodiscard]] std::string getTextureFile() const;
 
         //! Method to translate/shift a Compound Object
@@ -2018,7 +2044,7 @@ namespace helios {
 
         //! Compute per-vertex normals for the mesh by area-weighted averaging of adjacent face normals
         /**
-         * Vertex normals are never generated implicitly on load: a mesh whose source file did not supply normals reports \ref NORMAL_SOURCE_NONE, and this method must be called explicitly to generate them.
+         * The OBJ and PLY file loaders call this automatically for a mesh whose source file did not supply normals, blending across every edge so that the mesh's shared-vertex topology is unchanged. Call it explicitly for a mesh assembled programmatically, or to regenerate normals at a different crease angle.
          * Faces meeting at an angle greater than the crease angle are treated as a hard edge and do not contribute to each other's shared vertex normal, so the crease remains sharp. Calling this method
          * replaces any existing vertex normals and sets the normal source to \ref NORMAL_SOURCE_COMPUTED.
          * \param[in] crease_angle_degrees Angle (in degrees) between adjacent face normals above which the shared edge is treated as a hard crease.
@@ -2784,8 +2810,31 @@ namespace helios {
         //! fraction of surface area that is solid material (i.e., non-transparent)
         float solid_fraction;
 
+        //! Index of the image that gives the primitive its color into Context::color_texture_files, where 0 means that its texture does (see Context::setPrimitiveColorTexture())
+        uint color_texture_ID = 0;
+
+        //! Index of the primitive's class map into Context::spectral_texture_class_maps, where 0 means that it has no spectral texture (see Context::setPrimitiveSpectralTexture())
+        uint spectral_class_map_ID = 0;
+
+        //! Index of the primitive's spectral palette into Context::spectral_palettes, which is 0 exactly when spectral_class_map_ID is 0
+        uint spectral_palette_ID = 0;
+
         //! flag to indicate state of primitive has been changed
         bool dirty_flag;
+
+        //! Process-wide clock that modification stamps are read from (see Context::getModifiedUUIDs())
+        /**
+         * Shared by every Context, so that a stamp can be taken in a primitive's constructor, before the primitive knows its
+         * Context. A modification only reads it, so that primitives modified from parallel loops do not contend for it; only
+         * Context::getModifiedUUIDs() advances it.
+         */
+        static std::atomic<uint64_t> modification_clock;
+
+        //! The clock's value when the primitive was created, last marked dirty, or last hidden or shown (see Context::getModifiedUUIDs())
+        uint64_t modification_stamp = modification_clock.load(std::memory_order_relaxed);
+
+        //! Record that the primitive changed now, for Context::getModifiedUUIDs(), without marking it dirty
+        void stampModification();
 
         //! Set dirty_flag and advance the parent Context's geometry revision (see Context::getGeometryRevision())
         void markDirty();
@@ -3527,6 +3576,9 @@ namespace helios {
         //! Advanced whenever a primitive's shape (vertices, transform, texture mapping, or solid fraction) changes or a primitive is deleted (see getShapeRevision()). Unlike geometry_revision, changes to primitive data and color do not advance it.
         RevisionCounter shape_revision;
 
+        //! Advanced whenever a material is added, deleted or renamed, or its properties or data change (see getMaterialRevision())
+        RevisionCounter material_revision;
+
         //! Map containing a pointer to each compound object
         std::unordered_map<uint, CompoundObject *> objects;
 
@@ -3540,6 +3592,52 @@ namespace helios {
         //------------ TEXTURES ----------------//
 
         std::map<std::string, Texture> textures;
+
+        //! Images given to primitives by setPrimitiveColorTexture(). Index 0 is reserved to mean that a primitive has none.
+        std::vector<std::string> color_texture_files = {""};
+
+        //! Index of each image in color_texture_files
+        std::map<std::string, uint> color_texture_IDs;
+
+        //! Pairs of shape texture and color image that validateColorTexture() has already compared, since comparing them reads every pixel and a plant makes the same request for each of its leaves
+        std::set<std::pair<std::string, std::string>> validated_color_textures;
+
+        //! A class map given to primitives by setPrimitiveSpectralTexture()
+        struct SpectralClassMap {
+            std::string file;
+            helios::int2 resolution = make_int2(0, 0);
+            //! Class of each texel, row by row from the top of the image
+            std::vector<uint16_t> classes;
+            uint16_t largest_class = 0;
+            bool has_class_zero = false;
+        };
+
+        //! Class maps given to primitives. Index 0 is reserved to mean that a primitive has none. A deque, so that appending does not move the entries that getSpectralTextureClassMap() returns references to.
+        std::deque<SpectralClassMap> spectral_texture_class_maps = {SpectralClassMap{}};
+
+        //! Index of each class map in spectral_texture_class_maps, by file
+        std::map<std::string, uint> spectral_class_map_IDs;
+
+        //! A palette registered by addSpectralPalette()
+        struct SpectralPalette {
+            std::string label;
+            std::vector<SpectralTextureClass> classes;
+        };
+
+        //! Palettes registered by addSpectralPalette(). Index 0 is reserved to mean that a primitive has none. A deque, so that appending does not move the entries that getSpectralPalette() returns references to.
+        std::deque<SpectralPalette> spectral_palettes = {SpectralPalette{}};
+
+        //! Index of each palette in spectral_palettes, by label
+        std::map<std::string, uint> spectral_palette_IDs;
+
+        //! Pairs of shape texture and class map that validateSpectralClassMap() has already compared, since comparing them reads every texel and a plant makes the same request for each of its leaves
+        std::set<std::pair<std::string, std::string>> validated_spectral_class_maps;
+
+        //! Read a class map the first time it is used, and return its index in spectral_texture_class_maps
+        uint addSpectralClassMap(const std::string &class_map_file);
+
+        //! Raise an error explaining why a class map cannot be laid over a primitive, if it cannot
+        void validateSpectralClassMap(uint UUID, uint class_map_ID);
 
         void addTexture(const char *texture_file);
 
@@ -3558,6 +3656,9 @@ namespace helios {
 
         //! Map from material label to material ID for efficient lookup
         std::map<std::string, uint> material_label_to_id;
+
+        //! IDs of materials renamed from automatic ones, which a primitive-level edit copies rather than changes (see setPrimitiveAppearance())
+        std::set<uint> materials_renamed_from_automatic;
 
         //! Auto-incrementing material ID counter
         uint currentMaterialID;
@@ -3593,6 +3694,16 @@ namespace helios {
          * \param[in] materialID ID of the material to use. Nothing happens if the primitive already uses it.
          */
         void setPrimitiveMaterial(Primitive *primitive, uint materialID);
+
+        //! Give one primitive a new color, texture, or texture color override without changing an automatic material, which later primitives are given by the label that hashes its appearance
+        /**
+         * A primitive using an automatic material (or the default material) is moved to the automatic material of its new appearance, which is created if it does not exist yet; an automatic material carrying material data is copied instead. A named material is edited in place when this primitive is its only user, and copied when it is shared; a material renamed from an automatic one, which a plug-in may give to the primitives it creates later, is always copied.
+         * \param[in] primitive Primitive to update
+         * \param[in] color New color of the primitive
+         * \param[in] texture_file New texture file of the primitive (empty for none). It must already have been added with addTexture().
+         * \param[in] texture_color_overridden New texture color override flag of the primitive
+         */
+        void setPrimitiveAppearance(Primitive *primitive, const RGBAcolor &color, const std::string &texture_file, bool texture_color_overridden);
 
         //! Mark every primitive using a material as dirty after the material has changed
         /**
@@ -3817,6 +3928,17 @@ namespace helios {
          * \sa getGeometryRevision()
          */
         [[nodiscard]] uint64_t getShapeRevision() const;
+
+        //! Get a counter that advances whenever a material is added, deleted or renamed, or its properties or data change
+        /**
+         * Material properties are its color, texture, texture color override and two-sided flag; material data is anything set by
+         * setMaterialData() or removed by clearMaterialData(). Setting material data does not mark the primitives using the
+         * material dirty, so a plug-in that caches something derived from material data (e.g., the visualizer's table of Phong
+         * parameters) checks this counter instead. If two calls return the same value, no material changed in between. Assigning
+         * a material to a primitive changes the primitive, not the material: see getModifiedUUIDs().
+         * \return Current material revision
+         */
+        [[nodiscard]] uint64_t getMaterialRevision() const;
 
         //! Mark a primitive as "dirty", meaning it has been modified since last set as clean
         /**
@@ -4277,6 +4399,22 @@ namespace helios {
          * \return Vector of UUIDs for primitives that are marked dirty
          */
         [[nodiscard]] std::vector<uint> getDirtyUUIDs(bool include_deleted_UUIDs = false) const;
+
+        //! Get the primitives created or modified since an earlier call, and advance the caller's mark
+        /**
+         * The dirty flags are shared: they stay set until whoever owns them calls markGeometryClean() or markPrimitiveClean(),
+         * so a plug-in that only reads them sees every primitive ever modified, on every call, and has to work out for itself
+         * which of them changed since it last looked. This gives each caller its own view instead. Keep one variable per caller,
+         * starting at 0, and pass it on every call: each call returns the primitives created or modified since the previous
+         * call that was given that variable, whatever other callers do and whether or not anything marks the geometry clean in
+         * between. A modification is anything that marks a primitive dirty, and also hiding or showing it, which does not mark
+         * it dirty: hidden primitives are returned like any other, so check isPrimitiveHidden(). Deleted primitives are not
+         * returned (see getDeletedUUIDs()). The cost is one comparison per primitive in the Context.
+         * \param[inout] mark The caller's mark: 0 on the first call, which returns every primitive, and afterwards whatever the
+         * previous call left in it.
+         * \return UUIDs of the primitives created or modified since the call that set \p mark
+         */
+        [[nodiscard]] std::vector<uint> getModifiedUUIDs(uint64_t &mark) const;
 
         //! Get all primitive UUIDs that were deleted since the Context was last marked clean.
         /**
@@ -4891,6 +5029,7 @@ namespace helios {
         //! Method to return the texture map file of an Object
         /**
          * \param[in] ObjID Identifier of the object.
+         * \return Texture file of the object's first primitive, which is empty if it has no texture or the object has no primitives. The primitives of an object can have different textures, as with a polymesh leaf textured differently on each side.
          */
         [[nodiscard]] std::string getObjectTextureFile(uint ObjID) const;
 
@@ -5064,6 +5203,7 @@ namespace helios {
         /**
          * \param[in] UUID Universal unique identifier of primitive.
          * \param[in] color New color of primitive
+         * \note A primitive with an automatic material moves to the automatic material of its new appearance, so primitives created later with the original appearance are unaffected. A named material is changed in place if this primitive is its only user, and otherwise copied for this primitive (a material renamed from an automatic one is always copied, since a plug-in may give it to the primitives it creates later); to change a named material for every primitive using it, use setMaterialColor(), setMaterialTexture() or setMaterialTextureColorOverride().
          */
         void setPrimitiveColor(uint UUID, const helios::RGBcolor &color) const;
 
@@ -5071,6 +5211,7 @@ namespace helios {
         /**
          * \param[in] UUIDs Vector of universal unique identifiers of primitives.
          * \param[in] color New color of primitive
+         * \note A primitive with an automatic material moves to the automatic material of its new appearance, so primitives created later with the original appearance are unaffected. A named material is changed in place if this primitive is its only user, and otherwise copied for this primitive (a material renamed from an automatic one is always copied, since a plug-in may give it to the primitives it creates later); to change a named material for every primitive using it, use setMaterialColor(), setMaterialTexture() or setMaterialTextureColorOverride().
          */
         void setPrimitiveColor(const std::vector<uint> &UUIDs, const helios::RGBcolor &color) const;
 
@@ -5078,6 +5219,7 @@ namespace helios {
         /**
          * \param[in] UUID Universal unique identifier of primitive.
          * \param[in] color New color of primitive
+         * \note A primitive with an automatic material moves to the automatic material of its new appearance, so primitives created later with the original appearance are unaffected. A named material is changed in place if this primitive is its only user, and otherwise copied for this primitive (a material renamed from an automatic one is always copied, since a plug-in may give it to the primitives it creates later); to change a named material for every primitive using it, use setMaterialColor(), setMaterialTexture() or setMaterialTextureColorOverride().
          */
         void setPrimitiveColor(uint UUID, const helios::RGBAcolor &color) const;
 
@@ -5085,6 +5227,7 @@ namespace helios {
         /**
          * \param[in] UUIDs Vector of universal unique identifiers of primitives.
          * \param[in] color New color of primitive
+         * \note A primitive with an automatic material moves to the automatic material of its new appearance, so primitives created later with the original appearance are unaffected. A named material is changed in place if this primitive is its only user, and otherwise copied for this primitive (a material renamed from an automatic one is always copied, since a plug-in may give it to the primitives it creates later); to change a named material for every primitive using it, use setMaterialColor(), setMaterialTexture() or setMaterialTextureColorOverride().
          */
         void setPrimitiveColor(const std::vector<uint> &UUIDs, const helios::RGBAcolor &color) const;
 
@@ -5099,9 +5242,153 @@ namespace helios {
         /**
          * \param[in] UUID Unique universal identifier of primitive to be queried.
          * \param[in] texturefile Path to texture image file. An empty string removes the primitive's texture.
-         * \note The texture is loaded if the Context has not already loaded it, and an error is raised if the file cannot be used. The primitive's solid fraction, and therefore its area, is recomputed from the new texture's transparency channel. Facets of a leaf or other object that were discarded at creation because they were fully transparent in the previous texture are not restored.
+         * \note The texture is loaded if the Context has not already loaded it, and an error is raised if the file cannot be used. The primitive's solid fraction, and therefore its area, is recomputed from the new texture's transparency channel.
+         * Facets of a leaf or other object that were discarded at creation because they were fully transparent in the previous texture are not restored. A different texture removes the primitive's color texture and spectral texture, which were
+         * matched to the old one; the texture it already has changes nothing.
+         * \note A primitive with an automatic material moves to the automatic material of its new appearance, so primitives created later with the original appearance are unaffected. A named material is changed in place if this primitive is its only user, and otherwise copied for this primitive (a material renamed from an automatic one is always copied, since a plug-in may give it to the primitives it creates later); to change a named material for every primitive using it, use setMaterialColor(), setMaterialTexture() or setMaterialTextureColorOverride().
          */
         void setPrimitiveTextureFile(uint UUID, const std::string &texturefile);
+
+        //! Set an image that gives a primitive its color, while the texture of its material continues to give its shape
+        /**
+         * This changes how a primitive looks without changing its material, its area, or its transparency mask, so it can be used to change the appearance of many primitives repeatedly, such as leaves that yellow as they age. A radiation model does not rebuild its geometry as a result.
+         * \param[in] UUID Unique universal identifier of the primitive.
+         * \param[in] color_texture_file Path to the image, which must match the primitive's texture as described in \ref validateColorTexture(). An empty string removes the image, so that the primitive is colored by its texture again.
+         * \note The image is removed if the primitive's texture later changes, since it was matched to the previous one.
+         */
+        void setPrimitiveColorTexture(uint UUID, const std::string &color_texture_file);
+
+        //! Set an image that gives each of several primitives its color, while the texture of its material continues to give its shape
+        /**
+         * \param[in] UUIDs Vector of unique universal identifiers of the primitives.
+         * \param[in] color_texture_file Path to the image. See \ref setPrimitiveColorTexture(uint, const std::string &).
+         */
+        void setPrimitiveColorTexture(const std::vector<uint> &UUIDs, const std::string &color_texture_file);
+
+        //! Get the image that gives a primitive its color
+        /**
+         * \param[in] UUID Unique universal identifier of the primitive.
+         * \return The image given by \ref setPrimitiveColorTexture(uint, const std::string &) if there is one, and otherwise the primitive's texture, which is empty if it has none.
+         * \note Use \ref getPrimitiveTextureFile() for the image that gives the primitive its shape.
+         */
+        [[nodiscard]] std::string getPrimitiveColorTextureFile(uint UUID) const;
+
+        //! Check that an image can give color to primitives whose shape comes from a given texture, and raise an error explaining the mismatch if not
+        /**
+         * The two images must have the same resolution and identical transparency, pixel by pixel. Everything that uses the shape of a primitive reads it from its texture, so an image with a different outline would be drawn with a shape that disagrees with the primitive's area and with what other plug-ins see.
+         * \param[in] shape_texture_file Path to the texture that gives the shape.
+         * \param[in] color_texture_file Path to the image that gives the color.
+         */
+        void validateColorTexture(const std::string &shape_texture_file, const std::string &color_texture_file);
+
+        //! Register a spectral palette, which lists the optical spectra of each class of a class map
+        /**
+         * Class \f$k\f$ of a class map takes the spectra of entry \f$k-1\f$ of the palette; class 0 marks transparent texels. The spectra are named by global data labels and are not looked up here, so a palette can name spectra that a plug-in loads
+         * later (for example from a spectral library).
+         * \param[in] label Name of the palette.
+         * \param[in] classes Spectra of classes 1, 2, ... in order. Each needs a reflectivity spectrum label; the transmissivity label may be empty. At most 65535 classes.
+         * \note Registering the same classes under a label that already exists does nothing, so a file can be loaded twice. Different classes under an existing label raise an error: register them under a new label, and use \ref
+         * setPrimitiveSpectralPalette() to switch primitives to it.
+         */
+        void addSpectralPalette(const std::string &label, const std::vector<SpectralTextureClass> &classes);
+
+        //! Check whether a spectral palette has been registered
+        /**
+         * \param[in] label Name of the palette.
+         * \return True if \ref addSpectralPalette() has registered a palette with this label.
+         */
+        [[nodiscard]] bool doesSpectralPaletteExist(const std::string &label) const;
+
+        //! Get the classes of a spectral palette
+        /**
+         * \param[in] label Name of the palette, which must exist.
+         * \return Spectra of classes 1, 2, ... in order.
+         */
+        [[nodiscard]] const std::vector<SpectralTextureClass> &getSpectralPalette(const std::string &label) const;
+
+        //! Give a primitive a spectral texture: a class map laid over it like its texture, and a palette giving the spectra of each class
+        /**
+         * The class map is a single-channel 8-bit or 16-bit grayscale PNG (see \ref helios::readPNGSingleChannel()) mapped onto the primitive with the same (u,v) coordinates as its texture. It must agree with the primitive's shape:
+         * - With a texture that has a transparency channel, the class map has the texture's resolution, and class 0 marks exactly its transparent texels. As everywhere in Helios, a texel is opaque if its alpha is at least 250 (of 255) and
+         * transparent otherwise, so partly transparent edge texels must be class 0.
+         * - With a texture that has no transparency channel, the class map has the texture's resolution and contains no class 0.
+         * - Without a texture, the primitive must be a patch, which maps the whole class map; any resolution is allowed and the class map contains no class 0.
+         *
+         * Each class must have an entry in the palette. Giving a primitive a different class map changes its shape as far as other plug-ins are concerned (for example, a radiation model rebuilds its geometry), but leaves its material, texture and
+         * area unchanged.
+         * \param[in] UUID Unique universal identifier of the primitive, which must be a patch or triangle.
+         * \param[in] class_map_file Path to the class map.
+         * \param[in] palette_label Name of a palette registered with \ref addSpectralPalette().
+         * \note The spectral texture is removed if the primitive's texture later changes, since the class map was matched to the previous one. A tile without a texture whose sub-patches have spectral textures cannot be subdivided again with \ref
+         * setTileObjectSubdivisionCount(), since each new sub-patch would repeat the whole class map.
+         */
+        void setPrimitiveSpectralTexture(uint UUID, const std::string &class_map_file, const std::string &palette_label);
+
+        //! Give each of several primitives a spectral texture
+        /**
+         * \param[in] UUIDs Vector of unique universal identifiers of the primitives.
+         * \param[in] class_map_file Path to the class map.
+         * \param[in] palette_label Name of a palette registered with \ref addSpectralPalette().
+         * \note Every primitive is checked before any is changed. See \ref setPrimitiveSpectralTexture(uint, const std::string &, const std::string &).
+         */
+        void setPrimitiveSpectralTexture(const std::vector<uint> &UUIDs, const std::string &class_map_file, const std::string &palette_label);
+
+        //! Change the palette of a primitive that has a spectral texture, keeping its class map
+        /**
+         * This changes the spectra of each class without changing the primitive's shape, so it can be used to change the optical properties of many primitives repeatedly, such as leaves that senesce: the class map records where each change begins,
+         * and each stage is a palette.
+         * \param[in] UUID Unique universal identifier of the primitive, which must have a spectral texture.
+         * \param[in] palette_label Name of a palette registered with \ref addSpectralPalette(), with an entry for every class in the primitive's class map.
+         */
+        void setPrimitiveSpectralPalette(uint UUID, const std::string &palette_label);
+
+        //! Change the palette of each of several primitives that have a spectral texture
+        /**
+         * \param[in] UUIDs Vector of unique universal identifiers of the primitives.
+         * \param[in] palette_label Name of a registered palette. See \ref setPrimitiveSpectralPalette(uint, const std::string &).
+         */
+        void setPrimitiveSpectralPalette(const std::vector<uint> &UUIDs, const std::string &palette_label);
+
+        //! Remove the spectral texture of a primitive, if it has one
+        /**
+         * \param[in] UUID Unique universal identifier of the primitive.
+         */
+        void clearPrimitiveSpectralTexture(uint UUID);
+
+        //! Remove the spectral textures of several primitives
+        /**
+         * \param[in] UUIDs Vector of unique universal identifiers of the primitives.
+         */
+        void clearPrimitiveSpectralTexture(const std::vector<uint> &UUIDs);
+
+        //! Check whether a primitive has a spectral texture
+        /**
+         * \param[in] UUID Unique universal identifier of the primitive.
+         * \return True if \ref setPrimitiveSpectralTexture() has given it one that has not since been removed.
+         */
+        [[nodiscard]] bool primitiveHasSpectralTexture(uint UUID) const;
+
+        //! Get the class map of a primitive's spectral texture
+        /**
+         * \param[in] UUID Unique universal identifier of the primitive.
+         * \return Path to the class map, or an empty string if the primitive has no spectral texture.
+         */
+        [[nodiscard]] std::string getPrimitiveSpectralTextureFile(uint UUID) const;
+
+        //! Get the palette of a primitive's spectral texture
+        /**
+         * \param[in] UUID Unique universal identifier of the primitive.
+         * \return Name of the palette, or an empty string if the primitive has no spectral texture.
+         */
+        [[nodiscard]] std::string getPrimitiveSpectralPalette(uint UUID) const;
+
+        //! Get the classes of a class map that has been given to a primitive
+        /**
+         * \param[in] class_map_file Path to the class map, which must have been read by \ref setPrimitiveSpectralTexture() (a class map is read, and then kept, the first time it is passed to it).
+         * \param[out] resolution Width and height of the class map in texels.
+         * \return Class of each texel, row by row from the top of the image (index at [row*width+column]).
+         */
+        [[nodiscard]] const std::vector<uint16_t> &getSpectralTextureClassMap(const std::string &class_map_file, helios::int2 &resolution) const;
 
         //! Get the size (number of pixels) of primitive texture map image.
         /**
@@ -5133,24 +5420,28 @@ namespace helios {
         //! Override the color in the texture map for all primitives in the Compound Object, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
         /**
          * \param[in] UUID Universal unique identifier of primitive.
+         * \note A primitive with an automatic material moves to the automatic material of its new appearance, so primitives created later with the original appearance are unaffected. A named material is changed in place if this primitive is its only user, and otherwise copied for this primitive (a material renamed from an automatic one is always copied, since a plug-in may give it to the primitives it creates later); to change a named material for every primitive using it, use setMaterialColor(), setMaterialTexture() or setMaterialTextureColorOverride().
          */
         void overridePrimitiveTextureColor(uint UUID) const;
 
         //! Override the color in the texture map for multiple primitives, in which case the primitives will be colored by the constant RGB color, but will apply the transparency channel in the texture to determine its shape
         /**
          * \param[in] UUIDs Vector of universal unique identifier of primitives.
+         * \note A primitive with an automatic material moves to the automatic material of its new appearance, so primitives created later with the original appearance are unaffected. A named material is changed in place if this primitive is its only user, and otherwise copied for this primitive (a material renamed from an automatic one is always copied, since a plug-in may give it to the primitives it creates later); to change a named material for every primitive using it, use setMaterialColor(), setMaterialTexture() or setMaterialTextureColorOverride().
          */
         void overridePrimitiveTextureColor(const std::vector<uint> &UUIDs) const;
 
         //! Use the texture map to color the primitive rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
         /**
          * \param[in] UUID Universal unique identifier of primitive.
+         * \note A primitive with an automatic material moves to the automatic material of its new appearance, so primitives created later with the original appearance are unaffected. A named material is changed in place if this primitive is its only user, and otherwise copied for this primitive (a material renamed from an automatic one is always copied, since a plug-in may give it to the primitives it creates later); to change a named material for every primitive using it, use setMaterialColor(), setMaterialTexture() or setMaterialTextureColorOverride().
          */
         void usePrimitiveTextureColor(uint UUID) const;
 
         //! Use the texture map to color the primitives rather than the constant RGB color. This is function reverses a previous call to overrideTextureColor(). Note that using the texture color is the default behavior.
         /**
          * \param[in] UUIDs Vector of universal unique identifier of primitives.
+         * \note A primitive with an automatic material moves to the automatic material of its new appearance, so primitives created later with the original appearance are unaffected. A named material is changed in place if this primitive is its only user, and otherwise copied for this primitive (a material renamed from an automatic one is always copied, since a plug-in may give it to the primitives it creates later); to change a named material for every primitive using it, use setMaterialColor(), setMaterialTexture() or setMaterialTextureColorOverride().
          */
         void usePrimitiveTextureColor(const std::vector<uint> &UUIDs) const;
 
@@ -5186,6 +5477,9 @@ namespace helios {
 
         //! Rename a material's label
         /**
+         * The material is then found only by its new label. Renaming an automatic material (one created for a primitive's color or texture) does not make it the
+         * material of primitives created later with that appearance: they get an automatic material of their own, and the material is shared only by the
+         * primitives it is assigned to (see assignMaterialToPrimitive()).
          * \param[in] old_label Current label of the material
          * \param[in] new_label New label to assign
          * \note The new label must not start with '__' (reserved prefix).
@@ -5342,6 +5636,7 @@ namespace helios {
         void setMaterialData(const std::string &material_label, const char *data_label, const T &data) {
             uint matID = getMaterialIDFromLabel(material_label);
             materials[matID].setMaterialData(data_label, data);
+            material_revision.markModified();
         }
 
         //! Set vector data for a material
@@ -5356,6 +5651,7 @@ namespace helios {
         void setMaterialData(const std::string &material_label, const char *data_label, const std::vector<T> &data) {
             uint matID = getMaterialIDFromLabel(material_label);
             materials[matID].setMaterialData(data_label, data);
+            material_revision.markModified();
         }
 
         //! Get scalar data value from a material
@@ -7088,6 +7384,20 @@ namespace helios {
          */
         [[nodiscard]] float getPolymeshObjectVolume(uint ObjID) const;
 
+        //! Replace some of the primitives of a Polygon Mesh object with new ones, keeping the object itself
+        /**
+         * Re-meshing an object by deleting it and grouping new primitives into a fresh one changes its object ID and discards its object data, which breaks anything that keys state on the object. This
+         * instead swaps the primitives inside the existing object: its ID, object data and transformation matrix are kept. Each new primitive first receives a copy of the primitive data of its paired
+         * source primitive, and then the old primitives are deleted.
+         *
+         * The face set no longer describes the object once its primitives change, so it is cleared; call \ref setPolymeshObjectTopology() afterwards if the object should carry one.
+         * \param[in] ObjID Object ID of the Polygon Mesh object.
+         * \param[in] old_UUIDs Primitives of the object to remove and delete. All must be members of the object, and at least one member must remain or be added.
+         * \param[in] new_UUIDs Existing primitives, not yet members of any object, to add to the object.
+         * \param[in] data_source_UUIDs Parallel to new_UUIDs: the existing primitive whose primitive data each new primitive receives (typically one of old_UUIDs).
+         */
+        void replacePolymeshObjectPrimitives(uint ObjID, const std::vector<uint> &old_UUIDs, const std::vector<uint> &new_UUIDs, const std::vector<uint> &data_source_UUIDs);
+
         //! Set the indexed face set of a Polygon Mesh object
         /**
          * Attaches vertex-facet connectivity to a polymesh object. The file loaders call this automatically, so it is only needed when building a mesh programmatically from primitives that were added
@@ -8492,8 +8802,6 @@ namespace helios {
          * \param[in] UUIDs Vector of UUIDs for which geometry should be written
          */
         void writePLY(const char *filename, const std::vector<uint> &UUIDs) const;
-
-        // Asset directory registration removed - now using HELIOS_BUILD resolution
 
         //! Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without any scaling or rotation applied.
         /**

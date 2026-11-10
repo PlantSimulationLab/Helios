@@ -40,7 +40,7 @@ For simplified canopy architectures, theoretical solutions exist for
 
    The test creates a canopy with leaf area index (LAI) = 2.0, distributed over a 50m × 50m domain with 3m height. Ground-based radiation measurements and leaf-intercepted radiation are calculated within a central 40m × 40m area to minimize edge effects. Both direct (solar zenith angle = 36°) and diffuse radiation scenarios are tested.
 
-   Model results demonstrate excellent agreement with theoretical predictions, with relative errors below 1% for both direct and diffuse radiation interception. This validates the accuracy of the Monte Carlo ray tracing implementation for randomly oriented surfaces in complex 3D canopy geometries (plugins/radiation/tests/selfTest.cpp:731).
+   Model results demonstrate excellent agreement with theoretical predictions, with relative errors below 1% for both direct and diffuse radiation interception. This validates the accuracy of the Monte Carlo ray tracing implementation for randomly oriented surfaces in complex 3D canopy geometries.
 
 2 - <b>Canopy Sunlit/Shaded Leaf Area Fraction</b>
 

@@ -65,6 +65,7 @@ struct PerRayData {
     bool   hit_cover;          //!< Diffuse/camera/pixel-label ray hit a translucent cover and continues past it from cover_exit
     float3 cover_exit;         //!< World-space point just beyond the cover where the ray continues
     float  origin_cos;         //!< |cosine| of the angle between a direct or diffuse ray and the normal of the primitive it left
+    uint32_t palette_entry;    //!< Palette entry of the class at the point the ray left, or UINT32_MAX to use the origin primitive's own values
 };
 
 // ---------------------------------------------------------------------------
@@ -138,10 +139,14 @@ struct OptiX8LaunchParams {
     float*    radiation_out_top;      //!< [prim * Nbands_global + band]
     float*    radiation_out_bottom;   //!< [prim * Nbands_global + band]
     int32_t*  smoothing_vertex_indices;  //!< Shared vertex index per facet corner, 4 per primitive; entry 4*prim negative if the primitive is not smoothed, entry 4*prim+3 negative for a triangle
-    float*    vertex_radiation_out_top;    //!< [vertex * Nbands_launch + band], null when camera flux smoothing is disabled
-    float*    vertex_radiation_out_bottom; //!< [vertex * Nbands_launch + band], null when camera flux smoothing is disabled
+    float*    vertex_radiation_out_top;    //!< [component][vertex][band], null when camera flux smoothing is disabled
+    float*    vertex_radiation_out_bottom; //!< [component][vertex][band], null when camera flux smoothing is disabled
+    float*    vertex_normals;              //!< Unit shading normal per smoothing vertex [vertex * 3]; null unless smoothing is enabled and some primitive has a surface layer
+    uint32_t  vertex_normal_count;         //!< Number of smoothing vertices in vertex_normals (and in each component of vertex_radiation_out_*), 0 when null
+    float*    vertex_direct_irradiance;    //!< Unoccluded direct irradiance of each source at the smoothing vertices [source][vertex][band_launch]; null unless smoothing is enabled and there is a source
     float*    scatter_buff_top;       //!< [prim * Nbands_global + band]
     float*    scatter_buff_bottom;    //!< [prim * Nbands_global + band]
+    float*    forward_scatter;        //!< Forward scattering estimate [prim * Nbands_launch + band]; null except in scattering launches
     float*    radiation_in_camera;    //!< [prim * Nbands_launch + band]
     float*    scatter_buff_top_cam;   //!< [cam * Nprims * Nbands_launch + prim * Nbands_launch + band]
     float*    scatter_buff_bottom_cam; //!< same layout as scatter_buff_top_cam
@@ -185,6 +190,28 @@ struct OptiX8LaunchParams {
     int32_t*  mask_IDs;               //!< Per-primitive mask ID (-1 = no mask), indexed by global pos
     float2*   uv_data;                //!< UV coords: uv_data[pos*4 + vertex_idx] (4 vertices per primitive)
     int32_t*  uv_IDs;                 //!< Per-primitive: -1 = use parametric UV, >=0 = has custom UV in uv_data
+
+    // ---- Spectral texture class maps and palettes (see RayTracingGeometry::class_map_data and RayTracingMaterial::palette_offset) ----
+    uint16_t* class_map_data;         //!< Flat class maps, rows from the top: [map0_texels][map1_texels]...
+    uint32_t* class_map_offsets;      //!< class_map_offsets[k] = start index in class_map_data of class map k
+    int32_t*  class_map_sizes;        //!< 2 ints per class map: width, height
+    int32_t*  class_map_IDs;          //!< Per-primitive class map (-1 = none), indexed by global pos
+    uint32_t* palette_offset;         //!< Per-primitive first palette entry (UINT32_MAX = no spectral texture), indexed by global pos
+    float*    palette_rho;            //!< Palette reflectivity [source * Npalette_entries * Nbands_global + entry * Nbands_global + band]
+    float*    palette_tau;            //!< Palette transmissivity (same layout)
+    float*    palette_rho_cam;        //!< Camera-weighted palette reflectivity [((source * Npalette_entries + entry) * Nbands_global + band) * Ncameras + camera]
+    float*    palette_tau_cam;        //!< Camera-weighted palette transmissivity (same layout)
+    uint32_t* palette_band_active;    //!< [Nbands_global]: 1 where rays use the palette, 0 where they use the primitive's own values
+    uint32_t  Npalette_entries;       //!< Number of palette entries (0 when no primitive has a spectral texture)
+    float*    spectral_incident;      //!< Radiation reaching primitives with a spectral texture [face (top, bottom)][source slot][prim][band_launch], or null without cameras
+    uint32_t* class_flux_offset;      //!< Per-primitive first class-flux slot for the camera being traced (UINT32_MAX = none), or null
+    float*    class_flux;             //!< Camera-weighted outgoing radiation [face][class-flux slot][band_launch] (see RayTracingBackend::uploadSpectralCameraFlux())
+    uint32_t  class_flux_slots;       //!< Number of class-flux slots
+    uint32_t* camera_pixel_class;     //!< Class of the spectral texture seen in each pixel by the pixel-label launch (0 = none), or null
+    float*    vertex_spectral;        //!< Smoothing-vertex radiation of primitives with a spectral texture [face][layer][vertex][band] (see RayTracingBackend::uploadSpectralVertexIncident()), or null
+    uint32_t  vertex_spectral_layers; //!< Number of layers (source slots plus the emitted radiation), 0 for none
+    uint32_t  vertex_spectral_count;  //!< Number of smoothing vertices in vertex_spectral
+    uint32_t  vertex_spectral_camera; //!< Camera index for the camera-weighted palette values
 
     // ---- Scalar parameters ----
     uint32_t  Nprimitives;

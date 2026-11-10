@@ -104,6 +104,8 @@ namespace helios {
         void getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) override;
         void getWhiteReferenceResults(std::vector<float> &white_reference_top, std::vector<float> &white_reference_bottom) override;
         void getRadiationInTopResults(std::vector<float> &radiation_in_top) override;
+        void getForwardScatterResults(std::vector<float> &forward_scatter, size_t launch_band_count) override;
+        void getDirectFluxResults(std::vector<float> &direct_flux, size_t launch_band_count) override;
         [[nodiscard]] size_t getRadiationInTopBufferSize() const override;
         [[nodiscard]] size_t getAbandonedRayCount() override;
 
@@ -115,6 +117,11 @@ namespace helios {
         void copyScatterToRadiation() override;
         void uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) override;
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) override;
+        void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
+        void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
+        void uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) override;
+        void getCameraPixelSpectralClasses(std::vector<uint> &pixel_classes, const helios::int2 &resolution) override;
+        void uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) override;
         void zeroCameraScatterBuffers(size_t launch_band_count) override;
         void uploadSourceFluxes(const std::vector<float> &fluxes) override;
         void uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) override;
@@ -246,6 +253,23 @@ namespace helios {
         //! primitive has a layer; band count; start of the band tables; start of the albedo tables), then the surface model of each
         //! primitive, the albedo table of each model in each band, and the tables (float bits)
         Buffer surface_layer_buffer;
+        Buffer camera_info_buffer; //!< The camera being traced and the number of cameras, two uint words written before each camera launch, so the camera shader can index the camera-weighted materials
+        //! Spectral texture palettes, packed into one buffer (layout in shaders/common/spectral_texture.glsl): material set, binding 18
+        Buffer spectral_palette_buffer;
+        //! Spectral texture class maps, packed into one buffer (layout in shaders/common/spectral_texture.glsl): geometry set, binding 19
+        Buffer spectral_class_map_buffer;
+        //! Radiation reaching primitives with a spectral texture (see RayTracingResults::spectral_incident): results set, binding 16
+        Buffer spectral_incident_buffer;
+        //! Number of values in spectral_incident_buffer when it is in use, or 0 when it is a placeholder
+        size_t spectral_incident_count = 0;
+        //! Camera-weighted outgoing radiation of each class, packed (layout in shaders/common/spectral_texture.glsl): results set, binding 17
+        Buffer spectral_camera_flux_buffer;
+        //! Class of the spectral texture seen in each pixel by the pixel-label launch: results set, binding 18
+        Buffer camera_pixel_class_buffer;
+        //! Smoothing-vertex radiation of primitives with a spectral texture, packed by packSpectralVertexIncident(): results set, binding 19
+        Buffer spectral_vertex_buffer;
+        //! Number of palette entries of the last materials uploaded; the incident buffer is needed only when it is nonzero
+        size_t palette_entry_count = 0;
         Buffer source_fluxes_cam_buffer; //!< Camera spectral response weights [source × band]
         Buffer band_map_buffer; //!< Maps launch band index → global band index [launch_band_count]
         Buffer is_glass_buffer; //!< Translucent-cover flag per [source][prim][band] (uint, source-0 slice used)
@@ -254,12 +278,21 @@ namespace helios {
 
         // Result buffers (Set 2)
         Buffer radiation_in_buffer;
+        Buffer forward_scatter_buffer; //!< Forward scattering estimate [primitive × launch band] (see getForwardScatterResults()); a one-element placeholder until zeroScatterBuffers()
         Buffer radiation_in_top_buffer; //!< Absorbed radiation that arrived on the top face [primitive × launch band]; a one-element placeholder unless face absorption tracking is enabled
         Buffer radiation_out_top_buffer;
         Buffer radiation_out_bottom_buffer;
         Buffer smoothing_vertex_indices_buffer;
+
+        //! Bind a one-element placeholder in place of the vertex normals, which the camera shader takes to mean that there are none
+        void bindVertexNormalsPlaceholder();
+
+        //! Bind a one-element placeholder in place of the vertex direct irradiance, which the camera shader takes to mean that there is none
+        void bindVertexDirectIrradiancePlaceholder();
         Buffer vertex_radiation_out_top_buffer;
         Buffer vertex_radiation_out_bottom_buffer;
+        Buffer vertex_normals_buffer; //!< Shading normal per smoothing vertex [vertex × 3]; a one-element placeholder unless smoothing is enabled and there is a source or a surface layer
+        Buffer vertex_direct_irradiance_buffer; //!< Unoccluded direct irradiance per [source × smoothing vertex × band]; a one-element placeholder unless smoothing is enabled and there is a source
         Buffer scatter_top_buffer;
         Buffer scatter_bottom_buffer;
         Buffer camera_radiation_buffer; //!< Camera pixel radiation values

@@ -17,6 +17,7 @@
 */
 
 #include "CollisionDetection.h"
+#include "CollisionGeometry.h"
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <chrono>
 #include <cmath>
@@ -275,6 +276,41 @@ public:
     }
 };
 #endif
+
+DOCTEST_TEST_CASE("CollisionGeometry exact segment, point and triangle distances") {
+    using namespace helios::collision;
+    const vec3 a = make_vec3(0, 0, 0);
+    const vec3 b = make_vec3(1, 0, 0);
+    const vec3 c = make_vec3(0, 1, 0);
+
+    // Point to triangle: face, vertex and edge regions
+    DOCTEST_CHECK((closestPointOnTriangle(make_vec3(0.2f, 0.2f, 0.7f), a, b, c) - make_vec3(0.2f, 0.2f, 0)).magnitude() < 1e-6f);
+    DOCTEST_CHECK((closestPointOnTriangle(make_vec3(3, -1, 0), a, b, c) - b).magnitude() < 1e-6f);
+    DOCTEST_CHECK((closestPointOnTriangle(make_vec3(0.3f, -2, 0), a, b, c) - make_vec3(0.3f, 0, 0)).magnitude() < 1e-6f);
+    DOCTEST_CHECK((closestPointOnTriangle(make_vec3(1, 1, 0), a, b, c) - make_vec3(0.5f, 0.5f, 0)).magnitude() < 1e-6f);
+
+    // Segments: skew, parallel and degenerate (point to segment)
+    vec3 on_first, on_second;
+    DOCTEST_CHECK(closestPointsOnSegments(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0.5f, -1, 2), make_vec3(0.5f, 1, 2), on_first, on_second) == doctest::Approx(4.f));
+    DOCTEST_CHECK((on_first - make_vec3(0.5f, 0, 0)).magnitude() < 1e-6f);
+    DOCTEST_CHECK((on_second - make_vec3(0.5f, 0, 2)).magnitude() < 1e-6f);
+    DOCTEST_CHECK(closestPointsOnSegments(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(3, 1, 0), make_vec3(5, 1, 0), on_first, on_second) == doctest::Approx(5.f));
+    DOCTEST_CHECK(closestPointsOnSegments(make_vec3(2, 3, 0), make_vec3(2, 3, 0), make_vec3(0, 0, 0), make_vec3(4, 0, 0), on_first, on_second) == doctest::Approx(9.f));
+    DOCTEST_CHECK((on_second - make_vec3(2, 0, 0)).magnitude() < 1e-6f);
+
+    // Segment to triangle: crossing gives zero at the crossing, otherwise the nearest endpoint or edge pair
+    vec3 on_segment, on_triangle;
+    DOCTEST_CHECK(closestPointsSegmentTriangle(make_vec3(0.2f, 0.2f, -1), make_vec3(0.2f, 0.2f, 1), a, b, c, on_segment, on_triangle) == doctest::Approx(0.f));
+    DOCTEST_CHECK((on_segment - make_vec3(0.2f, 0.2f, 0)).magnitude() < 1e-6f);
+    DOCTEST_CHECK((on_triangle - on_segment).magnitude() < 1e-6f);
+    DOCTEST_CHECK(closestPointsSegmentTriangle(make_vec3(0.2f, 0.2f, 0.5f), make_vec3(0.2f, 0.2f, 2), a, b, c, on_segment, on_triangle) == doctest::Approx(0.25f));
+    DOCTEST_CHECK((on_triangle - make_vec3(0.2f, 0.2f, 0)).magnitude() < 1e-6f);
+    DOCTEST_CHECK(closestPointsSegmentTriangle(make_vec3(2, -1, 0), make_vec3(2, 2, 0), a, b, c, on_segment, on_triangle) == doctest::Approx(1.f));
+    DOCTEST_CHECK((on_triangle - b).magnitude() < 1e-6f);
+    // A segment passing beside the triangle's hypotenuse, 0.3 above the plane, is nearest that edge
+    DOCTEST_CHECK(closestPointsSegmentTriangle(make_vec3(0.5f, 0.5f, 0.3f), make_vec3(1.5f, 1.5f, 0.3f), a, b, c, on_segment, on_triangle) == doctest::Approx(0.09f));
+    DOCTEST_CHECK((on_triangle - make_vec3(0.5f, 0.5f, 0)).magnitude() < 1e-6f);
+}
 
 DOCTEST_TEST_CASE("CollisionDetection Plugin Initialization") {
     Context context;

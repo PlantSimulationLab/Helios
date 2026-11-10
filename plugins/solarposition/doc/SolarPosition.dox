@@ -15,6 +15,15 @@
  
  This plugin calculates the position of the sun, and also implements other models for solar fluxes as well as longwave fluxes from the sky. Model theory and equations are given in the sections below.
 
+ \warning <b>Helios counts longitude and the UTC offset positive in the Western hemisphere</b>, opposite to the convention of ISO 6709 and of most maps, GPS receivers and satellite metadata, which count them positive to the East. Coordinates and time zones from those sources must have their signs flipped:
+ <table>
+ <tr><th>Site</th><th>Usual (east-positive)</th><th>Helios longitude</th><th>Helios UTC offset</th></tr>
+ <tr><td>Davis, CA, USA</td><td>121.76 W = -121.76, UTC-8</td><td>+121.76</td><td>+8</td></tr>
+ <tr><td>Madrid, Spain</td><td>3.70 W = -3.70, UTC+1</td><td>+3.70</td><td>-1</td></tr>
+ <tr><td>Beijing, China</td><td>116.40 E = +116.40, UTC+8</td><td>-116.40</td><td>-8</td></tr>
+ </table>
+ A flipped longitude moves the sun by 4 minutes of time per degree, twice over (8 minutes per degree of the true longitude), which shifts its azimuth by many degrees near midday. The constructor warns when the UTC offset and longitude are more than 3 hours of solar time apart, which happens when only one of the two was flipped and the site is more than about 22 degrees from the prime meridian. It cannot detect a flipped longitude near the prime meridian, a flipped longitude used with times in UTC (an offset of 0), or a longitude and offset that were both flipped. The same convention applies to the location set in the Context with \ref helios::Context::setLocation().
+
  \section SolarConstructor SolarPosition Class Constructor
 
  <table>
@@ -23,12 +32,12 @@
  <tr><td>\ref SolarPosition::SolarPosition( float UTC_hrs, float latitude_deg, float longitude_deg, helios::Context* context) "SolarPosition( float UTC_hrs, float latitude_deg, float longitude_deg, helios::Context* context)"</td></tr>
  </table>
 
- The \ref SolarPosition class can be initialized by simply passing a pointer to the Helios context as an argument to the constructor. This gives the class the model access to the time and date currently set in the Context. The model must also know certain parameters about the simulated location, in particular the offset from UTC time, latitude, and longitude. A description of these parameters are given in the table below. These can be supplied using the second constructor listed in the table above. If the Context is the only argument supplied to the constructor, default values are assumed for UTC, latitude, and longitude (see table below).
+ The \ref SolarPosition class can be initialized by simply passing a pointer to the Helios context as an argument to the constructor. This gives the class the model access to the time and date currently set in the Context. The model must also know certain parameters about the simulated location, in particular the offset from UTC time, latitude, and longitude. A description of these parameters are given in the table below. These can be supplied using the second constructor listed in the table above. If the Context is the only argument supplied to the constructor, the location set in the Context with \ref helios::Context::setLocation() is used, whose default is given in the table below. A latitude, longitude or UTC offset outside its range (latitude -90 to 90, longitude -180 to 180, UTC offset -14 to 12 hours) raises an error.
 
  <table>
  <caption>SolarPosition constructor inputs</caption>
  <tr><th>Input Parameter</th><th>Description</th><th>Convention</th><th>Default Behavior</th></tr>
- <tr><td>UTC</td><td>Difference in hours between Coordinated Universal Time (UTC) for a particular location.  See the figure below to determine a particular UTC offset.</td><td>UTC offset value is positive moving West.</td><td>+8:00</td></tr>
+ <tr><td>UTC</td><td>Difference in hours between Coordinated Universal Time (UTC) for a particular location.  See the figure below to determine a particular UTC offset; the figure uses the usual convention, so its offsets must have their signs flipped (UTC-8 in the figure is +8 here).</td><td>UTC offset value is positive moving West.</td><td>+8:00</td></tr>
  <tr><td>latitude</td><td>Geographic coordinate that specifies the north–south position of a point on the Earth's surface in degrees.</td><td>Latitude is positive in the northern hemisphere.</td><td>+38.55</td></tr>
  <tr><td>longitude</td><td>Geographic coordinate that specifies the east-west position of a point on the Earth's surface in degrees.</td><td>Longitude is positive in the western hemisphere.</td><td>+121.76</td></tr>
  </table>
@@ -125,7 +134,7 @@
  \tau_R = \frac{P/P_0}{117.2594\lambda^4 - 1.3215\lambda^2 + 0.00032 - 0.000076\lambda^{-2}},
  \f]
 
- with \f$\lambda\f$ in \f$\mu\f$m. The aerosol optical depth follows the Ångström law (Eq. 8), \f$\tau_a = \beta\lambda^{-\alpha}\f$, with the turbidity set by \ref SolarPosition::setAtmosphericConditions() as \f$\beta\f$ and \f$\alpha = 1.3\f$. The aerosol single-scattering albedo \f$\omega_a = 0.893\f$ and asymmetry parameter \f$g_a = 0.634\f$ are those of the 6S continental aerosol at 550 nm (6S User Guide, Version 3, Part 2, Table 3, p. 120) and are applied at all wavelengths. Versions before 1.3.90 used 0.90 and 0.85, values of undocumented origin that are not given in Cachorro et al. (2022).
+ with \f$\lambda\f$ in \f$\mu\f$m. The aerosol optical depth follows the Ångström law (Eq. 8), \f$\tau_a = \beta\lambda^{-\alpha}\f$, with the turbidity set by \ref SolarPosition::setAtmosphericConditions() as \f$\beta\f$ and \f$\alpha = 1.3\f$. The aerosol single-scattering albedo \f$\omega_a = 0.893\f$ and asymmetry parameter \f$g_a = 0.634\f$ are those of the 6S continental aerosol at 550 nm (6S User Guide, Version 3, Part 2, Table 3, p. 120) and are applied at all wavelengths.
 
  <b>Scattering transmittance.</b> With \f$\tau_t = \tau_R + \tau_a\f$, the layer's single-scattering albedo is Eq. 16, \f$\omega = (\tau_R + \omega_a\tau_a)/\tau_t\f$. Its asymmetry parameter is \f$g = \omega_a\tau_a g_a/(\tau_R + \omega_a\tau_a)\f$ (Rayleigh scattering has \f$g = 0\f$): the phase function of a mixture is the average of its components' phase functions weighted by their scattering coefficients, and \f$g\f$ is its first moment (defined in the 6S User Guide, Part 2, p. 117). The printed Eq. 16, \f$g_a\tau_a/\tau_t\f$, weights by extinction instead and omits \f$\omega_a\f$. The total (direct plus diffuse) transmittance of the layer over a black ground is Eq. 14,
 
@@ -159,7 +168,7 @@
 
  where \f$E_0\f$ is the extraterrestrial irradiance corrected for the Earth-Sun distance, \f$T_{gas}\f$ the product of the gas transmittances and \f$\theta_s\f$ the solar zenith angle. Cloud calibration, if enabled, is then applied (see \ref SolarFluxCloudsSpectral).
 
- <b>Parameter derivation.</b> The inputs are those of the REST-2 model (pressure, temperature, humidity, turbidity). The precipitable water is derived from the temperature and humidity through the dew point (a relation attributed in an earlier implementation to Viswanadham 1981), and the ozone column comes from a satellite climatology unless set by the user (see \ref OzoneColumn). The ground albedo is 0.2 unless set with \ref SolarPosition::setGroundAlbedo().
+ <b>Parameter derivation.</b> The inputs are those of the REST-2 model (pressure, temperature, humidity, turbidity). The precipitable water is derived from the temperature and humidity through the dew point (a relation attributed to Viswanadham 1981), and the ozone column comes from a satellite climatology unless set by the user (see \ref OzoneColumn). The ground albedo is 0.2 unless set with \ref SolarPosition::setGroundAlbedo().
 
  <b>Validation against 6S.</b> The model was compared with 6S (6SV1.1, <a href="https://doi.org/10.1109/36.581987">Vermote et al. 1997</a>) for the continental aerosol at sea level, with the same water vapor (1.18 cm) and ozone (318 DU) columns, at 14 wavelengths from 350 to 2200 nm, solar zenith angles of 0, 30, 60 and 75 degrees, aerosol optical depths at 550 nm from 0 to 1 and ground albedos of 0, 0.2 and 0.8 (<code>plugins/solarposition/utilities/compare_spectral_with_6s.py</code>). Irradiances were compared as transmittances, so the difference between the two codes' extraterrestrial spectra does not enter. The table gives the range of the relative differences from 6S for 400-2200 nm (excluding 1040 nm) and solar zenith angles up to 60 degrees; the 350 nm, 1040 nm and 75 degree cases are described below it.
 
@@ -174,7 +183,7 @@
 
  Without aerosol the model agrees with 6S to within 0.7% for the direct and global irradiance. With aerosol, most of the difference comes from the aerosol model rather than the equations: the continental aerosol's optical properties vary with wavelength (from 0.4 to 0.86 \f$\mu\f$m its extinction corresponds to an Ångström exponent of about 1.16, and its single-scattering albedo falls to 0.75 at 1.54 \f$\mu\f$m; 6S User Guide, Part 2, Table 3), whereas the model uses \f$\alpha = 1.3\f$ and the 550 nm values of \f$\omega_a\f$ and \f$g_a\f$ at all wavelengths. This is why the direct normal irradiance differs by up to 27% at an aerosol optical depth of 1, and why, for a ground albedo of 0.2, the diffuse irradiance in the near infrared (1240-2200 nm) is 9-17% lower than 6S at aerosol optical depths of 0.05-0.2 and solar zenith angles of 0 and 30 degrees (0.3-12% lower at 60 degrees); from 400 to 870 nm, at solar zenith angles up to 60 degrees, the diffuse irradiance agrees to within 8.6% at those aerosol loads. With 6S's own aerosol optical depth, single-scattering albedo and asymmetry parameter at each wavelength, the spherical albedo of the model differs from that of 6S by at most 0.017 (350-2130 nm, aerosol optical depths 0.05-1), which changes the global irradiance by at most 1.9% for a ground albedo of 0.8 and 0.4% for a ground albedo of 0.2. For comparison, the additive form of Eq. 18 (with the same two-stream aerosol reflectance) overstates the spherical albedo by up to 0.23 in the same comparison, which raises the global irradiance by up to 34% at 350 nm for a ground albedo of 0.8 and an aerosol optical depth of 1, by 7.7% at 450 nm and an aerosol optical depth of 0.5, and by up to 5.2% for a ground albedo of 0.2. The error grows with the ground albedo, since it enters through \f$1/(1 - \rho S)\f$.
 
- The differences are larger at a solar zenith angle of 75 degrees, where the two-stream solution is least accurate: from 400 to 2200 nm (excluding 1040 nm) the diffuse irradiance differs from 6S by -4.9% to +14% at aerosol optical depths up to 0.2, and the global irradiance by -5.4% to +6.9% (ground albedo 0.2); at an aerosol optical depth of 0.5 the global irradiance differs by -17% to +15% and the diffuse irradiance by -17% to +18% at the wavelengths tested by the self-test (400, 450, 550, 670, 870, 1240 and 1640 nm). At 350 nm without aerosol, the direct irradiance is higher than that of 6S by up to 5.1% at a solar zenith angle of 75 degrees (partly because the Kasten-Young air mass there, 3.81, is smaller than the plane-parallel air mass of 6S, 3.86), whereas the global irradiance is lower by up to 4.1% (ground albedo 0.2); at an aerosol optical depth of 0.2 the global and diffuse irradiance at 350 nm are lower by up to 15%. At 1040 nm without aerosol, the model's diffuse irradiance is 25-31% higher than that of 6S (ground albedo 0.2). 6S computes its atmospheric functions at 20 wavelengths and interpolates them in wavelength as power laws (6S User Guide, Part 2, pp. 97 and 105), and without aerosol and gas absorption its diffuse transmittance divided by the Rayleigh optical depth (overhead sun, black ground) is 0.50 at 860 and 1240 nm but 0.36 at 1040 nm, a dip of about 28% where Rayleigh scattering should vary smoothly; the difference therefore reflects 6S's interpolation rather than the model. A self-test compares the model with 6S values generated by <code>plugins/solarposition/utilities/generate_ssolar_reference.py</code>.
+ The differences are larger at a solar zenith angle of 75 degrees, where the two-stream solution is least accurate: from 400 to 2200 nm (excluding 1040 nm) the diffuse irradiance differs from 6S by -4.9% to +14% at aerosol optical depths up to 0.2, and the global irradiance by -5.4% to +6.9% (ground albedo 0.2); at an aerosol optical depth of 0.5 the global irradiance differs by -17% to +15% and the diffuse irradiance by -17% to +18% at the wavelengths compared (400, 450, 550, 670, 870, 1240 and 1640 nm). At 350 nm without aerosol, the direct irradiance is higher than that of 6S by up to 5.1% at a solar zenith angle of 75 degrees (partly because the Kasten-Young air mass there, 3.81, is smaller than the plane-parallel air mass of 6S, 3.86), whereas the global irradiance is lower by up to 4.1% (ground albedo 0.2); at an aerosol optical depth of 0.2 the global and diffuse irradiance at 350 nm are lower by up to 15%. At 1040 nm without aerosol, the model's diffuse irradiance is 25-31% higher than that of 6S (ground albedo 0.2). 6S computes its atmospheric functions at 20 wavelengths and interpolates them in wavelength as power laws (6S User Guide, Part 2, pp. 97 and 105), and without aerosol and gas absorption its diffuse transmittance divided by the Rayleigh optical depth (overhead sun, black ground) is 0.50 at 860 and 1240 nm but 0.36 at 1040 nm, a dip of about 28% where Rayleigh scattering should vary smoothly; the difference therefore reflects 6S's interpolation rather than the model. The 6S values used for these comparisons are generated by <code>plugins/solarposition/utilities/generate_ssolar_reference.py</code>.
 
  <b>Output Format:</b> Results are stored in Context global data as vectors of (wavelength, irradiance) pairs (\ref helios::vec2) with user-defined labels. Three spectral components are computed: global irradiance on horizontal surface, direct irradiance normal to sun direction, and diffuse irradiance on horizontal surface (all in W/m²/nm).
 
@@ -207,7 +216,7 @@
  <li><i>Radiative transfer.</i> For seven atmospheres (the five climatological ones at their own water vapor columns, a dry atmosphere over a 2 km surface, and a humid one with 6 g/cm² at 305 K), at nadir and at 60 degrees, uvspec with REPTRAN agrees with the line-by-line model LBLRTM 12.17 (<a href="https://doi.org/10.1016/j.jqsrt.2004.05.058">Clough et al. 2005</a>; AER line file 3.8.1, MT_CKD 4.3 continuum) given the same profiles. The mean absolute difference is 0.16-0.24 K in the window bands between 8 and 13.5 \f$\mu\f$m (largest 0.75 K, in the most humid atmospheres, where REPTRAN transmits less than LBLRTM), 0.29-0.34 K in the water vapor bands, 0.37-0.44 K in the carbon dioxide bands (MODIS 33 and 36, ABI 16; largest 0.78 K) and 0.40-0.43 K in the ozone bands (MODIS 30, ABI 12; largest 0.96 K). The differences in the water vapor and ozone bands are larger at 60 degrees than at nadir, where LBLRTM's spherical geometry and uvspec's plane-parallel geometry differ most. The comparison can be repeated with <code>plugins/solarposition/utilities/compare_thermal_with_lblrtm.py</code>.</li>
  <li><i>Interpolation.</i> For 94 random states between the table's nodes (air temperature 250-305 K, water vapor 0.1-7.5 g/cm², surface pressure 701-1013 hPa, ozone 150-450 DU, view zenith 0-60 degrees), the table as used by \ref SolarPosition::calculateSensorThermalAtmosphere() differs from direct uvspec calculations by 0.03-0.09 K root-mean-square in the window bands between 8 and 13.5 \f$\mu\f$m (largest 0.47 K), at most 0.10 K root-mean-square in the carbon dioxide bands, 0.13-0.25 K in the water vapor bands (largest 0.51 K) and 0.12-0.17 K in the ozone bands (largest 0.80 K). \f$L^{\downarrow}\f$ integrated over a band differs by at most 2.6% root-mean-square (largest 6.2%, in the window bands, where the sky radiance is smallest). The comparison can be repeated with <code>plugins/solarposition/utilities/compare_thermal_with_uvspec.py</code>.</li>
  <li><i>Profile assumption.</i> The largest source of error for a real scene is usually the difference between its atmosphere and the assumed profile. For the subarctic summer atmosphere of Anderson et al., which is not one of the table's base atmospheres (287.2 K, 2.12 g/cm² of water vapor), the table's profile at the same surface air temperature and water vapor and ozone columns gives brightness temperatures 0.2-0.5 K lower in the window bands between 8 and 12.5 \f$\mu\f$m (0.7 K for a 7.5-13.5 \f$\mu\f$m band), 1.4-2.4 K lower in the ozone bands and in MODIS 33 and ABI 16, and 3.8-6.9 K lower in the bands that sense the upper troposphere and stratosphere (ABI 8 and 10, MODIS 27 and 36) (<code>compare_thermal_with_uvspec.py --held-out</code>). Sounding bands therefore reflect the assumed climatological profile rather than the actual one.</li>
- <li><i>Earlier model.</i> Before the table, this model used the generalized atmospheric functions of <a href="https://doi.org/10.1029/2003JD003480">Jiménez-Muñoz and Sobrino (2003)</a> (corrected in <a href="https://doi.org/10.1029/2004JD004804">2004</a>), fitted to MODTRAN 3.5 simulations of about 60 radiosoundings for effective wavelengths of 10-12 \f$\mu\f$m, which depend on the water vapor column only. Applying those functions to invert the radiance given by the table (nadir, surface at the air temperature, relative humidity 0.2-0.9) retrieves the surface temperature to within 1.3 K for ASTER band 14, MODIS bands 31 and 32, Landsat 8/9 TIRS bands 10 and 11 and Landsat TM/ETM+ band 6 when the water vapor is at most 1.5 g/cm² and the air temperature at most 290 K, which is within the accuracy the authors report for their functions (root-mean-square errors below 1.5 K for TM band 6 and below 2 K for AVHRR channel 4 and ATSR-2 channel 2). For ASTER band 13 the difference is 2.1-3.3 K under the same conditions. For warmer and more humid air the differences grow, to several kelvin and beyond 20 K for MODIS 32 and TIRS 11 at 5-6 g/cm² and 310 K, because the functions cannot represent the air temperature (<code>compare_thermal_with_jms.py</code>).</li>
+ <li><i>Generalized atmospheric functions.</i> The table was also compared with the generalized atmospheric functions of <a href="https://doi.org/10.1029/2003JD003480">Jiménez-Muñoz and Sobrino (2003)</a> (corrected in <a href="https://doi.org/10.1029/2004JD004804">2004</a>), fitted to MODTRAN 3.5 simulations of about 60 radiosoundings for effective wavelengths of 10-12 \f$\mu\f$m, which depend on the water vapor column only. Applying those functions to invert the radiance given by the table (nadir, surface at the air temperature, relative humidity 0.2-0.9) retrieves the surface temperature to within 1.3 K for ASTER band 14, MODIS bands 31 and 32, Landsat 8/9 TIRS bands 10 and 11 and Landsat TM/ETM+ band 6 when the water vapor is at most 1.5 g/cm² and the air temperature at most 290 K, which is within the accuracy the authors report for their functions (root-mean-square errors below 1.5 K for TM band 6 and below 2 K for AVHRR channel 4 and ATSR-2 channel 2). For ASTER band 13 the difference is 2.1-3.3 K under the same conditions. For warmer and more humid air the differences grow, to several kelvin and beyond 20 K for MODIS 32 and TIRS 11 at 5-6 g/cm² and 310 K, because the functions cannot represent the air temperature (<code>compare_thermal_with_jms.py</code>).</li>
  </ul>
 
  Limitations: clear sky without aerosol; the sensor is above the atmosphere; the atmosphere is plane-parallel; the profiles are climatological (see above); and bands at 3.5-5 \f$\mu\f$m, where reflected sunlight is significant, are not covered.
@@ -274,7 +283,7 @@
       context.setTime(30,12); //12:30
 
       //Initialize the SolarPosition class
-      SolarPosition sun( 7, 31.256, 119.947, &context );
+      SolarPosition sun( 8, 38.55, 121.76, &context ); // Davis, CA: UTC-8 and 121.76 W, both positive in Helios's west-positive convention
 
       //Get the sun position
       vec3 direction = sun.getSunDirectionVector(); //unit vector
@@ -302,19 +311,20 @@
       context.setTime(30,12); //12:30
 
       //Initialize the SolarPosition class
-      SolarPosition sun( 7, 31.256, 119.947, &context );
+      SolarPosition sun( 8, 38.55, 121.76, &context ); // Davis, CA: UTC-8 and 121.76 W, both positive in Helios's west-positive convention
 
       //Set atmospheric conditions globally
       sun.setAtmosphericConditions( 101000, 300, 0.6, 0.05 ); //pressure, temperature, humidity, turbidity
 
       //Calculate solar flux using stored atmospheric conditions
-      float R = sun.getSolarFlux(); //flux perpendicular to sun (W/m^2)
+      float R = sun.getSolarFlux(); //global flux, referenced to a surface perpendicular to sun (W/m^2)
       float zenith = sun.getSunZenith(); //zenithal angle (radians)
       float R_horiz = R*cos(zenith);  //flux on horizontal surface
 
-      float f_diff = sun.getDiffuseFraction(); //fraction of diffuse radiation
+      float f_diff = sun.getDiffuseFraction(); //fraction of the horizontal flux that is diffuse
 
-      float R_dir = R*(1.f-f_diff); //direct component of flux (W/m^2)
+      float R_dir = sun.getDirectSolarFlux(); //direct flux perpendicular to sun (W/m^2), equal to R*(1-f_diff)
+      float R_diff = sun.getDiffuseSolarFlux(); //diffuse flux on a horizontal surface (W/m^2), equal to R*f_diff*cos(zenith)
 
   }
  ~~~~~~
@@ -362,11 +372,14 @@
 
  \subsection SolarFlux Getting the Solar Flux
 
- The solar flux can be calculated using the REST-2 model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990?casa_token=BAJYGez71awAAAAA:CfmA4oT9MLiHGvpD6oUkkDu4EJ1S9uRabZq4-wM07jtcmviZ12jvhD8VVcAkjLWoGNMtg8hDaqo">Gueymard (2008)</a> using the \ref SolarPosition::getSolarFlux() function. IT IS CRITICAL TO NOTE THAT THE CALCULATED FLUX IS FOR A SURFACE PERPENDICULAR TO THE SUN DIRECTION. To get the flux on a horizontal surface, multiply by the cosine of the solar zenith angle.
+ The solar flux can be calculated using the REST-2 model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990?casa_token=BAJYGez71awAAAAA:CfmA4oT9MLiHGvpD6oUkkDu4EJ1S9uRabZq4-wM07jtcmviZ12jvhD8VVcAkjLWoGNMtg8hDaqo">Gueymard (2008)</a>. The direct and diffuse components are referenced to different surfaces, matching what the radiation model expects:
 
- Methods are available to get the incoming solar radiation flux perpendicular to the direction of the sun 1) for the entire solar spectrum (\ref SolarPosition::getSolarFlux()), 2) for the PAR band (\ref SolarPosition::getSolarFluxPAR()), and 3) for the NIR band (\ref SolarPosition::getSolarFluxNIR()).
+ - \ref SolarPosition::getDirectSolarFlux(), \ref SolarPosition::getDirectSolarFluxPAR() and \ref SolarPosition::getDirectSolarFluxNIR() give the direct-beam flux on a surface PERPENDICULAR TO THE SUN DIRECTION. This is the flux of a collimated sun source (\ref RadiationModel::setSourceFlux()).
+ - \ref SolarPosition::getDiffuseSolarFlux(), \ref SolarPosition::getDiffuseSolarFluxPAR() and \ref SolarPosition::getDiffuseSolarFluxNIR() give the diffuse flux on a HORIZONTAL surface. This is the diffuse sky flux of the radiation model (\ref RadiationModel::setDiffuseRadiationFlux()).
 
- The very similar function \ref SolarPosition::getDiffuseFraction() calculates the fraction of the total flux that is diffuse. The fraction that is direct is simply one minus the diffuse fraction.
+ The global (direct plus diffuse) flux on a horizontal surface is therefore the direct flux times the cosine of the solar zenith angle \f$\theta_s\f$ plus the diffuse flux. The REST-2 model computes the PAR and NIR bands separately, and clear-sky diffuse light is much richer in PAR than the direct beam, since Rayleigh scattering moves short wavelengths from the beam into the sky.
+
+ \ref SolarPosition::getSolarFlux(), \ref SolarPosition::getSolarFluxPAR() and \ref SolarPosition::getSolarFluxNIR() give the global flux referenced to a surface perpendicular to the sun, i.e., the global flux on a horizontal surface divided by \f$\cos\theta_s\f$. \ref SolarPosition::getDiffuseFraction() gives the fraction \f$f\f$ of the global horizontal flux that is diffuse. With \f$R\f$ from these functions, the direct flux perpendicular to the sun is \f$R(1-f)\f$ and the diffuse flux on a horizontal surface is \f$R f\cos\theta_s\f$ (not \f$R f\f$). The diffuse fraction is the same for both bands in this decomposition, so for band-resolved fluxes use the direct and diffuse functions above.
 
  Example code for using these solar flux functions is given below.
 
@@ -381,7 +394,7 @@
       context.setTime(30,12); //12:30
 
       //Initialize the SolarPosition class
-      SolarPosition sun( 7, 31.256, 119.947, &context );
+      SolarPosition sun( 8, 38.55, 121.76, &context ); // Davis, CA: UTC-8 and 121.76 W, both positive in Helios's west-positive convention
 
       //Set atmospheric conditions globally
       sun.setAtmosphericConditions( 101000, 300, 0.6, 0.05 ); //pressure, temperature, humidity, turbidity
@@ -390,12 +403,13 @@
       float zenith = sun.getSunZenith(); //zenithal angle (radians)
 
       //Calculate solar flux using stored atmospheric conditions
-      float R = sun.getSolarFlux(); //flux perpendicular to sun (W/m^2)
+      float R = sun.getSolarFlux(); //global flux, referenced to a surface perpendicular to sun (W/m^2)
       float R_horiz = R*cos(zenith);  //flux on horizontal surface
 
-      float f_diff = sun.getDiffuseFraction(); //fraction of diffuse radiation
+      float f_diff = sun.getDiffuseFraction(); //fraction of the horizontal flux that is diffuse
 
-      float R_dir = R*(1.f-f_diff); //direct component of flux (W/m^2)
+      float R_dir = sun.getDirectSolarFlux(); //direct flux perpendicular to sun (W/m^2), equal to R*(1-f_diff)
+      float R_diff = sun.getDiffuseSolarFlux(); //diffuse flux on a horizontal surface (W/m^2), equal to R*f_diff*cos(zenith)
 
   }
  ~~~~~~
@@ -410,11 +424,7 @@
 
  The REST2 model for solar fluxes was developed for clear-sky conditions and cannot directly be used when clouds are present. If incident solar radiation data is available (e.g., from a weather station), this can be used to calibrate the model to account for the possible presence of clouds. A simple model is described below for doing so.
 
- Consider \f$R_{meas,h}\f$ to be the measured all-wave incoming solar radiation flux on a horizontal plane (clear or cloudy conditions), and \f$R_{clear}\f$ to be the predicted all-wave incoming solar radiation flux predicted by the REST2 model for clear-sky conditions perpendicular to the direction of the sun. This flux can be projected onto the horizontal plane according to
-
- \f[
-    R_{clear,h} = R_{clear}\mathrm{cos}\,\theta_s.
- \f]
+ Consider \f$R_{meas,h}\f$ to be the measured all-wave incoming solar radiation flux on a horizontal plane (clear or cloudy conditions), and \f$R_{clear,h}\f$ to be the global (direct plus diffuse) all-wave flux on a horizontal plane predicted by the REST2 model for clear-sky conditions.
 
  The diffuse fraction is estimated from the hourly clearness index \f$k_T = R_{meas,h}/R_{0,h}\f$, where \f$R_{0,h}\f$ is the extraterrestrial irradiance on a horizontal surface, using the correlation of <a href="https://doi.org/10.1016/0038-092X(82)90302-4">Erbs et al. (1982)</a>:
 
@@ -426,13 +436,21 @@
     \end{cases}
  \f]
 
- The resulting flux that is output from the model is (flux perpendicular to the sun)
+ The measured flux is split between the PAR and NIR bands using the clear-sky fraction of the global horizontal flux that is PAR,
 
  \f[
-   R_{model} = R_{clear}\frac{R_{meas,h}}{R_{clear,h}}.
+   \phi_{PAR} = \frac{R_{clear,h}^{PAR}}{R_{clear,h}},
  \f]
 
- Note that \f$R_{clear}\f$ is the all-wave (PAR+NIR) clear-sky flux, since the measured flux \f$R_{meas,h}\f$ is itself all-wave. The resulting attenuation factor \f$R_{meas,h}/R_{clear,h}\f$ is applied equally to the PAR and NIR bands, so \ref SolarPosition::getSolarFluxPAR() and \ref SolarPosition::getSolarFluxNIR() retain their clear-sky spectral ratio under calibration and continue to sum to \ref SolarPosition::getSolarFlux().
+ where both fluxes include the direct and diffuse components. The fraction of the global (rather than the direct) flux is used because the measured flux is global; the direct beam alone becomes much redder than the global flux at low sun, and its PAR fraction would underestimate PAR by about 30% at a solar zenith angle of 80 degrees. Each band is then split into direct and diffuse components with the diffuse fraction \f$f_{diff}\f$ above. For the PAR band, the diffuse flux on a horizontal surface and the direct flux perpendicular to the sun are
+
+ \f[
+   R_{diff}^{PAR} = \phi_{PAR}\,f_{diff}\,R_{meas,h}, \qquad R_{dir}^{PAR} = \frac{\phi_{PAR}\,(1-f_{diff})\,R_{meas,h}}{\cos\theta_s},
+ \f]
+
+ and likewise for the NIR band with \f$1-\phi_{PAR}\f$. The global flux referenced to a surface perpendicular to the sun, given by \ref SolarPosition::getSolarFlux(), is \f$R_{meas,h}/\cos\theta_s\f$.
+
+ When the sun is so close to the horizon that the clear-sky global horizontal flux is 1 W/m<sup>2</sup> or less (a solar zenith angle above about 89.6 degrees), a positive measured flux cannot be represented as a flux perpendicular to the sun, which diverges as \f$1/\cos\theta_s\f$, and the flux functions raise an error. Skip such timesteps, or set their measured flux to zero. A measured flux of zero gives zero fluxes, and when the sun is below the horizon all fluxes are zero regardless of the measurement.
 
  \subsubsection SolarFluxCloudsSpectral Cloud calibration of the spectral model
 
@@ -463,7 +481,7 @@
     context.loadTabularTimeseriesData( "/path/to/weatherdatafile.txt", {"Date","Hour","R_tot_Wm2","Tair_C","humidity_rel","Patm_Pa"}, ",", "YYYYMMDD", 1 );
 
     //Initialize the SolarPosition class
-    SolarPosition sun( 7, 31.256, 119.947, &context );
+    SolarPosition sun( 8, 38.55, 121.76, &context ); // Davis, CA: UTC-8 and 121.76 W, both positive in Helios's west-positive convention
 
     //Enable cloud calibration
     sun.enableCloudCalibration( "R_tot_Wm2" ); //reference "R_tot_Wm2" data field in timeseries
@@ -482,12 +500,11 @@
         sun.setAtmosphericConditions( Patm_Pa, Tair_K, humidity_rel, turbidity );
 
         //Calculate solar flux
-        float R = sun.getSolarFlux(); //flux perpendicular to sun (W/m^2)
+        float R_dir = sun.getDirectSolarFlux(); //direct flux perpendicular to sun (W/m^2)
+        float R_diff = sun.getDiffuseSolarFlux(); //diffuse flux on a horizontal surface (W/m^2)
 
-        float f_diff = sun.getDiffuseFraction(); //fraction of diffuse radiation
-
-        float R_dir = R*(1.f-f_diff); //direct component of flux (W/m^2)
-        float R_diff = R*f_diff; //diffuse component of flux (W/m^2)
+        float PAR_dir = sun.getDirectSolarFluxPAR(); //likewise for the PAR band
+        float PAR_diff = sun.getDiffuseSolarFluxPAR();
 
     }
  }
@@ -522,7 +539,7 @@
       context.setTime(0,12); //Solar noon
 
       //Initialize SolarPosition with location
-      SolarPosition sun( 0, 36.93f, 3.33f, &context ); //UTC, latitude, longitude
+      SolarPosition sun( 0, 36.93f, 3.33f, &context ); // times in UTC (offset 0), latitude 36.93 N, longitude 3.33 W (positive West)
 
       //Set atmospheric conditions
       sun.setAtmosphericConditions( 87700.f, 298.f, 0.5f, 0.026f ); //pressure, temp, humidity, turbidity

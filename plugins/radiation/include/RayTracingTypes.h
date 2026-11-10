@@ -44,7 +44,7 @@ namespace helios {
 
         // Per-primitive data (indexed by primitive index 0..primitive_count-1)
         std::vector<float> transform_matrices; //!< Transform matrices (16 floats per primitive, row-major)
-        std::vector<uint> primitive_types; //!< Primitive type: 0=patch, 1=triangle, 2=disk, 3=tile, 5=bbox (4, formerly voxel, is unused)
+        std::vector<uint> primitive_types; //!< Primitive type: 0=patch, 1=triangle, 2=disk, 3=tile, 5=bbox (4 is unused)
         std::vector<uint> primitive_UUIDs; //!< UUID for each primitive (for result mapping)
         std::vector<uint> primitive_IDs; //!< Primitive ID within parent object (for sub-patch calculations)
         std::vector<uint> object_IDs; //!< Parent object ID for each primitive
@@ -86,6 +86,13 @@ namespace helios {
         std::vector<helios::vec2> uv_data; //!< Flattened 2D UV coordinates [primitive][vertex]
         std::vector<int> uv_IDs; //!< UV data start index for each primitive (-1 if no UVs)
 
+        // Spectral texture class maps (Context::setPrimitiveSpectralTexture()), laid over a primitive with the same (u,v) mapping and
+        // texel convention as its mask. A ray leaving a primitive with a class map takes the reflectivity and transmissivity of the
+        // class at its launch point from the palette tables in RayTracingMaterial.
+        std::vector<uint16_t> class_map_data; //!< Flattened class maps [class map][row from the top][column]
+        std::vector<helios::int2> class_map_sizes; //!< Size (width, height) of each class map
+        std::vector<int> class_map_IDs; //!< Class map of each primitive (-1 if none)
+
         // Periodic boundary condition
         helios::vec2 periodic_flag; //!< Periodic boundary flags (x, y directions)
 
@@ -114,8 +121,6 @@ namespace helios {
          * - object_subdivisions: size = getPerPrimitiveBufferSize()
          * - primitive_IDs: size = getPerPrimitiveBufferSize()  ← NOT Nobjects!
          * - twosided_flags, solid_fractions, object_IDs: size = getPerPrimitiveBufferSize()
-         *
-         * Historical bug (commit 53ca9687d): primitive_IDs sized by Nobjects instead of Nprimitives
          */
         size_t getPerPrimitiveBufferSize() const {
             return primitive_count;
@@ -154,11 +159,6 @@ namespace helios {
          *
          * @throws helios_runtime_error with detailed message if validation fails
          * @note Compiled out in release builds (#ifndef NDEBUG) - zero production cost
-         *
-         * Historical bugs this prevents:
-         * - Buffer sized by Nobjects instead of Nprimitives (commit 53ca9687d)
-         * - Wrong primitive_positions size
-         * - Inconsistent type counts
          */
         void validate() const;
     };
@@ -211,6 +211,18 @@ namespace helios {
         //! Whether any primitive has a surface layer in some band. The outgoing and scattered radiation buffers then hold a second component (see RayTracingResults).
         bool surface_layer_enabled = false;
 
+        // Spectral texture palettes. The palettes of every primitive with a class map are laid end to end; class k of a primitive's
+        // class map is entry palette_offset[primitive] + k - 1. A ray leaving such a primitive from a texel of class k > 0 uses that
+        // entry instead of the primitive's own reflectivity and transmissivity, which hold its area-weighted mean.
+        std::vector<float> palette_reflectivity; //!< Reflectivity per [slot][entry][band]
+        std::vector<float> palette_transmissivity; //!< Transmissivity per [slot][entry][band]
+        std::vector<float> palette_reflectivity_cam; //!< Camera-weighted reflectivity per [slot][entry][band][camera]
+        std::vector<float> palette_transmissivity_cam; //!< Camera-weighted transmissivity per [slot][entry][band][camera]
+        std::vector<uint32_t> palette_offset; //!< First palette entry of each primitive (UINT32_MAX if it has no class map)
+        //! Per global band: 1 where rays use the palette, 0 where they use the primitive's own values (bands with emission, whose emissivity is per primitive)
+        std::vector<uint32_t> palette_band_active;
+        size_t num_palette_entries = 0; //!< Number of palette entries
+
         size_t num_bands = 0; //!< Number of spectral bands
         size_t num_sources = 0; //!< Number of radiation sources (the material arrays have one more slot than this)
         size_t num_primitives = 0; //!< Number of primitives
@@ -246,6 +258,8 @@ namespace helios {
 
         // Scattering
         uint scattering_iteration = 0; //!< Current scattering iteration (0 = first bounce)
+        //! Accumulate the forward scattering estimate of this launch (see RayTracingBackend::getForwardScatterResults()); set for scattering launches only
+        bool forward_scatter_enabled = false;
 
         // Face selection (for diffuse rays)
         uint launch_face = 0; //!< Face to launch from: 1 = top (the side the normal points to), 0 = bottom
@@ -280,8 +294,8 @@ namespace helios {
         std::vector<float> radiation_out_bottom; //!< Emitted/outgoing radiation (bottom face) per [primitive][band]
 
         // Outgoing radiation resampled onto the shared mesh vertices, for camera flux smoothing (empty unless smoothing is enabled)
-        std::vector<float> vertex_radiation_out_top; //!< Area-weighted mean outgoing radiation (top face) per [vertex][band]
-        std::vector<float> vertex_radiation_out_bottom; //!< Area-weighted mean outgoing radiation (bottom face) per [vertex][band]
+        std::vector<float> vertex_radiation_out_top; //!< Area-weighted mean outgoing radiation (top face) per [component][vertex][band]
+        std::vector<float> vertex_radiation_out_bottom; //!< Area-weighted mean outgoing radiation (bottom face) per [component][vertex][band]
 
         // Flags
         uint specular_reflection_enabled =
@@ -304,6 +318,9 @@ namespace helios {
         std::vector<float> scatter_buff_top_cam; //!< Camera-weighted scattered radiation buffer (top) per [camera][primitive][band]
         std::vector<float> scatter_buff_bottom_cam; //!< Camera-weighted scattered radiation buffer (bottom) per [camera][primitive][band]
         std::vector<float> radiation_specular; //!< Direct flux reaching primitives with a surface layer, per [source][primitive][band]
+        //! Radiation reaching each face of each primitive with a spectral texture, per [face (top, then bottom)][source slot][primitive][launch band], from which cameras
+        //! compute the outgoing radiation of each class. Empty unless there are cameras and some primitive has a spectral texture.
+        std::vector<float> spectral_incident;
 
         size_t num_primitives = 0; //!< Number of primitives
         size_t num_bands = 0; //!< Number of bands
@@ -322,6 +339,41 @@ namespace helios {
      * \return table_size values of a(mu), followed by the hemispherical mean abar = 2 int_0^1 a(mu) mu dmu
      */
     std::vector<float> computeSurfaceLayerAlbedoTable(float refractive_index, float roughness, uint32_t table_size);
+
+    //! The class maps of a geometry packed into one array of words, for backends that read them from a single buffer
+    /**
+     * The layout is described in shaders/common/spectral_texture.glsl (used by the Vulkan and OptiX 6 backends): the number of
+     * primitives (0 when none has a class map) and of class maps, the class map of each primitive (0xFFFFFFFF for none), the width,
+     * height and first texel of each class map, then two 16-bit classes per word.
+     * \param[in] geometry Geometry whose class_map_data, class_map_sizes and class_map_IDs are packed
+     */
+    std::vector<uint32_t> packSpectralClassMaps(const RayTracingGeometry &geometry);
+
+    //! The spectral texture palettes of a material packed into one array of words, for backends that read them from a single buffer
+    /**
+     * The layout is described in shaders/common/spectral_texture.glsl: a header of 9 words (the number of palette entries, 0 when no
+     * primitive has a spectral texture; the global band count; the camera count; and the starts of the per-primitive offsets, of the
+     * per-band flags and of the four tables), then those arrays, the tables as float bits.
+     * \param[in] materials Material whose palette_* fields are packed
+     */
+    std::vector<uint32_t> packSpectralPalettes(const RayTracingMaterial &materials);
+
+    //! The camera-weighted outgoing radiation of the classes of spectral textures packed into one array of words, for backends that read it from a single buffer
+    /**
+     * The layout is described in shaders/common/spectral_texture.glsl: the number of class-flux slots (0 when there are none), the launch band count and the
+     * number of primitives; the first slot of each primitive; then the values per [face][slot][band] as float bits.
+     * \param[in] class_flux_offset First class-flux slot of each primitive (see RayTracingBackend::uploadSpectralCameraFlux()), or empty for none
+     * \param[in] class_flux Values per [face][slot][launch band]
+     * \param[in] launch_band_count Number of launched bands
+     */
+    std::vector<uint32_t> packSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux, size_t launch_band_count);
+
+    //! Pack the vertex values of RayTracingBackend::uploadSpectralVertexIncident() for the Vulkan and OptiX 6 devices
+    /**
+     * Layout: the layer count L (2, or 0 for none), the launch band count B, the smoothing vertex count V and the camera index; then the values per
+     * [face][layer][vertex][band] as float bits.
+     */
+    std::vector<uint32_t> packSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, size_t launch_band_count, uint32_t camera);
 
 } // namespace helios
 

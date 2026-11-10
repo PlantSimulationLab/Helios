@@ -1978,6 +1978,242 @@ void helios::writePNG(const std::string &filename, uint width, uint height, cons
     png_destroy_write_struct(&png, &info);
 }
 
+namespace {
+    // libpng reports an error by calling the error function, which must not return. The message is kept outside the caller's stack frame, whose
+    // local variables are indeterminate after the longjmp back to its setjmp.
+    thread_local char single_channel_png_error[256];
+
+    void singleChannelPNGError(png_structp png_ptr, png_const_charp message) {
+        std::snprintf(single_channel_png_error, sizeof(single_channel_png_error), "%s", message);
+        png_longjmp(png_ptr, 1);
+    }
+
+    // Warnings (for example about an unusual color profile) do not affect the pixel values, so they are not printed
+    void singleChannelPNGWarning(png_structp, png_const_charp) {
+    }
+} // namespace
+
+void helios::readPNGSingleChannel(const std::string &filename, uint &width, uint &height, std::vector<uint16_t> &pixel_values) {
+    const std::string prefix = "ERROR (readPNGSingleChannel): ";
+    std::string extension = getFileExtension(filename);
+    std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return std::tolower(c); });
+    if (extension != ".png") {
+        helios_runtime_error(prefix + "File " + filename + " is not PNG format. Save it as an 8-bit or 16-bit grayscale PNG.");
+    }
+
+    std::unique_ptr<FILE, int (*)(FILE *)> fp(fopen(filename.c_str(), "rb"), fclose);
+    if (!fp) {
+        helios_runtime_error(prefix + "File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
+    }
+
+    single_channel_png_error[0] = '\0';
+    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, singleChannelPNGError, singleChannelPNGWarning);
+    png_infop info_ptr = png_ptr != nullptr ? png_create_info_struct(png_ptr) : nullptr;
+    if (png_ptr == nullptr || info_ptr == nullptr) {
+        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+        helios_runtime_error(prefix + "Failed to create the PNG structures for " + filename + ".");
+    }
+
+    std::string error;
+    std::vector<std::vector<png_byte>> rows;
+    std::vector<png_bytep> row_pointers;
+    png_byte bit_depth = 0;
+    // libpng reports errors by longjmp, so nothing with a destructor is created between setjmp and the reads
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        error = "File " + filename + " could not be read as a PNG image (" + std::string(single_channel_png_error) + ").";
+    } else {
+        png_init_io(png_ptr, fp.get());
+        png_read_info(png_ptr, info_ptr);
+        bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+        const png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+        if (color_type == PNG_COLOR_TYPE_PALETTE) {
+            error = "File " + filename + " is an indexed-color PNG, whose pixel values are indices into a color table and are expanded to colors when read. Save it as an 8-bit or 16-bit grayscale PNG with the same values.";
+        } else if (color_type != PNG_COLOR_TYPE_GRAY) {
+            error = "File " + filename + " has more than one channel (color or transparency). Save it as an 8-bit or 16-bit grayscale PNG without transparency.";
+        } else if (bit_depth != 8 && bit_depth != 16) {
+            error = "File " + filename + " has a bit depth of " + std::to_string(bit_depth) + ". Save it with a bit depth of 8 or 16.";
+        } else if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+            error = "File " + filename + " marks one gray value as transparent. Save it without transparency.";
+        } else {
+            png_set_interlace_handling(png_ptr);
+            png_read_update_info(png_ptr, info_ptr);
+            width = png_get_image_width(png_ptr, info_ptr);
+            height = png_get_image_height(png_ptr, info_ptr);
+            rows.assign(height, std::vector<png_byte>(png_get_rowbytes(png_ptr, info_ptr)));
+            row_pointers.resize(height);
+            for (uint y = 0; y < height; y++) {
+                row_pointers[y] = rows[y].data();
+            }
+            png_read_image(png_ptr, row_pointers.data());
+        }
+    }
+    png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+    if (!error.empty()) {
+        helios_runtime_error(prefix + error);
+    }
+
+    // 16-bit samples are stored most significant byte first
+    pixel_values.resize(size_t(width) * height);
+    for (uint y = 0; y < height; y++) {
+        for (uint x = 0; x < width; x++) {
+            pixel_values[size_t(y) * width + x] = bit_depth == 16 ? uint16_t((rows[y][2 * x] << 8) | rows[y][2 * x + 1]) : rows[y][x];
+        }
+    }
+}
+
+void helios::writePNGSingleChannel(const std::string &filename, uint width, uint height, const std::vector<uint16_t> &pixel_values, uint bit_depth) {
+    const std::string prefix = "ERROR (writePNGSingleChannel): ";
+    if (bit_depth != 8 && bit_depth != 16) {
+        helios_runtime_error(prefix + "The bit depth must be 8 or 16, but " + std::to_string(bit_depth) + " was given.");
+    }
+    if (pixel_values.size() != size_t(width) * height) {
+        helios_runtime_error(prefix + "There are " + std::to_string(pixel_values.size()) + " pixel values for a " + std::to_string(width) + "x" + std::to_string(height) + " image, which needs " + std::to_string(size_t(width) * height) + ".");
+    }
+    if (bit_depth == 8) {
+        const auto largest = std::max_element(pixel_values.begin(), pixel_values.end());
+        if (largest != pixel_values.end() && *largest > 255) {
+            helios_runtime_error(prefix + "The value " + std::to_string(*largest) + " does not fit in an 8-bit image. Use a bit depth of 16.");
+        }
+    }
+
+    const size_t bytes_per_pixel = bit_depth / 8;
+    std::vector<std::vector<png_byte>> rows(height, std::vector<png_byte>(width * bytes_per_pixel));
+    for (uint y = 0; y < height; y++) {
+        for (uint x = 0; x < width; x++) {
+            const uint16_t value = pixel_values[size_t(y) * width + x];
+            if (bit_depth == 16) {
+                rows[y][2 * x] = png_byte(value >> 8); // most significant byte first
+                rows[y][2 * x + 1] = png_byte(value & 0xFF);
+            } else {
+                rows[y][x] = png_byte(value);
+            }
+        }
+    }
+    std::vector<png_bytep> row_pointers(height);
+    for (uint y = 0; y < height; y++) {
+        row_pointers[y] = rows[y].data();
+    }
+
+    FILE *fp = fopen(filename.c_str(), "wb");
+    if (fp == nullptr) {
+        helios_runtime_error(prefix + "File " + filename + " could not be opened for writing. Check that the directory exists and that you have permission to write to it.");
+    }
+    single_channel_png_error[0] = '\0';
+    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, singleChannelPNGError, singleChannelPNGWarning);
+    png_infop info_ptr = png_ptr != nullptr ? png_create_info_struct(png_ptr) : nullptr;
+    if (png_ptr == nullptr || info_ptr == nullptr) {
+        png_destroy_write_struct(&png_ptr, &info_ptr);
+        fclose(fp);
+        std::filesystem::remove(filename);
+        helios_runtime_error(prefix + "Failed to create the PNG structures for " + filename + ".");
+    }
+    bool failed = false;
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        failed = true;
+    } else {
+        png_init_io(png_ptr, fp);
+        png_set_IHDR(png_ptr, info_ptr, width, height, int(bit_depth), PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+        png_write_info(png_ptr, info_ptr);
+        png_write_image(png_ptr, row_pointers.data());
+        png_write_end(png_ptr, nullptr);
+    }
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+    // A failed write (including a failed flush when the file is closed) would leave a truncated image behind
+    const bool closed = fclose(fp) == 0;
+    if (failed || !closed) {
+        std::filesystem::remove(filename);
+        helios_runtime_error(prefix + "Writing " + filename + " failed" + (failed ? " (" + std::string(single_channel_png_error) + ")" : " when the file was closed") + ". Check that there is space on the disk.");
+    }
+}
+
+namespace {
+
+    //! A point in texture coordinates, for classMapAreaFractions()
+    struct TextureCoordinate {
+        double u;
+        double v;
+    };
+
+    // Area of the part of a convex polygon inside the rectangle u0 <= u <= u1, v0 <= v <= v1, by Sutherland-Hodgman clipping
+    double clippedPolygonArea(const std::vector<TextureCoordinate> &polygon, double u0, double u1, double v0, double v1) {
+        std::vector<TextureCoordinate> clipped = polygon;
+        auto clip = [&clipped](auto inside, auto intersect) {
+            std::vector<TextureCoordinate> output;
+            for (size_t i = 0; i < clipped.size(); i++) {
+                const TextureCoordinate &current = clipped[i];
+                const TextureCoordinate &previous = clipped[(i + clipped.size() - 1) % clipped.size()];
+                if (inside(current)) {
+                    if (!inside(previous)) {
+                        output.push_back(intersect(previous, current));
+                    }
+                    output.push_back(current);
+                } else if (inside(previous)) {
+                    output.push_back(intersect(previous, current));
+                }
+            }
+            clipped = output;
+        };
+        auto at_u = [](double edge) { return [edge](const TextureCoordinate &a, const TextureCoordinate &b) { return TextureCoordinate{edge, a.v + (b.v - a.v) * (edge - a.u) / (b.u - a.u)}; }; };
+        auto at_v = [](double edge) { return [edge](const TextureCoordinate &a, const TextureCoordinate &b) { return TextureCoordinate{a.u + (b.u - a.u) * (edge - a.v) / (b.v - a.v), edge}; }; };
+        clip([u0](const TextureCoordinate &p) { return p.u >= u0; }, at_u(u0));
+        clip([u1](const TextureCoordinate &p) { return p.u <= u1; }, at_u(u1));
+        clip([v0](const TextureCoordinate &p) { return p.v >= v0; }, at_v(v0));
+        clip([v1](const TextureCoordinate &p) { return p.v <= v1; }, at_v(v1));
+        double twice_area = 0;
+        for (size_t i = 0; i < clipped.size(); i++) {
+            const TextureCoordinate &a = clipped[i];
+            const TextureCoordinate &b = clipped[(i + 1) % clipped.size()];
+            twice_area += a.u * b.v - b.u * a.v;
+        }
+        return 0.5 * std::fabs(twice_area);
+    }
+
+} // namespace
+
+std::vector<std::pair<uint16_t, float>> helios::classMapAreaFractions(const std::vector<uint16_t> &classes, const helios::int2 &resolution, const std::vector<helios::vec2> &uv) {
+    const int width = resolution.x;
+    const int height = resolution.y;
+    std::vector<TextureCoordinate> polygon;
+    double u_min = 1e30, u_max = -1e30, v_min = 1e30, v_max = -1e30;
+    for (const helios::vec2 &corner: uv) {
+        polygon.push_back({corner.x, corner.y});
+        u_min = std::min(u_min, double(corner.x));
+        u_max = std::max(u_max, double(corner.x));
+        v_min = std::min(v_min, double(corner.y));
+        v_max = std::max(v_max, double(corner.y));
+    }
+    const double infinity = std::numeric_limits<double>::infinity();
+    auto column_of = [width](double u) { return width == 1 ? 0 : std::clamp(int(std::floor((width - 1) * u)), 0, width - 1); };
+    auto row_of = [height](double v) { return height == 1 ? 0 : std::clamp(int(std::floor((height - 1) * (1.0 - v))), 0, height - 1); };
+
+    std::map<uint16_t, double> class_area;
+    double total_area = 0;
+    for (int row = row_of(v_max); row <= row_of(v_min); row++) {
+        const double v_low = (height == 1 || row == height - 1) ? -infinity : 1.0 - double(row + 1) / double(height - 1);
+        const double v_high = (height == 1 || row == 0) ? infinity : 1.0 - double(row) / double(height - 1);
+        for (int column = column_of(u_min); column <= column_of(u_max); column++) {
+            const uint16_t texel_class = classes.at(size_t(row) * width + column);
+            if (texel_class == 0) {
+                continue;
+            }
+            const double u_low = (width == 1 || column == 0) ? -infinity : double(column) / double(width - 1);
+            const double u_high = (width == 1 || column == width - 1) ? infinity : double(column + 1) / double(width - 1);
+            const double area = clippedPolygonArea(polygon, std::max(u_low, u_min), std::min(u_high, u_max), std::max(v_low, v_min), std::min(v_high, v_max));
+            if (area > 0) {
+                class_area[texel_class] += area;
+                total_area += area;
+            }
+        }
+    }
+
+    std::vector<std::pair<uint16_t, float>> fractions;
+    for (const auto &entry: class_area) {
+        fractions.emplace_back(entry.first, float(entry.second / total_area));
+    }
+    return fractions;
+}
+
+
 void helios::writePNG(const std::string &filename, uint width, uint height, const std::vector<unsigned char> &pixel_data) {
 
     // Convert pixel_data array into RGBcolor vector

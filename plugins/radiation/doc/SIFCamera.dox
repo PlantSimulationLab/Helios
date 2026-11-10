@@ -49,8 +49,7 @@ since its fluorescence yield is unknown.
 The example below grows a cowpea plant under the nitrogen model, generates per-leaf
 PROSPECT-D + Fluspect-B biochemistry from leaf nitrogen content via
 \ref LeafOptics::run(), runs photosynthesis to populate \c electron_transport_ratio,
-then captures a SIF image at the red and far-red SIF bands. This is the same pipeline
-shipped as the \c projects/SIF_camera sample project.
+then captures a SIF image at the red and far-red SIF bands.
 
 ~~~~~~{.cpp}
 #include "RadiationModel.h"

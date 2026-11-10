@@ -39,6 +39,10 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera resolution must be at least 1x1.");
     } else if (camera_properties.HFOV < 0 || camera_properties.HFOV > 180.f) {
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horizontal field of view must be between 0 and 180 degrees.");
+    } else if (camera_properties.color_correction != "auto" && camera_properties.color_correction != "off") {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera '" + camera_label + "' has color_correction \"" + camera_properties.color_correction + "\"; it must be \"auto\" or \"off\".");
+    } else if (camera_properties.tone_curve != "auto" && camera_properties.tone_curve != "off") {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera '" + camera_label + "' has tone_curve \"" + camera_properties.tone_curve + "\"; it must be \"auto\" or \"off\".");
     }
 
     // Warn if any bound band has scattering depth 0 — such bands will not populate
@@ -495,6 +499,8 @@ CameraProperties RadiationModel::getCameraParameters(const std::string &camera_l
     camera_properties.shutter_speed = camera.shutter_speed;
     camera_properties.exposure_target = camera.exposure_target;
     camera_properties.white_balance = camera.white_balance;
+    camera_properties.color_correction = camera.color_correction;
+    camera_properties.tone_curve = camera.tone_curve;
     camera_properties.camera_zoom = camera.camera_zoom;
     camera_properties.FOV_aspect_ratio = camera.FOV_aspect_ratio;
 
@@ -513,6 +519,10 @@ void RadiationModel::updateCameraParameters(const std::string &camera_label, con
         helios_runtime_error("ERROR (RadiationModel::updateCameraParameters): Camera resolution must be at least 1x1.");
     } else if (camera_properties.HFOV <= 0 || camera_properties.HFOV >= 180.f) {
         helios_runtime_error("ERROR (RadiationModel::updateCameraParameters): Camera horizontal field of view must be between 0 and 180 degrees.");
+    } else if (camera_properties.color_correction != "auto" && camera_properties.color_correction != "off") {
+        helios_runtime_error("ERROR (RadiationModel::updateCameraParameters): Camera '" + camera_label + "' has color_correction \"" + camera_properties.color_correction + "\"; it must be \"auto\" or \"off\".");
+    } else if (camera_properties.tone_curve != "auto" && camera_properties.tone_curve != "off") {
+        helios_runtime_error("ERROR (RadiationModel::updateCameraParameters): Camera '" + camera_label + "' has tone_curve \"" + camera_properties.tone_curve + "\"; it must be \"auto\" or \"off\".");
     } else if (camera_properties.camera_zoom <= 0.0f) {
         helios_runtime_error("ERROR (RadiationModel::updateCameraParameters): camera_zoom must be greater than 0.");
     }
@@ -530,7 +540,7 @@ void RadiationModel::updateCameraParameters(const std::string &camera_label, con
                 context->clearGlobalData(global_data_label.c_str());
             }
         }
-        for (const std::string &buffer_suffix: {"_pixel_UUID", "_pixel_depth"}) {
+        for (const std::string &buffer_suffix: {"_pixel_UUID", "_pixel_depth", "_pixel_spectral_class"}) {
             std::string global_data_label = "camera_" + camera_label + buffer_suffix;
             if (context->doesGlobalDataExist(global_data_label.c_str())) {
                 context->clearGlobalData(global_data_label.c_str());
@@ -554,6 +564,8 @@ void RadiationModel::updateCameraParameters(const std::string &camera_label, con
     camera.exposure_target = camera_properties.exposure_target;
     camera.shutter_speed = camera_properties.shutter_speed;
     camera.white_balance = camera_properties.white_balance;
+    camera.color_correction = camera_properties.color_correction;
+    camera.tone_curve = camera_properties.tone_curve;
     camera.camera_zoom = camera_properties.camera_zoom;
 
     // Recalculate FOV_aspect_ratio to ensure square pixels
@@ -585,6 +597,7 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
         std::cout << "ERROR (RadiationModel::writeCameraImage): camera with label " << camera << " does not exist. Skipping image write for this camera." << std::endl;
         return "";
     }
+    requireCompleteCameraImage(camera, "writeCameraImage");
 
     if (bands.size() != 1 && bands.size() != 3) {
         helios_runtime_error("ERROR (RadiationModel::writeCameraImage): input vector of band labels should either have length of 1 (grayscale image) or length of 3 (RGB image). Skipping image write for this camera.");
@@ -618,13 +631,17 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
         b++;
     }
 
-    // Apply sRGB gamma compression for 3-channel (RGB) images
+    // Apply the tone curve (CameraProperties::tone_curve) and sRGB gamma compression for 3-channel (RGB) images
     // This is done on the copy, preserving the original linear data
-    bool is_rgb = (camera_data.size() == 3);
+    // A thermal camera's images are radiances, which are written without the encoding meant for colour images
+    bool is_rgb = (camera_data.size() == 3) && effectiveCameraType(cameras.at(camera)) != "thermal";
+    std::string not_rgb_reason;
+    const bool apply_tone_curve = is_rgb && cameras.at(camera).tone_curve == "auto" && !cameraRGBBands(cameras.at(camera), not_rgb_reason).empty();
     if (is_rgb) {
         for (auto &band_data: camera_data) {
             for (float &v: band_data) {
-                v = RadiationCamera::lin_to_srgb(std::fmaxf(0.0f, v));
+                const float linear = std::fmaxf(0.0f, v);
+                v = RadiationCamera::lin_to_srgb(apply_tone_curve ? RadiationCamera::typicalCameraToneCurve(linear) : linear);
             }
         }
     }
@@ -701,6 +718,8 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
         // Copy applied exposure gain and white balance factors from camera object
         metadata.image_processing.exposure_gain = cameras.at(camera).applied_exposure_gain;
         metadata.image_processing.white_balance_factors = cameras.at(camera).applied_white_balance_factors;
+        metadata.image_processing.color_correction_matrix = cameras.at(camera).applied_color_correction_matrix;
+        metadata.image_processing.tone_curve = apply_tone_curve ? "typical camera" : "none";
 
         // Set color space based on channel count (sRGB for RGB, linear for grayscale)
         metadata.image_processing.color_space = is_rgb ? "sRGB" : "linear";
@@ -725,6 +744,7 @@ std::string RadiationModel::writeNormCameraImage(const std::string &camera, cons
         std::cout << "ERROR (RadiationModel::writeNormCameraImage): camera with label " << camera << " does not exist. Skipping image write for this camera." << std::endl;
         return "";
     }
+    requireCompleteCameraImage(camera, "writeNormCameraImage");
 
     float maxval = 0;
     // Find maximum mean value over all bands
@@ -1661,6 +1681,36 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
                                             "RadiationModel::writeImageSegmentationMasks_ObjectData");
 }
 
+void RadiationModel::writeImageSegmentationMasksBySpectralClass(const std::string &cameralabel, const std::map<uint, std::string> &class_names, const std::string &json_filename, const std::string &image_file,
+                                                                const std::vector<std::string> &data_attribute_labels, bool append_file) {
+    const std::string caller = "RadiationModel::writeImageSegmentationMasksBySpectralClass";
+    if (cameras.find(cameralabel) == cameras.end()) {
+        helios_runtime_error("ERROR (" + caller + "): Camera '" + cameralabel + "' does not exist.");
+    }
+    const std::string class_label = "camera_" + cameralabel + "_pixel_spectral_class";
+    const std::string UUID_label = "camera_" + cameralabel + "_pixel_UUID";
+    if (!context->doesGlobalDataExist(class_label.c_str()) || !context->doesGlobalDataExist(UUID_label.c_str())) {
+        helios_runtime_error(
+                "ERROR (" + caller + "): The classes of spectral textures seen by camera '" + cameralabel +
+                "' were not recorded. RadiationModel::runBand() records them when it renders the camera (which needs a scattering depth above 0 in some band) and some primitive in the radiation model's geometry has a spectral texture (Context::setPrimitiveSpectralTexture()).");
+    }
+
+    // The class buffer is stored mirrored left-to-right relative to the written image, as the pixel-to-primitive map is (see getImageOrientedPixelUUIDs())
+    const int2 camera_resolution = cameras.at(cameralabel).resolution;
+    std::vector<uint> stored_classes;
+    context->getGlobalData(class_label.c_str(), stored_classes);
+    if (stored_classes.size() != size_t(camera_resolution.x) * size_t(camera_resolution.y)) {
+        helios_runtime_error("ERROR (" + caller + "): The classes recorded for camera '" + cameralabel + "' do not match its resolution. Run the radiation model again for this camera.");
+    }
+    std::vector<uint> pixel_classes(stored_classes.size());
+    for (int j = 0; j < camera_resolution.y; j++) {
+        for (int i = 0; i < camera_resolution.x; i++) {
+            pixel_classes.at(size_t(j) * camera_resolution.x + i) = stored_classes.at(size_t(j) * camera_resolution.x + (camera_resolution.x - i - 1));
+        }
+    }
+    annotation::writeClassMapSegmentationMasks(context, pixel_classes, getImageOrientedPixelUUIDs(context, cameralabel, camera_resolution), camera_resolution, class_names, json_filename, image_file, data_attribute_labels, append_file, caller);
+}
+
 void RadiationModel::setPadValue(const std::string &cameralabel, const std::vector<std::string> &bandlabels, const std::vector<float> &padvalues) {
     for (uint b = 0; b < bandlabels.size(); b++) {
         std::string bandlabel = bandlabels.at(b);
@@ -1803,6 +1853,7 @@ void RadiationModel::applyCameraImageCorrections(const std::string &cameralabel,
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::applyCameraImageCorrections): Camera '" + cameralabel + "' does not exist.");
     }
+    requireCompleteCameraImage(cameralabel, "applyCameraImageCorrections");
     RadiationCamera &camera = cameras.at(cameralabel);
     if (camera.pixel_data.find(red_band_label) == camera.pixel_data.end() || camera.pixel_data.find(green_band_label) == camera.pixel_data.end() || camera.pixel_data.find(blue_band_label) == camera.pixel_data.end()) {
         helios_runtime_error("ERROR (RadiationModel::applyCameraImageCorrections): One or more specified band labels do not exist for the camera pixel data.");
@@ -2292,6 +2343,32 @@ void RadiationCamera::adjustSBC(const std::string &red_band_label, const std::st
 //     }
 // }
 
+float RadiationCamera::typicalCameraToneCurve(float value) {
+    // Typical in-camera tone curve: the curve shared by the in-camera JPEGs of 413 camera models (Canon, Sony, Nikon, Panasonic, Fujifilm, Olympus,
+    // Pentax and others; one raw file each from raw.pixls.us, all CC0), measured against their raw data after the camera's colour matrix and white
+    // balance, with each image's exposure fitted. Input: linear values as exposed by the default auto exposure (centre-weighted mean luminance
+    // 0.235, fitted with this curve), on the scale where a typical scene's median luminance is 0.18; output: display-linear values, to be sRGB
+    // encoded. Half-stop steps from 2^-10 to 2^2.
+    static constexpr float kLog2InputStart = -10.f;
+    static constexpr float kLog2InputStep = 0.5f;
+    static constexpr float kOutput[] = {0.000253641f, 0.000359023f, 0.000508188f, 0.000719327f, 0.00101499f, 0.00137475f, 0.00192596f, 0.00291611f, 0.00447959f, 0.00708219f, 0.0118029f, 0.0201136f, 0.0349501f,
+                                        0.0608664f,   0.102352f,    0.165283f,    0.252467f,    0.365334f,   0.500717f,   0.648074f,   0.788564f,   0.880759f,   0.934756f,   0.951282f,  1.f};
+    static constexpr int kCount = int(sizeof(kOutput) / sizeof(kOutput[0]));
+    const float first_input = std::exp2(kLog2InputStart);
+    if (!(value > 0.f)) {
+        return 0.f;
+    } else if (value <= first_input) {
+        return kOutput[0] * value / first_input;
+    }
+    const float position = (std::log2(value) - kLog2InputStart) / kLog2InputStep;
+    if (position >= float(kCount - 1)) {
+        return 1.f;
+    }
+    const int index = int(position);
+    const float fraction = position - float(index);
+    return kOutput[index] + fraction * (kOutput[index + 1] - kOutput[index]);
+}
+
 void RadiationCamera::gammaCompress(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {
 
 #ifdef HELIOS_DEBUG
@@ -2363,7 +2440,7 @@ void RadiationCamera::autoExposure(const std::string &red_band_label, const std:
     }
 }
 
-void RadiationCamera::applyCameraExposure(helios::Context *context) {
+void RadiationCamera::applyCameraExposure(helios::Context *context, const std::vector<std::string> &rgb_bands, const std::string &effective_camera_type) {
     // Skip if pixel_data is empty (camera hasn't been rendered yet)
     if (pixel_data.empty()) {
         return;
@@ -2405,8 +2482,8 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
     if (exposure_mode == "auto") {
         // Determine camera type: if not set explicitly, infer from band count
         std::string cam_type;
-        if (!camera_type.empty()) {
-            cam_type = camera_type;
+        if (!effective_camera_type.empty()) {
+            cam_type = effective_camera_type;
         } else {
             // Infer type for manually created cameras
             cam_type = (band_labels.size() >= 3) ? "rgb" : "spectral";
@@ -2415,28 +2492,11 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
         if (cam_type == "thermal") {
             // Thermal cameras: skip exposure adjustment
             return;
-        } else if (cam_type == "rgb" && band_labels.size() >= 3) {
-            // RGB cameras: luminance-based auto-exposure (18% gray target)
-
-            // Use the first 3 bands as RGB (or find bands named "red", "green", "blue")
-            std::string red_band, green_band, blue_band;
-            for (const auto &band: band_labels) {
-                if (band.find("red") != std::string::npos || band.find("Red") != std::string::npos || band.find("RED") != std::string::npos) {
-                    red_band = band;
-                } else if (band.find("green") != std::string::npos || band.find("Green") != std::string::npos || band.find("GREEN") != std::string::npos) {
-                    green_band = band;
-                } else if (band.find("blue") != std::string::npos || band.find("Blue") != std::string::npos || band.find("BLUE") != std::string::npos) {
-                    blue_band = band;
-                }
-            }
-
-            // Fallback to first 3 bands if named bands not found
-            if (red_band.empty())
-                red_band = band_labels[0];
-            if (green_band.empty())
-                green_band = band_labels[1];
-            if (blue_band.empty())
-                blue_band = band_labels[2];
+        } else if (cam_type == "rgb" && rgb_bands.size() == 3) {
+            // RGB cameras: luminance-based auto-exposure on a centre-weighted mean, as a camera's meter (see CameraProperties::exposure_target)
+            const std::string &red_band = rgb_bands[0];
+            const std::string &green_band = rgb_bands[1];
+            const std::string &blue_band = rgb_bands[2];
 
             auto &data_red = pixel_data.at(red_band);
             auto &data_green = pixel_data.at(green_band);
@@ -2444,27 +2504,35 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
 
             const std::size_t N = data_red.size();
 
-            // Calculate luminance for each pixel
-            std::vector<float> luminance_values(N);
-            for (std::size_t i = 0; i < N; ++i) {
-                luminance_values[i] = luminance(data_red[i], data_green[i], data_blue[i]);
+            // Centre-weighted mean luminance: each pixel weighted by exp(-(dx^2 + dy^2)), with dx and dy its offsets from the
+            // image centre in units of 0.35 of the image width and height. Of the metering rules tested against 413 camera
+            // models' own JPEGs, this one predicted the exposure the cameras chose most closely (spread 0.57 stops, against 0.83
+            // for the median used before). The weighting is symmetric, so it does not depend on how the pixel data is flipped.
+            if (N != std::size_t(resolution.x) * std::size_t(resolution.y)) {
+                helios_runtime_error("ERROR (RadiationCamera::applyCameraExposure): camera '" + label + "' has " + std::to_string(N) + " pixels but a resolution of " + std::to_string(resolution.x) + "x" + std::to_string(resolution.y) +
+                                     ", so its centre-weighted exposure cannot be computed.");
             }
+            double weighted_luminance = 0;
+            double weight_total = 0;
+            for (int j = 0; j < resolution.y; j++) {
+                const double dy = (j + 0.5 - 0.5 * resolution.y) / (0.35 * resolution.y);
+                for (int i = 0; i < resolution.x; i++) {
+                    const double dx = (i + 0.5 - 0.5 * resolution.x) / (0.35 * resolution.x);
+                    const double weight = std::exp(-(dx * dx + dy * dy));
+                    const std::size_t p = std::size_t(j) * resolution.x + i;
+                    weighted_luminance += weight * luminance(data_red[p], data_green[p], data_blue[p]);
+                    weight_total += weight;
+                }
+            }
+            const float metered_luminance = float(weighted_luminance / weight_total);
 
-            // Sort to find median
-            std::vector<float> sorted_luminance = luminance_values;
-            std::sort(sorted_luminance.begin(), sorted_luminance.end());
-
-            std::size_t median_idx = N / 2;
-            float median_luminance = sorted_luminance[median_idx];
-
-            // Target median luminance, 18% grey by default. It is a property of the scene being
-            // imaged rather than a universal constant: a canopy viewed from above is darker than a
-            // grey card, so reproducing a real camera's output can need a lower value.
+            // The target is a property of the scene being imaged rather than a universal constant: a canopy viewed from above
+            // is darker than a typical photograph, so reproducing a real camera's output can need a lower value.
             if (exposure_target <= 0.f) {
                 helios_runtime_error("ERROR (RadiationCamera::applyCameraExposure): camera '" + label + "' has exposure_target " + std::to_string(exposure_target) +
-                                     ", which must be positive. Auto exposure scales the image by target/median, so a non-positive target would blacken or invert every pixel.");
+                                     ", which must be positive. Auto exposure scales the image by target/metered luminance, so a non-positive target would blacken or invert every pixel.");
             }
-            float auto_gain = exposure_target / std::max(median_luminance, 1e-6f);
+            float auto_gain = exposure_target / std::max(metered_luminance, 1e-6f);
             applied_exposure_gain = auto_gain;
 
             // Apply gain to all bands
@@ -2475,8 +2543,8 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
                 }
             }
 
-        } else if (cam_type == "spectral") {
-            // Spectral cameras: per-band normalization.
+        } else if (cam_type == "spectral" || cam_type == "rgb") {
+            // Spectral cameras, and cameras whose red, green and blue bands could not be identified (e.g. a colour-infrared camera): per-band normalization.
             //
             // We target a high percentile (not the median) as the exposure reference.
             // Scientific spectral imagery (narrow fluorescence bands, thermal IR,
@@ -2606,7 +2674,7 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
     helios_runtime_error("ERROR (RadiationCamera::applyCameraExposure): Unknown exposure mode '" + exposure_mode + "'. Must be 'auto', 'ISOXXX' (e.g., 'ISO100'), or 'manual'.");
 }
 
-std::string RadiationCamera::applyCameraWhiteBalance() {
+std::string RadiationCamera::applyCameraWhiteBalance(const std::vector<std::string> &rgb_bands) {
     // Skip if pixel_data is empty (camera hasn't been rendered yet)
     if (pixel_data.empty()) {
         return "";
@@ -2619,16 +2687,13 @@ std::string RadiationCamera::applyCameraWhiteBalance() {
         }
     }
 
-    // Skip white balance for single-channel images (grayscale/thermal)
-    if (band_labels.size() < 3) {
+    // Only an RGB camera is white balanced, on its red, green and blue bands (RadiationModel::cameraRGBBands())
+    if (rgb_bands.size() != 3) {
         return "";
     }
-
-    // For 3+ channel images, apply white balance to first 3 channels
-    // Assume standard RGB ordering for the first 3 bands
-    const std::string &red_band = band_labels[0];
-    const std::string &green_band = band_labels[1];
-    const std::string &blue_band = band_labels[2];
+    const std::string &red_band = rgb_bands[0];
+    const std::string &green_band = rgb_bands[1];
+    const std::string &blue_band = rgb_bands[2];
 
     // The white reference totals are set when a band is rendered and consumed here, so an image not re-rendered since it was last balanced is not balanced again.
     if (white_reference_band_totals.find(red_band) == white_reference_band_totals.end() || white_reference_band_totals.find(green_band) == white_reference_band_totals.end() ||
@@ -3283,6 +3348,12 @@ std::string RadiationModel::writeCameraMetadataFile(const std::string &camera_la
     j["image_processing"]["brightness_adjustment"] = format_float(img_proc.brightness_adjustment, 2);
     j["image_processing"]["contrast_adjustment"] = format_float(img_proc.contrast_adjustment, 2);
     j["image_processing"]["color_space"] = img_proc.color_space;
+    j["image_processing"]["tone_curve"] = img_proc.tone_curve;
+    if (img_proc.color_correction_matrix.size() == 9) {
+        const std::vector<float> &m = img_proc.color_correction_matrix;
+        j["image_processing"]["color_correction_matrix"] = {
+                {format_float(m[0], 4), format_float(m[1], 4), format_float(m[2], 4)}, {format_float(m[3], 4), format_float(m[4], 4), format_float(m[5], 4)}, {format_float(m[6], 4), format_float(m[7], 4), format_float(m[8], 4)}};
+    }
 
     // Only include agronomic_properties if data is available
     if (!metadata.agronomic_properties.plant_species.empty()) {

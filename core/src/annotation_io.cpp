@@ -147,6 +147,151 @@ namespace {
         }
     }
 
+    //! A data label whose mean over the pixels of each mask is written to the mask's "attributes", and whether it is read as primitive data (rather than object data)
+    struct AttributeInfo {
+        std::string label;
+        bool is_primitive_data;
+    };
+
+    //! The attribute labels to write: each is looked up in primitive data first and object data second, and labels found in neither are ignored
+    std::vector<AttributeInfo> resolveAttributeLabels(const Context *context, const std::vector<std::string> &data_attribute_labels) {
+        const std::vector<std::string> all_primitive_data = context->listAllPrimitiveDataLabels();
+        const std::vector<std::string> all_object_data = context->listAllObjectDataLabels();
+        std::vector<AttributeInfo> attribute_info;
+        for (const auto &attribute_label: data_attribute_labels) {
+            if (std::find(all_primitive_data.begin(), all_primitive_data.end(), attribute_label) != all_primitive_data.end()) {
+                attribute_info.push_back({attribute_label, true});
+            } else if (std::find(all_object_data.begin(), all_object_data.end(), attribute_label) != all_object_data.end()) {
+                attribute_info.push_back({attribute_label, false});
+            }
+        }
+        return attribute_info;
+    }
+
+    //! Append one COCO annotation of category category_id for each connected region of a mask, numbering them after max_annotation_id
+    /**
+     * The attributes of an annotation are the means of the attribute labels over the primitives the pixel-to-primitive map shows in its own pixels.
+     */
+    void appendRegionAnnotations(nlohmann::json &coco_json, int image_id, int category_id, const std::vector<std::vector<bool>> &mask, const helios::int2 &resolution, const Context *context, const std::vector<uint> &pixel_UUIDs,
+                                 const std::vector<AttributeInfo> &attribute_info, int &max_annotation_id) {
+        std::vector<std::vector<bool>> visited(resolution.y, std::vector<bool>(resolution.x, false));
+
+        for (int j = 0; j < resolution.y; j++) {
+            for (int i = 0; i < resolution.x; i++) {
+                if (!mask[j][i] || visited[j][i]) {
+                    continue;
+                }
+
+                // Flood fill the connected component that starts at this pixel
+                std::stack<std::pair<int, int>> stack;
+                std::vector<std::pair<int, int>> component_pixels;
+                stack.push({i, j});
+                visited[j][i] = true;
+
+                int min_x = i, max_x = i, min_y = j, max_y = j;
+                int area = 0;
+
+                while (!stack.empty()) {
+                    auto [ci, cj] = stack.top();
+                    stack.pop();
+                    area++;
+                    component_pixels.push_back({ci, cj});
+
+                    min_x = std::min(min_x, ci);
+                    max_x = std::max(max_x, ci);
+                    min_y = std::min(min_y, cj);
+                    max_y = std::max(max_y, cj);
+
+                    // Check 8-connected neighbors. This must match the connectivity of the boundary tracers below, which are 8-connected: a 4-connected fill would split a diagonal chain of pixels into a
+                    // separate component per pixel, while the tracer would walk the whole chain as one object.
+                    for (int di = -1; di <= 1; di++) {
+                        for (int dj = -1; dj <= 1; dj++) {
+                            if (di == 0 && dj == 0)
+                                continue;
+                            int ni = ci + di;
+                            int nj = cj + dj;
+                            if (ni >= 0 && ni < resolution.x && nj >= 0 && nj < resolution.y && mask[nj][ni] && !visited[nj][ni]) {
+                                stack.push({ni, nj});
+                                visited[nj][ni] = true;
+                            }
+                        }
+                    }
+                }
+
+                // Trace the boundary over a mask holding only this component, so that the start pixel is guaranteed to belong to it and the walk cannot cross into a different component that touches it diagonally.
+                const std::vector<std::vector<bool>> component_mask = helios::annotation::buildComponentMask(component_pixels, resolution);
+                const std::pair<int, int> start_pixel = helios::annotation::findStartingBoundaryPixel(component_mask, resolution);
+                if (start_pixel.first < 0) {
+                    continue;
+                }
+
+                auto contour = helios::annotation::traceBoundaryMoore(component_mask, start_pixel.first, start_pixel.second, resolution);
+
+                // The Moore trace can stall on very small or awkwardly shaped regions, so fall back to collecting the boundary pixels directly
+                if (contour.size() < 10) {
+                    contour = helios::annotation::traceBoundarySimple(component_mask, start_pixel.first, start_pixel.second, resolution);
+                }
+
+                if (contour.size() < 3) { // too few points to form a polygon
+                    continue;
+                }
+
+                nlohmann::json json_annotation;
+                json_annotation["id"] = max_annotation_id + 1;
+                json_annotation["image_id"] = image_id;
+                json_annotation["category_id"] = category_id;
+                // The width and height count whole pixels, so the box reaches the far edge of the last pixel in each direction
+                json_annotation["bbox"] = {min_x, min_y, max_x - min_x + 1, max_y - min_y + 1};
+                json_annotation["area"] = area;
+                json_annotation["iscrowd"] = 0;
+
+                // Convert contour to segmentation format (flatten coordinates)
+                std::vector<int> segmentation_coords;
+                for (const auto &point: contour) {
+                    segmentation_coords.push_back(point.first); // x coordinate
+                    segmentation_coords.push_back(point.second); // y coordinate
+                }
+                json_annotation["segmentation"] = {segmentation_coords};
+
+                if (!attribute_info.empty()) {
+                    std::map<std::string, double> component_attributes;
+                    for (const auto &attribute: attribute_info) {
+                        double sum = 0.0;
+                        int count = 0;
+                        for (const auto &[pixel_i, pixel_j]: component_pixels) {
+                            const uint UUID_plus_one = pixel_UUIDs.at(size_t(pixel_j) * size_t(resolution.x) + size_t(pixel_i));
+                            if (UUID_plus_one == 0 || !context->doesPrimitiveExist(UUID_plus_one - 1)) {
+                                continue;
+                            }
+                            double value = 0.0;
+                            if (readNumericData(context, UUID_plus_one - 1, attribute.label, attribute.is_primitive_data, value)) {
+                                sum += value;
+                                count++;
+                            }
+                        }
+                        // An attribute carried by none of the mask's primitives is reported as zero
+                        component_attributes[attribute.label] = (count > 0) ? sum / count : 0.0;
+                    }
+                    json_annotation["attributes"] = component_attributes;
+                }
+
+                coco_json["annotations"].push_back(json_annotation);
+                max_annotation_id++;
+            }
+        }
+    }
+
+    //! The highest annotation ID already in a COCO document, or -1
+    int maxAnnotationID(const nlohmann::json &coco_json) {
+        int max_annotation_id = -1;
+        for (const auto &existing_annotation: coco_json["annotations"]) {
+            if (existing_annotation["id"] > max_annotation_id) {
+                max_annotation_id = existing_annotation["id"];
+            }
+        }
+        return max_annotation_id;
+    }
+
 } // namespace
 
 std::pair<int, int> helios::annotation::findStartingBoundaryPixel(const std::vector<std::vector<bool>> &mask, const helios::int2 &resolution) {
@@ -683,143 +828,64 @@ void helios::annotation::writeLabelSegmentationMasks(const helios::Context *cont
     const int image_id = coco_json_pair.second;
     addCOCOCategory(coco_json, class_IDs, data_labels);
 
-    // Attributes are looked up in primitive data first and object data second; labels found in neither are ignored
-    struct AttributeInfo {
-        std::string label;
-        bool is_primitive_data;
-    };
-    std::vector<AttributeInfo> attribute_info;
-    for (const auto &attribute_label: data_attribute_labels) {
-        if (std::find(all_primitive_data.begin(), all_primitive_data.end(), attribute_label) != all_primitive_data.end()) {
-            attribute_info.push_back({attribute_label, true});
-        } else if (std::find(all_object_data.begin(), all_object_data.end(), attribute_label) != all_object_data.end()) {
-            attribute_info.push_back({attribute_label, false});
-        }
-    }
-    const bool use_attributes = !attribute_info.empty();
+    const std::vector<AttributeInfo> attribute_info = resolveAttributeLabels(context, data_attribute_labels);
 
     for (size_t label_idx = 0; label_idx < data_labels.size(); ++label_idx) {
-
         const std::map<int, std::vector<std::vector<bool>>> label_masks = labelMasks(context, pixel_UUIDs, resolution, data_labels[label_idx], use_object_data);
-
-        // Find the highest existing annotation ID to avoid conflicts
-        int max_annotation_id = -1;
-        for (const auto &existing_annotation: coco_json["annotations"]) {
-            if (existing_annotation["id"] > max_annotation_id) {
-                max_annotation_id = existing_annotation["id"];
-            }
-        }
-
-        // The annotation and its attributes are built together for each connected component, so that the attribute values written to an annotation are always those of its own pixels.
+        int max_annotation_id = maxAnnotationID(coco_json);
         for (const auto &label_pair: label_masks) {
-            const auto &mask = label_pair.second;
+            appendRegionAnnotations(coco_json, image_id, (int) class_IDs[label_idx], label_pair.second, resolution, context, pixel_UUIDs, attribute_info, max_annotation_id);
+        }
+    }
 
-            std::vector<std::vector<bool>> visited(resolution.y, std::vector<bool>(resolution.x, false));
+    writeCOCOJson(coco_json, outfile);
+}
 
-            for (int j = 0; j < resolution.y; j++) {
-                for (int i = 0; i < resolution.x; i++) {
-                    if (!mask[j][i] || visited[j][i]) {
-                        continue;
-                    }
+void helios::annotation::writeClassMapSegmentationMasks(const helios::Context *context, const std::vector<uint> &pixel_classes, const std::vector<uint> &pixel_UUIDs, const helios::int2 &resolution, const std::map<uint, std::string> &class_names,
+                                                        const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels, bool append_file, const std::string &caller) {
+    if (resolution.x <= 0 || resolution.y <= 0 || pixel_classes.size() != size_t(resolution.x) * size_t(resolution.y)) {
+        helios_runtime_error("ERROR (" + caller + "): The per-pixel class map has " + std::to_string(pixel_classes.size()) + " elements, which does not match the image resolution of " + std::to_string(resolution.x) + " x " +
+                             std::to_string(resolution.y) + " pixels.");
+    }
+    validatePixelMapSize(pixel_UUIDs, resolution, caller);
+    if (class_names.empty()) {
+        helios_runtime_error("ERROR (" + caller + "): No classes were given. Give the class value and category name of each class to annotate.");
+    }
+    for (const auto &class_name: class_names) {
+        if (class_name.first == 0) {
+            helios_runtime_error("ERROR (" + caller + "): Class 0 marks pixels without a class and cannot be annotated. Give classes of 1 or more.");
+        }
+    }
+    if (!std::filesystem::exists(image_file)) {
+        helios_runtime_error("ERROR (" + caller + "): Image file '" + image_file + "' does not exist.");
+    }
 
-                    // Flood fill the connected component that starts at this pixel
-                    std::stack<std::pair<int, int>> stack;
-                    std::vector<std::pair<int, int>> component_pixels;
-                    stack.push({i, j});
-                    visited[j][i] = true;
+    std::string outfile = json_filename;
+    if (outfile.length() < 5 || outfile.substr(outfile.length() - 5) != ".json") {
+        outfile += ".json";
+    }
 
-                    int min_x = i, max_x = i, min_y = j, max_y = j;
-                    int area = 0;
+    auto coco_json_pair = initializeCOCOJson(outfile, append_file, resolution, image_file);
+    nlohmann::json coco_json = coco_json_pair.first;
+    const int image_id = coco_json_pair.second;
+    std::vector<uint> category_IDs;
+    std::vector<std::string> category_names;
+    for (const auto &class_name: class_names) {
+        category_IDs.push_back(class_name.first);
+        category_names.push_back(class_name.second);
+    }
+    addCOCOCategory(coco_json, category_IDs, category_names);
 
-                    while (!stack.empty()) {
-                        auto [ci, cj] = stack.top();
-                        stack.pop();
-                        area++;
-                        component_pixels.push_back({ci, cj});
-
-                        min_x = std::min(min_x, ci);
-                        max_x = std::max(max_x, ci);
-                        min_y = std::min(min_y, cj);
-                        max_y = std::max(max_y, cj);
-
-                        // Check 8-connected neighbors. This must match the connectivity of the boundary tracers below, which are 8-connected: a 4-connected fill would split a diagonal chain of pixels into a
-                        // separate component per pixel, while the tracer would walk the whole chain as one object.
-                        for (int di = -1; di <= 1; di++) {
-                            for (int dj = -1; dj <= 1; dj++) {
-                                if (di == 0 && dj == 0)
-                                    continue;
-                                int ni = ci + di;
-                                int nj = cj + dj;
-                                if (ni >= 0 && ni < resolution.x && nj >= 0 && nj < resolution.y && mask[nj][ni] && !visited[nj][ni]) {
-                                    stack.push({ni, nj});
-                                    visited[nj][ni] = true;
-                                }
-                            }
-                        }
-                    }
-
-                    // Trace the boundary over a mask holding only this component, so that the start pixel is guaranteed to belong to it and the walk cannot cross into a different component that touches it diagonally.
-                    const std::vector<std::vector<bool>> component_mask = buildComponentMask(component_pixels, resolution);
-                    const std::pair<int, int> start_pixel = findStartingBoundaryPixel(component_mask, resolution);
-                    if (start_pixel.first < 0) {
-                        continue;
-                    }
-
-                    auto contour = traceBoundaryMoore(component_mask, start_pixel.first, start_pixel.second, resolution);
-
-                    // The Moore trace can stall on very small or awkwardly shaped regions, so fall back to collecting the boundary pixels directly
-                    if (contour.size() < 10) {
-                        contour = traceBoundarySimple(component_mask, start_pixel.first, start_pixel.second, resolution);
-                    }
-
-                    if (contour.size() < 3) { // too few points to form a polygon
-                        continue;
-                    }
-
-                    nlohmann::json json_annotation;
-                    json_annotation["id"] = max_annotation_id + 1;
-                    json_annotation["image_id"] = image_id;
-                    json_annotation["category_id"] = (int) class_IDs[label_idx];
-                    // The width and height count whole pixels, so the box reaches the far edge of the last pixel in each direction
-                    json_annotation["bbox"] = {min_x, min_y, max_x - min_x + 1, max_y - min_y + 1};
-                    json_annotation["area"] = area;
-                    json_annotation["iscrowd"] = 0;
-
-                    // Convert contour to segmentation format (flatten coordinates)
-                    std::vector<int> segmentation_coords;
-                    for (const auto &point: contour) {
-                        segmentation_coords.push_back(point.first); // x coordinate
-                        segmentation_coords.push_back(point.second); // y coordinate
-                    }
-                    json_annotation["segmentation"] = {segmentation_coords};
-
-                    if (use_attributes) {
-                        std::map<std::string, double> component_attributes;
-                        for (const auto &attribute: attribute_info) {
-                            double sum = 0.0;
-                            int count = 0;
-                            for (const auto &[pixel_i, pixel_j]: component_pixels) {
-                                const uint UUID_plus_one = pixel_UUIDs.at(size_t(pixel_j) * size_t(resolution.x) + size_t(pixel_i));
-                                if (UUID_plus_one == 0 || !context->doesPrimitiveExist(UUID_plus_one - 1)) {
-                                    continue;
-                                }
-                                double value = 0.0;
-                                if (readNumericData(context, UUID_plus_one - 1, attribute.label, attribute.is_primitive_data, value)) {
-                                    sum += value;
-                                    count++;
-                                }
-                            }
-                            // An attribute carried by none of the mask's primitives is reported as zero
-                            component_attributes[attribute.label] = (count > 0) ? sum / count : 0.0;
-                        }
-                        json_annotation["attributes"] = component_attributes;
-                    }
-
-                    coco_json["annotations"].push_back(json_annotation);
-                    max_annotation_id++;
-                }
+    const std::vector<AttributeInfo> attribute_info = resolveAttributeLabels(context, data_attribute_labels);
+    int max_annotation_id = maxAnnotationID(coco_json);
+    for (const auto &class_name: class_names) {
+        std::vector<std::vector<bool>> mask(resolution.y, std::vector<bool>(resolution.x, false));
+        for (int j = 0; j < resolution.y; j++) {
+            for (int i = 0; i < resolution.x; i++) {
+                mask[j][i] = pixel_classes[size_t(j) * size_t(resolution.x) + size_t(i)] == class_name.first;
             }
         }
+        appendRegionAnnotations(coco_json, image_id, int(class_name.first), mask, resolution, context, pixel_UUIDs, attribute_info, max_annotation_id);
     }
 
     writeCOCOJson(coco_json, outfile);

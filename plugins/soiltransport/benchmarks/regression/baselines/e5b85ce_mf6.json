@@ -1,0 +1,405 @@
+{
+ "label": "e5b85ce_mf6",
+ "date": "2026-10-19T05:27:54",
+ "machine": {
+  "host": "omarchy",
+  "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor",
+  "gpu": "NVIDIA GeForce RTX 5090"
+ },
+ "exe": "soil_regression",
+ "tier": "quick",
+ "repeat": 3,
+ "cases": {
+  "col_mass_balance": {
+   "case": "col_mass_balance",
+   "status": "ok",
+   "note": "",
+   "time_s": 0.000311827,
+   "errors": {
+    "storage_drift_rel": 6.154150264e-08
+   },
+   "values": {},
+   "work": {
+    "iterations": 60
+   }
+  },
+  "col_gardner_steady": {
+   "case": "col_gardner_steady",
+   "status": "ok",
+   "note": "",
+   "time_s": 0.000247948,
+   "errors": {
+    "max_dh_exact_m": 3.161847142e-06
+   },
+   "values": {},
+   "work": {
+    "steps": 103
+   }
+  },
+  "col_infiltration_sand": {
+   "case": "col_infiltration_sand",
+   "status": "ok",
+   "note": "",
+   "time_s": 0.0757153,
+   "errors": {
+    "rmse_theta_front": 0.01285136786
+   },
+   "values": {},
+   "work": {
+    "steps": 1227
+   }
+  },
+  "col_infiltration_loam": {
+   "case": "col_infiltration_loam",
+   "status": "ok",
+   "note": "",
+   "time_s": 0.242505,
+   "errors": {
+    "rmse_theta_front": 0.05010758878
+   },
+   "values": {},
+   "work": {
+    "steps": 2406
+   }
+  },
+  "col_infiltration_clay": {
+   "case": "col_infiltration_clay",
+   "status": "failed",
+   "note": "stopped at t = 2819.449463 s",
+   "time_s": 353.371,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "col_infiltration_clay_spline": {
+   "case": "col_infiltration_clay_spline",
+   "status": "unsupported",
+   "note": "no k_r spline",
+   "time_s": 0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "col_evaporation_sand": {
+   "case": "col_evaporation_sand",
+   "status": "unsupported",
+   "note": "no atmospheric top boundary",
+   "time_s": 0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "col_evaporation_loam1": {
+   "case": "col_evaporation_loam1",
+   "status": "unsupported",
+   "note": "no atmospheric top boundary",
+   "time_s": 0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "col_evaporation_loam2": {
+   "case": "col_evaporation_loam2",
+   "status": "unsupported",
+   "note": "no atmospheric top boundary",
+   "time_s": 0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "col_evaporation_clay": {
+   "case": "col_evaporation_clay",
+   "status": "unsupported",
+   "note": "no atmospheric top boundary",
+   "time_s": 0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "col_annulus_steady_clay": {
+   "case": "col_annulus_steady_clay",
+   "status": "unsupported",
+   "note": "no radial geometry",
+   "time_s": 0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "col_annulus_steady_loam": {
+   "case": "col_annulus_steady_loam",
+   "status": "unsupported",
+   "note": "no radial geometry",
+   "time_s": 0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "col_annulus_wilting_clay": {
+   "case": "col_annulus_wilting_clay",
+   "status": "unsupported",
+   "note": "no radial geometry",
+   "time_s": 0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "col_annulus_wilting_loam": {
+   "case": "col_annulus_wilting_loam",
+   "status": "unsupported",
+   "note": "no radial geometry",
+   "time_s": 0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "col_drying": {
+   "case": "col_drying",
+   "status": "ok",
+   "note": "",
+   "time_s": 0.000956711,
+   "errors": {
+    "water_balance_rel": 8.569121709e-06
+   },
+   "values": {
+    "time_to_wilting_s": 64905.46875
+   },
+   "work": {
+    "steps": 5,
+    "retries": 11
+   }
+  },
+  "3d_consistency_cpu": {
+   "case": "3d_consistency_cpu",
+   "status": "ok",
+   "note": "",
+   "time_s": 0.00121733,
+   "errors": {
+    "max_dtheta_vs_column": 2.387672393e-08
+   },
+   "values": {},
+   "work": {
+    "iterations": 158
+   }
+  },
+  "3d_consistency_gpu": {
+   "case": "3d_consistency_gpu",
+   "status": "ok",
+   "note": "",
+   "time_s": 0.148671,
+   "errors": {
+    "max_dtheta_vs_column": 2.38767241e-08
+   },
+   "values": {},
+   "work": {
+    "iterations": 158
+   }
+  },
+  "3d_drying_cpu": {
+   "case": "3d_drying_cpu",
+   "status": "ok",
+   "note": "",
+   "time_s": 0.860866,
+   "errors": {
+    "water_balance_rel": 1.050688803e-14,
+    "time_vs_column_rel": 0
+   },
+   "values": {
+    "time_to_wilting_s": 64905.46875
+   },
+   "work": {
+    "steps": 5,
+    "retries": 11
+   }
+  },
+  "3d_drying_gpu": {
+   "case": "3d_drying_gpu",
+   "status": "timeout",
+   "note": "over 600 s",
+   "time_s": 600.0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "3d_thin_cells_cpu": {
+   "case": "3d_thin_cells_cpu",
+   "status": "timeout",
+   "note": "over 600 s",
+   "time_s": 600.0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "3d_thin_cells_gpu": {
+   "case": "3d_thin_cells_gpu",
+   "status": "timeout",
+   "note": "over 600 s",
+   "time_s": 600.0,
+   "errors": {},
+   "values": {},
+   "work": {}
+  },
+  "3d_drip_cpu": {
+   "case": "3d_drip_cpu",
+   "status": "ok",
+   "note": "",
+   "time_s": 0.866139,
+   "errors": {
+    "rmse_theta_vs_reference": 0.0006358101873,
+    "max_theta_vs_reference": 0.001480814572,
+    "mass_residual_rel": 3.28392174e-10
+   },
+   "values": {},
+   "work": {
+    "nonlinear_iterations": 655,
+    "failed_steps": 0
+   }
+  },
+  "3d_drip_gpu": {
+   "case": "3d_drip_gpu",
+   "status": "ok",
+   "note": "",
+   "time_s": 1.11814,
+   "errors": {
+    "rmse_theta_vs_reference": 0.0006358101883,
+    "max_theta_vs_reference": 0.001480814572,
+    "mass_residual_rel": 2.11734322e-11
+   },
+   "values": {},
+   "work": {
+    "nonlinear_iterations": 634,
+    "failed_steps": 0
+   }
+  },
+  "mf6_test1_mf6_steps": {
+   "case": "mf6_test1_mf6_steps",
+   "status": "ok",
+   "note": "",
+   "time_s": 0.0108506,
+   "errors": {
+    "max_dpsi_vs_mf6_m": 1.860987004e-05
+   },
+   "values": {},
+   "work": {
+    "steps": 100
+   }
+  },
+  "mf6_test1_adaptive_ukr": {
+   "case": "mf6_test1_adaptive_ukr",
+   "status": "ok",
+   "note": "",
+   "time_s": 1.72046,
+   "errors": {
+    "max_dpsi_vs_mf6_m": 1.860986468e-05
+   },
+   "values": {},
+   "work": {
+    "steps": 180
+   }
+  },
+  "mf6_test1_adaptive": {
+   "case": "mf6_test1_adaptive",
+   "status": "ok",
+   "note": "",
+   "time_s": 1.34344,
+   "errors": {
+    "max_dpsi_vs_mf6_m": 0.2652975698
+   },
+   "values": {},
+   "work": {
+    "steps": 170
+   }
+  },
+  "3d_drip_fine_cpu": {
+   "case": "3d_drip_fine_cpu",
+   "status": "ok",
+   "note": "",
+   "time_s": 8.58407,
+   "errors": {
+    "rmse_theta_vs_reference": 0.0002442156454,
+    "max_theta_vs_reference": 0.0006563077997,
+    "mass_residual_rel": 1.544353132e-10
+   },
+   "values": {},
+   "work": {
+    "nonlinear_iterations": 705,
+    "failed_steps": 0
+   }
+  },
+  "3d_drip_fine_gpu": {
+   "case": "3d_drip_fine_gpu",
+   "status": "ok",
+   "note": "",
+   "time_s": 3.05936,
+   "errors": {
+    "rmse_theta_vs_reference": 0.0004091824571,
+    "max_theta_vs_reference": 0.0008863419842,
+    "mass_residual_rel": 8.826497405e-12
+   },
+   "values": {},
+   "work": {
+    "nonlinear_iterations": 698,
+    "failed_steps": 0
+   }
+  },
+  "mf6_test2_cpu": {
+   "case": "mf6_test2_cpu",
+   "status": "ok",
+   "note": "",
+   "time_s": 33.6553,
+   "errors": {
+    "max_dpsi_vs_mf6_m": 0.03303369586,
+    "mean_dpsi_vs_mf6_m": 0.005909438025,
+    "mass_residual_rel": 2.931761195e-08
+   },
+   "values": {},
+   "work": {
+    "steps": 948
+   }
+  },
+  "mf6_test2_gpu": {
+   "case": "mf6_test2_gpu",
+   "status": "ok",
+   "note": "",
+   "time_s": 20.8497,
+   "errors": {
+    "max_dpsi_vs_mf6_m": 0.0330416637,
+    "mean_dpsi_vs_mf6_m": 0.005910100849,
+    "mass_residual_rel": 4.545206673e-08
+   },
+   "values": {},
+   "work": {
+    "steps": 950
+   }
+  },
+  "mf6_test3_cpu": {
+   "case": "mf6_test3_cpu",
+   "status": "ok",
+   "note": "",
+   "time_s": 33.0987,
+   "errors": {
+    "max_dpsi_vs_mf6_m": 0.04490185597,
+    "mean_dpsi_vs_mf6_m": 0.005939576973,
+    "mass_residual_rel": 2.961745661e-09
+   },
+   "values": {},
+   "work": {
+    "steps": 935
+   }
+  },
+  "mf6_test3_gpu": {
+   "case": "mf6_test3_gpu",
+   "status": "ok",
+   "note": "",
+   "time_s": 20.5558,
+   "errors": {
+    "max_dpsi_vs_mf6_m": 0.04490022657,
+    "mean_dpsi_vs_mf6_m": 0.00593942196,
+    "mass_residual_rel": 4.895909985e-08
+   },
+   "values": {},
+   "work": {
+    "steps": 934
+   }
+  }
+ }
+}

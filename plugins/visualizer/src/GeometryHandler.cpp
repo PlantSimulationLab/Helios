@@ -74,15 +74,6 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
     size_t texture_ID_index = UUID_map.at(UUID).texture_ID_index;
     size_t size_index = UUID_map.at(UUID).size_index;
 
-    // Updating an existing primitive records which of its buffers really changed, since a primitive that only moved does not need its color, texture, or flags uploaded again
-    uint16_t changed_attributes = 0;
-    auto storeValue = [&changed_attributes](auto &stored, auto value, uint16_t attribute) {
-        if (stored != value) {
-            stored = value;
-            changed_attributes |= attribute;
-        }
-    };
-
     for (char i = 0; i < vertex_count; i++) {
 
         if (geometry_is_new) {
@@ -94,9 +85,9 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
         } else {
             // face index doesn't need to be updated
 
-            storeValue(vertex_data[geometry_type].at(vertex_index), vertices_copy.at(i).x, ATTRIBUTE_VERTEX);
-            storeValue(vertex_data[geometry_type].at(vertex_index + 1), vertices_copy.at(i).y, ATTRIBUTE_VERTEX);
-            storeValue(vertex_data[geometry_type].at(vertex_index + 2), vertices_copy.at(i).z, ATTRIBUTE_VERTEX);
+            vertex_data[geometry_type].at(vertex_index) = vertices_copy.at(i).x;
+            vertex_data[geometry_type].at(vertex_index + 1) = vertices_copy.at(i).y;
+            vertex_data[geometry_type].at(vertex_index + 2) = vertices_copy.at(i).z;
             vertex_index += 3;
         }
 
@@ -119,22 +110,22 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
                     texture_ID_data[geometry_type].push_back(textureID);
                 }
             } else {
-                storeValue(uv_data[geometry_type].at(uv_index), uvs.at(i).x, ATTRIBUTE_UV);
-                storeValue(uv_data[geometry_type].at(uv_index + 1), 1.f - uvs.at(i).y, ATTRIBUTE_UV);
+                uv_data[geometry_type].at(uv_index) = uvs.at(i).x;
+                uv_data[geometry_type].at(uv_index + 1) = 1.f - uvs.at(i).y;
                 uv_index += 2;
 
                 if (i == 0) { // only need to do this one time
                     if (has_glyph_texture) {
-                        storeValue(texture_flag_data[geometry_type].at(texture_flag_index), 3, ATTRIBUTE_TEXTURE_FLAG); // 3 means use RGB for color and red channel of texture for alpha
+                        texture_flag_data[geometry_type].at(texture_flag_index) = 3; // 3 means use RGB for color and red channel of texture for alpha
                     } else if (override_texture_color) { // if texture color is overridden, color primitive based on RGB color but use texture transparence for alpha mask
-                        storeValue(texture_flag_data[geometry_type].at(texture_flag_index), 2, ATTRIBUTE_TEXTURE_FLAG); // 2 means use RGB for color and texture transparency for alpha
+                        texture_flag_data[geometry_type].at(texture_flag_index) = 2; // 2 means use RGB for color and texture transparency for alpha
                     } else if (blend_texture_alpha) {
-                        storeValue(texture_flag_data[geometry_type].at(texture_flag_index), 4, ATTRIBUTE_TEXTURE_FLAG); // 4 means use texture for color and blend its alpha rather than thresholding it
+                        texture_flag_data[geometry_type].at(texture_flag_index) = 4; // 4 means use texture for color and blend its alpha rather than thresholding it
                     } else {
-                        storeValue(texture_flag_data[geometry_type].at(texture_flag_index), 1, ATTRIBUTE_TEXTURE_FLAG); // 1 means use texture for color and transparency for alpha
+                        texture_flag_data[geometry_type].at(texture_flag_index) = 1; // 1 means use texture for color and transparency for alpha
                     }
                     texture_flag_index++;
-                    storeValue(texture_ID_data[geometry_type].at(texture_ID_index), textureID, ATTRIBUTE_TEXTURE_ID);
+                    texture_ID_data[geometry_type].at(texture_ID_index) = textureID;
                     texture_ID_index++;
                 }
             }
@@ -154,17 +145,17 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
                     }
                 }
             } else {
-                storeValue(uv_data[geometry_type].at(uv_index), 0.f, ATTRIBUTE_UV);
-                storeValue(uv_data[geometry_type].at(uv_index + 1), 0.f, ATTRIBUTE_UV);
+                uv_data[geometry_type].at(uv_index) = 0.f;
+                uv_data[geometry_type].at(uv_index + 1) = 0.f;
                 uv_index += 2;
 
                 if (i == 0) { // only need to do this one time
                     if (has_glyph_texture) {
-                        storeValue(texture_flag_data[geometry_type].at(texture_flag_index), 3, ATTRIBUTE_TEXTURE_FLAG); // 3 means use RGB for color and red channel of texture for alpha
-                        storeValue(texture_ID_data[geometry_type].at(texture_ID_index), textureID, ATTRIBUTE_TEXTURE_ID);
+                        texture_flag_data[geometry_type].at(texture_flag_index) = 3; // 3 means use RGB for color and red channel of texture for alpha
+                        texture_ID_data[geometry_type].at(texture_ID_index) = textureID;
                     } else {
-                        storeValue(texture_flag_data[geometry_type].at(texture_flag_index), 0, ATTRIBUTE_TEXTURE_FLAG); // 0 means use RGB color
-                        storeValue(texture_ID_data[geometry_type].at(texture_ID_index), 0, ATTRIBUTE_TEXTURE_ID);
+                        texture_flag_data[geometry_type].at(texture_flag_index) = 0; // 0 means use RGB color
+                        texture_ID_data[geometry_type].at(texture_ID_index) = 0;
                     }
                     texture_flag_index++;
                     texture_ID_index++;
@@ -210,28 +201,28 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
 
         size_data[geometry_type].push_back(size);
     } else {
-        storeValue(normal_data[geometry_type].at(normal_index), normal.x, ATTRIBUTE_NORMAL);
-        storeValue(normal_data[geometry_type].at(normal_index + 1), normal.y, ATTRIBUTE_NORMAL);
-        storeValue(normal_data[geometry_type].at(normal_index + 2), normal.z, ATTRIBUTE_NORMAL);
+        normal_data[geometry_type].at(normal_index) = normal.x;
+        normal_data[geometry_type].at(normal_index + 1) = normal.y;
+        normal_data[geometry_type].at(normal_index + 2) = normal.z;
 
         // Re-adding an existing primitive resets its vertex normals to the recomputed face normal.
         // Any smooth normals previously applied refer to the old vertex positions and would no
         // longer be correct for the new ones.
         for (char v = 0; v < vertex_count; v++) {
-            storeValue(vertex_normal_data[geometry_type].at(vertex_normal_index + 3 * v + 0), normal.x, ATTRIBUTE_VERTEX_NORMAL);
-            storeValue(vertex_normal_data[geometry_type].at(vertex_normal_index + 3 * v + 1), normal.y, ATTRIBUTE_VERTEX_NORMAL);
-            storeValue(vertex_normal_data[geometry_type].at(vertex_normal_index + 3 * v + 2), normal.z, ATTRIBUTE_VERTEX_NORMAL);
+            vertex_normal_data[geometry_type].at(vertex_normal_index + 3 * v + 0) = normal.x;
+            vertex_normal_data[geometry_type].at(vertex_normal_index + 3 * v + 1) = normal.y;
+            vertex_normal_data[geometry_type].at(vertex_normal_index + 3 * v + 2) = normal.z;
         }
 
-        storeValue(color_data[geometry_type].at(color_index), color.r, ATTRIBUTE_COLOR);
-        storeValue(color_data[geometry_type].at(color_index + 1), color.g, ATTRIBUTE_COLOR);
-        storeValue(color_data[geometry_type].at(color_index + 2), color.b, ATTRIBUTE_COLOR);
-        storeValue(color_data[geometry_type].at(color_index + 3), color.a, ATTRIBUTE_COLOR);
+        color_data[geometry_type].at(color_index) = color.r;
+        color_data[geometry_type].at(color_index + 1) = color.g;
+        color_data[geometry_type].at(color_index + 2) = color.b;
+        color_data[geometry_type].at(color_index + 3) = color.a;
 
         size_data[geometry_type].at(size_index) = size;
     }
 
-    markDirty(UUID, geometry_is_new ? uint16_t(ATTRIBUTE_ALL) : changed_attributes);
+    markDirty(UUID);
 }
 
 bool GeometryHandler::doesGeometryExist(size_t UUID) const {
@@ -407,7 +398,7 @@ void GeometryHandler::setVertexNormals(size_t UUID, const std::vector<helios::ve
         vertex_normal_data[index_map.geometry_type].at(vertex_normal_ind + 3 * i + 2) = n.z;
     }
 
-    markDirty(UUID, ATTRIBUTE_VERTEX_NORMAL);
+    markDirty(UUID);
 }
 
 std::vector<helios::vec3> GeometryHandler::getVertices(size_t UUID) const {
@@ -501,7 +492,7 @@ void GeometryHandler::setMaterialIndex(size_t UUID, int material_index) {
     }
 
     stored_index = material_index;
-    markDirty(UUID, ATTRIBUTE_MATERIAL_INDEX);
+    markDirty(UUID);
 }
 
 const std::vector<float> *GeometryHandler::getVertexNormalData_ptr(VisualizerGeometryType geometry_type) const {
@@ -848,6 +839,7 @@ void GeometryHandler::deleteGeometry(size_t UUID) {
 
     delete_flag_data.at(index_map.geometry_type).at(index_map.delete_flag_index) = true;
     visible_flag_data.at(index_map.geometry_type).at(index_map.visible_index) = false;
+    layout_revision++;
 
     markDirty(UUID);
 
@@ -889,6 +881,7 @@ void GeometryHandler::clearAllGeometry() {
     }
 
     UUID_map.clear();
+    layout_revision++;
 
     deleted_primitive_count = 0;
 
@@ -911,6 +904,7 @@ void GeometryHandler::clearContextGeometry() {
                 delete_flag_data.at(geometry_type).at(i) = true;
                 // visible_flag_data.at(geometry_type).at(i) = false;
                 deleted_primitive_count++;
+                layout_revision++;
             }
         }
     }
@@ -1035,6 +1029,7 @@ void GeometryHandler::defragmentBuffers() {
     if (deleted_primitive_count == 0) {
         return;
     }
+    layout_revision++;
 
     // Iterate each geometry type
 
@@ -1178,6 +1173,8 @@ void GeometryHandler::defragmentBuffers() {
 
 void GeometryHandler::registerUUID(size_t UUID, const VisualizerGeometryType &geometry_type) {
 
+    layout_revision++;
+
     UUID_map[UUID] = {geometry_type,
                       face_index_data.at(geometry_type).size(),
                       vertex_data.at(geometry_type).size(),
@@ -1213,17 +1210,21 @@ char GeometryHandler::getVertexCount(const VisualizerGeometryType &geometry_type
     }
 }
 
-void GeometryHandler::markDirty(size_t UUID, uint16_t attributes) {
-    dirty_UUIDs[UUID] |= attributes;
+void GeometryHandler::markDirty(size_t UUID) {
+    dirty_UUIDs.insert(UUID);
 }
 
-const std::unordered_map<size_t, uint16_t> &GeometryHandler::getDirtyUUIDs() const {
+const std::unordered_set<size_t> &GeometryHandler::getDirtyUUIDs() const {
     return dirty_UUIDs;
 }
 
 void GeometryHandler::clearDirtyUUIDs() {
     dirty_UUIDs.clear();
     buffer_needs_full_update = false;
+}
+
+size_t GeometryHandler::getLayoutRevision() const {
+    return layout_revision;
 }
 
 bool GeometryHandler::doesBufferNeedFullUpdate() const {

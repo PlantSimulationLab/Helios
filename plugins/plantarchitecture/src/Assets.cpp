@@ -510,6 +510,129 @@ std::vector<helios::vec3> bendPetioleCenterline(const std::vector<helios::vec3> 
     return bent;
 }
 
+std::vector<helios::vec3> buildLeafBladeLattice(const LeafShapeValues &shape) {
+
+    const uint Nx = shape.subdivisions_x;
+    const uint Ny = shape.subdivisions_y;
+    if (Nx == 0 || Ny < 2 || Ny % 2 != 0) {
+        helios_runtime_error("ERROR (buildLeafBladeLattice): A leaf blade lattice needs at least one subdivision along the blade and an even number of at least two across it, but " + std::to_string(Nx) + " x " + std::to_string(Ny) +
+                             " was given.");
+    }
+    if (!std::isfinite(shape.aspect_ratio) || shape.aspect_ratio <= 0.f) {
+        helios_runtime_error("ERROR (buildLeafBladeLattice): The blade aspect ratio must be greater than zero, but " + std::to_string(shape.aspect_ratio) + " was given.");
+    }
+    if (!std::isfinite(shape.roll_fraction) || shape.roll_fraction < 0.f || shape.roll_fraction > 1.f) {
+        helios_runtime_error("ERROR (buildLeafBladeLattice): The roll fraction must be between 0 (flat) and 1 (rolled into a closed tube), but " + std::to_string(shape.roll_fraction) + " was given.");
+    }
+
+    const float aspect_ratio = shape.aspect_ratio;
+    const float dx = 1.f / float(Nx); // length of leaf subdivision in the x-direction
+    const float dy = aspect_ratio / float(Ny); // length of leaf subdivision in the y-direction
+    const uint cells_per_side = Ny / 2;
+    const float half_width = 0.5f * aspect_ratio;
+
+    // The cross-section is a planar curve described by its tangent angle as a function of arc length s from the midrib, psi(s) = fold + lateral + roll. Each lattice cell is laid along that curve with
+    // its own length dy, so the cross-section bends without stretching however coarse the lattice: the blade keeps its area and the texture keeps its outline.
+    //  - fold: the midrib fold, a V of constant angle on each side (tapering along the blade, below);
+    //  - lateral: the slope of lateral_curvature * (y / aspect_ratio)^4, the profile this term has always had, evaluated at the arc length rather than the flat width;
+    //  - roll: constant curvature roll_fraction * pi / half_width, which wraps the half-width onto an arc of half-angle roll_fraction * pi.
+    // A segment is laid along the mean direction of the curve over its own length, so for a pure roll the vertices land on a circle and the facets are its chords.
+    const bool pure_fold = shape.lateral_curvature == 0.f && shape.roll_fraction == 0.f;
+    const float roll_curvature = shape.roll_fraction * float(M_PI) / half_width;
+    constexpr int substeps_per_cell = 16;
+
+    // cross_section[i][k] is the (lateral, vertical) position of the vertex k cells out from the midrib at station i
+    std::vector<std::vector<vec2>> cross_section(Nx + 1, std::vector<vec2>(cells_per_side + 1, make_vec2(0, 0)));
+    for (uint i = 0; i <= Nx && !pure_fold; i++) {
+        const float x = float(i) * dx;
+        const float fold_angle = 0.5f * shape.midrib_fold_fraction * 1.5f * (1.f - x * x) * float(M_PI);
+        for (uint k = 1; k <= cells_per_side; k++) {
+            float sum_cos = 0.f;
+            float sum_sin = 0.f;
+            for (int m = 0; m < substeps_per_cell; m++) {
+                const float s = (float(k - 1) + (float(m) + 0.5f) / float(substeps_per_cell)) * dy;
+                const float lateral_slope = 4.f * shape.lateral_curvature * s * s * s / (aspect_ratio * aspect_ratio * aspect_ratio * aspect_ratio);
+                const float psi = fold_angle + atanf(lateral_slope) + roll_curvature * s;
+                sum_cos += cosf(psi);
+                sum_sin += sinf(psi);
+            }
+            const float direction_length = sqrtf(sum_cos * sum_cos + sum_sin * sum_sin);
+            cross_section.at(i).at(k) = cross_section.at(i).at(k - 1) + dy * make_vec2(sum_cos, sum_sin) / direction_length;
+        }
+    }
+
+    std::vector<vec3> lattice(size_t(Nx + 1) * size_t(Ny + 1));
+
+    for (int j = 0; j <= int(Ny); j++) {
+        float dtheta = 0;
+        for (int i = 0; i <= int(Nx); i++) {
+
+            const float x = float(i) * dx; // x-coordinate of leaf subdivision
+            const float y = float(j) * dy - half_width; // flat y-coordinate of leaf subdivision, which is also its arc length from the midrib
+
+            // Midrib folding, tapering along the blade. A leaf is most strongly channelled where its midrib is a prominent keel, near the base, and flattens out toward the tip as the midrib thins away;
+            // folding the blade by the same amount along its whole length instead gives a leaf that is still V-shaped at the tip, which reads as a stiff gutter rather than a leaf.
+            //
+            // The taper is normalised to average one over the blade, so the parameter keeps meaning the same average fold it always did and an existing species is not silently flattened - only the
+            // distribution of that fold along the leaf changes, from uniform to base-weighted.
+            float y_section;
+            float z_section;
+            if (pure_fold) {
+                // Written out in closed form so that a blade with only a fold is built exactly as it always was.
+                const float local_fold = shape.midrib_fold_fraction * 1.5f * (1.f - x * x);
+                y_section = cosf(0.5f * local_fold * M_PI) * y;
+                z_section = sinf(0.5f * local_fold * M_PI) * fabs(y);
+            } else {
+                const int cells_out = std::abs(j - int(cells_per_side));
+                const float side = j < int(cells_per_side) ? -1.f : 1.f;
+                y_section = side * cross_section.at(i).at(cells_out).x;
+                z_section = cross_section.at(i).at(cells_out).y;
+            }
+
+            // x-curvature. The exponent sets how the bending is distributed along the blade rather than how much of it there is - see LeafPrototype::longitudinal_curvature_exponent - so the tip
+            // deflection is the same whatever it is, and it is clamped to at least 1 because a smaller value would put a cusp at the leaf base.
+            const float curvature_exponent = fmaxf(1.f, shape.longitudinal_curvature_exponent);
+
+            // petiole roll
+            float z_petiole = 0;
+            if (shape.petiole_roll != 0.0f) {
+                z_petiole = fmin(0.1f, shape.petiole_roll * powf(7.f * y / aspect_ratio, 4) * exp(-70.f * (x))) - 0.01 * shape.petiole_roll / fabs(shape.petiole_roll);
+            }
+
+            // vertical displacement for leaf wave at each of the four subdivision vertices.
+            // The wave is applied along the local surface normal *after* the longitudinal
+            // curvature and buckle rotations, so the bumps don't get tilted into the leaf
+            // tangent direction (which would visually flatten the wave past the buckle).
+            float z_wave = 0;
+            if (shape.wave_period > 0.0f && shape.wave_amplitude > 0.0f) {
+                const float wave_phase = (x + shape.wave_period * float(j >= 0.5 * Ny)) * M_PI / shape.wave_period;
+                z_wave = 2.f * fabs(y) * shape.wave_amplitude * sinf(wave_phase);
+            }
+
+            vec3 vertex = make_vec3(x, y_section, z_section + z_petiole);
+
+            float rot_angle = 0.f;
+
+            if (shape.longitudinal_curvature != 0.0f && i > 0) {
+                // Derivative of the curvature term above, which must track its exponent: this is what orients the wave displacement along the leaf surface.
+                dtheta -= atan(curvature_exponent * shape.longitudinal_curvature * powf(x, curvature_exponent - 1.f) * dx);
+                vertex = rotatePointAboutLine(vertex, nullorigin, make_vec3(0, 1, 0), dtheta);
+                rot_angle += dtheta;
+            }
+
+            // apply wave displacement along the rotated leaf-surface normal
+            if (z_wave != 0.f) {
+                vertex.x += z_wave * sinf(rot_angle);
+                vertex.z += z_wave * cosf(rot_angle);
+            }
+
+            lattice.at(size_t(j) * (Nx + 1) + size_t(i)) = vertex + shape.lattice_offset;
+        }
+    }
+
+    return lattice;
+}
+
 uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
 
     // If OBJ model file is specified, load it and return the object ID
@@ -520,7 +643,9 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
     }
 
     std::string leaf_texture;
-    if (prototype_parameters->leaf_texture_file.empty()) {
+    if (!prototype_parameters->leaf_texture_series.empty()) {
+        leaf_texture = prototype_parameters->getTextureSeriesVariant(compound_leaf_index, prototype_parameters->texture_series_selector).front();
+    } else if (prototype_parameters->leaf_texture_file.empty()) {
         helios_runtime_error("ERROR (PlantArchitecture): Leaf prototype texture file was not specified.");
     } else if (prototype_parameters->leaf_texture_file.size() == 1) {
         leaf_texture = prototype_parameters->leaf_texture_file.begin()->second;
@@ -532,6 +657,13 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
 
     // Resolve leaf texture path (allows users to specify simple paths like "AlmondLeaf.png")
     leaf_texture = PlantArchitecture::resolveTextureFile(leaf_texture);
+
+    // Checked when the leaf is built rather than when it first reaches each image, which could be far into a simulation
+    if (!prototype_parameters->leaf_texture_series.empty()) {
+        for (const std::string &stage_texture: prototype_parameters->getTextureSeriesVariant(compound_leaf_index, prototype_parameters->texture_series_selector)) {
+            context_ptr->validateColorTexture(leaf_texture, PlantArchitecture::resolveTextureFile(stage_texture));
+        }
+    }
 
     // -- main leaf generation code -- //
 
@@ -547,67 +679,31 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
     const float dx = 1.f / float(Nx); // length of leaf subdivision in the x-direction
     const float dy = prototype_parameters->leaf_aspect_ratio.val() / float(Ny); // length of leaf subdivision in the y-direction
 
+    if (!std::isfinite(prototype_parameters->roll_fraction.val()) || prototype_parameters->roll_fraction.val() < 0.f || prototype_parameters->roll_fraction.val() > 1.f) {
+        helios_runtime_error("ERROR (PlantArchitecture): Leaf prototype roll_fraction must be between 0 (flat) and 1 (rolled into a closed tube), but " + std::to_string(prototype_parameters->roll_fraction.val()) + " was given.");
+    }
+
+    LeafShapeValues shape;
+    shape.aspect_ratio = prototype_parameters->leaf_aspect_ratio.val();
+    shape.midrib_fold_fraction = prototype_parameters->midrib_fold_fraction.val();
+    shape.longitudinal_curvature = prototype_parameters->longitudinal_curvature.val();
+    shape.longitudinal_curvature_exponent = prototype_parameters->longitudinal_curvature_exponent.val();
+    shape.lateral_curvature = prototype_parameters->lateral_curvature.val();
+    shape.petiole_roll = prototype_parameters->petiole_roll.val();
+    shape.wave_period = prototype_parameters->wave_period.val();
+    shape.wave_amplitude = prototype_parameters->wave_amplitude.val();
+    shape.roll_fraction = prototype_parameters->roll_fraction.val();
+    shape.subdivisions_x = Nx;
+    shape.subdivisions_y = Ny;
+    // Built at the origin; the offsets are applied to the primitives below, and recorded in the shape once they are known.
+    shape.lattice_offset = nullorigin;
+    const std::vector<vec3> lattice = buildLeafBladeLattice(shape);
+
     std::vector<std::vector<vec3>> vertices;
     resize_vector(vertices, Nx + 1, Ny + 1);
-
     for (int j = 0; j <= Ny; j++) {
-        float dtheta = 0;
         for (int i = 0; i <= Nx; i++) {
-
-            const float x = float(i) * dx; // x-coordinate of leaf subdivision
-            const float y = float(j) * dy - 0.5f * prototype_parameters->leaf_aspect_ratio.val(); // y-coordinate of leaf subdivision
-
-            // Midrib folding, tapering along the blade. A leaf is most strongly channelled where its midrib is a prominent keel, near the base, and flattens out toward the tip as the midrib thins away;
-            // folding the blade by the same amount along its whole length instead gives a leaf that is still V-shaped at the tip, which reads as a stiff gutter rather than a leaf.
-            //
-            // The taper is normalised to average one over the blade, so the parameter keeps meaning the same average fold it always did and an existing species is not silently flattened - only the
-            // distribution of that fold along the leaf changes, from uniform to base-weighted.
-            const float fold_taper = 1.5f * (1.f - x * x);
-            const float local_fold = prototype_parameters->midrib_fold_fraction.val() * fold_taper;
-            const float y_fold = cosf(0.5f * local_fold * M_PI) * y;
-            const float z_fold = sinf(0.5f * local_fold * M_PI) * fabs(y);
-
-            // x-curvature. The exponent sets how the bending is distributed along the blade rather than how much of it there is - see LeafPrototype::longitudinal_curvature_exponent - so the tip
-            // deflection is the same whatever it is, and it is clamped to at least 1 because a smaller value would put a cusp at the leaf base.
-            const float curvature_exponent = fmaxf(1.f, prototype_parameters->longitudinal_curvature_exponent.val());
-            float z_xcurve = prototype_parameters->longitudinal_curvature.val() * powf(x, curvature_exponent);
-
-            // y-curvature
-            float z_ycurve = prototype_parameters->lateral_curvature.val() * powf(y / prototype_parameters->leaf_aspect_ratio.val(), 4);
-
-            // petiole roll
-            float z_petiole = 0;
-            if (prototype_parameters->petiole_roll.val() != 0.0f) {
-                z_petiole = fmin(0.1f, prototype_parameters->petiole_roll.val() * powf(7.f * y / prototype_parameters->leaf_aspect_ratio.val(), 4) * exp(-70.f * (x))) -
-                            0.01 * prototype_parameters->petiole_roll.val() / fabs(prototype_parameters->petiole_roll.val());
-            }
-
-            // vertical displacement for leaf wave at each of the four subdivision vertices.
-            // The wave is applied along the local surface normal *after* the longitudinal
-            // curvature and buckle rotations, so the bumps don't get tilted into the leaf
-            // tangent direction (which would visually flatten the wave past the buckle).
-            float z_wave = 0;
-            if (prototype_parameters->wave_period.val() > 0.0f && prototype_parameters->wave_amplitude.val() > 0.0f) {
-                const float wave_phase = (x + prototype_parameters->wave_period.val() * float(j >= 0.5 * Ny)) * M_PI / prototype_parameters->wave_period.val();
-                z_wave = 2.f * fabs(y) * prototype_parameters->wave_amplitude.val() * sinf(wave_phase);
-            }
-
-            vertices.at(j).at(i) = make_vec3(x, y_fold, z_fold + z_ycurve + z_petiole);
-
-            float rot_angle = 0.f;
-
-            if (prototype_parameters->longitudinal_curvature.val() != 0.0f && i > 0) {
-                // Derivative of the curvature term above, which must track its exponent: this is what orients the wave displacement along the leaf surface.
-                dtheta -= atan(curvature_exponent * prototype_parameters->longitudinal_curvature.val() * powf(x, curvature_exponent - 1.f) * dx);
-                vertices.at(j).at(i) = rotatePointAboutLine(vertices.at(j).at(i), nullorigin, make_vec3(0, 1, 0), dtheta);
-                rot_angle += dtheta;
-            }
-
-            // apply wave displacement along the rotated leaf-surface normal
-            if (z_wave != 0.f) {
-                vertices.at(j).at(i).x += z_wave * sinf(rot_angle);
-                vertices.at(j).at(i).z += z_wave * cosf(rot_angle);
-            }
+            vertices.at(j).at(i) = lattice.at(size_t(j) * (Nx + 1) + size_t(i));
         }
     }
 
@@ -672,6 +768,7 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
     for (vec3 &mesh_vertex: mesh_vertices) {
         mesh_vertex = mesh_vertex + prototype_parameters->leaf_offset;
     }
+    shape.lattice_offset = prototype_parameters->leaf_offset;
 
     if (prototype_parameters->build_petiolule) {
         // The petiolule length is looked up by compound-leaf index the same way as the texture, so the terminal leaflet can carry a longer stalk than the laterals.
@@ -696,6 +793,7 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
         // The blade starts where the cylindrical part of the stalk ends.
         const vec3 blade_shift = make_vec3(petiolule_length, 0, 0);
         context_ptr->translatePrimitive(UUIDs, blade_shift);
+        shape.lattice_offset = shape.lattice_offset + blade_shift;
         for (vec3 &mesh_vertex: mesh_vertices) {
             mesh_vertex = mesh_vertex + blade_shift;
         }
@@ -766,7 +864,12 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
     prototype_parameters->longitudinal_curvature.resample();
     prototype_parameters->longitudinal_curvature_exponent.resample();
     prototype_parameters->lateral_curvature.resample();
+    prototype_parameters->roll_fraction.resample();
     prototype_parameters->petiole_roll.resample();
+
+    // Recorded so that the leaf can later be reshaped in place starting from exactly the shape it was built with (see Phytomer::buildLeafPrototype())
+    prototype_parameters->last_built_shape = shape;
+    prototype_parameters->last_built_shape_valid = true;
     prototype_parameters->wave_period.resample();
     prototype_parameters->wave_amplitude.resample();
 
@@ -794,6 +897,23 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
         context_ptr->computePolymeshObjectVertexNormals(objID, leaf_crease_angle_degrees);
     }
 
+    // The class map of the leaf texture, recorded on each leaf triangle that covers a class so that LeafOptics can give the leaf's tissues their own spectra. A triangle covering only transparent texels
+    // (as the radiation model samples the texture) can take no class, so it keeps the spectra given to the leaf as a whole.
+    std::string class_map;
+    if (prototype_parameters->leaf_class_map_file.size() == 1) {
+        class_map = prototype_parameters->leaf_class_map_file.begin()->second;
+    } else if (prototype_parameters->leaf_class_map_file.find(compound_leaf_index) != prototype_parameters->leaf_class_map_file.end()) {
+        class_map = prototype_parameters->leaf_class_map_file.at(compound_leaf_index);
+    }
+    if (!class_map.empty()) {
+        const std::string remedy = " A class map is made for one leaf texture (see utilities/leaf_class_maps). If the leaf texture was changed, clear LeafPrototype::leaf_class_map_file, or set it to a class map made for the new texture.";
+        if (!prototype_parameters->leaf_texture_series.empty()) {
+            helios_runtime_error("ERROR (PlantArchitecture): A leaf prototype has both a class map (LeafPrototype::leaf_class_map_file) and a texture series (LeafPrototype::leaf_texture_series), which cannot be combined." + remedy);
+        }
+        // The petiolule has no texture, so only the blade triangles are considered.
+        PlantArchitecture::recordSpectralClassMap(context_ptr, context_ptr->getObjectPrimitiveUUIDs(objID), leaf_texture, class_map, "leaf", remedy);
+    }
+
     return objID;
 }
 
@@ -811,6 +931,63 @@ uint AlmondFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AlmondFlower.obj").string().c_str(), make_vec3(0.0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
+}
+
+// ---- Training helpers shared by the trained tree models ---- //
+
+//! Number of nodes to keep so that a shoot is cut back to about `length` metres (the first node whose far end reaches that length is kept).
+static uint nodesToKeepForLength(const Shoot &shoot, float length) {
+    float arc = 0;
+    bool first_vertex = true;
+    helios::vec3 previous;
+    for (uint node = 0; node < shoot.shoot_internode_vertices.size(); node++) {
+        for (const helios::vec3 &vertex: shoot.shoot_internode_vertices.at(node)) {
+            if (!first_vertex) {
+                arc += (vertex - previous).magnitude();
+            }
+            previous = vertex;
+            first_vertex = false;
+        }
+        if (arc >= length) {
+            return node + 1;
+        }
+    }
+    return uint(shoot.shoot_internode_vertices.size());
+}
+
+//! Cut a shoot back to about `length` metres, ending its growth. Returns the number of nodes kept.
+/** The cut is deferred to the end of the time step (see PlantArchCallbackEdits), but the tip is stopped at once: removing phytomers only
+    ends a shoot's growth when the removed tip already has its geometry, so a young tip could otherwise survive the cut and regrow. */
+static uint cutShootToLength(Shoot &shoot, float length) {
+    uint keep = nodesToKeepForLength(shoot, length);
+    if (keep < shoot.phytomers.size()) {
+        shoot.plantarchitecture_ptr->pruneBranch(shoot.plantID, uint(shoot.ID), keep);
+        shoot.meristem_is_alive = false;
+    }
+    return keep;
+}
+
+//! Make one vegetative bud on each of the top `node_count` nodes below `keep` break into a shoot of type `shoot_type_label`, standing in for the release from apical dominance a cut causes.
+/** The bud-break probabilities cannot tell a cut from a natural shoot tip, so without this a headed shoot usually regrows from a single bud
+    or none. Only valid while the shoot is growing: a bud set active in dormancy is drawn again when dormancy breaks. Node 0 is skipped
+    (a blind node), and so are buds that have already grown a shoot. */
+static void releaseBudsBelowCut(Shoot &shoot, uint keep, uint node_count, const std::string &shoot_type_label) {
+    uint released = 0;
+    for (int node = int(keep) - 1; node >= 1 && released < node_count; node--) {
+        const std::shared_ptr<Phytomer> &phytomer = shoot.phytomers.at(node);
+        bool released_here = false;
+        for (auto &petiole: phytomer->axillary_vegetative_buds) {
+            for (auto &vbud: petiole) {
+                if (!released_here && vbud.shoot_ID == uint(-1)) {
+                    // A bud already passed over for a spur (see growSpursFromUnbrokenBuds()) is growing a limb after all.
+                    vbud.shoot_type_label = shoot_type_label;
+                    Phytomer::setVegetativeBudState(BUD_ACTIVE, vbud);
+                    released_here = true;
+                }
+            }
+        }
+        released++;
+    }
 }
 
 //! Grow spurs from the lateral buds of a limb that did not grow a long shoot.
@@ -869,6 +1046,13 @@ void AlmondSpurPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 uint AppleFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/AppleFruit.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
     uint objID = context_ptr->addPolymeshObject(UUIDs);
+
+    // Optical defaults for the radiation model, as the primitive data it reads: a red-apple skin spectrum (the radiation plugin's fruit spectral library; a stand-in for a measured one) under a waxy
+    // specular surface layer, which is what makes the fruit read as an apple to a radiation camera. Every fruit copied from the prototype carries them, and a user overrides them by setting the same
+    // primitive data (or the fruit material's data, which takes precedence) after the plant is built. Without the radiation model they are inert.
+    context_ptr->setPrimitiveData(UUIDs, "reflectivity_spectrum", "apple_fruit_reflectivity_0000");
+    context_ptr->setPrimitiveData(UUIDs, "specular_roughness", 0.15f);
+    context_ptr->setPrimitiveData(UUIDs, "specular_n", 1.5f);
     return objID;
 }
 
@@ -970,9 +1154,10 @@ void ApplePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
     }
 }
 
-void ApplePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
+//! Rules shared by the apple models: spur release, flower-bud thinning by light, and the distal zone of a long shoot without axillary flowers.
+static void applePhytomerCallback(const std::shared_ptr<Phytomer> &phytomer, float spur_fraction) {
 
-    growSpursFromUnbrokenBuds(phytomer, apple_spur_fraction);
+    growSpursFromUnbrokenBuds(phytomer, spur_fraction);
 
     const Shoot &shoot = *phytomer->parent_shoot_ptr;
     if (!shoot.isdormant) {
@@ -1002,6 +1187,342 @@ void ApplePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
                 phytomer->setFloralBudState(BUD_DEAD, fbud);
             }
         }
+    }
+}
+
+void ApplePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
+    applePhytomerCallback(phytomer, apple_spur_fraction);
+}
+
+// ---- Apple fruiting wall (tall spindle) training ---- //
+//
+// The tall spindle (Hoying, Robinson & Fargione, "The Tall Spindle Planting System", Cornell Cooperative Extension; Robinson 2007, NY
+// Fruit Quarterly 15(1); Robinson & Hoying 2014) is a single tied leader with no permanent scaffolds. Each winter the grower heads the
+// leader back to a fruiting side branch once it has reached the wall's height, pinches the shoots that compete with it at the top of last year's extension,
+// removes any fruiting branch that has grown to half the leader's diameter or too old with a bevel cut that leaves a short stub (a flat,
+// weak replacement grows from the stub), keeps every branch columnar by removing its larger side shoots, and hedges the wall to its
+// width. The rules below are state-based, so they are applied on every dormant time step and change nothing after the first.
+
+//! Fraction of the lateral vegetative buds left unbroken on a fruiting branch's year-old wood that grow a spur (see growSpursFromUnbrokenBuds()).
+static constexpr float apple_fruitingwall_spur_fraction = 0.3f;
+//! The same fraction for the leader, whose wood is kept cleaner than the branches'.
+static constexpr float apple_fruitingwall_leader_spur_fraction = 0.1f;
+//! Fruiting branches renewed in one winter at most (Cornell: two or three of the largest limbs a year).
+static constexpr uint apple_fruitingwall_renewals_per_winter = 3;
+//! Wall dimensions used when a plant was not built with the corresponding build parameter (see PlantArchitecture::buildAppleFruitingWall()).
+static constexpr float apple_fruitingwall_default_tree_height = 3.1f;
+static constexpr float apple_fruitingwall_default_trunk_height = 0.7f;
+static constexpr float apple_fruitingwall_default_tree_spacing = 0.9f;
+static constexpr float apple_fruitingwall_default_row_spacing = 3.3f;
+//! Width (m) of the wall across the row at the height of the lowest branch and at the top, for the reference row spacing (Robinson &
+//! Hoying 2014: a summer-hedged wall about 1.5 m wide at the base and 0.75 m at the top). The widths scale with the row spacing.
+static constexpr float apple_fruitingwall_wall_width_base = 1.5f;
+static constexpr float apple_fruitingwall_wall_width_top = 0.75f;
+static constexpr float apple_fruitingwall_reference_row_spacing = 3.3f;
+//! A branch may reach this far past the midpoint between neighbouring trees along the row.
+static constexpr float apple_fruitingwall_row_overlap = 0.05f;
+//! Height (m) above the wall's height that a shoot may reach before it is cut back.
+static constexpr float apple_fruitingwall_height_tolerance = 0.03f;
+//! When the leader reaches the wall's height it is cut back to the highest fruiting branch within this distance (m) below it, which becomes the top of the tree.
+static constexpr float apple_fruitingwall_heading_window = 0.5f;
+//! A fruiting branch is renewed when its base diameter exceeds this fraction of the leader's diameter at its insertion ...
+static constexpr float apple_fruitingwall_branch_diameter_ratio_max = 0.5f;
+//! ... or exceeds this diameter (m) ...
+static constexpr float apple_fruitingwall_branch_diameter_max = 0.025f;
+//! ... or this many winters have passed since it grew.
+static constexpr uint apple_fruitingwall_branch_age_max = 6;
+//! Winters a branch must have stood before the diameter-ratio rule applies to it: a new branch at the top of the leader is as thick as
+//! the leader there, and the ratio only becomes meaningful once the leader has thickened below it.
+static constexpr uint apple_fruitingwall_branch_ratio_rule_age_min = 3;
+//! A fruiting branch longer than this (m) is cut back ...
+static constexpr float apple_fruitingwall_branch_length_max = 0.75f;
+//! ... to about this length (m).
+static constexpr float apple_fruitingwall_branch_length_headed = 0.6f;
+//! Side shoots of a fruiting branch thicker than half the branch, and upright side shoots (water sprouts) longer than this (m), are
+//! removed to keep the branch columnar ...
+static constexpr float apple_fruitingwall_upright_side_shoot_length_max = 0.25f;
+//! ... and any other side shoot longer than this (m) is cut back ...
+static constexpr float apple_fruitingwall_side_shoot_length_max = 0.35f;
+//! ... to about this length (m), as the hedger would.
+static constexpr float apple_fruitingwall_side_shoot_length_headed = 0.2f;
+//! Shoots that grew within this distance (m) of the leader's tip last season compete with it and are pinched ...
+static constexpr float apple_fruitingwall_competitor_zone = 0.2f;
+//! ... back to this many nodes.
+static constexpr uint apple_fruitingwall_competitor_nodes_kept = 3;
+//! Buds released below the leader's heading cut, so that the new top carries fresh fruiting branches.
+static constexpr uint apple_fruitingwall_buds_released_at_heading = 2;
+//! A feather that sits this far (m) below the trunk height is removed.
+static constexpr float apple_fruitingwall_low_feather_tolerance = 0.05f;
+
+struct AppleFruitingWallDimensions {
+    float tree_height;
+    float trunk_height;
+    float tree_spacing;
+    float row_spacing;
+};
+
+//! Wall dimensions the plant was built with (see PlantArchitecture::buildAppleFruitingWall()), or the defaults for a plant built another way.
+static AppleFruitingWallDimensions appleFruitingWallDimensions(const PlantArchitecture *plantarchitecture, uint plantID) {
+    const std::map<std::string, float> &build_parameters = plantarchitecture->getPlantBuildParameters(plantID);
+    auto read = [&build_parameters](const char *name, float default_value) {
+        const auto it = build_parameters.find(name);
+        return it == build_parameters.end() ? default_value : it->second;
+    };
+    AppleFruitingWallDimensions wall{};
+    wall.tree_height = read("tree_height", apple_fruitingwall_default_tree_height);
+    wall.trunk_height = read("trunk_height", apple_fruitingwall_default_trunk_height);
+    wall.tree_spacing = read("tree_spacing", apple_fruitingwall_default_tree_spacing);
+    wall.row_spacing = read("row_spacing", apple_fruitingwall_default_row_spacing);
+    return wall;
+}
+
+//! Half-width (m) of the wall across the row at `height` above the plant base: the wall tapers from its base width at the lowest branch to its top width at the leader's height.
+static float appleFruitingWallHalfWidth(const AppleFruitingWallDimensions &wall, float height) {
+    const float fraction = std::clamp((height - wall.trunk_height) / std::fmax(wall.tree_height - wall.trunk_height, 0.01f), 0.f, 1.f);
+    const float width = apple_fruitingwall_wall_width_base + (apple_fruitingwall_wall_width_top - apple_fruitingwall_wall_width_base) * fraction;
+    return 0.5f * width * wall.row_spacing / apple_fruitingwall_reference_row_spacing;
+}
+
+//! A bevel-cut stub: the single basal node left of a renewed fruiting branch.
+static bool appleFruitingWallIsStub(const Shoot &shoot) {
+    return shoot.phytomers.size() == 1 && !shoot.meristem_is_alive;
+}
+
+//! The fruiting branch borne at one node of the leader.
+/** The leader's child at the node is the branch until it is renewed; then it is a stub, and the branch is the shoot regrown from the stub.
+    A regrown branch renewed in its turn leaves a stub on the stub, so the branch is found by following the stubs down the chain. */
+struct AppleFruitingWallBranch {
+    //! Node of the leader the branch is borne at.
+    uint leader_node;
+    //! The last stub of the chain, or -1 if the branch has never been renewed.
+    uint stubID;
+    //! The branch itself, or -1 if the last stub has not regrown yet.
+    uint branchID;
+};
+
+static std::vector<AppleFruitingWallBranch> appleFruitingWallBranches(const PlantArchitecture *plantarchitecture, const Shoot &leader) {
+    const uint plantID = leader.plantID;
+    std::vector<AppleFruitingWallBranch> branches;
+    for (const uint childID: plantarchitecture->getChildShootIDs(plantID, uint(leader.ID))) {
+        if (plantarchitecture->isShootPruned(plantID, childID) || plantarchitecture->getPlantShoot(plantID, childID)->shoot_type_label == "spur") {
+            continue;
+        }
+        AppleFruitingWallBranch branch{plantarchitecture->getPlantShoot(plantID, childID)->parent_node_index, uint(-1), childID};
+        for (uint depth = 0; depth < 16 && branch.branchID != uint(-1); depth++) {
+            const std::shared_ptr<Shoot> &shoot = plantarchitecture->getPlantShoot(plantID, branch.branchID);
+            if (!appleFruitingWallIsStub(*shoot)) {
+                break;
+            }
+            branch.stubID = branch.branchID;
+            branch.branchID = uint(-1);
+            for (const uint regrownID: plantarchitecture->getChildShootIDs(plantID, branch.stubID)) {
+                if (!plantarchitecture->isShootPruned(plantID, regrownID) && plantarchitecture->getPlantShoot(plantID, regrownID)->shoot_type_label != "spur") {
+                    branch.branchID = regrownID;
+                    break;
+                }
+            }
+        }
+        branches.push_back(branch);
+    }
+    return branches;
+}
+
+//! Dormant-season training of the wall (see the section comment above). Run once per time step from the leader.
+static void appleFruitingWallWinterPruning(Shoot &leader, const AppleFruitingWallDimensions &wall) {
+    PlantArchitecture *plantarchitecture = leader.plantarchitecture_ptr;
+    const uint plantID = leader.plantID;
+    const helios::vec3 base = plantarchitecture->getPlantBasePosition(plantID);
+    const float z_cap = base.z + wall.tree_height + apple_fruitingwall_height_tolerance;
+    const float row_half_extent = 0.5f * wall.tree_spacing + apple_fruitingwall_row_overlap;
+
+    const std::vector<AppleFruitingWallBranch> branches = appleFruitingWallBranches(plantarchitecture, leader);
+
+    // Once the leader reaches the wall's height it is headed, as the grower does, back to a weak fruiting side branch: the highest
+    // fruiting branch within the heading window below the wall's height, which becomes the top of the tree. With no branch there it is
+    // cut at the wall's height.
+    if (leader.meristem_is_alive && leader.shoot_internode_vertices.back().back().z > z_cap) {
+        uint cut_node = uint(leader.shoot_internode_vertices.size());
+        for (uint node = 0; node < leader.shoot_internode_vertices.size(); node++) {
+            if (leader.shoot_internode_vertices.at(node).back().z > z_cap) {
+                cut_node = node;
+                break;
+            }
+        }
+        uint top_branch_node = 0;
+        bool top_branch_found = false;
+        for (const AppleFruitingWallBranch &entry: branches) {
+            const float base_height = leader.shoot_internode_vertices.at(entry.leader_node).back().z - base.z;
+            if (entry.branchID != uint(-1) && entry.leader_node + 1 < cut_node && base_height >= wall.tree_height - apple_fruitingwall_heading_window && (!top_branch_found || entry.leader_node > top_branch_node)) {
+                top_branch_node = entry.leader_node;
+                top_branch_found = true;
+            }
+        }
+        if (top_branch_found) {
+            cut_node = top_branch_node + 1;
+        }
+        if (cut_node >= 1 && cut_node < leader.phytomers.size()) {
+            plantarchitecture->pruneBranch(plantID, uint(leader.ID), cut_node);
+        }
+        leader.meristem_is_alive = false;
+    }
+
+    // Everything else is kept inside the wall: shoots above the wall's height are cut back, and the branches are hedged to the wall's
+    // width across the row and to half the tree spacing along it. A shoot is cut at its first node outside the wall.
+    for (const uint shootID: plantarchitecture->getAllShootIDs(plantID)) {
+        if (plantarchitecture->isShootPruned(plantID, shootID) || shootID == uint(leader.ID)) {
+            continue;
+        }
+        const std::shared_ptr<Shoot> &shoot = plantarchitecture->getPlantShoot(plantID, shootID);
+        const bool hedged = shoot->parent_shoot_ID >= 0 && shoot->shoot_type_label != "spur";
+        for (uint node = 0; node < shoot->shoot_internode_vertices.size(); node++) {
+            const helios::vec3 &tip = shoot->shoot_internode_vertices.at(node).back();
+            bool outside = tip.z > z_cap;
+            if (hedged) {
+                outside = outside || std::fabs(tip.x - base.x) > appleFruitingWallHalfWidth(wall, tip.z - base.z) || std::fabs(tip.y - base.y) > row_half_extent;
+            }
+            if (outside) {
+                plantarchitecture->pruneBranch(plantID, shootID, node);
+                break;
+            }
+        }
+    }
+
+    // The fruiting branches on the leader.
+    const float leader_tip_z = leader.shoot_internode_vertices.back().back().z;
+    // A stub that has not regrown was cut this winter (a stub always regrows the following summer), so the stubs without a branch
+    // count the renewals already made this winter.
+    uint renewals_this_winter = 0;
+    for (const AppleFruitingWallBranch &branch: branches) {
+        if (branch.branchID == uint(-1)) {
+            renewals_this_winter++;
+        }
+    }
+    std::vector<std::pair<float, uint>> renewal_candidates; // base radius, shoot ID
+
+    for (const AppleFruitingWallBranch &entry: branches) {
+        if (entry.branchID == uint(-1)) {
+            continue;
+        }
+        const std::shared_ptr<Shoot> &branch = plantarchitecture->getPlantShoot(plantID, entry.branchID);
+        const float branch_base_height = leader.shoot_internode_vertices.at(entry.leader_node).back().z - base.z;
+
+        // The trunk is kept clear.
+        if (branch_base_height < wall.trunk_height - apple_fruitingwall_low_feather_tolerance) {
+            plantarchitecture->pruneBranch(plantID, entry.stubID == uint(-1) ? entry.branchID : entry.stubID, 0);
+            continue;
+        }
+
+        // Shoots that grew at the top of last season's leader extension compete with the leader and are pinched back.
+        if (leader.meristem_is_alive && branch->dormancy_cycles == 1 && leader_tip_z - (branch_base_height + base.z) < apple_fruitingwall_competitor_zone && branch->phytomers.size() > apple_fruitingwall_competitor_nodes_kept) {
+            plantarchitecture->pruneBranch(plantID, entry.branchID, apple_fruitingwall_competitor_nodes_kept);
+            branch->meristem_is_alive = false;
+            continue;
+        }
+
+        // Renewal candidates: a branch that has grown too thick for the leader, or too old. The thickest are cut first, a few a winter.
+        const float branch_radius = branch->shoot_internode_radii.front().front();
+        const float leader_radius = leader.shoot_internode_radii.at(entry.leader_node).back();
+        const bool too_thick_for_leader = branch->dormancy_cycles >= apple_fruitingwall_branch_ratio_rule_age_min && branch_radius > apple_fruitingwall_branch_diameter_ratio_max * leader_radius;
+        if (branch->phytomers.size() > 1 && (too_thick_for_leader || 2.f * branch_radius > apple_fruitingwall_branch_diameter_max || branch->dormancy_cycles >= apple_fruitingwall_branch_age_max)) {
+            renewal_candidates.emplace_back(branch_radius, entry.branchID);
+        }
+
+        // A branch that has grown too long is cut back.
+        if (branch->calculateShootLength() > apple_fruitingwall_branch_length_max) {
+            static_cast<void>(cutShootToLength(*branch, apple_fruitingwall_branch_length_headed));
+        }
+
+        // The branch is kept columnar: side shoots that would become limbs are removed.
+        for (const uint sideID: plantarchitecture->getChildShootIDs(plantID, entry.branchID)) {
+            if (plantarchitecture->isShootPruned(plantID, sideID)) {
+                continue;
+            }
+            const std::shared_ptr<Shoot> &side = plantarchitecture->getPlantShoot(plantID, sideID);
+            if (side->shoot_type_label == "spur") {
+                continue;
+            }
+            const float side_radius = side->shoot_internode_radii.front().front();
+            const float branch_radius_at_side = branch->shoot_internode_radii.at(side->parent_node_index).back();
+            const helios::vec3 side_axis = side->phytomers.front()->getInternodeAxisVector(0.5f);
+            const float side_length = side->calculateShootLength();
+            // A side shoot starts as thick as the branch wood it grew from, so its diameter is judged once it has stood a full season.
+            if ((side->dormancy_cycles >= 2 && side_radius > 0.5f * branch_radius_at_side) || (side_axis.z > 0.5f && side_length > apple_fruitingwall_upright_side_shoot_length_max)) {
+                plantarchitecture->pruneBranch(plantID, sideID, 0);
+            } else if (side_length > apple_fruitingwall_side_shoot_length_max) {
+                static_cast<void>(cutShootToLength(*side, apple_fruitingwall_side_shoot_length_headed));
+            }
+        }
+    }
+
+    // The bevel cuts: the branch is cut to its basal node, which regrows a replacement next season (see appleFruitingWallSummerTraining()).
+    std::sort(renewal_candidates.begin(), renewal_candidates.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+    for (const auto &[radius, branchID]: renewal_candidates) {
+        if (renewals_this_winter >= apple_fruitingwall_renewals_per_winter) {
+            break;
+        }
+        plantarchitecture->pruneBranch(plantID, branchID, 1);
+        plantarchitecture->getPlantShoot(plantID, branchID)->meristem_is_alive = false;
+        renewals_this_winter++;
+    }
+}
+
+//! Growing-season training of the wall: stubs regrow, and a headed leader releases the buds below its cut. Run once per time step from the leader.
+static void appleFruitingWallSummerTraining(Shoot &leader) {
+    PlantArchitecture *plantarchitecture = leader.plantarchitecture_ptr;
+    const uint plantID = leader.plantID;
+
+    // Both rules stop by themselves once the released bud has grown a shoot (its shoot ID is then set).
+    for (const AppleFruitingWallBranch &entry: appleFruitingWallBranches(plantarchitecture, leader)) {
+        if (entry.branchID != uint(-1) || entry.stubID == uint(-1)) {
+            continue;
+        }
+        const std::shared_ptr<Shoot> &stub = plantarchitecture->getPlantShoot(plantID, entry.stubID);
+        for (auto &petiole: stub->phytomers.front()->axillary_vegetative_buds) {
+            for (auto &vbud: petiole) {
+                if (vbud.shoot_ID == uint(-1)) {
+                    vbud.shoot_type_label = "renewal";
+                    Phytomer::setVegetativeBudState(BUD_ACTIVE, vbud);
+                }
+            }
+        }
+    }
+
+    if (!leader.meristem_is_alive) {
+        releaseBudsBelowCut(leader, uint(leader.phytomers.size()), apple_fruitingwall_buds_released_at_heading, "branch");
+    }
+}
+
+void AppleFruitingWallPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
+
+    ApplePhytomerCreationFunction(phytomer, shoot_node_index, parent_shoot_node_index, shoot_max_nodes, plant_age);
+
+    // The basal node of a lateral is blind: it never grows a shoot or a spur, which keeps the base of every branch clean. Its bud is the
+    // one a bevel-cut stub regrows from, which appleFruitingWallSummerTraining() wakes explicitly.
+    if (shoot_node_index == 0 && phytomer->parent_shoot_ptr->parent_shoot_ID >= 0) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
+        for (auto &petiole: phytomer->axillary_vegetative_buds) {
+            for (auto &vbud: petiole) {
+                vbud.shoot_type_label = "spur";
+            }
+        }
+    }
+}
+
+void AppleFruitingWallPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
+
+    applePhytomerCallback(phytomer, phytomer->parent_shoot_ptr->parent_shoot_ID < 0 ? apple_fruitingwall_leader_spur_fraction : apple_fruitingwall_spur_fraction);
+
+    // The training rules act on the whole plant once per time step, from the tip phytomer of the leader. Seasons are read from the
+    // leader's own dormancy flag (see PistachioPhytomerCallbackFunction()).
+    Shoot &leader = *phytomer->parent_shoot_ptr;
+    if (leader.parent_shoot_ID >= 0 || leader.phytomers.empty() || phytomer != leader.phytomers.back()) {
+        return;
+    }
+
+    if (leader.isdormant) {
+        appleFruitingWallWinterPruning(leader, appleFruitingWallDimensions(leader.plantarchitecture_ptr, leader.plantID));
+    } else {
+        appleFruitingWallSummerTraining(leader);
     }
 }
 
@@ -1478,12 +1999,6 @@ void GrapevinePhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
     }
 }
 
-uint MaizeTasselPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
-
-    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/MaizeTassel.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
-    return context_ptr->addPolymeshObject(UUIDs);
-}
-
 uint MaizeEarPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
 
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/MaizeEar.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
@@ -1561,6 +2076,9 @@ void MaizePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
         phytomer->phytomer_parameters.inflorescence.flowers_per_peduncle = 1;
         phytomer->phytomer_parameters.inflorescence.fruit_prototype_function = MaizeEarPrototype;
         phytomer->phytomer_parameters.inflorescence.fruit_prototype_scale = 0.2;
+        phytomer->phytomer_parameters.inflorescence.pitch.uniformDistribution(0, 30);
+        phytomer->phytomer_parameters.inflorescence.unique_prototypes = 1;
+        phytomer->phytomer_parameters.peduncle.color = phytomer->phytomer_parameters.internode.color;
         phytomer->phytomer_parameters.peduncle.length = 0.05f;
         phytomer->phytomer_parameters.peduncle.radius = 0.01;
         phytomer->phytomer_parameters.peduncle.pitch = 5;
@@ -1673,61 +2191,6 @@ static constexpr uint pistachio_buds_released_per_cut = 2;
 static constexpr uint pistachio_buds_released_at_tipping = 5;
 //! Fraction of the lateral vegetative buds left unbroken on a limb's year-old wood that grow a spur (see growSpursFromUnbrokenBuds()).
 static constexpr float pistachio_spur_fraction = 0.f;
-//! Number of nodes to keep so that a shoot is cut back to about `length` metres (the first node whose far end reaches that length is kept).
-static uint pistachioNodesToKeep(const Shoot &shoot, float length) {
-    float arc = 0;
-    bool first_vertex = true;
-    helios::vec3 previous;
-    for (uint node = 0; node < shoot.shoot_internode_vertices.size(); node++) {
-        for (const helios::vec3 &vertex: shoot.shoot_internode_vertices.at(node)) {
-            if (!first_vertex) {
-                arc += (vertex - previous).magnitude();
-            }
-            previous = vertex;
-            first_vertex = false;
-        }
-        if (arc >= length) {
-            return node + 1;
-        }
-    }
-    return uint(shoot.shoot_internode_vertices.size());
-}
-
-//! Cut a shoot back to about `length` metres, ending its growth. Returns the number of nodes kept.
-/** The cut is deferred to the end of the time step (see PlantArchCallbackEdits), but the tip is stopped at once: removing phytomers only
-    ends a shoot's growth when the removed tip already has its geometry, so a young tip could otherwise survive the cut and regrow. */
-static uint pistachioCutToLength(Shoot &shoot, float length) {
-    uint keep = pistachioNodesToKeep(shoot, length);
-    if (keep < shoot.phytomers.size()) {
-        shoot.plantarchitecture_ptr->pruneBranch(shoot.plantID, uint(shoot.ID), keep);
-        shoot.meristem_is_alive = false;
-    }
-    return keep;
-}
-
-//! Make one vegetative bud on each of the top `node_count` nodes below `keep` break, standing in for the release from apical dominance a cut causes.
-/** The bud-break probabilities cannot tell a cut from a natural shoot tip, so without this a headed shoot usually regrows from a single bud
-    or none. Only valid while the shoot is growing: a bud set active in dormancy is drawn again when dormancy breaks. Node 0 is skipped
-    (a blind node), and so are buds that have already grown a shoot. */
-static void pistachioReleaseBudsBelow(Shoot &shoot, uint keep, uint node_count) {
-    uint released = 0;
-    for (int node = int(keep) - 1; node >= 1 && released < node_count; node--) {
-        const std::shared_ptr<Phytomer> &phytomer = shoot.phytomers.at(node);
-        bool released_here = false;
-        for (auto &petiole: phytomer->axillary_vegetative_buds) {
-            for (auto &vbud: petiole) {
-                if (!released_here && vbud.shoot_ID == uint(-1)) {
-                    // A bud already passed over for a spur (see growSpursFromUnbrokenBuds()) is growing a limb after all.
-                    vbud.shoot_type_label = "proleptic";
-                    Phytomer::setVegetativeBudState(BUD_ACTIVE, vbud);
-                    released_here = true;
-                }
-            }
-        }
-        released++;
-    }
-}
-
 void PistachioPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
 
     growSpursFromUnbrokenBuds(phytomer, pistachio_spur_fraction);
@@ -1757,7 +2220,7 @@ void PistachioPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
     // once those buds have grown shoots. (Scaffolds are in their first dormancy cycle from planting, secondaries from their first winter.)
     if ((is_scaffold || is_secondary) && !shoot.meristem_is_alive && !shoot.isdormant && shoot.dormancy_cycles == 1) {
         const uint buds_released = is_scaffold ? pistachio_buds_released_at_tipping : pistachio_buds_released_per_cut;
-        pistachioReleaseBudsBelow(shoot, uint(shoot.phytomers.size()), buds_released);
+        releaseBudsBelowCut(shoot, uint(shoot.phytomers.size()), buds_released, "proleptic");
 
         // The shoots that grow from those buds are released from apical dominance, so they grow as leaders of the fork rather than as
         // laterals: each gets the full internode length of its shoot type. Without this only the top one did (a new shoot's internode
@@ -1775,7 +2238,7 @@ void PistachioPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
         // Tip each scaffold once, in the season it reaches the tipping length. Tipping removes the growing tip even when the node reaching
         // the tipping length is the tip itself and nothing is cut off.
         if (shoot.meristem_is_alive && !shoot.isdormant && shoot.calculateShootLength() >= pistachio_scaffold_tip_length) {
-            static_cast<void>(pistachioCutToLength(shoot, pistachio_scaffold_tip_length));
+            static_cast<void>(cutShootToLength(shoot, pistachio_scaffold_tip_length));
             shoot.meristem_is_alive = false;
         }
 
@@ -1792,7 +2255,7 @@ void PistachioPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
                 if (i >= pistachio_secondaries_per_scaffold) {
                     plantarchitecture->pruneBranch(shoot.plantID, secondaries.at(i).second, 0);
                 } else {
-                    static_cast<void>(pistachioCutToLength(*secondary, pistachio_secondary_head_length));
+                    static_cast<void>(cutShootToLength(*secondary, pistachio_secondary_head_length));
                 }
             }
         }
@@ -1831,17 +2294,109 @@ void RedbudPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
     }
 }
 
-uint RiceSpikePrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
-    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/RiceGrain.obj").string().c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
-    uint objID = context_ptr->addPolymeshObject(UUIDs);
-    return objID;
+// Length of a rice leaf blade as a fraction of the longest blade on the plant, counted from the flag leaf down
+static float riceBladeLengthFraction(uint node_index, uint shoot_max_nodes) {
+    // The flag leaf, second and third leaves of Nipponbare are 33.4, 42.7 and 42.1 cm (SPO1 study, International Journal of Molecular Sciences 2023, doi:10.3390/ijms242316974), and the largest leaf is the second or
+    // third from the last (Yoshida 1981, Fundamentals of Rice Crop Science). Below that blade length falls as the bell-shaped profile of Watanabe et al. (2005, Annals of Botany 95:1131); the lower values are read from photographs.
+    constexpr std::array<float, 8> fraction_by_rank_from_top = {0.78f, 1.f, 0.99f, 0.93f, 0.84f, 0.74f, 0.63f, 0.52f};
+    const int ranks_from_top = std::max(0, int(shoot_max_nodes) - 1 - int(node_index));
+    if (ranks_from_top < int(fraction_by_rank_from_top.size())) {
+        return fraction_by_rank_from_top.at(ranks_from_top);
+    }
+    // The leaves of the seedling are short.
+    return std::max(0.2f, fraction_by_rank_from_top.back() - 0.1f * float(ranks_from_top - int(fraction_by_rank_from_top.size()) + 1));
+}
+
+// Length of the sheath of a rice leaf in meters
+// No measurements by rank were found for a modern cultivar, so these lengths are estimates, set from photographs and the collar heights they give.
+static float riceSheathLength(uint node_index, uint shoot_max_nodes) {
+    constexpr std::array<float, 8> length_by_rank_from_top = {0.24f, 0.25f, 0.24f, 0.22f, 0.20f, 0.17f, 0.14f, 0.11f};
+    const int ranks_from_top = std::max(0, int(shoot_max_nodes) - 1 - int(node_index));
+    if (ranks_from_top < int(length_by_rank_from_top.size())) {
+        return length_by_rank_from_top.at(ranks_from_top);
+    }
+    return std::max(0.03f, length_by_rank_from_top.back() - 0.02f * float(ranks_from_top - int(length_by_rank_from_top.size()) + 1));
+}
+
+// Length of a culm internode of rice in meters, counted from the flag leaf down. Only the upper internodes elongate; those below are crowded into the crown.
+static float riceCulmInternodeLength(uint node_index, uint shoot_max_nodes) {
+    // Rice has about five elongated internodes, lengthening up the culm, and the unelongated ones total only a few centimeters (Yoshida 1981). Measured lengths from the base are about 1, 4 and 6 cm in ZS97 (Frontiers
+    // in Plant Science, internode QTL study, doi via PMC12748189), and the top three span about 85% of the culm (Xu et al. 2011, Annals of Botany 107:817). The uppermost is the peduncle, not listed here.
+    constexpr std::array<float, 5> length_by_rank_from_top = {0.18f, 0.10f, 0.055f, 0.035f, 0.012f};
+    const int ranks_from_top = std::max(0, int(shoot_max_nodes) - 1 - int(node_index));
+    return ranks_from_top < int(length_by_rank_from_top.size()) ? length_by_rank_from_top.at(ranks_from_top) : 0.003f;
+}
+
+// One tiller a rice plant can bear: its position on the main stem, and for a secondary tiller its position on that primary tiller (zero for a primary tiller).
+struct RiceTillerPosition {
+    uint main_stem_leaf;
+    uint primary_tiller_leaf;
+};
+
+// Tillers in the order they emerge. A tiller emerges from the axil of leaf n as leaf n+3 of its parent appears, and leaf 2 is usually the first to tiller (Yoshida 1981), so the primary tiller of main-stem leaf n appears with main-stem leaf n+3,
+// and the secondary tiller of leaf k of that primary appears with main-stem leaf n+k+6. Positions that would appear at the same time are taken from the lowest main-stem leaf first.
+static constexpr std::array<RiceTillerPosition, 18> rice_tiller_positions = {{{2, 0}, {3, 0}, {4, 0}, {5, 0}, {2, 1}, {6, 0}, {2, 2}, {3, 1}, {7, 0}, {2, 3}, {3, 2}, {4, 1}, {2, 4}, {3, 3}, {4, 2}, {5, 1}, {3, 4}, {4, 3}}};
+
+int riceTillerCount(const std::map<std::string, float> &build_parameters) {
+    return getBuildParameterIntegerValue(build_parameters, rice_tiller_count, 12);
 }
 
 void RicePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
-    // The flag leaf stands nearly along the culm.
-    if (shoot_max_nodes > 0 && shoot_node_index + 1 == shoot_max_nodes) {
-        setGrassFlagLeafAngle(phytomer, 5.f);
+    Shoot *shoot = phytomer->parent_shoot_ptr;
+    const PlantArchitecture *plantarchitecture = shoot->plantarchitecture_ptr;
+    const int tiller_count = riceTillerCount(plantarchitecture->getPlantBuildParameters(phytomer->plantID));
+    const auto tiller_positions_begin = rice_tiller_positions.begin();
+    const auto tiller_positions_end = tiller_positions_begin + tiller_count;
+
+    if (shoot_node_index == 0 && phytomer->rank > 0) {
+        // The leaves of all the tillers of a plant finish together, so a tiller carries as many fewer leaves than its parent as it was late in appearing: it starts 3 phyllochrons after the leaf that subtends it,
+        // whose number is its position. Set on the tiller's own shoot parameters, so that its panicle forms at that node.
+        const std::shared_ptr<Shoot> &parent_shoot = plantarchitecture->getPlantShoot(phytomer->plantID, shoot->parent_shoot_ID);
+        const int tiller_max_nodes = std::max(3, parent_shoot->shoot_parameters.max_nodes.val() - int(parent_shoot_node_index + 1) - 2);
+        shoot->shoot_parameters.max_nodes = tiller_max_nodes;
+        phytomer->shoot_index.z = tiller_max_nodes;
+        shoot_max_nodes = uint(tiller_max_nodes);
+    }
+
+    // The internodes at the positions tillers can arise from stay short, so that the tillers of a plant all come from a crown at the soil surface. Secondary tillers arise from the first four leaves of a primary tiller.
+    constexpr uint highest_main_stem_tiller_leaf = 7;
+    constexpr uint highest_primary_tiller_tiller_leaf = 4;
+    auto node_is_in_crown = [&](uint node_index) { return node_index + 1 <= (phytomer->rank == 0 ? highest_main_stem_tiller_leaf : phytomer->rank == 1 ? highest_primary_tiller_tiller_leaf : 0u); };
+
+    // Keep the bud in this axil only if it is the position of one of the plant's tillers.
+    bool bud_makes_tiller = false;
+    if (phytomer->rank == 0) {
+        bud_makes_tiller = std::any_of(tiller_positions_begin, tiller_positions_end, [&](const RiceTillerPosition &position) { return position.primary_tiller_leaf == 0 && position.main_stem_leaf == shoot_node_index + 1; });
+    } else if (phytomer->rank == 1) {
+        const uint main_stem_leaf = parent_shoot_node_index + 1;
+        bud_makes_tiller = std::any_of(tiller_positions_begin, tiller_positions_end, [&](const RiceTillerPosition &position) { return position.main_stem_leaf == main_stem_leaf && position.primary_tiller_leaf == shoot_node_index + 1; });
+    }
+    if (!bud_makes_tiller) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
+    }
+
+    // The blade is built at its fraction of the longest blade on the plant, applied relative to the size it is currently built at.
+    phytomer->scaleLeafPrototypeScale(riceBladeLengthFraction(shoot_node_index, shoot_max_nodes));
+
+    // A rice blade does not begin at the node its leaf is inserted on. The sheath wraps the culm upward from that node to the collar, where the blade begins. The model has no separate sheath, so, as for the library
+    // wheat, its internodes run from collar to collar instead of from node to node. Each is the culm internode, plus the sheath of the leaf it carries, less the sheath of the leaf below, whose collar it starts from.
+    // Within the crown the sheaths are not added, since a collar raised on a sheath would carry the tillers above it up the culm; the lowest blades, which are short and the first to die, come out at the crown instead.
+    float model_internode_length = 0.004f;
+    if (!node_is_in_crown(shoot_node_index)) {
+        const float sheath_length_below = shoot_node_index == 0 || node_is_in_crown(shoot_node_index - 1) ? 0.f : riceSheathLength(shoot_node_index - 1, shoot_max_nodes);
+        model_internode_length = std::max(0.002f, riceCulmInternodeLength(shoot_node_index, shoot_max_nodes) + riceSheathLength(shoot_node_index, shoot_max_nodes) - sheath_length_below);
+    }
+    phytomer->setInternodeMaxLength(model_internode_length);
+
+    // The upper leaves stand close to the culm: 9.4, 9.3 and 12.4 degrees for the flag leaf, second and third leaves of Nipponbare (SPO1 study, 2023), with a spread read from photographs.
+    constexpr std::array<float, 3> upper_leaf_angle = {9.4f, 9.3f, 12.4f};
+    const int leaf_ranks_from_top = int(shoot_max_nodes) - 1 - int(shoot_node_index);
+    if (shoot_max_nodes > 0 && leaf_ranks_from_top < int(upper_leaf_angle.size())) {
+        setGrassFlagLeafAngle(phytomer, upper_leaf_angle.at(leaf_ranks_from_top) + phytomer->parent_shoot_ptr->context_ptr->randu(-3.f, 5.f));
+    } else if (node_is_in_crown(shoot_node_index)) {
+        // The sheaths of the lowest leaves hold them upright, which the model has no sheath to do, and they leave the crown on a tiller still leaning at its full insertion angle.
+        setGrassFlagLeafAngle(phytomer, phytomer->parent_shoot_ptr->context_ptr->randu(3.f, 12.f));
     }
 }
 
@@ -1902,30 +2457,84 @@ SorghumPanicleParameters SorghumPanicleParameters::loose() {
 // SorghumPanicleParameters::fromBuildParameters(), blended by the panicle_type preset, and declared to the plant library by SorghumPanicleParameters::buildParameterDeclarations(). The rachis radius, branch
 // color and tube subdivisions are left out, since they are matched to the library peduncle, which is not built from the panicle parameters.
 
-struct SorghumPanicleFloatKey {
+template<typename OrganParameters>
+struct OrganFloatKey {
     const char *name;
-    float SorghumPanicleParameters::*field;
+    float OrganParameters::*field;
     float min_value;
     float max_value;
     const char *description;
 };
 
-struct SorghumPanicleIntegerKey {
+template<typename OrganParameters>
+struct OrganIntegerKey {
     const char *name;
-    int SorghumPanicleParameters::*field;
+    int OrganParameters::*field;
     int min_value;
     int max_value;
     const char *description;
 };
 
-struct SorghumPanicleColorKey {
+template<typename OrganParameters>
+struct OrganColorKey {
     const char *name;
-    helios::RGBcolor SorghumPanicleParameters::*field;
+    helios::RGBcolor OrganParameters::*field;
     float helios::RGBcolor::*channel;
     const char *description;
 };
 
-static const std::vector<SorghumPanicleFloatKey> sorghum_panicle_float_keys = {
+//! The tables of build parameter keys of one organ, each key mapping onto one field of its parameter structure
+template<typename OrganParameters>
+struct OrganKeyTables {
+    const std::vector<OrganFloatKey<OrganParameters>> &float_keys;
+    const std::vector<OrganIntegerKey<OrganParameters>> &integer_keys;
+    const std::vector<OrganColorKey<OrganParameters>> &color_keys;
+};
+
+// Blend of two parameter sets, weighted by fraction toward the second. Only the fields in the key tables are blended.
+template<typename OrganParameters>
+static OrganParameters blendOrganParameters(const OrganKeyTables<OrganParameters> &tables, const OrganParameters &from, const OrganParameters &to, float fraction) {
+    OrganParameters blended = from;
+    for (const auto &key: tables.float_keys) {
+        blended.*key.field = (1.f - fraction) * from.*key.field + fraction * to.*key.field;
+    }
+    for (const auto &key: tables.integer_keys) {
+        blended.*key.field = int(std::round((1.f - fraction) * float(from.*key.field) + fraction * float(to.*key.field)));
+    }
+    for (const auto &key: tables.color_keys) {
+        blended.*key.field.*key.channel = (1.f - fraction) * from.*key.field.*key.channel + fraction * to.*key.field.*key.channel;
+    }
+    return blended;
+}
+
+// Each key given in the build parameters overrides its field.
+template<typename OrganParameters>
+static void applyOrganBuildParameters(const OrganKeyTables<OrganParameters> &tables, const std::map<std::string, float> &build_parameters, OrganParameters &parameters) {
+    for (const auto &key: tables.float_keys) {
+        parameters.*key.field = getBuildParameterValue(build_parameters, key.name, parameters.*key.field, key.min_value, key.max_value, key.description);
+    }
+    for (const auto &key: tables.integer_keys) {
+        parameters.*key.field = getBuildParameterIntegerValue(build_parameters, key.name, parameters.*key.field, key.min_value, key.max_value, key.description);
+    }
+    for (const auto &key: tables.color_keys) {
+        parameters.*key.field.*key.channel = getBuildParameterValue(build_parameters, key.name, parameters.*key.field.*key.channel, 0.f, 1.f, key.description);
+    }
+}
+
+template<typename OrganParameters>
+static void appendOrganBuildParameterDeclarations(const OrganKeyTables<OrganParameters> &tables, std::vector<BuildParameterDeclaration> &declarations) {
+    for (const auto &key: tables.float_keys) {
+        declarations.push_back({key.name, key.min_value, key.max_value, false, key.description});
+    }
+    for (const auto &key: tables.integer_keys) {
+        declarations.push_back({key.name, float(key.min_value), float(key.max_value), true, key.description});
+    }
+    for (const auto &key: tables.color_keys) {
+        declarations.push_back({key.name, 0.f, 1.f, false, key.description});
+    }
+}
+
+static const std::vector<OrganFloatKey<SorghumPanicleParameters>> sorghum_panicle_float_keys = {
         {"panicle_length", &SorghumPanicleParameters::length, 0.05f, 0.6f, "sorghum panicle length in meters"},
         {"panicle_length_variation", &SorghumPanicleParameters::length_variation, 0.f, 0.3f, "coefficient of variation of sorghum panicle length"},
         {"panicle_rachis_length_fraction", &SorghumPanicleParameters::rachis_length_fraction, 0.3f, 1.f, "fraction of the sorghum panicle length spanned by the rachis"},
@@ -1953,13 +2562,13 @@ static const std::vector<SorghumPanicleFloatKey> sorghum_panicle_float_keys = {
         {"glume_spread", &SorghumPanicleParameters::glume_spread, 0.f, 90.f, "gape of the sorghum glumes in degrees"},
 };
 
-static const std::vector<SorghumPanicleIntegerKey> sorghum_panicle_integer_keys = {
+static const std::vector<OrganIntegerKey<SorghumPanicleParameters>> sorghum_panicle_integer_keys = {
         {"panicle_branch_count", &SorghumPanicleParameters::primary_branch_count, 5, 200, "number of sorghum primary branches"},
         {"panicle_grains_per_raceme", &SorghumPanicleParameters::grains_per_raceme, 1, 20, "mean number of grains on a sorghum raceme"},
         {"grain_count", &SorghumPanicleParameters::grain_count, 100, 10000, "mean number of grains on a sorghum panicle"},
 };
 
-static const std::vector<SorghumPanicleColorKey> sorghum_panicle_color_keys = {
+static const std::vector<OrganColorKey<SorghumPanicleParameters>> sorghum_panicle_color_keys = {
         {"grain_color_r", &SorghumPanicleParameters::grain_color, &helios::RGBcolor::r, "red component of the sorghum grain color"},
         {"grain_color_g", &SorghumPanicleParameters::grain_color, &helios::RGBcolor::g, "green component of the sorghum grain color"},
         {"grain_color_b", &SorghumPanicleParameters::grain_color, &helios::RGBcolor::b, "blue component of the sorghum grain color"},
@@ -1972,20 +2581,7 @@ static const std::vector<SorghumPanicleColorKey> sorghum_panicle_color_keys = {
 static constexpr BuildParameterDeclaration sorghum_panicle_type{"panicle_type", 0.f, 1.f, false, "sorghum panicle type from 0 (compact) through 0.5 (semi-compact) to 1 (loose)"};
 static constexpr BuildParameterDeclaration sorghum_grain_subdivisions{"grain_subdivisions", 3.f, 12.f, true, "number of facets around a sorghum grain"};
 
-// Blend of two panicle parameter sets, weighted by fraction toward the second. Only the fields in the key tables are blended; the presets differ in no other field.
-static SorghumPanicleParameters blendSorghumPanicleParameters(const SorghumPanicleParameters &from, const SorghumPanicleParameters &to, float fraction) {
-    SorghumPanicleParameters blended = from;
-    for (const SorghumPanicleFloatKey &key: sorghum_panicle_float_keys) {
-        blended.*key.field = (1.f - fraction) * from.*key.field + fraction * to.*key.field;
-    }
-    for (const SorghumPanicleIntegerKey &key: sorghum_panicle_integer_keys) {
-        blended.*key.field = int(std::round((1.f - fraction) * float(from.*key.field) + fraction * float(to.*key.field)));
-    }
-    for (const SorghumPanicleColorKey &key: sorghum_panicle_color_keys) {
-        blended.*key.field.*key.channel = (1.f - fraction) * from.*key.field.*key.channel + fraction * to.*key.field.*key.channel;
-    }
-    return blended;
-}
+static const OrganKeyTables<SorghumPanicleParameters> sorghum_panicle_key_tables{sorghum_panicle_float_keys, sorghum_panicle_integer_keys, sorghum_panicle_color_keys};
 
 SorghumPanicleParameters SorghumPanicleParameters::fromBuildParameters(const std::map<std::string, float> &build_parameters) {
 
@@ -1994,21 +2590,13 @@ SorghumPanicleParameters SorghumPanicleParameters::fromBuildParameters(const std
     if (build_parameters.find("panicle_type") != build_parameters.end()) {
         const float panicle_type = getBuildParameterValue(build_parameters, sorghum_panicle_type, 0.5f);
         if (panicle_type <= 0.5f) {
-            parameters = blendSorghumPanicleParameters(compact(), SorghumPanicleParameters(), 2.f * panicle_type);
+            parameters = blendOrganParameters(sorghum_panicle_key_tables, compact(), SorghumPanicleParameters(), 2.f * panicle_type);
         } else {
-            parameters = blendSorghumPanicleParameters(SorghumPanicleParameters(), loose(), 2.f * panicle_type - 1.f);
+            parameters = blendOrganParameters(sorghum_panicle_key_tables, SorghumPanicleParameters(), loose(), 2.f * panicle_type - 1.f);
         }
     }
 
-    for (const SorghumPanicleFloatKey &key: sorghum_panicle_float_keys) {
-        parameters.*key.field = getBuildParameterValue(build_parameters, key.name, parameters.*key.field, key.min_value, key.max_value, key.description);
-    }
-    for (const SorghumPanicleIntegerKey &key: sorghum_panicle_integer_keys) {
-        parameters.*key.field = getBuildParameterIntegerValue(build_parameters, key.name, parameters.*key.field, key.min_value, key.max_value, key.description);
-    }
-    for (const SorghumPanicleColorKey &key: sorghum_panicle_color_keys) {
-        parameters.*key.field.*key.channel = getBuildParameterValue(build_parameters, key.name, parameters.*key.field.*key.channel, 0.f, 1.f, key.description);
-    }
+    applyOrganBuildParameters(sorghum_panicle_key_tables, build_parameters, parameters);
     parameters.grain_subdivisions = uint(getBuildParameterIntegerValue(build_parameters, sorghum_grain_subdivisions, int(parameters.grain_subdivisions)));
 
     return parameters;
@@ -2016,15 +2604,7 @@ SorghumPanicleParameters SorghumPanicleParameters::fromBuildParameters(const std
 
 std::vector<BuildParameterDeclaration> SorghumPanicleParameters::buildParameterDeclarations() {
     std::vector<BuildParameterDeclaration> declarations = {sorghum_panicle_type, sorghum_grain_subdivisions};
-    for (const SorghumPanicleFloatKey &key: sorghum_panicle_float_keys) {
-        declarations.push_back({key.name, key.min_value, key.max_value, false, key.description});
-    }
-    for (const SorghumPanicleIntegerKey &key: sorghum_panicle_integer_keys) {
-        declarations.push_back({key.name, float(key.min_value), float(key.max_value), true, key.description});
-    }
-    for (const SorghumPanicleColorKey &key: sorghum_panicle_color_keys) {
-        declarations.push_back({key.name, 0.f, 1.f, false, key.description});
-    }
+    appendOrganBuildParameterDeclarations(sorghum_panicle_key_tables, declarations);
     return declarations;
 }
 
@@ -2497,6 +3077,869 @@ uint buildSorghumPanicle(helios::Context *context_ptr, const SorghumPanicleParam
 
 uint SorghumPaniclePrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
     return buildSorghumPanicle(context_ptr, SorghumPanicleParameters::fromBuildParameters(build_parameters));
+}
+
+// ---- Maize tassel ---- //
+
+MaizeTasselParameters MaizeTasselParameters::fewBranched() {
+    MaizeTasselParameters parameters;
+    parameters.length = 0.36f;
+    parameters.central_spike_fraction = 0.8f;
+    parameters.primary_branch_count = 6;
+    parameters.secondary_branch_count = 0;
+    parameters.branch_length = 0.17f;
+    parameters.branch_angle_base = 24.f;
+    parameters.branch_angle_tip = 14.f;
+    parameters.branch_droop_base = 12.f;
+    parameters.branch_droop_tip = 3.f;
+    return parameters;
+}
+
+MaizeTasselParameters MaizeTasselParameters::manyBranched() {
+    MaizeTasselParameters parameters;
+    parameters.length = 0.40f;
+    parameters.central_spike_fraction = 0.55f;
+    parameters.primary_branch_count = 22;
+    parameters.secondary_branch_count = 8;
+    parameters.branch_length = 0.23f;
+    parameters.branch_length_tip_fraction = 0.45f;
+    parameters.branch_angle_base = 54.f;
+    parameters.branch_angle_tip = 28.f;
+    parameters.branch_droop_base = 45.f;
+    parameters.branch_droop_tip = 10.f;
+    return parameters;
+}
+
+// The tables below are the single list of the tassel's build parameters. The radii of the axis, the branch color and the tube subdivisions are left out, since they are matched to the library peduncle, which is
+// not built from the tassel parameters.
+static const std::vector<OrganFloatKey<MaizeTasselParameters>> maize_tassel_float_keys = {
+        {"tassel_length", &MaizeTasselParameters::length, 0.05f, 0.8f, "maize tassel length in meters, from its lowest branch to its tip"},
+        {"tassel_length_variation", &MaizeTasselParameters::length_variation, 0.f, 0.3f, "coefficient of variation of maize tassel length"},
+        {"tassel_central_spike_fraction", &MaizeTasselParameters::central_spike_fraction, 0.1f, 1.f, "fraction of the maize tassel length spanned by the central spike"},
+        {"tassel_axis_curvature", &MaizeTasselParameters::axis_curvature, 0.f, 90.f, "total bend of the maize tassel axis in degrees"},
+        {"tassel_branch_count_variation", &MaizeTasselParameters::primary_branch_count_variation, 0.f, 0.5f, "coefficient of variation of the number of maize tassel primary branches"},
+        {"tassel_branch_length", &MaizeTasselParameters::branch_length, 0.02f, 0.5f, "length of the longest maize tassel primary branches in meters"},
+        {"tassel_branch_length_tip_fraction", &MaizeTasselParameters::branch_length_tip_fraction, 0.1f, 1.f, "length of the uppermost maize tassel primary branch as a fraction of the longest"},
+        {"tassel_branch_length_variation", &MaizeTasselParameters::branch_length_variation, 0.f, 0.5f, "coefficient of variation of maize tassel primary branch length"},
+        {"tassel_branch_angle_base", &MaizeTasselParameters::branch_angle_base, 0.f, 100.f, "insertion angle of the lowest maize tassel primary branch in degrees from the axis"},
+        {"tassel_branch_angle_tip", &MaizeTasselParameters::branch_angle_tip, 0.f, 100.f, "insertion angle of the uppermost maize tassel primary branch in degrees from the axis"},
+        {"tassel_branch_droop_base", &MaizeTasselParameters::branch_droop_base, 0.f, 120.f, "downward arch of the lowest maize tassel primary branch in degrees"},
+        {"tassel_branch_droop_tip", &MaizeTasselParameters::branch_droop_tip, 0.f, 120.f, "downward arch of the uppermost maize tassel primary branch in degrees"},
+        {"tassel_branch_bare_fraction", &MaizeTasselParameters::branch_bare_fraction, 0.f, 0.9f, "fraction of each maize tassel branch that bears no spikelets"},
+        {"tassel_branch_radius", &MaizeTasselParameters::branch_radius, 0.0002f, 0.003f, "radius of a maize tassel primary branch in meters"},
+        {"tassel_spike_spikelet_density", &MaizeTasselParameters::spike_spikelet_density, 1.f, 40.f, "spikelets per centimeter of maize central spike"},
+        {"tassel_branch_spikelet_density", &MaizeTasselParameters::branch_spikelet_density, 1.f, 20.f, "spikelets per centimeter of maize tassel branch"},
+        {"spikelet_length", &MaizeTasselParameters::spikelet_length, 0.003f, 0.02f, "maize spikelet length in meters"},
+        {"spikelet_width", &MaizeTasselParameters::spikelet_width, 0.001f, 0.008f, "maize spikelet width in meters"},
+        {"spikelet_thickness", &MaizeTasselParameters::spikelet_thickness, 0.001f, 0.008f, "maize spikelet thickness in meters"},
+        {"spikelet_size_variation", &MaizeTasselParameters::spikelet_size_variation, 0.f, 0.3f, "coefficient of variation of maize spikelet size"},
+        {"spikelet_angle", &MaizeTasselParameters::spikelet_angle, 0.f, 60.f, "angle of a maize spikelet from the axis or branch bearing it in degrees"},
+        {"glume_color_variation", &MaizeTasselParameters::glume_color_variation, 0.f, 0.5f, "coefficient of variation of maize glume brightness"},
+        {"anther_fraction", &MaizeTasselParameters::anther_fraction, 0.f, 1.f, "fraction of maize spikelets with a floret at anthesis"},
+        {"anther_length", &MaizeTasselParameters::anther_length, 0.001f, 0.012f, "maize anther length in meters"},
+        {"anther_width", &MaizeTasselParameters::anther_width, 0.0003f, 0.004f, "maize anther width in meters"},
+        {"filament_length", &MaizeTasselParameters::filament_length, 0.f, 0.02f, "maize filament length in meters"},
+        {"anther_color_variation", &MaizeTasselParameters::anther_color_variation, 0.f, 0.5f, "coefficient of variation of maize anther brightness"},
+};
+
+static const std::vector<OrganIntegerKey<MaizeTasselParameters>> maize_tassel_integer_keys = {
+        {"tassel_branch_count", &MaizeTasselParameters::primary_branch_count, 0, 60, "mean number of maize tassel primary branches"},
+        {"tassel_secondary_branch_count", &MaizeTasselParameters::secondary_branch_count, 0, 40, "number of maize tassel secondary branches"},
+};
+
+static const std::vector<OrganColorKey<MaizeTasselParameters>> maize_tassel_color_keys = {
+        {"glume_color_r", &MaizeTasselParameters::glume_color, &helios::RGBcolor::r, "red component of the maize glume color"},
+        {"glume_color_g", &MaizeTasselParameters::glume_color, &helios::RGBcolor::g, "green component of the maize glume color"},
+        {"glume_color_b", &MaizeTasselParameters::glume_color, &helios::RGBcolor::b, "blue component of the maize glume color"},
+        {"glume_tip_color_r", &MaizeTasselParameters::glume_tip_color, &helios::RGBcolor::r, "red component of the maize glume tip color"},
+        {"glume_tip_color_g", &MaizeTasselParameters::glume_tip_color, &helios::RGBcolor::g, "green component of the maize glume tip color"},
+        {"glume_tip_color_b", &MaizeTasselParameters::glume_tip_color, &helios::RGBcolor::b, "blue component of the maize glume tip color"},
+        {"anther_color_r", &MaizeTasselParameters::anther_color, &helios::RGBcolor::r, "red component of the maize anther color"},
+        {"anther_color_g", &MaizeTasselParameters::anther_color, &helios::RGBcolor::g, "green component of the maize anther color"},
+        {"anther_color_b", &MaizeTasselParameters::anther_color, &helios::RGBcolor::b, "blue component of the maize anther color"},
+};
+
+static const OrganKeyTables<MaizeTasselParameters> maize_tassel_key_tables{maize_tassel_float_keys, maize_tassel_integer_keys, maize_tassel_color_keys};
+
+// The two keys that do not map onto a single field
+static constexpr BuildParameterDeclaration maize_tassel_type{"tassel_type", 0.f, 1.f, false, "maize tassel type from 0 (few-branched) through 0.5 (the default) to 1 (many-branched)"};
+static constexpr BuildParameterDeclaration maize_spikelet_subdivisions{"spikelet_subdivisions", 3.f, 12.f, true, "number of facets around a maize spikelet"};
+
+MaizeTasselParameters MaizeTasselParameters::fromBuildParameters(const std::map<std::string, float> &build_parameters) {
+
+    // The preset is applied first, so that individual parameters given alongside it override it
+    MaizeTasselParameters parameters;
+    if (build_parameters.find(maize_tassel_type.name) != build_parameters.end()) {
+        const float tassel_type = getBuildParameterValue(build_parameters, maize_tassel_type, 0.5f);
+        if (tassel_type <= 0.5f) {
+            parameters = blendOrganParameters(maize_tassel_key_tables, fewBranched(), MaizeTasselParameters(), 2.f * tassel_type);
+        } else {
+            parameters = blendOrganParameters(maize_tassel_key_tables, MaizeTasselParameters(), manyBranched(), 2.f * tassel_type - 1.f);
+        }
+    }
+
+    applyOrganBuildParameters(maize_tassel_key_tables, build_parameters, parameters);
+    parameters.spikelet_subdivisions = uint(getBuildParameterIntegerValue(build_parameters, maize_spikelet_subdivisions, int(parameters.spikelet_subdivisions)));
+
+    return parameters;
+}
+
+std::vector<BuildParameterDeclaration> MaizeTasselParameters::buildParameterDeclarations() {
+    std::vector<BuildParameterDeclaration> declarations = {maize_tassel_type, maize_spikelet_subdivisions};
+    appendOrganBuildParameterDeclarations(maize_tassel_key_tables, declarations);
+    return declarations;
+}
+
+// Brightness factor of one spikelet or anther. Every distinct color in the Context takes its own material, so a continuous spread of brightness over a tassel's tens of thousands of triangles would create a
+// material for each, and the cost of naming them grows with the square of their number. Rounded to steps too small to see, the spread is kept with a handful of materials.
+static float quantizedBrightness(helios::Context *context_ptr, float coefficient_of_variation) {
+    constexpr float brightness_step = 0.04f;
+    return std::round(clamp(1.f + coefficient_of_variation * context_ptr->randn(), 0.6f, 1.4f) / brightness_step) * brightness_step;
+}
+
+// The primitives of a grass inflorescence with the face table the object is given. The table lets the object find which of its pieces are closed, since Polymesh::getVolume() cannot otherwise compute a volume for an
+// object in which closed pieces mix with open ones, and the carbohydrate model needs the volume of every fruit. The spikelet hulls are the only closed pieces, so they are its volume.
+struct GrassInflorescenceMesh {
+    std::vector<vec3> vertices;
+    std::vector<helios::int3> faces;
+    std::vector<uint> UUIDs;
+
+    [[nodiscard]] int addVertex(const vec3 &vertex) {
+        vertices.push_back(vertex);
+        return int(vertices.size()) - 1;
+    }
+    void addTriangle(helios::Context *context_ptr, int vertex0, int vertex1, int vertex2, const RGBcolor &color) {
+        UUIDs.push_back(context_ptr->addTriangle(vertices.at(vertex0), vertices.at(vertex1), vertices.at(vertex2), color));
+        faces.push_back(make_int3(vertex0, vertex1, vertex2));
+    }
+    //! A triangle that shares no vertices with any other, part of an open piece of the inflorescence
+    void addIsolatedTriangle(helios::Context *context_ptr, const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2, const RGBcolor &color) {
+        const int first_vertex = addVertex(vertex0);
+        static_cast<void>(addVertex(vertex1));
+        static_cast<void>(addVertex(vertex2));
+        addTriangle(context_ptr, first_vertex, first_vertex + 1, first_vertex + 2, color);
+    }
+    //! A tube, already in the Context, whose triangles are entered as an open piece of the inflorescence
+    void addTube(helios::Context *context_ptr, const std::vector<uint> &tube_UUIDs) {
+        for (uint UUID: tube_UUIDs) {
+            const std::vector<vec3> corners = context_ptr->getPrimitiveVertices(UUID);
+            const int first_vertex = int(vertices.size());
+            vertices.insert(vertices.end(), corners.begin(), corners.end());
+            faces.push_back(make_int3(first_vertex, first_vertex + 1, first_vertex + 2));
+            UUIDs.push_back(UUID);
+        }
+    }
+};
+
+// Mesh of one spikelet: a closed spindle with a pole at each end and two staggered rings of vertices, broadest below its middle. Its long axis is spikelet_axis; width and thickness lie along width_axis and the
+// third, perpendicular axis. Facets alternate slightly in brightness, standing in for the keels and veins of the glumes, and the apical facets take the tip color.
+static void addMaizeSpikelet(helios::Context *context_ptr, const vec3 &center, const vec3 &spikelet_axis, const vec3 &width_axis, float length, float width, float thickness, uint facets, const RGBcolor &color,
+                             const RGBcolor &tip_color, GrassInflorescenceMesh &mesh) {
+    const vec3 thickness_axis = cross(spikelet_axis, width_axis);
+    const float half_length = 0.5f * length;
+    const float ring_height[2] = {-0.45f * half_length, 0.35f * half_length};
+    const float ring_profile[2] = {1.f, 0.72f};
+
+    const int base_pole = mesh.addVertex(center - spikelet_axis * half_length);
+    const int apex_pole = mesh.addVertex(center + spikelet_axis * half_length);
+    std::vector<int> rings[2];
+    for (int ring = 0; ring < 2; ring++) {
+        rings[ring].resize(facets);
+        for (uint facet = 0; facet < facets; facet++) {
+            const float angle = 2.f * PI_F * (float(facet) + 0.5f * float(ring)) / float(facets);
+            rings[ring].at(facet) = mesh.addVertex(center + spikelet_axis * ring_height[ring] + width_axis * (0.5f * width * ring_profile[ring] * cosf(angle)) + thickness_axis * (0.5f * thickness * ring_profile[ring] * sinf(angle)));
+        }
+    }
+
+    for (uint facet = 0; facet < facets; facet++) {
+        const uint next = (facet + 1) % facets;
+        RGBcolor body_color = color;
+        body_color.scale(facet % 2 == 0 ? 1.08f : 0.92f);
+        mesh.addTriangle(context_ptr, base_pole, rings[0].at(next), rings[0].at(facet), body_color);
+        mesh.addTriangle(context_ptr, rings[0].at(facet), rings[0].at(next), rings[1].at(facet), body_color);
+        mesh.addTriangle(context_ptr, rings[1].at(facet), rings[0].at(next), rings[1].at(next), body_color);
+        mesh.addTriangle(context_ptr, apex_pole, rings[1].at(facet), rings[1].at(next), tip_color);
+    }
+}
+
+// Mesh of one anther and the filament it hangs from. The anther is a blunt rod of 3 facets, and the filament a single hair-thin triangle from the spikelet to the top of the anther.
+static constexpr uint grass_anther_facets = 3;
+static void addGrassAnther(helios::Context *context_ptr, const vec3 &filament_base, const vec3 &hang_direction, const vec3 &anther_axis, float filament_length, float anther_length, float anther_width, const RGBcolor &color,
+                           GrassInflorescenceMesh &mesh) {
+    constexpr float filament_width = 0.00025f;
+
+    const vec3 anther_top = filament_base + hang_direction * filament_length;
+    const vec3 anther_bottom = anther_top + anther_axis * anther_length;
+    const vec3 side_a = perpendicularTo(anther_axis);
+    const vec3 side_b = cross(anther_axis, side_a);
+
+    if (filament_length > 0.f) {
+        RGBcolor filament_color = color;
+        filament_color.scale(1.1f);
+        const vec3 filament_side = perpendicularTo(hang_direction) * (0.5f * filament_width);
+        mesh.addIsolatedTriangle(context_ptr, filament_base - filament_side, filament_base + filament_side, anther_top, filament_color);
+    }
+
+    int top_ring[grass_anther_facets];
+    int bottom_ring[grass_anther_facets];
+    for (uint facet = 0; facet < grass_anther_facets; facet++) {
+        const float angle = 2.f * PI_F * float(facet) / float(grass_anther_facets);
+        const vec3 radial = side_a * (0.5f * anther_width * cosf(angle)) + side_b * (0.5f * anther_width * sinf(angle));
+        top_ring[facet] = mesh.addVertex(anther_top + radial * 0.8f);
+        bottom_ring[facet] = mesh.addVertex(anther_bottom + radial);
+    }
+    for (uint facet = 0; facet < grass_anther_facets; facet++) {
+        const uint next = (facet + 1) % grass_anther_facets;
+        mesh.addTriangle(context_ptr, top_ring[facet], bottom_ring[facet], bottom_ring[next], color);
+        mesh.addTriangle(context_ptr, top_ring[facet], bottom_ring[next], top_ring[next], color);
+    }
+}
+
+uint buildMaizeTassel(helios::Context *context_ptr, const MaizeTasselParameters &parameters) {
+
+    const MaizeTasselParameters &p = parameters;
+    if (p.length <= 0.f || p.spikelet_length <= 0.f || p.spikelet_width <= 0.f || p.spikelet_thickness <= 0.f || p.axis_radius <= 0.f || p.axis_tip_radius <= 0.f || p.branch_radius <= 0.f) {
+        helios_runtime_error("ERROR (buildMaizeTassel): Tassel length, axis and branch radii, and spikelet dimensions must all be positive.");
+    } else if (p.central_spike_fraction <= 0.f || p.central_spike_fraction > 1.f) {
+        helios_runtime_error("ERROR (buildMaizeTassel): central_spike_fraction must be greater than 0 and at most 1, but " + std::to_string(p.central_spike_fraction) + " was given.");
+    } else if (p.primary_branch_count < 0 || p.secondary_branch_count < 0) {
+        helios_runtime_error("ERROR (buildMaizeTassel): primary_branch_count and secondary_branch_count cannot be negative.");
+    } else if (p.spike_spikelet_density <= 0.f || p.branch_spikelet_density <= 0.f) {
+        helios_runtime_error("ERROR (buildMaizeTassel): spike_spikelet_density and branch_spikelet_density must be positive.");
+    } else if (p.branch_bare_fraction < 0.f || p.branch_bare_fraction >= 1.f) {
+        helios_runtime_error("ERROR (buildMaizeTassel): branch_bare_fraction must be in the range [0,1), but " + std::to_string(p.branch_bare_fraction) + " was given.");
+    } else if (p.anther_fraction < 0.f || p.anther_fraction > 1.f) {
+        helios_runtime_error("ERROR (buildMaizeTassel): anther_fraction must be in the range [0,1], but " + std::to_string(p.anther_fraction) + " was given.");
+    } else if (p.anther_fraction > 0.f && (p.anther_length <= 0.f || p.anther_width <= 0.f)) {
+        helios_runtime_error("ERROR (buildMaizeTassel): anther_length and anther_width must be positive when there are anthers.");
+    } else if (p.filament_length < 0.f) {
+        helios_runtime_error("ERROR (buildMaizeTassel): filament_length cannot be negative.");
+    } else if (p.spikelet_subdivisions < 3 || p.branch_radial_subdivisions < 3 || p.axis_radial_subdivisions < 3) {
+        helios_runtime_error("ERROR (buildMaizeTassel): spikelet_subdivisions, branch_radial_subdivisions and axis_radial_subdivisions must each be at least 3.");
+    }
+
+    const float size_factor = clamp(1.f + p.length_variation * context_ptr->randn(), 0.7f, 1.3f);
+    const float tassel_length = p.length * size_factor;
+    const int primary_branch_count = p.primary_branch_count == 0 ? 0 : std::max(1, int(std::round(float(p.primary_branch_count) * (1.f + p.primary_branch_count_variation * context_ptr->randn()))));
+    // With no branches the whole axis is central spike.
+    const float branched_length = primary_branch_count == 0 ? 0.f : (1.f - p.central_spike_fraction) * tassel_length;
+
+    const vec3 gravity = make_vec3(-1, 0, 0);
+
+    // ---- Axis ---- //
+
+    // The axis bends at constant curvature in a plane of random orientation through the x-axis.
+    const float total_bend = deg2rad(p.axis_curvature);
+    const float bend_azimuth = context_ptr->randu(0.f, 2.f * PI_F);
+    const vec3 axis_base_direction = make_vec3(1, 0, 0);
+    const vec3 bend_direction = make_vec3(0, cosf(bend_azimuth), sinf(bend_azimuth));
+    const vec3 binormal = cross(axis_base_direction, bend_direction);
+
+    auto axis_position = [&](float arc_length) {
+        if (std::fabs(total_bend) < 1e-4f) {
+            return axis_base_direction * arc_length;
+        }
+        const float bend_radius = tassel_length / total_bend;
+        const float angle = arc_length / bend_radius;
+        return axis_base_direction * (bend_radius * sinf(angle)) + bend_direction * (bend_radius * (1.f - cosf(angle)));
+    };
+    auto axis_tangent = [&](float arc_length) {
+        const float angle = total_bend * arc_length / tassel_length;
+        return axis_base_direction * cosf(angle) + bend_direction * sinf(angle);
+    };
+    auto axis_normal = [&](float arc_length) {
+        const float angle = total_bend * arc_length / tassel_length;
+        return bend_direction * cosf(angle) - axis_base_direction * sinf(angle);
+    };
+    // The axis narrows from the base of the tassel to the tip of the central spike, fastest through the branched zone where it gives up the branches' share of its load.
+    auto axis_radius_at = [&](float arc_length) { return p.axis_tip_radius + (p.axis_radius - p.axis_tip_radius) * std::pow(1.f - arc_length / tassel_length, 1.5f); };
+
+    GrassInflorescenceMesh mesh;
+
+    constexpr int axis_segments = 16;
+    std::vector<vec3> axis_nodes(axis_segments + 1);
+    std::vector<float> axis_radii(axis_segments + 1);
+    for (int node = 0; node <= axis_segments; node++) {
+        const float arc_length = tassel_length * float(node) / float(axis_segments);
+        axis_nodes.at(node) = axis_position(arc_length);
+        axis_radii.at(node) = axis_radius_at(arc_length);
+    }
+    mesh.addTube(context_ptr, context_ptr->addTube(p.axis_radial_subdivisions, axis_nodes, axis_radii, std::vector<RGBcolor>(axis_nodes.size(), p.branch_color)));
+
+    // ---- Spikelet placement ---- //
+
+    // A spikelet's size, colors and anthers are handled in one place, whichever axis or branch bears it. Toward the end of its axis a spikelet is smaller, as the last of each row are.
+    auto add_spikelet = [&](const vec3 &surface_point, const vec3 &spikelet_axis, const vec3 &outward, float taper, const vec3 &hang_bias) {
+        const float scale = taper * clamp(1.f + p.spikelet_size_variation * context_ptr->randn(), 0.7f, 1.3f);
+        const float length = p.spikelet_length * scale;
+        const float width = p.spikelet_width * scale;
+        const float thickness = p.spikelet_thickness * scale;
+
+        const vec3 width_axis = normalize(cross(spikelet_axis, outward));
+        const vec3 spikelet_center = surface_point + outward * (0.45f * thickness) + spikelet_axis * (0.5f * length);
+
+        RGBcolor body_color = p.glume_color;
+        RGBcolor tip_color = p.glume_tip_color;
+        const float brightness = quantizedBrightness(context_ptr, p.glume_color_variation);
+        body_color.scale(brightness);
+        tip_color.scale(brightness);
+        addMaizeSpikelet(context_ptr, spikelet_center, spikelet_axis, width_axis, length, width, thickness, p.spikelet_subdivisions, body_color, tip_color, mesh);
+
+        if (context_ptr->randu() < p.anther_fraction) {
+            // The three anthers of a floret leave between the glumes near the apex and hang under gravity, spreading a little from one another. An anther on a filament hangs almost plumb but its own weight is
+            // not centered on the filament's attachment, so each anther is tilted a little from the filament.
+            const vec3 floret_point = spikelet_center + spikelet_axis * (0.3f * length) + outward * (0.5f * thickness);
+            for (int anther = 0; anther < 3; anther++) {
+                const vec3 scatter = make_vec3(0.f, context_ptr->randu(-0.25f, 0.25f), context_ptr->randu(-0.25f, 0.25f));
+                const vec3 hang_direction = normalize(gravity + hang_bias + scatter);
+                const vec3 anther_axis = normalize(hang_direction + make_vec3(0.f, context_ptr->randu(-0.2f, 0.2f), context_ptr->randu(-0.2f, 0.2f)));
+                RGBcolor anther_color = p.anther_color;
+                anther_color.scale(quantizedBrightness(context_ptr, p.anther_color_variation));
+                addGrassAnther(context_ptr, floret_point, hang_direction, anther_axis, p.filament_length * context_ptr->randu(0.7f, 1.3f), p.anther_length * context_ptr->randu(0.85f, 1.15f), p.anther_width, anther_color, mesh);
+            }
+        }
+    };
+
+    // ---- Central spike ---- //
+
+    // The spikelet pairs of the central spike stand in many ranks. Anderson & Brown (1948, Annals of the Missouri Botanical Garden) relate the ranks to the rows of the ear: an 8-rowed plant has opposite pairs in
+    // whorls turned a quarter turn from one another, which is what is built here, 8 ranks of spikelets. Ranks are not perfectly straight, so each pair is displaced from its place by a few degrees.
+    constexpr int pairs_per_whorl = 2;
+    constexpr float spike_pair_step = 0.5f * PI_F;
+    const float spike_length = tassel_length - branched_length;
+    const float whorl_spacing = 0.01f * float(2 * pairs_per_whorl) / p.spike_spikelet_density;
+    const int whorl_count = std::max(1, int(std::round(spike_length / whorl_spacing)));
+    const float spike_azimuth_offset = context_ptr->randu(0.f, 2.f * PI_F);
+    const float spikelet_angle = deg2rad(p.spikelet_angle);
+    for (int whorl = 0; whorl < whorl_count; whorl++) {
+        // The spikelet base sits at the whorl, so the last whorl stops short of the tip by what the last spikelets span.
+        const float fraction = (float(whorl) + 0.5f) / float(whorl_count);
+        const float arc_length = std::min(branched_length + fraction * spike_length, tassel_length - 0.5f * p.spikelet_length);
+        const float taper = fraction < 0.8f ? 1.f : 1.f - 0.45f * (fraction - 0.8f) / 0.2f;
+        const vec3 center = axis_position(arc_length);
+        const vec3 tangent = axis_tangent(arc_length);
+        const vec3 normal = axis_normal(arc_length);
+        const float radius = axis_radius_at(arc_length);
+        // The spikelets of a pair sit side by side around the axis.
+        const float pair_half_angle = 0.5f * p.spikelet_width / (radius + 0.5f * p.spikelet_thickness);
+        for (int pair = 0; pair < pairs_per_whorl; pair++) {
+            const float pair_azimuth = spike_azimuth_offset + spike_pair_step * float(whorl) + PI_F * float(pair) + deg2rad(context_ptr->randu(-12.f, 12.f));
+            for (float side: {-1.f, 1.f}) {
+                const float azimuth = pair_azimuth + side * pair_half_angle;
+                const vec3 outward = normal * cosf(azimuth) + binormal * sinf(azimuth);
+                const vec3 spikelet_axis = normalize(tangent * cosf(spikelet_angle) + outward * sinf(spikelet_angle));
+                // The pedicellate spikelet of the pair stands a little above the sessile one.
+                const float pedicel_lift = side > 0.f ? 0.4f * whorl_spacing : 0.f;
+                add_spikelet(center + tangent * pedicel_lift + outward * radius, spikelet_axis, outward, taper, outward * 0.3f);
+            }
+        }
+    }
+
+    // ---- Branches ---- //
+
+    // One branch of the tassel: bent in the plane holding the direction of its parent and its outward direction, carrying a pair of spikelets on alternate sides every 2/density along its fertile length.
+    constexpr int branch_segments = 8;
+    auto add_branch = [&](const vec3 &base, const vec3 &parent_tangent, const vec3 &outward, float length, float insertion_angle, float droop, float base_radius, float bare_fraction, std::vector<vec3> *nodes_out) {
+        std::vector<vec3> nodes(branch_segments + 1);
+        std::vector<vec3> tangents(branch_segments);
+        std::vector<float> radii(branch_segments + 1);
+        nodes.at(0) = base;
+        for (int segment = 0; segment < branch_segments; segment++) {
+            // Stiff near its base and arching toward its tip
+            const float position = (float(segment) + 0.5f) / float(branch_segments);
+            const float angle = insertion_angle + droop * std::pow(position, 1.5f);
+            tangents.at(segment) = normalize(parent_tangent * cosf(angle) + outward * sinf(angle));
+            nodes.at(segment + 1) = nodes.at(segment) + tangents.at(segment) * (length / float(branch_segments));
+        }
+        for (int node = 0; node <= branch_segments; node++) {
+            radii.at(node) = base_radius * (1.f - 0.6f * float(node) / float(branch_segments));
+        }
+        mesh.addTube(context_ptr, context_ptr->addTube(p.branch_radial_subdivisions, nodes, radii, std::vector<RGBcolor>(nodes.size(), p.branch_color)));
+
+        const float pair_spacing = 0.01f * 2.f / p.branch_spikelet_density;
+        const float fertile_length = (1.f - bare_fraction) * length;
+        const int pair_count = std::max(1, int(std::round(fertile_length / pair_spacing)));
+        const vec3 plane_normal = normalize(cross(parent_tangent, outward));
+        for (int pair = 0; pair < pair_count; pair++) {
+            const float fraction = (float(pair) + 0.5f) / float(pair_count);
+            const float arc_length = bare_fraction * length + fraction * fertile_length;
+            const int segment = std::min(int(float(branch_segments) * arc_length / length), branch_segments - 1);
+            const float local = float(branch_segments) * arc_length / length - float(segment);
+            const vec3 point = nodes.at(segment) + (nodes.at(segment + 1) - nodes.at(segment)) * local;
+            const vec3 tangent = tangents.at(segment);
+            const float radius = radii.at(segment) + (radii.at(segment + 1) - radii.at(segment)) * local;
+            // The upper side of the branch, toward the parent's direction
+            const vec3 upper = normalize(cross(plane_normal, tangent) * ((cross(plane_normal, tangent) * parent_tangent) >= 0.f ? 1.f : -1.f));
+            const float row_side = pair % 2 == 0 ? 1.f : -1.f;
+            const float taper = fraction < 0.85f ? 1.f : 1.f - 0.4f * (fraction - 0.85f) / 0.15f;
+
+            // A pair lies on one flank of the branch: the sessile spikelet low on the flank and the pedicellate one above it and further along.
+            const float sessile_elevation = deg2rad(context_ptr->randu(-30.f, 0.f));
+            const float pedicellate_elevation = deg2rad(context_ptr->randu(25.f, 55.f));
+            for (int member = 0; member < 2; member++) {
+                const float elevation = member == 0 ? sessile_elevation : pedicellate_elevation;
+                const vec3 flank = normalize(plane_normal * (row_side * cosf(elevation)) + upper * sinf(elevation));
+                const vec3 spikelet_axis = normalize(tangent * cosf(spikelet_angle) + flank * sinf(spikelet_angle));
+                const vec3 surface_point = point + flank * radius + tangent * (member == 1 ? 0.25f * pair_spacing : 0.f);
+                if (member == 1) {
+                    // The pedicel of the raised spikelet
+                    const vec3 pedicel_side = spikelet_axis * 0.0004f;
+                    mesh.addIsolatedTriangle(context_ptr, point - pedicel_side, point + pedicel_side, surface_point, p.branch_color);
+                }
+                add_spikelet(surface_point, spikelet_axis, flank, taper, flank * 0.25f);
+            }
+        }
+        if (nodes_out != nullptr) {
+            *nodes_out = nodes;
+        }
+    };
+
+    struct PrimaryBranch {
+        std::vector<vec3> nodes;
+        vec3 parent_tangent;
+        vec3 outward;
+        float length;
+    };
+    std::vector<PrimaryBranch> primary_branches(primary_branch_count);
+    const float branch_azimuth_offset = context_ptr->randu(0.f, 2.f * PI_F);
+    for (int b = 0; b < primary_branch_count; b++) {
+        // Position 0 at the lowest branch and 1 at the uppermost. The branches go up the axis with a divergence near the golden angle, so they surround the axis without visible ranks.
+        const float position = primary_branch_count > 1 ? float(b) / float(primary_branch_count - 1) : 0.f;
+        const float jittered_position = clamp(position + context_ptr->randu(-0.25f, 0.25f) / float(primary_branch_count), 0.f, 1.f);
+        const float arc_length = jittered_position * branched_length;
+
+        const float length_profile = position < 0.3f ? 1.f : 1.f + (p.branch_length_tip_fraction - 1.f) * (position - 0.3f) / 0.7f;
+        const float length = p.branch_length * size_factor * length_profile * clamp(1.f + p.branch_length_variation * context_ptr->randn(), 0.5f, 1.5f);
+        const float insertion_angle = deg2rad(clamp(p.branch_angle_base + (p.branch_angle_tip - p.branch_angle_base) * position + context_ptr->randu(-5.f, 5.f), 0.f, 120.f));
+        const float droop = deg2rad((p.branch_droop_base + (p.branch_droop_tip - p.branch_droop_base) * position) * context_ptr->randu(0.7f, 1.3f));
+
+        const float azimuth = branch_azimuth_offset + deg2rad(137.5f) * float(b) + deg2rad(context_ptr->randu(-20.f, 20.f));
+        PrimaryBranch &branch = primary_branches.at(b);
+        branch.parent_tangent = axis_tangent(arc_length);
+        branch.outward = axis_normal(arc_length) * cosf(azimuth) + binormal * sinf(azimuth);
+        branch.length = length;
+        const vec3 base = axis_position(arc_length) + branch.outward * (0.8f * axis_radius_at(arc_length));
+        add_branch(base, branch.parent_tangent, branch.outward, length, insertion_angle, droop, p.branch_radius, p.branch_bare_fraction, &branch.nodes);
+    }
+
+    // ---- Secondary branches ---- //
+
+    // Secondary branches are short and leave the lowest primary branches near their base, on one side and then the other.
+    for (int s = 0; s < p.secondary_branch_count && primary_branch_count > 0; s++) {
+        const PrimaryBranch &parent = primary_branches.at(s % std::max(1, primary_branch_count / 2));
+        const float side = s % 2 == 0 ? 1.f : -1.f;
+        const vec3 parent_direction = normalize(parent.nodes.at(1) - parent.nodes.at(0));
+        const vec3 plane_normal = normalize(cross(parent.parent_tangent, parent.outward));
+        const vec3 base = parent.nodes.at(0) + (parent.nodes.at(1) - parent.nodes.at(0)) * 0.6f;
+        const float length = 0.45f * parent.length * context_ptr->randu(0.8f, 1.2f);
+        add_branch(base, parent_direction, plane_normal * side, length, deg2rad(context_ptr->randu(20.f, 35.f)), deg2rad(context_ptr->randu(0.f, 15.f)), 0.65f * p.branch_radius, 0.1f, nullptr);
+    }
+
+    context_ptr->setPrimitiveData(mesh.UUIDs, "object_label", "fruit");
+
+    const uint objID = context_ptr->addPolymeshObject(mesh.UUIDs);
+    context_ptr->setPolymeshObjectTopology(objID, mesh.vertices, mesh.faces, mesh.UUIDs, {}, {}, helios::NORMAL_SOURCE_NONE);
+    return objID;
+}
+
+uint MaizeTasselPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
+    return buildMaizeTassel(context_ptr, MaizeTasselParameters::fromBuildParameters(build_parameters));
+}
+
+// ---- Rice panicle ---- //
+
+RicePanicleParameters RicePanicleParameters::erect() {
+    RicePanicleParameters parameters;
+    parameters.length = 0.19f;
+    parameters.rachis_droop = 22.f;
+    parameters.primary_branch_count = 13;
+    parameters.branch_length_base = 0.085f;
+    parameters.branch_length_tip = 0.04f;
+    parameters.branch_angle_base = 14.f;
+    parameters.branch_angle_tip = 8.f;
+    parameters.branch_hang = 0.1f;
+    parameters.secondary_branches_per_primary = 2.5f;
+    parameters.secondary_branch_length = 0.016f;
+    parameters.spikelet_spacing = 0.0052f;
+    return parameters;
+}
+
+RicePanicleParameters RicePanicleParameters::lax() {
+    RicePanicleParameters parameters;
+    parameters.length = 0.30f;
+    parameters.rachis_droop = 125.f;
+    parameters.primary_branch_count = 10;
+    parameters.branch_length_base = 0.15f;
+    parameters.branch_length_tip = 0.06f;
+    parameters.branch_angle_base = 32.f;
+    parameters.branch_angle_tip = 16.f;
+    parameters.branch_hang = 0.9f;
+    parameters.secondary_branches_per_primary = 2.f;
+    parameters.secondary_branch_length = 0.028f;
+    parameters.spikelet_spacing = 0.0085f;
+    return parameters;
+}
+
+static const std::vector<OrganFloatKey<RicePanicleParameters>> rice_panicle_float_keys = {
+        {"panicle_length", &RicePanicleParameters::length, 0.05f, 0.6f, "rice panicle length in meters"},
+        {"panicle_length_variation", &RicePanicleParameters::length_variation, 0.f, 0.3f, "coefficient of variation of rice panicle length"},
+        {"rachis_droop", &RicePanicleParameters::rachis_droop, 0.f, 180.f, "angle through which the rachis of a ripe rice panicle turns from base to tip in degrees"},
+        {"branch_count_variation", &RicePanicleParameters::primary_branch_count_variation, 0.f, 0.5f, "coefficient of variation of the number of rice panicle primary branches"},
+        {"branch_length_base", &RicePanicleParameters::branch_length_base, 0.01f, 0.4f, "length of the lowest rice panicle primary branches in meters"},
+        {"branch_length_tip", &RicePanicleParameters::branch_length_tip, 0.005f, 0.4f, "length of the uppermost rice panicle primary branch in meters"},
+        {"branch_length_variation", &RicePanicleParameters::branch_length_variation, 0.f, 0.5f, "coefficient of variation of rice panicle primary branch length"},
+        {"branch_angle_base", &RicePanicleParameters::branch_angle_base, 0.f, 90.f, "insertion angle of the lowest rice panicle primary branch in degrees from the rachis"},
+        {"branch_angle_tip", &RicePanicleParameters::branch_angle_tip, 0.f, 90.f, "insertion angle of the uppermost rice panicle primary branch in degrees from the rachis"},
+        {"branch_hang", &RicePanicleParameters::branch_hang, 0.f, 1.f, "how far a primary branch of a ripe rice panicle turns toward hanging, from 0 to 1"},
+        {"branch_bare_fraction", &RicePanicleParameters::branch_bare_fraction, 0.f, 0.9f, "fraction of each rice panicle primary branch that bears nothing"},
+        {"secondary_branches_per_primary", &RicePanicleParameters::secondary_branches_per_primary, 0.f, 10.f, "mean number of secondary branches on the longest rice panicle primary branches"},
+        {"secondary_zone_fraction", &RicePanicleParameters::secondary_zone_fraction, 0.05f, 1.f, "fraction of a rice panicle primary branch over which its secondary branches arise"},
+        {"secondary_branch_length", &RicePanicleParameters::secondary_branch_length, 0.003f, 0.1f, "length of a rice panicle secondary branch in meters"},
+        {"spikelet_spacing", &RicePanicleParameters::spikelet_spacing, 0.002f, 0.03f, "distance along a rice panicle primary branch between successive spikelets in meters"},
+        {"spikelet_length", &RicePanicleParameters::spikelet_length, 0.004f, 0.015f, "rice spikelet length in meters"},
+        {"spikelet_width", &RicePanicleParameters::spikelet_width, 0.001f, 0.006f, "rice spikelet width in meters"},
+        {"spikelet_thickness", &RicePanicleParameters::spikelet_thickness, 0.001f, 0.005f, "rice spikelet thickness in meters"},
+        {"spikelet_size_variation", &RicePanicleParameters::spikelet_size_variation, 0.f, 0.3f, "coefficient of variation of rice spikelet size"},
+        {"spikelet_angle", &RicePanicleParameters::spikelet_angle, 0.f, 60.f, "angle of a rice spikelet from the branch bearing it in degrees"},
+        {"pedicel_length", &RicePanicleParameters::pedicel_length, 0.f, 0.015f, "length of a rice pedicel in meters"},
+        {"ripeness", &RicePanicleParameters::ripeness, 0.f, 1.f, "ripeness of the hulls of a rice panicle, from 0 (green) to 1 (fully ripe)"},
+        {"hull_color_variation", &RicePanicleParameters::hull_color_variation, 0.f, 0.5f, "coefficient of variation of rice hull brightness"},
+        {"anther_fraction", &RicePanicleParameters::anther_fraction, 0.f, 1.f, "fraction of rice spikelets open at anthesis"},
+        {"anther_length", &RicePanicleParameters::anther_length, 0.0005f, 0.006f, "rice anther length in meters"},
+        {"anther_width", &RicePanicleParameters::anther_width, 0.0002f, 0.002f, "rice anther width in meters"},
+        {"filament_length", &RicePanicleParameters::filament_length, 0.f, 0.015f, "rice filament length in meters"},
+        {"anther_color_variation", &RicePanicleParameters::anther_color_variation, 0.f, 0.5f, "coefficient of variation of rice anther brightness"},
+};
+
+static const std::vector<OrganIntegerKey<RicePanicleParameters>> rice_panicle_integer_keys = {
+        {"branch_count", &RicePanicleParameters::primary_branch_count, 1, 40, "mean number of rice panicle primary branches"},
+        {"spikelets_per_secondary", &RicePanicleParameters::spikelets_per_secondary, 1, 12, "number of spikelets on a rice panicle secondary branch"},
+};
+
+static const std::vector<OrganColorKey<RicePanicleParameters>> rice_panicle_color_keys = {
+        {"hull_green_color_r", &RicePanicleParameters::hull_green_color, &helios::RGBcolor::r, "red component of the hull color of an unripe rice spikelet"},
+        {"hull_green_color_g", &RicePanicleParameters::hull_green_color, &helios::RGBcolor::g, "green component of the hull color of an unripe rice spikelet"},
+        {"hull_green_color_b", &RicePanicleParameters::hull_green_color, &helios::RGBcolor::b, "blue component of the hull color of an unripe rice spikelet"},
+        {"hull_ripe_color_r", &RicePanicleParameters::hull_ripe_color, &helios::RGBcolor::r, "red component of the hull color of a ripe rice spikelet"},
+        {"hull_ripe_color_g", &RicePanicleParameters::hull_ripe_color, &helios::RGBcolor::g, "green component of the hull color of a ripe rice spikelet"},
+        {"hull_ripe_color_b", &RicePanicleParameters::hull_ripe_color, &helios::RGBcolor::b, "blue component of the hull color of a ripe rice spikelet"},
+        {"anther_color_r", &RicePanicleParameters::anther_color, &helios::RGBcolor::r, "red component of the rice anther color"},
+        {"anther_color_g", &RicePanicleParameters::anther_color, &helios::RGBcolor::g, "green component of the rice anther color"},
+        {"anther_color_b", &RicePanicleParameters::anther_color, &helios::RGBcolor::b, "blue component of the rice anther color"},
+};
+
+static const OrganKeyTables<RicePanicleParameters> rice_panicle_key_tables{rice_panicle_float_keys, rice_panicle_integer_keys, rice_panicle_color_keys};
+
+// The two keys that do not map onto a single field
+static constexpr BuildParameterDeclaration rice_panicle_type{"panicle_type", 0.f, 1.f, false, "rice panicle type from 0 (erect) through 0.5 (the default) to 1 (lax)"};
+static constexpr BuildParameterDeclaration rice_spikelet_subdivisions{"spikelet_subdivisions", 3.f, 12.f, true, "number of facets around a rice spikelet"};
+
+RicePanicleParameters RicePanicleParameters::fromBuildParameters(const std::map<std::string, float> &build_parameters) {
+
+    // The preset is applied first, so that individual parameters given alongside it override it
+    RicePanicleParameters parameters;
+    if (build_parameters.find(rice_panicle_type.name) != build_parameters.end()) {
+        const float panicle_type = getBuildParameterValue(build_parameters, rice_panicle_type, 0.5f);
+        if (panicle_type <= 0.5f) {
+            parameters = blendOrganParameters(rice_panicle_key_tables, erect(), RicePanicleParameters(), 2.f * panicle_type);
+        } else {
+            parameters = blendOrganParameters(rice_panicle_key_tables, RicePanicleParameters(), lax(), 2.f * panicle_type - 1.f);
+        }
+    }
+
+    applyOrganBuildParameters(rice_panicle_key_tables, build_parameters, parameters);
+    parameters.spikelet_subdivisions = uint(getBuildParameterIntegerValue(build_parameters, rice_spikelet_subdivisions, int(parameters.spikelet_subdivisions)));
+
+    return parameters;
+}
+
+std::vector<BuildParameterDeclaration> RicePanicleParameters::buildParameterDeclarations() {
+    std::vector<BuildParameterDeclaration> declarations = {rice_panicle_type, rice_spikelet_subdivisions};
+    appendOrganBuildParameterDeclarations(rice_panicle_key_tables, declarations);
+    return declarations;
+}
+
+// Mesh of one rice spikelet: a closed spindle with a pole at each end and three staggered rings of vertices, broadest just below its middle, plus the two small sterile lemmas at its base. The lemma covers one side
+// of the spikelet and the slightly narrower, darker palea the other. Its long axis is spikelet_axis; width and thickness lie along width_axis and the third, perpendicular axis.
+static void addRiceSpikelet(helios::Context *context_ptr, const vec3 &center, const vec3 &spikelet_axis, const vec3 &width_axis, float length, float width, float thickness, uint facets, const RGBcolor &color, GrassInflorescenceMesh &mesh) {
+    const vec3 thickness_axis = cross(spikelet_axis, width_axis);
+    const float half_length = 0.5f * length;
+    constexpr int ring_count = 3;
+    constexpr float ring_height[ring_count] = {-0.80f, -0.10f, 0.66f};
+    constexpr float ring_profile[ring_count] = {0.70f, 1.f, 0.80f};
+
+    const int base_pole = mesh.addVertex(center - spikelet_axis * half_length);
+    const int apex_pole = mesh.addVertex(center + spikelet_axis * half_length);
+    std::vector<int> rings[ring_count];
+    for (int ring = 0; ring < ring_count; ring++) {
+        rings[ring].resize(facets);
+        for (uint facet = 0; facet < facets; facet++) {
+            const float angle = 2.f * PI_F * (float(facet) + 0.5f * float(ring % 2)) / float(facets);
+            rings[ring].at(facet) = mesh.addVertex(center + spikelet_axis * (ring_height[ring] * half_length) + width_axis * (0.5f * width * ring_profile[ring] * cosf(angle)) + thickness_axis * (0.5f * thickness * ring_profile[ring] * sinf(angle)));
+        }
+    }
+
+    RGBcolor lemma_color = color;
+    lemma_color.scale(1.05f);
+    RGBcolor palea_color = color;
+    palea_color.scale(0.88f);
+    RGBcolor apex_color = color;
+    apex_color.scale(0.86f);
+    for (uint facet = 0; facet < facets; facet++) {
+        const uint next = (facet + 1) % facets;
+        const RGBcolor &body_color = facet < (facets + 1) / 2 ? lemma_color : palea_color;
+        mesh.addTriangle(context_ptr, base_pole, rings[0].at(next), rings[0].at(facet), body_color);
+        // Rings 0 and 2 are aligned with each other and ring 1 is staggered half a facet from them
+        mesh.addTriangle(context_ptr, rings[0].at(facet), rings[0].at(next), rings[1].at(facet), body_color);
+        mesh.addTriangle(context_ptr, rings[1].at(facet), rings[0].at(next), rings[1].at(next), body_color);
+        mesh.addTriangle(context_ptr, rings[1].at(facet), rings[2].at(next), rings[2].at(facet), body_color);
+        mesh.addTriangle(context_ptr, rings[1].at(facet), rings[1].at(next), rings[2].at(next), body_color);
+        mesh.addTriangle(context_ptr, apex_pole, rings[2].at(facet), rings[2].at(next), apex_color);
+    }
+
+    // The sterile lemmas are two pale scales about a quarter of the spikelet's length, one to each side of its base.
+    RGBcolor sterile_lemma_color = color;
+    sterile_lemma_color.scale(1.2f);
+    const vec3 base = center - spikelet_axis * half_length;
+    for (float side: {-1.f, 1.f}) {
+        const vec3 outer = width_axis * (side * 0.28f * width);
+        mesh.addIsolatedTriangle(context_ptr, base + outer * 0.2f - thickness_axis * (0.12f * thickness), base + outer * 0.2f + thickness_axis * (0.12f * thickness), base + outer + spikelet_axis * (0.25f * length), sterile_lemma_color);
+    }
+}
+
+uint buildRicePanicle(helios::Context *context_ptr, const RicePanicleParameters &parameters, RicePanicleStage stage) {
+
+    const RicePanicleParameters &p = parameters;
+    if (p.length <= 0.f || p.spikelet_length <= 0.f || p.spikelet_width <= 0.f || p.spikelet_thickness <= 0.f || p.rachis_radius <= 0.f || p.rachis_tip_radius <= 0.f || p.branch_radius <= 0.f) {
+        helios_runtime_error("ERROR (buildRicePanicle): Panicle length, rachis and branch radii, and spikelet dimensions must all be positive.");
+    } else if (p.primary_branch_count < 1) {
+        helios_runtime_error("ERROR (buildRicePanicle): primary_branch_count must be at least 1.");
+    } else if (p.spikelet_spacing <= 0.f) {
+        helios_runtime_error("ERROR (buildRicePanicle): spikelet_spacing must be positive.");
+    } else if (p.branch_length_base <= 0.f || p.branch_length_tip <= 0.f) {
+        helios_runtime_error("ERROR (buildRicePanicle): Primary branch lengths must be positive.");
+    } else if (p.branch_bare_fraction < 0.f || p.branch_bare_fraction >= 1.f) {
+        helios_runtime_error("ERROR (buildRicePanicle): branch_bare_fraction must be in the range [0,1), but " + std::to_string(p.branch_bare_fraction) + " was given.");
+    } else if (p.secondary_branches_per_primary < 0.f || p.secondary_branch_length <= 0.f || p.spikelets_per_secondary < 1) {
+        helios_runtime_error("ERROR (buildRicePanicle): secondary_branches_per_primary cannot be negative, secondary_branch_length must be positive, and spikelets_per_secondary must be at least 1.");
+    } else if (p.secondary_zone_fraction <= 0.f || p.secondary_zone_fraction > 1.f) {
+        helios_runtime_error("ERROR (buildRicePanicle): secondary_zone_fraction must be greater than 0 and at most 1, but " + std::to_string(p.secondary_zone_fraction) + " was given.");
+    } else if (p.branch_hang < 0.f || p.branch_hang > 1.f || p.ripeness < 0.f || p.ripeness > 1.f || p.anther_fraction < 0.f || p.anther_fraction > 1.f) {
+        helios_runtime_error("ERROR (buildRicePanicle): branch_hang, ripeness and anther_fraction must each be in the range [0,1].");
+    } else if (p.anther_fraction > 0.f && (p.anther_length <= 0.f || p.anther_width <= 0.f)) {
+        helios_runtime_error("ERROR (buildRicePanicle): anther_length and anther_width must be positive when there are anthers.");
+    } else if (p.filament_length < 0.f || p.pedicel_length < 0.f) {
+        helios_runtime_error("ERROR (buildRicePanicle): filament_length and pedicel_length cannot be negative.");
+    } else if (p.spikelet_subdivisions < 3 || p.branch_radial_subdivisions < 3 || p.rachis_radial_subdivisions < 3) {
+        helios_runtime_error("ERROR (buildRicePanicle): spikelet_subdivisions, branch_radial_subdivisions and rachis_radial_subdivisions must each be at least 3.");
+    }
+
+    // A panicle comes out of the flag leaf sheath upright with its branches held against the rachis. They spread at anthesis, and only the weight of the filling grain bends the rachis over and pulls the branches
+    // down. The fractions of the ripe form at the two earlier stages are read from photographs.
+    float droop_fraction = 1.f;
+    float hang_fraction = 1.f;
+    float spread_fraction = 1.f;
+    if (stage == RicePanicleStage::heading) {
+        droop_fraction = 0.1f;
+        hang_fraction = 0.1f;
+        spread_fraction = 0.35f;
+    } else if (stage == RicePanicleStage::anthesis) {
+        droop_fraction = 0.3f;
+        hang_fraction = 0.25f;
+        spread_fraction = 0.75f;
+    }
+
+    const float size_factor = clamp(1.f + p.length_variation * context_ptr->randn(), 0.7f, 1.3f);
+    const float panicle_length = p.length * size_factor;
+    const float rachis_bend = deg2rad(p.rachis_droop * droop_fraction);
+    const float branch_hang = p.branch_hang * hang_fraction;
+    const vec3 gravity = make_vec3(-1, 0, 0);
+    const vec3 binormal = make_vec3(0, 1, 0);
+
+    // ---- Rachis ---- //
+
+    // The rachis lies in the xz-plane and bends from +x toward -z, more strongly toward its tip, where it has the least to stiffen it and the most lever arm to the branches below.
+    constexpr int rachis_segments = 20;
+    constexpr float rachis_bend_exponent = 1.4f;
+    auto rachis_tangent = [&](float arc_length) {
+        const float angle = rachis_bend * std::pow(clamp(arc_length / panicle_length, 0.f, 1.f), rachis_bend_exponent);
+        return make_vec3(cosf(angle), 0.f, -sinf(angle));
+    };
+    auto rachis_normal = [&](float arc_length) {
+        const float angle = rachis_bend * std::pow(clamp(arc_length / panicle_length, 0.f, 1.f), rachis_bend_exponent);
+        return make_vec3(sinf(angle), 0.f, cosf(angle));
+    };
+    auto rachis_radius_at = [&](float arc_length) { return p.rachis_tip_radius + (p.rachis_radius - p.rachis_tip_radius) * (1.f - arc_length / panicle_length); };
+
+    std::vector<vec3> rachis_nodes(rachis_segments + 1);
+    std::vector<float> rachis_radii(rachis_segments + 1);
+    rachis_nodes.at(0) = nullorigin;
+    rachis_radii.at(0) = p.rachis_radius;
+    for (int node = 1; node <= rachis_segments; node++) {
+        const float segment_length = panicle_length / float(rachis_segments);
+        rachis_nodes.at(node) = rachis_nodes.at(node - 1) + rachis_tangent((float(node) - 0.5f) * segment_length) * segment_length;
+        rachis_radii.at(node) = rachis_radius_at(float(node) * segment_length);
+    }
+    auto rachis_position = [&](float arc_length) {
+        const float position = clamp(arc_length / panicle_length, 0.f, 1.f) * float(rachis_segments);
+        const int segment = std::min(int(position), rachis_segments - 1);
+        return rachis_nodes.at(segment) + (rachis_nodes.at(segment + 1) - rachis_nodes.at(segment)) * (position - float(segment));
+    };
+
+    GrassInflorescenceMesh mesh;
+    mesh.addTube(context_ptr, context_ptr->addTube(p.rachis_radial_subdivisions, rachis_nodes, rachis_radii, std::vector<RGBcolor>(rachis_nodes.size(), p.branch_color)));
+
+    // ---- Spikelet placement ---- //
+
+    // Colors are drawn from a short list of steps rather than a continuous range, since every distinct color takes its own material (see quantizedBrightness()).
+    auto hull_color_at = [&](float height_on_panicle) {
+        float ripe_weight = 0.f;
+        if (stage == RicePanicleStage::ripening) {
+            constexpr float ripeness_step = 0.2f;
+            // The top of a panicle ripens first, so the base lags the ripeness of the panicle as a whole until the panicle is fully ripe.
+            const float lag = (1.f - height_on_panicle) * (1.f - p.ripeness);
+            ripe_weight = std::round(clamp(p.ripeness - lag + context_ptr->randu(-0.1f, 0.1f), 0.f, 1.f) / ripeness_step) * ripeness_step;
+        }
+        RGBcolor color = make_RGBcolor(p.hull_green_color.r + (p.hull_ripe_color.r - p.hull_green_color.r) * ripe_weight, p.hull_green_color.g + (p.hull_ripe_color.g - p.hull_green_color.g) * ripe_weight,
+                                       p.hull_green_color.b + (p.hull_ripe_color.b - p.hull_green_color.b) * ripe_weight);
+        color.scale(quantizedBrightness(context_ptr, p.hull_color_variation));
+        return color;
+    };
+
+    auto add_spikelet = [&](const vec3 &attachment, const vec3 &spikelet_axis, float height_on_panicle) {
+        const float scale = clamp(1.f + p.spikelet_size_variation * context_ptr->randn(), 0.8f, 1.2f);
+        const float length = p.spikelet_length * scale;
+        const vec3 hull_base = attachment + spikelet_axis * p.pedicel_length;
+        const vec3 center = hull_base + spikelet_axis * (0.5f * length);
+        const vec3 reference = perpendicularTo(spikelet_axis);
+        const float twist = context_ptr->randu(0.f, 2.f * PI_F);
+        const vec3 width_axis = normalize(reference * cosf(twist) + cross(spikelet_axis, reference) * sinf(twist));
+
+        if (p.pedicel_length > 0.f) {
+            constexpr float pedicel_width = 0.0005f;
+            mesh.addIsolatedTriangle(context_ptr, attachment - width_axis * (0.5f * pedicel_width), attachment + width_axis * (0.5f * pedicel_width), hull_base, p.branch_color);
+        }
+        addRiceSpikelet(context_ptr, center, spikelet_axis, width_axis, length, p.spikelet_width * scale, p.spikelet_thickness * scale, p.spikelet_subdivisions, hull_color_at(height_on_panicle), mesh);
+
+        if (stage == RicePanicleStage::anthesis && context_ptr->randu() < p.anther_fraction) {
+            // Six anthers leave the open floret near its apex and hang on filaments, spreading a little from one another.
+            const vec3 floret_point = center + spikelet_axis * (0.25f * length);
+            for (int anther = 0; anther < 6; anther++) {
+                const vec3 scatter = make_vec3(0.f, context_ptr->randu(-0.35f, 0.35f), context_ptr->randu(-0.35f, 0.35f));
+                const vec3 hang_direction = normalize(gravity + scatter);
+                RGBcolor anther_color = p.anther_color;
+                anther_color.scale(quantizedBrightness(context_ptr, p.anther_color_variation));
+                addGrassAnther(context_ptr, floret_point, hang_direction, hang_direction, p.filament_length * context_ptr->randu(0.7f, 1.3f), p.anther_length * context_ptr->randu(0.9f, 1.1f), p.anther_width, anther_color, mesh);
+            }
+        }
+    };
+
+    // ---- Branches ---- //
+
+    // One branch: a curve that starts out along initial_direction and turns toward hanging along its length.
+    struct RiceBranchCurve {
+        std::vector<vec3> nodes;
+        std::vector<vec3> tangents;
+        float length;
+    };
+    auto add_branch_curve = [&](const vec3 &base, const vec3 &initial_direction, float length, float base_radius, float hang, int segments) {
+        RiceBranchCurve curve;
+        curve.length = length;
+        curve.nodes.resize(segments + 1);
+        curve.tangents.resize(segments);
+        std::vector<float> radii(segments + 1);
+        curve.nodes.at(0) = base;
+        for (int segment = 0; segment < segments; segment++) {
+            const float position = (float(segment) + 0.5f) / float(segments);
+            const float weight = hang * std::pow(position, 0.8f);
+            curve.tangents.at(segment) = normalize(initial_direction * (1.f - weight) + gravity * weight);
+            curve.nodes.at(segment + 1) = curve.nodes.at(segment) + curve.tangents.at(segment) * (length / float(segments));
+        }
+        for (int node = 0; node <= segments; node++) {
+            radii.at(node) = base_radius * (1.f - 0.5f * float(node) / float(segments));
+        }
+        mesh.addTube(context_ptr, context_ptr->addTube(p.branch_radial_subdivisions, curve.nodes, radii, std::vector<RGBcolor>(curve.nodes.size(), p.branch_color)));
+        return curve;
+    };
+    auto point_on_curve = [](const RiceBranchCurve &curve, float arc_length, vec3 &point, vec3 &tangent) {
+        const int segments = int(curve.tangents.size());
+        const float position = clamp(arc_length / curve.length, 0.f, 1.f) * float(segments);
+        const int segment = std::min(int(position), segments - 1);
+        point = curve.nodes.at(segment) + (curve.nodes.at(segment + 1) - curve.nodes.at(segment)) * (position - float(segment));
+        tangent = curve.tangents.at(segment);
+    };
+    // Spikelets from one arc length to another on a branch, alternating between the two sides, with the last at the very tip pointing along the branch.
+    auto add_branch_spikelets = [&](const RiceBranchCurve &curve, float first_arc, float last_arc, int count, const vec3 &side_axis, float height_on_panicle) {
+        const float spikelet_angle = deg2rad(p.spikelet_angle);
+        for (int spikelet = 0; spikelet < count; spikelet++) {
+            const bool is_terminal = spikelet == count - 1;
+            const float fraction = count > 1 ? float(spikelet) / float(count - 1) : 1.f;
+            vec3 point, tangent;
+            point_on_curve(curve, first_arc + (last_arc - first_arc) * fraction, point, tangent);
+            const float side = spikelet % 2 == 0 ? 1.f : -1.f;
+            const float jitter = deg2rad(context_ptr->randu(-6.f, 6.f));
+            const vec3 lateral = normalize(side_axis - tangent * (side_axis * tangent)) * side;
+            const vec3 spikelet_axis = is_terminal ? tangent : normalize(tangent * cosf(spikelet_angle + jitter) + lateral * sinf(spikelet_angle + jitter));
+            add_spikelet(point, spikelet_axis, height_on_panicle);
+        }
+    };
+
+    const int primary_branch_count = std::max(1, int(std::round(float(p.primary_branch_count) * (1.f + p.primary_branch_count_variation * context_ptr->randn()))));
+    const float azimuth_offset = context_ptr->randu(0.f, 2.f * PI_F);
+    for (int b = 0; b < primary_branch_count; b++) {
+        // Position 0 at the lowest branch and 1 at the uppermost, which ends the rachis. The lowest branches come off close together at the panicle base, and the rest are spaced evenly up the rachis.
+        const float position = primary_branch_count > 1 ? float(b) / float(primary_branch_count - 1) : 1.f;
+        const float crowded_position = std::pow(position, 1.25f);
+        const float jittered_position = b + 1 == primary_branch_count ? 1.f : clamp(crowded_position + context_ptr->randu(-0.2f, 0.2f) / float(primary_branch_count), 0.f, 1.f);
+        const float arc_length = jittered_position * panicle_length;
+
+        const float length = size_factor * (p.branch_length_base + (p.branch_length_tip - p.branch_length_base) * position) * clamp(1.f + p.branch_length_variation * context_ptr->randn(), 0.6f, 1.4f);
+        const float insertion_angle = deg2rad(clamp((p.branch_angle_base + (p.branch_angle_tip - p.branch_angle_base) * position) * spread_fraction + context_ptr->randu(-4.f, 4.f), 0.f, 90.f));
+        const float azimuth = azimuth_offset + deg2rad(137.5f) * float(b) + deg2rad(context_ptr->randu(-15.f, 15.f));
+
+        const vec3 tangent = rachis_tangent(arc_length);
+        const vec3 outward = rachis_normal(arc_length) * cosf(azimuth) + binormal * sinf(azimuth);
+        const vec3 initial_direction = normalize(tangent * cosf(insertion_angle) + outward * sinf(insertion_angle));
+        const vec3 base = rachis_position(arc_length) + outward * (0.7f * rachis_radius_at(arc_length));
+        const float hang = branch_hang * context_ptr->randu(0.8f, 1.2f);
+        const RiceBranchCurve primary = add_branch_curve(base, initial_direction, length, p.branch_radius, clamp(hang, 0.f, 1.f), 8);
+
+        const vec3 branch_side = normalize(cross(initial_direction, outward));
+
+        // A primary branch carries secondary branches on its lower part, and spikelets directly above them up to its tip. The bare part of the branch comes first.
+        const float bare_length = p.branch_bare_fraction * length;
+        const float zone_end = std::max(bare_length, p.secondary_zone_fraction * length);
+        const int secondary_count = int(std::round(p.secondary_branches_per_primary * length / (size_factor * p.branch_length_base) * context_ptr->randu(0.8f, 1.2f)));
+        for (int s = 0; s < secondary_count; s++) {
+            const float arc = bare_length + (zone_end - bare_length) * (float(s) + 0.5f) / float(secondary_count);
+            vec3 point, primary_tangent;
+            point_on_curve(primary, arc, point, primary_tangent);
+            const float side = s % 2 == 0 ? 1.f : -1.f;
+            const vec3 lateral = normalize(branch_side - primary_tangent * (branch_side * primary_tangent)) * side;
+            const float secondary_angle = deg2rad(context_ptr->randu(14.f, 28.f) * spread_fraction);
+            const vec3 secondary_direction = normalize(primary_tangent * cosf(secondary_angle) + lateral * sinf(secondary_angle));
+            const RiceBranchCurve secondary = add_branch_curve(point, secondary_direction, p.secondary_branch_length * size_factor * context_ptr->randu(0.8f, 1.2f), 0.6f * p.branch_radius, clamp(hang, 0.f, 1.f), 3);
+            add_branch_spikelets(secondary, 0.15f * secondary.length, secondary.length, p.spikelets_per_secondary, cross(secondary_direction, lateral), jittered_position);
+        }
+
+        const float direct_start = secondary_count > 0 ? zone_end : bare_length;
+        const int direct_count = std::max(1, int(std::round((length - direct_start) / p.spikelet_spacing)) + 1);
+        add_branch_spikelets(primary, direct_start, length, direct_count, branch_side, jittered_position);
+    }
+
+    context_ptr->setPrimitiveData(mesh.UUIDs, "object_label", "fruit");
+
+    const uint objID = context_ptr->addPolymeshObject(mesh.UUIDs);
+    context_ptr->setPolymeshObjectTopology(objID, mesh.vertices, mesh.faces, mesh.UUIDs, {}, {}, helios::NORMAL_SOURCE_NONE);
+    return objID;
+}
+
+uint RicePaniclePrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
+    return buildRicePanicle(context_ptr, RicePanicleParameters::fromBuildParameters(build_parameters), RicePanicleStage::ripening);
+}
+
+uint RiceFloweringPaniclePrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
+    return buildRicePanicle(context_ptr, RicePanicleParameters::fromBuildParameters(build_parameters), flower_is_open ? RicePanicleStage::anthesis : RicePanicleStage::heading);
 }
 
 int sorghumTillerCount(const std::map<std::string, float> &build_parameters) {
