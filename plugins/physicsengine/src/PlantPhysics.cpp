@@ -219,6 +219,100 @@ namespace {
 
 } // namespace
 
+std::string plantLinkLabel(PlantArticulationLinkType type) {
+    switch (type) {
+        case ARTICULATION_LINK_INTERNODE:
+            return "wood";
+        case ARTICULATION_LINK_PETIOLE:
+            return "petiole";
+        case ARTICULATION_LINK_PEDUNCLE:
+            return "peduncle";
+        case ARTICULATION_LINK_LEAF:
+            return "leaf";
+        case ARTICULATION_LINK_FRUIT:
+            return "fruit";
+        case ARTICULATION_LINK_FLOWER:
+            return "flower";
+    }
+    helios_runtime_error("ERROR (plantLinkLabel): Unknown plant articulation link type " + std::to_string(static_cast<int>(type)) + ".");
+    return "";
+}
+
+std::vector<uint> findPlantLinksInBox(const PlantArticulation &articulation, PlantArticulationLinkType type, const vec3 &box_min, const vec3 &box_max) {
+    std::vector<uint> found;
+    for (uint i = 0; i < articulation.links.size(); i++) {
+        const PlantArticulationLink &link = articulation.links[i];
+        const vec3 &p = link.position;
+        if (link.type == type && p.x >= box_min.x && p.x <= box_max.x && p.y >= box_min.y && p.y <= box_max.y && p.z >= box_min.z && p.z <= box_max.z) {
+            found.push_back(i);
+        }
+    }
+    return found;
+}
+
+uint findBearingInternode(const PlantArticulation &articulation, uint link_index) {
+    if (link_index >= articulation.links.size()) {
+        helios_runtime_error("ERROR (findBearingInternode): Link " + std::to_string(link_index) + " does not exist; the plant has " + std::to_string(articulation.links.size()) + " links.");
+    }
+    int link = articulation.links[link_index].parent_index;
+    while (link >= 0 && articulation.links[link].type != ARTICULATION_LINK_INTERNODE) {
+        link = articulation.links[link].parent_index;
+    }
+    if (link < 0) {
+        helios_runtime_error("ERROR (findBearingInternode): Link " + articulation.links[link_index].name + " is not borne on an internode.");
+    }
+    return static_cast<uint>(link);
+}
+
+std::vector<uint> findSupportingInternodes(const PlantArticulation &articulation, uint link_index, uint count) {
+    if (link_index >= articulation.links.size()) {
+        helios_runtime_error("ERROR (findSupportingInternodes): Link " + std::to_string(link_index) + " does not exist; the plant has " + std::to_string(articulation.links.size()) + " links.");
+    }
+    std::vector<uint> internodes;
+    for (int link = articulation.links[link_index].parent_index; link >= 0 && internodes.size() < count; link = articulation.links[link].parent_index) {
+        if (articulation.links[link].type == ARTICULATION_LINK_INTERNODE && articulation.links[link].parent_index >= 0) {
+            internodes.push_back(static_cast<uint>(link));
+        }
+    }
+    return internodes;
+}
+
+NearestPlantOrgan::NearestPlantOrgan(const PlantArticulation &articulation, PlantArticulationLinkType type) {
+    if (type != ARTICULATION_LINK_INTERNODE && type != ARTICULATION_LINK_PETIOLE && type != ARTICULATION_LINK_PEDUNCLE) {
+        helios_runtime_error("ERROR (NearestPlantOrgan): Only organs with a capsule shape can be searched (internodes, petioles, and peduncles), but " + plantLinkLabel(type) + " was given.");
+    }
+    for (uint i = 0; i < articulation.links.size(); i++) {
+        const PlantArticulationLink &link = articulation.links[i];
+        if (link.type != type) {
+            continue;
+        }
+        // The local +z axis of the link is the capsule axis, the third column of its rotation matrix
+        const vec3 axis = make_vec3(2.f * (link.qx * link.qz + link.qw * link.qy), 2.f * (link.qy * link.qz - link.qw * link.qx), 1.f - 2.f * (link.qx * link.qx + link.qy * link.qy));
+        segments.push_back({i, link.position - link.half_length * axis, link.position + link.half_length * axis, link.radius});
+    }
+    if (segments.empty()) {
+        helios_runtime_error("ERROR (NearestPlantOrgan): The plant has no " + plantLinkLabel(type) + " links to search.");
+    }
+}
+
+NearestPlantOrganResult NearestPlantOrgan::find(const vec3 &point) const {
+    NearestPlantOrganResult nearest;
+    nearest.surface_distance = std::numeric_limits<float>::max();
+    for (const Segment &segment: segments) {
+        const vec3 along = segment.end - segment.start;
+        const float length_squared = along * along;
+        const float t = length_squared > 0.f ? std::clamp((point - segment.start) * along / length_squared, 0.f, 1.f) : 0.f;
+        const vec3 offset = segment.start + t * along - point;
+        const float distance = offset.magnitude() - segment.radius;
+        if (distance < nearest.surface_distance) {
+            nearest.surface_distance = distance;
+            nearest.axis_offset = offset;
+            nearest.link_index = segment.link_index;
+        }
+    }
+    return nearest;
+}
+
 uint addPlantToPhysicsEngine(PhysicsEngine &engine, const Context &context, const PlantArchitecture &plantarchitecture, uint plantID, const USDExportParameters &plant_physics, const PlantPhysicsParameters &params) {
 
     if (params.leaf_collision_shape != "box" && params.leaf_collision_shape != "ellipsoid" && params.leaf_collision_shape != "triangles") {
@@ -248,6 +342,7 @@ uint addPlantToPhysicsEngine(PhysicsEngine &engine, const Context &context, cons
         const PlantArticulationLink &link = links[i];
         PhysicsLink &physics_link = articulation.links[i];
         physics_link.name = link.name;
+        physics_link.label = plantLinkLabel(link.type);
         physics_link.parent_index = link.parent_index;
         physics_link.position = link.position;
         physics_link.qw = link.qw;

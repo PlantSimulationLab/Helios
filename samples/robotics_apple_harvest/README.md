@@ -33,6 +33,13 @@ so the cup is in line with a fruit when the fruit is on the level line from the 
 stop), the cup's seal breaks, the fruit detaches without being gripped, or 10 s pass. The force on the tree leaves out the cup's contact
 with the fruit being picked, which it has to touch; pushing that fruit too hard knocks it off.
 
+**Built from plug-in components:** the cup is a `VacuumCup`, the velocity actions go through a `ToolVelocityAction`, the force on the tree comes from
+a `ContactSensor` on the robot with the picked fruit as its target, the protective stop is a `ProtectiveStop`, and the offset to the nearest wood
+comes from `NearestPlantOrgan` (robotics and physicsengine plug-ins). A `ControlLoop` runs the cup and the stop at every physics step, the stem fails
+through `PhysicsEngine::setDetachForce()`, episodes start from the settled tree through `PhysicsEngine::setResetPose()`, and
+`ParallelRobotSimulations` steps every simulation of every tree on its threads. The wrist and movie cameras are `RobotCamera`s. `harvest_env.cpp` keeps the task itself: choosing fruit, resets,
+observations, rewards and outcomes.
+
 **Start:** the arm tucked, with the robot up to 0.2 m along the row from the fruit. For training, `train.py --near-start 0.4` starts 40% of
 episodes with the cup instead 2-12 cm short of where the fruit would be seated and up to 3 cm out of line with it, so that the policy
 practises lining the cup up and sealing it; a placement the arm cannot reach without touching anything (about 3%) starts tucked. Held-out

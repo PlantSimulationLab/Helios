@@ -101,6 +101,24 @@ PhysicsEngine::addModelFile() loads an MJCF or URDF file, and adds a prefix to e
 PhysicsEngine::addPositionServo() drives one of its joints, PhysicsEngine::addForceTorqueSensor() adds a sensor on one of its bodies, and PhysicsEngine::bindObjectToBody() makes Context geometry follow one of its bodies.
 The \ref RoboticsDoc "Robotics" plug-in builds robots on these.
 
+\section PhysicsEngineContactSensor Contact force by what is touched
+
+A ContactSensor measures the contact force on a body of a loaded model and every body below it, such as a whole robot, split by the partner of each contact. Each articulation link is reported under its label
+(PhysicsLink::label): \ref addPlantToPhysicsEngine() labels the links of a plant "wood", "petiole", "peduncle", "leaf", "fruit", or "flower" (see \ref plantLinkLabel()). The ground plane is "ground", and every
+other body, such as a kinematic box or another loaded model, is "other". One link per instance can be reported as "target" instead, with ContactSensor::setTargetLink(), such as the fruit a robot is picking,
+so that the force on it can be told from the force on the rest of the plant.
+
+\code{.cpp}
+    engine.initialize();
+    ContactSensor contact(&engine, "robot/base_link");
+    contact.setTargetLink(plant, fruit_link);
+    engine.step();
+    vec3 on_wood = contact.getForce("wood");
+    vec3 on_anything_but_the_fruit = contact.getTotalForce({"target"});
+\endcode
+
+Create the sensor after PhysicsEngine::initialize(), and call ContactSensor::prepareInstances() after creating more instances. ContactSensor::isPenetrating() tells whether a pose placed directly touches anything.
+
 \section PhysicsEngineDetach Detaching links
 
 A link with the joint type \ref PHYSICS_JOINT_DETACHABLE is held rigidly to its parent until PhysicsEngine::detachLink() releases it, after which it and its descendants move freely. This is how a branch is cut or a fruit is picked.
@@ -109,7 +127,9 @@ Set PhysicsEngineParameters::ground_collisions so that a detached link comes to 
 The links that may be detached have to be chosen before PhysicsEngine::initialize(), and each adds six degrees of freedom and a constraint to the model. In return, detaching needs no change to the model, so each simulation instance can detach different links, and PhysicsEngine::resetInstance() restores them.
 A held link is rigid at that joint, rather than bending as a ball joint would. PlantPhysicsParameters::detachable_links chooses them for a plant.
 
-PhysicsEngine::getDetachableLinkLoad() gives the force in the constraint holding a link. To model a connection that fails under load, such as a fruit's stem, compare it with a limit and call PhysicsEngine::detachLink().
+PhysicsEngine::getDetachableLinkLoad() gives the force in the constraint holding a link. To model a connection that fails under load, such as a fruit's stem, give the link a force with PhysicsEngine::setDetachForce():
+after every physics step the load is compared with it, and the link is released when the load is larger, so a peak between control steps is not missed. Each instance has its own forces, which are kept when it is reset.
+PhysicsEngine::getLoadDetachmentCount() counts the links released this way since the instance was reset.
 
 \section PhysicsEngineInstances Running many instances
 
@@ -126,6 +146,12 @@ have the same bodies and joints, and PhysicsEngine::updateContextGeometry() copi
     engine.stepInstances(100);
     engine.updateContextGeometry(3); // render instance 3
 \endcode
+
+A plant built by PlantArchitecture is not at rest under gravity, so it swings when simulated. To start every episode from rest, let one instance settle and call PhysicsEngine::setResetPose(): resetting any instance, and
+creating one, then puts every joint where that instance's are, with no velocity.
+
+PhysicsEngine::getDisplayBodyPoses() records the world pose of every body whose motion moves Context geometry, and PhysicsEngine::showDisplayBodyPoses() shows such a pose again by moving the geometry, for drawing
+the frames of a movie after a run, possibly from poses recorded in another simulator of the same scene.
 
 \section PhysicsEnginePlants Simulating plants
 
@@ -184,6 +210,17 @@ the overlap. Leaves are thin plates and can still overlap a box by up to about a
 
 The \c PGS solver (PhysicsEngineParameters::solver) is used by default because it is several times faster than
 \c Newton for articulations with thousands of links; with the discrete integrator both treat joint stiffness implicitly.
+
+\section PhysicsEngineSceneHelpers Choosing organs of a plant
+
+\ref findPlantLinksInBox() finds the organs of one type whose rest position is in a box, such as the fruit at heights a robot can reach. \ref findBearingInternode() finds the internode an organ grows on, and
+\ref findSupportingInternodes() the internodes that carry it, nearest first, which are the ones to leave flexible (PlantPhysicsParameters::flexible_links) when the rest of the wood is rigid.
+
+\section PhysicsEngineNearestOrgan Nearest organ of a plant
+
+NearestPlantOrgan finds the organ of one type nearest a point, such as the wood nearest a robot's gripper, which a policy can use to keep clear of it. It searches the organs where they stand in the plant's
+rest pose, standing in for a map of the plant that perception would build before a robot starts work, so it does not need the simulation. Only organs with a capsule shape can be searched: internodes,
+petioles, and peduncles. NearestPlantOrganResult gives the link, the offset to the nearest point on its axis, and the distance to its surface.
 
 \section PhysicsEngineCollisions Collisions between links
 

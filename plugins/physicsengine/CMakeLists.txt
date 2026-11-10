@@ -44,7 +44,7 @@ endif()
 
 find_package(Threads REQUIRED)
 
-add_library(physicsengine STATIC "src/PhysicsEngine.cpp" "tests/selfTest.cpp")
+add_library(physicsengine STATIC "src/PhysicsEngine.cpp" "src/ContactSensor.cpp" "tests/selfTest.cpp")
 
 target_include_directories(physicsengine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 # MuJoCo is public: code built on the engine uses the MuJoCo API directly on PhysicsEngine::getMuJoCoModel() and getMuJoCoData()

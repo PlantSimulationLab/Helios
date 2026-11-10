@@ -22,7 +22,7 @@
 
 using namespace helios;
 
-Robot::Robot(PhysicsEngine *engine, const std::string &model_file, const std::string &name, const vec3 &position, float yaw_degrees) : engine(engine), prefix(name + "/") {
+Robot::Robot(PhysicsEngine *engine, const std::string &model_file, const std::string &name, const vec3 &position, float yaw_degrees) : engine(engine), name(name), prefix(name + "/"), base_position(position), base_yaw_degrees(yaw_degrees) {
     if (engine == nullptr) {
         helios_runtime_error("ERROR (Robot): The PhysicsEngine pointer must not be null.");
     }
@@ -172,6 +172,16 @@ size_t Robot::findJoint(const std::string &joint_name, const std::string &method
     return 0;
 }
 
+vec2 Robot::getJointRange(const std::string &joint_name) const {
+    requireInitialized("getJointRange");
+    const JointRecord &joint = joints[findJoint(joint_name, "getJointRange")];
+    const mjModel *model = engine->getMuJoCoModel();
+    if (!model->jnt_limited[joint.joint_ID]) {
+        return make_vec2(-std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity());
+    }
+    return make_vec2(toUserUnits(joint, model->jnt_range[2 * joint.joint_ID]), toUserUnits(joint, model->jnt_range[2 * joint.joint_ID + 1]));
+}
+
 std::vector<std::string> Robot::getJointNames() const {
     std::vector<std::string> names;
     names.reserve(joints.size());
@@ -179,6 +189,22 @@ std::vector<std::string> Robot::getJointNames() const {
         names.push_back(joint.name);
     }
     return names;
+}
+
+std::string Robot::getName() const {
+    return name;
+}
+
+vec3 Robot::getBasePosition() const {
+    return base_position;
+}
+
+float Robot::getBaseYaw() const {
+    return base_yaw_degrees;
+}
+
+PhysicsEngine *Robot::getPhysicsEngine() const {
+    return engine;
 }
 
 void Robot::setJointTargets(const std::vector<float> &targets, uint instance) {

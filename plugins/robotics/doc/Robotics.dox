@@ -72,6 +72,63 @@ An unstable servo shows up as large oscillations of the arm or an error from Phy
 
 Robot::getToolForce() sums the contact forces on the tool and its descendants. It is zero when nothing touches the tool, and needs no taring. It is what an ideal wrist sensor would read once the tool's weight and inertia are removed, with no noise or bandwidth limit.
 Use it rather than PhysicsEngine::addForceTorqueSensor() while the arm is moving, since that sensor's reading is only reliable at rest.
+A ContactSensor on the robot (see \ref PhysicsEngineContactSensor) splits the contact force by what the robot touches, such as wood, fruit, or leaves.
+
+\section RoboticsComponents Actions, end effectors, and safety
+
+These parts of a robot task run in C++ and are configured once, so that a task need not write them itself. Each is created after Robot::initialize(), and keeps state per simulation instance.
+Each is a RobotComponent, which a ControlLoop calls at every physics step, and the actions are also RobotAction objects, which a controller commands with a block of numbers each control step.
+
+- ToolVelocityAction moves the tool point at a commanded Cartesian velocity: each control step it moves a target, solves inverse kinematics for it, and sets the joint targets. The target may lead the tool by at most a set distance,
+  so that it does not run away while the arm is blocked. The tool axis stays along a fixed direction, or with ToolVelocityAction::setToolAxisAwayFromPivot() points horizontally away from the turret an arm turns on.
+- VacuumCup is an ideal suction cup on a robot body, which seals on a spherical target such as a fruit only when its whole lip is on it, holds the target seated in its mouth with springs, and reports when the pull, the load across the
+  mouth, or the moment that peels it pass what the seal holds (VacuumCupParameters). In a ControlLoop it lets go of the target when the seal breaks. VacuumCupGripAction commands it.
+- ProtectiveStop trips when the contact force on the robot measured by a ContactSensor, leaving out partners such as the target it is meant to touch, passes a limit. It is checked at every physics step, so that a peak
+  between control steps is not missed.
+- JointPositionAction sets joint targets from commands scaled to the joints' ranges, and JointVelocityAction moves them at commanded speeds, for robots such as gantries driven joint by joint.
+
+\code{.cpp}
+    ContactSensor contact(&engine, "robot/base_link");
+    ProtectiveStop stop(&contact, 50.f, {"target"});
+    VacuumCup cup(&robot, "tool", make_vec3(0.32f, 0, 0), make_vec3(1, 0, 0));
+    ToolVelocityAction move(&robot, 0.3f, 0.08f);
+
+    VacuumCupGripAction grip(&cup);
+    ControlLoop loop(&engine, 20); // 20 physics steps per control step
+    loop.addComponent(&cup);
+    loop.addComponent(&stop);
+    loop.addComponent(&move);
+
+    // Each episode
+    loop.resetInstance(instance);
+    engine.setDetachForce(plant, fruit_link, 20.f, instance); // the stem fails at 20 N
+    cup.setTarget(plant, fruit_link, instance);
+    contact.setTargetLink(plant, fruit_link, instance);
+    robot.setJointPositions(start_pose, instance);
+
+    // Each control step: actions, then the physics steps, which end early if the fruit comes off, the seal breaks, or the stop trips
+    move.applyAction(velocity_command, loop.getControlPeriod(), instance);
+    grip.applyAction(grip_command, loop.getControlPeriod(), instance);
+    ControlStepResult result = loop.step(instance);
+\endcode
+
+\section RoboticsParallel Many scenes and copies
+
+ParallelRobotSimulations holds the scenes a task is trained on, such as several trees, each a PhysicsEngine with its ControlLoop and actions, and every instance of each as a copy. ParallelRobotSimulations::step() takes the
+actions of every copy in one array and runs a control step of each on a pool of threads kept for its life. ParallelRobotSimulations::forEachCopy() and ParallelRobotSimulations::gather() run anything else over all copies on
+the same threads, such as observations, rewards, and resets, so that a task's code for one copy is all it has to write. The scenes are built and owned by the task.
+
+<tt>samples/robotics_apple_harvest</tt> builds its task from these, with \ref NearestPlantOrgan for the wood near the cup.
+
+\section RoboticsCamera Cameras
+
+With the visualizer plug-in in the project's list of plug-ins, RobotCamera renders a scene as it stands in one simulation instance, from a camera placed in the world (RobotCamera::setPose()) or mounted on a body such as a
+robot's wrist (RobotCamera::mountOnBody()). Each frame gives a color image, the depth of each pixel, and the Context primitive and object seen in each pixel, so a task can use images as observations or measure how much of a
+fruit is visible. Without the visualizer plug-in, the rest of the robotics plug-in builds and runs without OpenGL.
+
+OpenGL is tied to a thread, so construct the camera and draw on the thread that will render. RobotCamera::prepare() needs no OpenGL, so the cameras of different scenes can prepare in parallel and then draw one after another
+(RobotCamera::draw()). Use one camera per Context: each clears the Context's geometry flags after a frame, so that the next frame redraws only what moved. To draw a movie from recorded poses, show them with
+PhysicsEngine::showDisplayBodyPoses() and render the instance.
 
 \section RoboticsResets Home pose and parallel instances
 

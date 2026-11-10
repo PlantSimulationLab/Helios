@@ -5,9 +5,12 @@
 
 #include "harvest_env.h"
 
+#include "ParallelRobotSimulations.h"
 #include "PlantPhysics.h"
-#include "Robot.h"
-#include "Visualizer.h"
+#include "ProtectiveStop.h"
+#include "RobotCamera.h"
+#include "ToolVelocityAction.h"
+#include "VacuumCup.h"
 
 #include <mujoco/mujoco.h>
 
@@ -88,8 +91,6 @@ namespace {
         uint link;
         uint bearing_wood_link; // the nearest internode toward the trunk
         uint objID;
-        int body_ID;
-        float radius;
         vec3 settled_position;
         vec3 settled_wood_position;
     };
@@ -100,11 +101,19 @@ namespace {
     const uint organ_wood = 2;
     const uint organ_fruit_base = 3;
 
-    struct WoodSegment {
-        vec3 start;
-        vec3 end;
-        float radius;
-    };
+    VacuumCupParameters cupParameters() {
+        VacuumCupParameters cup;
+        cup.lip_radius = cup_lip_radius;
+        cup.lip_thickness = cup_lip_thickness;
+        cup.seal_reach = grip_reach;
+        cup.stiffness = grip_stiffness;
+        cup.damping = grip_damping;
+        cup.ramp_seconds = grip_ramp_seconds;
+        cup.pull_limit = grip_limit;
+        cup.shear_limit = grip_shear_limit;
+        cup.moment_limit = grip_moment_limit;
+        return cup;
+    }
 
     USDExportParameters plantPhysics() {
         USDExportParameters plant_physics;
@@ -114,15 +123,15 @@ namespace {
         return plant_physics;
     }
 
+    // Fruit at heights the arm can reach
+    std::vector<uint> findReachableFruit(const PlantArticulation &articulation) {
+        const float unbounded = std::numeric_limits<float>::infinity();
+        return findPlantLinksInBox(articulation, ARTICULATION_LINK_FRUIT, make_vec3(-unbounded, -unbounded, min_fruit_height), make_vec3(unbounded, unbounded, max_fruit_height));
+    }
+
     // Reachable fruit, nearest the robot first, since those are the ones not hidden behind the wall
     std::vector<uint> chooseCandidateFruit(const PlantArticulation &articulation, int seed) {
-        std::vector<uint> reachable;
-        for (uint i = 0; i < articulation.links.size(); i++) {
-            const PlantArticulationLink &link = articulation.links[i];
-            if (link.type == ARTICULATION_LINK_FRUIT && link.position.z >= min_fruit_height && link.position.z <= max_fruit_height) {
-                reachable.push_back(i);
-            }
-        }
+        std::vector<uint> reachable = findReachableFruit(articulation);
         std::sort(reachable.begin(), reachable.end(), [&](uint a, uint b) { return articulation.links[a].position.x < articulation.links[b].position.x; });
         if (reachable.size() > candidates_per_tree) {
             reachable.resize(candidates_per_tree);
@@ -137,13 +146,8 @@ namespace {
     std::vector<uint> chooseFlexibleInternodes(const PlantArticulation &articulation, const std::vector<uint> &candidates) {
         std::vector<uint> flexible;
         for (uint fruit: candidates) {
-            int internodes = 0;
-            for (int link = articulation.links[fruit].parent_index; link >= 0 && internodes < flexible_internodes_per_candidate; link = articulation.links[link].parent_index) {
-                if (articulation.links[link].type == ARTICULATION_LINK_INTERNODE && articulation.links[link].parent_index >= 0) {
-                    flexible.push_back(static_cast<uint>(link));
-                    internodes++;
-                }
-            }
+            const std::vector<uint> supporting = findSupportingInternodes(articulation, fruit, flexible_internodes_per_candidate);
+            flexible.insert(flexible.end(), supporting.begin(), supporting.end());
         }
         return flexible;
     }
@@ -156,9 +160,15 @@ namespace {
         uint plant = 0;
         int tool_body_ID = -1;
         std::vector<Candidate> candidates;
-        std::vector<mjtNum> settled_qpos;
-        std::vector<WoodSegment> wood; // where the wood stands at rest, which stands in for what perception would report
-        std::unique_ptr<Visualizer> camera;
+        std::unique_ptr<NearestPlantOrgan> nearest_wood; // where the wood stands at rest, which stands in for what perception would report
+        // What the robot uses: contact by what it touches, the protective stop on it, the cup, and the cup's velocity control
+        std::unique_ptr<ContactSensor> contact;
+        std::unique_ptr<ProtectiveStop> protective_stop;
+        std::unique_ptr<VacuumCup> cup;
+        std::unique_ptr<ToolVelocityAction> tool_action;
+        std::unique_ptr<VacuumCupGripAction> grip_action;
+        std::unique_ptr<ControlLoop> control_loop; // runs the cup and the protective stop at every physics step
+        std::unique_ptr<RobotCamera> camera;
         std::unordered_map<uint, uint> organ_of_primitive; // for measuring what the camera sees: which kind of plant organ each primitive belongs to, or which fruit
 
         // For showing a simulation from outside (movies): the links of the plant, parents first, with the MuJoCo body of each (-1 if it has none) and its
@@ -167,7 +177,7 @@ namespace {
         std::vector<int> link_parents;
         std::vector<int> link_bodies;
         std::vector<std::array<mjtNum, 7>> link_rest_poses;
-        std::unique_ptr<Visualizer> movie_camera;
+        std::unique_ptr<RobotCamera> movie_camera;
 
         Tree(int seed, int instance_count, bool leaves, bool show_arm = false) : plantarchitecture(&context), engine(&context) {
             context.seedRandomGenerator(seed);
@@ -182,13 +192,7 @@ namespace {
             const USDExportParameters plant_physics = plantPhysics();
             const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID, plant_physics);
 
-            for (const PlantArticulationLink &link: articulation.links) {
-                if (link.type == ARTICULATION_LINK_INTERNODE) {
-                    // The local +z axis of the link is the capsule axis, the third column of its rotation matrix
-                    const vec3 axis = make_vec3(2.f * (link.qx * link.qz + link.qw * link.qy), 2.f * (link.qy * link.qz - link.qw * link.qx), 1.f - 2.f * (link.qx * link.qx + link.qy * link.qy));
-                    wood.push_back({link.position - link.half_length * axis, link.position + link.half_length * axis, link.radius});
-                }
-            }
+            nearest_wood = std::make_unique<NearestPlantOrgan>(articulation, ARTICULATION_LINK_INTERNODE);
 
             const std::vector<uint> reachable = chooseCandidateFruit(articulation, seed);
 
@@ -265,6 +269,20 @@ namespace {
             const mjModel *model = engine.getMuJoCoModel();
             tool_body_ID = mj_name2id(model, mjOBJ_BODY, "robot/tool");
 
+            // The contact sensor covers the whole robot. The fruit being picked is its "target", which the cup is meant to touch, so the stop leaves it out.
+            contact = std::make_unique<ContactSensor>(&engine, mj_id2name(model, mjOBJ_BODY, model->body_rootid[tool_body_ID]));
+            protective_stop = std::make_unique<ProtectiveStop>(contact.get(), protective_stop_force, std::vector<std::string>{"target"});
+            cup = std::make_unique<VacuumCup>(robot.get(), "tool", cup_face, make_vec3(1, 0, 0), cupParameters());
+            tool_action = std::make_unique<ToolVelocityAction>(robot.get(), max_tool_speed, max_target_lead);
+            // The cup is level and points away from the turret, which turns about a vertical axis 0.15 m ahead of the platform as it drives along the row
+            tool_action->setToolAxisAwayFromPivot(make_vec3(0.15f, 0, 0), "drive");
+            tool_action->setLockedJoints({"roll"});
+            grip_action = std::make_unique<VacuumCupGripAction>(cup.get());
+            control_loop = std::make_unique<ControlLoop>(&engine, physics_steps_per_control);
+            control_loop->addComponent(cup.get());
+            control_loop->addComponent(protective_stop.get());
+            control_loop->addComponent(tool_action.get());
+
             for (const PlantArticulationLink &link: articulation.links) {
                 link_names.push_back(link.name);
                 link_parents.push_back(link.parent_index);
@@ -276,27 +294,16 @@ namespace {
             // Let the fruit and flexible wood settle, and start every episode from there
             robot->setJointPositions(tucked_pose, 0);
             engine.step(settling_physics_steps, 0);
-            const mjData *data = engine.getMuJoCoData(0);
-            settled_qpos.assign(data->qpos, data->qpos + model->nq);
+            engine.setResetPose(0);
 
             for (uint link: reachable) {
                 Candidate candidate;
                 candidate.link = link;
                 candidate.objID = articulation.links[link].source_objID;
-                int wood = articulation.links[link].parent_index;
-                while (wood >= 0 && articulation.links[wood].type != ARTICULATION_LINK_INTERNODE) {
-                    wood = articulation.links[wood].parent_index;
-                }
-                if (wood < 0) {
-                    helios_runtime_error("ERROR (harvest_env): Fruit " + articulation.links[link].name + " is not borne on an internode.");
-                }
-                candidate.bearing_wood_link = static_cast<uint>(wood);
+                candidate.bearing_wood_link = findBearingInternode(articulation, link);
                 candidate.settled_wood_position = engine.getLinkPosition(plant, candidate.bearing_wood_link, 0);
-                candidate.body_ID = mj_name2id(model, mjOBJ_BODY, ("p" + std::to_string(plantID) + "_" + articulation.links[link].name).c_str());
-                if (candidate.body_ID < 0 || model->body_geomnum[candidate.body_ID] < 1) {
-                    helios_runtime_error("ERROR (harvest_env): Fruit " + articulation.links[link].name + " has no collision shape in the compiled model.");
-                }
-                candidate.radius = float(model->geom_size[3 * model->body_geomadr[candidate.body_ID]]);
+                // Fails here, rather than in an episode, if the cup cannot seal on this fruit
+                cup->setTarget(plant, link, 0);
                 candidate.settled_position = engine.getLinkPosition(plant, link, 0);
                 candidates.push_back(candidate);
             }
@@ -310,20 +317,8 @@ namespace {
         float near_start_fraction = 0.f; // share of episodes started with the cup near the fruit
         const Candidate *target = nullptr;
         float detach_force = 0.f;
-        bool gripped = false;
-        // Where the cup holds the fruit, in the tool body's frame: the fruit's center, the cup's axis, and the fruit's orientation; and how far the fruit's
-        // center is from the center of the cup's mouth
-        mjtNum grip_center[3] = {0, 0, 0};
-        mjtNum grip_normal[3] = {0, 0, 0};
-        float grip_seat_distance = 0.f;
-        mjtNum grip_orientation[4] = {1, 0, 0, 0};
-        float grip_shear = 0.f; // N, the load along the face in the last physics step
-        float grip_moment = 0.f; // N m, the load's moment about the face's center in the last physics step
-        float grip_seconds = 0.f;
-        float grip_force = 0.f;
         float previous_load = 0.f;
         float previous_distance = 0.f;
-        vec3 tool_target;
         int control_step = 0;
         vec3 pull_direction;
         HarvestEpisodeRecord current{};
@@ -334,102 +329,14 @@ namespace {
         // For showing: control steps a success goes on for, with the cup carrying the freed fruit away (see harvest_env_set_follow_through())
         int follow_through_steps = 0;
         int follow_through_remaining = 0; // nonzero while a success goes on
+        bool gripped_before_step = false; // whether the cup was gripping when the control step started
         HarvestEpisodeRecord detached_record{}; // the record of an episode that goes on, as it was when the fruit detached
     };
 
-    vec3 toVec3(const mjtNum *p) {
-        return make_vec3(float(p[0]), float(p[1]), float(p[2]));
-    }
-
     // The contact force of the robot on the tree, other than on the fruit it is picking: the robot is meant to touch that fruit, and pushing it too hard
     // knocks it off. This is what the protective stop acts on.
-    vec3 contactOnTree(const Slot &slot) {
-        const mjModel *model = slot.tree->engine.getMuJoCoModel();
-        const mjData *data = slot.tree->engine.getMuJoCoData(slot.instance);
-        const int fruit_body = slot.target->body_ID;
-        const int robot_root = model->body_rootid[slot.tree->tool_body_ID];
-        vec3 on_fruit = make_vec3(0, 0, 0);
-        for (int c = 0; c < data->ncon; c++) {
-            const mjContact &contact = data->contact[c];
-            if (contact.efc_address < 0) {
-                continue;
-            }
-            const int body_0 = model->geom_bodyid[contact.geom[0]];
-            const int body_1 = model->geom_bodyid[contact.geom[1]];
-            // MuJoCo gives the force that geom 0 exerts on geom 1
-            float sign = 0.f;
-            if (body_1 == fruit_body && model->body_rootid[body_0] == robot_root) {
-                sign = 1.f;
-            } else if (body_0 == fruit_body && model->body_rootid[body_1] == robot_root) {
-                sign = -1.f;
-            } else {
-                continue;
-            }
-            mjtNum contact_force[6], world_force[3];
-            mj_contactForce(model, data, c, contact_force);
-            mju_mulMatTVec3(world_force, contact.frame, contact_force);
-            on_fruit = on_fruit + sign * toVec3(world_force);
-        }
-        return slot.tree->engine.getExternalContactForce(slot.tree->plant, slot.instance) - on_fruit;
-    }
-
-    // The cup's axis, which is the tool's x axis
-    vec3 cupAxis(const Slot &slot) {
-        const mjtNum *tool_rotation = slot.tree->engine.getMuJoCoData(slot.instance)->xmat + 9 * slot.tree->tool_body_ID;
-        return make_vec3(float(tool_rotation[0]), float(tool_rotation[3]), float(tool_rotation[6]));
-    }
-
-    // From the cup's axis to the fruit's center, at right angles to the axis: how far, and which way, the cup is out of line with the fruit
-    vec3 offAxis(const Slot &slot) {
-        const mjData *data = slot.tree->engine.getMuJoCoData(slot.instance);
-        const vec3 axis = cupAxis(slot);
-        const vec3 to_fruit = toVec3(data->xipos + 3 * slot.target->body_ID) - slot.tree->robot->getToolPosition(slot.instance);
-        return to_fruit - (to_fruit * axis) * axis;
-    }
-
-    // How far the point of the cup's lip farthest from the fruit is from the fruit's surface. The cup can seal when it is within grip_reach: then the
-    // whole lip is on the fruit, which sits in the mouth with its center near the axis. Far from the fruit, it is about the distance to its surface.
-    float sealGap(const Slot &slot) {
-        const mjData *data = slot.tree->engine.getMuJoCoData(slot.instance);
-        const vec3 to_fruit = toVec3(data->xipos + 3 * slot.target->body_ID) - slot.tree->robot->getToolPosition(slot.instance);
-        const float along_axis = to_fruit * cupAxis(slot);
-        const float off_axis = offAxis(slot).magnitude();
-        // The farthest point of the lip is on the side away from the fruit's center
-        return std::sqrt(along_axis * along_axis + (cup_lip_radius + off_axis) * (cup_lip_radius + off_axis)) - slot.target->radius - cup_lip_thickness;
-    }
-
-    // How far the center of a fruit seated in the cup is from the center of its mouth: its surface then touches the whole lip
-    float seatDistance(const Slot &slot) {
-        const float reach = slot.target->radius + cup_lip_thickness;
-        return std::sqrt(std::max(0.f, reach * reach - cup_lip_radius * cup_lip_radius));
-    }
-
-    // The load on the cup's seal in the last physics step, as a fraction of what breaks it: the largest of the pull, the load along the face and the moment,
-    // each over its limit
-    float sealLoad(const Slot &slot) {
-        return std::max({slot.grip_force / grip_limit, slot.grip_shear / grip_shear_limit, slot.grip_moment / grip_moment_limit});
-    }
-
-    bool sealBroken(const Slot &slot) {
-        return sealLoad(slot) > 1.f;
-    }
-
-    // From a point to the nearest surface of the wood
-    vec3 towardNearestWood(const Tree &tree, const vec3 &point) {
-        vec3 nearest_offset = make_vec3(0, 0, 0);
-        float nearest_distance = std::numeric_limits<float>::max();
-        for (const WoodSegment &segment: tree.wood) {
-            const vec3 along = segment.end - segment.start;
-            const float length_squared = along * along;
-            const float t = length_squared > 0.f ? std::clamp((point - segment.start) * along / length_squared, 0.f, 1.f) : 0.f;
-            const vec3 offset = segment.start + t * along - point;
-            const float distance = offset.magnitude() - segment.radius;
-            if (distance < nearest_distance) {
-                nearest_distance = distance;
-                nearest_offset = offset;
-            }
-        }
-        return nearest_offset;
+    float contactOnTree(const Slot &slot) {
+        return slot.tree->protective_stop->measureForce(slot.instance);
     }
 
     // A camera on the wrist, behind and above the cup, looking along the tool past the cup
@@ -440,28 +347,20 @@ namespace {
         look_at = cup + 0.3f * axis;
     }
 
-    void pointCamera(Slot &slot) {
-        vec3 eye, look_at;
-        wristCameraPose(*slot.tree->robot, slot.instance, eye, look_at);
-        slot.tree->camera->setCameraPosition(eye, look_at);
-    }
-
     const float wrist_camera_field_of_view = 70.f;
     const float movie_camera_field_of_view = 40.f;
 
     // The part of rendering that needs no OpenGL, so that trees can do it in parallel
     void prepareSlotFrame(Slot &slot) {
-        Tree &tree = *slot.tree;
-        tree.engine.updateContextGeometry(slot.instance);
-        pointCamera(slot);
-        tree.camera->prepareContextGeometry();
-        // Flags cleared after each frame report only what moves between frames, so the visualizer does not check every primitive
-        tree.context.markGeometryClean();
+        vec3 eye, look_at;
+        wristCameraPose(*slot.tree->robot, slot.instance, eye, look_at);
+        slot.tree->camera->setPose(eye, look_at);
+        slot.tree->camera->prepare(slot.instance);
     }
 
     void renderSlot(Slot &slot) {
         prepareSlotFrame(slot);
-        slot.tree->camera->plotUpdate(true);
+        slot.tree->camera->draw();
     }
 
     // The world pose (x, y, z, qw, qx, qy, qz) of every link of the plant, NaN for a link with no body, and the robot's joint positions (m, degrees)
@@ -532,51 +431,39 @@ namespace {
             }
         }
 
-        tree.engine.updateContextGeometry(slot.instance);
-        tree.movie_camera->prepareContextGeometry();
-        tree.context.markGeometryClean();
         if (wrist_view) {
             vec3 wrist_eye, wrist_look_at;
             wristCameraPose(*tree.robot, slot.instance, wrist_eye, wrist_look_at);
-            tree.movie_camera->setCameraFieldOfView(wrist_camera_field_of_view);
-            tree.movie_camera->setCameraPosition(wrist_eye, wrist_look_at);
+            tree.movie_camera->setFieldOfView(wrist_camera_field_of_view);
+            tree.movie_camera->setPose(wrist_eye, wrist_look_at);
         } else {
-            tree.movie_camera->setCameraFieldOfView(movie_camera_field_of_view);
-            tree.movie_camera->setCameraPosition(eye, look_at);
+            tree.movie_camera->setFieldOfView(movie_camera_field_of_view);
+            tree.movie_camera->setPose(eye, look_at);
         }
-        tree.movie_camera->plotUpdate(true);
-        std::vector<uint> pixels;
-        uint width = 0;
-        uint height = 0;
-        tree.movie_camera->getWindowPixelsRGB(pixels, width, height);
-        // OpenGL gives the bottom row first
-        for (uint row = 0; row < height; row++) {
-            const uint *source = pixels.data() + size_t(height - 1 - row) * size_t(width) * 3;
-            unsigned char *destination = image + size_t(row) * size_t(width) * 3;
-            for (uint k = 0; k < width * 3; k++) {
-                destination[k] = static_cast<unsigned char>(source[k]);
-            }
-        }
+        // The geometry follows the poses just written into the simulation's state
+        tree.movie_camera->render(slot.instance);
+        tree.movie_camera->getColorImage(image);
     }
 
     void writeObservation(const Slot &slot, float *observation) {
         Robot &robot = *slot.tree->robot;
         const mjModel *model = slot.tree->engine.getMuJoCoModel();
         const mjData *data = slot.tree->engine.getMuJoCoData(slot.instance);
+        const VacuumCup &cup = *slot.tree->cup;
         const vec3 tool = robot.getToolPosition(slot.instance);
-        const vec3 fruit = toVec3(data->xipos + 3 * slot.target->body_ID);
+        const vec3 fruit = cup.getTargetPosition(slot.instance);
         const vec3 relative = fruit - tool;
         const std::vector<float> joints = robot.getJointPositions(slot.instance);
         mjtNum velocity[6];
         mj_objectVelocity(model, data, mjOBJ_BODY, slot.tree->tool_body_ID, velocity, 0);
-        const float contact = contactOnTree(slot).magnitude();
-        const vec3 wood = towardNearestWood(*slot.tree, tool);
+        const float contact = contactOnTree(slot);
+        const vec3 wood = slot.tree->nearest_wood->find(tool).axis_offset;
 
         int i = 0;
         observation[i++] = relative.x;
         observation[i++] = relative.y;
         observation[i++] = relative.z;
-        observation[i++] = sealGap(slot);
+        observation[i++] = cup.getSealGap(slot.instance);
         observation[i++] = tool.x - robot_base.x;
         observation[i++] = tool.y - joints[0];
         observation[i++] = tool.z;
@@ -587,14 +474,14 @@ namespace {
         for (size_t j = 1; j < 6; j++) {
             observation[i++] = deg2rad(joints[j]);
         }
-        observation[i++] = slot.gripped ? 1.f : 0.f;
-        observation[i++] = sealLoad(slot); // how near the seal is to breaking
+        observation[i++] = cup.isGripped(slot.instance) ? 1.f : 0.f;
+        observation[i++] = cup.getSealLoad(slot.instance); // how near the seal is to breaking
         observation[i++] = contact / 10.f;
         observation[i++] = float(slot.control_step) / float(max_control_steps);
         observation[i++] = wood.x;
         observation[i++] = wood.y;
         observation[i++] = wood.z;
-        const vec3 off_axis = offAxis(slot);
+        const vec3 off_axis = cup.getOffAxis(slot.instance);
         observation[i++] = off_axis.x;
         observation[i++] = off_axis.y;
         observation[i++] = off_axis.z;
@@ -602,23 +489,7 @@ namespace {
 
     // Whether any part of the robot touches anything other than itself and the ground
     bool robotTouches(const Slot &slot) {
-        const mjModel *model = slot.tree->engine.getMuJoCoModel();
-        const mjData *data = slot.tree->engine.getMuJoCoData(slot.instance);
-        const int robot_root = model->body_rootid[slot.tree->tool_body_ID];
-        for (int c = 0; c < data->ncon; c++) {
-            const mjContact &contact = data->contact[c];
-            if (contact.dist >= 0) {
-                continue;
-            }
-            const int body_0 = model->geom_bodyid[contact.geom[0]];
-            const int body_1 = model->geom_bodyid[contact.geom[1]];
-            const bool robot_0 = model->body_rootid[body_0] == robot_root;
-            const bool robot_1 = model->body_rootid[body_1] == robot_root;
-            if (robot_0 != robot_1 && body_0 != 0 && body_1 != 0) {
-                return true;
-            }
-        }
-        return false;
+        return slot.tree->contact->isPenetrating({"ground"}, slot.instance);
     }
 
     // Place the arm with the cup a few centimeters short of the fruit and somewhat out of line with it, pointing away from the turret, so that training
@@ -626,12 +497,12 @@ namespace {
     bool placeCupNearFruit(Slot &slot, const std::vector<float> &start_pose) {
         Tree &tree = *slot.tree;
         std::uniform_real_distribution<float> unit(0.f, 1.f);
-        const vec3 fruit = toVec3(tree.engine.getMuJoCoData(slot.instance)->xipos + 3 * slot.target->body_ID);
+        const vec3 fruit = tree.cup->getTargetPosition(slot.instance);
         for (int attempt = 0; attempt < near_start_attempts; attempt++) {
             vec3 line = fruit - make_vec3(robot_base.x + 0.15f, start_pose[0], fruit.z);
             line.normalize();
             const vec3 sideways = make_vec3(-line.y, line.x, 0.f);
-            const float standoff = seatDistance(slot) + near_start_min_standoff + unit(slot.random) * (near_start_max_standoff - near_start_min_standoff);
+            const float standoff = tree.cup->getSeatDistance(slot.instance) + near_start_min_standoff + unit(slot.random) * (near_start_max_standoff - near_start_min_standoff);
             const vec3 target = fruit - standoff * line + near_start_off_axis * ((2.f * unit(slot.random) - 1.f) * sideways + (2.f * unit(slot.random) - 1.f) * make_vec3(0, 0, 1));
             vec3 pointing = target - make_vec3(robot_base.x + 0.15f, start_pose[0], target.z);
             pointing.normalize();
@@ -650,15 +521,19 @@ namespace {
     void resetSlot(Slot &slot) {
         Tree &tree = *slot.tree;
         PhysicsEngine &engine = tree.engine;
-        engine.resetInstance(slot.instance);
+        // Back to the settled tree, with the cup, the stop, and the cup's velocity control reset
+        tree.control_loop->resetInstance(slot.instance);
 
         std::uniform_int_distribution<size_t> pick_fruit(0, tree.candidates.size() - 1);
         std::uniform_real_distribution<float> unit(0.f, 1.f);
         slot.target = &tree.candidates[pick_fruit(slot.random)];
         slot.detach_force = min_detach_force + unit(slot.random) * (max_detach_force - min_detach_force);
+        // The stem fails when the load on it passes the force for this fruit
+        engine.clearDetachForces(slot.instance);
+        engine.setDetachForce(tree.plant, slot.target->link, slot.detach_force, slot.instance);
+        tree.cup->setTarget(tree.plant, slot.target->link, slot.instance);
+        tree.contact->setTargetLink(tree.plant, slot.target->link, slot.instance);
 
-        mjData *data = engine.getMuJoCoData(slot.instance);
-        mju_copy(data->qpos, tree.settled_qpos.data(), engine.getMuJoCoModel()->nq);
         std::vector<float> start_pose = tucked_pose;
         start_pose[0] = slot.target->settled_position.y + (2.f * unit(slot.random) - 1.f) * start_offset;
         tree.robot->setJointPositions(start_pose, slot.instance);
@@ -666,133 +541,27 @@ namespace {
             placeCupNearFruit(slot, start_pose);
         }
 
-        slot.gripped = false;
-        slot.grip_seconds = 0.f;
-        slot.grip_force = 0.f;
         slot.follow_through_remaining = 0;
         slot.previous_load = 0.f;
         slot.control_step = 0;
-        slot.tool_target = tree.robot->getToolPosition(slot.instance);
-        slot.previous_distance = sealGap(slot);
+        slot.previous_distance = tree.cup->getSealGap(slot.instance);
         slot.pull_direction = make_vec3(0, 0, 0);
         slot.current = HarvestEpisodeRecord{};
         slot.current.detach_force = slot.detach_force;
         slot.current.steps_to_grip = -1;
     }
 
-    // Seal the cup on the fruit: the fruit is to be held seated in the mouth, with its center on the cup's axis and its surface on the whole lip
-    void startGrip(Slot &slot) {
-        Tree &tree = *slot.tree;
-        const mjData *data = tree.engine.getMuJoCoData(slot.instance);
-        const int fruit_body = slot.target->body_ID;
-        const int tool_body = tree.tool_body_ID;
-        slot.grip_seat_distance = seatDistance(slot);
-        for (int k = 0; k < 3; k++) {
-            slot.grip_center[k] = (k == 0 ? cup_face.x : k == 1 ? cup_face.y : cup_face.z) + (k == 0 ? slot.grip_seat_distance : 0.f);
-            slot.grip_normal[k] = k == 0 ? 1 : 0;
-        }
-        mjtNum tool_inverse[4];
-        mju_negQuat(tool_inverse, data->xquat + 4 * tool_body);
-        mju_mulQuat(slot.grip_orientation, tool_inverse, data->xquat + 4 * fruit_body);
-        slot.gripped = true;
-        slot.grip_seconds = 0.f;
-    }
-
-    // The force and torque of the grip on the fruit, applied to the fruit and, in reaction, to the arm. The rotational springs have the time constants of the
-    // linear ones for this fruit's inertia.
-    void applyGrip(Slot &slot, float dt) {
-        Tree &tree = *slot.tree;
-        const mjModel *model = tree.engine.getMuJoCoModel();
-        mjData *data = tree.engine.getMuJoCoData(slot.instance);
-        const int fruit_body = slot.target->body_ID;
-        const int tool_body = tree.tool_body_ID;
-        mju_zero(data->xfrc_applied + 6 * fruit_body, 6);
-        mju_zero(data->xfrc_applied + 6 * tool_body, 6);
-        slot.grip_force = 0.f;
-        slot.grip_shear = 0.f;
-        slot.grip_moment = 0.f;
-        if (!slot.gripped) {
-            return;
-        }
-        slot.grip_seconds += dt;
-        const float ramp = std::min(1.f, slot.grip_seconds / grip_ramp_seconds);
-
-        // Where the fruit should be, and how fast that point moves with the tool
-        mjtNum offset[3], normal_world[3];
-        mju_mulMatVec3(offset, data->xmat + 9 * tool_body, slot.grip_center);
-        mju_mulMatVec3(normal_world, data->xmat + 9 * tool_body, slot.grip_normal);
-        const vec3 held = toVec3(data->xpos + 3 * tool_body) + toVec3(offset);
-        const vec3 normal = toVec3(normal_world);
-        mjtNum velocity_fruit[6], velocity_tool[6];
-        mj_objectVelocity(model, data, mjOBJ_BODY, fruit_body, velocity_fruit, 0);
-        mj_objectVelocity(model, data, mjOBJ_BODY, tool_body, velocity_tool, 0);
-        const vec3 tool_center = toVec3(data->xipos + 3 * tool_body);
-        const vec3 tool_spin = toVec3(velocity_tool);
-        const vec3 held_velocity = toVec3(velocity_tool + 3) + cross(tool_spin, held - tool_center);
-        const vec3 fruit = toVec3(data->xipos + 3 * fruit_body);
-        const vec3 on_fruit = ramp * (grip_stiffness * (held - fruit) + grip_damping * (held_velocity - toVec3(velocity_fruit + 3)));
-
-        // The orientation the fruit should have, and the rotation from where it is to there
-        mjtNum held_orientation[4], fruit_inverse[4], error[4], error_rotation[3];
-        mju_mulQuat(held_orientation, data->xquat + 4 * tool_body, slot.grip_orientation);
-        mju_negQuat(fruit_inverse, data->xquat + 4 * fruit_body);
-        mju_mulQuat(error, held_orientation, fruit_inverse);
-        mju_quat2Vel(error_rotation, error, 1.0);
-        const float mass = float(model->body_mass[fruit_body]);
-        const float inertia = float(model->body_inertia[3 * fruit_body] + model->body_inertia[3 * fruit_body + 1] + model->body_inertia[3 * fruit_body + 2]) / 3.f;
-        const vec3 torque_on_fruit = ramp * (inertia / mass) * (grip_stiffness * toVec3(error_rotation) + grip_damping * (tool_spin - toVec3(velocity_fruit)));
-
-        // The load on the seal: pulling the fruit toward the cup is a pull out of it, the rest is across the mouth, and the moment is about the mouth's center
-        const float pull = std::max(0.f, -(on_fruit * normal));
-        const vec3 along_face = on_fruit - (on_fruit * normal) * normal;
-        const vec3 face_center = held - slot.grip_seat_distance * normal;
-        slot.grip_force = pull;
-        slot.grip_shear = along_face.magnitude();
-        slot.grip_moment = (torque_on_fruit + cross(held - face_center, on_fruit)).magnitude();
+    // Keep the direction the cup last pulled the fruit in, for the episode's record
+    void recordPullDirection(Slot &slot) {
+        const vec3 on_fruit = slot.tree->cup->getForceOnTarget(slot.instance);
         if (on_fruit.magnitude() > 1e-6f) {
             slot.pull_direction = on_fruit / on_fruit.magnitude();
         }
-
-        const float fruit_load[6] = {on_fruit.x, on_fruit.y, on_fruit.z, torque_on_fruit.x, torque_on_fruit.y, torque_on_fruit.z};
-        // The reaction acts where the fruit is held rather than at the tool's center of mass, so it also carries a torque
-        const vec3 on_tool = -1.f * on_fruit;
-        const vec3 torque_on_tool = cross(held - tool_center, on_tool) - torque_on_fruit;
-        const float tool_load[6] = {on_tool.x, on_tool.y, on_tool.z, torque_on_tool.x, torque_on_tool.y, torque_on_tool.z};
-        for (int k = 0; k < 6; k++) {
-            data->xfrc_applied[6 * fruit_body + k] = fruit_load[k];
-            data->xfrc_applied[6 * tool_body + k] = tool_load[k];
-        }
     }
 
-    // A control step after the fruit detached, with the cup backing straight away from the tree whatever the action, carrying the fruit for as long as the
-    // grip holds. The episode is a success either way, and ends when the steps run out, with the record it had when the fruit detached.
-    void stepFollowThrough(Slot &slot, float *observation, float &reward, int &outcome, float *terminal_observation) {
-        Tree &tree = *slot.tree;
-        Robot &robot = *tree.robot;
-        const float dt = float(physics_steps_per_control) * tree.engine.getTimestep();
-        const vec3 tool = robot.getToolPosition(slot.instance);
-        slot.tool_target = slot.tool_target + dt * max_tool_speed * make_vec3(-1, 0, 0);
-        vec3 lead = slot.tool_target - tool;
-        if (lead.magnitude() > max_target_lead) {
-            slot.tool_target = tool + lead / lead.magnitude() * max_target_lead;
-        }
-        const std::vector<float> joints = robot.getJointPositions(slot.instance);
-        vec3 pointing = slot.tool_target - make_vec3(robot_base.x + 0.15f, joints[0], slot.tool_target.z);
-        pointing.z = 0.f;
-        if (pointing.magnitude() > 0.05f) {
-            pointing.normalize();
-            RobotInverseKinematicsResult pose = robot.solveInverseKinematics(slot.tool_target, pointing, {"roll"}, slot.instance);
-            if (pose.converged) {
-                robot.setJointTargets(pose.joint_positions, slot.instance);
-            }
-        }
-        for (uint s = 0; s < physics_steps_per_control; s++) {
-            applyGrip(slot, tree.engine.getTimestep());
-            tree.engine.step(1, slot.instance);
-            if (sealBroken(slot)) {
-                slot.gripped = false; // the fruit falls
-            }
-        }
+    // After a control step following a success, with the cup backing straight away from the tree whatever the action, carrying the fruit for as long as the
+    // grip holds (see followThroughAction()). The episode is a success either way, and ends when the steps run out, with the record it had when the fruit detached.
+    void finishFollowThroughStep(Slot &slot, float *observation, float &reward, int &outcome, float *terminal_observation) {
         reward = 0.f;
         outcome = HARVEST_RUNNING;
         slot.follow_through_remaining--;
@@ -806,62 +575,36 @@ namespace {
         writeObservation(slot, observation);
     }
 
-    void stepSlot(Slot &slot, const float *action, float *observation, float &reward, int &outcome, float *terminal_observation) {
+    // The action of a control step after a success, for showing: the cup backs straight away from the tree, and grips no more
+    const float follow_through_action[action_size] = {-1.f, 0.f, 0.f, 0.f};
+
+    // After a control step, which moved the cup's target and sealed it if asked and it could (the actions), then simulated until the control step ended, or
+    // the fruit detached, the seal broke, or the protective stop tripped (the control loop)
+    void finishStep(Slot &slot, float *observation, float &reward, int &outcome, float *terminal_observation) {
         if (slot.follow_through_remaining > 0) {
-            stepFollowThrough(slot, observation, reward, outcome, terminal_observation);
+            finishFollowThroughStep(slot, observation, reward, outcome, terminal_observation);
             return;
         }
         Tree &tree = *slot.tree;
         PhysicsEngine &engine = tree.engine;
-        Robot &robot = *tree.robot;
-        const float dt = float(physics_steps_per_control) * engine.getTimestep();
+        VacuumCup &cup = *tree.cup;
 
-        // Move the tool target, and solve for the arm with the cup pointing away from the robot's turret
-        const vec3 velocity = max_tool_speed * make_vec3(std::clamp(action[0], -1.f, 1.f), std::clamp(action[1], -1.f, 1.f), std::clamp(action[2], -1.f, 1.f));
-        const vec3 tool = robot.getToolPosition(slot.instance);
-        slot.tool_target = slot.tool_target + dt * velocity;
-        vec3 lead = slot.tool_target - tool;
-        if (lead.magnitude() > max_target_lead) {
-            lead = lead / lead.magnitude() * max_target_lead;
-            slot.tool_target = tool + lead;
-        }
-        const std::vector<float> joints = robot.getJointPositions(slot.instance);
-        vec3 pointing = slot.tool_target - make_vec3(robot_base.x + 0.15f, joints[0], slot.tool_target.z);
-        pointing.z = 0.f;
-        if (pointing.magnitude() > 0.05f) {
-            pointing.normalize();
-            RobotInverseKinematicsResult pose = robot.solveInverseKinematics(slot.tool_target, pointing, {"roll"}, slot.instance);
-            // An unreachable target leaves the arm where it was heading
-            if (pose.converged) {
-                robot.setJointTargets(pose.joint_positions, slot.instance);
-            }
-        }
-
-        const float distance_before_grip = sealGap(slot);
-        const bool gripped_now = !slot.gripped && action[3] > 0.f && distance_before_grip < grip_reach;
+        // A seal that broke in the step that ended it still held the fruit until then
+        const bool holding = cup.isGripped(slot.instance) || cup.isSealBroken(slot.instance);
+        const bool gripped_now = !slot.gripped_before_step && holding;
         if (gripped_now) {
-            startGrip(slot);
             slot.current.steps_to_grip = slot.control_step;
         }
-
-        // Simulate, with the stem failing when the load on it passes the force for this fruit
+        recordPullDirection(slot);
+        const float load = engine.getDetachableLinkLoad(tree.plant, slot.target->link, slot.instance);
+        const float peak_contact = tree.protective_stop->getPeakForce(slot.instance);
         outcome = HARVEST_RUNNING;
-        float load = 0.f;
-        float physics_dt = engine.getTimestep();
-        float peak_contact = 0.f;
-        for (uint s = 0; s < physics_steps_per_control && outcome == HARVEST_RUNNING; s++) {
-            applyGrip(slot, physics_dt);
-            engine.step(1, slot.instance);
-            load = engine.getDetachableLinkLoad(tree.plant, slot.target->link, slot.instance);
-            if (load > slot.detach_force) {
-                engine.detachLink(tree.plant, slot.target->link, slot.instance);
-                outcome = slot.gripped ? HARVEST_SUCCESS : HARVEST_KNOCKED_OFF;
-            } else if (sealBroken(slot)) {
-                outcome = HARVEST_SLIPPED;
-            } else if (contactOnTree(slot).magnitude() > protective_stop_force) {
-                outcome = HARVEST_COLLISION;
-            }
-            peak_contact = std::max(peak_contact, contactOnTree(slot).magnitude());
+        if (engine.isLinkDetached(tree.plant, slot.target->link, slot.instance)) {
+            outcome = holding ? HARVEST_SUCCESS : HARVEST_KNOCKED_OFF;
+        } else if (cup.isSealBroken(slot.instance)) {
+            outcome = HARVEST_SLIPPED;
+        } else if (tree.protective_stop->isStopped(slot.instance)) {
+            outcome = HARVEST_COLLISION;
         }
         slot.control_step++;
         if (outcome == HARVEST_RUNNING && slot.control_step >= max_control_steps) {
@@ -869,15 +612,15 @@ namespace {
         }
 
         // Reward: approach the fruit, grip it, load the stem, and detach it, without pushing on the tree
-        const float distance = sealGap(slot);
+        const float distance = cup.getSealGap(slot.instance);
         reward = -0.005f;
-        if (!slot.gripped) {
+        if (!holding) {
             reward += 5.f * (slot.previous_distance - distance);
         }
         if (gripped_now) {
             reward += 1.f;
         }
-        if (slot.gripped) {
+        if (holding) {
             reward += 3.f * (load - slot.previous_load) / max_detach_force;
         }
         reward -= 0.02f * std::min(peak_contact, protective_stop_force);
@@ -896,7 +639,7 @@ namespace {
         slot.current.peak_wood_motion = std::max(slot.current.peak_wood_motion, (engine.getLinkPosition(tree.plant, slot.target->bearing_wood_link, slot.instance) - slot.target->settled_wood_position).magnitude());
         slot.current.steps = slot.control_step;
         slot.current.final_stem_load = load;
-        slot.current.final_grip_force = slot.grip_force;
+        slot.current.final_grip_force = cup.getPullForce(slot.instance);
         slot.current.pull_x = slot.pull_direction.x;
         slot.current.pull_y = slot.pull_direction.y;
         slot.current.pull_z = slot.pull_direction.z;
@@ -918,45 +661,10 @@ namespace {
 
     struct Environment {
         std::vector<std::unique_ptr<Tree>> trees;
-        std::vector<Slot> slots;
-        int thread_count = 1;
+        std::vector<Slot> slots; // in the order of the copies of simulations: the instances of each tree, tree by tree
+        std::unique_ptr<ParallelRobotSimulations> simulations; // destroyed before the trees it steps
+        std::vector<float> actions; // each copy's actions for the control step being run
     };
-
-    // Run a function for every index up to a count, each on one thread at a time
-    template<typename Function>
-    void forEachIndex(const Environment &environment, size_t count, Function function) {
-        std::atomic<size_t> next{0};
-        std::exception_ptr first_failure;
-        std::mutex failure_mutex;
-        auto worker = [&]() {
-            for (size_t i = next++; i < count; i = next++) {
-                try {
-                    function(i);
-                } catch (...) {
-                    std::lock_guard<std::mutex> lock(failure_mutex);
-                    if (!first_failure) {
-                        first_failure = std::current_exception();
-                    }
-                }
-            }
-        };
-        std::vector<std::thread> threads;
-        for (int t = 1; t < environment.thread_count; t++) {
-            threads.emplace_back(worker);
-        }
-        worker();
-        for (std::thread &thread: threads) {
-            thread.join();
-        }
-        if (first_failure) {
-            std::rethrow_exception(first_failure);
-        }
-    }
-
-    template<typename Function>
-    void forEachSlot(Environment &environment, Function function) {
-        forEachIndex(environment, environment.slots.size(), function);
-    }
 
 } // namespace
 
@@ -969,9 +677,11 @@ void *harvest_env_create(const int *tree_seeds, int tree_count, int instances_pe
 void *harvest_env_create_for_movie(const int *tree_seeds, int tree_count, int instances_per_tree, int thread_count, int seed, int leaves, int show_arm) {
     try {
         auto environment = std::make_unique<Environment>();
-        environment->thread_count = std::max(1, thread_count);
+        environment->simulations = std::make_unique<ParallelRobotSimulations>(static_cast<uint>(std::max(1, thread_count)));
         for (int t = 0; t < tree_count; t++) {
             environment->trees.push_back(std::make_unique<Tree>(tree_seeds[t], instances_per_tree, leaves != 0, show_arm != 0));
+            Tree &tree = *environment->trees.back();
+            environment->simulations->addVariant(&tree.engine, tree.control_loop.get(), {tree.tool_action.get(), tree.grip_action.get()});
             for (int i = 0; i < instances_per_tree; i++) {
                 Slot slot;
                 slot.tree = environment->trees.back().get();
@@ -999,12 +709,7 @@ int harvest_env_tree_has_reachable_fruit(int tree_seed) {
     plantarchitecture.loadPlantModelFromLibrary(plant_model);
     uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), plant_age);
     USDExportParameters plant_physics;
-    for (const PlantArticulationLink &link: plantarchitecture.getPlantArticulation(plantID, plant_physics).links) {
-        if (link.type == ARTICULATION_LINK_FRUIT && link.position.z >= min_fruit_height && link.position.z <= max_fruit_height) {
-            return 1;
-        }
-    }
-    return 0;
+    return findReachableFruit(plantarchitecture.getPlantArticulation(plantID, plant_physics)).empty() ? 0 : 1;
 }
 
 int harvest_env_export_tree(int tree_seed, const char *directory) {
@@ -1090,13 +795,7 @@ int harvest_env_export_tree(int tree_seed, const char *directory) {
         }
         json << "],\n\"candidates\": [";
         for (size_t c = 0; c < candidates.size(); c++) {
-            int wood = articulation.links[candidates[c]].parent_index;
-            while (wood >= 0 && articulation.links[wood].type != ARTICULATION_LINK_INTERNODE) {
-                wood = articulation.links[wood].parent_index;
-            }
-            if (wood < 0) {
-                helios_runtime_error("ERROR (harvest_env_export_tree): Fruit " + articulation.links[candidates[c]].name + " is not borne on an internode.");
-            }
+            const uint wood = findBearingInternode(articulation, candidates[c]);
             json << (c ? ", " : "") << "{\"link\": \"" << articulation.links[candidates[c]].name << "\", \"bearing_wood\": \"" << articulation.links[wood].name << "\"}";
         }
         // The wood where it stands at rest, which stands in for what perception would report
@@ -1155,15 +854,13 @@ int harvest_env_enable_camera(void *env, int width, int height) {
     Environment &environment = *static_cast<Environment *>(env);
     try {
         for (const std::unique_ptr<Tree> &tree: environment.trees) {
-            tree->camera = std::make_unique<Visualizer>(static_cast<uint>(width), static_cast<uint>(height), 1, false, true);
-            tree->camera->disableMessages();
-            tree->camera->hideWatermark();
-            tree->camera->setBackgroundColor(make_RGBcolor(0.6f, 0.75f, 0.95f));
-            tree->camera->setLightingModel(Visualizer::LIGHTING_PHONG);
-            tree->camera->setLightDirection(make_vec3(0.3f, -0.5f, 0.8f));
-            tree->camera->setCameraFieldOfView(wrist_camera_field_of_view);
-            tree->camera->hideNavigationGizmo(); // the gizmo is rebuilt whenever the camera moves, which is every frame on a wrist
-            tree->camera->buildContextGeometry(&tree->context);
+            RobotCameraParameters wrist;
+            wrist.field_of_view = wrist_camera_field_of_view;
+            wrist.antialiasing_samples = 1;
+            wrist.background = make_RGBcolor(0.6f, 0.75f, 0.95f);
+            wrist.light_direction = make_vec3(0.3f, -0.5f, 0.8f);
+            wrist.shadows = false;
+            tree->camera = std::make_unique<RobotCamera>(&tree->engine, &tree->context, static_cast<uint>(width), static_cast<uint>(height), wrist);
             tree->engine.setContextUpdateTolerance(context_update_tolerance);
         }
         return 1;
@@ -1175,30 +872,19 @@ int harvest_env_enable_camera(void *env, int width, int height) {
 
 void harvest_env_render(void *env, unsigned char *images) {
     Environment &environment = *static_cast<Environment *>(env);
-    std::vector<uint> pixels;
     // Instances of a tree share its visualizer and so its framebuffer, so one instance of each tree is rendered at a time. The slots of a tree are next to each other.
     const size_t tree_count = environment.trees.size();
     const size_t instances_per_tree = environment.slots.size() / tree_count;
     for (size_t instance = 0; instance < instances_per_tree; instance++) {
-        forEachIndex(environment, tree_count, [&](size_t tree) { prepareSlotFrame(environment.slots[tree * instances_per_tree + instance]); });
+        environment.simulations->forEachIndex(tree_count, [&](size_t tree) { prepareSlotFrame(environment.slots[tree * instances_per_tree + instance]); });
         // Reading the images back only after all are drawn lets the GPU work through them while the next is being drawn, rather than waiting for each one
         for (size_t tree = 0; tree < tree_count; tree++) {
-            environment.slots[tree * instances_per_tree + instance].tree->camera->plotUpdate(true);
+            environment.slots[tree * instances_per_tree + instance].tree->camera->draw();
         }
         for (size_t tree = 0; tree < tree_count; tree++) {
             const size_t i = tree * instances_per_tree + instance;
-            uint width = 0;
-            uint height = 0;
-            environment.slots[i].tree->camera->getWindowPixelsRGB(pixels, width, height);
-            // OpenGL gives the bottom row first
-            unsigned char *image = images + i * size_t(width) * size_t(height) * 3;
-            for (uint row = 0; row < height; row++) {
-                const uint *source = pixels.data() + size_t(height - 1 - row) * size_t(width) * 3;
-                unsigned char *destination = image + size_t(row) * size_t(width) * 3;
-                for (uint k = 0; k < width * 3; k++) {
-                    destination[k] = static_cast<unsigned char>(source[k]);
-                }
-            }
+            const RobotCamera &camera = *environment.slots[i].tree->camera;
+            camera.getColorImage(images + i * size_t(camera.getWidth()) * size_t(camera.getHeight()) * 3);
         }
     }
 }
@@ -1206,19 +892,18 @@ void harvest_env_render(void *env, unsigned char *images) {
 void harvest_env_save_camera_image(void *env, int index, const char *filename) {
     Slot &slot = static_cast<Environment *>(env)->slots.at(index);
     renderSlot(slot);
-    slot.tree->camera->printWindow(filename, "jpeg");
+    slot.tree->camera->saveImage(filename, "jpeg");
 }
 
 void harvest_env_measure_camera_view(void *env, int index, HarvestCameraView *view) {
     Slot &slot = static_cast<Environment *>(env)->slots.at(index);
     Tree &tree = *slot.tree;
     renderSlot(slot);
-    std::vector<uint> pixel_UUIDs;
-    std::vector<float> depth;
-    uint width = 0;
-    uint height = 0;
-    tree.camera->getPixelUUIDs(pixel_UUIDs, width, height);
-    tree.camera->getDepthImage(depth, width, height);
+    const size_t pixel_count = size_t(tree.camera->getWidth()) * size_t(tree.camera->getHeight());
+    std::vector<uint> pixel_UUIDs(pixel_count);
+    std::vector<float> depth(pixel_count);
+    tree.camera->getPrimitiveImage(pixel_UUIDs.data());
+    tree.camera->getDepthImage(depth.data());
     *view = HarvestCameraView{};
     const uint target_label = slot.target->objID + organ_fruit_base;
     for (size_t k = 0; k < pixel_UUIDs.size(); k++) {
@@ -1304,15 +989,13 @@ int harvest_env_enable_movie_camera(void *env, int width, int height) {
             if (tree->camera) {
                 helios_runtime_error("ERROR (harvest_env_enable_movie_camera): The wrist camera is enabled. Both cameras clear the Context's geometry flags after each frame, so each would miss motion the other drew.");
             }
-            tree->movie_camera = std::make_unique<Visualizer>(static_cast<uint>(width), static_cast<uint>(height), 8, false, true);
-            tree->movie_camera->disableMessages();
-            tree->movie_camera->hideWatermark();
-            tree->movie_camera->setBackgroundColor(make_RGBcolor(0.72f, 0.83f, 0.95f));
-            tree->movie_camera->setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
-            tree->movie_camera->setLightDirection(make_vec3(-0.35f, -0.45f, 0.82f));
-            tree->movie_camera->setCameraFieldOfView(movie_camera_field_of_view);
-            tree->movie_camera->hideNavigationGizmo();
-            tree->movie_camera->buildContextGeometry(&tree->context);
+            RobotCameraParameters movie;
+            movie.field_of_view = movie_camera_field_of_view;
+            movie.antialiasing_samples = 8;
+            movie.background = make_RGBcolor(0.72f, 0.83f, 0.95f);
+            movie.light_direction = make_vec3(-0.35f, -0.45f, 0.82f);
+            movie.shadows = true;
+            tree->movie_camera = std::make_unique<RobotCamera>(&tree->engine, &tree->context, static_cast<uint>(width), static_cast<uint>(height), movie);
             tree->engine.setContextUpdateTolerance(1e-5f);
         }
         return 1;
@@ -1354,15 +1037,24 @@ void harvest_env_last_episode(const void *env, int index, HarvestEpisodeRecord *
 
 void harvest_env_reset(void *env, float *observations) {
     Environment &environment = *static_cast<Environment *>(env);
-    forEachSlot(environment, [&](size_t i) {
+    environment.simulations->forEachCopy([&](uint i, uint, uint) {
         resetSlot(environment.slots[i]);
-        writeObservation(environment.slots[i], observations + i * observation_size);
+        writeObservation(environment.slots[i], observations + size_t(i) * observation_size);
     });
 }
 
 void harvest_env_step(void *env, const float *actions, float *observations, float *rewards, int *outcomes, float *terminal_observations) {
     Environment &environment = *static_cast<Environment *>(env);
-    forEachSlot(environment, [&](size_t i) { stepSlot(environment.slots[i], actions + i * action_size, observations + i * observation_size, rewards[i], outcomes[i], terminal_observations + i * observation_size); });
+    const size_t count = environment.slots.size();
+    environment.actions.resize(count * action_size);
+    for (size_t i = 0; i < count; i++) {
+        Slot &slot = environment.slots[i];
+        const float *action = slot.follow_through_remaining > 0 ? follow_through_action : actions + i * action_size;
+        std::copy(action, action + action_size, environment.actions.begin() + i * action_size);
+        slot.gripped_before_step = slot.tree->cup->isGripped(slot.instance);
+    }
+    environment.simulations->step(environment.actions.data());
+    environment.simulations->forEachCopy([&](uint i, uint, uint) { finishStep(environment.slots[i], observations + size_t(i) * observation_size, rewards[i], outcomes[i], terminal_observations + size_t(i) * observation_size); });
 }
 
 } // extern "C"

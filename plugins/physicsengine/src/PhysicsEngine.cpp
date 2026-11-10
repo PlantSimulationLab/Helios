@@ -522,6 +522,11 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
     }
 
     bindContextGeometry();
+    for (const BodyRestPose &pose: rest_poses) {
+        if (std::find(display_body_IDs.begin(), display_body_IDs.end(), pose.body_ID) == display_body_IDs.end()) {
+            display_body_IDs.push_back(pose.body_ID);
+        }
+    }
 
     if (printmessages) {
         std::cout << "MuJoCo model compiled: " << model->nbody << " bodies, " << model->nv << " degrees of freedom, " << model->ngeom << " geoms." << std::endl;
@@ -536,6 +541,7 @@ uint PhysicsEngine::createInstance() {
         helios_runtime_error("ERROR (PhysicsEngine::createInstance): MuJoCo could not allocate the simulation data.");
     }
     instance.box_velocities.resize(boxes.size());
+    applyResetPose(instance);
     mj_forward(model, instance.data);
     instances.push_back(std::move(instance));
     return static_cast<uint>(instances.size() - 1);
@@ -549,7 +555,25 @@ void PhysicsEngine::resetInstance(uint instance) {
     static_cast<void>(getInstance(instance, "resetInstance"));
     mj_resetData(model, instances[instance].data);
     std::fill(instances[instance].box_velocities.begin(), instances[instance].box_velocities.end(), make_vec3(0, 0, 0));
+    instances[instance].load_detachments = 0;
+    applyResetPose(instances[instance]);
     mj_forward(model, instances[instance].data);
+}
+
+void PhysicsEngine::applyResetPose(Instance &instance) const {
+    if (!reset_qpos.empty()) {
+        mju_copy(instance.data->qpos, reset_qpos.data(), model->nq);
+    }
+}
+
+void PhysicsEngine::setResetPose(uint instance) {
+    const mjData *data = getInstance(instance, "setResetPose").data;
+    reset_qpos.assign(data->qpos, data->qpos + model->nq);
+}
+
+void PhysicsEngine::clearResetPose() {
+    requireInitialized("clearResetPose");
+    reset_qpos.clear();
 }
 
 size_t PhysicsEngine::addRestPose(int body_ID) {
@@ -702,33 +726,16 @@ void PhysicsEngine::bindObjectPrimitives(uint objID, size_t rest_pose_index) {
     }
 }
 
-void PhysicsEngine::detachLink(uint articulationID, uint link_index, uint instance) {
-    static_cast<void>(getInstance(instance, "detachLink"));
-    requireLink(articulationID, link_index, "detachLink");
+int PhysicsEngine::detachEqualityID(uint articulationID, uint link_index, const std::string &method) const {
+    requireLink(articulationID, link_index, method);
     const int equality_ID = articulations[articulationID].link_detach_equality_IDs[link_index];
     if (equality_ID < 0) {
-        helios_runtime_error("ERROR (PhysicsEngine::detachLink): Link " + std::to_string(link_index) + " of articulation " + std::to_string(articulationID) + " does not have a detachable joint. Set its joint type to PHYSICS_JOINT_DETACHABLE before initialize().");
+        helios_runtime_error("ERROR (PhysicsEngine::" + method + "): Link " + std::to_string(link_index) + " of articulation " + std::to_string(articulationID) + " does not have a detachable joint. Set its joint type to PHYSICS_JOINT_DETACHABLE before initialize().");
     }
-    instances[instance].data->eq_active[equality_ID] = 0;
+    return equality_ID;
 }
 
-bool PhysicsEngine::isLinkDetached(uint articulationID, uint link_index, uint instance) const {
-    const mjData *data = getInstance(instance, "isLinkDetached").data;
-    requireLink(articulationID, link_index, "isLinkDetached");
-    const int equality_ID = articulations[articulationID].link_detach_equality_IDs[link_index];
-    if (equality_ID < 0) {
-        helios_runtime_error("ERROR (PhysicsEngine::isLinkDetached): Link " + std::to_string(link_index) + " of articulation " + std::to_string(articulationID) + " does not have a detachable joint.");
-    }
-    return data->eq_active[equality_ID] == 0;
-}
-
-float PhysicsEngine::getDetachableLinkLoad(uint articulationID, uint link_index, uint instance) const {
-    const mjData *data = getInstance(instance, "getDetachableLinkLoad").data;
-    requireLink(articulationID, link_index, "getDetachableLinkLoad");
-    const int equality_ID = articulations[articulationID].link_detach_equality_IDs[link_index];
-    if (equality_ID < 0) {
-        helios_runtime_error("ERROR (PhysicsEngine::getDetachableLinkLoad): Link " + std::to_string(link_index) + " of articulation " + std::to_string(articulationID) + " does not have a detachable joint.");
-    }
+float PhysicsEngine::equalityLoad(const mjData *data, int equality_ID) const {
     // The first three constraint rows of a weld are its force, and the other three its torque
     for (int row = 0; row < data->nefc; row++) {
         if (data->efc_type[row] == mjCNSTR_EQUALITY && data->efc_id[row] == equality_ID) {
@@ -736,6 +743,49 @@ float PhysicsEngine::getDetachableLinkLoad(uint articulationID, uint link_index,
         }
     }
     return 0.f;
+}
+
+void PhysicsEngine::detachLink(uint articulationID, uint link_index, uint instance) {
+    static_cast<void>(getInstance(instance, "detachLink"));
+    const int equality_ID = detachEqualityID(articulationID, link_index, "detachLink");
+    instances[instance].data->eq_active[equality_ID] = 0;
+}
+
+void PhysicsEngine::setDetachForce(uint articulationID, uint link_index, float force, uint instance) {
+    static_cast<void>(getInstance(instance, "setDetachForce"));
+    const int equality_ID = detachEqualityID(articulationID, link_index, "setDetachForce");
+    if (!(force > 0.f)) {
+        helios_runtime_error("ERROR (PhysicsEngine::setDetachForce): The force must be positive, but was " + std::to_string(force) + " N. Use clearDetachForces() to stop releasing links by load.");
+    }
+    std::vector<DetachForce> &detach_forces = instances[instance].detach_forces;
+    for (DetachForce &existing: detach_forces) {
+        if (existing.equality_ID == equality_ID) {
+            existing.force = force;
+            return;
+        }
+    }
+    detach_forces.push_back({equality_ID, force});
+}
+
+void PhysicsEngine::clearDetachForces(uint instance) {
+    static_cast<void>(getInstance(instance, "clearDetachForces"));
+    instances[instance].detach_forces.clear();
+}
+
+uint PhysicsEngine::getLoadDetachmentCount(uint instance) const {
+    return getInstance(instance, "getLoadDetachmentCount").load_detachments;
+}
+
+bool PhysicsEngine::isLinkDetached(uint articulationID, uint link_index, uint instance) const {
+    const mjData *data = getInstance(instance, "isLinkDetached").data;
+    const int equality_ID = detachEqualityID(articulationID, link_index, "isLinkDetached");
+    return data->eq_active[equality_ID] == 0;
+}
+
+float PhysicsEngine::getDetachableLinkLoad(uint articulationID, uint link_index, uint instance) const {
+    const mjData *data = getInstance(instance, "getDetachableLinkLoad").data;
+    const int equality_ID = detachEqualityID(articulationID, link_index, "getDetachableLinkLoad");
+    return equalityLoad(data, equality_ID);
 }
 
 void PhysicsEngine::splitTubesAtLink(uint articulationID, uint link_index) {
@@ -840,6 +890,12 @@ void PhysicsEngine::stepInstance(Instance &instance, uint step_count) const {
         }
         mj_step(model, instance.data);
         checkSimulationHealth(instance.data);
+        for (const DetachForce &detach: instance.detach_forces) {
+            if (instance.data->eq_active[detach.equality_ID] && equalityLoad(instance.data, detach.equality_ID) > detach.force) {
+                instance.data->eq_active[detach.equality_ID] = 0;
+                instance.load_detachments++;
+            }
+        }
     }
 }
 
@@ -974,6 +1030,51 @@ void PhysicsEngine::updateContextGeometry(uint instance) {
     }
 }
 
+uint PhysicsEngine::getDisplayBodyCount() const {
+    requireInitialized("getDisplayBodyCount");
+    return static_cast<uint>(display_body_IDs.size());
+}
+
+std::vector<std::string> PhysicsEngine::getDisplayBodyNames() const {
+    requireInitialized("getDisplayBodyNames");
+    std::vector<std::string> names;
+    for (int body_ID: display_body_IDs) {
+        const char *name = mj_id2name(model, mjOBJ_BODY, body_ID);
+        names.emplace_back(name != nullptr ? name : "");
+    }
+    return names;
+}
+
+void PhysicsEngine::getDisplayBodyPoses(float *poses, uint instance) const {
+    const mjData *data = getInstance(instance, "getDisplayBodyPoses").data;
+    for (size_t i = 0; i < display_body_IDs.size(); i++) {
+        const int body_ID = display_body_IDs[i];
+        for (int k = 0; k < 3; k++) {
+            poses[7 * i + k] = float(data->xpos[3 * body_ID + k]);
+        }
+        for (int k = 0; k < 4; k++) {
+            poses[7 * i + 3 + k] = float(data->xquat[4 * body_ID + k]);
+        }
+    }
+}
+
+void PhysicsEngine::showDisplayBodyPoses(const float *poses, uint instance) {
+    mjData *data = getInstance(instance, "showDisplayBodyPoses").data;
+    for (size_t i = 0; i < display_body_IDs.size(); i++) {
+        const int body_ID = display_body_IDs[i];
+        mjtNum quaternion[4] = {poses[7 * i + 3], poses[7 * i + 4], poses[7 * i + 5], poses[7 * i + 6]};
+        if (mju_normalize4(quaternion) < 1e-9) {
+            helios_runtime_error("ERROR (PhysicsEngine::showDisplayBodyPoses): The orientation of body " + std::to_string(i) + " is a zero quaternion.");
+        }
+        for (int k = 0; k < 3; k++) {
+            data->xpos[3 * body_ID + k] = poses[7 * i + k];
+        }
+        mju_copy4(data->xquat + 4 * body_ID, quaternion);
+        mju_quat2Mat(data->xmat + 9 * body_ID, quaternion);
+    }
+    updateContextGeometry(instance);
+}
+
 void PhysicsEngine::setContextUpdateTolerance(float tolerance) {
     if (tolerance < 0.f) {
         helios_runtime_error("ERROR (PhysicsEngine::setContextUpdateTolerance): The tolerance must not be negative.");
@@ -1029,6 +1130,28 @@ uint PhysicsEngine::getLinkCount() const {
         count += record.description.links.size();
     }
     return static_cast<uint>(count);
+}
+
+uint PhysicsEngine::getArticulationCount() const {
+    return static_cast<uint>(articulations.size());
+}
+
+uint PhysicsEngine::getArticulationLinkCount(uint articulationID) const {
+    if (articulationID >= articulations.size()) {
+        helios_runtime_error("ERROR (PhysicsEngine::getArticulationLinkCount): Articulation " + std::to_string(articulationID) + " does not exist.");
+    }
+    return static_cast<uint>(articulations[articulationID].description.links.size());
+}
+
+std::string PhysicsEngine::getLinkLabel(uint articulationID, uint link_index) const {
+    requireLink(articulationID, link_index, "getLinkLabel");
+    return articulations[articulationID].description.links[link_index].label;
+}
+
+int PhysicsEngine::getLinkBodyID(uint articulationID, uint link_index) const {
+    requireInitialized("getLinkBodyID");
+    requireLink(articulationID, link_index, "getLinkBodyID");
+    return articulations[articulationID].link_body_IDs[link_index];
 }
 
 uint PhysicsEngine::getContactCount(uint instance) const {

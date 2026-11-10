@@ -103,6 +103,25 @@ public:
     //! Get the names of the servo-driven joints, in the order used for joint positions and targets
     [[nodiscard]] std::vector<std::string> getJointNames() const;
 
+    //! Get the range of positions of a servo-driven joint given in the model file
+    /**
+     * \param[in] joint_name Name of the joint in the model file.
+     * \return Lowest (x) and highest (y) position: degrees for a hinge, meters for a slide. Minus and plus infinity if the joint is not limited.
+     */
+    [[nodiscard]] helios::vec2 getJointRange(const std::string &joint_name) const;
+
+    //! Get the name of the robot given to the constructor. Its bodies and joints are named "<name>/<name in the model file>" in the simulation.
+    [[nodiscard]] std::string getName() const;
+
+    //! Get the world position of the robot's origin given to the constructor
+    [[nodiscard]] helios::vec3 getBasePosition() const;
+
+    //! Get the rotation of the robot about the world z-axis given to the constructor, in degrees
+    [[nodiscard]] float getBaseYaw() const;
+
+    //! Get the physics simulation the robot is in
+    [[nodiscard]] PhysicsEngine *getPhysicsEngine() const;
+
     //! Set the target position of every servo-driven joint
     /**
      * \param[in] targets Target of each joint in the order of getJointNames(): degrees for hinges, meters for slides.
@@ -180,7 +199,10 @@ private:
     [[nodiscard]] double toModelUnits(const JointRecord &joint, float value) const;
 
     PhysicsEngine *engine;
+    std::string name;
     std::string prefix;
+    helios::vec3 base_position;
+    float base_yaw_degrees = 0.f;
 
     std::vector<JointRecord> joints;
     std::vector<float> home_pose; // empty until setHomePose() is called

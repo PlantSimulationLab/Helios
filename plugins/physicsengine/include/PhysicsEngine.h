@@ -94,6 +94,8 @@ enum PhysicsJointType {
 struct PhysicsLink {
     //! Name of the link, unique within the articulation
     std::string name;
+    //! Kind of thing the link is, such as "wood", "fruit", or "leaf" for the links of a plant. ContactSensor reports contact with links by this label. An empty label is reported as "articulation".
+    std::string label;
     //! Index of the parent link, or -1 if the link is a root and is fixed to the world
     int parent_index = -1;
     //! World-space position of the link frame origin in the rest pose
@@ -236,7 +238,7 @@ public:
 
     //! Create another simulation instance of the compiled model, starting from the initial state
     /**
-     * Instances share the model and have entirely separate state. Instance 0 is created by initialize().
+     * Instances share the model and have entirely separate state. Instance 0 is created by initialize(). A new instance starts in the pose set by setResetPose(), if one was set.
      * \return ID of the new instance.
      */
     uint createInstance();
@@ -246,9 +248,20 @@ public:
 
     //! Return an instance to its initial state
     /**
+     * Every joint returns to the pose set by setResetPose(), or to the pose the model was built in if none was set, with no velocity. Detached links are attached again.
      * \param[in] instance ID of the simulation instance.
      */
     void resetInstance(uint instance = 0);
+
+    //! Make the current joint positions of an instance the pose that resetInstance() returns every instance to
+    /**
+     * Use it after letting a plant settle under gravity, so that every episode starts from rest rather than from the pose the plant was built in, which swings as it settles. Velocities are not kept: instances reset to the pose at rest.
+     * \param[in] instance ID of the simulation instance whose pose is kept.
+     */
+    void setResetPose(uint instance = 0);
+
+    //! Return resetInstance() to the pose the model was built in
+    void clearResetPose();
 
     //! Release a link that has a detachable joint, so that it and its descendants move freely
     /**
@@ -276,6 +289,30 @@ public:
      * \return Force in N, or zero if the link has been released.
      */
     [[nodiscard]] float getDetachableLinkLoad(uint articulationID, uint link_index, uint instance = 0) const;
+
+    //! Release a link with a detachable joint by itself as soon as the load holding it passes a force, such as a fruit whose stem fails
+    /**
+     * After every physics step, the load given by getDetachableLinkLoad() is compared with the force, and the link is detached when it is larger. The load at that step can still be read with getDetachableLinkLoad() until the next step.
+     * The force is kept when the instance is reset, so it applies to every episode until it is changed or cleared.
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     * \param[in] link_index Index of the link within the articulation. Its joint type must be 
+ef PHYSICS_JOINT_DETACHABLE.
+     * \param[in] force Load in N above which the link is released. Must be positive.
+     * \param[in] instance ID of the simulation instance.
+     */
+    void setDetachForce(uint articulationID, uint link_index, float force, uint instance = 0);
+
+    //! Stop releasing any link by load in an instance, undoing setDetachForce()
+    /**
+     * \param[in] instance ID of the simulation instance.
+     */
+    void clearDetachForces(uint instance = 0);
+
+    //! Get the number of links that have been released by load (setDetachForce()) since the instance was created or last reset
+    /**
+     * \param[in] instance ID of the simulation instance.
+     */
+    [[nodiscard]] uint getLoadDetachmentCount(uint instance = 0) const;
 
     //! Split any Context tube object that spans a link and its parent, so that the part following the link separates cleanly when the link is detached
     /**
@@ -318,6 +355,28 @@ public:
      */
     void updateContextGeometry(uint instance = 0);
 
+    //! Get the number of bodies whose motion moves Context geometry: the links of articulations, kinematic boxes, and bodies of loaded models given geometry with bindObjectToBody()
+    [[nodiscard]] uint getDisplayBodyCount() const;
+
+    //! Get the MuJoCo names of the bodies whose motion moves Context geometry, in the order of getDisplayBodyPoses()
+    [[nodiscard]] std::vector<std::string> getDisplayBodyNames() const;
+
+    //! Get the world pose of every body whose motion moves Context geometry, for recording how a simulation looked
+    /**
+     * The poses are those found at the start of the last step, which are what updateContextGeometry() shows.
+     * \param[out] poses getDisplayBodyCount() poses of 7 numbers each: x, y, z, then the orientation as a unit quaternion w, x, y, z.
+     * \param[in] instance ID of the simulation instance.
+     */
+    void getDisplayBodyPoses(float *poses, uint instance = 0) const;
+
+    //! Show a recorded pose of every body whose motion moves Context geometry, by moving that geometry (updateContextGeometry())
+    /**
+     * This is for showing, such as drawing the frames of a movie from poses recorded with getDisplayBodyPoses(), possibly in another simulator of the same scene. The joint state of the instance is not changed, but the body poses MuJoCo found are overwritten until the next step or reset, so an instance used for this should only be used for showing.
+     * \param[in] poses getDisplayBodyCount() poses of 7 numbers each, as getDisplayBodyPoses() gives them. The quaternions need not be normalized.
+     * \param[in] instance ID of the simulation instance.
+     */
+    void showDisplayBodyPoses(const float *poses, uint instance = 0);
+
     //! Set how far a body has to move before updateContextGeometry() moves its geometry
     /**
      * Small motion that nothing would notice still costs a renderer the update of that geometry, which adds up when switching between simulation instances that differ only slightly.
@@ -351,6 +410,29 @@ public:
 
     //! Get the total number of articulation links in the simulation
     [[nodiscard]] uint getLinkCount() const;
+
+    //! Get the number of articulations added with addArticulation()
+    [[nodiscard]] uint getArticulationCount() const;
+
+    //! Get the number of links of an articulation
+    /**
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     */
+    [[nodiscard]] uint getArticulationLinkCount(uint articulationID) const;
+
+    //! Get the label of an articulation link, as given in PhysicsLink::label
+    /**
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     * \param[in] link_index Index of the link within the articulation.
+     */
+    [[nodiscard]] std::string getLinkLabel(uint articulationID, uint link_index) const;
+
+    //! Get the MuJoCo body ID of an articulation link, for direct use of the MuJoCo API
+    /**
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     * \param[in] link_index Index of the link within the articulation.
+     */
+    [[nodiscard]] int getLinkBodyID(uint articulationID, uint link_index) const;
 
     //! Get the number of contacts found in the last step
     /**
@@ -463,10 +545,18 @@ private:
         int dof_address = -1;
     };
 
+    // A link released by itself when the load holding it passes a force
+    struct DetachForce {
+        int equality_ID;
+        float force;
+    };
+
     // State of one simulation instance
     struct Instance {
         mjData_ *data = nullptr;
         std::vector<helios::vec3> box_velocities;
+        std::vector<DetachForce> detach_forces;
+        uint load_detachments = 0; // links released by load since the instance was created or reset
     };
 
     // Rest pose of a MuJoCo body, against which its current pose gives the rigid motion applied to its geometry
@@ -509,6 +599,9 @@ private:
     void bindObjectPrimitives(uint objID, size_t rest_pose_index);
     size_t addRestPose(int body_ID);
     void stepInstance(Instance &instance, uint step_count) const;
+    void applyResetPose(Instance &instance) const;
+    [[nodiscard]] int detachEqualityID(uint articulationID, uint link_index, const std::string &method) const;
+    [[nodiscard]] float equalityLoad(const mjData_ *data, int equality_ID) const;
     void checkSimulationHealth(const mjData_ *data) const;
     [[nodiscard]] bool isLinkContact(const mjData_ *data, int contact_index) const;
     void requireInitialized(const std::string &method) const;
@@ -528,6 +621,7 @@ private:
     std::vector<ObjectBodyRequest> object_body_requests;
 
     std::vector<BodyRestPose> rest_poses;
+    std::vector<int> display_body_IDs; // the bodies of rest_poses, each once, in order of first appearance
     std::vector<std::array<float, 16>> synced_transforms; // rigid motion of each rest pose that the Context geometry shows, empty before the first updateContextGeometry()
     float context_update_tolerance = 0.f;
     std::vector<PrimitiveBinding> primitive_bindings;
@@ -542,6 +636,7 @@ private:
     std::vector<mjSpec_ *> model_file_specs; // each is attached to spec, which refers to it until both are deleted
     mjModel_ *model = nullptr;
     std::vector<Instance> instances;
+    std::vector<double> reset_qpos; // joint positions resetInstance() returns to, empty for the pose the model was built in
 
     bool printmessages = true;
 };

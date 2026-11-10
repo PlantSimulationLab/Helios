@@ -16,6 +16,7 @@
 
 */
 
+#include "ContactSensor.h"
 #include "PhysicsEngine.h"
 #ifdef HELIOS_PHYSICS_ENGINE_PLANTS
 #include "PlantPhysics.h"
@@ -260,6 +261,58 @@ DOCTEST_TEST_CASE("PhysicsEngine - copying to the Context only touches geometry 
     DOCTEST_CHECK((mean - pendulum.links[1].position).magnitude() < 1e-3f);
 }
 
+DOCTEST_TEST_CASE("PhysicsEngine - body poses can be recorded, and shown again to move the Context geometry") {
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    PhysicsArticulation pendulum = makePendulum("pendulum", 1.f, 0.5f, 0.3f);
+    uint pendulumID = engine.addArticulation(pendulum);
+    uint moving_sphere = context.addSphereObject(6, pendulum.links[1].position, 0.05f);
+    engine.bindObjectToLink(moving_sphere, pendulumID, 1);
+    engine.initialize();
+
+    // One body per link, each once even though the bob also carries the sphere
+    DOCTEST_REQUIRE(engine.getDisplayBodyCount() == 2);
+    const std::vector<std::string> names = engine.getDisplayBodyNames();
+    DOCTEST_CHECK(names == std::vector<std::string>{"pendulum_pivot", "pendulum_bob"});
+
+    // A recorded pose is where the body was, and showing it again puts the geometry back there
+    engine.step(100);
+    std::vector<float> recorded(7 * 2);
+    engine.getDisplayBodyPoses(recorded.data());
+    const vec3 recorded_bob = make_vec3(recorded[7], recorded[8], recorded[9]);
+    DOCTEST_CHECK((recorded_bob - engine.getLinkPosition(pendulumID, 1)).magnitude() < 1e-6f);
+    DOCTEST_CHECK(recorded[10] * recorded[10] + recorded[11] * recorded[11] + recorded[12] * recorded[12] + recorded[13] * recorded[13] == doctest::Approx(1.f));
+    engine.step(200);
+    engine.updateContextGeometry();
+
+    auto sphereCenter = [&]() {
+        vec3 mean = make_vec3(0, 0, 0);
+        const std::vector<vec3> vertices = getAllVertices(context, {moving_sphere});
+        for (const vec3 &vertex: vertices) {
+            mean = mean + vertex;
+        }
+        return mean / float(vertices.size());
+    };
+    DOCTEST_REQUIRE((sphereCenter() - recorded_bob).magnitude() > 0.01f);
+    engine.showDisplayBodyPoses(recorded.data());
+    DOCTEST_CHECK((sphereCenter() - recorded_bob).magnitude() < 1e-3f);
+
+    // A pose from elsewhere, such as another simulator: the bob moved a meter along x, with an unnormalized orientation
+    std::vector<float> shifted = recorded;
+    shifted[7] += 1.f;
+    for (int k = 10; k < 14; k++) {
+        shifted[k] *= 2.f;
+    }
+    engine.showDisplayBodyPoses(shifted.data());
+    DOCTEST_CHECK((sphereCenter() - (recorded_bob + make_vec3(1, 0, 0))).magnitude() < 1e-3f);
+
+    std::vector<float> degenerate = recorded;
+    std::fill(degenerate.begin() + 10, degenerate.begin() + 14, 0.f);
+    DOCTEST_CHECK_THROWS(engine.showDisplayBodyPoses(degenerate.data()));
+    DOCTEST_CHECK_THROWS(engine.getDisplayBodyPoses(recorded.data(), 3));
+}
+
 DOCTEST_TEST_CASE("PhysicsEngine - a tolerance ignores small motion, and slow drift still arrives") {
     Context context;
     PhysicsEngine engine(&context);
@@ -497,6 +550,105 @@ DOCTEST_TEST_CASE("PhysicsEngine - the load on a detachable link is what holds i
     DOCTEST_CHECK(engine.getDetachableLinkLoad(branchID, 1) == doctest::Approx(0.f));
 
     DOCTEST_CHECK_THROWS(static_cast<void>(engine.getDetachableLinkLoad(branchID, 0)));
+}
+
+DOCTEST_TEST_CASE("PhysicsEngine - a link with a detach force is released by itself when the load passes it, in its own instance only") {
+    Context context;
+    PhysicsArticulation branch = makePendulum("branch", 1.f, 0.5f, 0.f);
+    branch.links[1].joint_type = PHYSICS_JOINT_DETACHABLE;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint branchID = engine.addArticulation(branch);
+    engine.initialize();
+    engine.createInstance();
+    const int body = mj_name2id(engine.getMuJoCoModel(), mjOBJ_BODY, "branch_bob");
+
+    // Holding up its 1 kg, the link stays below a 15 N limit; pulled down with 10 N more, it passes it
+    engine.setDetachForce(branchID, 1, 15.f, 0);
+    engine.setDetachForce(branchID, 1, 50.f, 1);
+    for (uint instance = 0; instance < 2; instance++) {
+        engine.step(300, instance);
+        DOCTEST_CHECK_FALSE(engine.isLinkDetached(branchID, 1, instance));
+        engine.getMuJoCoData(instance)->xfrc_applied[6 * body + 2] = -10.;
+        engine.step(300, instance);
+    }
+    DOCTEST_CHECK(engine.isLinkDetached(branchID, 1, 0));
+    DOCTEST_CHECK(engine.getLoadDetachmentCount(0) == 1);
+    DOCTEST_CHECK_FALSE(engine.isLinkDetached(branchID, 1, 1));
+    DOCTEST_CHECK(engine.getLoadDetachmentCount(1) == 0);
+
+    // The load at release can be read until the next step
+    {
+        Context fresh_context;
+        PhysicsEngine fresh(&fresh_context);
+        fresh.disableMessages();
+        uint freshID = fresh.addArticulation(branch);
+        fresh.initialize();
+        fresh.step(300);
+        fresh.setDetachForce(freshID, 1, 15.f);
+        fresh.getMuJoCoData()->xfrc_applied[6 * body + 2] = -10.;
+        uint steps = 0;
+        while (!fresh.isLinkDetached(freshID, 1) && steps < 1000) {
+            fresh.step();
+            steps++;
+        }
+        DOCTEST_REQUIRE(fresh.isLinkDetached(freshID, 1));
+        DOCTEST_CHECK(fresh.getDetachableLinkLoad(freshID, 1) > 15.f);
+    }
+
+    // Reset attaches the link again, clears the count, and keeps the force
+    engine.resetInstance(0);
+    DOCTEST_CHECK_FALSE(engine.isLinkDetached(branchID, 1, 0));
+    DOCTEST_CHECK(engine.getLoadDetachmentCount(0) == 0);
+    engine.getMuJoCoData(0)->xfrc_applied[6 * body + 2] = -10.;
+    engine.step(300, 0);
+    DOCTEST_CHECK(engine.isLinkDetached(branchID, 1, 0));
+
+    // A cleared force releases nothing
+    engine.resetInstance(0);
+    engine.clearDetachForces(0);
+    engine.getMuJoCoData(0)->xfrc_applied[6 * body + 2] = -10.;
+    engine.step(300, 0);
+    DOCTEST_CHECK_FALSE(engine.isLinkDetached(branchID, 1, 0));
+
+    DOCTEST_CHECK_THROWS(engine.setDetachForce(branchID, 0, 10.f));
+    DOCTEST_CHECK_THROWS(engine.setDetachForce(branchID, 1, 0.f));
+    DOCTEST_CHECK_THROWS(engine.setDetachForce(branchID, 1, 10.f, 5));
+}
+
+DOCTEST_TEST_CASE("PhysicsEngine - instances reset to a pose set from a settled instance") {
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint pendulumID = engine.addArticulation(makePendulum("pendulum", 1.f, 0.5f, 0.6f));
+    engine.initialize();
+    const vec3 built = engine.getLinkPosition(pendulumID, 1);
+
+    // Damped by nothing, so stop it where it is by keeping only its pose
+    engine.step(100);
+    // Body positions are found at the start of each step, so bring them up to the joint positions the step ended with
+    mj_forward(engine.getMuJoCoModel(), engine.getMuJoCoData());
+    const vec3 moved = engine.getLinkPosition(pendulumID, 1);
+    DOCTEST_REQUIRE((moved - built).magnitude() > 0.01f);
+    engine.setResetPose(0);
+
+    const uint later = engine.createInstance();
+    DOCTEST_CHECK((engine.getLinkPosition(pendulumID, 1, later) - moved).magnitude() < 1e-6f);
+    engine.step(50, 0);
+    engine.resetInstance(0);
+    DOCTEST_CHECK((engine.getLinkPosition(pendulumID, 1, 0) - moved).magnitude() < 1e-6f);
+    DOCTEST_CHECK(engine.getMaxLinkSpeed(0) == doctest::Approx(0.f));
+
+    // Both reset instances then move the same way
+    engine.resetInstance(later);
+    engine.step(50, 0);
+    engine.step(50, later);
+    DOCTEST_CHECK((engine.getLinkPosition(pendulumID, 1, 0) - engine.getLinkPosition(pendulumID, 1, later)).magnitude() < 1e-7f);
+
+    engine.clearResetPose();
+    engine.resetInstance(0);
+    DOCTEST_CHECK((engine.getLinkPosition(pendulumID, 1, 0) - built).magnitude() < 1e-6f);
+    DOCTEST_CHECK_THROWS(engine.setResetPose(9));
 }
 
 DOCTEST_TEST_CASE("PhysicsEngine - a detached link comes to rest on the ground when ground collisions are enabled") {
@@ -846,6 +998,124 @@ DOCTEST_TEST_CASE("PhysicsEngine - a loaded model pushes articulations, and the 
     DOCTEST_CHECK(force.z > 0.f);
     DOCTEST_CHECK(force.z == doctest::Approx(expected_force).epsilon(0.15));
     std::filesystem::remove(arm_file);
+}
+
+DOCTEST_TEST_CASE("ContactSensor - splits the force on a loaded model by the label of what it touches, with a target per instance") {
+    std::string arm_file = writeHingedArmFile();
+    Context context;
+
+    // A horizontal rod labeled as wood just above the arc of the arm's tip, as in the test above
+    const float rod_height = 0.12f;
+    PhysicsArticulation rod;
+    rod.name = "rod";
+    PhysicsLink root;
+    root.name = "root";
+    root.position = make_vec3(0.5f, -0.3f, rod_height);
+    root.mass = 0.01f;
+    root.inertia_diagonal = make_vec3(1e-6f, 1e-6f, 1e-6f);
+    rod.links.push_back(root);
+    PhysicsLink shaft;
+    shaft.name = "shaft";
+    shaft.label = "wood";
+    shaft.parent_index = 0;
+    shaft.position = make_vec3(0.5f, 0, rod_height);
+    shaft.qw = std::sqrt(0.5f);
+    shaft.qx = -std::sqrt(0.5f);
+    shaft.mass = 0.05f;
+    shaft.inertia_diagonal = make_vec3(1e-3f, 1e-3f, 1e-5f);
+    shaft.joint_type = PHYSICS_JOINT_BALL;
+    shaft.stiffness = 2.f;
+    shaft.damping = 0.5f;
+    PhysicsCollisionShape capsule;
+    capsule.type = PHYSICS_SHAPE_CAPSULE;
+    capsule.size = make_vec3(0.005f, 0.3f, 0);
+    shaft.shapes.push_back(capsule);
+    rod.links.push_back(shaft);
+
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint rodID = engine.addArticulation(rod);
+    engine.addModelFile(arm_file, "a/");
+    engine.addPositionServo("a/hinge", 500.f, 50.f);
+    PhysicsEngineParameters params;
+    params.gravity = false;
+    engine.initialize(params);
+    engine.createInstance();
+
+    DOCTEST_CHECK(engine.getArticulationCount() == 1);
+    DOCTEST_CHECK(engine.getArticulationLinkCount(rodID) == 2);
+    DOCTEST_CHECK(engine.getLinkLabel(rodID, 1) == "wood");
+    DOCTEST_CHECK(engine.getLinkLabel(rodID, 0).empty());
+    DOCTEST_CHECK(engine.getLinkBodyID(rodID, 1) == mj_name2id(engine.getMuJoCoModel(), mjOBJ_BODY, "rod_shaft"));
+
+    ContactSensor sensor(&engine, "a/base");
+    const std::vector<std::string> &partners = sensor.getPartnerNames();
+    for (const std::string &expected: {"wood", "articulation", "target", "ground", "other"}) {
+        DOCTEST_CHECK(std::find(partners.begin(), partners.end(), expected) != partners.end());
+    }
+    DOCTEST_CHECK(sensor.getPreparedInstanceCount() == 2);
+
+    // Lift the tip into the rod in both instances, with the rod as the target in instance 1 only
+    sensor.setTargetLink(rodID, 1, 1);
+    const int actuator = mj_name2id(engine.getMuJoCoModel(), mjOBJ_ACTUATOR, "a/hinge_servo");
+    for (uint instance = 0; instance < 2; instance++) {
+        engine.step(10, instance);
+        DOCTEST_CHECK(sensor.getTotalForce({}, instance).magnitude() == doctest::Approx(0.f));
+        DOCTEST_CHECK_FALSE(sensor.isPenetrating({}, instance));
+        for (uint s = 0; s < 1500; s++) {
+            engine.getMuJoCoData(instance)->ctrl[actuator] = 0.3 * double(s + 1) / 1500.0;
+            engine.step(1, instance);
+        }
+        engine.step(1000, instance);
+    }
+
+    // The arm feels the reaction to the force on the rod, and only under the rod's label
+    const vec3 on_rod = engine.getExternalContactForce(rodID, 0);
+    DOCTEST_REQUIRE(on_rod.z > 0.01f);
+    const vec3 wood = sensor.getForce("wood", 0);
+    DOCTEST_CHECK((wood + on_rod).magnitude() < 1e-4f * on_rod.magnitude());
+    DOCTEST_CHECK((sensor.getTotalForce({}, 0) - wood).magnitude() < 1e-6f);
+    DOCTEST_CHECK(sensor.getTotalForce({"wood"}, 0).magnitude() == doctest::Approx(0.f));
+    DOCTEST_CHECK(sensor.getForce("target", 0).magnitude() == doctest::Approx(0.f));
+    const std::vector<vec3> forces = sensor.getForces(0);
+    DOCTEST_REQUIRE(forces.size() == partners.size());
+    const size_t wood_index = std::find(partners.begin(), partners.end(), "wood") - partners.begin();
+    DOCTEST_CHECK((forces[wood_index] - wood).magnitude() < 1e-6f);
+
+    // In instance 1 the same contact is with the target
+    DOCTEST_CHECK(sensor.getForce("wood", 1).magnitude() == doctest::Approx(0.f));
+    DOCTEST_CHECK((sensor.getForce("target", 1) - wood).magnitude() < 1e-3f * wood.magnitude());
+    sensor.clearTargetLink(1);
+    DOCTEST_CHECK((sensor.getForce("wood", 1) - wood).magnitude() < 1e-3f * wood.magnitude());
+
+    // The tip rests slightly inside the rod, held there by the contact
+    DOCTEST_CHECK(sensor.isPenetrating({}, 0));
+    DOCTEST_CHECK_FALSE(sensor.isPenetrating({"wood"}, 0));
+
+    // Sensing the arm body alone sees the same contact, since the tip is on it
+    ContactSensor arm_sensor(&engine, "a/arm");
+    DOCTEST_CHECK((arm_sensor.getForce("wood", 0) - wood).magnitude() < 1e-6f);
+
+    // Instances created after the sensor need prepareInstances()
+    const uint late_instance = engine.createInstance();
+    DOCTEST_CHECK_THROWS(sensor.setTargetLink(rodID, 1, late_instance));
+    sensor.prepareInstances();
+    DOCTEST_CHECK_NOTHROW(sensor.setTargetLink(rodID, 1, late_instance));
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(sensor.getForce("leaf", 0)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(sensor.getTotalForce({"leaf"}, 0)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(sensor.getForces(5)));
+    DOCTEST_CHECK_THROWS(ContactSensor(&engine, "a/missing"));
+    DOCTEST_CHECK_THROWS(ContactSensor(&engine, "world"));
+    std::filesystem::remove(arm_file);
+}
+
+DOCTEST_TEST_CASE("ContactSensor - cannot be created before the simulation is initialized") {
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    DOCTEST_CHECK_THROWS(ContactSensor(&engine, "a/base"));
+    DOCTEST_CHECK_THROWS(ContactSensor(nullptr, "a/base"));
 }
 
 #ifdef HELIOS_PHYSICS_ENGINE_PLANTS
@@ -1284,6 +1554,146 @@ DOCTEST_TEST_CASE("PlantPhysics - rigid leaves have no joints of their own, and 
     DOCTEST_CHECK(rigid_motion > 1e-4f);
     DOCTEST_CHECK(rigid_change < 1e-5f);
     DOCTEST_CHECK(flexible_motion > 0.f);
+}
+
+DOCTEST_TEST_CASE("PlantPhysics - links are labeled by organ, and a contact sensor reports them by label") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    uint plantID = buildTestPlant(context, plantarchitecture);
+    const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+
+    DOCTEST_CHECK(plantLinkLabel(ARTICULATION_LINK_INTERNODE) == "wood");
+    DOCTEST_CHECK(plantLinkLabel(ARTICULATION_LINK_FRUIT) == "fruit");
+    DOCTEST_CHECK(plantLinkLabel(ARTICULATION_LINK_LEAF) == "leaf");
+
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint articulationID = addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID);
+    engine.addModelFile(writeHingedArmFile(), "a/", make_vec3(2, 2, 0));
+    engine.initialize();
+    std::filesystem::remove("physicsengine_test_hinged_arm.urdf");
+
+    std::set<std::string> labels;
+    for (uint i = 0; i < articulation.links.size(); i++) {
+        DOCTEST_CHECK(engine.getLinkLabel(articulationID, i) == plantLinkLabel(articulation.links[i].type));
+        labels.insert(engine.getLinkLabel(articulationID, i));
+    }
+    DOCTEST_CHECK(labels.count("wood") == 1);
+    DOCTEST_CHECK(labels.count("leaf") == 1);
+
+    ContactSensor sensor(&engine, "a/base");
+    const std::vector<std::string> &partners = sensor.getPartnerNames();
+    for (const std::string &label: labels) {
+        DOCTEST_CHECK(std::find(partners.begin(), partners.end(), label) != partners.end());
+    }
+    // Every link has a label, so none is reported as an unlabeled articulation
+    DOCTEST_CHECK(std::find(partners.begin(), partners.end(), "articulation") == partners.end());
+}
+
+DOCTEST_TEST_CASE("PlantPhysics - the nearest organ to a point is found among organs of one type at rest") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    uint plantID = buildTestPlant(context, plantarchitecture);
+    const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+    NearestPlantOrgan nearest_wood(articulation, ARTICULATION_LINK_INTERNODE);
+
+    // On the axis of an internode, the point is inside that internode by its radius
+    uint probe_link = 0;
+    for (uint i = 0; i < articulation.links.size(); i++) {
+        if (articulation.links[i].type == ARTICULATION_LINK_INTERNODE && articulation.links[i].radius > articulation.links[probe_link].radius) {
+            probe_link = i;
+        }
+    }
+    const PlantArticulationLink &probe = articulation.links[probe_link];
+    const NearestPlantOrganResult inside = nearest_wood.find(probe.position);
+    DOCTEST_CHECK(inside.surface_distance == doctest::Approx(-probe.radius).epsilon(1e-3));
+    DOCTEST_CHECK(inside.axis_offset.magnitude() < 1e-5f);
+    DOCTEST_CHECK(articulation.links[inside.link_index].type == ARTICULATION_LINK_INTERNODE);
+
+    // Away from the plant, the nearest internode is the one a search of every internode finds, and the offset reaches its axis
+    const vec3 point = make_vec3(0.3f, -0.2f, 0.25f);
+    const NearestPlantOrganResult found = nearest_wood.find(point);
+    float best = std::numeric_limits<float>::max();
+    for (const PlantArticulationLink &link: articulation.links) {
+        if (link.type != ARTICULATION_LINK_INTERNODE) {
+            continue;
+        }
+        const vec3 axis = make_vec3(2.f * (link.qx * link.qz + link.qw * link.qy), 2.f * (link.qy * link.qz - link.qw * link.qx), 1.f - 2.f * (link.qx * link.qx + link.qy * link.qy));
+        const vec3 start = link.position - link.half_length * axis;
+        const float t = std::clamp((point - start) * axis, 0.f, 2.f * link.half_length);
+        best = std::min(best, (start + t * axis - point).magnitude() - link.radius);
+    }
+    DOCTEST_CHECK(found.surface_distance == doctest::Approx(best).epsilon(1e-4));
+    DOCTEST_CHECK(found.surface_distance > 0.f);
+    DOCTEST_CHECK(found.axis_offset.magnitude() - articulation.links[found.link_index].radius == doctest::Approx(found.surface_distance).epsilon(1e-4));
+
+    DOCTEST_CHECK_THROWS(NearestPlantOrgan(articulation, ARTICULATION_LINK_LEAF));
+    PlantArticulation no_wood;
+    DOCTEST_CHECK_THROWS(NearestPlantOrgan(no_wood, ARTICULATION_LINK_INTERNODE));
+}
+
+DOCTEST_TEST_CASE("PlantPhysics - organs are found in a box, and the internodes that carry an organ are found toward the root") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    uint plantID = buildTestPlant(context, plantarchitecture);
+    const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+    const float unbounded = std::numeric_limits<float>::infinity();
+
+    // An unbounded box holds every leaf; one bounded in height only those in that band
+    const std::vector<uint> leaves = findPlantLinksInBox(articulation, ARTICULATION_LINK_LEAF, make_vec3(-unbounded, -unbounded, -unbounded), make_vec3(unbounded, unbounded, unbounded));
+    const size_t leaf_count = std::count_if(articulation.links.begin(), articulation.links.end(), [](const PlantArticulationLink &link) { return link.type == ARTICULATION_LINK_LEAF; });
+    DOCTEST_REQUIRE(leaves.size() == leaf_count);
+    DOCTEST_REQUIRE(leaf_count > 2);
+    float top = -unbounded;
+    for (uint leaf: leaves) {
+        top = std::max(top, articulation.links[leaf].position.z);
+    }
+    const std::vector<uint> high_leaves = findPlantLinksInBox(articulation, ARTICULATION_LINK_LEAF, make_vec3(-unbounded, -unbounded, 0.5f * top), make_vec3(unbounded, unbounded, unbounded));
+    DOCTEST_CHECK_FALSE(high_leaves.empty());
+    DOCTEST_CHECK(high_leaves.size() < leaves.size());
+    for (uint leaf: high_leaves) {
+        DOCTEST_CHECK(articulation.links[leaf].position.z >= 0.5f * top);
+    }
+    DOCTEST_CHECK(std::is_sorted(high_leaves.begin(), high_leaves.end()));
+
+    // The internodes carrying the highest leaf: each the ancestor of the one before, none at the root, the first the one bearing the leaf
+    const uint highest = *std::max_element(leaves.begin(), leaves.end(), [&](uint a, uint b) { return articulation.links[a].position.z < articulation.links[b].position.z; });
+    const uint bearing = findBearingInternode(articulation, highest);
+    DOCTEST_CHECK(articulation.links[bearing].type == ARTICULATION_LINK_INTERNODE);
+    const std::vector<uint> supporting = findSupportingInternodes(articulation, highest, 3);
+    DOCTEST_REQUIRE(supporting.size() == 3);
+    DOCTEST_CHECK(supporting.front() == bearing);
+    auto isAncestor = [&](uint ancestor, uint link) {
+        for (int parent = articulation.links[link].parent_index; parent >= 0; parent = articulation.links[parent].parent_index) {
+            if (static_cast<uint>(parent) == ancestor) {
+                return true;
+            }
+        }
+        return false;
+    };
+    for (size_t k = 0; k < supporting.size(); k++) {
+        DOCTEST_CHECK(articulation.links[supporting[k]].type == ARTICULATION_LINK_INTERNODE);
+        DOCTEST_CHECK(articulation.links[supporting[k]].parent_index >= 0);
+        if (k > 0) {
+            DOCTEST_CHECK(isAncestor(supporting[k], supporting[k - 1]));
+        }
+    }
+    // Asking for more than there are returns all of them but the root
+    const std::vector<uint> all_supporting = findSupportingInternodes(articulation, highest, 100000);
+    for (uint link: all_supporting) {
+        DOCTEST_CHECK(articulation.links[link].parent_index >= 0);
+    }
+    DOCTEST_CHECK(all_supporting.size() >= supporting.size());
+
+    // The root has nothing below it
+    uint root = 0;
+    while (articulation.links[root].parent_index >= 0) {
+        root++;
+    }
+    DOCTEST_CHECK(findSupportingInternodes(articulation, root, 5).empty());
+    DOCTEST_CHECK_THROWS(static_cast<void>(findBearingInternode(articulation, root)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(findBearingInternode(articulation, static_cast<uint>(articulation.links.size()))));
+    DOCTEST_CHECK_THROWS(static_cast<void>(findSupportingInternodes(articulation, static_cast<uint>(articulation.links.size()), 1)));
 }
 
 DOCTEST_TEST_CASE("PlantPhysics - misuse is reported") {
