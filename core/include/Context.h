@@ -3540,8 +3540,14 @@ namespace helios {
         //! Warning aggregator for API design warnings (e.g., inefficient API usage)
         mutable WarningAggregator api_warnings;
 
-        //! List of primitives that have been modified since geometry was last set as clean
+        //! List of primitives that have been deleted since geometry was last set as clean
         std::vector<uint> dirty_deleted_primitives;
+
+        //! Every primitive deletion, as (modification clock value when deleted, UUID), in the order deleted (see getDeletedUUIDs(uint64_t) const)
+        /**
+         * Never emptied, so that a caller whose mark predates a deletion always finds it. The clock values never decrease along the list.
+         */
+        std::vector<std::pair<uint64_t, uint>> primitive_deletion_log;
 
         //! Change counter that stays cheap when advanced from many threads at once
         /**
@@ -4419,8 +4425,27 @@ namespace helios {
         //! Get all primitive UUIDs that were deleted since the Context was last marked clean.
         /**
          * \return Vector of UUIDs for primitives that were deleted since the Context was last marked clean
+         * \sa getDeletedUUIDs(uint64_t) const, which gives each caller its own view
          */
         [[nodiscard]] std::vector<uint> getDeletedUUIDs() const;
+
+        //! Get the primitives deleted since a caller's mark from getModifiedUUIDs()
+        /**
+         * The deletion counterpart of getModifiedUUIDs(). The list returned by getDeletedUUIDs() is emptied by markGeometryClean(),
+         * so a caller that relies on it never learns of a primitive deleted and then marked clean before it looked. Deletions are also
+         * recorded against the clock that getModifiedUUIDs() reads, so a caller can ask for those since its own mark whatever other
+         * callers do. This does not advance the mark. To see each modification and each deletion exactly once, keep the mark from
+         * before the call to getModifiedUUIDs() and pass that here:
+         * \code
+         * const uint64_t previous_mark = mark;
+         * std::vector<uint> modified = context.getModifiedUUIDs(mark);
+         * std::vector<uint> deleted = context.getDeletedUUIDs(previous_mark);
+         * \endcode
+         * Every deletion is kept for the life of the Context (12 bytes each), since any caller's mark may predate it.
+         * \param[in] mark A mark set by getModifiedUUIDs(), or 0 for every deletion since the Context was created.
+         * \return UUIDs of the primitives deleted since \p mark was set, in the order they were deleted
+         */
+        [[nodiscard]] std::vector<uint> getDeletedUUIDs(uint64_t mark) const;
 
         //! Hide primitive in the Context such that its UUID is not returned in Context::getAllUUIDs()
         /**

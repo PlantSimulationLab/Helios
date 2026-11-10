@@ -211,6 +211,38 @@ TEST_CASE("Core Context State and Configuration") {
         DOCTEST_CHECK(ctx.getModifiedUUIDs(mark) == std::vector<uint>{copy});
     }
 
+    SUBCASE("Deleted UUIDs since a caller's mark") {
+        // Deletions are kept with the same clock as modifications, so a caller asks for those since its previous mark, and
+        // markGeometryClean() does not take them away
+        Context ctx;
+        uint p0 = ctx.addPatch();
+        uint p1 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        uint p2 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+
+        uint64_t mark = 0;
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(mark).empty()); // nothing deleted yet
+        static_cast<void>(ctx.getModifiedUUIDs(mark));
+
+        // A deletion since the mark is returned, even after the geometry was marked clean
+        ctx.deletePrimitive(p1);
+        ctx.markGeometryClean();
+        DOCTEST_CHECK(ctx.getDeletedUUIDs().empty()); // the clean-flag list is emptied
+        uint64_t previous_mark = mark;
+        static_cast<void>(ctx.getModifiedUUIDs(mark));
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(previous_mark) == std::vector<uint>{p1});
+
+        // Asking does not advance the mark: only getModifiedUUIDs() does, and after it the deletion is not returned again
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(previous_mark) == std::vector<uint>{p1});
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(mark).empty());
+
+        // A caller whose mark predates both deletions sees both, in the order they were deleted
+        uint64_t early_mark = mark;
+        ctx.deletePrimitive(p2);
+        ctx.deletePrimitive(p0);
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(early_mark) == std::vector<uint>{p2, p0});
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(0) == std::vector<uint>{p1, p2, p0});
+    }
+
     SUBCASE("Material revision") {
         // Advances when a material changes, including material data, which marks no primitive dirty; not when one is read or assigned
         Context ctx;

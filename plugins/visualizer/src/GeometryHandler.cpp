@@ -54,6 +54,18 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
     if (!doesGeometryExist(UUID)) {
         registerUUID(UUID, geometry_type);
         geometry_is_new = true;
+    } else if (getDeleteFlag(UUID)) {
+        // Deleted geometry keeps its slot until the buffers are defragmented, so this ID still has one. Updating the slot in place
+        // without clearing its flags left the re-added geometry deleted and invisible: a Context primitive deleted from the
+        // Visualizer and later added back (for example hidden, then shown) was never drawn again.
+        const PrimitiveIndexMap &index_map = UUID_map.at(UUID);
+        if (index_map.geometry_type != geometry_type) {
+            helios::helios_runtime_error("ERROR (GeometryHandler::addGeometry): Geometry " + std::to_string(UUID) + " was deleted as one geometry type and is being added back as another. This is an internal error in the Visualizer plug-in.");
+        }
+        delete_flag_data.at(geometry_type).at(index_map.delete_flag_index) = false;
+        visible_flag_data.at(geometry_type).at(index_map.visible_index) = static_cast<char>(visible_flag);
+        deleted_primitive_count--;
+        layout_revision++;
     }
 
     if (coordinate_system == 0) { // No vertex transformation (i.e., identity matrix)
@@ -924,6 +936,13 @@ void GeometryHandler::getDomainBoundingBox(helios::vec2 &xbounds, helios::vec2 &
     for (const auto &[UUID, index_map]: UUID_map) {
         // Only primitives with Cartesian coordinates should be included in bounding box
         if (coordinate_flag_data.at(index_map.geometry_type).at(index_map.coordinate_flag_index) == 0) {
+            continue;
+        }
+        // Deleted geometry keeps its slot until the buffers are defragmented, and a hidden Context primitive keeps its geometry flagged
+        // invisible; neither is displayed, and counting them fitted the default camera to primitives that are not there. Invisible
+        // geometry that is not a Context primitive (e.g., a point culled for being outside the view) still counts.
+        if (delete_flag_data.at(index_map.geometry_type).at(index_map.delete_flag_index) ||
+            (context_geometry_flag_data.at(index_map.geometry_type).at(index_map.context_geometry_flag_index) && !visible_flag_data.at(index_map.geometry_type).at(index_map.visible_index))) {
             continue;
         }
 

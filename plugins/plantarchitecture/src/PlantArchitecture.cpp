@@ -6084,24 +6084,36 @@ LeafShapeValues Phytomer::getLeafShape(uint petiole_index, uint leaf_index) cons
     return {};
 }
 
-void Phytomer::reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested) {
+uint Phytomer::reshapedLeafSubdivisionsY(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested, const char *caller) const {
     const LeafShapeValues current = getLeafShape(petiole_index, leaf_index);
     const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
     if (!context_ptr->doesObjectExist(objID_leaf)) {
-        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): Leaf object " + std::to_string(objID_leaf) + " no longer exists in the Context, so it cannot be reshaped.");
+        helios_runtime_error("ERROR (" + std::string(caller) + "): Leaf object " + std::to_string(objID_leaf) + " no longer exists in the Context, so it cannot be reshaped.");
     }
     if (shape_requested.subdivisions_x != current.subdivisions_x || !(shape_requested.lattice_offset == current.lattice_offset)) {
-        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): The new shape of leaf object " + std::to_string(objID_leaf) +
+        helios_runtime_error("ERROR (" + std::string(caller) + "): The new shape of leaf object " + std::to_string(objID_leaf) +
                              " has a different number of subdivisions along the blade or a different lattice offset from the leaf's own. Start from Phytomer::getLeafShape() and change only the shape terms.");
     }
 
-    LeafShapeValues shape = shape_requested;
     // A roll needs enough cells across the blade to form its arc. Each cell is held to turning through at most pi/16, which keeps the chords' projected area within a fraction of a percent of the arc's.
-    const uint cells_for_roll = 2 * uint(std::ceil(16.f * shape.roll_fraction));
-    shape.subdivisions_y = std::max({current.subdivisions_y, shape_requested.subdivisions_y, cells_for_roll});
-    if (shape.subdivisions_y % 2 != 0) {
-        shape.subdivisions_y++;
+    const uint cells_for_roll = 2 * uint(std::ceil(16.f * shape_requested.roll_fraction));
+    uint subdivisions_y = std::max({current.subdivisions_y, shape_requested.subdivisions_y, cells_for_roll});
+    if (subdivisions_y % 2 != 0) {
+        subdivisions_y++;
     }
+    return subdivisions_y;
+}
+
+bool Phytomer::canReshapeLeafInPlace(uint petiole_index, uint leaf_index, const LeafShapeValues &shape) const {
+    return reshapedLeafSubdivisionsY(petiole_index, leaf_index, shape, "PlantArchitecture::Phytomer::canReshapeLeafInPlace") == getLeafShape(petiole_index, leaf_index).subdivisions_y;
+}
+
+void Phytomer::reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested) {
+    const LeafShapeValues current = getLeafShape(petiole_index, leaf_index);
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+
+    LeafShapeValues shape = shape_requested;
+    shape.subdivisions_y = reshapedLeafSubdivisionsY(petiole_index, leaf_index, shape_requested, "PlantArchitecture::Phytomer::reshapeLeaf");
 
     const uint Nx = current.subdivisions_x;
     const size_t lattice_count_old = size_t(Nx + 1) * size_t(current.subdivisions_y + 1);

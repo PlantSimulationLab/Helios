@@ -21514,6 +21514,53 @@ DOCTEST_TEST_CASE("PlantArchitecture setPetioleLeafRoll rolls a blade in place w
     DOCTEST_CHECK_THROWS(plantarchitecture.setPlantLeafRoll(plantID + 100, 0.5f));
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture Phytomer::canReshapeLeafInPlace predicts whether reshapeLeaf keeps the leaf's primitives") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    const uint plantID = buildFlatWheat(context, plantarchitecture, 30);
+    const uint node = largestMainstemLeafNode(context, plantarchitecture, plantID);
+    const auto phytomer = plantarchitecture.getPlantShoot(plantID, 0)->phytomers.at(node);
+    const uint objID = phytomer->leaf_objIDs.at(0).at(0);
+    const std::vector<uint> UUIDs_before = context.getObjectPrimitiveUUIDs(objID);
+
+    // A new aspect ratio and curvature fit the existing lattice: predicted, and the primitives are kept
+    LeafShapeValues reshaped = phytomer->getLeafShape(0, 0);
+    reshaped.aspect_ratio *= 1.2f;
+    reshaped.longitudinal_curvature += 0.1f;
+    DOCTEST_CHECK(phytomer->canReshapeLeafInPlace(0, 0, reshaped));
+    phytomer->reshapeLeaf(0, 0, reshaped);
+    DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(objID) == UUIDs_before);
+
+    // A roll needs more cells across the narrow wheat blade than it has: predicted, and the blade is re-meshed
+    LeafShapeValues rolled = phytomer->getLeafShape(0, 0);
+    rolled.roll_fraction = 0.5f;
+    DOCTEST_CHECK(!phytomer->canReshapeLeafInPlace(0, 0, rolled));
+    phytomer->reshapeLeaf(0, 0, rolled);
+    const std::vector<uint> UUIDs_rolled = context.getObjectPrimitiveUUIDs(objID);
+    DOCTEST_CHECK(UUIDs_rolled != UUIDs_before);
+
+    // Now fine enough, a smaller roll fits
+    rolled.roll_fraction = 0.3f;
+    rolled.subdivisions_y = phytomer->getLeafShape(0, 0).subdivisions_y;
+    DOCTEST_CHECK(phytomer->canReshapeLeafInPlace(0, 0, rolled));
+    phytomer->reshapeLeaf(0, 0, rolled);
+    DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(objID) == UUIDs_rolled);
+
+    // A shape that reshapeLeaf() refuses is refused here too
+    LeafShapeValues mismatched = phytomer->getLeafShape(0, 0);
+    mismatched.subdivisions_x += 1;
+    bool threw = false;
+    {
+        capture_cerr cerr_buffer;
+        try {
+            static_cast<void>(phytomer->canReshapeLeafInPlace(0, 0, mismatched));
+        } catch (const std::exception &) {
+            threw = true;
+        }
+    }
+    DOCTEST_CHECK(threw);
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture setPlantLeafRoll rolls every leaf, and a drooping rolled leaf stays rolled as it grows") {
     {
         Context context;

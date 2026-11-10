@@ -565,6 +565,18 @@ std::vector<uint> Context::getDeletedUUIDs() const {
     return dirty_deleted_primitives;
 }
 
+std::vector<uint> Context::getDeletedUUIDs(uint64_t mark) const {
+    // The log is ordered by clock value, so the deletions after the mark are a tail of it. A deletion stamped with the mark's own value
+    // happened before the call to getModifiedUUIDs() that set it, as for a modification.
+    const auto first_after_mark = std::upper_bound(primitive_deletion_log.begin(), primitive_deletion_log.end(), mark, [](uint64_t mark_value, const std::pair<uint64_t, uint> &deletion) { return mark_value < deletion.first; });
+    std::vector<uint> deleted_UUIDs;
+    deleted_UUIDs.reserve(size_t(primitive_deletion_log.end() - first_after_mark));
+    for (auto deletion = first_after_mark; deletion != primitive_deletion_log.end(); ++deletion) {
+        deleted_UUIDs.push_back(deletion->second);
+    }
+    return deleted_UUIDs;
+}
+
 void Context::hidePrimitive(uint UUID) const {
 #ifdef HELIOS_DEBUG
     if (!doesPrimitiveExist(UUID)) {

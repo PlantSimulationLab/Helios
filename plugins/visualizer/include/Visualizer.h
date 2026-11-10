@@ -1475,6 +1475,7 @@ public:
     /**
      * \param[out] buffer Pixel data. The data is stored as r-g-b * column * row. So indices (0,1,2) would be the RGB values for row 0 and column 0, indices (3,4,5) would be RGB values for row 0 and column 1, and so on.
      * \note The buffer must hold `3*width*height` elements, where width and height come from \ref getFramebufferSize() — **not** from \ref getWindowSize() and not from the dimensions passed to the constructor. On a high-DPI (Retina) display the framebuffer is larger than the window, typically by a factor of two per axis, so sizing the buffer from the window dimensions overflows it. Prefer the std::vector overload, which allocates correctly on the caller's behalf.
+     * \note This reads back the frame last rendered and renders nothing itself. Call \ref plotUpdate() first: an error is raised if no frame has been rendered, or if anything drawn by the Visualizer (its geometry, camera, colours, lighting, background, colorbar and so on) has changed since the last render. A change to the Context reaches the Visualizer only when it renders, so the pixels show the Context as it was then. \ref printWindow(const char*, const std::string&) "printWindow()" renders the frame itself when needed.
      */
     void getWindowPixelsRGB(uint *buffer) const;
 
@@ -1484,6 +1485,7 @@ public:
      * \param[out] pixel_data Pixel data, stored as r-g-b * column * row.
      * \param[out] width_pixels Width of the returned image in pixels
      * \param[out] height_pixels Height of the returned image in pixels
+     * \note This reads back the frame last rendered and renders nothing itself. Call \ref plotUpdate() first: an error is raised if no frame has been rendered, or if anything drawn by the Visualizer (its geometry, camera, colours, lighting, background, colorbar and so on) has changed since the last render. A change to the Context reaches the Visualizer only when it renders, so the pixels show the Context as it was then. \ref printWindow(const char*, const std::string&) "printWindow()" renders the frame itself when needed.
      */
     void getWindowPixelsRGB(std::vector<uint> &pixel_data, uint &width_pixels, uint &height_pixels) const;
 
@@ -1511,7 +1513,7 @@ public:
      * The depth is the distance in world units from the camera to the visible surface, measured along the camera viewing direction. Geometry lying in the plane through a point perpendicular to the viewing direction
      * therefore has one depth across the whole image. This is the same definition of depth as the camera depth images of the radiation plug-in (RadiationModel::writeDepthImageData()).
      *
-     * The frame is rendered as part of the call if needed, in the same way as \ref printWindow(const char*, const std::string&) "printWindow()".
+     * The call renders its own pass from the current Context geometry and camera, including the default camera fitted to the scene when none was set, so it describes the same view as an image saved by \ref printWindow(const char*, const std::string&) "printWindow()". It does not render the colour image.
      *
      * \param[out] depth_pixels Depth of each pixel, row-major with row 0 at the TOP of the image, which is the orientation of an image saved by printWindow(). Pixels in which no geometry is visible hold -1.
      * \param[out] width_pixels Width of the returned image in pixels, which is the framebuffer width (see \ref getFramebufferSize()).
@@ -1528,7 +1530,7 @@ public:
      * This is the pixel-to-primitive map from which bounding boxes and segmentation masks are computed. It is exact: it does not depend on primitive colors, lighting, or the anti-aliasing the Visualizer was created
      * with, and producing it does not modify the Context.
      *
-     * The frame is rendered as part of the call if needed, in the same way as \ref printWindow(const char*, const std::string&) "printWindow()".
+     * The call renders its own pass from the current Context geometry and camera, including the default camera fitted to the scene when none was set, so it describes the same view as an image saved by \ref printWindow(const char*, const std::string&) "printWindow()". It does not render the colour image.
      *
      * \param[out] pixel_UUIDs UUID of the Context primitive visible in each pixel plus one, row-major with row 0 at the TOP of the image. Pixels in which no Context primitive is visible hold 0. That includes
      * background, and pixels covered by a rectangle or triangle that was added directly to the Visualizer (which hides what is behind it but is not a Context primitive).
@@ -1540,6 +1542,60 @@ public:
      * \note Lines and points added to the Visualizer are likewise not part of the map and do not hide the primitives behind them, although they do appear in a saved image.
      */
     void getPixelUUIDs(std::vector<uint> &pixel_UUIDs, uint &width_pixels, uint &height_pixels);
+
+    //! Get the Context primitive visible in each pixel of a rectangle of the current view
+    /**
+     * Identical, pixel for pixel, to the matching rectangle of \ref getPixelUUIDs(std::vector<uint>&, uint&, uint&) "getPixelUUIDs()", but only the rectangle is rendered and read back, which is faster when it is a
+     * small part of the image (for example the screen box of one object).
+     *
+     * \param[out] pixel_UUIDs UUID of the Context primitive visible in each pixel of the rectangle plus one, or 0 where none is visible. Row-major with row 0 at the TOP of the rectangle, and \p width * \p height long.
+     * \param[in] x0 Column of the rectangle's left edge, in pixels from the left of the image.
+     * \param[in] y0 Row of the rectangle's top edge, in pixels from the top of the image.
+     * \param[in] width Width of the rectangle in pixels.
+     * \param[in] height Height of the rectangle in pixels.
+     * \note The rectangle must lie within the framebuffer (see \ref getFramebufferSize()) and must not be empty, or an error is raised.
+     */
+    void getPixelUUIDs(std::vector<uint> &pixel_UUIDs, uint x0, uint y0, uint width, uint height);
+
+    //! Get the distance to the nearest surface in each pixel of a rectangle of the current view
+    /**
+     * Identical, pixel for pixel, to the matching rectangle of \ref getDepthImage(std::vector<float>&, uint&, uint&) "getDepthImage()", but only the rectangle is rendered and read back.
+     *
+     * \param[out] depth_pixels Depth of each pixel of the rectangle, or -1 where nothing is visible. Row-major with row 0 at the TOP of the rectangle, and \p width * \p height long.
+     * \param[in] x0 Column of the rectangle's left edge, in pixels from the left of the image.
+     * \param[in] y0 Row of the rectangle's top edge, in pixels from the top of the image.
+     * \param[in] width Width of the rectangle in pixels.
+     * \param[in] height Height of the rectangle in pixels.
+     * \note The rectangle must lie within the framebuffer (see \ref getFramebufferSize()) and must not be empty, or an error is raised.
+     */
+    void getDepthImage(std::vector<float> &depth_pixels, uint x0, uint y0, uint width, uint height);
+
+    //! Get both the pixel-to-primitive map and the depth image of the current view from a single render
+    /**
+     * Gives the same results as \ref getPixelUUIDs(std::vector<uint>&, uint&, uint&) "getPixelUUIDs()" and \ref getDepthImage(std::vector<float>&, uint&, uint&) "getDepthImage()", which render the same
+     * annotation pass, so asking for both through this call costs one render instead of two.
+     *
+     * \param[out] pixel_UUIDs UUID of the Context primitive visible in each pixel plus one, or 0 where none is visible. Row-major with row 0 at the TOP of the image.
+     * \param[out] depth_pixels Depth of each pixel, or -1 where nothing is visible. Same layout as \p pixel_UUIDs.
+     * \param[out] width_pixels Width of the returned images in pixels, which is the framebuffer width (see \ref getFramebufferSize()).
+     * \param[out] height_pixels Height of the returned images in pixels, which is the framebuffer height.
+     */
+    void getPixelUUIDsAndDepth(std::vector<uint> &pixel_UUIDs, std::vector<float> &depth_pixels, uint &width_pixels, uint &height_pixels);
+
+    //! Get both the pixel-to-primitive map and the depth image of a rectangle of the current view from a single render
+    /**
+     * The rectangle counterpart of \ref getPixelUUIDsAndDepth(std::vector<uint>&, std::vector<float>&, uint&, uint&) "getPixelUUIDsAndDepth()": identical, pixel for pixel, to the matching rectangles of
+     * the whole-image maps, with only the rectangle rendered and read back.
+     *
+     * \param[out] pixel_UUIDs UUID of the Context primitive visible in each pixel of the rectangle plus one, or 0 where none is visible. Row-major with row 0 at the TOP of the rectangle.
+     * \param[out] depth_pixels Depth of each pixel of the rectangle, or -1 where nothing is visible. Same layout as \p pixel_UUIDs.
+     * \param[in] x0 Column of the rectangle's left edge, in pixels from the left of the image.
+     * \param[in] y0 Row of the rectangle's top edge, in pixels from the top of the image.
+     * \param[in] width Width of the rectangle in pixels.
+     * \param[in] height Height of the rectangle in pixels.
+     * \note The rectangle must lie within the framebuffer (see \ref getFramebufferSize()) and must not be empty, or an error is raised.
+     */
+    void getPixelUUIDsAndDepth(std::vector<uint> &pixel_UUIDs, std::vector<float> &depth_pixels, uint x0, uint y0, uint width, uint height);
 
     //! Write bounding boxes for the current view based on primitive data labels, in Ultralytics YOLO format
     /**
@@ -1893,7 +1949,27 @@ private:
     bool createEGLContext();
 
     //! Release the EGL context and display created by createEGLContext(), if any
+    /**
+     * The EGL display of a device is shared by every Visualizer rendering on that device, so it is terminated only when the last
+     * of them releases it. Terminating it earlier destroyed the contexts of the Visualizers still using it.
+     */
     void destroyEGLContext();
+
+    //! Make this Visualizer's OpenGL context current on the calling thread
+    /**
+     * OpenGL calls act on whichever context is current, and each Visualizer owns its own context. Every method that issues OpenGL
+     * calls makes its own context current first, so that a Visualizer never draws into, reads back from, or deletes the objects of
+     * another Visualizer that was created, drawn or destroyed since. Raises an error if the context cannot be made current.
+     * \param[in] caller Name of the calling method, for the error message.
+     */
+    void makeContextCurrent(const char *caller) const;
+
+    //! Try to make this Visualizer's OpenGL context current, without raising an error
+    /**
+     * \return True if this Visualizer has an OpenGL context and it is now current; false if it has none or it could not be made current.
+     * \sa makeContextCurrent()
+     */
+    [[nodiscard]] bool tryMakeContextCurrent() const noexcept;
 
     //! Create the shadow-map framebuffer and the depth texture array holding the shadow cascades
     /**
@@ -2220,16 +2296,26 @@ private:
     //! Dimensions the annotation framebuffer attachments are currently allocated at
     uint annotation_buffer_width = 0, annotation_buffer_height = 0;
 
+    //! Bring everything a render draws from up to date, without rendering
+    /**
+     * Culls points, fits the default camera to the scene if no camera was set, updates the colorbar, watermark and navigation gizmo, and uploads changed geometry to the GPU. Shared by the colour render
+     * (plotUpdate_private()) and the annotation pass, so that both describe the same view.
+     */
+    void prepareFrameGeometry();
+
     //! Render the annotation pass for the current camera and read back its buffers
     /**
-     * Renders the frame first if the one on the GPU is out of date, exactly as \ref printWindow() does, so that the buffers describe the same view as a saved image whichever of the two is requested first.
+     * Uploads changed geometry and settles the default camera first (see prepareFrameGeometry()), so that the buffers describe the same view as a saved image whichever of the two is requested first. The colour frame is not rendered.
      *
      * \param[out] pixel_UUIDs UUID of the Context primitive visible in each pixel plus one, or zero where none is visible. Row-major with row 0 at the top of the image.
      * \param[out] pixel_depth Distance in world units from the camera to the visible surface along the viewing direction, or -1 where nothing is visible. Same layout as pixel_UUIDs.
-     * \param[out] width_pixels Width of the buffers in pixels, which is the framebuffer width.
-     * \param[out] height_pixels Height of the buffers in pixels, which is the framebuffer height.
+     * \param[out] width_pixels Width of the buffers in pixels, which is the framebuffer width, or the window width if \p pixel_window is given.
+     * \param[out] height_pixels Height of the buffers in pixels, which is the framebuffer height, or the window height if \p pixel_window is given.
+     * \param[in] pixel_window [optional] Rectangle of the image to render and read back, in pixels from the top-left corner of the image; null for the whole image. Raises an error if it does not lie within the framebuffer.
+     * \param[in] caller [optional] Name of the public method, for error messages.
      */
-    void renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::vector<float> &pixel_depth, uint &width_pixels, uint &height_pixels);
+    void renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::vector<float> &pixel_depth, uint &width_pixels, uint &height_pixels, const helios::int4 *pixel_window = nullptr,
+                                 const char *caller = "Visualizer::renderAnnotationBuffers");
 
     //! Check that a Context has been given to the Visualizer and return it, for the methods that annotate Context primitives
     [[nodiscard]] helios::Context *getContextForAnnotation(const std::string &caller) const;
@@ -2473,6 +2559,12 @@ private:
 
     //! Buffer objects to hold per-vertex data
     std::vector<GLuint> face_index_buffer, vertex_buffer, uv_buffer, vertex_normal_buffer;
+
+    //! Element buffer listing the vertices of the opaque rectangles, two triangles each, drawn in one call by render()
+    mutable GLuint rectangle_element_buffer = 0;
+
+    //! The indices last uploaded to rectangle_element_buffer, so that an unchanged list is not uploaded again
+    mutable std::vector<GLuint> rectangle_element_indices_uploaded;
     //! Buffer objects to hold per-primitive data. We will use textures to hold this data.
     std::vector<GLuint> color_buffer, normal_buffer, texture_flag_buffer, texture_ID_buffer, coordinate_flag_buffer, sky_geometry_flag_buffer, hidden_flag_buffer, material_index_buffer;
     //! Texture objects to hold per-primitive data.
@@ -2506,6 +2598,10 @@ private:
     //! Times the face-to-primitive lookup that decodes the annotation pass has been rebuilt
     /** Rebuilding it visits every displayed primitive; kept so a test can check it is reused while the layout is unchanged. */
     size_t annotation_face_lookup_build_count = 0;
+
+    //! Times the colour frame has been rendered since construction
+    /** Kept so a test can check that the annotation pass does not render the colour frame, which it does not draw from. */
+    size_t color_frame_render_count = 0;
 
     //! Context primitives whose fingerprint the last buildContextGeometry_private() computed, i.e. that it examined for changes
     size_t context_primitives_examined_last_build = 0;
@@ -2634,6 +2730,16 @@ private:
 
     //! Context primitives currently on display: live geometry uploaded from the Context whose primitive still exists
     [[nodiscard]] std::vector<uint> getDisplayedContextPrimitiveUUIDs() const;
+
+    //! Flag the displayed faces of a Context primitive visible or invisible, without adding or removing geometry
+    /**
+     * Used to hide and show Context primitives: the faces keep their places in the buffers, so the geometry layout is unchanged.
+     * Faces the primitive has not been given yet are left alone; a primitive shown for the first time is added by the build.
+     * \param[in] UUID Context primitive UUID.
+     * \param[in] visible True to draw the faces, false to hide them.
+     * \return True if any face's flag changed.
+     */
+    bool setContextPrimitiveFacesVisible(uint UUID, bool visible);
 
     //! Set the automatic colorbar range to span the color-by data values of a set of primitives
     /**

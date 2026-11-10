@@ -18,8 +18,8 @@ usage() {
     echo "  --log-file <file>  Redirect all output to a specified log file"
     echo "  --test <name>    Run only the specified test (e.g., --test radiation)"
     echo "  --tests <list>   Run specified tests (comma-separated, e.g., --tests \"radiation,lidar\")"
-    echo "  --testcase <case> Pass specific test case to doctest (e.g., --testcase \"My Test Case\")"
-    echo "  --doctestargs <args> Pass arguments directly to doctest (e.g., --doctestargs \"--help --list-test-cases\")"
+    echo "  --testcase <case> Pass specific test case(s) to doctest, comma-separated, with * wildcards (e.g., --testcase \"My Test Case\" or --testcase \"*first*,*second*\")"
+    echo "  --doctestargs <args> Pass arguments directly to doctest (e.g., --doctestargs \"--help --list-test-cases\"); words are split on spaces, so quote any containing one (e.g., --doctestargs \"'--subcase=*a b*'\")"
     echo "  --list-tests         Build test executables and list available test cases without running them"
     echo "  --project-dir <dir>  Use specified directory for project (persistent, not cleaned up)"
     echo "  --disableopenmp      Disable OpenMP by passing -DENABLE_OPENMP=OFF to cmake"
@@ -242,6 +242,21 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+# doctest takes only options, so a word of --doctestargs that is not one is a piece of an option split at a space, and the
+# filter it came from no longer selects the tests that were asked for. Checked before anything is built. Filename expansion
+# is off, as where the arguments are used, so that a '*' is not matched against files.
+if [ -n "$DOCTEST_ARGS" ]; then
+  set -f
+  eval "DOCTEST_ARGS_CHECK=($DOCTEST_ARGS)"
+  set +f
+  for test_arg in "${DOCTEST_ARGS_CHECK[@]}"; do
+    if [[ "$test_arg" != -* ]]; then
+      echo -e "\x1B[31mError: --doctestargs \"$DOCTEST_ARGS\" contains '$test_arg', which is not a doctest option: an option containing a space was split there. Quote that option inside the argument (e.g., --doctestargs \"'--test-case=*a b*'\"), or give test cases with --testcase \"*first*,*second*\".\x1B[39m"
+      exit 1
+    fi
+  done
+fi
 
 # Validate that only one test specification method is used
 TEST_SPEC_COUNT=0
@@ -627,21 +642,35 @@ else
         TEST_ARGS_ARRAY+=("--test-case=$TESTCASE_FILTER")
       fi
       if [ -n "$DOCTEST_ARGS" ]; then
-        # Use eval to properly split DOCTEST_ARGS into array elements
+        # Use eval to properly split DOCTEST_ARGS into array elements, honouring quotes. Filename expansion is turned off
+        # around it, or a '*' in a test filter would be matched against the files in the build directory.
+        set -f
         eval "TEST_ARGS_ARRAY+=($DOCTEST_ARGS)"
+        set +f
       fi
 
-      # Validate test case filter matches at least one test before running
-      if [ -n "$TESTCASE_FILTER" ]; then
+      # Validate that the test filters match at least one test before running, whether they came from --testcase or
+      # --doctestargs. A filter that matches nothing otherwise runs zero tests and is reported as a pass. This is easy
+      # to do by accident with --doctestargs, whose words are split on spaces: "--test-case=*a b*" becomes
+      # "--test-case=*a" and a stray "b*".
+      FILTER_ARGS=()
+      for test_arg in "${TEST_ARGS_ARRAY[@]}"; do
+        case "$test_arg" in
+          --test-case=*|-tc=*|--test-case-exclude=*|-tce=*|--test-suite=*|-ts=*|--test-suite-exclude=*|-tse=*|--source-file=*|-sf=*|--source-file-exclude=*|-sfe=*)
+            FILTER_ARGS+=("$test_arg")
+            ;;
+        esac
+      done
+      if [ ${#FILTER_ARGS[@]} -gt 0 ]; then
         if [[ "${OSTYPE}" == "msys"* ]]; then
-          MATCHED_CASES=$("./${test_exe}.exe" --list-test-cases --test-case="$TESTCASE_FILTER" 2>/dev/null)
+          MATCHED_CASES=$("./${test_exe}.exe" --list-test-cases "${FILTER_ARGS[@]}" 2>/dev/null)
         else
-          MATCHED_CASES=$("./${test_exe}" --list-test-cases --test-case="$TESTCASE_FILTER" 2>/dev/null)
+          MATCHED_CASES=$("./${test_exe}" --list-test-cases "${FILTER_ARGS[@]}" 2>/dev/null)
         fi
         # Check if doctest reports 0 matching test cases
         if echo "$MATCHED_CASES" | grep -q "current filters: 0"; then
-          echo -e "\x1B[31mError: No test cases match filter '$TESTCASE_FILTER' in $test_exe\x1B[39m"
-          echo "Use --doctestargs \"--list-test-cases\" to see available test cases"
+          echo -e "\x1B[31mError: No test cases in $test_exe match the filters: ${FILTER_ARGS[*]}\x1B[39m"
+          echo "Use --doctestargs \"--list-test-cases\" to see available test cases. Give several test cases as one comma-separated --testcase \"*first*,*second*\"."
           ERROR_COUNT=$((ERROR_COUNT + 1))
           continue
         fi

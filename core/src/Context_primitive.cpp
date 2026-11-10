@@ -627,6 +627,7 @@ void Context::deletePrimitive(uint UUID) {
     delete prim;
     primitives.erase(UUID);
     dirty_deleted_primitives.push_back(UUID);
+    primitive_deletion_log.emplace_back(Primitive::modification_clock.load(std::memory_order_relaxed), UUID);
     geometry_revision.markModified();
     shape_revision.markModified();
     invalidateAllUUIDsCache();

@@ -2032,6 +2032,17 @@ public:
      */
     void reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeValues &shape);
 
+    //! Whether reshapeLeaf() would keep a leaf's primitives for a new shape, rather than re-mesh its blade
+    /**
+     * reshapeLeaf() moves the vertices of the existing blade lattice when it has as many cells across the blade as the new shape needs, and otherwise replaces the blade primitives with a finer lattice,
+     * which changes their UUIDs. A caller that must keep the UUIDs (for example one that tracks primitives in a renderer) asks first and decides what to do instead of discovering the re-mesh afterwards.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] shape New blade shape, with the same requirements as for reshapeLeaf(); an error is raised for a shape reshapeLeaf() would refuse.
+     * \return True if reshapeLeaf() would keep every primitive of the leaf; false if it would re-mesh the blade.
+     */
+    [[nodiscard]] bool canReshapeLeafInPlace(uint petiole_index, uint leaf_index, const LeafShapeValues &shape) const;
+
     //! Rebuild the leaflets of one petiole with each turned by its own offset from the leaf's angles.
     /**
      * Every leaflet on a petiole is otherwise turned by the same leaf.pitch, leaf.yaw and leaf.roll, mirrored from one side of the petiole to the other, so the two members of a pair are always mirror images.
@@ -2264,6 +2275,17 @@ public:
     void deletePhytomer();
 
 private:
+    //! Cells across the blade that reshapeLeaf() builds a leaf's new shape with
+    /**
+     * The larger of the leaf's own, the shape's, and what its roll needs, rounded up to even. reshapeLeaf() keeps the leaf's primitives exactly when this equals the leaf's own; shared with
+     * canReshapeLeafInPlace() so that the two cannot disagree. Raises an error for a leaf or shape that cannot be reshaped.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] shape_requested New blade shape.
+     * \param[in] caller Name of the public method, for error messages.
+     */
+    [[nodiscard]] uint reshapedLeafSubdivisionsY(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested, const char *caller) const;
+
     //! Remove the leaves and petioles of the phytomer, optionally handing their Context objects to the caller instead of deleting them
     /**
      * \param[out] detached_objIDs If not null, the Context objects of the leaves and petioles are appended here and left in the Context; if null, they are deleted, as by removeLeaf().

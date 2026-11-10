@@ -748,7 +748,17 @@
     <tr><td>\ref Visualizer::writeNormDepthImage() "writeNormDepthImage()"</td><td>Grayscale JPEG for viewing, in which the nearest surface is white and anything at or beyond a given maximum depth is black.</td></tr>
   </table>
 
-  The underlying buffers can also be retrieved directly, without writing a file: \ref Visualizer::getDepthImage() "getDepthImage()" returns the depth of each pixel, and \ref Visualizer::getPixelUUIDs() "getPixelUUIDs()" returns the UUID of the Context primitive visible in each pixel.
+  The underlying buffers can also be retrieved directly, without writing a file: \ref Visualizer::getDepthImage(std::vector<float>&, uint&, uint&) "getDepthImage()" returns the depth of each pixel, and \ref Visualizer::getPixelUUIDs(std::vector<uint>&, uint&, uint&) "getPixelUUIDs()" returns the UUID of the Context primitive visible in each pixel (plus one, so that 0 means none). Both come from the same render, so when both are needed, \ref Visualizer::getPixelUUIDsAndDepth(std::vector<uint>&, std::vector<float>&, uint&, uint&) "getPixelUUIDsAndDepth()" returns them together for the cost of one. Each of the three also takes a rectangle of the image (left column, top row, width and height, in pixels), and then renders and returns only that rectangle, pixel for pixel identical to the same part of the whole-image result. This is much faster when the region of interest, such as the screen box of one plant, is a small part of the image:
+
+  \code{.cpp}
+  std::vector<uint> pixel_UUIDs;
+  std::vector<float> pixel_depth;
+  // a 128 x 96 pixel rectangle whose top-left corner is at column 400, row 250
+  visualizer.getPixelUUIDsAndDepth(pixel_UUIDs, pixel_depth, 400, 250, 128, 96);
+  // pixel_UUIDs.at(row * 128 + column) for row 0..95 and column 0..127
+  \endcode
+
+  These calls render their own pass from the current Context geometry and camera; they do not render the colour image. A primitive hidden with Context::hidePrimitive() is absent from them as from the image, and hiding or showing primitives is cheap: their geometry stays in the Visualizer, flagged invisible.
 
   \note \ref Visualizer::getDepthMap(std::vector<float>&, uint&, uint&) "getDepthMap()" and \ref Visualizer::plotDepthMap() "plotDepthMap()" produce a <i>normalized</i> depth map for display, scaled between the nearest and farthest values in view. It is not a distance. Use getDepthImage() when the depth is needed in world units.
 
