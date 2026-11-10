@@ -1186,7 +1186,8 @@ DOCTEST_TEST_CASE("PlantArchitecture advanceTime after pruneBranch leaves empty 
  */
 static uint buildAppleAndPruneABranch(PlantArchitecture &plantarchitecture, uint &plantID) {
     plantarchitecture.loadPlantModelFromLibrary("apple");
-    plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 365);
+    // In leaf: the apple breaks dormancy at day 165 and re-enters it at day 365, when its leaves drop.
+    plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 300);
 
     const std::shared_ptr<Shoot> trunk = plantarchitecture.getPlantShoot(plantID, 0);
     int branchID = -1;
@@ -2996,7 +2997,7 @@ DOCTEST_TEST_CASE("PlantArchitecture insertion_angle_tip distribution is drawn a
 DOCTEST_TEST_CASE("Plant Library - pistachio training: scaffolds tipped, secondaries thinned and headed in the first winter") {
     // The library pistachio trains itself from its phytomer callback: each scaffold is tipped at 0.45 m in its first season, and in the
     // first winter its secondaries are thinned to three and headed to 0.30 m. Checked partway through that winter (the plant goes dormant
-    // around day 366 and the cuts are applied by the next day), on structural invariants that hold whatever the random draws.
+    // around day 365 and the cuts are applied by the next day), on structural invariants that hold whatever the random draws.
     constexpr float tip_length = 0.45f;
     constexpr float head_length = 0.30f;
     constexpr float internode_tolerance = 0.07f; // a cut keeps the node whose far end reaches the length, so one internode at most beyond it
@@ -11579,6 +11580,47 @@ DOCTEST_TEST_CASE("PlantArchitecture manually-built plant survives advanceTime w
     DOCTEST_CHECK(!plantarchitecture.getPlantPetioleObjectIDs(plantID).empty());
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture dormancy cycle lasts exactly dd_to_dormancy_break + dd_to_dormancy days") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // A plant whose dormancy period is dd_to_dormancy_break + dd_to_dormancy must re-enter dormancy after exactly that many
+    // days, so that a 365-day cycle advanced with advanceTime(365) per year stays on the calendar. The cycle used to run one
+    // day long, re-entering dormancy on day period + 1.
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    plantarchitecture.addBaseStemShoot(plantID, 1, make_AxisRotation(0, 0, 0), 0.0005f, 0.03f, 0.01f, 0.01f, 0, "unifoliate");
+
+    constexpr float days_to_dormancy_break = 5.f;
+    constexpr float days_to_dormancy = 10.f;
+    constexpr int dormancy_period = int(days_to_dormancy_break + days_to_dormancy);
+    plantarchitecture.setPlantPhenologicalThresholds(plantID, days_to_dormancy_break, -1, -1, -1, -1, days_to_dormancy);
+    plantarchitecture.makePlantDormant(plantID);
+
+    std::vector<int> dormancy_entry_days;
+    std::vector<int> dormancy_break_days;
+    bool was_dormant = plantarchitecture.isPlantDormant(plantID);
+    DOCTEST_REQUIRE(was_dormant);
+    for (int day = 1; day <= 3 * dormancy_period; day++) {
+        plantarchitecture.advanceTime(plantID, 1.f);
+        const bool is_dormant = plantarchitecture.isPlantDormant(plantID);
+        if (is_dormant && !was_dormant) {
+            dormancy_entry_days.push_back(day);
+        } else if (!is_dormant && was_dormant) {
+            dormancy_break_days.push_back(day);
+        }
+        was_dormant = is_dormant;
+    }
+
+    DOCTEST_REQUIRE(dormancy_entry_days.size() >= 2);
+    DOCTEST_REQUIRE(dormancy_break_days.size() >= 2);
+    DOCTEST_CHECK(dormancy_break_days.at(0) == int(days_to_dormancy_break));
+    DOCTEST_CHECK(dormancy_entry_days.at(0) == dormancy_period);
+    DOCTEST_CHECK(dormancy_entry_days.at(1) == 2 * dormancy_period);
+    DOCTEST_CHECK(dormancy_break_days.at(1) == dormancy_period + int(days_to_dormancy_break));
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture library-built plant phenology is unaffected by PlantInstance defaults") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -12318,7 +12360,7 @@ DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall is deterministic for a s
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall training keeps the tree a wall") {
-    // Two seasons from planting (the model's season is 366 days): the leader has extended to the top wire and been headed there, new
+    // Two seasons from planting (the model's season is 365 days): the leader has extended to the top wire and been headed there, new
     // fruiting branches have grown from it, spurs clothe the year-old wood, and every shoot has been hedged to the wall.
     Context context;
     context.seedRandomGenerator(2024);
@@ -12327,7 +12369,7 @@ DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall training keeps the tree 
     plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
     const vec3 base = make_vec3(0, 0, 0);
     uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(base, 0.f);
-    plantarchitecture.advanceTime(2.f * 366.f + 20.f);
+    plantarchitecture.advanceTime(2.f * 365.f + 20.f);
 
     const float leader_height = appleWallShootTopHeight(plantarchitecture, plantID, 0);
     DOCTEST_CHECK(leader_height >= 2.4f);
@@ -12368,7 +12410,7 @@ DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall is a mature tall spindle
     plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
     const vec3 base = make_vec3(0, 0, 0);
     uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(base, 0.f);
-    plantarchitecture.advanceTime(5.f * 366.f + 20.f);
+    plantarchitecture.advanceTime(5.f * 365.f + 20.f);
 
     // Trunk about 5.4 cm at 30 cm (Cline et al. 2021, NC-140 'Fuji' trial, year 5) and the leader headed back to a fruiting branch
     // within half a metre of the wall's height.

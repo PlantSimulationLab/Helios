@@ -2670,10 +2670,6 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     this->build_context_geometry_petiole = plantarchitecture_ptr->build_context_geometry_petiole;
     this->build_context_geometry_peduncle = plantarchitecture_ptr->build_context_geometry_peduncle;
 
-    //    if( internode_radius==0.f || internode_length_max==0.f || parent_shoot_parameters.internode_radius_max.val()==0.f ){
-    //        build_context_geometry_internode = false;
-    //    }
-
     // Number of longitudinal segments for internode and petiole
     // if Ndiv=0, use Ndiv=1 (but don't add any primitives to Context)
     uint Ndiv_internode_length = std::max(uint(1), phytomer_parameters.internode.length_segments);
@@ -4399,10 +4395,6 @@ void Phytomer::scaleInternodeMaxLength(const float scale_factor) {
 void Phytomer::setInternodeMaxLength(const float internode_length_max_new) {
     float scale_factor = internode_length_max_new / this->internode_length_max;
     scaleInternodeMaxLength(scale_factor);
-}
-
-void Phytomer::setInternodeMaxRadius(float internode_radius_max_new) {
-    this->internode_radius_max = internode_radius_max_new;
 }
 
 void Phytomer::scalePetioleMaxLength(const float scale_factor) {
@@ -11622,8 +11614,10 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
             // predicate is satisfied on the first timestep and -- because time_since_dormancy is reset to 0
             // just below -- on every step thereafter, repeatedly stripping leaves and killing buds via
             // makeDormant(). Every library plant supplies a positive dd_to_dormancy, so this is inert for them.
+            // The comparison is >=, matching the dormancy-break test below: time_since_dormancy has already been advanced for this
+            // step, so a strict > fired one step late and stretched every cycle to dormancy_period + 1 days (a 366-day year).
             const float dormancy_period = plant_instance.dd_to_dormancy_break + plant_instance.dd_to_dormancy;
-            if (dormancy_period > 0.f && plant_instance.time_since_dormancy > dormancy_period) {
+            if (dormancy_period > 0.f && plant_instance.time_since_dormancy >= dormancy_period) {
                 plant_instance.time_since_dormancy = 0;
 
                 // Self-pruning. Evaluated here, at the season boundary, because this is the point at which a branch has

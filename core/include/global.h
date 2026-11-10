@@ -1445,11 +1445,13 @@ namespace helios {
 
     //--------------------- ASSET PATH RESOLUTION -----------------------------------//
 
-    //! Resolve asset file path using cpplocate, allowing executables to run from any directory
+    //! Resolve an asset file path; equivalent to resolveFilePath()
     /**
      * \param[in] relativePath Relative path to the asset file (e.g., "plugins/visualizer/shaders/shader.vert")
      * \return Absolute path to the asset file
-     * \note This function searches for assets in multiple locations: build directory, system install locations, and custom paths
+     * \note The path is resolved relative to the current working directory, then the directory named by the HELIOS_BUILD environment variable (or, if it is not set, the
+     * working directory or its parent, whichever contains a plugins/ directory). An executable must therefore be run from its build directory, or one directory below it,
+     * unless HELIOS_BUILD is set. See resolveFilePath().
      * \ingroup functions
      */
     [[nodiscard]] std::filesystem::path resolveAssetPath(const std::string &relativePath);
@@ -1480,7 +1482,8 @@ namespace helios {
      * Resolves file paths using the following fallback sequence:
      * 1. If absolute path, validates existence and returns canonical path
      * 2. Checks relative to current working directory first
-     * 3. Falls back to checking relative to HELIOS_BUILD environment variable path
+     * 3. Falls back to checking relative to the HELIOS_BUILD environment variable path, or, if HELIOS_BUILD is not set, relative to the current working directory or its parent,
+     *    whichever contains a plugins/ directory
      * 4. Throws helios_runtime_error if file not found in either location
      *
      * \param[in] filename File name with or without path (e.g., "texture.jpg" or "models/texture.jpg")
