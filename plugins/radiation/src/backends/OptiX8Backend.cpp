@@ -270,6 +270,7 @@ void OptiX8Backend::shutdown() {
     freePtr(d_vertex_radiation_out_bottom);
     freePtr(d_vertex_normals);
     freePtr(d_vertex_direct_irradiance);
+    freePtr(d_vertex_normal_map_moments);
     freePtr(d_scatter_buff_top);
     freePtr(d_scatter_buff_bottom);
     freePtr(d_forward_scatter);
@@ -489,6 +490,21 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
         upload(d_class_map_IDs,     geometry.class_map_IDs.data(),   geometry.class_map_IDs.size()   * sizeof(int32_t));
     }
 
+    // ---- Normal maps: one packed buffer, absent (nullptr) when no primitive has a map so that the device programs skip them ----
+    {
+        freeCUdeviceptr(d_normal_maps);
+        const std::vector<uint32_t> packed_normal_maps = helios::packNormalMaps(geometry);
+        if (packed_normal_maps.at(0) != 0u) {
+            upload(d_normal_maps, packed_normal_maps.data(), packed_normal_maps.size() * sizeof(uint32_t));
+        }
+        freeCUdeviceptr(d_normal_map_slots);
+        freeCUdeviceptr(d_normal_map_moments);
+        normal_map_slot_count = geometry.normal_map_slot_count;
+        if (normal_map_slot_count > 0) {
+            upload(d_normal_map_slots, geometry.normal_map_slots.data(), geometry.normal_map_slots.size() * sizeof(uint32_t));
+        }
+    }
+
     // Update h_params device pointers
     const uint32_t Nprims = static_cast<uint32_t>(geometry.primitive_count);
     h_params.transform_matrix         = reinterpret_cast<float *>(d_transform_matrix);
@@ -514,6 +530,8 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     h_params.vertex_normal_count = 0;
     freeCUdeviceptr(d_vertex_direct_irradiance);
     h_params.vertex_direct_irradiance = nullptr;
+    freeCUdeviceptr(d_vertex_normal_map_moments);
+    h_params.vertex_normal_map_moments = nullptr;
     h_params.patch_vertices           = reinterpret_cast<float3 *>(d_patch_vertices);
     h_params.patch_UUIDs              = reinterpret_cast<uint32_t *>(d_patch_UUIDs);
     h_params.triangle_vertices        = reinterpret_cast<float3 *>(d_triangle_vertices);
@@ -539,6 +557,9 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     h_params.class_map_offsets        = reinterpret_cast<uint32_t *>(d_class_map_offsets);
     h_params.class_map_sizes          = reinterpret_cast<int32_t *>(d_class_map_sizes);
     h_params.class_map_IDs            = reinterpret_cast<int32_t *>(d_class_map_IDs);
+    h_params.normal_maps = reinterpret_cast<const uint32_t *>(d_normal_maps);
+    h_params.normal_map_slots = reinterpret_cast<const uint32_t *>(d_normal_map_slots);
+    h_params.normal_map_moments = nullptr; // sized by zeroRadiationBuffers()
 
     // Store counts
     current_primitive_count = geometry.primitive_count;
@@ -1333,7 +1354,7 @@ void OptiX8Backend::getCameraResults(std::vector<float> &pixel_data, std::vector
 // Buffer management utilities
 // ---------------------------------------------------------------------------
 
-void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) {
+void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption, bool record_normal_map_moments) {
     const size_t Nprims = current_primitive_count;
 
     // Absorbed radiation that arrived on the top face: allocated only while tracking is enabled, and null otherwise so the kernels skip the write
@@ -1364,6 +1385,15 @@ void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_fa
     if (d_radiation_out_bottom) CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_out_bottom), 0, outgoing_bytes));
     if (d_scatter_buff_top)     CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_top),     0, outgoing_bytes));
     if (d_scatter_buff_bottom)  CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_bottom),  0, outgoing_bytes));
+
+    // The directions of the diffuse radiation reaching normal-mapped primitives, accumulated by every diffuse launch of a runBand() for the cameras
+    const size_t moment_bytes = record_normal_map_moments ? normal_map_slot_count * 2 * launch_band_count * 3 * sizeof(float) : 0;
+    normal_map_moment_count = moment_bytes / sizeof(float);
+    reallocDevice(d_normal_map_moments, moment_bytes);
+    if (moment_bytes > 0) {
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_normal_map_moments), 0, moment_bytes));
+    }
+    h_params.normal_map_moments = moment_bytes > 0 ? reinterpret_cast<float *>(d_normal_map_moments) : nullptr;
 
     // Each camera's white reference: one [prim][band] block per camera, zeroed only here so that it accumulates over all the
     // direct and diffuse launches of a runBand()
@@ -1520,6 +1550,28 @@ void OptiX8Backend::uploadVertexNormals(const std::vector<float> &vertex_normals
     h_params.vertex_normal_count = static_cast<uint32_t>(vertex_normals.size() / 3);
 }
 
+void OptiX8Backend::getNormalMapMoments(std::vector<float> &moments) {
+    moments.assign(normal_map_moment_count, 0.f);
+    if (normal_map_moment_count > 0) {
+        CUDA_CHECK(cudaMemcpy(moments.data(), reinterpret_cast<void *>(d_normal_map_moments), normal_map_moment_count * sizeof(float), cudaMemcpyDeviceToHost));
+    }
+}
+
+void OptiX8Backend::uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) {
+    if (vertex_moments.size() % 6 != 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::uploadVertexNormalMapMoments): The vertex moments hold " + std::to_string(vertex_moments.size()) + " values, which is not three per face of each vertex and band.");
+    }
+    if (vertex_moments.empty()) {
+        freeCUdeviceptr(d_vertex_normal_map_moments);
+        h_params.vertex_normal_map_moments = nullptr;
+        return;
+    }
+    const size_t bytes = vertex_moments.size() * sizeof(float);
+    reallocDevice(d_vertex_normal_map_moments, bytes);
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_vertex_normal_map_moments), vertex_moments.data(), bytes, cudaMemcpyHostToDevice));
+    h_params.vertex_normal_map_moments = reinterpret_cast<const float *>(d_vertex_normal_map_moments);
+}
+
 void OptiX8Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
     const size_t Nprims = current_primitive_count;
     if (Nprims == 0 || launch_band_count == 0 || current_camera_count == 0) return;
@@ -1654,6 +1706,8 @@ void OptiX8Backend::freeGeometryBuffers() {
     h_params.vertex_normal_count = 0;
     freeCUdeviceptr(d_vertex_direct_irradiance);
     h_params.vertex_direct_irradiance = nullptr;
+    freeCUdeviceptr(d_vertex_normal_map_moments);
+    h_params.vertex_normal_map_moments = nullptr;
     freeCUdeviceptr(d_patch_vertices);
     freeCUdeviceptr(d_patch_UUIDs);
     freeCUdeviceptr(d_triangle_vertices);
@@ -1676,6 +1730,9 @@ void OptiX8Backend::freeGeometryBuffers() {
     freeCUdeviceptr(d_class_map_offsets);
     freeCUdeviceptr(d_class_map_sizes);
     freeCUdeviceptr(d_class_map_IDs);
+    freeCUdeviceptr(d_normal_maps);
+    freeCUdeviceptr(d_normal_map_slots);
+    freeCUdeviceptr(d_normal_map_moments);
     freeCUdeviceptr(d_aabbs);
     freeCUdeviceptr(d_gas_output);
     gas_handle = 0;
@@ -1950,6 +2007,7 @@ void OptiX8Backend::applyLaunchParams(const RayTracingLaunchParams &params) {
     h_params.launch_face            = params.launch_face;
     h_params.scattering_iteration   = params.scattering_iteration;
     h_params.specular_reflection_enabled = params.specular_reflection_enabled;
+    h_params.normal_map_direct = params.normal_map_direct;
     h_params.below_horizon_diffuse_enabled = params.below_horizon_diffuse_enabled;
     h_params.camera_ID              = params.camera_id;
     h_params.camera_position        = make_float3(params.camera_position.x, params.camera_position.y, params.camera_position.z);

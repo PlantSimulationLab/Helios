@@ -107,7 +107,7 @@ namespace helios {
         [[nodiscard]] size_t getAbandonedRayCount() override;
 
         // Buffer utilities
-        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) override;
+        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption, bool record_normal_map_moments) override;
         void zeroScatterBuffers() override;
         void zeroAbandonedRayCount() override;
         void zeroCameraPixelBuffers(const helios::int2 &resolution) override;
@@ -116,6 +116,8 @@ namespace helios {
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) override;
         void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
         void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
+        void getNormalMapMoments(std::vector<float> &moments) override;
+        void uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) override;
         void uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) override;
         void getCameraPixelSpectralClasses(std::vector<uint> &pixel_classes, const helios::int2 &resolution) override;
         void uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) override;
@@ -259,6 +261,14 @@ namespace helios {
         RTvariable surface_layer_tables_RTvariable;
         RTbuffer spectral_class_maps_RTbuffer; //!< Spectral texture class maps, packed (see helios::packSpectralClassMaps())
         RTvariable spectral_class_maps_RTvariable;
+        RTbuffer normal_maps_RTbuffer; //!< Normal maps, packed (see helios::packNormalMaps() and include/NormalMapMath.h)
+        RTvariable normal_maps_RTvariable;
+        RTbuffer normal_map_slots_RTbuffer; //!< Slot of each normal-mapped primitive in normal_map_moments (RayTracingGeometry::normal_map_slots)
+        RTvariable normal_map_slots_RTvariable;
+        RTbuffer normal_map_moments_RTbuffer; //!< [slot][face][launch band][3] directions of the diffuse radiation reaching mapped primitives
+        RTvariable normal_map_moments_RTvariable;
+        size_t normal_map_slot_count = 0;
+        size_t normal_map_moment_count = 0; //!< Number of values recorded in normal_map_moments_RTbuffer, 0 when nothing is recorded
         RTbuffer spectral_palette_RTbuffer; //!< Spectral texture palettes, packed (see helios::packSpectralPalettes())
         RTvariable spectral_palette_RTvariable;
         RTbuffer spectral_incident_RTbuffer; //!< Radiation reaching primitives with a spectral texture (see RayTracingResults::spectral_incident)
@@ -298,6 +308,8 @@ namespace helios {
         RTvariable vertex_normals_RTvariable;
         RTbuffer vertex_direct_irradiance_RTbuffer; //!< Unoccluded direct irradiance per [source][smoothing vertex][band]; one element unless smoothing is enabled and there is a source
         RTvariable vertex_direct_irradiance_RTvariable;
+        RTbuffer vertex_normal_map_moments_RTbuffer; //!< normal_map_moments averaged onto the smoothing vertices [vertex][face][launch band][3]; one element unless smoothing is enabled and there are maps
+        RTvariable vertex_normal_map_moments_RTvariable;
         RTbuffer radiation_specular_RTbuffer;
         RTvariable radiation_specular_RTvariable;
         RTbuffer scatter_buff_top_RTbuffer;
@@ -405,6 +417,7 @@ namespace helios {
         RTvariable camera_ID_RTvariable;
         RTvariable camera_resolution_full_RTvariable;
         RTvariable specular_reflection_enabled_RTvariable;
+        RTvariable normal_map_direct_RTvariable; //!< Camera launches: 1 if normal-mapped primitives' direct radiation is shaded per hit point (RayTracingLaunchParams::normal_map_direct)
         RTvariable below_horizon_diffuse_enabled_RTvariable;
         RTvariable scattering_iteration_RTvariable;
 

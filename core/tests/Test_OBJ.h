@@ -1821,3 +1821,143 @@ DOCTEST_TEST_CASE("Context loadOBJ keeps authored normals and hard edges") {
         DOCTEST_CHECK(largest_component == doctest::Approx(1.f).epsilon(1e-4));
     }
 }
+
+TEST_CASE("OBJ materials carry normal and bump maps") {
+    const std::filesystem::path dir = std::filesystem::temp_directory_path() / "helios_test_obj_normal_maps";
+    std::filesystem::create_directories(dir);
+    const std::string texture = (dir / "diffuse.png").string();
+    const std::string normal_map = (dir / "normal.png").string();
+    const std::string bump_map = (dir / "height.png").string();
+    writePNG(texture, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.3f, 0.6f, 0.2f, 1.f)));
+    writePNG(normal_map, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.6f, 0.45f, 0.95f, 1.f)));
+    writePNGSingleChannel(bump_map, 4, 4, std::vector<uint16_t>(16, 2000), 16);
+
+    auto writeModel = [&](const std::string &name, const std::string &material_lines) {
+        std::ofstream mtl((dir / (name + ".mtl")).string());
+        mtl << "newmtl surface\nKd 1 1 1\nmap_Kd diffuse.png\n" << material_lines;
+        mtl.close();
+        std::ofstream obj((dir / (name + ".obj")).string());
+        obj << "mtllib " << name << ".mtl\nv 0 0 0\nv 1 0 0\nv 1 1 0\nvt 0 0\nvt 1 0\nvt 1 1\nusemtl surface\nf 1/1 2/2 3/3\n";
+        return (dir / (name + ".obj")).string();
+    };
+
+    SUBCASE("norm is a normal map; map_Bump is classified by its image") {
+        Context ctx;
+        std::vector<uint> norm_UUIDs = ctx.loadOBJ(writeModel("norm", "norm -bm 0.5 normal.png\n").c_str(), true);
+        DOCTEST_REQUIRE(norm_UUIDs.size() == 1);
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapKind(norm_UUIDs.front()) == NORMAL_MAP_TANGENT_SPACE);
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapStrength(norm_UUIDs.front()) == doctest::Approx(0.5f));
+
+        std::vector<uint> bump_normal_UUIDs = ctx.loadOBJ(writeModel("bumpnormal", "map_Bump normal.png\n").c_str(), true);
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapKind(bump_normal_UUIDs.front()) == NORMAL_MAP_TANGENT_SPACE);
+
+        std::vector<uint> bump_UUIDs = ctx.loadOBJ(writeModel("bumpheight", "bump -bm 4 height.png\n").c_str(), true);
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapKind(bump_UUIDs.front()) == NORMAL_MAP_BUMP);
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapStrength(bump_UUIDs.front()) == doctest::Approx(4.f));
+    }
+
+    SUBCASE("a map line naming an image Helios cannot read is refused") {
+        // Regression test. A "norm", "map_Bump" or "bump" line whose image was not a PNG or JPEG was skipped without a word, so the model loaded without its map.
+        for (const std::string &line: {"norm normal.tga\n", "map_Bump height.tif\n", "bump -bm 2 relief.exr\n"}) {
+            DOCTEST_INFO(line);
+            Context ctx;
+            DOCTEST_CHECK_THROWS(ctx.loadOBJ(writeModel("unreadable", line).c_str(), true));
+        }
+    }
+
+    SUBCASE("writeOBJ writes the normals Helios applies, under names of their own") {
+        // Regression test. The map image was copied as it is, so a green-flipped (DirectX) map read back with its relief inverted vertically, and a map with the same
+        // file name as the texture (in another folder) overwrote the texture. writeOBJ now writes each material's decoded normals, which read back as the same normals.
+        const std::filesystem::path out_dir = dir / "out_decoded";
+        const std::filesystem::path map_folder = dir / "maps";
+        std::filesystem::create_directories(out_dir);
+        std::filesystem::create_directories(map_folder);
+        // A normal map named like the texture, in another folder, with a varying tilt
+        const std::string same_name_map = (map_folder / "diffuse.png").string();
+        std::vector<RGBAcolor> texels(16);
+        for (int i = 0; i < 16; i++) {
+            texels[i] = make_RGBAcolor(0.5f + 0.02f * float(i), 0.4f + 0.01f * float(i), 0.9f, 1.f);
+        }
+        writePNG(same_name_map, 4, 4, texels);
+        std::vector<std::shared_ptr<const NormalMapTexels>> written;
+        {
+            Context ctx;
+            // The bumped triangle has a texture of its own, so that nothing copies diffuse.png again after its namesake map
+            const std::string other_texture = (dir / "other_diffuse.png").string();
+            writePNG(other_texture, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.3f, 0.6f, 0.2f, 1.f)));
+            const uint flipped = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), texture.c_str(), make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+            const uint bumped = ctx.addTriangle(make_vec3(2, 0, 0), make_vec3(3, 0, 0), make_vec3(3, 1, 0), other_texture.c_str(), make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+            ctx.setPrimitiveNormalMap(flipped, same_name_map, 0.6123457f, true);
+            ctx.setPrimitiveBumpMap(bumped, bump_map, 6.f);
+            written = {ctx.getMaterialNormalMapTexels(ctx.getPrimitiveMaterialID(flipped)), ctx.getMaterialNormalMapTexels(ctx.getPrimitiveMaterialID(bumped))};
+            ctx.writeOBJ((out_dir / "written.obj").string(), {flipped, bumped}, false, true);
+        }
+        Context loaded;
+        const std::vector<uint> UUIDs = loaded.loadOBJ((out_dir / "written.obj").string().c_str(), true);
+        DOCTEST_REQUIRE(UUIDs.size() == 2);
+        for (uint UUID: UUIDs) {
+            // The texture read back is the texture (green 0.6), not the map that shares its file name
+            uint width = 0, height = 0;
+            std::vector<RGBAcolor> texture_texels;
+            readPNG(loaded.getPrimitiveTextureFile(UUID), width, height, texture_texels);
+            DOCTEST_CHECK(std::fabs(texture_texels.front().g - 0.6f) < 0.01f);
+        }
+        // The normals read back are those written, to the 8 bits of the image
+        for (size_t k = 0; k < written.size(); k++) {
+            const std::shared_ptr<const NormalMapTexels> &original = written.at(k);
+            float best = 1e6f;
+            for (uint UUID: UUIDs) {
+                const std::shared_ptr<const NormalMapTexels> reread = loaded.getMaterialNormalMapTexels(loaded.getPrimitiveMaterialID(UUID));
+                DOCTEST_REQUIRE(reread != nullptr);
+                if (reread->resolution.x != original->resolution.x || reread->resolution.y != original->resolution.y) {
+                    continue;
+                }
+                float largest_difference = 0.f;
+                for (int row = 0; row < original->resolution.y; row++) {
+                    for (int column = 0; column < original->resolution.x; column++) {
+                        largest_difference = std::max(largest_difference, (original->getNormal(column, row) - reread->getNormal(column, row)).magnitude());
+                    }
+                }
+                best = std::min(best, largest_difference);
+            }
+            DOCTEST_INFO("written map " << k);
+            DOCTEST_CHECK(best < 0.012f);
+        }
+    }
+
+    SUBCASE("a map without a diffuse texture is refused") {
+        std::ofstream mtl((dir / "notexture.mtl").string());
+        mtl << "newmtl surface\nKd 1 1 1\nnorm normal.png\n";
+        mtl.close();
+        std::ofstream obj((dir / "notexture.obj").string());
+        obj << "mtllib notexture.mtl\nv 0 0 0\nv 1 0 0\nv 1 1 0\nusemtl surface\nf 1 2 3\n";
+        obj.close();
+        Context ctx;
+        DOCTEST_CHECK_THROWS(ctx.loadOBJ((dir / "notexture.obj").string().c_str(), true));
+    }
+
+    SUBCASE("writeOBJ writes the maps and they read back") {
+        const std::filesystem::path out_dir = dir / "out";
+        std::filesystem::create_directories(out_dir);
+        {
+            Context ctx;
+            uint normal_triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), texture.c_str(), make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+            uint bump_triangle = ctx.addTriangle(make_vec3(2, 0, 0), make_vec3(3, 0, 0), make_vec3(3, 1, 0), texture.c_str(), make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+            ctx.setPrimitiveNormalMap(normal_triangle, normal_map, 0.75f);
+            ctx.setPrimitiveBumpMap(bump_triangle, bump_map, 6.f);
+            ctx.writeOBJ((out_dir / "written.obj").string(), {normal_triangle, bump_triangle}, false, true);
+        }
+        // Each map is written as the normals Helios applies, named after the written model, and reads back as a tangent-space normal map at a strength of 1
+        DOCTEST_CHECK(std::filesystem::exists(out_dir / "written_normal_0.png"));
+        DOCTEST_CHECK(std::filesystem::exists(out_dir / "written_normal_1.png"));
+        Context loaded;
+        std::vector<uint> UUIDs = loaded.loadOBJ((out_dir / "written.obj").string().c_str(), true);
+        DOCTEST_REQUIRE(UUIDs.size() == 2);
+        for (uint UUID: UUIDs) {
+            DOCTEST_CHECK(loaded.getPrimitiveNormalMapKind(UUID) == NORMAL_MAP_TANGENT_SPACE);
+            DOCTEST_CHECK(loaded.getPrimitiveNormalMapStrength(UUID) == doctest::Approx(1.f));
+        }
+    }
+
+    std::filesystem::remove_all(dir);
+}

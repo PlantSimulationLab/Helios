@@ -133,6 +133,14 @@ RT_PROGRAM void direct_raygen() {
             // The class of a spectral texture at the launch point, whose reflectivity and transmissivity the rays from it use
             prd.palette_entry = d_spectralPaletteEntry(objID, d_originTextureUV(ptype, sp, puvID));
 
+            // The shading normal of a normal map at the launch point, which only a surface layer's angle-dependent split of the light uses here
+            const uint origin_map = d_normalMapOf(objID);
+            const bool origin_has_normal = origin_map != helios_nm::NO_MAP && d_hasSurfaceLayer(objID);
+            float3 origin_shading_normal = normal;
+            if (origin_has_normal) {
+                origin_shading_normal = d_normalMapShadingNormalAt(ptype, origin_map, m_trans, puvID, normal, sp, false);
+            }
+
             // translate the ray to the location of the primitive
 
             float3 ray_origin = sp;
@@ -237,7 +245,9 @@ RT_PROGRAM void direct_raygen() {
                 } else {
                     prd.face = 0;
                 }
-                prd.origin_cos = fabs(dot(ray_direction, normal));
+                // A surface layer sees the light at the angle of the shading normal at the launch point (|m.L|, so that a facet tipped away from the source counts as its mirror image,
+                // consistently with the folding of diffuse rays); the beam power the primitive intercepts stays at the geometric cosine
+                prd.origin_cos = origin_has_normal ? fabs(dot(ray_direction, origin_shading_normal)) : fabs(dot(ray_direction, normal));
 
                 if ((prd.face == 1 || twosided_flag[objID] == 1) && twosided_flag[objID] != 3) {
 
@@ -426,10 +436,16 @@ RT_PROGRAM void diffuse_raygen() {
             float3 ray_origin;
             optix::Ray ray;
 
+            // A normal map leaves the cosine lobe on the facet normal, so that the primitive gathers what its footprint intercepts (as a relief that is a heightfield does)
             ray_direction = d_rotatePoint(ray_direction, acos_safe(normal.z), atan2(normal.y, normal.x));
 
             prd.strength = 1.f / float(dimx);
+            // A surface layer sees each ray at its angle to the shading normal at the launch point
             prd.origin_cos = fabs(dot(ray_direction, normal));
+            const uint origin_map = d_normalMapOf(objID);
+            if (origin_map != helios_nm::NO_MAP && d_hasSurfaceLayer(objID)) {
+                prd.origin_cos = fabs(dot(ray_direction, d_normalMapShadingNormalAt(ptype, origin_map, m_trans, puvID, normal, sp, false)));
+            }
 
             prd.origin_UUID = UUID;
             prd.source_ID = Nsources; // diffuse/scatter material slot, weighted by the band's combined incident spectrum

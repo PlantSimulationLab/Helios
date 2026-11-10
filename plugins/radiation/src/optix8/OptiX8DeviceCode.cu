@@ -20,6 +20,7 @@
 #include <optix_device.h>
 #include "OptiX8Math.h"
 #include "OptiX8LaunchParams.h"
+#include "NormalMapMath.h"
 
 // ---------------------------------------------------------------------------
 // Launch params declared as constant memory (filled by optixLaunch)
@@ -234,6 +235,133 @@ static __forceinline__ __device__ uint32_t paletteEntryAt(uint32_t pos, float2 u
     iy = max(0, min(iy, height - 1));
     const uint32_t texel_class = params.class_map_data[params.class_map_offsets[class_map] + (uint32_t)(iy * width + ix)];
     return texel_class == 0u ? 0xFFFFFFFFu : first_entry + texel_class - 1u;
+}
+
+// ---------------------------------------------------------------------------
+// Normal maps (the conventions are specified in include/NormalMapMath.h)
+// ---------------------------------------------------------------------------
+
+//! Reads the packed normal-map words for the shared helios_nm functions
+struct NormalMapWords {
+    const uint32_t *words;
+    __device__ __forceinline__ uint32_t operator[](uint32_t i) const {
+        return words[i];
+    }
+};
+
+static __forceinline__ __device__ helios_nm::Vec3 toNM(const float3 &v) {
+    return helios_nm::make(v.x, v.y, v.z);
+}
+static __forceinline__ __device__ float3 fromNM(const helios_nm::Vec3 &v) {
+    return make_float3(v.x, v.y, v.z);
+}
+
+//! Normal map of the primitive at position pos, or helios_nm::NO_MAP
+static __forceinline__ __device__ uint32_t normalMapOf(uint32_t pos) {
+    if (params.normal_maps == nullptr) {
+        return helios_nm::NO_MAP;
+    }
+    return helios_nm::mapIndex(NormalMapWords{params.normal_maps}, pos);
+}
+
+
+//! Shading normal on the top face of the primitive at position pos at canonical point sp (as originTextureUV() takes it), about the unit base normal base_top on the side of the facet's top normal:
+//! the nearest texel for ray launches, bilinear for cameras
+static __forceinline__ __device__ float3 normalMapShadingNormalAt(uint32_t pos, uint32_t ptype, uint32_t map, const float *T, const float3 &base_top, const float3 &sp, bool bilinear) {
+    helios_nm::Vec3 E1, E2;
+    helios_nm::primitiveEdges(T, ptype, E1, E2);
+    const bool has_uv = params.uv_IDs[pos] >= 0;
+    float2 uv0 = make_float2(0.f, 0.f), uv1 = uv0, uv2 = uv0;
+    if (has_uv) {
+        uv0 = params.uv_data[pos * 4 + 0];
+        uv1 = params.uv_data[pos * 4 + 1];
+        uv2 = params.uv_data[pos * 4 + 2];
+    }
+    float ax, ay, bx, by;
+    helios_nm::uvJacobian(ptype, has_uv, uv0.x, uv0.y, uv1.x, uv1.y, uv2.x, uv2.y, ax, ay, bx, by);
+    const helios_nm::Frame frame = helios_nm::buildFrame(E1, E2, ax, ay, bx, by, toNM(base_top));
+    float u, v;
+    helios_nm::texcoord(ptype, uv0.x, uv0.y, ax, ay, bx, by, sp.x, sp.y, u, v);
+    const NormalMapWords words{params.normal_maps};
+    const helios_nm::Vec3 n_ts = bilinear ? helios_nm::fetchBilinear(words, map, u, v) : helios_nm::fetchNearest(words, map, u, v);
+    return fromNM(helios_nm::perturb(frame, n_ts));
+}
+
+//! The canonical point sp of a hit on the primitive at position pos from its hit attributes (patch-local coordinates plus 0.5, or the barycentric weights of a triangle's second and third corners)
+static __forceinline__ __device__ float3 canonicalPointFromHit(uint32_t ptype, float attr_u, float attr_v) {
+    return ptype == 1 ? make_float3(attr_v, attr_u + attr_v, 0.f) : make_float3(attr_u - 0.5f, attr_v - 0.5f, 0.f);
+}
+
+//! Shading normal on the top face of the primitive at position pos at the current hit (closest-hit programs only), with the facet's top normal returned in normal_top
+static __forceinline__ __device__ float3 hitShadingNormalTop(uint32_t pos, uint32_t map, bool bilinear, float3 &normal_top) {
+    float T[16];
+    for (int i = 0; i < 16; i++) {
+        T[i] = params.transform_matrix[pos * 16 + i];
+    }
+    const uint32_t ptype = params.primitive_type[pos];
+    helios_nm::Vec3 E1, E2;
+    helios_nm::primitiveEdges(T, ptype, E1, E2);
+    normal_top = fromNM(helios_nm::normalize(helios_nm::cross(E1, E2)));
+    const float3 sp = canonicalPointFromHit(ptype, __uint_as_float(optixGetAttribute_2()), __uint_as_float(optixGetAttribute_3()));
+    return normalMapShadingNormalAt(pos, ptype, map, T, normal_top, sp, bilinear);
+}
+
+//! Adds the diffuse radiation that a ray brings to one face of a normal-mapped primitive, times the direction it came from, to the record cameras shade the
+//! primitive's scattered light with (see RayTracingGeometry::normal_map_slots and normalMapDiffuseRelief()). Nothing is recorded for other primitives.
+static __forceinline__ __device__ void recordIncidentDirection(uint32_t pos, bool face_top, uint32_t b_launch, float body_strength, const float3 &direction) {
+    if (params.normal_map_moments == nullptr || body_strength == 0.f) {
+        return;
+    }
+    const uint32_t slot = params.normal_map_slots[pos];
+    if (slot == 0xFFFFFFFFu) {
+        return;
+    }
+    float *moment = params.normal_map_moments + ((size_t(slot) * 2u + (face_top ? 0u : 1u)) * params.Nbands_launch + b_launch) * 3u;
+    atomicFloatAdd(&moment[0], body_strength * direction.x);
+    atomicFloatAdd(&moment[1], body_strength * direction.y);
+    atomicFloatAdd(&moment[2], body_strength * direction.z);
+}
+
+//! The change, for a camera, in the scattered light the viewed face of a normal-mapped primitive sends out where its shading normal tilts away from the base normal
+//! (the facet's, or the smoothed one) by the tangential vector m_t, given the camera-weighted reflectivity and transmissivity of the diffuse slot. The diffuse rays of
+//! a primitive gather about its facet normal, as without a map, so that it absorbs what its footprint intercepts; with the radiance reaching each face taken as linear in
+//! direction, fitted to the recorded first moment M of what reached it, a facet tilted by m_t would receive (8/3) m_t . M_t more, M_t the part of M along the facet
+//! (unit normal facet_normal) the moment was gathered on. The face toward the camera reflects that, and the light it transmits entered the other face, whose shading
+//! normal is -m. A uniform sky gives no relief. With camera flux smoothing (smooth_corners[0] >= 0) and the moments averaged onto the smoothing vertices, the moments are interpolated
+//! from the facet's corners with smooth_weights, so that the relief is continuous across facets.
+static __forceinline__ __device__ float normalMapDiffuseRelief(uint32_t pos, bool face_top, uint32_t b_launch, const float3 &shading_normal, const float3 &base_normal, const float3 &facet_normal, float rho_d, float tau_d,
+                                                               const int32_t *smooth_corners, const float *smooth_weights) {
+    if (params.normal_map_moments == nullptr) {
+        return 0.f;
+    }
+    const uint32_t slot = params.normal_map_slots[pos];
+    if (slot == 0xFFFFFFFFu) {
+        return 0.f;
+    }
+    float3 same = make_float3(0.f, 0.f, 0.f), other = make_float3(0.f, 0.f, 0.f);
+    const uint32_t face_same = face_top ? 0u : 1u;
+    if (params.vertex_normal_map_moments != nullptr && smooth_corners[0] >= 0) {
+        for (int c = 0; c < 4; c++) {
+            if (smooth_corners[c] < 0) {
+                continue;
+            }
+            const float *vertex_same = params.vertex_normal_map_moments + ((size_t(smooth_corners[c]) * 2u + face_same) * params.Nbands_launch + b_launch) * 3u;
+            const float *vertex_other = params.vertex_normal_map_moments + ((size_t(smooth_corners[c]) * 2u + (1u - face_same)) * params.Nbands_launch + b_launch) * 3u;
+            same = make_float3(same.x + smooth_weights[c] * vertex_same[0], same.y + smooth_weights[c] * vertex_same[1], same.z + smooth_weights[c] * vertex_same[2]);
+            other = make_float3(other.x + smooth_weights[c] * vertex_other[0], other.y + smooth_weights[c] * vertex_other[1], other.z + smooth_weights[c] * vertex_other[2]);
+        }
+    } else {
+        const float *own_same = params.normal_map_moments + ((size_t(slot) * 2u + face_same) * params.Nbands_launch + b_launch) * 3u;
+        const float *own_other = params.normal_map_moments + ((size_t(slot) * 2u + (1u - face_same)) * params.Nbands_launch + b_launch) * 3u;
+        same = make_float3(own_same[0], own_same[1], own_same[2]);
+        other = make_float3(own_other[0], own_other[1], own_other[2]);
+    }
+    float3 weighted = make_float3(rho_d * same.x - tau_d * other.x, rho_d * same.y - tau_d * other.y, rho_d * same.z - tau_d * other.z);
+    const float normal_part = dot(weighted, facet_normal);
+    weighted = make_float3(weighted.x - normal_part * facet_normal.x, weighted.y - normal_part * facet_normal.y, weighted.z - normal_part * facet_normal.z);
+    const float along = dot(shading_normal, base_normal);
+    const float3 m_t = make_float3(shading_normal.x - along * base_normal.x, shading_normal.y - along * base_normal.y, shading_normal.z - along * base_normal.z);
+    return (8.f / 3.f) * dot(m_t, weighted);
 }
 
 // Reflectivity, transmissivity and their camera-weighted values of the primitive a ray left, at the point it left from
@@ -843,14 +971,20 @@ static __forceinline__ __device__ float vertexDirectIrradiance(uint32_t s, uint3
 //! With camera flux smoothing: direct radiation of source s reaching one face of a facet, evaluated with the shading normal. face_normal and face_shading_normal are the facet's normal and the shading
 //! normal of that face, and facet_value what the face itself received. That carries the cosine of the facet's normal, which is replaced by that of the shading normal. A face turned away from the source
 //! received nothing of its own, yet near the terminator its shading normal can still face the source; it takes the irradiance its vertices carry from the neighbouring facets that the source reached.
-static __forceinline__ __device__ float faceDirect(float facet_value, const float3 &to_source, const float3 &face_normal, const float3 &face_shading_normal, uint32_t s, uint32_t b_launch, const int32_t v[4], const float w[4]) {
+//! With soften (a normal map), the rescaled value is multiplied by the shadow-terminator softening of Chiang et al. (see helios_nm::terminatorSoftening()), so that relief does not end in a hard edge where the
+//! facet still faces the source but the shading normal barely does. v[0] < 0 (no smoothing vertices) leaves a face turned away from the source with nothing.
+static __forceinline__ __device__ float faceDirect(float facet_value, const float3 &to_source, const float3 &face_normal, const float3 &face_shading_normal, uint32_t s, uint32_t b_launch, const int32_t v[4], const float w[4], bool soften) {
     const float mu_facet = dot(face_normal, to_source);
     const float mu_shading = fmaxf(0.f, dot(face_shading_normal, to_source));
     if (mu_shading <= 0.f) {
         return 0.f;
     }
     if (mu_facet > 0.f) {
-        return facet_value * mu_shading / mu_facet;
+        const float softening = soften ? helios_nm::terminatorSoftening(toNM(face_normal), toNM(face_shading_normal), toNM(to_source)) : 1.f;
+        return facet_value * mu_shading / mu_facet * softening;
+    }
+    if (v[0] < 0) {
+        return 0.f;
     }
     return vertexDirectIrradiance(s, b_launch, v, w) * mu_shading;
 }
@@ -860,7 +994,7 @@ static __forceinline__ __device__ float faceDirect(float facet_value, const floa
 //! side. The viewed face reflects what reaches it and passes on what reaches the other face; a surface layer, whose albedo table is `layer` (null for none), keeps 1 - a(mu) of it in the body. The
 //! direct radiation a facet records reached the face toward the source.
 static __forceinline__ __device__ float smoothedDirectBodyFlux(uint32_t pos, uint32_t b_launch, uint32_t b_global, const float *layer, const float3 &viewed_normal, const float3 &shading_normal, const float3 &point, const int32_t v[4],
-                                                               const float w[4]) {
+                                                               const float w[4], bool soften) {
     const float3 back_normal = make_float3(-viewed_normal.x, -viewed_normal.y, -viewed_normal.z);
     const float3 back_shading_normal = make_float3(-shading_normal.x, -shading_normal.y, -shading_normal.z);
     float flux = 0.f;
@@ -872,11 +1006,11 @@ static __forceinline__ __device__ float smoothedDirectBodyFlux(uint32_t pos, uin
         const float rho = params.rho_cam[material];
         const float tau = params.tau_cam ? params.tau_cam[material] : 0.f;
         if (rho > 0.f) {
-            const float reaching = faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, viewed_normal, shading_normal, s, b_launch, v, w);
+            const float reaching = faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, viewed_normal, shading_normal, s, b_launch, v, w, soften);
             flux += rho * reaching * (layer ? 1.f - surfaceLayerAlbedo(layer, fmaxf(0.f, dot(shading_normal, to_source))) : 1.f);
         }
         if (tau > 0.f) {
-            const float reaching = faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, back_normal, back_shading_normal, s, b_launch, v, w);
+            const float reaching = faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, back_normal, back_shading_normal, s, b_launch, v, w, soften);
             flux += tau * reaching * (layer ? 1.f - surfaceLayerAlbedo(layer, fmaxf(0.f, dot(back_shading_normal, to_source))) : 1.f);
         }
     }
@@ -887,13 +1021,13 @@ static __forceinline__ __device__ float smoothedDirectBodyFlux(uint32_t pos, uin
 //! evaluated with the interpolated shading normal rather than the facet's. viewed_normal is the facet's own unit normal on the side the camera sees, and shading_normal the interpolated one on that side.
 //! The incident flux carries the cosine of the facet, so it is rescaled to the cosine of the shading normal; it reached the face toward the source, so only a source on the viewed side counts.
 static __forceinline__ __device__ float directLayerReflectionSmoothed(uint32_t pos, uint32_t b_launch, const float *table, const float3 &viewed_normal, const float3 &shading_normal, const float3 &to_viewer, const float3 &point, int camera,
-                                                                      const int32_t v[4], const float w[4]) {
+                                                                      const int32_t v[4], const float w[4], bool soften) {
     float reflected = 0.f;
     for (uint32_t s = 0; s < params.Nsources; s++) {
         const float3 to_source = directionToSource(s, point);
         // What reached the face toward the source; a viewed face turned away from it takes the irradiance its vertices carry (see faceDirect())
         const float facet_value = dot(viewed_normal, to_source) > 0.f ? params.radiation_specular[(s * params.Nprimitives + pos) * params.Nbands_launch + b_launch] : 0.f;
-        float incident = faceDirect(facet_value, to_source, viewed_normal, shading_normal, s, b_launch, v, w);
+        float incident = faceDirect(facet_value, to_source, viewed_normal, shading_normal, s, b_launch, v, w, soften);
         if (incident <= 0.f)
             continue;
         if (camera >= 0) {
@@ -983,7 +1117,8 @@ extern "C" __global__ void __miss__direct() {
             const float *layer = surfaceLayerTable(origin_position, b_global);
             const float layer_albedo = layer ? surfaceLayerAlbedo(layer, prd->origin_cos) : 0.f;
             const double body_strength = layer ? strength * (1.0 - layer_albedo) : strength;
-            if ((layer || isSmoothedPrimitive(origin_position)) && params.radiation_specular) {
+            // Also recorded for a primitive with a normal map, whose direct radiation cameras shade per hit point with the shading normal
+            if ((layer || isSmoothedPrimitive(origin_position) || normalMapOf(origin_position) != helios_nm::NO_MAP) && params.radiation_specular) {
                 atomicFloatAdd(&params.radiation_specular[(prd->source_ID * Nprims + origin_position) * Nbands_launch + (uint32_t)b], (float)strength);
             }
             // The reflected energy is also kept in the face's second outgoing component, so that the host counts it in the energy
@@ -1108,6 +1243,7 @@ extern "C" __global__ void __miss__diffuse() {
             if (layer_albedo > 0.f) {
                 depositLayerReflection(prd, ind_origin, b_global, strength * layer_albedo);
             }
+            recordIncidentDirection(origin_position, prd->face, (uint32_t) b, body_strength, ray_dir);
 
             atomicFloatAdd(&params.radiation_in[ind_origin], body_strength * (1.f - t_rho - t_tau));
             if (params.radiation_in_top && prd->face) {
@@ -1456,6 +1592,19 @@ extern "C" __global__ void __closesthit__diffuse() {
     const uint32_t Nbands_global = params.Nbands_global;
     const uint32_t Nbands_launch = params.Nbands_launch;
 
+    // The angle-dependent terms of a hit primitive's surface layer see the ray at the angle of its shading normal; a Lambertian surface sends out the same radiance at every angle, so only a
+    // layered primitive with a normal map needs the shading normal here
+    const uint32_t hit_map = normalMapOf(hit_position);
+    const bool hit_shaded = hit_map != helios_nm::NO_MAP && params.surface_model != nullptr && params.surface_model[hit_position] != 0u;
+    float3 hit_normal_top = make_float3(0.f, 0.f, 1.f);
+    float3 hit_shading_top = hit_normal_top;
+    if (hit_shaded) {
+        hit_shading_top = hitShadingNormalTop(hit_position, hit_map, false, hit_normal_top);
+    }
+    // Only a primitive with a surface layer uses the angle, so the others skip reading their transform for it
+    const bool hit_has_layer = params.surface_model != nullptr && params.surface_model[hit_position] != 0u;
+    const float hit_cos = hit_shaded ? fabsf(dot(hit_shading_top, optixGetWorldRayDirection())) : (hit_has_layer ? primitiveNormalCos(hit_position, optixGetWorldRayDirection()) : 0.f);
+
     int b = -1;
     for (uint32_t b_global = 0; b_global < Nbands_global; b_global++) {
         if (!params.band_launch_flag[b_global]) continue;
@@ -1469,7 +1618,7 @@ extern "C" __global__ void __closesthit__diffuse() {
         // A hit primitive with a surface layer sends out its two components, in proportions that depend on the angle
         const float *hit_layer = surfaceLayerTable(hit_position, b_global);
         const float *hit_outgoing = face_top ? params.radiation_out_top : params.radiation_out_bottom;
-        float outgoing = hit_layer ? outgoingLayerFlux(hit_outgoing, ind_hit, hit_layer, primitiveNormalCos(hit_position, optixGetWorldRayDirection())) : hit_outgoing[ind_hit];
+        float outgoing = hit_layer ? outgoingLayerFlux(hit_outgoing, ind_hit, hit_layer, hit_cos) : hit_outgoing[ind_hit];
         if (hit_layer && params.specular_reflection_enabled != 0u && params.radiation_specular) {
             const float3 ray_direction = optixGetWorldRayDirection();
             const float3 to_viewer = make_float3(-ray_direction.x, -ray_direction.y, -ray_direction.z);
@@ -1480,7 +1629,15 @@ extern "C" __global__ void __closesthit__diffuse() {
             const float3 ray_origin = optixGetWorldRayOrigin();
             const float  t_hit = optixGetRayTmax();
             const float3 point = make_float3(ray_origin.x + t_hit * ray_direction.x, ray_origin.y + t_hit * ray_direction.y, ray_origin.z + t_hit * ray_direction.z);
-            outgoing += directLayerReflection(hit_position, (uint32_t)b, hit_layer, face_normal, to_viewer, point, -1);
+            if (hit_shaded) {
+                // The lobe around the shading normal, with the incident flux carried from the facet's cosine to the shading normal's
+                const float3 viewed_shading = dot(hit_normal_top, face_normal) > 0.f ? hit_shading_top : make_float3(-hit_shading_top.x, -hit_shading_top.y, -hit_shading_top.z);
+                const int32_t no_vertices[4] = {-1, -1, -1, -1};
+                const float no_weights[4] = {0.f, 0.f, 0.f, 0.f};
+                outgoing += directLayerReflectionSmoothed(hit_position, (uint32_t) b, hit_layer, face_normal, viewed_shading, to_viewer, point, -1, no_vertices, no_weights, true);
+            } else {
+                outgoing += directLayerReflection(hit_position, (uint32_t) b, hit_layer, face_normal, to_viewer, point, -1);
+            }
         }
         // Forward scattering estimate (see RadiationModel::runBand()): the flux this ray carries away from the origin along its
         // path, times the fraction of it the surface it reaches scatters again. A cover reflects its reflectance; what it transmits
@@ -1498,7 +1655,7 @@ extern "C" __global__ void __closesthit__diffuse() {
                     const uint32_t hit_radprop_ind = prd->source_ID * Nprims * Nbands_global + hit_position * Nbands_global + b_global;
                     rescattered = params.rho[hit_radprop_ind] + params.tau[hit_radprop_ind];
                     if (hit_layer) {
-                        const float hit_albedo = surfaceLayerAlbedo(hit_layer, primitiveNormalCos(hit_position, optixGetWorldRayDirection()));
+                        const float hit_albedo = surfaceLayerAlbedo(hit_layer, hit_cos);
                         rescattered = hit_albedo + (1.f - hit_albedo) * rescattered;
                     }
                 }
@@ -1526,6 +1683,7 @@ extern "C" __global__ void __closesthit__diffuse() {
         if (layer_albedo > 0.f) {
             depositLayerReflection(prd, ind_origin, b_global, (float)(strength * layer_albedo));
         }
+        recordIncidentDirection(origin_position, prd->face, (uint32_t) b, (float) body_strength, optixGetWorldRayDirection());
 
         atomicFloatAdd(&params.radiation_in[ind_origin], (float)(body_strength * (1.0 - t_rho - t_tau)));
         if (params.radiation_in_top && prd->face) {
@@ -1674,6 +1832,22 @@ extern "C" __global__ void __closesthit__camera() {
             shading_normal = normalize(interpolated);
         }
     }
+    // A normal map tilts the shading normal (the facet's, or the smoothed one) by the texel at the hit point, bilinearly interpolated so that a magnified map does not show its texels
+    const uint32_t hit_map = normalMapOf(hit_position);
+    const bool normal_mapped = hit_map != helios_nm::NO_MAP;
+    // The normal the map tilts (the facet's or the smoothed one), on the viewed side
+    const float3 base_viewed = shading_normal;
+    if (normal_mapped) {
+        const uint32_t hit_type = params.primitive_type[hit_position];
+        const float3 base_top = face_top ? shading_normal : make_float3(-shading_normal.x, -shading_normal.y, -shading_normal.z);
+        const float3 sp = canonicalPointFromHit(hit_type, __uint_as_float(optixGetAttribute_2()), __uint_as_float(optixGetAttribute_3()));
+        const float3 m_top = normalMapShadingNormalAt(hit_position, hit_type, hit_map, T, base_top, sp, true);
+        shading_normal = face_top ? m_top : make_float3(-m_top.x, -m_top.y, -m_top.z);
+    }
+    // The angle-dependent terms (the direct radiation per hit point, a surface layer's viewing angle and lobe) use the shading normal when there is one
+    const bool use_shading_normal = smooth_shading || normal_mapped;
+    // A normal-mapped primitive's direct radiation is shaded per hit point when the host removed what the direct launch deposited from the outgoing radiation the camera reads
+    const bool shade_direct_per_hit = normal_mapped ? params.normal_map_direct != 0u : smooth_shading;
     const int32_t smooth_corners[4] = {smooth_v0, smooth_v1, smooth_v2, smooth_v3};
     const float smooth_weights[4] = {smooth_w0, smooth_w1, smooth_w2, smooth_w3};
 
@@ -1710,8 +1884,8 @@ extern "C" __global__ void __closesthit__camera() {
         }
         const bool class_applies = hit_class_slot != 0xFFFFFFFFu && params.palette_band_active[globalBandIndex(b)] != 0u;
         // With smoothing, the vertices carry the radiation other than the sources' direct radiation, which is evaluated here per facet with the shading normal
-        if (smooth_shading && params.radiation_specular != nullptr && !class_applies) {
-            outgoing_flux += smoothedDirectBodyFlux(hit_position, b, globalBandIndex(b), surfaceLayerTable(hit_position, globalBandIndex(b)), normal, shading_normal, hit_point, smooth_corners, smooth_weights);
+        if (shade_direct_per_hit && params.radiation_specular != nullptr && !class_applies) {
+            outgoing_flux += smoothedDirectBodyFlux(hit_position, b, globalBandIndex(b), surfaceLayerTable(hit_position, globalBandIndex(b)), normal, shading_normal, hit_point, smooth_corners, smooth_weights, normal_mapped);
         }
         // The class's own outgoing radiation: flat over the facet, or with camera flux smoothing, the class's camera-weighted reflectivity and
         // transmissivity applied to the radiation reaching the two faces, and the emitted radiation, interpolated from the facet's vertices
@@ -1743,8 +1917,8 @@ extern "C" __global__ void __closesthit__camera() {
                         const float3 to_source = directionToSource(slot, hit_point);
                         const float incident = params.radiation_specular[(slot * Nprims + hit_position) * Nbands_l + b];
                         const bool viewed_face_toward_source = dot(normal, to_source) > 0.f;
-                        same_value = faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, normal, shading_normal, slot, b, smooth_corners, smooth_weights);
-                        other_value = faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, back_normal, back_shading_normal, slot, b, smooth_corners, smooth_weights);
+                        same_value = faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, normal, shading_normal, slot, b, smooth_corners, smooth_weights, normal_mapped);
+                        other_value = faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, back_normal, back_shading_normal, slot, b, smooth_corners, smooth_weights, normal_mapped);
                     } else {
                         same_value = vertexValue(same_face, 0);
                         other_value = vertexValue(1u - same_face, 0);
@@ -1753,7 +1927,38 @@ extern "C" __global__ void __closesthit__camera() {
                 }
             } else {
                 outgoing_flux = params.class_flux[((face_top ? 0u : params.class_flux_slots) + hit_class_slot) * Nbands_l + b];
+                // With a normal map, the host left the sources' direct radiation out of the class flux, and it is shaded here with the shading normal
+                if (normal_mapped && params.normal_map_direct != 0u && params.radiation_specular != nullptr) {
+                    const uint32_t b_global = globalBandIndex(b);
+                    const float3 back_normal = make_float3(-normal.x, -normal.y, -normal.z);
+                    const float3 back_shading_normal = make_float3(-shading_normal.x, -shading_normal.y, -shading_normal.z);
+                    for (uint32_t slot = 0; slot < params.Nsources; slot++) {
+                        const size_t ind_cam = ((size_t(slot) * params.Npalette_entries + hit_entry) * params.Nbands_global + b_global) * params.Ncameras + params.camera_ID;
+                        const float3 to_source = directionToSource(slot, hit_point);
+                        const float incident = params.radiation_specular[(slot * Nprims + hit_position) * Nbands_l + b];
+                        const bool viewed_face_toward_source = dot(normal, to_source) > 0.f;
+                        const float same_value = faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, normal, shading_normal, slot, b, smooth_corners, smooth_weights, true);
+                        const float other_value = faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, back_normal, back_shading_normal, slot, b, smooth_corners, smooth_weights, true);
+                        outgoing_flux += params.palette_rho_cam[ind_cam] * same_value + params.palette_tau_cam[ind_cam] * other_value;
+                    }
+                }
             }
+        }
+        // A normal map also shades the scattered light (from the sky and other surfaces), by the direction it came from
+        if (normal_mapped && params.normal_map_moments != nullptr) {
+            const uint32_t b_global = globalBandIndex(b);
+            float rho_d, tau_d;
+            if (class_applies) {
+                const size_t ind_cam = ((size_t(params.Nsources) * params.Npalette_entries + hit_entry) * params.Nbands_global + b_global) * params.Ncameras + params.camera_ID;
+                rho_d = params.palette_rho_cam[ind_cam];
+                tau_d = params.palette_tau_cam[ind_cam];
+            } else {
+                const size_t material = ((size_t(params.Nsources) * Nprims + hit_position) * params.Nbands_global + b_global) * params.Ncameras + params.camera_ID;
+                rho_d = params.rho_cam[material];
+                tau_d = params.tau_cam ? params.tau_cam[material] : 0.f;
+            }
+            const float relief = normalMapDiffuseRelief(hit_position, face_top, b, shading_normal, base_viewed, normalize(normal), rho_d, tau_d, smooth_corners, smooth_weights);
+            outgoing_flux = outgoing_flux >= 0.f ? fmaxf(0.f, outgoing_flux + relief) : outgoing_flux + relief;
         }
         // A surface with a layer sends out its two components, in proportions that depend on the viewing angle. With smoothing, the
         // second component is interpolated from the facet's vertices like the first, and the viewing angle is taken from the shading normal.
@@ -1761,16 +1966,22 @@ extern "C" __global__ void __closesthit__camera() {
             const uint32_t layer_offset = Nprims * Nbands_l;
             float mu_view;
             float layer_flux;
-            if (smooth_shading) {
+            if (normal_mapped) {
+                // A texel of a map tilted away from the viewer is seen at |m.d|, as the rays the primitive sends out are folded into its hemisphere
+                mu_view = fminf(1.f, fabsf(dot(shading_normal, ray_direction)));
+            } else if (use_shading_normal) {
                 // A shading normal can tip away from the viewer at a silhouette, where the layer is seen edge-on
                 mu_view = fminf(1.f, fmaxf(0.f, -dot(shading_normal, ray_direction)));
+            } else {
+                mu_view = fabsf(dot(normal, ray_direction));
+            }
+            if (smooth_shading) {
                 const float *vertex_layer_flux = (face_top ? params.vertex_radiation_out_top : params.vertex_radiation_out_bottom) + size_t(params.vertex_normal_count) * Nbands_l;
                 layer_flux = smooth_w0 * vertex_layer_flux[uint32_t(smooth_v0) * Nbands_l + b] + smooth_w1 * vertex_layer_flux[uint32_t(smooth_v1) * Nbands_l + b] + smooth_w2 * vertex_layer_flux[uint32_t(smooth_v2) * Nbands_l + b];
                 if (smooth_v3 >= 0) {
                     layer_flux += smooth_w3 * vertex_layer_flux[uint32_t(smooth_v3) * Nbands_l + b];
                 }
             } else {
-                mu_view = fabsf(dot(normal, ray_direction));
                 layer_flux = (face_top ? params.radiation_out_top : params.radiation_out_bottom)[layer_offset + ind_hit];
             }
             const float a = surfaceLayerAlbedo(layer, mu_view);
@@ -1867,8 +2078,8 @@ extern "C" __global__ void __closesthit__camera() {
             if (const float *layer = surfaceLayerTable(hit_position, globalBandIndex(b))) {
                 const float3 point = make_float3(ray_origin.x + t_hit * ray_direction.x, ray_origin.y + t_hit * ray_direction.y, ray_origin.z + t_hit * ray_direction.z);
                 const float3 to_viewer = make_float3(-ray_direction.x, -ray_direction.y, -ray_direction.z);
-                if (smooth_shading) {
-                    strength_spec = directLayerReflectionSmoothed(hit_position, b, layer, normal, shading_normal, to_viewer, point, int(params.camera_ID), smooth_corners, smooth_weights) * (float) prd->strength;
+                if (use_shading_normal) {
+                    strength_spec = directLayerReflectionSmoothed(hit_position, b, layer, normal, shading_normal, to_viewer, point, int(params.camera_ID), smooth_corners, smooth_weights, normal_mapped) * (float) prd->strength;
                 } else {
                     strength_spec = directLayerReflection(hit_position, b, layer, normal, to_viewer, point, int(params.camera_ID)) * (float) prd->strength;
                 }
@@ -2036,6 +2247,14 @@ extern "C" __global__ void __raygen__direct() {
             // The class of a spectral texture at the launch point, whose reflectivity and transmissivity the rays from it use
             const uint32_t origin_palette_entry = paletteEntryAt(prim_pos, originTextureUV(prim_pos, ptype, sp));
 
+            // The shading normal of a normal map at the launch point, which only a surface layer's angle-dependent split of the light uses here
+            const uint32_t origin_map = normalMapOf(prim_pos);
+            const bool origin_has_normal = origin_map != helios_nm::NO_MAP && params.surface_model != nullptr && params.surface_model[prim_pos] != 0u;
+            float3 origin_shading_normal = normal;
+            if (origin_has_normal) {
+                origin_shading_normal = normalMapShadingNormalAt(prim_pos, ptype, origin_map, T, normal, sp, false);
+            }
+
             // Transform sample point to world space
             float3 ray_origin = sp;
             d_transformPoint(T, ray_origin);
@@ -2141,7 +2360,9 @@ extern "C" __global__ void __raygen__direct() {
                 prd.skip_origin          = true;
                 prd.hit_periodic_boundary = false;
                 prd.face                 = (dot(ray_direction, normal) > 0.f);
-                prd.origin_cos           = fabsf(dot(ray_direction, normal));
+                // A surface layer sees the light at the angle of the shading normal at the launch point (|m.L|, so that a facet tipped away from the source counts as its mirror image,
+                // consistently with the folding of diffuse rays); the beam power the primitive intercepts stays at the geometric cosine
+                prd.origin_cos = origin_has_normal ? fabsf(dot(ray_direction, origin_shading_normal)) : fabsf(dot(ray_direction, normal));
                 prd.palette_entry        = origin_palette_entry;
                 initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
 
@@ -2304,10 +2525,14 @@ extern "C" __global__ void __raygen__diffuse() {
                 __trap();
             }
 
-            // Rotate hemisphere direction by primitive normal orientation
-            float3 ray_dir = d_rotatePoint(ray_dir_canonical,
-                                           acos_safe(normal.z),
-                                           atan2f(normal.y, normal.x));
+            // Rotate hemisphere direction by primitive normal orientation. A normal map leaves the cosine lobe on the facet normal, so that the primitive gathers what its
+            // footprint intercepts (as a relief that is a heightfield does); a surface layer sees each ray at its angle to the shading normal at the launch point.
+            const float3 ray_dir = d_rotatePoint(ray_dir_canonical, acos_safe(normal.z), atan2f(normal.y, normal.x));
+            const uint32_t origin_map = normalMapOf(prim_pos);
+            float origin_lobe_cos = fabsf(dot(ray_dir, normal));
+            if (origin_map != helios_nm::NO_MAP && params.surface_model != nullptr && params.surface_model[prim_pos] != 0u) {
+                origin_lobe_cos = fabsf(dot(ray_dir, normalMapShadingNormalAt(prim_pos, ptype, origin_map, T, normal, sp, false)));
+            }
 
             // The class of a spectral texture at the launch point, whose reflectivity and transmissivity the rays from it use
             const uint32_t origin_palette_entry = paletteEntryAt(prim_pos, originTextureUV(prim_pos, ptype, sp));
@@ -2324,7 +2549,7 @@ extern "C" __global__ void __raygen__diffuse() {
             prd.skip_origin           = true;
             prd.hit_periodic_boundary = false;
             prd.strength              = 1.0 / double(dimxy);
-            prd.origin_cos            = fabsf(dot(ray_dir, normal));
+            prd.origin_cos = origin_lobe_cos;
             initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
 
             uint32_t u0, u1;

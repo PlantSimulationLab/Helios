@@ -129,7 +129,7 @@ namespace helios {
         [[nodiscard]] size_t getAbandonedRayCount() override;
 
         // Buffer utilities
-        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) override;
+        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption, bool record_normal_map_moments) override;
         void zeroScatterBuffers() override;
         void zeroAbandonedRayCount() override;
         void zeroCameraPixelBuffers(const helios::int2 &resolution) override;
@@ -143,6 +143,8 @@ namespace helios {
                                       const std::vector<float> &vertex_radiation_out_bottom) override;
         void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
         void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
+        void getNormalMapMoments(std::vector<float> &moments) override;
+        void uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) override;
         void zeroCameraScatterBuffers(size_t launch_band_count) override;
         void uploadSourceFluxes(const std::vector<float> &fluxes) override;
         void uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) override;
@@ -299,6 +301,12 @@ namespace helios {
         CUdeviceptr d_class_map_offsets      = 0; //!< start index of each class map in class_map_data
         CUdeviceptr d_class_map_sizes        = 0; //!< 2 ints per class map: width, height
         CUdeviceptr d_class_map_IDs          = 0; //!< per-primitive class map (-1 = none)
+        CUdeviceptr d_normal_maps = 0; //!< packed normal maps (include/NormalMapMath.h), 0 when no primitive has one
+        CUdeviceptr d_normal_map_slots = 0; //!< slot of each normal-mapped primitive in d_normal_map_moments
+        CUdeviceptr d_normal_map_moments = 0; //!< [slot][face][launch band][3] directions of the diffuse radiation reaching mapped primitives
+        size_t normal_map_moment_count = 0; //!< Number of values in d_normal_map_moments, 0 when nothing is recorded
+        CUdeviceptr d_vertex_normal_map_moments = 0; //!< [smoothing vertex][face][launch band][3] the same averaged onto the smoothing vertices, while smoothing is enabled and there are maps
+        size_t normal_map_slot_count = 0; //!< number of slots
         CUdeviceptr d_palette_offset         = 0; //!< per-primitive first palette entry (UINT32_MAX = none)
         CUdeviceptr d_palette_rho            = 0;
         CUdeviceptr d_palette_tau            = 0;

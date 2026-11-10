@@ -196,6 +196,13 @@ struct OptiX8LaunchParams {
     uint32_t* class_map_offsets;      //!< class_map_offsets[k] = start index in class_map_data of class map k
     int32_t*  class_map_sizes;        //!< 2 ints per class map: width, height
     int32_t*  class_map_IDs;          //!< Per-primitive class map (-1 = none), indexed by global pos
+
+    // ---- Normal maps (see include/NormalMapMath.h for the packed layout) ----
+    const uint32_t* normal_maps;      //!< Packed normal maps, or nullptr when no primitive has one
+    uint32_t  normal_map_direct;      //!< Camera launches: 1 if the host removed the direct launch's deposit from normal-mapped primitives' outgoing radiation, so the camera shades it per hit point
+    const uint32_t* normal_map_slots; //!< Slot of each normal-mapped primitive in normal_map_moments (UINT32_MAX for none), or nullptr when no primitive has a map
+    float*    normal_map_moments;     //!< [slot][face][launch band][3]: flux-weighted sum of the directions the diffuse radiation reaching each face came from
+    const float* vertex_normal_map_moments; //!< [smoothing vertex][face][launch band][3]: normal_map_moments averaged onto the smoothing vertices; null unless smoothing and maps
     uint32_t* palette_offset;         //!< Per-primitive first palette entry (UINT32_MAX = no spectral texture), indexed by global pos
     float*    palette_rho;            //!< Palette reflectivity [source * Npalette_entries * Nbands_global + entry * Nbands_global + band]
     float*    palette_tau;            //!< Palette transmissivity (same layout)

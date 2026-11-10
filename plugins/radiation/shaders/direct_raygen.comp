@@ -256,6 +256,7 @@ layout(set = 4, binding = 0) buffer RayCountersBuffer {
 #include "common/texture_mask.glsl"
 #include "common/surface_layer.glsl"
 #include "common/spectral_texture.glsl"
+#include "common/normal_map.glsl"
 
 const float PI = 3.14159265359;
 
@@ -532,6 +533,14 @@ void main() {
             uint nbase = prim_idx * 3;
             vec3 normal = vec3(normals_buf.normals[nbase], normals_buf.normals[nbase + 1], normals_buf.normals[nbase + 2]);
 
+            // The shading normal of a normal map at the launch point, which only a surface layer's angle-dependent split of the light uses here
+            uint origin_map = nm_map_index(prim_idx);
+            bool origin_has_normal = origin_map != NO_NORMAL_MAP && !origin_is_cover && surface_layer_present(prim_idx);
+            vec3 origin_shading_normal = normalize(normal);
+            if (origin_has_normal) {
+                origin_shading_normal = nm_shading_normal(prim_idx, prim_type, origin_map, normalize(normal), sp_local.x, sp_local.y, false);
+            }
+
             // Transform to world space
             vec3 ray_origin = transform_point(transform, sp_local);
 
@@ -779,7 +788,8 @@ void main() {
                     float body_fraction = 1.0;
                     int layer = origin_is_cover ? -1 : surface_layer_table(prim_idx, global_b);
                     if (layer >= 0) {
-                        layer_albedo = surface_layer_albedo(layer, abs(dot(ray_dir, normalize(normal))));
+                        // At the angle of the shading normal at the launch point (|m.L|, consistently with the folding of diffuse rays); the intercepted power stays at the geometric cosine
+                        layer_albedo = surface_layer_albedo(layer, abs(dot(ray_dir, origin_has_normal ? origin_shading_normal : normalize(normal))));
                         body_fraction = 1.0 - layer_albedo;
                         absorption_factor *= body_fraction;
                         rho *= body_fraction;
@@ -900,7 +910,8 @@ void main() {
                     // With camera flux smoothing, every smoothed primitive records it as well, for the camera to evaluate the direct radiation with the shading normal
                     if (pc.specular_reflection_enabled > 0) {
                         bool smoothed = !origin_is_cover && smoothing_indices_buf.indices.length() > int(prim_idx) * 4 + 3 && smoothing_indices_buf.indices[int(prim_idx) * 4] >= 0;
-                        float spec_energy = (layer >= 0 || smoothed) ? flux * strength : 0.0;
+                        // Also recorded for a primitive with a normal map, whose direct radiation cameras shade per hit point with the shading normal
+                        float spec_energy = (layer >= 0 || smoothed || (origin_map != NO_NORMAL_MAP && !origin_is_cover)) ? flux * strength : 0.0;
                         float spec_sum = subgroupAdd(spec_energy);
                         if (subgroupElect()) {
                             uint spec_idx = src_idx * pc.primitive_count * pc.band_count + prim_idx * pc.band_count + band;

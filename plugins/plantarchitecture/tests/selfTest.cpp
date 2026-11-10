@@ -676,6 +676,53 @@ DOCTEST_TEST_CASE("Material Naming - closed fruit surfaces are one-sided") {
     DOCTEST_CHECK(fraction < 0.95);
 }
 
+namespace closed_fruit_normal_map_test {
+    std::string normal_map_file;
+    //! A closed, textured fruit whose primitives have a normal map
+    uint mappedFruit(Context *context_ptr, uint, const std::map<std::string, float> &) {
+        const std::string texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/AppleFruit.jpg").string();
+        const uint objID = context_ptr->addSphereObject(10, make_vec3(0, 0, 0), 0.03f, texture.c_str());
+        context_ptr->setPrimitiveNormalMap(context_ptr->getObjectPrimitiveUUIDs(objID), normal_map_file, 0.8f, true);
+        return objID;
+    }
+} // namespace closed_fruit_normal_map_test
+
+DOCTEST_TEST_CASE("Material Naming - the one-sided material of a closed fruit keeps its normal map") {
+    // Regression test. The one-sided "_closed" copy of a fruit material was made by hand with its color and texture only, so a fruit lost its normal or bump map
+    // (from its OBJ material or set on its prototype) once it was made one-sided.
+    using namespace closed_fruit_normal_map_test;
+    normal_map_file = (std::filesystem::temp_directory_path() / "helios_pa_fruit_normal.png").string();
+    writePNG(normal_map_file, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.7f, 0.4f, 0.9f, 1.f)));
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    std::map<std::string, ShootParameters> shoot_parameters = plantarchitecture.getCurrentShootParameters();
+    for (auto &shoot: shoot_parameters) {
+        shoot.second.phytomer_parameters.inflorescence.unique_prototypes = 0;
+        shoot.second.phytomer_parameters.inflorescence.fruit_prototype_function = mappedFruit;
+    }
+    plantarchitecture.updateCurrentShootParameters(shoot_parameters);
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 600);
+    for (float extra_days = 0; plantarchitecture.getPlantFruitObjectIDs(plantID).empty() && extra_days < 300; extra_days += 10) {
+        plantarchitecture.advanceTime(plantID, 10);
+    }
+    const std::vector<uint> fruit_UUIDs = context.getObjectPrimitiveUUIDs(plantarchitecture.getPlantFruitObjectIDs(plantID));
+    DOCTEST_REQUIRE(!fruit_UUIDs.empty());
+    size_t one_sided = 0, mapped = 0;
+    for (uint UUID: fruit_UUIDs) {
+        const std::string material = context.getPrimitiveMaterialLabel(UUID);
+        one_sided += context.getPrimitiveTwosidedFlag(UUID) == 0 ? 1 : 0;
+        if (context.getMaterialNormalMapKind(material) == NORMAL_MAP_TANGENT_SPACE && context.getMaterialNormalMapStrength(material) == doctest::Approx(0.8f) && context.isMaterialNormalMapGreenFlipped(material)) {
+            mapped++;
+        }
+    }
+    DOCTEST_CHECK(one_sided == fruit_UUIDs.size());
+    DOCTEST_CHECK(mapped == fruit_UUIDs.size());
+    std::filesystem::remove(normal_map_file);
+}
+
 DOCTEST_TEST_CASE("Shoot Topology Accessors - getAllShootIDs and getPlantShoot") {
     Context context;
     context.seedRandomGenerator(12345);
@@ -9797,6 +9844,56 @@ DOCTEST_TEST_CASE("USD export basic structure") {
     DOCTEST_CHECK(fixed_count == 1);
 
     std::remove(filename.c_str());
+}
+
+DOCTEST_TEST_CASE("USD export writes the normal maps of materials") {
+    // A bump map on the leaves is written as the tangent-space normal map it decodes to, connected to the surface's normal input
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    const std::string bump = (std::filesystem::temp_directory_path() / "helios_test_usd_bump.png").string();
+    std::vector<uint16_t> heights(8 * 8);
+    for (size_t i = 0; i < heights.size(); i++) {
+        heights[i] = uint16_t(4000 * (i % 8));
+    }
+    writePNGSingleChannel(bump, 8, 8, heights, 16);
+    std::vector<uint> textured;
+    for (uint UUID: context.getAllUUIDs()) {
+        if (!context.getPrimitiveTextureFile(UUID).empty()) {
+            textured.push_back(UUID);
+        }
+    }
+    DOCTEST_REQUIRE(!textured.empty());
+    context.setPrimitiveBumpMap(textured, bump, 4.f);
+
+    const std::filesystem::path output_dir = std::filesystem::temp_directory_path() / "helios_test_usd_normal_maps";
+    std::filesystem::create_directories(output_dir);
+    const std::string filename = (output_dir / "plant.usda").string();
+    plantarchitecture.writePlantStructureUSD(plantID, filename);
+    std::ifstream file(filename);
+    DOCTEST_REQUIRE(file.is_open());
+    const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+    DOCTEST_CHECK(content.find("normal3f inputs:normal.connect") != std::string::npos);
+    DOCTEST_CHECK(content.find("token inputs:sourceColorSpace = \"raw\"") != std::string::npos);
+    const size_t at = content.find("_normal.png");
+    DOCTEST_REQUIRE(at != std::string::npos);
+    const size_t start = content.rfind("./textures/", at);
+    DOCTEST_REQUIRE(start != std::string::npos);
+    const std::string written = (output_dir / content.substr(start + 2, at + 11 - start - 2)).string();
+    DOCTEST_CHECK(std::filesystem::exists(written));
+    // A ramp rising to the right tilts the normals to the left: red below the middle
+    if (std::filesystem::exists(written)) {
+        uint width, height;
+        std::vector<RGBAcolor> pixels;
+        readPNG(written, width, height, pixels);
+        DOCTEST_CHECK(pixels.at(size_t(height / 2) * width + width / 2).r < 0.45f);
+    }
+    std::filesystem::remove_all(output_dir);
+    std::filesystem::remove(bump);
 }
 
 DOCTEST_TEST_CASE("USD export physics properties") {

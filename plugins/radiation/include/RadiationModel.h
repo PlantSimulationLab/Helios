@@ -2780,6 +2780,26 @@ protected:
     //! File of each class map in geometry_data.class_map_sizes, to check that a primitive's class map is the one its geometry was built with
     std::vector<std::string> spectral_class_map_files;
 
+    //! Normal map of a material as it was when the geometry was last built
+    struct NormalMapBuildKey {
+        std::string file;
+        helios::NormalMapKind kind = helios::NORMAL_MAP_NONE;
+        float strength = 1.f;
+        bool flip_green = false;
+    };
+
+    //! The distinct normal maps (file, kind, strength, flip) primitives had in the last geometry build
+    std::vector<NormalMapBuildKey> normal_map_build_keys;
+
+    //! Index in normal_map_build_keys of each primitive's map (by position) in the last geometry build, or UINT_MAX; empty when no primitive had one
+    std::vector<uint> normal_map_build_key_index;
+
+    //! Raise an error if a primitive's normal map differs from the one it had when the geometry was last built
+    /**
+     * \param[in] UUIDs Primitives of the geometry, in position order
+     */
+    void checkNormalMapsCurrent(const std::vector<uint> &UUIDs) const;
+
     //! Outgoing radiation of each class of each primitive with a spectral texture, as one camera sees it
     /**
      * \param[in] spectral_incident Radiation reaching each face of each primitive, per [face][source slot][primitive][launch band], accumulated over the launches
@@ -2788,8 +2808,9 @@ protected:
      * \param[in] band_launch_flag Which global bands are launched
      * \param[out] class_flux_offset First class-flux slot of each primitive, or UINT32_MAX (see RayTracingBackend::uploadSpectralCameraFlux())
      * \param[out] class_flux Outgoing radiation per [face][class-flux slot][launch band]
+     * \param[in] omit_normal_map_direct Leave out the sources' direct radiation (source slots below the source count) of normal-mapped primitives, which the camera then shades per hit point
      */
-    void computeSpectralCameraFlux(const std::vector<float> &spectral_incident, const std::vector<float> &emitted_flux, uint camera, const std::vector<char> &band_launch_flag, std::vector<uint32_t> &class_flux_offset,
+    void computeSpectralCameraFlux(const std::vector<float> &spectral_incident, const std::vector<float> &emitted_flux, uint camera, const std::vector<char> &band_launch_flag, bool omit_normal_map_direct, std::vector<uint32_t> &class_flux_offset,
                                    std::vector<float> &class_flux) const;
 
     //! Per band label, the first reason the last updateRadiativeProperties() could not weight a primitive's reflectivity/transmissivity spectrum in that band
@@ -2880,6 +2901,9 @@ protected:
     //! Whether the backend currently holds the vertex direct irradiance (see accumulateDirectIrradianceAtVertices()), which it needs only while smoothing is enabled and there is a radiation source
     bool vertex_direct_irradiance_uploaded = false;
 
+    //! Whether the backend currently holds the vertex moments of normal-mapped primitives (see accumulateNormalMapMomentsAtVertices()), which it needs only while smoothing is enabled and there are maps
+    bool vertex_normal_map_moments_uploaded = false;
+
     //! Unit normal of each primitive taking part in smoothing, in GPU buffer order, from its corner positions (zero for the others)
     std::vector<helios::vec3> smoothing_facet_normal;
 
@@ -2936,6 +2960,18 @@ protected:
      * \param[out] vertex_irradiance Values per [source][vertex][launch band].
      */
     void accumulateDirectIrradianceAtVertices(const std::vector<float> &direct_flux, size_t launch_band_count, std::vector<float> &vertex_irradiance) const;
+
+    //! Average the directions of the diffuse radiation reaching the faces of primitives with normal maps onto the shared vertices, for camera flux smoothing
+    /**
+     * The first moment of the radiation reaching each face of a mapped primitive (see RayTracingGeometry::normal_map_slots) shades its scattered light per texel in camera images. Recorded per primitive
+     * from a limited number of rays, it differs a little from one facet to the next, which shows as steps at the facet edges; each vertex therefore averages, by area, the mapped facets meeting there,
+     * and the camera interpolates the vertex values across the facet as it does the outgoing radiation. Each facet contributes only the part of its moment along the facet (the part along
+     * its normal does not shade the relief, and averaging it across a curved surface would turn it into relief). Facets without a map take no part.
+     * \param[in] moments Values per [normal-map slot][face][launch band][3] (see RayTracingBackend::getNormalMapMoments()).
+     * \param[in] launch_band_count Number of launched bands.
+     * \param[out] vertex_moments Values per [vertex][face][launch band][3].
+     */
+    void accumulateNormalMapMomentsAtVertices(const std::vector<float> &moments, size_t launch_band_count, std::vector<float> &vertex_moments) const;
 
     //! Average the radiation reaching and leaving the faces of primitives with a spectral texture onto the shared vertices, for camera flux smoothing
     /**

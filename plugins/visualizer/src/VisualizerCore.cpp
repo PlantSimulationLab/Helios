@@ -1941,6 +1941,8 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     // They are therefore given valid, inert contents up front rather than left at texture 0.
     createShadowMapPlaceholderTexture();
     uploadPhongMaterialTable({});
+    uploadNormalMapMaterialTable({});
+    transferNormalMapData();
 
     // The shadow-map framebuffer is created lazily by createShadowFramebuffer() the first
     // time shadowed lighting is actually rendered, in both windowed and headless modes.
@@ -2076,6 +2078,18 @@ Visualizer::~Visualizer() {
         if (phong_material_table_texture != 0) {
             glDeleteTextures(1, &phong_material_table_texture);
             phong_material_table_texture = 0;
+        }
+        if (normal_map_material_table_buffer != 0) {
+            glDeleteBuffers(1, &normal_map_material_table_buffer);
+            normal_map_material_table_buffer = 0;
+        }
+        if (normal_map_material_table_texture != 0) {
+            glDeleteTextures(1, &normal_map_material_table_texture);
+            normal_map_material_table_texture = 0;
+        }
+        if (normal_map_array != 0) {
+            glDeleteTextures(1, &normal_map_array);
+            normal_map_array = 0;
         }
 
         glDeleteBuffers((GLsizei) color_buffer.size(), color_buffer.data());
@@ -2315,6 +2329,18 @@ bool Visualizer::isSmoothShadingEnabled() const {
     return smooth_shading_enabled;
 }
 
+void Visualizer::enableNormalMaps() {
+    normal_maps_enabled = true;
+}
+
+void Visualizer::disableNormalMaps() {
+    normal_maps_enabled = false;
+}
+
+bool Visualizer::areNormalMapsEnabled() const {
+    return normal_maps_enabled;
+}
+
 std::unordered_map<uint, int> Visualizer::buildPhongMaterialTable(const helios::Context *context, const std::set<uint> &referenced_material_IDs) {
 
     // Resolving Phong parameters is deliberately done here, once per distinct material, rather than
@@ -2325,16 +2351,37 @@ std::unordered_map<uint, int> Visualizer::buildPhongMaterialTable(const helios::
 
     std::unordered_map<uint, int> material_ID_to_index;
     std::vector<GLfloat> table;
+    // Normal-map layer of each table entry, and the decoded maps in layer order. A map shared by several materials (same file, kind, strength and flip) is one
+    // decoded object in the Context's cache, and so takes one layer.
+    std::vector<GLfloat> normal_map_table;
+    std::vector<std::shared_ptr<const helios::NormalMapTexels>> layers;
+    std::map<const helios::NormalMapTexels *, int> layer_of;
 
     for (uint materialID: referenced_material_IDs) {
 
         const helios::Material &material = context->getMaterial(materialID);
 
         // A material that specifies none of the four parameters is left out of the table entirely,
-        // so its primitives keep an index of -1 and fall back to the global Phong material.
+        // so its primitives keep an index of -1 and fall back to the global Phong material. One
+        // with a normal map is kept regardless, since the table index is also how its primitives
+        // find their map; it then carries the global parameters.
         const bool has_any = material.doesMaterialDataExist("phong_ambient") || material.doesMaterialDataExist("phong_diffuse") || material.doesMaterialDataExist("phong_specular") || material.doesMaterialDataExist("phong_shininess");
-        if (!has_any) {
+        const bool has_normal_map = material.normal_map_kind != helios::NORMAL_MAP_NONE;
+        if (!has_any && !has_normal_map) {
             continue;
+        }
+
+        int normal_map_layer = -1;
+        if (has_normal_map) {
+            std::shared_ptr<const helios::NormalMapTexels> texels = context->getMaterialNormalMapTexels(materialID);
+            const auto existing = layer_of.find(texels.get());
+            if (existing != layer_of.end()) {
+                normal_map_layer = existing->second;
+            } else {
+                normal_map_layer = static_cast<int>(layers.size());
+                layer_of[texels.get()] = normal_map_layer;
+                layers.push_back(std::move(texels));
+            }
         }
 
         // Parameters the material does not specify individually inherit the global value, so a
@@ -2367,10 +2414,14 @@ std::unordered_map<uint, int> Visualizer::buildPhongMaterialTable(const helios::
         table.push_back(resolved.diffuse);
         table.push_back(resolved.specular);
         table.push_back(resolved.shininess);
+        normal_map_table.push_back(static_cast<GLfloat>(normal_map_layer));
     }
 
     phong_material_table_size = static_cast<GLint>(table.size() / 4);
     uploadPhongMaterialTable(std::move(table));
+    uploadNormalMapMaterialTable(std::move(normal_map_table));
+    // The maps themselves are uploaded by transferBufferData(), which compares this list with what the GPU holds
+    normal_map_layers = std::move(layers);
 
     return material_ID_to_index;
 }
@@ -2391,6 +2442,23 @@ void Visualizer::uploadPhongMaterialTable(std::vector<GLfloat> table) {
     glBufferData(GL_TEXTURE_BUFFER, GLsizeiptr(table.size() * sizeof(GLfloat)), table.data(), GL_STATIC_DRAW);
     glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
     glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, phong_material_table_buffer);
+    glBindBuffer(GL_TEXTURE_BUFFER, 0);
+    glBindTexture(GL_TEXTURE_BUFFER, 0);
+}
+
+void Visualizer::uploadNormalMapMaterialTable(std::vector<GLfloat> table) {
+    if (normal_map_material_table_buffer == 0) {
+        glGenBuffers(1, &normal_map_material_table_buffer);
+        glGenTextures(1, &normal_map_material_table_texture);
+    }
+    glBindBuffer(GL_TEXTURE_BUFFER, normal_map_material_table_buffer);
+    // As for the Phong table, an empty table is padded to one unused entry so that it is a valid texture buffer source
+    if (table.empty()) {
+        table.assign(1, -1.f);
+    }
+    glBufferData(GL_TEXTURE_BUFFER, GLsizeiptr(table.size() * sizeof(GLfloat)), table.data(), GL_STATIC_DRAW);
+    glBindTexture(GL_TEXTURE_BUFFER, normal_map_material_table_texture);
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, normal_map_material_table_buffer);
     glBindBuffer(GL_TEXTURE_BUFFER, 0);
     glBindTexture(GL_TEXTURE_BUFFER, 0);
 }

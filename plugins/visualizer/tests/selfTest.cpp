@@ -216,6 +216,21 @@ public:
         return visualizer.phong_material_table_texture;
     }
 
+    //! Texture array holding the normal maps
+    static GLuint getNormalMapArrayTexture(const Visualizer &visualizer) {
+        return visualizer.normal_map_array;
+    }
+
+    //! Texture object backing the per-material normal-map layer table
+    static GLuint getNormalMapMaterialTableTexture(const Visualizer &visualizer) {
+        return visualizer.normal_map_material_table_texture;
+    }
+
+    //! Number of normal maps currently held by the GPU texture array
+    static size_t getNormalMapLayerCount(const Visualizer &visualizer) {
+        return visualizer.normal_map_layers_uploaded.size();
+    }
+
     //! Force the framebuffer dimensions independently of the window dimensions
     /**
      * Headless mode always initializes the framebuffer to match the window, so the high-DPI case
@@ -2488,6 +2503,8 @@ DOCTEST_TEST_CASE("Visualizer binds a real texture to every sampler the primary 
 
     DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getShadowMapPlaceholderTexture(visualizer) != 0, "no placeholder depth texture exists, so the shadowMap sampler is bound to texture 0 whenever shadowed lighting has not been used");
     DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getPhongMaterialTableTexture(visualizer) != 0, "no Phong material table texture exists, so the phongMaterialTable sampler is bound to texture 0 for any scene built without a Context");
+    DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getNormalMapArrayTexture(visualizer) != 0, "no normal-map texture array exists, so the normalMapSampler sampler is bound to texture 0 for any scene without normal maps");
+    DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getNormalMapMaterialTableTexture(visualizer) != 0, "no normal-map material table texture exists, so the normalMapMaterialTable sampler is bound to texture 0 for any scene built without a Context");
 }
 
 DOCTEST_TEST_CASE("Visualizer shadows render in headless mode") {
@@ -7346,3 +7363,359 @@ TEST_CASE("Hidden Context primitives are not drawn, and hiding or showing one ta
     DOCTEST_CHECK(std::any_of(tiles.begin(), tiles.end(), shows));
 }
 
+
+// ---------------------------------------------------------------------------------------------
+// Normal and bump maps
+// ---------------------------------------------------------------------------------------------
+
+namespace {
+
+    //! Write a uniform normal-map image whose every texel is (r, g, b) in 0-255
+    std::string writeTestNormalMap(const std::string &name, uint resolution, int r, int g, int b) {
+        const std::string file = (std::filesystem::temp_directory_path() / name).string();
+        writePNG(file, resolution, resolution, std::vector<RGBAcolor>(size_t(resolution) * resolution, make_RGBAcolor(float(r) / 255.f, float(g) / 255.f, float(b) / 255.f, 1.f)));
+        return file;
+    }
+
+    //! Mean red channel over a square of pixels at the centre of the window, after updating the plot
+    double centreBrightness(Visualizer &visualizer) {
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.plotUpdate(true);
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        double sum = 0;
+        int count = 0;
+        for (uint row = h / 2 - 4; row < h / 2 + 4; row++) {
+            for (uint column = w / 2 - 4; column < w / 2 + 4; column++) {
+                sum += pixels.at(3 * (size_t(row) * w + column));
+                count++;
+            }
+        }
+        return sum / count;
+    }
+
+    std::vector<uint> windowPixels(Visualizer &visualizer) {
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.plotUpdate(true);
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        return pixels;
+    }
+
+    //! A headless 64x64 visualizer with Phong lighting looking down on the origin, built from the Context
+    void setUpNormalMapView(Visualizer &visualizer, Context &context) {
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.disableColorbar();
+        visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+        visualizer.buildContextGeometry(&context);
+        // Slightly off-axis: looking straight down the z axis gives a degenerate camera basis
+        visualizer.setCameraPosition(make_vec3(0.1f, 0.1f, 18), make_vec3(0, 0, 0));
+    }
+
+} // namespace
+
+TEST_CASE("Visualizer normal maps tilt the shading normal along u and v") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // A flat untextured patch lit from opposite sides is equally bright either way. A normal map tilted 45 degrees toward +u (red 218) makes the side the light
+    // comes from matter: brighter with the light toward +x (u runs along +x on an unrotated patch), darker with it toward -x. The same with green and v along +y.
+    const std::string tilt_u = writeTestNormalMap("helios_vis_nm_tilt_u.png", 16, 218, 128, 218);
+    const std::string tilt_v = writeTestNormalMap("helios_vis_nm_tilt_v.png", 16, 128, 218, 218);
+
+    Context context;
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20), nullrotation, make_RGBcolor(0.6f, 0.6f, 0.6f));
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+
+    auto litFrom = [&](const vec3 &direction) {
+        visualizer.setLightDirection(direction);
+        return centreBrightness(visualizer);
+    };
+
+    const double flat_plus_x = litFrom(make_vec3(1, 0, 1));
+    const double flat_minus_x = litFrom(make_vec3(-1, 0, 1));
+    DOCTEST_CHECK(std::fabs(flat_plus_x - flat_minus_x) <= 2.0);
+
+    context.setPrimitiveNormalMap(patch, tilt_u);
+    const double u_plus_x = litFrom(make_vec3(1, 0, 1));
+    const double u_minus_x = litFrom(make_vec3(-1, 0, 1));
+    const double u_plus_y = litFrom(make_vec3(0, 1, 1));
+    const double u_minus_y = litFrom(make_vec3(0, -1, 1));
+    DOCTEST_CHECK_MESSAGE(u_plus_x > u_minus_x + 20.0, "a normal map tilted toward +u should be lit from +x: " << u_plus_x << " vs " << u_minus_x);
+    DOCTEST_CHECK(u_plus_x > flat_plus_x);
+    DOCTEST_CHECK(std::fabs(u_plus_y - u_minus_y) <= 2.0);
+
+    context.setPrimitiveNormalMap(patch, tilt_v);
+    const double v_plus_y = litFrom(make_vec3(0, 1, 1));
+    const double v_minus_y = litFrom(make_vec3(0, -1, 1));
+    DOCTEST_CHECK_MESSAGE(v_plus_y > v_minus_y + 20.0, "a normal map tilted toward +v (green up) should be lit from +y: " << v_plus_y << " vs " << v_minus_y);
+
+    // A map in the DirectX convention, whose green points down the image, tilts the other way
+    context.setPrimitiveNormalMap(patch, tilt_v, 1.f, true);
+    const double flipped_plus_y = litFrom(make_vec3(0, 1, 1));
+    const double flipped_minus_y = litFrom(make_vec3(0, -1, 1));
+    DOCTEST_CHECK_MESSAGE(flipped_minus_y > flipped_plus_y + 20.0, "a green-flipped map should tilt toward -v: " << flipped_plus_y << " vs " << flipped_minus_y);
+
+    std::filesystem::remove(tilt_u);
+    std::filesystem::remove(tilt_v);
+}
+
+TEST_CASE("Visualizer normal maps follow mirrored texture coordinates") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // A textured triangle whose u runs along -x: a map tilted toward +u then faces -x
+    const std::string tilt_u = writeTestNormalMap("helios_vis_nm_mirror_tilt_u.png", 16, 218, 128, 218);
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_vis_nm_mirror_texture.png").string();
+    writePNG(texture, 8, 8, std::vector<RGBAcolor>(64, make_RGBAcolor(0.6f, 0.6f, 0.6f, 1.f)));
+
+    Context context;
+    const uint triangle = context.addTriangle(make_vec3(-20, -20, 0), make_vec3(20, -20, 0), make_vec3(0, 20, 0), texture.c_str(), make_vec2(1, 0), make_vec2(0, 0), make_vec2(0.5f, 1));
+    context.setPrimitiveNormalMap(triangle, tilt_u);
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+    const double plus_x = centreBrightness(visualizer);
+    visualizer.setLightDirection(make_vec3(-1, 0, 1));
+    const double minus_x = centreBrightness(visualizer);
+    DOCTEST_CHECK_MESSAGE(minus_x > plus_x + 20.0, "with u mirrored along -x, a map tilted toward +u should be lit from -x: " << plus_x << " vs " << minus_x);
+
+    std::filesystem::remove(tilt_u);
+    std::filesystem::remove(texture);
+}
+
+TEST_CASE("Visualizer bump maps shade as the equivalent normal map") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // A 16-bit ramp rising to the right by a per texel, at strength s, gives the normal normalize(-s*a, 0, 1) at every interior texel
+    const uint resolution = 64;
+    std::vector<uint16_t> ramp(resolution * resolution);
+    for (uint row = 0; row < resolution; row++) {
+        for (uint column = 0; column < resolution; column++) {
+            ramp[row * resolution + column] = uint16_t(1000 * column);
+        }
+    }
+    const std::string bump_file = (std::filesystem::temp_directory_path() / "helios_vis_bump_ramp.png").string();
+    writePNGSingleChannel(bump_file, resolution, resolution, ramp, 16);
+    const float strength = 40.f;
+    const vec3 expected = normalize(make_vec3(-strength * 1000.f / 65535.f, 0.f, 1.f));
+    const std::string normal_file = writeTestNormalMap("helios_vis_bump_equivalent.png", resolution, int(std::lround((expected.x * 0.5f + 0.5f) * 255.f)), 128, int(std::lround((expected.z * 0.5f + 0.5f) * 255.f)));
+
+    Context context;
+    context.addMaterial("surface");
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20), nullrotation, make_RGBcolor(0.6f, 0.6f, 0.6f));
+    context.assignMaterialToPrimitive(patch, "surface");
+    context.setMaterialColor("surface", make_RGBAcolor(0.6f, 0.6f, 0.6f, 1.f));
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+    visualizer.setLightDirection(make_vec3(-1, 0, 1));
+
+    const double flat = centreBrightness(visualizer);
+    context.setMaterialBumpMap("surface", bump_file, strength);
+    const double bump = centreBrightness(visualizer);
+    context.clearMaterialNormalMap("surface");
+    context.setMaterialNormalMap("surface", normal_file);
+    const double normal = centreBrightness(visualizer);
+
+    DOCTEST_CHECK_MESSAGE(bump > flat + 10.0, "the ramp faces -x, so light from -x should brighten it: " << bump << " vs flat " << flat);
+    DOCTEST_CHECK_MESSAGE(std::fabs(bump - normal) <= 3.0, "the bump map and its equivalent normal map should shade alike: " << bump << " vs " << normal);
+
+    std::filesystem::remove(bump_file);
+    std::filesystem::remove(normal_file);
+}
+
+TEST_CASE("Visualizer normal maps update incrementally and can be switched off") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    const std::string tilt_u = writeTestNormalMap("helios_vis_nm_incremental.png", 16, 218, 128, 218);
+
+    Context context;
+    context.addMaterial("bark");
+    context.setMaterialColor("bark", make_RGBAcolor(0.6f, 0.5f, 0.4f, 1.f));
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20));
+    context.assignMaterialToPrimitive(patch, "bark");
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+
+    const std::vector<uint> without_map = windowPixels(visualizer);
+    DOCTEST_CHECK(VisualizerTestHelper::getNormalMapLayerCount(visualizer) == 0);
+
+    context.setMaterialNormalMap("bark", tilt_u);
+    const std::vector<uint> with_map = windowPixels(visualizer);
+    DOCTEST_CHECK(with_map != without_map);
+    DOCTEST_CHECK(VisualizerTestHelper::getNormalMapLayerCount(visualizer) == 1);
+
+    // Turning maps off in the visualizer, or using no lighting, renders exactly as without the map
+    visualizer.disableNormalMaps();
+    DOCTEST_CHECK_FALSE(visualizer.areNormalMapsEnabled());
+    DOCTEST_CHECK(windowPixels(visualizer) == without_map);
+    visualizer.enableNormalMaps();
+    DOCTEST_CHECK(windowPixels(visualizer) == with_map);
+
+    visualizer.setLightingModel(Visualizer::LIGHTING_NONE);
+    const std::vector<uint> unlit_with_map = windowPixels(visualizer);
+    context.clearMaterialNormalMap("bark");
+    const std::vector<uint> unlit_without_map = windowPixels(visualizer);
+    DOCTEST_CHECK(unlit_with_map == unlit_without_map);
+
+    // Clearing the map restores the original image exactly, and the map leaves the GPU
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    DOCTEST_CHECK(windowPixels(visualizer) == without_map);
+    DOCTEST_CHECK(VisualizerTestHelper::getNormalMapLayerCount(visualizer) == 0);
+
+    std::filesystem::remove(tilt_u);
+}
+
+TEST_CASE("Visualizer normal maps of different sizes keep their orientation") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // A small map tilted toward +u and a larger one tilted toward -u share the texture array, so the small one is resampled to the larger layer size
+    const std::string small_plus_u = writeTestNormalMap("helios_vis_nm_small.png", 8, 218, 128, 218);
+    const std::string large_minus_u = writeTestNormalMap("helios_vis_nm_large.png", 64, 37, 128, 218);
+
+    Context context;
+    const uint left = context.addPatch(make_vec3(-5, 0, 0), make_vec2(9, 9), nullrotation, make_RGBcolor(0.6f, 0.6f, 0.6f));
+    const uint right = context.addPatch(make_vec3(5, 0, 0), make_vec2(9, 9), nullrotation, make_RGBcolor(0.6f, 0.6f, 0.6f));
+    context.setPrimitiveNormalMap(left, small_plus_u);
+    context.setPrimitiveNormalMap(right, large_minus_u);
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+
+    std::vector<uint> pixels;
+    uint w = 0, h = 0;
+    visualizer.plotUpdate(true);
+    visualizer.getWindowPixelsRGB(pixels, w, h);
+    DOCTEST_CHECK(VisualizerTestHelper::getNormalMapLayerCount(visualizer) == 2);
+    const uint left_value = pixels.at(3 * (size_t(h / 2) * w + w / 4 + 2));
+    const uint right_value = pixels.at(3 * (size_t(h / 2) * w + 3 * w / 4 - 2));
+    DOCTEST_CHECK_MESSAGE(left_value > right_value + 20, "the +u map should be lit from +x and the -u map not: " << left_value << " vs " << right_value);
+
+    std::filesystem::remove(small_plus_u);
+    std::filesystem::remove(large_minus_u);
+}
+
+TEST_CASE("Visualizer normal maps on a smooth-shaded textured tube") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    const std::string bark_normal = writeTestNormalMap("helios_vis_nm_tube.png", 32, 180, 140, 230);
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_vis_nm_tube_texture.png").string();
+    writePNG(texture, 8, 8, std::vector<RGBAcolor>(64, make_RGBAcolor(0.5f, 0.4f, 0.3f, 1.f)));
+
+    Context context;
+    const uint tube = context.addTubeObject(8, {make_vec3(0, 0, -3), make_vec3(0, 0, 3)}, {1.f, 1.f}, texture.c_str());
+    context.setPrimitiveNormalMap(context.getObjectPrimitiveUUIDs(tube), bark_normal);
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+    visualizer.setLightDirection(make_vec3(1, 0.3f, 1));
+    visualizer.enableSmoothShading();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(10, 2, 1), make_vec3(0, 0, 0));
+    std::vector<uint> pixels;
+    uint w = 0, h = 0;
+    DOCTEST_CHECK_NOTHROW(visualizer.plotUpdate(true));
+    visualizer.getWindowPixelsRGB(pixels, w, h);
+    DOCTEST_CHECK(glGetError() == GL_NO_ERROR);
+    DOCTEST_CHECK(VisualizerTestHelper::getNormalMapLayerCount(visualizer) == 1);
+    DOCTEST_CHECK(std::any_of(pixels.begin(), pixels.end(), [](uint value) { return value > 20; }));
+
+    std::filesystem::remove(bark_normal);
+    std::filesystem::remove(texture);
+}
+
+TEST_CASE("Visualizer normal maps reach a patch given a textured material after it was created") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // A patch created without a texture has no (u,v) coordinates; given a textured material it maps the whole image, as in the Context, so its normal map applies
+    const std::string tilt_u = writeTestNormalMap("helios_vis_nm_material_patch.png", 16, 218, 128, 218);
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_vis_nm_material_texture.png").string();
+    writePNG(texture, 8, 8, std::vector<RGBAcolor>(64, make_RGBAcolor(0.6f, 0.6f, 0.6f, 1.f)));
+
+    Context context;
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20));
+    context.addMaterial("bark");
+    context.setMaterialTexture("bark", texture);
+    context.setMaterialNormalMap("bark", tilt_u);
+    context.assignMaterialToPrimitive(patch, "bark");
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+    const double plus_x = centreBrightness(visualizer);
+    visualizer.setLightDirection(make_vec3(-1, 0, 1));
+    const double minus_x = centreBrightness(visualizer);
+    DOCTEST_CHECK_MESSAGE(plus_x > minus_x + 20.0, "the material's map tilted toward +u should be lit from +x: " << plus_x << " vs " << minus_x);
+    // The texture is drawn rather than the material's black color
+    DOCTEST_CHECK(plus_x > 20.0);
+
+    std::filesystem::remove(tilt_u);
+    std::filesystem::remove(texture);
+}
+
+TEST_CASE("Visualizer normal maps use an orthonormal tangent frame on skewed texture coordinates") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // u runs along +x and v along the diagonal (+x+y), so dP/dv is not perpendicular to dP/du. In the orthonormal (MikkTSpace, glTF) frame the
+    // bitangent is cross(N, T) = +y, so a map tilted toward +v tilts the surface toward +y only: light from +x and from -x shade it alike. Taking the
+    // bitangent along dP/dv instead would tilt it toward +x as well.
+    const std::string tilt_v = writeTestNormalMap("helios_vis_nm_skew_tilt_v.png", 16, 128, 218, 218);
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_vis_nm_skew_texture.png").string();
+    writePNG(texture, 8, 8, std::vector<RGBAcolor>(64, make_RGBAcolor(0.6f, 0.6f, 0.6f, 1.f)));
+
+    Context context;
+    const uint triangle = context.addTriangle(make_vec3(-30, -20, 0), make_vec3(10, -20, 0), make_vec3(10, 20, 0), texture.c_str(), make_vec2(0, 0), make_vec2(1, 0), make_vec2(0, 1));
+    context.setPrimitiveNormalMap(triangle, tilt_v);
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+    const double plus_x = centreBrightness(visualizer);
+    visualizer.setLightDirection(make_vec3(-1, 0, 1));
+    const double minus_x = centreBrightness(visualizer);
+    visualizer.setLightDirection(make_vec3(0, 1, 1));
+    const double plus_y = centreBrightness(visualizer);
+    visualizer.setLightDirection(make_vec3(0, -1, 1));
+    const double minus_y = centreBrightness(visualizer);
+    DOCTEST_CHECK_MESSAGE(std::fabs(plus_x - minus_x) <= 2.0, "the bitangent should be cross(N, T), with no x component: " << plus_x << " vs " << minus_x);
+    DOCTEST_CHECK_MESSAGE(plus_y > minus_y + 20.0, "a map tilted toward +v should be lit from +y: " << plus_y << " vs " << minus_y);
+
+    std::filesystem::remove(tilt_v);
+    std::filesystem::remove(texture);
+}
+
+TEST_CASE("Visualizer reports normal maps on primitives with collinear texture coordinates") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // Regression test. Collinear (u,v) coordinates give a map no orientation, so the shader draws such a primitive with its flat normal; the radiation model
+    // warned about it, while the visualizer left the map out without a word.
+    const std::string tilt_u = writeTestNormalMap("helios_vis_nm_collinear_tilt_u.png", 16, 218, 128, 218);
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_vis_nm_collinear_texture.png").string();
+    writePNG(texture, 8, 8, std::vector<RGBAcolor>(64, make_RGBAcolor(0.6f, 0.6f, 0.6f, 1.f)));
+    Context context;
+    const uint degenerate = context.addTriangle(make_vec3(-20, -20, 0), make_vec3(20, -20, 0), make_vec3(0, 20, 0), texture.c_str(), make_vec2(0, 0), make_vec2(0.5f, 0.5f), make_vec2(1, 1));
+    context.setPrimitiveNormalMap(degenerate, tilt_u);
+    Visualizer visualizer(64, 64, 0, true, true);
+    std::string output;
+    {
+        capture_cerr capture;
+        setUpNormalMapView(visualizer, context);
+        (void) windowPixels(visualizer);
+        output = capture.get_captured_output();
+    }
+    DOCTEST_CHECK(output.find("collinear texture (u,v) coordinates") != std::string::npos);
+    std::filesystem::remove(tilt_u);
+    std::filesystem::remove(texture);
+}

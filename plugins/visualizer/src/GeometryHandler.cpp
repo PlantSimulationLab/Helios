@@ -86,6 +86,21 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
     size_t texture_ID_index = UUID_map.at(UUID).texture_ID_index;
     size_t size_index = UUID_map.at(UUID).size_index;
 
+    // (u,v) coordinates given without a texture place a normal map on an untextured primitive: they are stored for the normal map, and the primitive is colored by its RGB color
+    const bool uv_only = textureID < 0 && !has_glyph_texture;
+    int textured_flag;
+    if (uv_only) {
+        textured_flag = 0; // 0 means use RGB color
+    } else if (has_glyph_texture) {
+        textured_flag = 3; // 3 means use RGB for color and red channel of texture for alpha
+    } else if (override_texture_color) { // if texture color is overridden, color primitive based on RGB color but use texture transparence for alpha mask
+        textured_flag = 2; // 2 means use RGB for color and texture transparency for alpha
+    } else if (blend_texture_alpha) {
+        textured_flag = 4; // 4 means use texture for color and blend its alpha rather than thresholding it
+    } else {
+        textured_flag = 1; // 1 means use texture for color and transparency for alpha
+    }
+
     for (char i = 0; i < vertex_count; i++) {
 
         if (geometry_is_new) {
@@ -110,16 +125,8 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
                 uv_data[geometry_type].push_back(1.f - uvs.at(i).y);
 
                 if (i == 0) { // only need to do this one time
-                    if (has_glyph_texture) {
-                        texture_flag_data[geometry_type].push_back(3); // 3 means use RGB for color and red channel of texture for alpha
-                    } else if (override_texture_color) { // if texture color is overridden, color primitive based on RGB color but use texture transparence for alpha mask
-                        texture_flag_data[geometry_type].push_back(2); // 2 means use RGB for color and texture transparency for alpha
-                    } else if (blend_texture_alpha) {
-                        texture_flag_data[geometry_type].push_back(4); // 4 means use texture for color and blend its alpha rather than thresholding it
-                    } else {
-                        texture_flag_data[geometry_type].push_back(1); // 1 means use texture for color and transparency for alpha
-                    }
-                    texture_ID_data[geometry_type].push_back(textureID);
+                    texture_flag_data[geometry_type].push_back(textured_flag);
+                    texture_ID_data[geometry_type].push_back(uv_only ? 0 : textureID);
                 }
             } else {
                 uv_data[geometry_type].at(uv_index) = uvs.at(i).x;
@@ -127,17 +134,9 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
                 uv_index += 2;
 
                 if (i == 0) { // only need to do this one time
-                    if (has_glyph_texture) {
-                        texture_flag_data[geometry_type].at(texture_flag_index) = 3; // 3 means use RGB for color and red channel of texture for alpha
-                    } else if (override_texture_color) { // if texture color is overridden, color primitive based on RGB color but use texture transparence for alpha mask
-                        texture_flag_data[geometry_type].at(texture_flag_index) = 2; // 2 means use RGB for color and texture transparency for alpha
-                    } else if (blend_texture_alpha) {
-                        texture_flag_data[geometry_type].at(texture_flag_index) = 4; // 4 means use texture for color and blend its alpha rather than thresholding it
-                    } else {
-                        texture_flag_data[geometry_type].at(texture_flag_index) = 1; // 1 means use texture for color and transparency for alpha
-                    }
+                    texture_flag_data[geometry_type].at(texture_flag_index) = textured_flag;
                     texture_flag_index++;
-                    texture_ID_data[geometry_type].at(texture_ID_index) = textureID;
+                    texture_ID_data[geometry_type].at(texture_ID_index) = uv_only ? 0 : textureID;
                     texture_ID_index++;
                 }
             }

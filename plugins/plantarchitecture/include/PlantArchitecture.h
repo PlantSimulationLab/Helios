@@ -6164,6 +6164,10 @@ protected:
         helios::RGBAcolor color;
         std::string texture_file;
         bool texture_color_overridden = false;
+        std::string normal_map_file;
+        helios::NormalMapKind normal_map_kind = helios::NORMAL_MAP_NONE;
+        float normal_map_strength = 1.f;
+        bool normal_map_flip_green = false;
     };
     //! Material named for each automatic material label and organ material base name, given to the organs of that kind and appearance created later (see nameOrganMaterials())
     std::map<std::pair<std::string, std::string>, OrganMaterial> organ_material_labels;

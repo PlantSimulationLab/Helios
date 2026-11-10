@@ -331,6 +331,13 @@ void OptiX6Backend::initialize() {
     addBuffer("spectral_class_maps", spectral_class_maps_RTbuffer, spectral_class_maps_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("spectral_palette", spectral_palette_RTbuffer, spectral_palette_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
     initializeBuffer1Dui(spectral_class_maps_RTbuffer, std::vector<uint>(2, 0u));
+    addBuffer("normal_maps", normal_maps_RTbuffer, normal_maps_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
+    // Word 0 is 0 until a geometry with normal maps is uploaded, so the programs skip them
+    initializeBuffer1Dui(normal_maps_RTbuffer, std::vector<uint>{0u, 0u, 0u, 1u});
+    addBuffer("normal_map_slots", normal_map_slots_RTbuffer, normal_map_slots_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
+    initializeBuffer1Dui(normal_map_slots_RTbuffer, std::vector<uint>{0xFFFFFFFFu});
+    addBuffer("normal_map_moments", normal_map_moments_RTbuffer, normal_map_moments_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
+    zeroBuffer1D(normal_map_moments_RTbuffer, 1);
     initializeBuffer1Dui(spectral_palette_RTbuffer, std::vector<uint>(9, 0u));
     addBuffer("spectral_incident", spectral_incident_RTbuffer, spectral_incident_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     zeroBuffer1D(spectral_incident_RTbuffer, 1);
@@ -359,6 +366,8 @@ void OptiX6Backend::initialize() {
     addBuffer("vertex_radiation_out_bottom", vertex_radiation_out_bottom_RTbuffer, vertex_radiation_out_bottom_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("vertex_normals", vertex_normals_RTbuffer, vertex_normals_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("vertex_direct_irradiance", vertex_direct_irradiance_RTbuffer, vertex_direct_irradiance_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+    addBuffer("vertex_normal_map_moments", vertex_normal_map_moments_RTbuffer, vertex_normal_map_moments_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+    zeroBuffer1D(vertex_normal_map_moments_RTbuffer, 1);
     addBuffer("radiation_in_camera", radiation_in_camera_RTbuffer, radiation_in_camera_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("camera_pixel_label", camera_pixel_label_RTbuffer, camera_pixel_label_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("camera_pixel_depth", camera_pixel_depth_RTbuffer, camera_pixel_depth_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
@@ -436,6 +445,8 @@ void OptiX6Backend::initialize() {
 
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "specular_reflection_enabled", &specular_reflection_enabled_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1ui(specular_reflection_enabled_RTvariable, 0));
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "normal_map_direct", &normal_map_direct_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet1ui(normal_map_direct_RTvariable, 0));
 
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "below_horizon_diffuse_enabled", &below_horizon_diffuse_enabled_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1ui(below_horizon_diffuse_enabled_RTvariable, 0));
@@ -906,7 +917,7 @@ size_t OptiX6Backend::getAbandonedRayCount() {
     return getOptiXbufferData_ui(abandoned_ray_count_RTbuffer).at(0);
 }
 
-void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) {
+void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption, bool record_normal_map_moments) {
     if (!is_initialized) {
         helios_runtime_error("ERROR (OptiX6Backend::zeroRadiationBuffers): Backend not initialized.");
     }
@@ -930,6 +941,10 @@ void OptiX6Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_fa
     // Note: Bbox primitives don't accumulate radiation (they only wrap rays),
     // so buffers are sized for real primitives only
     // The outgoing and scattered buffers hold one block per outgoing component
+    // The directions of the diffuse radiation reaching normal-mapped primitives, accumulated by every diffuse launch of a runBand() for the cameras
+    normal_map_moment_count = record_normal_map_moments ? normal_map_slot_count * 2 * launch_band_count * 3 : 0;
+    zeroBuffer1D(normal_map_moments_RTbuffer, std::max<size_t>(1, normal_map_moment_count));
+
     size_t buffer_size = current_primitive_count * current_band_count;
     if (buffer_size > 0) {
         zeroBuffer1D(radiation_in_RTbuffer, buffer_size);
@@ -1012,6 +1027,35 @@ void OptiX6Backend::uploadVertexDirectIrradiance(const std::vector<float> &verte
         return;
     }
     initializeBuffer1Df(vertex_direct_irradiance_RTbuffer, vertex_irradiance);
+}
+
+void OptiX6Backend::getNormalMapMoments(std::vector<float> &moments) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX6Backend::getNormalMapMoments): Backend not initialized.");
+    }
+    moments.clear();
+    if (normal_map_moment_count == 0) {
+        return;
+    }
+    moments = getOptiXbufferData(normal_map_moments_RTbuffer);
+    if (moments.size() < normal_map_moment_count) {
+        helios_runtime_error("ERROR (OptiX6Backend::getNormalMapMoments): The normal-map moment buffer holds " + std::to_string(moments.size()) + " values, but " + std::to_string(normal_map_moment_count) + " were recorded.");
+    }
+    moments.resize(normal_map_moment_count);
+}
+
+void OptiX6Backend::uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX6Backend::uploadVertexNormalMapMoments): Backend not initialized.");
+    }
+    if (vertex_moments.size() % 6 != 0) {
+        helios_runtime_error("ERROR (OptiX6Backend::uploadVertexNormalMapMoments): The vertex moments hold " + std::to_string(vertex_moments.size()) + " values, which is not three per face of each vertex and band.");
+    }
+    if (vertex_moments.empty()) {
+        zeroBuffer1D(vertex_normal_map_moments_RTbuffer, 1); // a single element reads as none
+        return;
+    }
+    initializeBuffer1Df(vertex_normal_map_moments_RTbuffer, vertex_moments);
 }
 
 void OptiX6Backend::uploadVertexNormals(const std::vector<float> &vertex_normals) {
@@ -1700,6 +1744,7 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry &geometry) {
     // Vertex normals describe the topology of the geometry they were built from, so a new geometry releases them; RadiationModel uploads them again when a camera needs them. A single element reads as none.
     zeroBuffer1D(vertex_normals_RTbuffer, 1);
     zeroBuffer1D(vertex_direct_irradiance_RTbuffer, 1);
+    zeroBuffer1D(vertex_normal_map_moments_RTbuffer, 1);
 
     // Solid fractions: append bbox fractions for OptiX
     if (!geometry.solid_fractions.empty()) {
@@ -1851,6 +1896,10 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry &geometry) {
 
     // Spectral texture class maps
     initializeBuffer1Dui(spectral_class_maps_RTbuffer, packSpectralClassMaps(geometry));
+    initializeBuffer1Dui(normal_maps_RTbuffer, packNormalMaps(geometry));
+    // A one-element placeholder holding "no slot" when no primitive has a map; the moments are sized by zeroRadiationBuffers()
+    normal_map_slot_count = geometry.normal_map_slot_count;
+    initializeBuffer1Dui(normal_map_slots_RTbuffer, normal_map_slot_count > 0 ? std::vector<uint>(geometry.normal_map_slots.begin(), geometry.normal_map_slots.end()) : std::vector<uint>{0xFFFFFFFFu});
 }
 
 void OptiX6Backend::materialsToBuffers(const RayTracingMaterial &materials) {
@@ -2053,6 +2102,7 @@ void OptiX6Backend::launchParamsToVariables(const RayTracingLaunchParams &params
     RT_CHECK_ERROR(rtVariableSet1ui(specular_reflection_enabled_RTvariable, specular_enabled));
 
     RT_CHECK_ERROR(rtVariableSet1ui(below_horizon_diffuse_enabled_RTvariable, params.below_horizon_diffuse_enabled ? 1 : 0));
+    RT_CHECK_ERROR(rtVariableSet1ui(normal_map_direct_RTvariable, params.normal_map_direct));
 }
 
 void OptiX6Backend::buffersToResults(RayTracingResults &results) {

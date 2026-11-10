@@ -169,6 +169,7 @@ void Visualizer::printWindow(const char *outfile, const std::string &image_forma
         primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
         primaryShader.setSmoothShading(smooth_shading_enabled);
         primaryShader.setPhongMaterialTable(phong_material_table_size);
+        primaryShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
         render(false);
 
@@ -741,6 +742,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
         primaryShader.setSmoothShading(smooth_shading_enabled);
         primaryShader.setPhongMaterialTable(phong_material_table_size);
+        primaryShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
         bindShadowMap();
 
@@ -859,6 +861,7 @@ void Visualizer::plotOnce(bool getKeystrokes) {
     primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
     primaryShader.setSmoothShading(smooth_shading_enabled);
     primaryShader.setPhongMaterialTable(phong_material_table_size);
+    primaryShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
     bindShadowMap();
 
@@ -908,6 +911,9 @@ void Visualizer::transferBufferData() {
         if (textures_dirty || texArray == 0) {
             transferTextureData();
             textures_dirty = false;
+        }
+        if (normal_map_layers != normal_map_layers_uploaded || normal_map_array == 0) {
+            transferNormalMapData();
         }
         return;
     }
@@ -1105,6 +1111,9 @@ void Visualizer::transferBufferData() {
         transferTextureData();
         textures_dirty = false;
     }
+    if (normal_map_layers != normal_map_layers_uploaded || normal_map_array == 0) {
+        transferNormalMapData();
+    }
 
     geometry_handler.clearDirtyUUIDs();
 
@@ -1223,6 +1232,84 @@ void Visualizer::transferTextureData() {
     glBindBuffer(GL_TEXTURE_BUFFER, 0);
 }
 
+
+void Visualizer::transferNormalMapData() {
+
+    // Every layer of an array has the same size, so all maps are resampled to the largest map's size (clamped to the maximum texture size). Each map then
+    // fills its layer, which is what lets the shader sample it with the primitive's (u,v) directly and lets mipmaps be generated without blending a map with
+    // texels outside it. With no maps, a one-texel layer holding the flat normal keeps the sampler bound to a complete texture.
+    uint2 layer_size = make_uint2(1, 1);
+    for (const auto &map: normal_map_layers) {
+        layer_size.x = std::max(layer_size.x, std::min<uint>(uint(map->resolution.x), maximum_texture_size.x));
+        layer_size.y = std::max(layer_size.y, std::min<uint>(uint(map->resolution.y), maximum_texture_size.y));
+    }
+    const size_t layer_count = std::max<size_t>(1, normal_map_layers.size());
+    // Every layer takes the largest map's size, so many small maps beside one large one would take far more memory than the maps themselves. The layers are
+    // shrunk, keeping their aspect ratio, until the array (with its mipmaps) fits a 256 MiB budget; the radiation model keeps every map at full resolution.
+    const double budget_bytes = 256.0 * 1024.0 * 1024.0;
+    const double array_bytes = double(layer_size.x) * double(layer_size.y) * 2.0 * double(layer_count) * 4.0 / 3.0;
+    if (array_bytes > budget_bytes) {
+        const double shrink = std::sqrt(budget_bytes / array_bytes);
+        const uint2 full_size = layer_size;
+        layer_size.x = std::max(1u, uint(double(layer_size.x) * shrink));
+        layer_size.y = std::max(1u, uint(double(layer_size.y) * shrink));
+        if (message_flag) {
+            std::cout << "WARNING (Visualizer::transferNormalMapData): The " << layer_count << " normal and bump maps in the scene would take " << int(array_bytes / (1024.0 * 1024.0)) << " MiB at " << full_size.x << " x " << full_size.y
+                      << " texels each, so they are drawn at " << layer_size.x << " x " << layer_size.y << " (the radiation model uses them at full resolution). Use fewer distinct maps, or maps of similar size, to keep their detail." << std::endl;
+        }
+    }
+
+    GLint max_layers = 0;
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_layers);
+    if (max_layers > 0 && layer_count > size_t(max_layers)) {
+        helios_runtime_error("ERROR (Visualizer::transferNormalMapData): The scene uses " + std::to_string(layer_count) + " distinct normal or bump maps, but this OpenGL implementation holds at most " + std::to_string(max_layers) +
+                             " layers in a texture array. Share maps between materials (the same file, strength and green flip) to reduce the count.");
+    }
+
+    GLsizei mip_levels = 1;
+    for (uint extent = std::max(layer_size.x, layer_size.y); extent > 1; extent /= 2) {
+        mip_levels++;
+    }
+
+    // Immutable storage is recreated whenever the set of maps changes, which happens only when materials change
+    if (normal_map_array != 0) {
+        glDeleteTextures(1, &normal_map_array);
+    }
+    glGenTextures(1, &normal_map_array);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, normal_map_array);
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY, mip_levels, GL_RG8, GLsizei(layer_size.x), GLsizei(layer_size.y), GLsizei(layer_count));
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    // Rows are uploaded from the top of the image, as color textures are, because the shader's t coordinate is 1 - v
+    std::vector<unsigned char> layer_texels(size_t(layer_size.x) * size_t(layer_size.y) * 2, 128);
+    for (size_t layer = 0; layer < normal_map_layers.size(); layer++) {
+        const helios::NormalMapTexels &map = *normal_map_layers[layer];
+        for (uint row = 0; row < layer_size.y; row++) {
+            for (uint column = 0; column < layer_size.x; column++) {
+                // The layer texel centred at (u, v) takes the map's value there in the texel convention every Helios consumer of the map uses (that of masks and the
+                // radiation model, see NormalMapTexels::sampleBilinear()), so that relief lines up between visualizer and radiation camera images
+                const vec2 uv = make_vec2((float(column) + 0.5f) / float(layer_size.x), 1.f - (float(row) + 0.5f) / float(layer_size.y));
+                const vec3 normal = map.sampleBilinear(uv);
+                const size_t index = 2 * (size_t(row) * layer_size.x + column);
+                layer_texels[index] = static_cast<unsigned char>(std::lround(std::clamp(normal.x * 0.5f + 0.5f, 0.f, 1.f) * 255.f));
+                layer_texels[index + 1] = static_cast<unsigned char>(std::lround(std::clamp(normal.y * 0.5f + 0.5f, 0.f, 1.f) * 255.f));
+            }
+        }
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, GLint(layer), GLsizei(layer_size.x), GLsizei(layer_size.y), 1, GL_RG, GL_UNSIGNED_BYTE, layer_texels.data());
+    }
+    if (normal_map_layers.empty()) {
+        const unsigned char flat[2] = {128, 128};
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, 1, 1, 1, GL_RG, GL_UNSIGNED_BYTE, flat);
+    }
+    glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+
+    normal_map_layers_uploaded = normal_map_layers;
+}
 
 void Visualizer::bindShadowMap() const {
     glActiveTexture(GL_TEXTURE1);
@@ -1343,6 +1430,12 @@ void Visualizer::render(bool shadow) const {
         glActiveTexture(GL_TEXTURE11);
         glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
 
+        glActiveTexture(GL_TEXTURE12);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, normal_map_array);
+
+        glActiveTexture(GL_TEXTURE13);
+        glBindTexture(GL_TEXTURE_BUFFER, normal_map_material_table_texture);
+
         glBindVertexArray(primaryShader.vertex_array_IDs.at(triangle_ind));
         assert(checkerrors());
         if (annotation_pass) {
@@ -1389,6 +1482,12 @@ void Visualizer::render(bool shadow) const {
 
         glActiveTexture(GL_TEXTURE11);
         glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
+
+        glActiveTexture(GL_TEXTURE12);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, normal_map_array);
+
+        glActiveTexture(GL_TEXTURE13);
+        glBindTexture(GL_TEXTURE_BUFFER, normal_map_material_table_texture);
 
         glBindVertexArray(primaryShader.vertex_array_IDs.at(rectangle_ind));
         if (annotation_pass) {
@@ -1528,6 +1627,7 @@ void Visualizer::render(bool shadow) const {
             lineShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
             lineShader.setSmoothShading(smooth_shading_enabled);
             lineShader.setPhongMaterialTable(phong_material_table_size);
+            lineShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
             // Set viewport size for geometry shader
             GLint viewportSizeLoc = glGetUniformLocation(lineShader.shaderID, "viewportSize");
@@ -1573,6 +1673,12 @@ void Visualizer::render(bool shadow) const {
 
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
+
+            glActiveTexture(GL_TEXTURE12);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, normal_map_array);
+
+            glActiveTexture(GL_TEXTURE13);
+            glBindTexture(GL_TEXTURE_BUFFER, normal_map_material_table_texture);
 
             glBindVertexArray(lineShader.vertex_array_IDs.at(line_ind));
 
@@ -1626,6 +1732,7 @@ void Visualizer::render(bool shadow) const {
             primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
             primaryShader.setSmoothShading(smooth_shading_enabled);
             primaryShader.setPhongMaterialTable(phong_material_table_size);
+            primaryShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
             // Rebind texture array and uv_rescale for primary shader
             glActiveTexture(GL_TEXTURE0);
@@ -1673,6 +1780,12 @@ void Visualizer::render(bool shadow) const {
 
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
+
+            glActiveTexture(GL_TEXTURE12);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, normal_map_array);
+
+            glActiveTexture(GL_TEXTURE13);
+            glBindTexture(GL_TEXTURE_BUFFER, normal_map_material_table_texture);
 
             glBindVertexArray(primaryShader.vertex_array_IDs.at(point_ind));
 
@@ -1859,6 +1972,7 @@ void Visualizer::plotUpdate_private(bool hide_window, bool context_geometry_is_c
     primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
     primaryShader.setSmoothShading(smooth_shading_enabled);
     primaryShader.setPhongMaterialTable(phong_material_table_size);
+    primaryShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
     bindShadowMap();
 
@@ -2664,6 +2778,17 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
     phongMaterialTableSizeUniform = glGetUniformLocation(shaderID, "phongMaterialTableSize");
     glUniform1i(phongMaterialTableSizeUniform, 0);
 
+    // Normal maps: the texture array on unit 12 and the per-material layer table on unit 13. Only the primary (and line) fragment shader declares them.
+    normalMapSamplerUniform = glGetUniformLocation(shaderID, "normalMapSampler");
+    if (normalMapSamplerUniform >= 0)
+        glUniform1i(normalMapSamplerUniform, 12);
+    normalMapMaterialTableUniform = glGetUniformLocation(shaderID, "normalMapMaterialTable");
+    if (normalMapMaterialTableUniform >= 0)
+        glUniform1i(normalMapMaterialTableUniform, 13);
+    normalMapsEnabledUniform = glGetUniformLocation(shaderID, "normalMapsEnabled");
+    if (normalMapsEnabledUniform >= 0)
+        glUniform1i(normalMapsEnabledUniform, 0);
+
     assert(checkerrors());
 
     initialized = true;
@@ -2767,6 +2892,12 @@ void Shader::setAmbientColors(const helios::RGBcolor &sky_color, const helios::R
 
 void Shader::setPhongMaterialTable(GLint table_size) const {
     glUniform1i(phongMaterialTableSizeUniform, table_size);
+}
+
+void Shader::setNormalMapsEnabled(bool enabled) const {
+    if (normalMapsEnabledUniform >= 0) {
+        glUniform1i(normalMapsEnabledUniform, enabled ? 1 : 0);
+    }
 }
 
 void Shader::setSmoothShading(bool enabled) const {

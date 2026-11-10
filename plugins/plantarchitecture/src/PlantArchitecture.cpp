@@ -148,9 +148,10 @@ static void makeClosedFruitSurfacesOneSided(helios::Context *context_ptr, uint o
             // The one-sided copy: an existing material of the same appearance under the label, or a new one.
             const std::string base_label = ((material.substr(0, 2) == "__") ? fruit_material_name : material) + "_closed";
             auto sameAppearance = [&](const std::string &label) {
-                return context_ptr->getMaterialTwosidedFlag(label) == 0 && context_ptr->getMaterialColor(label) == context_ptr->getMaterialColor(material)
-                       && context_ptr->getMaterialTexture(label) == context_ptr->getMaterialTexture(material)
-                       && context_ptr->isMaterialTextureColorOverridden(label) == context_ptr->isMaterialTextureColorOverridden(material);
+                return context_ptr->getMaterialTwosidedFlag(label) == 0 && context_ptr->getMaterialColor(label) == context_ptr->getMaterialColor(material) && context_ptr->getMaterialTexture(label) == context_ptr->getMaterialTexture(material) &&
+                       context_ptr->isMaterialTextureColorOverridden(label) == context_ptr->isMaterialTextureColorOverridden(material) && context_ptr->getMaterialNormalMapKind(label) == context_ptr->getMaterialNormalMapKind(material) &&
+                       context_ptr->getMaterialNormalMapFile(label) == context_ptr->getMaterialNormalMapFile(material) && context_ptr->getMaterialNormalMapStrength(label) == context_ptr->getMaterialNormalMapStrength(material) &&
+                       context_ptr->isMaterialNormalMapGreenFlipped(label) == context_ptr->isMaterialNormalMapGreenFlipped(material);
             };
             std::string closed_material = base_label;
             for (int suffix = 1; context_ptr->doesMaterialExist(closed_material) && !sameAppearance(closed_material); ++suffix) {
@@ -164,6 +165,12 @@ static void makeClosedFruitSurfacesOneSided(helios::Context *context_ptr, uint o
                     context_ptr->setMaterialTexture(closed_material, texture);
                 }
                 context_ptr->setMaterialTextureColorOverride(closed_material, context_ptr->isMaterialTextureColorOverridden(material));
+                const NormalMapKind map_kind = context_ptr->getMaterialNormalMapKind(material);
+                if (map_kind == NORMAL_MAP_TANGENT_SPACE) {
+                    context_ptr->setMaterialNormalMap(closed_material, context_ptr->getMaterialNormalMapFile(material), context_ptr->getMaterialNormalMapStrength(material), context_ptr->isMaterialNormalMapGreenFlipped(material));
+                } else if (map_kind == NORMAL_MAP_BUMP) {
+                    context_ptr->setMaterialBumpMap(closed_material, context_ptr->getMaterialNormalMapFile(material), context_ptr->getMaterialNormalMapStrength(material));
+                }
                 context_ptr->setMaterialTwosidedFlag(closed_material, 0);
             }
             context_ptr->assignMaterialToPrimitive(UUID, closed_material);
@@ -200,8 +207,9 @@ void PlantArchitecture::nameOrganMaterials(uint objID, const std::string &desire
         // kind of organ from an automatic material of the same texture and, to within rounding, the same color is the organ's material.
         const OrganMaterial *same_appearance = nullptr;
         for (const auto &[other_key, other] : organ_material_labels) {
-            if (other_key.second != desired_base_name || !context_ptr->doesMaterialExist(other.label) || other.texture_file != automatic.texture_file
-                || other.texture_color_overridden != automatic.texture_color_overridden) {
+            if (other_key.second != desired_base_name || !context_ptr->doesMaterialExist(other.label) || other.texture_file != automatic.texture_file || other.texture_color_overridden != automatic.texture_color_overridden ||
+                other.normal_map_file != automatic.normal_map_file || other.normal_map_kind != automatic.normal_map_kind || other.normal_map_strength != automatic.normal_map_strength ||
+                other.normal_map_flip_green != automatic.normal_map_flip_green) {
                 continue;
             }
             if (std::fabs(other.color.r - automatic.color.r) < 1e-4f && std::fabs(other.color.g - automatic.color.g) < 1e-4f && std::fabs(other.color.b - automatic.color.b) < 1e-4f
@@ -217,7 +225,7 @@ void PlantArchitecture::nameOrganMaterials(uint objID, const std::string &desire
             continue;
         }
 
-        const OrganMaterial record{"", automatic.color, automatic.texture_file, automatic.texture_color_overridden};
+        const OrganMaterial record{"", automatic.color, automatic.texture_file, automatic.texture_color_overridden, automatic.normal_map_file, automatic.normal_map_kind, automatic.normal_map_strength, automatic.normal_map_flip_green};
         std::string label = desired_base_name;
         for (int suffix = 1; context_ptr->doesMaterialExist(label); ++suffix) {
             label = desired_base_name + "_" + std::to_string(suffix);
@@ -238,9 +246,14 @@ void PlantArchitecture::nameOrganMaterials(uint objID, const std::string &desire
             }
             context_ptr->setMaterialTextureColorOverride(label, automatic.texture_color_overridden);
             context_ptr->setMaterialTwosidedFlag(label, automatic.twosided_flag);
+            if (automatic.normal_map_kind == NORMAL_MAP_TANGENT_SPACE) {
+                context_ptr->setMaterialNormalMap(label, automatic.normal_map_file, automatic.normal_map_strength, automatic.normal_map_flip_green);
+            } else if (automatic.normal_map_kind == NORMAL_MAP_BUMP) {
+                context_ptr->setMaterialBumpMap(label, automatic.normal_map_file, automatic.normal_map_strength);
+            }
             context_ptr->assignMaterialToPrimitive(primitives, label);
         }
-        organ_material_labels[key] = OrganMaterial{label, record.color, record.texture_file, record.texture_color_overridden};
+        organ_material_labels[key] = OrganMaterial{label, record.color, record.texture_file, record.texture_color_overridden, record.normal_map_file, record.normal_map_kind, record.normal_map_strength, record.normal_map_flip_green};
     }
 }
 

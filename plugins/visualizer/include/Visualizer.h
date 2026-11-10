@@ -151,6 +151,12 @@ struct Shader {
     //! Bind the packed per-material Phong parameter table
     void setPhongMaterialTable(GLint table_size) const;
 
+    //! Enable or disable normal and bump maps in the fragment shader
+    /**
+     * \param[in] enabled True when normal maps are enabled and at least one is loaded
+     */
+    void setNormalMapsEnabled(bool enabled) const;
+
     //! Set shader as current
     void useShader() const;
 
@@ -194,6 +200,9 @@ struct Shader {
     GLint phongMaterialTableUniform;
     GLint phongMaterialTableSizeUniform;
     GLint materialIndexTextureObjectUniform;
+    GLint normalMapSamplerUniform;
+    GLint normalMapMaterialTableUniform;
+    GLint normalMapsEnabledUniform;
     std::vector<GLuint> vertex_array_IDs;
     GLint uvRescaleUniform;
 
@@ -800,6 +809,31 @@ public:
 
     //! Query whether smooth shading is enabled
     [[nodiscard]] bool isSmoothShadingEnabled() const;
+
+    //! Shade surfaces with the normal and bump maps of their Context materials (the default)
+    /**
+     * A primitive whose material has a normal map (helios::Context::setMaterialNormalMap()) or a bump map (helios::Context::setMaterialBumpMap()) is lit with
+     * the shading normal the map gives at each pixel, tilted from the geometric (or, with smooth shading, the interpolated) normal in the tangent frame of the
+     * primitive's texture coordinates. Only the lit terms change: the shadow test keeps the geometric normal, and with \ref LIGHTING_NONE the maps have no effect.
+     * A terminator term (Chiang et al. 2019, "Taming the Shadow Terminator") fades the direct light smoothly where the shading normal faces the light but the
+     * surface does not, so relief does not end in a hard edge on the dark side of a curved surface.
+     *
+     * Each map is stored once on the GPU at two bytes per texel plus mipmaps, all maps at the size of the largest (at most the maximum texture size), and costs
+     * nothing per primitive.
+     *
+     * \sa disableNormalMaps(), areNormalMapsEnabled()
+     */
+    void enableNormalMaps();
+
+    //! Ignore normal and bump maps, shading every surface with its geometric (or smooth-shading) normal
+    /**
+     * The maps stay on the GPU, so they can be turned back on without uploading them again.
+     * \sa enableNormalMaps()
+     */
+    void disableNormalMaps();
+
+    //! Query whether surfaces are shaded with their normal and bump maps
+    [[nodiscard]] bool areNormalMapsEnabled() const;
 
     //! Set the background color for the visualizer window
     /**
@@ -2060,6 +2094,9 @@ private:
     //! Uploads all textures to the texture array and updates UV rescaling.
     void transferTextureData();
 
+    //! Uploads the normal maps registered by buildPhongMaterialTable() to the normal-map texture array, or a one-texel placeholder when there are none
+    void transferNormalMapData();
+
     /**
      * \brief Registers a texture file and obtains its unique texture ID.
      *
@@ -2404,6 +2441,12 @@ private:
      */
     std::unordered_map<uint, int> buildPhongMaterialTable(const helios::Context *context, const std::set<uint> &referenced_material_IDs);
 
+    //! Upload the per-material normal-map layer table, which has one entry per entry of the Phong material table
+    /**
+     * \param[in] table Normal-map layer of each material in the Phong material table, or -1 for a material without a map. An empty table uploads one unused entry.
+     */
+    void uploadNormalMapMaterialTable(std::vector<GLfloat> table);
+
     //! Upload the packed Phong material table to its texture buffer
     /**
      * Creates the buffer and texture on the first call. An empty table is padded to one unused
@@ -2624,6 +2667,25 @@ private:
 
     //! Number of entries currently in the packed Phong material table
     GLint phong_material_table_size = 0;
+
+    //! Buffer and texture holding the normal-map layer of each entry of the Phong material table
+    /** One R32F texel per material, the layer of \ref normal_map_array holding its map, or -1 for none. A material with a normal map is always given a Phong
+        table entry (with the global Phong parameters if it has none of its own), so that its primitives have an index into this table. */
+    GLuint normal_map_material_table_buffer = 0;
+    GLuint normal_map_material_table_texture = 0;
+
+    //! Texture array holding every normal map in use, one map per layer, as RG8 (x and y of the tangent-space normal mapped to [0,1]) with mipmaps
+    /** Each map is resampled to fill its layer, so the shader samples it with the primitive's (u,v) directly and mipmaps never blend a map with empty texels. */
+    GLuint normal_map_array = 0;
+
+    //! Decoded normal maps in layer order, as last registered by buildPhongMaterialTable()
+    std::vector<std::shared_ptr<const helios::NormalMapTexels>> normal_map_layers;
+
+    //! Maps uploaded to \ref normal_map_array, so that an unchanged set is not uploaded again
+    std::vector<std::shared_ptr<const helios::NormalMapTexels>> normal_map_layers_uploaded;
+
+    //! Whether the shader applies normal maps (see enableNormalMaps())
+    bool normal_maps_enabled = true;
 
     //! Rescaling factor for texture (u,v)'s for when the texture size is smaller than the maximum texture size
     GLuint uv_rescale_buffer;

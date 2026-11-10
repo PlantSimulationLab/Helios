@@ -93,6 +93,17 @@ namespace helios {
         std::vector<helios::int2> class_map_sizes; //!< Size (width, height) of each class map
         std::vector<int> class_map_IDs; //!< Class map of each primitive (-1 if none)
 
+        // Normal maps (Context::setMaterialNormalMap() and setMaterialBumpMap()), laid over a primitive with the same (u,v) mapping and texel convention as its
+        // mask, already decoded to unit tangent-space normals with their strength applied (see include/NormalMapMath.h for how they are used).
+        std::vector<uint16_t> normal_map_texels; //!< Flattened normals [map][row from the top][column], each uint8(x) | uint8(y) << 8 with x and y signed 8-bit normalized
+        std::vector<helios::int2> normal_map_sizes; //!< Size (width, height) of each normal map
+        std::vector<int> normal_map_IDs; //!< Normal map of each primitive (-1 if none); empty when no primitive has one
+        //! Slot of each normal-mapped primitive in the record of the direction of the diffuse radiation it gathers (UINT32_MAX for none); empty when no primitive has a map.
+        //! The diffuse launches accumulate, per slot, face (top, then bottom) and launch band, the flux-weighted sum of the directions the radiation came from (3 values),
+        //! with which cameras shade a mapped primitive's scattered light per texel (see RayTracingBackend::zeroRadiationBuffers()).
+        std::vector<uint32_t> normal_map_slots;
+        size_t normal_map_slot_count = 0; //!< Number of slots in normal_map_slots
+
         // Periodic boundary condition
         helios::vec2 periodic_flag; //!< Periodic boundary flags (x, y directions)
 
@@ -301,6 +312,8 @@ namespace helios {
         uint specular_reflection_enabled =
                 0; //!< 1 = this launch evaluates the surface layers' reflection lobe of the direct radiation (the launch reading its first scattering, and camera launches); for a direct launch, that surface layers are present
         uint below_horizon_diffuse_enabled = 0; //!< 1 = diffuse sky radiation also reaches rays that leave the domain below the horizon (diffuse and camera rays)
+        //! Camera launches: 1 if the outgoing radiation uploaded for normal-mapped primitives leaves out what the direct launch deposited, which the camera then shades per hit point with the shading normal
+        uint normal_map_direct = 0;
     };
 
     /**
@@ -348,6 +361,13 @@ namespace helios {
      * \param[in] geometry Geometry whose class_map_data, class_map_sizes and class_map_IDs are packed
      */
     std::vector<uint32_t> packSpectralClassMaps(const RayTracingGeometry &geometry);
+
+    //! The normal maps of a geometry packed into one array of words, the layout every backend reads (described in include/NormalMapMath.h)
+    /**
+     * Word 0 is 0 when no primitive has a normal map, and the array then holds only the four header words.
+     * \param[in] geometry Geometry whose normal_map_* fields are packed
+     */
+    std::vector<uint32_t> packNormalMaps(const RayTracingGeometry &geometry);
 
     //! The spectral texture palettes of a material packed into one array of words, for backends that read them from a single buffer
     /**

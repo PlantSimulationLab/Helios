@@ -332,6 +332,10 @@ void Visualizer::buildContextGeometry_private() {
     // addGeometry() resets a primitive's vertex normals to its face normal, so a primitive re-added later in the loop would otherwise discard normals set earlier.
     std::unordered_map<uint, std::vector<uint>> smooth_shaded_triangles;
 
+    // Primitives with a normal or bump map whose (u,v) coordinates are collinear, which give the map no orientation, so it is not applied to them
+    size_t degenerate_normal_map_frames = 0;
+    uint first_degenerate_frame_UUID = 0;
+
     for (unsigned int UUID: contextUUIDs_needupdate) {
 
         if (!context->doesPrimitiveExist(UUID)) {
@@ -424,15 +428,39 @@ void Visualizer::buildContextGeometry_private() {
             textureID = registerTextureImage(texture_file);
         }
 
+        // An untextured patch or triangle with a normal map is given the (u,v) coordinates the map is sampled with, and is still colored by its RGB color
+        std::vector<vec2> normal_map_uvs;
+        if (ptype != helios::PRIMITIVE_TYPE_VOXEL && context->getPrimitiveNormalMapKind(UUID) != helios::NORMAL_MAP_NONE) {
+            const std::vector<vec2> frame_uvs = context->getPrimitiveNormalMapUV(UUID);
+            if (texture_file.empty()) {
+                normal_map_uvs = frame_uvs;
+            }
+            // The shader takes the map's tangents from the (u,v) coordinates, which must span an area (see Context::validateNormalMapFrame() and the radiation model)
+            const vec2 a = frame_uvs.at(1) - frame_uvs.at(0);
+            const vec2 b = frame_uvs.at(2) - frame_uvs.at(ptype == helios::PRIMITIVE_TYPE_TRIANGLE ? 0 : 1);
+            const float extent = std::max(a.x * a.x + a.y * a.y, b.x * b.x + b.y * b.y);
+            if (!(std::fabs(a.x * b.y - a.y * b.x) > 1e-12f * extent) || extent == 0.f) {
+                if (degenerate_normal_map_frames == 0) {
+                    first_degenerate_frame_UUID = UUID;
+                }
+                degenerate_normal_map_frames++;
+            }
+        }
+
         // ---- PATCHES ---- //
         if (ptype == helios::PRIMITIVE_TYPE_PATCH) {
             // - Patch does not have an associated texture or we are ignoring texture
             if (texture_file.empty()) {
-                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, verts, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
+                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, verts, color, normal_map_uvs, -1, false, false, COORDINATES_CARTESIAN, true, true);
             }
             // - Patch has a texture
             else {
                 std::vector<vec2> uvs = context->getPrimitiveTextureUV(UUID);
+                // A patch without (u,v) coordinates maps the whole image, as it does in the Context (for example a patch given a textured material after it was
+                // created). Without them it would be drawn in its material color and any normal map would have no frame.
+                if (uvs.empty()) {
+                    uvs = {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)};
+                }
 
                 // - coloring primitive based on texture
                 if (!isContextPrimitiveTextureColorOverridden(UUID)) {
@@ -448,7 +476,7 @@ void Visualizer::buildContextGeometry_private() {
         else if (ptype == helios::PRIMITIVE_TYPE_TRIANGLE) {
             // - Triangle does not have an associated texture or we are ignoring texture
             if (texture_file.empty()) {
-                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_TRIANGLE, verts, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
+                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_TRIANGLE, verts, color, normal_map_uvs, -1, false, false, COORDINATES_CARTESIAN, true, true);
             }
             // - Triangle has a texture
             else {
@@ -516,6 +544,12 @@ void Visualizer::buildContextGeometry_private() {
                                              true);
             }
         }
+    }
+
+    // Reported whether or not messages are enabled, as the radiation model does: the map is silently missing from these primitives otherwise
+    if (degenerate_normal_map_frames > 0) {
+        std::cerr << "WARNING (Visualizer::buildContextGeometry): " << degenerate_normal_map_frames << " primitive(s) with a normal or bump map, the first UUID " << first_degenerate_frame_UUID
+                  << ", have collinear texture (u,v) coordinates, so the map has no orientation on them and is not applied to them." << std::endl;
     }
 
     // Apply per-vertex normals, one parent object at a time. Everything expensive - a Polymesh's vertex and face tables, a tube's node tangents and taper rates - is fetched once per object here instead of
@@ -649,6 +683,10 @@ uint64_t Visualizer::computeContextPrimitiveFingerprint(uint UUID) const {
         const std::vector<helios::vec2> uvs = context->getPrimitiveTextureUV(UUID);
         hash_bytes(uvs.data(), uvs.size() * sizeof(helios::vec2));
     }
+
+    // A normal map gives an untextured primitive (u,v) coordinates. Which map it is reaches the shader through the material table (see buildPhongMaterialTable()), so only whether there is one matters here.
+    const unsigned char normal_map_kind = static_cast<unsigned char>(context->getPrimitiveNormalMapKind(UUID));
+    hash_bytes(&normal_map_kind, sizeof(normal_map_kind));
 
     float color_value;
     if (getContextPrimitiveColorValue(UUID, color_value)) {

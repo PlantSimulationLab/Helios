@@ -18,6 +18,7 @@
 
 #include "RadiationModel.h"
 #include "BufferIndexing.h"
+#include "NormalMapMath.h"
 #include <climits>
 #include <cmath>
 #include <cstring>
@@ -2261,6 +2262,7 @@ void RadiationModel::buildCameraFluxSmoothingTopology() {
     // A rebuilt topology invalidates whatever normals the backend holds; the backend releases them with the geometry upload that follows (see RayTracingBackend::uploadVertexNormals()).
     smoothing_vertex_normals_uploaded = false;
     vertex_direct_irradiance_uploaded = false;
+    vertex_normal_map_moments_uploaded = false;
     geometry_data.smoothing_vertex_indices.clear();
     geometry_data.smoothing_vertex_count = 0;
 
@@ -2579,6 +2581,9 @@ void RadiationModel::subtractCameraDirectFlux(std::vector<float> &camera_scatter
         if (smoothing_vertex_indices.at(4 * position) < 0) {
             continue; // not smoothed, so the camera reads this primitive's own value and nothing is averaged
         }
+        if (!geometry_data.normal_map_IDs.empty() && geometry_data.normal_map_IDs.at(position) >= 0) {
+            continue; // a normal-mapped primitive's direct radiation was already removed exactly, as the direct launch deposited it (see runBand())
+        }
         const helios::vec3 &facet_normal = smoothing_facet_normal.at(position);
         for (size_t s = 0; s < source_count; s++) {
             // A collimated source and the sun sphere lie in one direction; a finite source is seen from the facet's centroid
@@ -2614,6 +2619,64 @@ void RadiationModel::subtractCameraDirectFlux(std::vector<float> &camera_scatter
                 (lit_top ? camera_scatter_top : camera_scatter_bottom).at(index) -= reflected;
                 (lit_top ? camera_scatter_bottom : camera_scatter_top).at(index) -= transmitted;
             }
+        }
+    }
+}
+
+void RadiationModel::accumulateNormalMapMomentsAtVertices(const std::vector<float> &moments, size_t launch_band_count, std::vector<float> &vertex_moments) const {
+    const size_t values_per_slot = 2 * launch_band_count * 3;
+    vertex_moments.assign(smoothing_vertex_count * values_per_slot, 0.f);
+    const size_t primitive_count = context_UUIDs.size();
+    if (smoothing_vertex_count == 0 || geometry_data.normal_map_slot_count == 0) {
+        return;
+    }
+    if (smoothing_vertex_indices.size() != 4 * primitive_count || smoothing_primitive_area.size() != primitive_count || smoothing_facet_normal.size() != primitive_count || geometry_data.normal_map_slots.size() != primitive_count) {
+        helios_runtime_error("ERROR (RadiationModel::accumulateNormalMapMomentsAtVertices): The camera flux smoothing topology or the normal-map slots describe a different number of primitives than the " + std::to_string(primitive_count) +
+                             " in the geometry. Call updateGeometry() after changing the geometry.");
+    }
+    if (moments.size() != geometry_data.normal_map_slot_count * values_per_slot) {
+        helios_runtime_error("ERROR (RadiationModel::accumulateNormalMapMomentsAtVertices): The normal-map moments hold " + std::to_string(moments.size()) + " values, but " + std::to_string(geometry_data.normal_map_slot_count) +
+                             " mapped primitives and " + std::to_string(launch_band_count) + " launched bands need " + std::to_string(geometry_data.normal_map_slot_count * values_per_slot) + ".");
+    }
+    std::vector<float> mapped_area(smoothing_vertex_count, 0.f);
+    for (size_t position = 0; position < primitive_count; position++) {
+        const uint32_t slot = geometry_data.normal_map_slots.at(position);
+        if (slot == UINT32_MAX || smoothing_vertex_indices.at(4 * position) < 0) {
+            continue; // no map, or no part in smoothing
+        }
+        const float facet_area = smoothing_primitive_area.at(position);
+        if (facet_area <= 0.f) {
+            continue;
+        }
+        // Only the part of each moment along the facet shades the relief. The part along its normal is most of the moment (most of the radiation comes from in front of
+        // the facet) and points a different way on each facet of a curved surface, so averaging it would give a vertex a tangential part that comes from the curvature,
+        // not from the light, and relief on a surface under a uniform sky.
+        const helios::vec3 &facet_normal = smoothing_facet_normal.at(position);
+        std::vector<float> tangential(values_per_slot);
+        for (size_t triple = 0; triple < values_per_slot / 3; triple++) {
+            const helios::vec3 moment = helios::make_vec3(moments.at(size_t(slot) * values_per_slot + 3 * triple), moments.at(size_t(slot) * values_per_slot + 3 * triple + 1), moments.at(size_t(slot) * values_per_slot + 3 * triple + 2));
+            const helios::vec3 along_facet = moment - (moment * facet_normal) * facet_normal;
+            tangential.at(3 * triple) = along_facet.x;
+            tangential.at(3 * triple + 1) = along_facet.y;
+            tangential.at(3 * triple + 2) = along_facet.z;
+        }
+        for (size_t c = 0; c < 4; c++) {
+            const int vertex = smoothing_vertex_indices.at(4 * position + c);
+            if (vertex < 0) {
+                continue; // a triangle, which has only three corners
+            }
+            mapped_area.at(size_t(vertex)) += facet_area;
+            for (size_t value = 0; value < values_per_slot; value++) {
+                vertex_moments.at(size_t(vertex) * values_per_slot + value) += facet_area * tangential.at(value);
+            }
+        }
+    }
+    for (size_t vertex = 0; vertex < smoothing_vertex_count; vertex++) {
+        if (mapped_area.at(vertex) <= 0.f) {
+            continue; // no mapped facet meets here, so no camera reads this vertex
+        }
+        for (size_t value = 0; value < values_per_slot; value++) {
+            vertex_moments.at(vertex * values_per_slot + value) /= mapped_area.at(vertex);
         }
     }
 }
@@ -3294,6 +3357,8 @@ void RadiationModel::updateRadiativeProperties() {
         primitive_palette_offset.at(u) = palette_it->second;
     }
 
+    checkNormalMapsCurrent(context_UUIDs);
+
     // second, calculate unique values of rho and tau for every band and weighting contributor: rho_unique[label][band][contributor] and
     // rho_cam_unique[label][band][contributor][camera]. The entry after the last contributor holds the band's diffuse-slot value.
     const uint unique_diffuse_index = Ncontributors;
@@ -3710,6 +3775,11 @@ void RadiationModel::updateRadiativeProperties() {
                                                                             ". The glass (Fresnel+Bouguer) model takes precedence; the constant value is ignored.");
                 }
 
+                // A translucent cover is traced as a flat sheet that rays pass through, so a normal map on it has nothing to act on
+                if (context->getPrimitiveNormalMapKind(UUID) != helios::NORMAL_MAP_NONE) {
+                    helios_runtime_error("ERROR (RadiationModel::updateRadiativeProperties): Primitive UUID " + std::to_string(UUID) + " is a translucent cover (glass_n_" + band + ") and has the normal or bump map '" +
+                                         context->getPrimitiveNormalMapFile(UUID) + "'. Covers are traced as flat sheets, so normal maps are not supported on them; clear the primitive's normal map.");
+                }
                 for (uint slot = 0; slot < Nslots; slot++) {
                     material_data.is_glass[mat_idx(slot, u, b)] = 1;
                     material_data.glass_n[mat_idx(slot, u, b)] = n_s;
@@ -3856,7 +3926,8 @@ void RadiationModel::updateRadiativeProperties() {
     // primitive with a layer (radiation_specular). Camera flux smoothing needs the same for every smoothed primitive, to evaluate
     // its direct radiation with the shading normal (see subtractCameraDirectFlux()).
     specular_reflection_mode = material_data.surface_layer_enabled ? 1 : 0;
-    material_data.specular_reflection_enabled = material_data.surface_layer_enabled || (cameraflux_smoothing_enabled && smoothing_vertex_count > 0);
+    // The direct radiation reaching each primitive is recorded for the surface layers' lobe, for camera flux smoothing, and for cameras to shade normal-mapped primitives per hit point
+    material_data.specular_reflection_enabled = material_data.surface_layer_enabled || (cameraflux_smoothing_enabled && smoothing_vertex_count > 0) || (!geometry_data.normal_map_IDs.empty() && !cameras.empty());
 
     backend->updateMaterials(material_data);
 
@@ -5269,7 +5340,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     }
 
     // Zero radiation buffers via backend
-    backend->zeroRadiationBuffers(Nbands_launch, track_face_absorption);
+    // Cameras shade the scattered light of primitives with normal maps from the directions it came from, which the diffuse launches record only when there are cameras
+    backend->zeroRadiationBuffers(Nbands_launch, track_face_absorption, !cameras.empty() && !geometry_data.normal_map_IDs.empty());
 
     // Direct and diffuse rays launched by this call, and the count of those abandoned at the periodic wrap limit (reported below)
     backend->zeroAbandonedRayCount();
@@ -5419,7 +5491,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         params.num_bands_global = Nbands_global;
         params.num_bands_launch = Nbands_launch;
         // For the direct launch the flag asks for the direct flux reaching primitives to be recorded: those with a surface layer, and with camera flux smoothing, every smoothed one
-        params.specular_reflection_enabled = (specular_reflection_mode != 0 || (cameraflux_smoothing_enabled && smoothing_vertex_count > 0)) ? 1 : 0;
+        params.specular_reflection_enabled = (specular_reflection_mode != 0 || (cameraflux_smoothing_enabled && smoothing_vertex_count > 0) || (!geometry_data.normal_map_IDs.empty() && Ncameras > 0)) ? 1 : 0;
 
         // Use the band_launch_flag already built above (lines 3375-3383)
         std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
@@ -5535,6 +5607,19 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         scatter_top_cam.resize(outgoing_components * Ncameras * camera_scatter_stride, 0.0f);
         scatter_bottom_cam.resize(outgoing_components * Ncameras * camera_scatter_stride, 0.0f);
     }
+    // Cameras shade the direct radiation of normal-mapped primitives per hit point with the shading normal, so what the direct launch deposited in each camera's outgoing radiation
+    // of those primitives is kept, per [camera][normal-mapped primitive][band] (first component), and removed before the camera reads it. Only those primitives are kept, so the
+    // copy costs nothing without normal maps.
+    std::vector<size_t> normal_map_positions;
+    if (Ncameras > 0) {
+        for (size_t p = 0; p < geometry_data.normal_map_IDs.size(); p++) {
+            if (geometry_data.normal_map_IDs[p] >= 0) {
+                normal_map_positions.push_back(p);
+            }
+        }
+    }
+    std::vector<float> normal_map_direct_top, normal_map_direct_bottom;
+    bool normal_map_direct_recorded = false;
     // The radiation reaching primitives with a spectral texture, per [face][source slot][primitive][band] (see RayTracingResults::spectral_incident)
     std::vector<float> spectral_incident;
     // The radiation each face emits, per [face][primitive][band]: a camera sees it from every class of a primitive with a spectral texture
@@ -5645,6 +5730,21 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
         // Accumulate camera scatter from direct rays
         if (Ncameras > 0) {
+            if (!normal_map_positions.empty()) {
+                const size_t count = normal_map_positions.size();
+                normal_map_direct_top.assign(Ncameras * count * Nbands_launch, 0.f);
+                normal_map_direct_bottom.assign(Ncameras * count * Nbands_launch, 0.f);
+                for (size_t cam = 0; cam < Ncameras; cam++) {
+                    for (size_t k = 0; k < count; k++) {
+                        for (size_t b = 0; b < Nbands_launch; b++) {
+                            const size_t source_index = cam * camera_scatter_stride + normal_map_positions[k] * Nbands_launch + b;
+                            normal_map_direct_top[(cam * count + k) * Nbands_launch + b] = scatter_results.scatter_buff_top_cam.at(source_index);
+                            normal_map_direct_bottom[(cam * count + k) * Nbands_launch + b] = scatter_results.scatter_buff_bottom_cam.at(source_index);
+                        }
+                    }
+                }
+                normal_map_direct_recorded = true;
+            }
             accumulateCameraScatter(scatter_results, scatter_top_cam, scatter_bottom_cam, spectral_incident);
             // Zero GPU camera scatter buffers to prevent double-counting on next iteration
             backend->zeroCameraScatterBuffers(Nbands_launch);
@@ -6345,6 +6445,22 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 smoothing_vertex_normals_uploaded = camera_needs_vertex_normals;
             }
 
+            // With smoothing, the directions of the scattered light reaching primitives with normal maps, averaged onto the shared vertices, so that cameras shade it continuously across the facets.
+            // The same for every camera.
+            std::vector<float> normal_map_moments;
+            if (cameraflux_smoothing_enabled && smoothing_vertex_count > 0 && geometry_data.normal_map_slot_count > 0) {
+                backend->getNormalMapMoments(normal_map_moments);
+            }
+            if (!normal_map_moments.empty()) {
+                std::vector<float> vertex_moments;
+                accumulateNormalMapMomentsAtVertices(normal_map_moments, Nbands_launch, vertex_moments);
+                backend->uploadVertexNormalMapMoments(vertex_moments);
+                vertex_normal_map_moments_uploaded = true;
+            } else if (vertex_normal_map_moments_uploaded) {
+                backend->uploadVertexNormalMapMoments({});
+                vertex_normal_map_moments_uploaded = false;
+            }
+
             uint cam = 0;
             for (auto &camera: cameras) {
 
@@ -6389,13 +6505,24 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                     camera_scatter_top.insert(camera_scatter_top.end(), scatter_top_cam.begin() + std::ptrdiff_t(begin), scatter_top_cam.begin() + std::ptrdiff_t(begin + camera_scatter_stride));
                     camera_scatter_bottom.insert(camera_scatter_bottom.end(), scatter_bottom_cam.begin() + std::ptrdiff_t(begin), scatter_bottom_cam.begin() + std::ptrdiff_t(begin + camera_scatter_stride));
                 }
+                // A normal-mapped primitive's direct radiation is shaded by the camera per hit point, so what the direct launch deposited is taken out of what it reads
+                if (normal_map_direct_recorded) {
+                    const size_t count = normal_map_positions.size();
+                    for (size_t k = 0; k < count; k++) {
+                        for (size_t b = 0; b < Nbands_launch; b++) {
+                            const size_t index = normal_map_positions[k] * Nbands_launch + b;
+                            camera_scatter_top[index] -= normal_map_direct_top[(cam * count + k) * Nbands_launch + b];
+                            camera_scatter_bottom[index] -= normal_map_direct_bottom[(cam * count + k) * Nbands_launch + b];
+                        }
+                    }
+                }
                 backend->uploadRadiationOut(camera_scatter_top, camera_scatter_bottom);
 
                 // A primitive with a spectral texture is seen in the outgoing radiation of the class it is hit at, rather than its own
                 std::vector<uint32_t> class_flux_offset;
                 std::vector<float> class_flux;
                 if (!spectral_incident.empty()) {
-                    computeSpectralCameraFlux(spectral_incident, spectral_emitted, cam, band_launch_flag, class_flux_offset, class_flux);
+                    computeSpectralCameraFlux(spectral_incident, spectral_emitted, cam, band_launch_flag, normal_map_direct_recorded, class_flux_offset, class_flux);
                 }
                 backend->uploadSpectralCameraFlux(class_flux_offset, class_flux);
                 if (smooth_spectral_textures) {
@@ -6455,6 +6582,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                     params.random_seed = drawLaunchSeed();
                     std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
                     params.band_launch_flag = band_flags;
+                    params.normal_map_direct = normal_map_direct_recorded ? 1 : 0;
 
                     // Progress message
                     if (message_flag) {
@@ -8354,8 +8482,8 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
     }
 }
 
-void RadiationModel::computeSpectralCameraFlux(const std::vector<float> &spectral_incident, const std::vector<float> &emitted_flux, uint camera, const std::vector<char> &band_launch_flag, std::vector<uint32_t> &class_flux_offset,
-                                               std::vector<float> &class_flux) const {
+void RadiationModel::computeSpectralCameraFlux(const std::vector<float> &spectral_incident, const std::vector<float> &emitted_flux, uint camera, const std::vector<char> &band_launch_flag, bool omit_normal_map_direct,
+                                               std::vector<uint32_t> &class_flux_offset, std::vector<float> &class_flux) const {
     const size_t Nprimitives = context_UUIDs.size();
     const size_t Nslots = radiation_sources.size() + 1;
     const size_t Nentries = material_data.num_palette_entries;
@@ -8397,13 +8525,15 @@ void RadiationModel::computeSpectralCameraFlux(const std::vector<float> &spectra
     auto incident = [&](size_t face, size_t slot, size_t u, size_t b) { return spectral_incident[((face * Nslots + slot) * Nprimitives + u) * Nbands_launch + b]; };
     class_flux.assign(2 * size_t(class_flux_slots) * Nbands_launch, 0.f);
     for (size_t u = 0; u < Nprimitives; u++) {
+        const bool normal_mapped = omit_normal_map_direct && !geometry_data.normal_map_IDs.empty() && geometry_data.normal_map_IDs.at(u) >= 0;
+        const size_t first_slot = normal_mapped ? Nslots - 1 : 0;
         for (uint32_t k = 0; k < palette_size.at(u); k++) {
             const size_t entry = material_data.palette_offset.at(u) + k;
             const size_t class_slot = class_flux_offset.at(u) + k;
             for (size_t b = 0; b < Nbands_launch; b++) {
                 double top = emitted_flux[u * Nbands_launch + b];
                 double bottom = emitted_flux[(Nprimitives + u) * Nbands_launch + b];
-                for (size_t slot = 0; slot < Nslots; slot++) {
+                for (size_t slot = first_slot; slot < Nslots; slot++) {
                     const double rho_cam = material_data.palette_reflectivity_cam.at(palette_cam_idx(slot, entry, global_band.at(b), camera));
                     const double tau_cam = material_data.palette_transmissivity_cam.at(palette_cam_idx(slot, entry, global_band.at(b), camera));
                     top += rho_cam * incident(0, slot, u, b) + tau_cam * incident(1, slot, u, b);
@@ -8428,6 +8558,11 @@ void RadiationModel::buildTextureData() {
     geometry_data.uv_data.clear();
     geometry_data.class_map_data.clear();
     geometry_data.class_map_sizes.clear();
+    geometry_data.normal_map_texels.clear();
+    geometry_data.normal_map_sizes.clear();
+    geometry_data.normal_map_IDs.clear();
+    normal_map_build_keys.clear();
+    normal_map_build_key_index.clear();
 
     // Initialize with -1 (no texture)
     geometry_data.mask_IDs.clear();
@@ -8444,6 +8579,10 @@ void RadiationModel::buildTextureData() {
     // The same for class maps, and for the class fractions of primitives that share a class map and (u,v) coordinates (such as the leaves of one plant)
     std::map<std::string, int> class_map_to_idx;
     std::map<std::pair<int, std::vector<float>>, std::vector<std::pair<uint16_t, float>>> class_fraction_cache;
+    // Index of each decoded normal map (by the Context's shared copy), or -1 for a map whose normals all quantize to the facet normal, which is no map at all
+    std::map<const helios::NormalMapTexels *, int> normal_map_to_idx;
+    std::map<const helios::NormalMapTexels *, uint> normal_map_key_index;
+    std::vector<uint> degenerate_normal_map_UUIDs;
 
     for (size_t prim_idx = 0; prim_idx < Nobjects; prim_idx++) {
         uint UUID = geometry_data.primitive_UUIDs[prim_idx];
@@ -8451,6 +8590,9 @@ void RadiationModel::buildTextureData() {
         const bool has_spectral_texture = context->primitiveHasSpectralTexture(UUID);
         std::string texture_file = context->getPrimitiveTextureFile(UUID);
         const bool has_mask = !texture_file.empty() && context->primitiveTextureHasTransparencyChannel(UUID);
+        const uint material_ID = context->getPrimitiveMaterialID(UUID);
+        const helios::Material &material = context->getMaterial(material_ID);
+        const bool has_normal_map = material.normal_map_kind != helios::NORMAL_MAP_NONE;
 
         if (has_mask) {
             // Check cache for existing mask from same texture file
@@ -8480,14 +8622,18 @@ void RadiationModel::buildTextureData() {
             geometry_data.mask_IDs[prim_idx] = mask_idx;
         }
 
-        if (!has_mask && !has_spectral_texture) {
-            continue; // No mask or class map - mask_ID and class_map_ID stay -1
+        if (!has_mask && !has_spectral_texture && !has_normal_map) {
+            continue; // No mask, class map or normal map - mask_ID, class_map_ID and the normal map stay -1
         }
 
         // Extract UV coordinates for this primitive
         // uv_IDs stores the position index (not offset), used to access uvdata[vertex][position] in CUDA
         std::vector<helios::vec2> uvs = context->getPrimitiveTextureUV(UUID);
         if (uvs.empty() && context->getPrimitiveType(UUID) == helios::PRIMITIVE_TYPE_TRIANGLE) {
+            if (has_normal_map && !has_mask) {
+                helios_runtime_error("ERROR (RadiationModel::updateGeometry): Triangle UUID " + std::to_string(UUID) + " has the normal or bump map '" + material.normal_map_file +
+                                     "' but no texture (u,v) coordinates, so the map cannot be placed on it. Add the triangle with Context::addTriangle() giving a texture file and (u,v) coordinates.");
+            }
             helios_runtime_error("ERROR (RadiationModel::updateGeometry): Triangle UUID " + std::to_string(UUID) + " has a texture with a transparency channel ('" + texture_file +
                                  "') but no texture (u,v) coordinates, so its transparency mask cannot be applied. Add the triangle with Context::addTriangle() giving the texture file and (u,v) coordinates.");
         }
@@ -8503,6 +8649,67 @@ void RadiationModel::buildTextureData() {
             }
         }
         // If uvs is empty, uv_ID stays -1 and CUDA will use default UV mapping
+
+        if (has_normal_map) {
+            const std::shared_ptr<const helios::NormalMapTexels> texels = context->getMaterialNormalMapTexels(material_ID);
+            int map_idx;
+            auto cache_it = normal_map_to_idx.find(texels.get());
+            if (cache_it != normal_map_to_idx.end()) {
+                map_idx = cache_it->second;
+            } else {
+                // Quantize the Context's 16-bit normals to the 8 bits the devices hold (x and y signed normalized, z reconstructed)
+                const size_t texel_count = size_t(texels->resolution.x) * size_t(texels->resolution.y);
+                std::vector<uint16_t> packed(texel_count);
+                bool flat = true;
+                for (size_t t = 0; t < texel_count; t++) {
+                    const int x = int(std::lround(float(texels->xy[2 * t]) / 32767.f * 127.f));
+                    const int y = int(std::lround(float(texels->xy[2 * t + 1]) / 32767.f * 127.f));
+                    flat = flat && x == 0 && y == 0;
+                    packed[t] = uint16_t(uint8_t(int8_t(x))) | uint16_t(uint16_t(uint8_t(int8_t(y))) << 8);
+                }
+                if (flat) {
+                    map_idx = -1;
+                } else {
+                    map_idx = static_cast<int>(geometry_data.normal_map_sizes.size());
+                    geometry_data.normal_map_texels.insert(geometry_data.normal_map_texels.end(), packed.begin(), packed.end());
+                    geometry_data.normal_map_sizes.push_back(texels->resolution);
+                }
+                normal_map_to_idx[texels.get()] = map_idx;
+            }
+            if (map_idx >= 0) {
+                // A primitive whose (u,v) coordinates are collinear has no tangent frame, so the map cannot be oriented on it
+                const float *T = &geometry_data.transform_matrices[16 * prim_idx];
+                const uint primitive_type = geometry_data.primitive_types[prim_idx];
+                helios_nm::Vec3 E1, E2;
+                helios_nm::primitiveEdges(T, primitive_type, E1, E2);
+                const helios_nm::Vec3 normal = helios_nm::normalize(helios_nm::cross(E1, E2));
+                float ax, ay, bx, by;
+                helios_nm::uvJacobian(primitive_type, !uvs.empty(), uvs.empty() ? 0.f : uvs[0].x, uvs.empty() ? 0.f : uvs[0].y, uvs.empty() ? 0.f : uvs[1].x, uvs.empty() ? 0.f : uvs[1].y, uvs.empty() ? 0.f : uvs[2].x, uvs.empty() ? 0.f : uvs[2].y,
+                                      ax, ay, bx, by);
+                if (!helios_nm::buildFrame(E1, E2, ax, ay, bx, by, normal).valid) {
+                    degenerate_normal_map_UUIDs.push_back(UUID);
+                    map_idx = -1;
+                }
+            }
+            if (map_idx >= 0) {
+                if (geometry_data.normal_map_IDs.empty()) {
+                    geometry_data.normal_map_IDs.assign(Nobjects, -1);
+                }
+                geometry_data.normal_map_IDs[prim_idx] = map_idx;
+            }
+            // Recorded so that runBand() can tell when a map has changed since this build (see checkNormalMapsCurrent()). The map, not the material, is recorded: a
+            // primitive given a new color moves to another material with the same map.
+            const NormalMapBuildKey key{material.normal_map_file, material.normal_map_kind, material.normal_map_strength, material.normal_map_flip_green};
+            auto key_it = normal_map_key_index.find(texels.get());
+            if (key_it == normal_map_key_index.end()) {
+                key_it = normal_map_key_index.emplace(texels.get(), uint(normal_map_build_keys.size())).first;
+                normal_map_build_keys.push_back(key);
+            }
+            if (normal_map_build_key_index.empty()) {
+                normal_map_build_key_index.assign(Nobjects, UINT_MAX);
+            }
+            normal_map_build_key_index[prim_idx] = key_it->second;
+        }
 
         if (has_spectral_texture) {
             const std::string class_map_file = context->getPrimitiveSpectralTextureFile(UUID);
@@ -8540,6 +8747,45 @@ void RadiationModel::buildTextureData() {
                         "' has only class 0 (transparent texels) within the primitive's (u,v) coordinates, as the radiation model samples it, so the primitive has no class to take its reflectivity and transmissivity from. Check its (u,v) coordinates, or remove the primitive.");
             }
             spectral_class_fractions[prim_idx] = fraction_it->second;
+        }
+    }
+
+    // Reported whether or not messages are enabled, since the radiation model then treats these primitives differently from what the user asked for
+    // A slot in the record of incident directions for each primitive whose map reaches the devices
+    geometry_data.normal_map_slots.clear();
+    geometry_data.normal_map_slot_count = 0;
+    if (!geometry_data.normal_map_IDs.empty()) {
+        geometry_data.normal_map_slots.assign(Nobjects, UINT32_MAX);
+        for (size_t p = 0; p < Nobjects; p++) {
+            if (geometry_data.normal_map_IDs[p] >= 0) {
+                geometry_data.normal_map_slots[p] = uint32_t(geometry_data.normal_map_slot_count++);
+            }
+        }
+    }
+
+    if (!degenerate_normal_map_UUIDs.empty()) {
+        std::cerr << "WARNING (RadiationModel::updateGeometry): " << degenerate_normal_map_UUIDs.size() << " primitive(s) with a normal or bump map, the first UUID " << degenerate_normal_map_UUIDs.front()
+                  << ", have collinear texture (u,v) coordinates, so the map has no orientation on them and is not applied to them." << std::endl;
+    }
+}
+
+void RadiationModel::checkNormalMapsCurrent(const std::vector<uint> &UUIDs) const {
+    // The normal maps are part of the geometry. A geometry built from a list of primitives is not rebuilt automatically, so it can be out of date.
+    for (size_t u = 0; u < UUIDs.size(); u++) {
+        const uint UUID = UUIDs[u];
+        const helios::Material &material = context->getMaterial(context->getPrimitiveMaterialID(UUID));
+        const uint built_key = normal_map_build_key_index.empty() ? UINT_MAX : normal_map_build_key_index.at(u);
+        if (material.normal_map_kind == helios::NORMAL_MAP_NONE && built_key == UINT_MAX) {
+            continue;
+        }
+        bool current = built_key != UINT_MAX;
+        if (current) {
+            const NormalMapBuildKey &key = normal_map_build_keys.at(built_key);
+            current = key.file == material.normal_map_file && key.kind == material.normal_map_kind && key.strength == material.normal_map_strength && key.flip_green == material.normal_map_flip_green;
+        }
+        if (!current) {
+            helios_runtime_error("ERROR (RadiationModel::runBand): The normal or bump map of primitive UUID " + std::to_string(UUID) +
+                                 " has changed since the radiation model's geometry was built. Call RadiationModel::updateGeometry() again after giving primitives normal maps or changing them.");
         }
     }
 }
