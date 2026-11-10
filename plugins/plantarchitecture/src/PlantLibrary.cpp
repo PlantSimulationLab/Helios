@@ -3905,17 +3905,14 @@ uint PlantArchitecture::buildGrapevineVSP(const helios::vec3 &base_position) {
     plant_instances.at(plantID).shoot_tree.at(uID_cane_L)->meristem_is_alive = false;
     plant_instances.at(plantID).shoot_tree.at(uID_cane_R)->meristem_is_alive = false;
 
-    // Wake the trained wood and its buds. Two things have to be undone here, both consequences of building
-    // this structure from prescribed node positions rather than with appendShoot().
+    // Wake the trained wood and its buds.
     //
-    // First, every bud on a shoot built by addShootFromNodePositions() comes back dead, where the same
-    // cordon built by appendShoot() comes back with nearly all of them active: buds are sampled for break
-    // as each phytomer is appended, against a node index that is not yet final on the prescribed path, and
-    // the apex-weighted probability this shoot type uses then floors every one of them. A cordon whose buds
-    // are all dead bears no shoots at all. They are set dormant rather than sampled, which is the right
-    // behaviour for trained wood in any case: the grower decides how many shoots a cordon carries.
+    // First, the cordon buds are set active rather than left to the sampling done as each phytomer was
+    // appended (vegetative_bud_break_probability_min = 0.9 for grapevine_cane, which leaves about one bud
+    // in ten dead), which is the right behaviour for trained wood: the grower decides how many shoots a
+    // cordon carries. The trunk's buds are set dead.
     //
-    // Second, a prescribed shoot is created dormant, so without clearing the flag the cordons would sit
+    // Second, a manually added shoot is created dormant, so without clearing the flag the cordons would sit
     // until the plant's dormancy-break threshold -- 165 days for this model -- and the shoots they bear
     // would be born after it. That costs those shoots the makeDormant()/breakDormancy() pass at the season
     // boundary, which is where a shoot's own buds are re-sampled against its final node count, and it is
