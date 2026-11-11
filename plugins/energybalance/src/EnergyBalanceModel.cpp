@@ -1922,6 +1922,11 @@ void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint
                 // Moisture conductance
                 if (moisture_conductance_given && context->doesPrimitiveDataExist(p, "moisture_conductance")) {
                     context->getPrimitiveData(p, "moisture_conductance", inputs.gS[u]);
+                    // A negative conductance would reverse the transpiration flux
+                    if (!std::isfinite(inputs.gS[u]) || inputs.gS[u] < 0.f) {
+                        helios_runtime_error("ERROR (EnergyBalanceModel::run): Primitive " + std::to_string(p) + " has a moisture conductance of " + std::to_string(inputs.gS[u]) +
+                                             " mol/m^2/s in primitive data 'moisture_conductance', but it must be a finite value of zero or more. Check the model or data that set it.");
+                    }
                 } else {
                     inputs.gS[u] = gS_default;
                 }

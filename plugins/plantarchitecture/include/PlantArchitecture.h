@@ -1397,15 +1397,30 @@ struct ShootParameters {
      * plugin documentation.
      */
     RandomParameter_float girth_area_factor;
-    //! Angle (deg) at which child shoots emerge from this parent shoot at the tip of the parent shoot
+    //! Insertion angle (deg) of a shoot of this type that emerges from a bud at the tip of its parent shoot
+    /**
+     * This is a property of the child shoot, not of the parent it emerges from: when a vegetative bud breaks, the insertion angle of the new shoot is read from the shoot type the bud will become, and the
+     * parent shoot contributes only the position of the bud along it (see insertion_angle_decay_rate).
+     */
     RandomParameter_float insertion_angle_tip;
-    //! Rate (deg/node) at which the child shoot insertion angle increases moving down this parent shoot
+    //! Rate (deg/node) at which the insertion angle of a shoot of this type increases with the distance of its bud below the tip of its parent shoot
+    /**
+     * Like insertion_angle_tip, this is read from the type of the child shoot. The insertion angle is insertion_angle_tip + insertion_angle_decay_rate times the number of nodes between the bud and the
+     * parent's tip, capped at 90 degrees.
+     */
     RandomParameter_float insertion_angle_decay_rate;
-    //! Maximum internode length (m) of a child shoot
+    //! Maximum internode length (m) of a shoot of this type
+    /**
+     * When a shoot of this type emerges from a bud and growth_requires_dormancy is true, its internode length is reduced from this value by internode_length_decay_rate for each node between the bud and the
+     * tip of the parent shoot, down to internode_length_min. All three values are read from the type of the child shoot, not the parent.
+     */
     RandomParameter_float internode_length_max;
-    //! Minimum internode length (m) of a child shoot
+    //! Minimum internode length (m) of a shoot of this type, the floor for the reduction set by internode_length_decay_rate
     RandomParameter_float internode_length_min;
-    //! Rate (m/node) at which internode length decreases moving down the parent shoot
+    //! Rate (m/node) at which the internode length of a shoot of this type decreases with the distance of its bud below the tip of its parent shoot
+    /**
+     * Applied only when growth_requires_dormancy is true. See internode_length_max.
+     */
     RandomParameter_float internode_length_decay_rate;
     //! Roll angle (deg) of the shoot specifying the orientation of the first petiole relative to the parent shoot
     RandomParameter_float base_roll;
@@ -1458,12 +1473,26 @@ struct ShootParameters {
      * unset. A rate is a non-negative quantity, so no negative value can be confused with one a user intended.
      */
     static constexpr float leaf_expansion_rate_unset = -1.f;
-    //! Minimum probability that a bud will break and form a new shoot
+    //! Minimum probability that a vegetative bud on a shoot of this type will break and form a new shoot
+    /**
+     * This is also the probability used everywhere along the shoot when vegetative_bud_break_probability_decay_rate is zero, and when it is negative and growth_requires_dormancy is false. With the
+     * defaults (0, with a decay rate of -0.5 and growth_requires_dormancy false) no vegetative bud ever breaks. See the vegetative bud break section of the plug-in documentation.
+     */
     RandomParameter_float vegetative_bud_break_probability_min;
-    //! Maximum probability that a bud will break and form a new shoot
+    //! Probability that a vegetative bud on a shoot of this type will break at the end of the shoot where the probability is highest
+    /**
+     * Used only when vegetative_bud_break_probability_decay_rate is non-zero: at the apex for a positive rate, at the base for a negative rate (and growth_requires_dormancy true).
+     */
     RandomParameter_float vegetative_bud_break_probability_max;
 
-    //! Decay rate (1/node) of the vegetative bud-break probability along the shoot; sign determines direction
+    //! Rate (1/node) at which the vegetative bud-break probability falls from vegetative_bud_break_probability_max to vegetative_bud_break_probability_min along the shoot
+    /**
+     * Positive: highest at the apex, falling moving down the shoot. Negative: highest at the base, falling moving up the shoot, but only when growth_requires_dormancy is true; otherwise every bud uses
+     * vegetative_bud_break_probability_min. Zero: every bud uses vegetative_bud_break_probability_min.
+     *
+     * These parameters are read from the shoot bearing the bud. Buds are sampled when a phytomer is created on a shoot whose type has growth_requires_dormancy false, and when dormancy is broken
+     * otherwise; a bud that does not break is set dead. Note that PlantArchitecture::makePlantDormant() also kills every bud that is not dormant at the time, including active buds that have not broken yet.
+     */
     RandomParameter_float vegetative_bud_break_probability_decay_rate;
 
     //! Maximum number of floral buds at the shoot apex (0 means the shoot forms no terminal floral buds)
@@ -1876,12 +1905,6 @@ public:
      */
     void scalePetioleMaxLength(float scale_factor);
 
-    //! Set the maximum radius of the internode
-    /**
-     * \param[in] internode_radius_max_new Maximum radius of the internode
-     */
-    void setInternodeMaxRadius(float internode_radius_max_new);
-
     //! Set the leaf scale as a fraction of its total fully-elongated scale factor, carrying the petiole to the same fraction. Value is uniformly applied for all leaves/leaflets in the petiole.
     /**
      * The petiole is moved to the same fraction of its own fully-elongated length, which is what makes this the call to use when a leaf and the petiole it sits on are being posed together -- restoring a
@@ -2031,6 +2054,17 @@ public:
      * \param[in] shape New blade shape. Its subdivisions_y is the least number of cells wanted across the blade; its subdivisions_x and lattice_offset must be the leaf's own.
      */
     void reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeValues &shape);
+
+    //! Whether reshapeLeaf() would keep a leaf's primitives for a new shape, rather than re-mesh its blade
+    /**
+     * reshapeLeaf() moves the vertices of the existing blade lattice when it has as many cells across the blade as the new shape needs, and otherwise replaces the blade primitives with a finer lattice,
+     * which changes their UUIDs. A caller that must keep the UUIDs (for example one that tracks primitives in a renderer) asks first and decides what to do instead of discovering the re-mesh afterwards.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] shape New blade shape, with the same requirements as for reshapeLeaf(); an error is raised for a shape reshapeLeaf() would refuse.
+     * \return True if reshapeLeaf() would keep every primitive of the leaf; false if it would re-mesh the blade.
+     */
+    [[nodiscard]] bool canReshapeLeafInPlace(uint petiole_index, uint leaf_index, const LeafShapeValues &shape) const;
 
     //! Rebuild the leaflets of one petiole with each turned by its own offset from the leaf's angles.
     /**
@@ -2264,6 +2298,17 @@ public:
     void deletePhytomer();
 
 private:
+    //! Cells across the blade that reshapeLeaf() builds a leaf's new shape with
+    /**
+     * The larger of the leaf's own, the shape's, and what its roll needs, rounded up to even. reshapeLeaf() keeps the leaf's primitives exactly when this equals the leaf's own; shared with
+     * canReshapeLeafInPlace() so that the two cannot disagree. Raises an error for a leaf or shape that cannot be reshaped.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] shape_requested New blade shape.
+     * \param[in] caller Name of the public method, for error messages.
+     */
+    [[nodiscard]] uint reshapedLeafSubdivisionsY(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested, const char *caller) const;
+
     //! Remove the leaves and petioles of the phytomer, optionally handing their Context objects to the caller instead of deleting them
     /**
      * \param[out] detached_objIDs If not null, the Context objects of the leaves and petioles are appended here and left in the Context; if null, they are deleted, as by removeLeaf().
@@ -2657,7 +2702,6 @@ public:
     std::vector<std::vector<FloralBud>> floral_buds; // first index is petiole within internode, second index is bud within petiole
 
     float internode_radius_initial;
-    float internode_radius_max;
     //! Fully-elongated length of this phytomer's internode, which its current length is a fraction of.
     float internode_length_max;
 
@@ -4123,6 +4167,9 @@ public:
      * \param[in] petiole_index [optional] Index of the petiole within the internode to which the new shoot will be attached (when there are multiple petioles per internode)
      * \return ID of the newly generated shoot.
      * \note Like every other manually-added shoot, the new shoot is created dormant. Call breakPlantDormancy() before advanceTime() if it is to grow.
+     * \note The axillary vegetative buds are created exactly as by addChildShoot(), from the shoot type's ShootParameters::vegetative_bud_break_probability_min and companions. If the type has
+     * ShootParameters::growth_requires_dormancy false, they are sampled at once and those that do not break are set dead, and a later call to makePlantDormant() kills the rest; set them dormant first with
+     * \ref Phytomer::setVegetativeBudState(BudState) if they are to break after a dormancy period.
      * \note The prescribed geometry is protected from the growth model, but not from the caller. The phytomers are created fully elongated, which is what exempts them from the elongation performed by advanceTime();
      * calling Phytomer::setInternodeLengthScaleFraction() on one of them directly overrides that and rescales the internode away from its measured length.
      * \note This form builds the measured geometry and grows the shoot afterwards with the same shoot type, so any parameter set to make the measured section buildable -- a node cap raised to fit it, curvature zeroed
@@ -4877,6 +4924,10 @@ public:
 
     /**
      * \brief Makes the specified plant enter a dormant state.
+     *
+     * Every shoot is made dormant as at the end of a season: every vegetative and floral bud that is not already dormant is set dead, leaves are removed unless the plant is evergreen, and the time since
+     * dormancy is reset to zero. Buds that are active but have not yet broken are killed too. These are the buds of any shoot whose type has ShootParameters::growth_requires_dormancy false, which are
+     * sampled as their phytomers are created, so a manually built shoot of such a type keeps no buds through this call unless they are set dormant first with \ref Phytomer::setVegetativeBudState(BudState).
      *
      * \param[in] plantID ID of the plant to be made dormant.
      */
@@ -6221,6 +6272,10 @@ protected:
         helios::RGBAcolor color;
         std::string texture_file;
         bool texture_color_overridden = false;
+        std::string normal_map_file;
+        helios::NormalMapKind normal_map_kind = helios::NORMAL_MAP_NONE;
+        float normal_map_strength = 1.f;
+        bool normal_map_flip_green = false;
     };
     //! Material named for each automatic material label and organ material base name, given to the organs of that kind and appearance created later (see nameOrganMaterials())
     std::map<std::pair<std::string, std::string>, OrganMaterial> organ_material_labels;

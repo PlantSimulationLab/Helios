@@ -256,6 +256,7 @@ layout(set = 4, binding = 0) buffer RayCountersBuffer {
 #include "common/texture_mask.glsl"
 #include "common/surface_layer.glsl"
 #include "common/spectral_texture.glsl"
+#include "common/normal_map.glsl"
 
 const float PI = 3.14159265359;
 
@@ -356,29 +357,7 @@ vec3 sample_square(inout RNGState rng) {
     return vec3(-0.5 + Rx, -0.5 + Ry, 0.0);
 }
 
-// Calculate ray strength for collimated source (sun)
-float calc_collimated_strength(vec3 normal, vec3 ray_dir, uint Nrays) {
-    return abs(dot(normal, ray_dir)) / float(Nrays);
-}
-
-// Calculate ray strength for sphere source via numerical integration over visible hemisphere
-// (matches CUDA rayGeneration.cu lines 160-172)
-float calc_sphere_strength(vec3 normal, vec3 ray_dir, float ray_magnitude, float sphere_diameter, uint Nrays) {
-    float strength = 0.0;
-    const uint N = 10;
-    for (uint j = 0; j < N; j++) {
-        for (uint i = 0; i < N; i++) {
-            float theta = acos_safe(1.0 - 2.0 * (float(i) + 0.5) / float(N));
-            float phi = (float(j) + 0.5) * 2.0 * PI / float(N);
-            vec3 light_direction = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
-            if (dot(light_direction, ray_dir) < 0.0) {
-                strength += 1.0 / float(Nrays) * abs(dot(normal, ray_dir)) * abs(dot(light_direction, ray_dir))
-                            / (ray_magnitude * ray_magnitude) / float(N * N) * sphere_diameter * sphere_diameter;
-            }
-        }
-    }
-    return strength;
-}
+#include "common/source_sampling.glsl"
 
 // ========== Main Shader ==========
 void main() {
@@ -532,116 +511,28 @@ void main() {
             uint nbase = prim_idx * 3;
             vec3 normal = vec3(normals_buf.normals[nbase], normals_buf.normals[nbase + 1], normals_buf.normals[nbase + 2]);
 
+            // The shading normal of a normal map at the launch point, which only a surface layer's angle-dependent split of the light uses here
+            uint origin_map = nm_map_index(prim_idx);
+            bool origin_has_normal = origin_map != NO_NORMAL_MAP && !origin_is_cover && surface_layer_present(prim_idx);
+            vec3 origin_shading_normal = normalize(normal);
+            if (origin_has_normal) {
+                origin_shading_normal = nm_shading_normal(prim_idx, prim_type, origin_map, normalize(normal), sp_local.x, sp_local.y, false);
+            }
+
             // Transform to world space
             vec3 ray_origin = transform_point(transform, sp_local);
 
             // Send ray to each source
             for (uint src_idx = 0; src_idx < pc.source_count; ++src_idx) {
 
-                vec3 source_pos = get_source_position(src_idx);
                 uint source_type = source_types_buf.types[src_idx];
-
                 vec3 ray_dir;
-                float strength = 0.0;
-                vec3 source_target = source_pos; // point sampled on a finite source, where the shadow ray ends
-
-                if (source_type == 0) { // Collimated source (sun)
-                    ray_dir = normalize(source_pos); // source_pos is direction for collimated
-                    strength = calc_collimated_strength(normal, ray_dir, Nrays);
-
-                } else if (source_type == 1 || source_type == 2) { // Sphere or sun-sphere source
-                    // Sample random point on sphere surface (matches CUDA rayGeneration.cu lines 152-154)
-                    float theta_s = acos_safe(1.0 - 2.0 * rng_float(rng));
-                    float phi_s = rng_float(rng) * 2.0 * PI;
-                    float radius = source_widths_buf.widths[src_idx].x * 0.5; // width stores diameter
-                    vec3 sphere_point = radius * vec3(sin(theta_s) * cos(phi_s), sin(theta_s) * sin(phi_s), cos(theta_s));
-
-                    // Ray from surface point toward sampled point on sphere
-                    float ray_magnitude;
-                    source_target = sphere_point + source_pos;
-                    ray_dir = safe_normalize(source_target - ray_origin, ray_magnitude);
-                    if (ray_magnitude < 1e-20) {
-                        continue; // Surface point coincides with the sampled source point
-                    }
-
-                    // Numerical integration over visible hemisphere of sphere
-                    strength = calc_sphere_strength(normal, ray_dir, ray_magnitude, source_widths_buf.widths[src_idx].x, Nrays);
-
-                } else if (source_type == 3) { // Rectangle source
-                    vec3 source_rotation = get_source_rotation(src_idx);
-                    vec2 source_size = source_widths_buf.widths[src_idx]; // (width, height)
-
-                    // Sample random point on rectangle [-0.5, 0.5]²
-                    vec3 square_point = sample_square(rng);
-
-                    // Scale by rectangle dimensions (matches OptiX line 183)
-                    square_point.x *= source_size.x;
-                    square_point.y *= source_size.y;
-
-                    // Apply rotation matrix (matches OptiX line 184)
-                    mat4 light_transform = make_rotation_matrix(source_rotation);
-                    vec3 light_point = transform_point(light_transform, square_point);
-
-                    // Transform light direction (matches OptiX line 186-187)
-                    vec3 light_direction = normalize(transform_direction(light_transform, vec3(0, 0, 1)));
-
-                    // Ray from surface to light sample point
-                    source_target = light_point + source_pos;
-                    ray_dir = source_target - ray_origin;
-
-                    // Back-face rejection: skip if ray hits back side of light
-                    if (dot(ray_dir, light_direction) > 0.0) {
-                        continue;
-                    }
-
-                    float ray_magnitude;
-                    ray_dir = safe_normalize(ray_dir, ray_magnitude);
-                    if (ray_magnitude < 1e-20) {
-                        continue; // Surface point coincides with the sampled source point
-                    }
-
-                    // Strength calculation (matches OptiX rayGeneration.cu:197)
-                    float area = source_size.x * source_size.y;
-                    strength = (1.0 / float(Nrays)) * abs(dot(normal, ray_dir)) * abs(dot(light_direction, ray_dir))
-                               / (ray_magnitude * ray_magnitude) * area / PI;
-
-                } else if (source_type == 4) { // Disk source
-                    vec3 source_rotation = get_source_rotation(src_idx);
-                    float radius = source_widths_buf.widths[src_idx].x; // x component stores radius
-
-                    // Sample random point on unit disk (function already exists in shader)
-                    vec3 disk_point = sample_disk(rng);
-
-                    // Apply rotation matrix to unit disk point (matches OptiX line 208)
-                    mat4 light_transform = make_rotation_matrix(source_rotation);
-                    vec3 light_point = transform_point(light_transform, disk_point);
-
-                    // Transform light direction (matches OptiX line 210-211)
-                    vec3 light_direction = normalize(transform_direction(light_transform, vec3(0, 0, 1)));
-
-                    // Ray from surface to light sample point (scale AFTER transform, matches OptiX line 213)
-                    source_target = radius * light_point + source_pos;
-                    ray_dir = source_target - ray_origin;
-
-                    // Back-face rejection
-                    if (dot(ray_dir, light_direction) > 0.0) {
-                        continue;
-                    }
-
-                    float ray_magnitude;
-                    ray_dir = safe_normalize(ray_dir, ray_magnitude);
-                    if (ray_magnitude < 1e-20) {
-                        continue; // Surface point coincides with the sampled source point
-                    }
-
-                    // Strength calculation (matches OptiX rayGeneration.cu:221)
-                    strength = (1.0 / float(Nrays)) * abs(dot(normal, ray_dir)) * abs(dot(light_direction, ray_dir))
-                               / (ray_magnitude * ray_magnitude) * radius * radius;
-
-                } else {
-                    // Unsupported source type
-                    continue;
+                vec3 source_target; // point sampled on a finite source, where the shadow ray ends
+                float source_factor;
+                if (!sample_source_direction(src_idx, ray_origin, rng, ray_dir, source_target, source_factor)) {
+                    continue; // the back of a rectangle or disk source, or an unknown source type
                 }
+                float strength = abs(dot(normal, ray_dir)) / float(Nrays) * source_factor;
 
                 // Check if ray is facing the correct direction
                 float dot_product = dot(ray_dir, normal);
@@ -659,84 +550,14 @@ void main() {
                     cover_tau[cb] = 1.0;
                 }
 
-                // Trace ray to check for occlusion (matches OptiX rtTrace in rayGeneration.cu:224)
-                // Periodic boundary wrap loop + translucent-cover pass-through loop: a glass occluder is
-                // not a blocker — accumulate its angular transmittance, deposit its reflected/absorbed
-                // energy, and re-trace past it toward the source (bounded iterations).
-                // The ray counts as blocked unless it reaches the source: a ray that reaches the periodic wrap limit or the
-                // segment limit deposits nothing, as in the OptiX backends.
-                float occlusion_t;
-                uint occluder;
-                vec3 trace_origin = ray_origin;
-                bool is_occluded = true;
-                int boundary_hits = 0;
-                // Distance left to the point sampled on a finite source, measured from trace_origin. A hit beyond it is
-                // behind the source and does not block.
-                float distance_to_source = length(source_target - ray_origin);
-
-                // No minimum distance: the primitive the ray was launched from is skipped (prim_idx), and a minimum distance let
-                // a ray launched that close to an adjacent surface pass through it where the two meet
-                float segment_t_min = 0.0;
-                for (int step = 0; step < MAX_RAY_SEGMENTS; ++step) {
-                    occluder = traverse_cwbvh(trace_origin, ray_dir, segment_t_min, prim_idx, occlusion_t);
-
-                    // Periodic boundary wrap (bbox face is not a real occluder)
-                    if (pc.bbox_count != 0) {
-                        vec3 wrapped_origin;
-                        float boundary_t;
-                        bool hit_periodic = check_periodic_boundary(
-                            trace_origin, ray_dir, occlusion_t,
-                            pc.periodic_flag_x, pc.periodic_flag_y, pc.bbox_count,
-                            pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
-                            wrapped_origin, boundary_t);
-                        if (hit_periodic) {
-                            if (source_type != 0 && boundary_t >= distance_to_source) {
-                                is_occluded = false; // the source is reached before the boundary
-                                break;
-                            }
-                            if (++boundary_hits >= MAX_PERIODIC_WRAPS) { // wrap limit — treated as blocked
-                                atomicAdd(ray_counters_buf.counters[0], 1u);
-                                break;
-                            }
-                            distance_to_source -= boundary_t;
-                            trace_origin = wrapped_origin;
-                            segment_t_min = 0.0; // a wrapped ray hits geometry right at the boundary it was wrapped to
-                            continue;
-                        }
-                    }
-
-                    if (occluder == 0xFFFFFFFF) { // miss — reached the source
-                        is_occluded = false;
-                        break;
-                    }
-
-                    // occlusion_t is measured from trace_origin, which is past any boundaries and translucent covers already crossed.
-                    if (source_type != 0 && occlusion_t >= distance_to_source) {
-                        is_occluded = false; // hit is behind the source — unblocked
-                        break;
-                    }
-
-                    // A primitive that is not a translucent cover for all launched bands is an opaque blocker.
-                    if (occluder == prim_idx || !glass_cover_all_bands(occluder, pc.band_count, pc.material_band_count)) {
-                        break;
-                    }
-
-                    // Glass pass-through: accumulate the per-band transmittance. What the cover itself absorbs and
-                    // reflects is booked by the cover's own rays, not here: this ray was launched by the surface
-                    // behind the cover, so its strength is normalized to that surface's area and angle.
-                    uint cov_nbase = occluder * 3;
-                    vec3 cov_normal = vec3(normals_buf.normals[cov_nbase], normals_buf.normals[cov_nbase + 1], normals_buf.normals[cov_nbase + 2]);
-                    float cov_cos = abs(dot(ray_dir, normalize(cov_normal)));
-
-                    for (uint band = 0; band < pc.band_count && band < uint(GLASS_MAX_BANDS); ++band) {
-                        cover_tau[band] *= glass_cover_tau_rho_alpha(occluder, band, pc.material_band_count, cov_cos).x;
-                    }
-
-                    // Advance just past the cover hit and continue toward the source.
-                    trace_origin = trace_origin + ray_dir * (occlusion_t + 1e-4);
-                    distance_to_source -= occlusion_t + 1e-4;
-                    segment_t_min = 1e-4;
+                // Trace the ray toward the source: a glass cover passes it at its angular transmittance, anything else blocks it, and it wraps through periodic boundaries. The ray counts as
+                // blocked unless it reaches the source; one that reaches the periodic wrap limit is counted as abandoned, as in the OptiX backends.
+                uint reached = trace_to_source(ray_origin, ray_dir, prim_idx, source_type != 0u, length(source_target - ray_origin), pc.periodic_flag_x, pc.periodic_flag_y, pc.bbox_count, pc.domain_xmin,
+                                               pc.domain_xmax, pc.domain_ymin, pc.domain_ymax, pc.band_count, pc.material_band_count, cover_tau);
+                if (reached == SOURCE_WRAP_LIMIT) {
+                    atomicAdd(ray_counters_buf.counters[0], 1u);
                 }
+                bool is_occluded = reached != SOURCE_REACHED;
 
                 if (is_occluded) {
                     continue; // Ray blocked - no direct illumination from this source
@@ -779,7 +600,8 @@ void main() {
                     float body_fraction = 1.0;
                     int layer = origin_is_cover ? -1 : surface_layer_table(prim_idx, global_b);
                     if (layer >= 0) {
-                        layer_albedo = surface_layer_albedo(layer, abs(dot(ray_dir, normalize(normal))));
+                        // At the angle of the shading normal at the launch point (|m.L|, consistently with the folding of diffuse rays); the intercepted power stays at the geometric cosine
+                        layer_albedo = surface_layer_albedo(layer, abs(dot(ray_dir, origin_has_normal ? origin_shading_normal : normalize(normal))));
                         body_fraction = 1.0 - layer_albedo;
                         absorption_factor *= body_fraction;
                         rho *= body_fraction;
@@ -900,7 +722,8 @@ void main() {
                     // With camera flux smoothing, every smoothed primitive records it as well, for the camera to evaluate the direct radiation with the shading normal
                     if (pc.specular_reflection_enabled > 0) {
                         bool smoothed = !origin_is_cover && smoothing_indices_buf.indices.length() > int(prim_idx) * 4 + 3 && smoothing_indices_buf.indices[int(prim_idx) * 4] >= 0;
-                        float spec_energy = (layer >= 0 || smoothed) ? flux * strength : 0.0;
+                        // Also recorded for a primitive with a normal map, whose direct radiation cameras shade per hit point with the shading normal
+                        float spec_energy = (layer >= 0 || smoothed || (origin_map != NO_NORMAL_MAP && !origin_is_cover)) ? flux * strength : 0.0;
                         float spec_sum = subgroupAdd(spec_energy);
                         if (subgroupElect()) {
                             uint spec_idx = src_idx * pc.primitive_count * pc.band_count + prim_idx * pc.band_count + band;

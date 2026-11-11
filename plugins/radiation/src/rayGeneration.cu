@@ -133,6 +133,14 @@ RT_PROGRAM void direct_raygen() {
             // The class of a spectral texture at the launch point, whose reflectivity and transmissivity the rays from it use
             prd.palette_entry = d_spectralPaletteEntry(objID, d_originTextureUV(ptype, sp, puvID));
 
+            // The shading normal of a normal map at the launch point, which only a surface layer's angle-dependent split of the light uses here
+            const uint origin_map = d_normalMapOf(objID);
+            const bool origin_has_normal = origin_map != helios_nm::NO_MAP && d_hasSurfaceLayer(objID);
+            float3 origin_shading_normal = normal;
+            if (origin_has_normal) {
+                origin_shading_normal = d_normalMapShadingNormalAt(ptype, origin_map, m_trans, puvID, normal, sp, false);
+            }
+
             // translate the ray to the location of the primitive
 
             float3 ray_origin = sp;
@@ -144,84 +152,11 @@ RT_PROGRAM void direct_raygen() {
                 // set the ray direction
                 float3 ray_direction;
                 float ray_magnitude;
-                if (source_types[rr] == 0) { // collimated source
-                    ray_direction = normalize(source_positions[rr]);
-                    ray_magnitude = RT_DEFAULT_MAX;
-                    prd.strength = 1. / double(launch_dim.x * launch_dim.y) * fabs(dot(normal, ray_direction));
-                } else if (source_types[rr] == 1 || source_types[rr] == 2) { // sphere source
-
-                    // sample point on surface of sphere
-                    float theta_s = acos_safe(1.f - 2.f * rnd(prd.seed));
-                    float phi_s = rnd(prd.seed) * 2.f * M_PI;
-                    float3 sphere_point = 0.5 * source_widths[rr].x * make_float3(sin(theta_s) * cos(phi_s), sin(theta_s) * sin(phi_s), cos(theta_s));
-
-                    ray_direction = sphere_point + source_positions[rr] - ray_origin;
-
-                    ray_magnitude = d_magnitude(ray_direction);
-                    ray_direction = normalize(ray_direction);
-                    prd.strength = 0.f;
-                    uint N = 10;
-                    for (uint j = 0; j < N; j++) {
-                        for (uint i = 0; i < N; i++) {
-                            float theta = acos_safe(1.f - 2.f * (float(i) + 0.5f) / float(N));
-                            float phi = (float(j) + 0.5f) * 2.f * M_PI / float(N);
-                            float3 light_direction = make_float3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
-                            if (dot(light_direction, ray_direction) < 0) {
-                                prd.strength +=
-                                        1. / double(launch_dim.x * launch_dim.y) * fabs(dot(normal, ray_direction)) * fabs(dot(light_direction, ray_direction)) / (ray_magnitude * ray_magnitude) / (N * N) * source_widths[rr].x * source_widths[rr].x;
-                            }
-                        }
-                    }
-
-                } else if (source_types[rr] == 3) { // rectangle source
-
-                    // transformation matrix
-                    float light_transform[16];
-                    d_makeTransformMatrix(source_rotations[rr], light_transform);
-
-                    // sample point on surface of disk
-                    float3 square_point;
-                    d_sampleSquare(prd.seed, square_point);
-                    square_point = make_float3(source_widths[rr].x * square_point.x, source_widths[rr].y * square_point.y, square_point.z);
-                    d_transformPoint(light_transform, square_point);
-
-                    float3 light_direction = make_float3(0, 0, 1);
-                    d_transformPoint(light_transform, light_direction);
-
-                    ray_direction = square_point + source_positions[rr] - ray_origin;
-
-                    if (dot(ray_direction, light_direction) > 0.f) { // don't emit from back side of light source (note that ray goes toward the source, so the dot produce is negative when light is pointed at primitive)
-                        continue;
-                    }
-
-                    ray_magnitude = d_magnitude(ray_direction);
-                    ray_direction = normalize(ray_direction);
-                    prd.strength = 1. / double(launch_dim.x * launch_dim.y) * fabs(dot(normal, ray_direction)) * fabs(dot(light_direction, ray_direction)) / (ray_magnitude * ray_magnitude) * source_widths[rr].x * source_widths[rr].y / M_PI;
-
-                } else if (source_types[rr] == 4) { // disk source
-
-                    // transformation matrix
-                    float light_transform[16];
-                    d_makeTransformMatrix(source_rotations[rr], light_transform);
-
-                    // sample point on surface of disk
-                    float3 disk_point;
-                    d_sampleDisk(prd.seed, disk_point);
-                    d_transformPoint(light_transform, disk_point);
-
-                    float3 light_direction = make_float3(0, 0, 1);
-                    d_transformPoint(light_transform, light_direction);
-
-                    ray_direction = source_widths[rr].x * disk_point + source_positions[rr] - ray_origin;
-
-                    if (dot(ray_direction, light_direction) > 0.f) { // don't emit from back side of light source (note that ray goes toward the source, so the dot produce is negative when light is pointed at primitive)
-                        continue;
-                    }
-
-                    ray_magnitude = d_magnitude(ray_direction);
-                    ray_direction = normalize(ray_direction);
-                    prd.strength = 1. / double(launch_dim.x * launch_dim.y) * fabs(dot(normal, ray_direction)) * fabs(dot(light_direction, ray_direction)) / (ray_magnitude * ray_magnitude) * source_widths[rr].x * source_widths[rr].x;
+                double source_factor;
+                if (!d_sampleSourceDirection(rr, ray_origin, prd.seed, ray_direction, ray_magnitude, source_factor)) {
+                    continue; // the back of a rectangle or disk source, or an unknown source type
                 }
+                prd.strength = 1. / double(launch_dim.x * launch_dim.y) * fabs(dot(normal, ray_direction)) * source_factor;
 
                 // No minimum distance: the primitive the ray was launched from is skipped (isRayOrigin()), and a minimum distance
                 // let a ray launched that close to an adjacent surface pass through it where the two meet
@@ -237,7 +172,9 @@ RT_PROGRAM void direct_raygen() {
                 } else {
                     prd.face = 0;
                 }
-                prd.origin_cos = fabs(dot(ray_direction, normal));
+                // A surface layer sees the light at the angle of the shading normal at the launch point (|m.L|, so that a facet tipped away from the source counts as its mirror image,
+                // consistently with the folding of diffuse rays); the beam power the primitive intercepts stays at the geometric cosine
+                prd.origin_cos = origin_has_normal ? fabs(dot(ray_direction, origin_shading_normal)) : fabs(dot(ray_direction, normal));
 
                 if ((prd.face == 1 || twosided_flag[objID] == 1) && twosided_flag[objID] != 3) {
 
@@ -426,10 +363,16 @@ RT_PROGRAM void diffuse_raygen() {
             float3 ray_origin;
             optix::Ray ray;
 
+            // A normal map leaves the cosine lobe on the facet normal, so that the primitive gathers what its footprint intercepts (as a relief that is a heightfield does)
             ray_direction = d_rotatePoint(ray_direction, acos_safe(normal.z), atan2(normal.y, normal.x));
 
             prd.strength = 1.f / float(dimx);
+            // A surface layer sees each ray at its angle to the shading normal at the launch point
             prd.origin_cos = fabs(dot(ray_direction, normal));
+            const uint origin_map = d_normalMapOf(objID);
+            if (origin_map != helios_nm::NO_MAP && d_hasSurfaceLayer(objID)) {
+                prd.origin_cos = fabs(dot(ray_direction, d_normalMapShadingNormalAt(ptype, origin_map, m_trans, puvID, normal, sp, false)));
+            }
 
             prd.origin_UUID = UUID;
             prd.source_ID = Nsources; // diffuse/scatter material slot, weighted by the band's combined incident spectrum

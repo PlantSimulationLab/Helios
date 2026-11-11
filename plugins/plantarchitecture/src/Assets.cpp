@@ -1019,7 +1019,6 @@ static constexpr float almond_spur_fraction = 0.2f;
 void AlmondPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
     if (phytomer->internode_length_max < 0.01) { // spurs
-        phytomer->setInternodeMaxRadius(0.005);
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->scaleLeafPrototypeScale(0.8);
         phytomer->setFloralBudState(BUD_DEAD);
@@ -1122,7 +1121,6 @@ void ApplePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
 
     // An apple spur flowers only from its terminal mixed bud, which is added when the spur goes dormant and is not touched here.
     if (shoot.shoot_type_label == "spur") {
-        phytomer->setInternodeMaxRadius(0.005);
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->scaleLeafPrototypeScale(0.8);
         phytomer->setFloralBudState(BUD_DEAD);
@@ -1134,7 +1132,6 @@ void ApplePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
     // the terminal flower cluster of a long shoot, and never branching. Its unbroken buds are marked as already considered for a spur, so
     // that growSpursFromUnbrokenBuds() does not grow spurs out of a short shoot.
     if (phytomer->internode_length_max < 0.011f) {
-        phytomer->setInternodeMaxRadius(0.005);
         phytomer->setVegetativeBudState(BUD_DEAD);
         for (auto &petiole: phytomer->axillary_vegetative_buds) {
             for (auto &vbud: petiole) {
@@ -2165,7 +2162,6 @@ void PistachioPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint 
 
     // A lateral that breaks well below its parent's tip gets short internodes and is a spur: a few leaves a season, and no branching.
     if (phytomer->internode_length_max < 0.01) {
-        phytomer->setInternodeMaxRadius(0.005);
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap = 6;
     }

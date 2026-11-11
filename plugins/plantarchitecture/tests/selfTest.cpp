@@ -194,7 +194,9 @@ DOCTEST_TEST_CASE("Plant Library Model Building - almond") {
     PlantArchitecture plantarchitecture(&context);
     plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("almond"));
-    DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
+    // Four seasons, the oldest almond any test grows. Growth cost roughly doubles each further season (the 3000-day maximum age takes
+    // several minutes), so this stops short of the full lifespan.
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 1460));
 }
 
 DOCTEST_TEST_CASE("Plant Library Model Building - apple") {
@@ -676,6 +678,53 @@ DOCTEST_TEST_CASE("Material Naming - closed fruit surfaces are one-sided") {
     DOCTEST_CHECK(fraction < 0.95);
 }
 
+namespace closed_fruit_normal_map_test {
+    std::string normal_map_file;
+    //! A closed, textured fruit whose primitives have a normal map
+    uint mappedFruit(Context *context_ptr, uint, const std::map<std::string, float> &) {
+        const std::string texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/AppleFruit.jpg").string();
+        const uint objID = context_ptr->addSphereObject(10, make_vec3(0, 0, 0), 0.03f, texture.c_str());
+        context_ptr->setPrimitiveNormalMap(context_ptr->getObjectPrimitiveUUIDs(objID), normal_map_file, 0.8f, true);
+        return objID;
+    }
+} // namespace closed_fruit_normal_map_test
+
+DOCTEST_TEST_CASE("Material Naming - the one-sided material of a closed fruit keeps its normal map") {
+    // Regression test. The one-sided "_closed" copy of a fruit material was made by hand with its color and texture only, so a fruit lost its normal or bump map
+    // (from its OBJ material or set on its prototype) once it was made one-sided.
+    using namespace closed_fruit_normal_map_test;
+    normal_map_file = (std::filesystem::temp_directory_path() / "helios_pa_fruit_normal.png").string();
+    writePNG(normal_map_file, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.7f, 0.4f, 0.9f, 1.f)));
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    std::map<std::string, ShootParameters> shoot_parameters = plantarchitecture.getCurrentShootParameters();
+    for (auto &shoot: shoot_parameters) {
+        shoot.second.phytomer_parameters.inflorescence.unique_prototypes = 0;
+        shoot.second.phytomer_parameters.inflorescence.fruit_prototype_function = mappedFruit;
+    }
+    plantarchitecture.updateCurrentShootParameters(shoot_parameters);
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 600);
+    for (float extra_days = 0; plantarchitecture.getPlantFruitObjectIDs(plantID).empty() && extra_days < 300; extra_days += 10) {
+        plantarchitecture.advanceTime(plantID, 10);
+    }
+    const std::vector<uint> fruit_UUIDs = context.getObjectPrimitiveUUIDs(plantarchitecture.getPlantFruitObjectIDs(plantID));
+    DOCTEST_REQUIRE(!fruit_UUIDs.empty());
+    size_t one_sided = 0, mapped = 0;
+    for (uint UUID: fruit_UUIDs) {
+        const std::string material = context.getPrimitiveMaterialLabel(UUID);
+        one_sided += context.getPrimitiveTwosidedFlag(UUID) == 0 ? 1 : 0;
+        if (context.getMaterialNormalMapKind(material) == NORMAL_MAP_TANGENT_SPACE && context.getMaterialNormalMapStrength(material) == doctest::Approx(0.8f) && context.isMaterialNormalMapGreenFlipped(material)) {
+            mapped++;
+        }
+    }
+    DOCTEST_CHECK(one_sided == fruit_UUIDs.size());
+    DOCTEST_CHECK(mapped == fruit_UUIDs.size());
+    std::filesystem::remove(normal_map_file);
+}
+
 DOCTEST_TEST_CASE("Shoot Topology Accessors - getAllShootIDs and getPlantShoot") {
     Context context;
     context.seedRandomGenerator(12345);
@@ -1139,7 +1188,8 @@ DOCTEST_TEST_CASE("PlantArchitecture advanceTime after pruneBranch leaves empty 
  */
 static uint buildAppleAndPruneABranch(PlantArchitecture &plantarchitecture, uint &plantID) {
     plantarchitecture.loadPlantModelFromLibrary("apple");
-    plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 365);
+    // In leaf: the apple breaks dormancy at day 165 and re-enters it at day 365, when its leaves drop.
+    plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 300);
 
     const std::shared_ptr<Shoot> trunk = plantarchitecture.getPlantShoot(plantID, 0);
     int branchID = -1;
@@ -2949,7 +2999,7 @@ DOCTEST_TEST_CASE("PlantArchitecture insertion_angle_tip distribution is drawn a
 DOCTEST_TEST_CASE("Plant Library - pistachio training: scaffolds tipped, secondaries thinned and headed in the first winter") {
     // The library pistachio trains itself from its phytomer callback: each scaffold is tipped at 0.45 m in its first season, and in the
     // first winter its secondaries are thinned to three and headed to 0.30 m. Checked partway through that winter (the plant goes dormant
-    // around day 366 and the cuts are applied by the next day), on structural invariants that hold whatever the random draws.
+    // around day 365 and the cuts are applied by the next day), on structural invariants that hold whatever the random draws.
     constexpr float tip_length = 0.45f;
     constexpr float head_length = 0.30f;
     constexpr float internode_tolerance = 0.07f; // a cut keeps the node whose far end reaches the length, so one internode at most beyond it
@@ -7733,22 +7783,31 @@ DOCTEST_TEST_CASE("Build Parameters - Grapevine Wye Trellis Parameters") {
 }
 
 DOCTEST_TEST_CASE("Build Parameters - Tree Training System (Almond)") {
-    // Test tree training parameters
-    Context context;
-    PlantArchitecture plantarchitecture(&context);
-    plantarchitecture.disableMessages();
+    // The training parameters shape the tree when it is built: the trunk is laid out to trunk_height and num_scaffolds scaffolds
+    // are attached to it. Both are in place at age 0, so the tree is not grown. num_scaffolds is passed as a float, like every
+    // build parameter, and must arrive as that exact whole number of scaffolds.
+    for (float trunk_height: {0.5f, 1.0f}) {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("almond");
+        const std::map<std::string, float> tree_params = {{"trunk_height", trunk_height}, {"num_scaffolds", 5.0f}, {"scaffold_angle", 35.0f}};
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, tree_params);
 
-    plantarchitecture.loadPlantModelFromLibrary("almond");
-    std::map<std::string, float> tree_params = {
-            {"trunk_height", 0.5f}, // 50 cm total trunk height
-            {"num_scaffolds", 5.0f}, // 5 scaffold branches
-            {"scaffold_angle", 35.0f} // 35 degree scaffold angle
-    };
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, tree_params);
-
-    DOCTEST_CHECK(plantID != uint(-1));
-    std::vector<uint> plant_primitives = plantarchitecture.getAllPlantObjectIDs(plantID);
-    DOCTEST_CHECK(plant_primitives.size() > 0);
+        uint scaffold_count = 0;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+            if (shoot->shoot_type_label == "scaffold" && !shoot->phytomers.empty()) {
+                scaffold_count++;
+            }
+        }
+        DOCTEST_INFO("requested trunk_height = ", trunk_height);
+        DOCTEST_CHECK(scaffold_count == 5);
+        // The trunk is a whole number of 3 cm internodes, and leans slightly, so its top is within one internode of the request.
+        const float stem_height = plantarchitecture.getPlantStemHeight(plantID);
+        DOCTEST_INFO("stem height = ", stem_height);
+        DOCTEST_CHECK(std::fabs(stem_height - trunk_height) < 0.03f);
+    }
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture shade-driven branch shedding thins the branching tail") {
@@ -7908,6 +7967,8 @@ DOCTEST_TEST_CASE("PlantArchitecture almond scaffolds carry no lateral from the 
     // The bud at a scaffold's base sits in the trunk/scaffold crotch, and left alone it grows into a long limb straight out of
     // the junction -- the largest lateral on the scaffold. The almond builders kill it, as orchard training clears the crotch,
     // so a grown tree must carry no shoot borne on node 0 of any scaffold. The laterals further up must still be there.
+    // A live crotch bud breaks in the first season, but almond_independence carries only about ten scaffold laterals after one
+    // season, so the tree is grown for two (25-60 laterals across seeds).
     for (const std::string &model: {std::string("almond"), std::string("almond_independence")}) {
         Context context;
         context.seedRandomGenerator(100);
@@ -7915,7 +7976,7 @@ DOCTEST_TEST_CASE("PlantArchitecture almond scaffolds carry no lateral from the 
         plantarchitecture.disableMessages();
         plantarchitecture.loadPlantModelFromLibrary(model);
         uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
-        plantarchitecture.advanceTime(plantID, 2555.f);
+        plantarchitecture.advanceTime(plantID, 730.f);
 
         uint crotch_laterals = 0;
         uint scaffold_laterals = 0;
@@ -8056,40 +8117,46 @@ DOCTEST_TEST_CASE("Build Parameters - Almond trunk_height spans its full documen
 }
 
 DOCTEST_TEST_CASE("Build Parameters - Apple Tree") {
-    // Test apple tree with custom parameters
-    Context context;
-    PlantArchitecture plantarchitecture(&context);
-    plantarchitecture.disableMessages();
-
+    // The training parameters shape the tree when it is built: the trunk is laid out to trunk_height and num_scaffolds scaffolds
+    // are attached to it, so both are checked at age 0 without growing the tree.
     // Note: trunk_height limited by trunk max_nodes (20) * internode_length (0.04m) = 0.8m max
-    plantarchitecture.loadPlantModelFromLibrary("apple");
-    std::map<std::string, float> apple_params = {
-            {"trunk_height", 0.7f}, // 70 cm trunk height (within max_nodes limit)
-            {"num_scaffolds", 6.0f}, // 6 scaffold branches
-            {"scaffold_angle", 45.0f} // 45 degree scaffold angle
-    };
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, apple_params);
+    for (float trunk_height: {0.4f, 0.7f}) {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("apple");
+        const std::map<std::string, float> apple_params = {{"trunk_height", trunk_height}, {"num_scaffolds", 6.0f}, {"scaffold_angle", 45.0f}};
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, apple_params);
 
-    DOCTEST_CHECK(plantID != uint(-1));
+        DOCTEST_INFO("requested trunk_height = ", trunk_height);
+        // The apple scaffolds are the trunk's only child shoots at planting.
+        DOCTEST_CHECK(plantarchitecture.getChildShootIDs(plantID, 0).size() == 6);
+        // The trunk is a whole number of 4 cm internodes, and leans slightly, so its top is within one internode of the request.
+        const float stem_height = plantarchitecture.getPlantStemHeight(plantID);
+        DOCTEST_INFO("stem height = ", stem_height);
+        DOCTEST_CHECK(std::fabs(stem_height - trunk_height) < 0.04f);
+    }
 }
 
 DOCTEST_TEST_CASE("Build Parameters - Pistachio Tree Fixed Scaffold System") {
-    // Test pistachio tree with different scaffold count
-    Context context;
-    PlantArchitecture plantarchitecture(&context);
-    plantarchitecture.disableMessages();
+    // The scaffolds are attached to the trunk when the tree is built, so the requested count is checked at age 0 without growing
+    // the tree: the minimum of 2 and an odd count, where the last opposite pair has a single member.
+    for (float num_scaffolds: {2.0f, 3.0f}) {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("pistachio");
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"num_scaffolds", num_scaffolds}});
 
-    plantarchitecture.loadPlantModelFromLibrary("pistachio");
-
-    // Test with 2 scaffolds (minimum)
-    std::map<std::string, float> pistachio_params_min = {{"num_scaffolds", 2.0f}};
-    uint plantID_min = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, pistachio_params_min);
-    DOCTEST_CHECK(plantID_min != uint(-1));
-
-    // Test with 4 scaffolds (default)
-    std::map<std::string, float> pistachio_params_def = {{"num_scaffolds", 4.0f}};
-    uint plantID_def = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(5, 0, 0), 5000, pistachio_params_def);
-    DOCTEST_CHECK(plantID_def != uint(-1));
+        uint scaffold_count = 0;
+        for (uint shootID: plantarchitecture.getChildShootIDs(plantID, 0)) {
+            if (plantarchitecture.getPlantShoot(plantID, shootID)->shoot_type_label == "scaffold") {
+                scaffold_count++;
+            }
+        }
+        DOCTEST_INFO("requested num_scaffolds = ", num_scaffolds);
+        DOCTEST_CHECK(scaffold_count == uint(num_scaffolds));
+    }
 }
 
 DOCTEST_TEST_CASE("Build Parameters - Pistachio builds every requested scaffold") {
@@ -8214,25 +8281,6 @@ DOCTEST_TEST_CASE("Build Parameters - Canopy Building passes num_scaffolds to ev
     for (uint plantID: plantIDs_extent) {
         DOCTEST_CHECK(plantarchitecture.getAllShootIDs(plantID).size() == 7);
     }
-}
-
-DOCTEST_TEST_CASE("Build Parameters - Type Casting Float to Uint") {
-    // Test that float parameters correctly cast to uint for node counts
-    Context context;
-    PlantArchitecture plantarchitecture(&context);
-    plantarchitecture.disableMessages();
-
-    plantarchitecture.loadPlantModelFromLibrary("almond");
-
-    // Specify parameters as floats (should cast to uint internally where needed)
-    std::map<std::string, float> float_params = {
-            {"trunk_height", 0.5f}, // Height as float
-            {"num_scaffolds", 5.0f}, // Should cast to uint(5)
-            {"scaffold_angle", 42.5f} // Angle as float
-    };
-
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, float_params);
-    DOCTEST_CHECK(plantID != uint(-1));
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData 'all' keyword") {
@@ -9936,6 +9984,56 @@ DOCTEST_TEST_CASE("USD export basic structure") {
     std::remove(filename.c_str());
 }
 
+DOCTEST_TEST_CASE("USD export writes the normal maps of materials") {
+    // A bump map on the leaves is written as the tangent-space normal map it decodes to, connected to the surface's normal input
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 500);
+
+    const std::string bump = (std::filesystem::temp_directory_path() / "helios_test_usd_bump.png").string();
+    std::vector<uint16_t> heights(8 * 8);
+    for (size_t i = 0; i < heights.size(); i++) {
+        heights[i] = uint16_t(4000 * (i % 8));
+    }
+    writePNGSingleChannel(bump, 8, 8, heights, 16);
+    std::vector<uint> textured;
+    for (uint UUID: context.getAllUUIDs()) {
+        if (!context.getPrimitiveTextureFile(UUID).empty()) {
+            textured.push_back(UUID);
+        }
+    }
+    DOCTEST_REQUIRE(!textured.empty());
+    context.setPrimitiveBumpMap(textured, bump, 4.f);
+
+    const std::filesystem::path output_dir = std::filesystem::temp_directory_path() / "helios_test_usd_normal_maps";
+    std::filesystem::create_directories(output_dir);
+    const std::string filename = (output_dir / "plant.usda").string();
+    plantarchitecture.writePlantStructureUSD(plantID, filename);
+    std::ifstream file(filename);
+    DOCTEST_REQUIRE(file.is_open());
+    const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+    DOCTEST_CHECK(content.find("normal3f inputs:normal.connect") != std::string::npos);
+    DOCTEST_CHECK(content.find("token inputs:sourceColorSpace = \"raw\"") != std::string::npos);
+    const size_t at = content.find("_normal.png");
+    DOCTEST_REQUIRE(at != std::string::npos);
+    const size_t start = content.rfind("./textures/", at);
+    DOCTEST_REQUIRE(start != std::string::npos);
+    const std::string written = (output_dir / content.substr(start + 2, at + 11 - start - 2)).string();
+    DOCTEST_CHECK(std::filesystem::exists(written));
+    // A ramp rising to the right tilts the normals to the left: red below the middle
+    if (std::filesystem::exists(written)) {
+        uint width, height;
+        std::vector<RGBAcolor> pixels;
+        readPNG(written, width, height, pixels);
+        DOCTEST_CHECK(pixels.at(size_t(height / 2) * width + width / 2).r < 0.45f);
+    }
+    std::filesystem::remove_all(output_dir);
+    std::filesystem::remove(bump);
+}
+
 DOCTEST_TEST_CASE("USD export physics properties") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -11619,6 +11717,47 @@ DOCTEST_TEST_CASE("PlantArchitecture manually-built plant survives advanceTime w
     DOCTEST_CHECK(!plantarchitecture.getPlantPetioleObjectIDs(plantID).empty());
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture dormancy cycle lasts exactly dd_to_dormancy_break + dd_to_dormancy days") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // A plant whose dormancy period is dd_to_dormancy_break + dd_to_dormancy must re-enter dormancy after exactly that many
+    // days, so that a 365-day cycle advanced with advanceTime(365) per year stays on the calendar. The cycle used to run one
+    // day long, re-entering dormancy on day period + 1.
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    plantarchitecture.addBaseStemShoot(plantID, 1, make_AxisRotation(0, 0, 0), 0.0005f, 0.03f, 0.01f, 0.01f, 0, "unifoliate");
+
+    constexpr float days_to_dormancy_break = 5.f;
+    constexpr float days_to_dormancy = 10.f;
+    constexpr int dormancy_period = int(days_to_dormancy_break + days_to_dormancy);
+    plantarchitecture.setPlantPhenologicalThresholds(plantID, days_to_dormancy_break, -1, -1, -1, -1, days_to_dormancy);
+    plantarchitecture.makePlantDormant(plantID);
+
+    std::vector<int> dormancy_entry_days;
+    std::vector<int> dormancy_break_days;
+    bool was_dormant = plantarchitecture.isPlantDormant(plantID);
+    DOCTEST_REQUIRE(was_dormant);
+    for (int day = 1; day <= 3 * dormancy_period; day++) {
+        plantarchitecture.advanceTime(plantID, 1.f);
+        const bool is_dormant = plantarchitecture.isPlantDormant(plantID);
+        if (is_dormant && !was_dormant) {
+            dormancy_entry_days.push_back(day);
+        } else if (!is_dormant && was_dormant) {
+            dormancy_break_days.push_back(day);
+        }
+        was_dormant = is_dormant;
+    }
+
+    DOCTEST_REQUIRE(dormancy_entry_days.size() >= 2);
+    DOCTEST_REQUIRE(dormancy_break_days.size() >= 2);
+    DOCTEST_CHECK(dormancy_break_days.at(0) == int(days_to_dormancy_break));
+    DOCTEST_CHECK(dormancy_entry_days.at(0) == dormancy_period);
+    DOCTEST_CHECK(dormancy_entry_days.at(1) == 2 * dormancy_period);
+    DOCTEST_CHECK(dormancy_break_days.at(1) == dormancy_period + int(days_to_dormancy_break));
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture library-built plant phenology is unaffected by PlantInstance defaults") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -12358,7 +12497,7 @@ DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall is deterministic for a s
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall training keeps the tree a wall") {
-    // Two seasons from planting (the model's season is 366 days): the leader has extended to the top wire and been headed there, new
+    // Two seasons from planting (the model's season is 365 days): the leader has extended to the top wire and been headed there, new
     // fruiting branches have grown from it, spurs clothe the year-old wood, and every shoot has been hedged to the wall.
     Context context;
     context.seedRandomGenerator(2024);
@@ -12367,7 +12506,7 @@ DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall training keeps the tree 
     plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
     const vec3 base = make_vec3(0, 0, 0);
     uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(base, 0.f);
-    plantarchitecture.advanceTime(2.f * 366.f + 20.f);
+    plantarchitecture.advanceTime(2.f * 365.f + 20.f);
 
     const float leader_height = appleWallShootTopHeight(plantarchitecture, plantID, 0);
     DOCTEST_CHECK(leader_height >= 2.4f);
@@ -12408,7 +12547,7 @@ DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall is a mature tall spindle
     plantarchitecture.loadPlantModelFromLibrary("apple_fruitingwall");
     const vec3 base = make_vec3(0, 0, 0);
     uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(base, 0.f);
-    plantarchitecture.advanceTime(5.f * 366.f + 20.f);
+    plantarchitecture.advanceTime(5.f * 365.f + 20.f);
 
     // Trunk about 5.4 cm at 30 cm (Cline et al. 2021, NC-140 'Fuji' trial, year 5) and the leader headed back to a fruiting branch
     // within half a metre of the wall's height.
@@ -21649,6 +21788,53 @@ DOCTEST_TEST_CASE("PlantArchitecture setPetioleLeafRoll rolls a blade in place w
     DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeafRoll(plantID, 0, 9999, 0, 0.5f));
     DOCTEST_CHECK_THROWS(plantarchitecture.setPlantLeafRoll(plantID, 2.f));
     DOCTEST_CHECK_THROWS(plantarchitecture.setPlantLeafRoll(plantID + 100, 0.5f));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture Phytomer::canReshapeLeafInPlace predicts whether reshapeLeaf keeps the leaf's primitives") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    const uint plantID = buildFlatWheat(context, plantarchitecture, 30);
+    const uint node = largestMainstemLeafNode(context, plantarchitecture, plantID);
+    const auto phytomer = plantarchitecture.getPlantShoot(plantID, 0)->phytomers.at(node);
+    const uint objID = phytomer->leaf_objIDs.at(0).at(0);
+    const std::vector<uint> UUIDs_before = context.getObjectPrimitiveUUIDs(objID);
+
+    // A new aspect ratio and curvature fit the existing lattice: predicted, and the primitives are kept
+    LeafShapeValues reshaped = phytomer->getLeafShape(0, 0);
+    reshaped.aspect_ratio *= 1.2f;
+    reshaped.longitudinal_curvature += 0.1f;
+    DOCTEST_CHECK(phytomer->canReshapeLeafInPlace(0, 0, reshaped));
+    phytomer->reshapeLeaf(0, 0, reshaped);
+    DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(objID) == UUIDs_before);
+
+    // A roll needs more cells across the narrow wheat blade than it has: predicted, and the blade is re-meshed
+    LeafShapeValues rolled = phytomer->getLeafShape(0, 0);
+    rolled.roll_fraction = 0.5f;
+    DOCTEST_CHECK(!phytomer->canReshapeLeafInPlace(0, 0, rolled));
+    phytomer->reshapeLeaf(0, 0, rolled);
+    const std::vector<uint> UUIDs_rolled = context.getObjectPrimitiveUUIDs(objID);
+    DOCTEST_CHECK(UUIDs_rolled != UUIDs_before);
+
+    // Now fine enough, a smaller roll fits
+    rolled.roll_fraction = 0.3f;
+    rolled.subdivisions_y = phytomer->getLeafShape(0, 0).subdivisions_y;
+    DOCTEST_CHECK(phytomer->canReshapeLeafInPlace(0, 0, rolled));
+    phytomer->reshapeLeaf(0, 0, rolled);
+    DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(objID) == UUIDs_rolled);
+
+    // A shape that reshapeLeaf() refuses is refused here too
+    LeafShapeValues mismatched = phytomer->getLeafShape(0, 0);
+    mismatched.subdivisions_x += 1;
+    bool threw = false;
+    {
+        capture_cerr cerr_buffer;
+        try {
+            static_cast<void>(phytomer->canReshapeLeafInPlace(0, 0, mismatched));
+        } catch (const std::exception &) {
+            threw = true;
+        }
+    }
+    DOCTEST_CHECK(threw);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture setPlantLeafRoll rolls every leaf, and a drooping rolled leaf stays rolled as it grows") {

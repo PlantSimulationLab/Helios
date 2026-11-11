@@ -1494,3 +1494,56 @@ TEST_CASE("loadPLY header handling") {
         std::remove(test_file);
     }
 }
+
+TEST_CASE("Material normal and bump maps round-trip through XML") {
+    const std::string normal_map = (std::filesystem::temp_directory_path() / "helios_test_xml_normal.png").string();
+    const std::string bump_map = (std::filesystem::temp_directory_path() / "helios_test_xml_bump.png").string();
+    const std::string xml_file = (std::filesystem::temp_directory_path() / "helios_test_normal_maps.xml").string();
+    writePNG(normal_map, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.8f, 0.5f, 0.9f, 1.f)));
+    writePNGSingleChannel(bump_map, 4, 4, std::vector<uint16_t>(16, 1000), 16);
+    {
+        Context ctx;
+        ctx.addMaterial("bark");
+        ctx.setMaterialNormalMap("bark", normal_map, 0.123456789f, true);
+        ctx.addMaterial("plank");
+        ctx.setMaterialBumpMap("plank", bump_map, 7.5f);
+        uint p0 = ctx.addPatch();
+        uint p1 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+        uint p2 = ctx.addPatch(make_vec3(4, 0, 0), make_vec2(1, 1));
+        ctx.assignMaterialToPrimitive(p0, "bark");
+        ctx.assignMaterialToPrimitive(p1, "plank");
+        ctx.setPrimitiveNormalMap(p2, normal_map); // an automatic material with a map
+        ctx.writeXML(xml_file.c_str(), true);
+    }
+    Context loaded;
+    std::vector<uint> UUIDs = loaded.loadXML(xml_file.c_str(), true);
+    DOCTEST_REQUIRE(UUIDs.size() == 3);
+    DOCTEST_CHECK(loaded.getMaterialNormalMapKind("bark") == NORMAL_MAP_TANGENT_SPACE);
+    DOCTEST_CHECK(loaded.getMaterialNormalMapFile("bark") == normal_map);
+    DOCTEST_CHECK(loaded.getMaterialNormalMapStrength("bark") == 0.123456789f);
+    DOCTEST_CHECK(loaded.isMaterialNormalMapGreenFlipped("bark"));
+    DOCTEST_CHECK(loaded.getMaterialNormalMapKind("plank") == NORMAL_MAP_BUMP);
+    DOCTEST_CHECK(loaded.getMaterialNormalMapStrength("plank") == doctest::Approx(7.5f));
+    DOCTEST_CHECK(loaded.getPrimitiveNormalMapKind(UUIDs.at(0)) == NORMAL_MAP_TANGENT_SPACE);
+    DOCTEST_CHECK(loaded.getPrimitiveNormalMapKind(UUIDs.at(1)) == NORMAL_MAP_BUMP);
+    DOCTEST_CHECK(loaded.getPrimitiveNormalMapKind(UUIDs.at(2)) == NORMAL_MAP_TANGENT_SPACE);
+
+    // A material may not hold both kinds, and a bump map needs a strength
+    const std::string bad_file = (std::filesystem::temp_directory_path() / "helios_test_normal_maps_bad.xml").string();
+    {
+        std::ofstream out(bad_file);
+        out << "<helios>\n<materials>\n<material label=\"both\"><color>1 1 1 1</color><normal_map>" << normal_map << "</normal_map><bump_map>" << bump_map << "</bump_map><bump_map_strength>2</bump_map_strength></material>\n</materials>\n</helios>\n";
+    }
+    Context bad;
+    DOCTEST_CHECK_THROWS(bad.loadXML(bad_file.c_str(), true));
+    {
+        std::ofstream out(bad_file);
+        out << "<helios>\n<materials>\n<material label=\"nostrength\"><color>1 1 1 1</color><bump_map>" << bump_map << "</bump_map></material>\n</materials>\n</helios>\n";
+    }
+    Context bad2;
+    DOCTEST_CHECK_THROWS(bad2.loadXML(bad_file.c_str(), true));
+
+    for (const auto &file: {normal_map, bump_map, xml_file, bad_file}) {
+        std::filesystem::remove(file);
+    }
+}

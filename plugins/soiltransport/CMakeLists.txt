@@ -9,6 +9,16 @@ endif()
 # Try to find CUDA toolkit (optional)
 find_package(CUDAToolkit QUIET)
 
+# Verify that the CUDA language can actually be enabled (e.g., VS integration is installed)
+if(CUDAToolkit_FOUND)
+    include(CheckLanguage)
+    check_language(CUDA)
+    if(NOT CMAKE_CUDA_COMPILER)
+        message(STATUS "CUDA toolkit found but CUDA language could not be enabled (missing Visual Studio integration?) - falling back to CPU-only build")
+        set(CUDAToolkit_FOUND FALSE)
+    endif()
+endif()
+
 if(CUDAToolkit_FOUND)
     set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
 

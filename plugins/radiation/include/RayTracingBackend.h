@@ -266,8 +266,11 @@ namespace helios {
          *
          * @param[in] track_face_absorption If true, every following direct and diffuse launch also accumulates the absorbed radiation that arrived on the top face of each primitive
          * (read with getRadiationInTopResults()), in a buffer sized [primitive][launch band]. If false, that buffer is reduced to a placeholder and the launches skip the write.
+         * @param[in] record_normal_map_moments If true, the diffuse launches record, for each primitive with a normal map, the flux-weighted directions of the radiation reaching
+         * each face (see RayTracingGeometry::normal_map_slots), with which cameras shade its scattered light; only needed when there are cameras. If false, the record is reduced to a
+         * placeholder and the launches skip it.
          */
-        virtual void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) = 0;
+        virtual void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption, bool record_normal_map_moments) = 0;
 
         /**
          * @brief Zero scatter buffers (scatter_buff_top, scatter_buff_bottom) and the forward scattering estimate (see getForwardScatterResults())
@@ -321,20 +324,29 @@ namespace helios {
          * @param[in] vertex_normals Three values per shared vertex [Nvertices * 3], or empty to release the buffer
          *
          * With these present, the camera hit program interpolates a shading normal across each smoothed facet for the angle-dependent terms of a surface layer, and reads the layer's own outgoing component
-         * from the second component of the vertex radiation (see uploadVertexRadiationOut()). RadiationModel supplies them only while smoothing is enabled and some primitive has a layer, so that smoothing
-         * of Lambertian surfaces costs no memory for them. A geometry upload (updateGeometry()) releases them, because they belong to the topology of the geometry they were built from.
+         * from the second component of the vertex radiation (see uploadVertexRadiationOut()), and raises the origin of a shadow ray from a facet turned away from a source onto the smooth surface they
+         * describe. RadiationModel supplies them only while smoothing is enabled and there is a source or some primitive has a layer. A geometry upload (updateGeometry()) releases them, because they
+         * belong to the topology of the geometry they were built from.
          */
         virtual void uploadVertexNormals(const std::vector<float> &vertex_normals) = 0;
 
         /**
-         * @brief Upload each source's unoccluded direct irradiance averaged onto the shared mesh vertices, for camera flux smoothing
+         * @brief Get the directions of the diffuse radiation that reached each primitive with a normal map in the diffuse launches since zeroRadiationBuffers()
          *
-         * @param[in] vertex_irradiance Values per [source][vertex][launch band] (see RadiationModel::accumulateDirectIrradianceAtVertices()), or empty to release the buffer
-         *
-         * Read by the camera hit program for a face turned away from a source, which takes the value interpolated from its vertices times the cosine of its shading normal, so that the light fades across
-         * the terminator. The vertex count is that of uploadVertexNormals(), which RadiationModel always supplies with these. A geometry upload (updateGeometry()) releases them.
+         * @param[out] moments Flux-weighted sums of the directions the radiation came from, per [normal-map slot][face (top, then bottom)][launch band][3] (see RayTracingGeometry::normal_map_slots), or
+         * empty when the last zeroRadiationBuffers() call did not ask for them to be recorded
          */
-        virtual void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) = 0;
+        virtual void getNormalMapMoments(std::vector<float> &moments) = 0;
+
+        /**
+         * @brief Upload the directions of the diffuse radiation reaching primitives with a normal map, averaged onto the shared vertices of camera flux smoothing
+         *
+         * @param[in] vertex_moments Values per [smoothing vertex][face (top, then bottom)][launch band][3] (see RadiationModel::accumulateNormalMapMomentsAtVertices()), or empty to release the buffer
+         *
+         * With these present, a camera hit on a smoothed primitive with a normal map interpolates the directions from the facet's vertices, as it does the outgoing radiation, instead of reading the
+         * primitive's own, so that the shading of its scattered light is continuous across the facets. A geometry upload (updateGeometry()) releases them.
+         */
+        virtual void uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) = 0;
 
 
         /**

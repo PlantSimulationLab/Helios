@@ -21,6 +21,7 @@
 
 #include <set>
 #include <unordered_set>
+#include <tuple>
 #include <utility>
 
 #include "global.h"
@@ -150,6 +151,20 @@ namespace helios {
         /** Value of 1 (default) means primitive absorbs/emits from both faces.
             Value of 0 means one-sided (absorb/emit from front face only). */
         uint twosided_flag;
+
+        //! Normal map or bump map image of the material (empty string if none)
+        /** See Context::setMaterialNormalMap() and Context::setMaterialBumpMap(). The image's (u,v) mapping is the primitive's texture mapping. */
+        std::string normal_map_file;
+
+        //! Kind of image held in normal_map_file (NORMAL_MAP_NONE if there is none)
+        NormalMapKind normal_map_kind = NORMAL_MAP_NONE;
+
+        //! Strength of the normal or bump map
+        /** For a tangent-space normal map, a factor on the tilt of the normals (1 keeps the map as authored); for a bump map, the displacement in texels of the full height range. */
+        float normal_map_strength = 1.f;
+
+        //! Whether the normal map uses the DirectX convention, with green pointing down the image (tangent-space normal maps only)
+        bool normal_map_flip_green = false;
 
         //! Reference count - number of primitives currently using this material
         /** Used for efficient copy-on-write material sharing */
@@ -3540,8 +3555,14 @@ namespace helios {
         //! Warning aggregator for API design warnings (e.g., inefficient API usage)
         mutable WarningAggregator api_warnings;
 
-        //! List of primitives that have been modified since geometry was last set as clean
+        //! List of primitives that have been deleted since geometry was last set as clean
         std::vector<uint> dirty_deleted_primitives;
+
+        //! Every primitive deletion, as (modification clock value when deleted, UUID), in the order deleted (see getDeletedUUIDs(uint64_t) const)
+        /**
+         * Never emptied, so that a caller whose mark predates a deletion always finds it. The clock values never decrease along the list.
+         */
+        std::vector<std::pair<uint64_t, uint>> primitive_deletion_log;
 
         //! Change counter that stays cheap when advanced from many threads at once
         /**
@@ -3676,6 +3697,24 @@ namespace helios {
         //! Generate material label from properties for automatic de-duplication
         std::string generateMaterialLabel(const RGBAcolor &color, const std::string &texture, bool texture_override) const;
 
+        //! Properties of a material that make up a primitive's appearance, by which automatic materials are found again (see setPrimitiveAppearance())
+        struct MaterialAppearance {
+            RGBAcolor color;
+            std::string texture_file;
+            bool texture_color_overridden = false;
+            std::string normal_map_file;
+            NormalMapKind normal_map_kind = NORMAL_MAP_NONE;
+            float normal_map_strength = 1.f;
+            bool normal_map_flip_green = false;
+        };
+
+        //! The appearance properties of a material
+        [[nodiscard]] static MaterialAppearance getMaterialAppearance(const Material &material);
+
+        //! Generate the label of the automatic material with an appearance
+        /** The normal map enters the hash only when there is one, so materials without a map keep the labels they have always had. */
+        std::string generateMaterialLabel(const MaterialAppearance &appearance) const;
+
         //! Check if a material is shared by multiple primitives
         bool isMaterialShared(uint materialID) const;
 
@@ -3697,13 +3736,35 @@ namespace helios {
 
         //! Give one primitive a new color, texture, or texture color override without changing an automatic material, which later primitives are given by the label that hashes its appearance
         /**
-         * A primitive using an automatic material (or the default material) is moved to the automatic material of its new appearance, which is created if it does not exist yet; an automatic material carrying material data is copied instead. A named material is edited in place when this primitive is its only user, and copied when it is shared; a material renamed from an automatic one, which a plug-in may give to the primitives it creates later, is always copied.
+         * A primitive using an automatic material (or the default material) is moved to the automatic material of its new appearance, which is created if it does not exist yet; an automatic material carrying material data is copied instead. A named
+         * material is edited in place when this primitive is its only user, and copied when it is shared; a material renamed from an automatic one, which a plug-in may give to the primitives it creates later, is always copied.
          * \param[in] primitive Primitive to update
-         * \param[in] color New color of the primitive
-         * \param[in] texture_file New texture file of the primitive (empty for none). It must already have been added with addTexture().
-         * \param[in] texture_color_overridden New texture color override flag of the primitive
+         * \param[in] appearance New appearance of the primitive: color, texture file (empty for none, already added with addTexture()), texture color override, and normal or bump map
          */
-        void setPrimitiveAppearance(Primitive *primitive, const RGBAcolor &color, const std::string &texture_file, bool texture_color_overridden);
+        void setPrimitiveAppearance(Primitive *primitive, const MaterialAppearance &appearance);
+
+        //! Check that a primitive can carry a normal or bump map, which needs a frame of (u,v) coordinates: a patch, or a triangle with (u,v) coordinates
+        /**
+         * \param[in] primitive Primitive to check
+         * \param[in] caller Name of the calling function, for the error message
+         * \param[in] map_file Normal or bump map file, for the error message
+         */
+        void validateNormalMapFrame(const Primitive *primitive, const std::string &caller, const std::string &map_file) const;
+
+        //! Give a material a normal or bump map, including Helios's own (automatic) materials, as loadXML() does for the materials it reads; see setMaterialNormalMap()
+        void setMaterialNormalMap_internal(const std::string &material_label, NormalMapKind kind, const std::string &map_file, float strength, bool flip_green);
+
+        //! Remove a material's normal or bump map, including Helios's own (automatic) materials; see clearMaterialNormalMap()
+        void clearMaterialNormalMap_internal(const std::string &material_label);
+
+        //! Release decoded maps that no material names and that no consumer holds
+        void pruneNormalMapCache();
+
+        //! Decoded normal and bump maps, keyed by (file as given, kind, strength, green flip); see getNormalMapTexels()
+        mutable std::map<std::tuple<std::string, uint8_t, float, bool>, std::shared_ptr<const NormalMapTexels>> normal_map_cache;
+
+        //! Guards normal_map_cache, which const methods fill
+        mutable std::mutex normal_map_cache_mutex;
 
         //! Mark every primitive using a material as dirty after the material has changed
         /**
@@ -3811,6 +3872,11 @@ namespace helios {
             uint materialID;
             bool textureHasTransparency = false;
             bool textureColorIsOverridden = false;
+            //! Normal or bump map named by the material's "norm", "map_Bump" or "bump" line (empty if none)
+            std::string normal_map;
+            NormalMapKind normal_map_kind = NORMAL_MAP_NONE;
+            //! Strength from the line's "-bm" option (1 if absent)
+            float normal_map_strength = 1.f;
 
             OBJmaterial(const RGBcolor &a_color, std::string a_texture, uint a_materialID) : color{a_color}, texture{std::move(a_texture)}, materialID{a_materialID} {};
         };
@@ -4419,8 +4485,27 @@ namespace helios {
         //! Get all primitive UUIDs that were deleted since the Context was last marked clean.
         /**
          * \return Vector of UUIDs for primitives that were deleted since the Context was last marked clean
+         * \sa getDeletedUUIDs(uint64_t) const, which gives each caller its own view
          */
         [[nodiscard]] std::vector<uint> getDeletedUUIDs() const;
+
+        //! Get the primitives deleted since a caller's mark from getModifiedUUIDs()
+        /**
+         * The deletion counterpart of getModifiedUUIDs(). The list returned by getDeletedUUIDs() is emptied by markGeometryClean(),
+         * so a caller that relies on it never learns of a primitive deleted and then marked clean before it looked. Deletions are also
+         * recorded against the clock that getModifiedUUIDs() reads, so a caller can ask for those since its own mark whatever other
+         * callers do. This does not advance the mark. To see each modification and each deletion exactly once, keep the mark from
+         * before the call to getModifiedUUIDs() and pass that here:
+         * \code
+         * const uint64_t previous_mark = mark;
+         * std::vector<uint> modified = context.getModifiedUUIDs(mark);
+         * std::vector<uint> deleted = context.getDeletedUUIDs(previous_mark);
+         * \endcode
+         * Every deletion is kept for the life of the Context (12 bytes each), since any caller's mark may predate it.
+         * \param[in] mark A mark set by getModifiedUUIDs(), or 0 for every deletion since the Context was created.
+         * \return UUIDs of the primitives deleted since \p mark was set, in the order they were deleted
+         */
+        [[nodiscard]] std::vector<uint> getDeletedUUIDs(uint64_t mark) const;
 
         //! Hide primitive in the Context such that its UUID is not returned in Context::getAllUUIDs()
         /**
@@ -5273,6 +5358,85 @@ namespace helios {
          */
         [[nodiscard]] std::string getPrimitiveColorTextureFile(uint UUID) const;
 
+        //! Give a primitive a tangent-space normal map
+        /**
+         * The primitive's material is not edited if other primitives share it: like \ref setPrimitiveColor(uint, const helios::RGBcolor &) const, the primitive moves to (or gets a copy of) a material with the new
+         * map, so a map set on one leaf does not spread to the others. A user-named material whose only user is this primitive is edited, as a color change edits it, so primitives given that material later also get the map. See \ref
+         * setMaterialNormalMap() for the convention and the meaning of the arguments.
+         * \param[in] UUID Unique universal identifier of the primitive, which must be a patch or a triangle with texture (u,v) coordinates
+         * \param[in] normal_map_file Path to the normal map (PNG or JPEG)
+         * \param[in] strength Factor on the tilt of the normals; 1 (default) keeps the map as authored
+         * \param[in] flip_green True for a map made in the DirectX convention
+         */
+        void setPrimitiveNormalMap(uint UUID, const std::string &normal_map_file, float strength = 1.f, bool flip_green = false);
+
+        //! Give primitives a tangent-space normal map
+        /**
+         * \param[in] UUIDs Unique universal identifiers of the primitives. All are checked before any is changed.
+         * \param[in] normal_map_file Path to the normal map (PNG or JPEG)
+         * \param[in] strength Factor on the tilt of the normals; 1 (default) keeps the map as authored
+         * \param[in] flip_green True for a map made in the DirectX convention
+         * \note See \ref setPrimitiveNormalMap(uint, const std::string &, float, bool).
+         */
+        void setPrimitiveNormalMap(const std::vector<uint> &UUIDs, const std::string &normal_map_file, float strength = 1.f, bool flip_green = false);
+
+        //! Give a primitive a bump (height) map
+        /**
+         * See \ref setMaterialBumpMap() for the meaning of the arguments and \ref setPrimitiveNormalMap(uint, const std::string &, float, bool) for how the primitive's material changes.
+         * \param[in] UUID Unique universal identifier of the primitive, which must be a patch or a triangle with texture (u,v) coordinates
+         * \param[in] bump_map_file Path to the bump map
+         * \param[in] strength Displacement, in texels, of the full height range
+         */
+        void setPrimitiveBumpMap(uint UUID, const std::string &bump_map_file, float strength);
+
+        //! Give primitives a bump (height) map
+        /**
+         * \param[in] UUIDs Unique universal identifiers of the primitives. All are checked before any is changed.
+         * \param[in] bump_map_file Path to the bump map
+         * \param[in] strength Displacement, in texels, of the full height range
+         */
+        void setPrimitiveBumpMap(const std::vector<uint> &UUIDs, const std::string &bump_map_file, float strength);
+
+        //! Remove the normal or bump map of a primitive
+        /**
+         * \param[in] UUID Unique universal identifier of the primitive. Nothing happens if it has no map.
+         */
+        void clearPrimitiveNormalMap(uint UUID);
+
+        //! Remove the normal or bump map of primitives
+        /**
+         * \param[in] UUIDs Unique universal identifiers of the primitives
+         */
+        void clearPrimitiveNormalMap(const std::vector<uint> &UUIDs);
+
+        //! Get the normal or bump map file of a primitive
+        /**
+         * \param[in] UUID Unique universal identifier of the primitive
+         * \return The file of the primitive's material, or an empty string if it has none
+         */
+        [[nodiscard]] std::string getPrimitiveNormalMapFile(uint UUID) const;
+
+        //! Get the kind of normal map a primitive has
+        /**
+         * \param[in] UUID Unique universal identifier of the primitive
+         * \return NORMAL_MAP_TANGENT_SPACE, NORMAL_MAP_BUMP, or NORMAL_MAP_NONE
+         */
+        [[nodiscard]] NormalMapKind getPrimitiveNormalMapKind(uint UUID) const;
+
+        //! Get the strength of a primitive's normal or bump map
+        /**
+         * \param[in] UUID Unique universal identifier of the primitive
+         * \return The strength of its material's map, or 1 if it has none
+         */
+        [[nodiscard]] float getPrimitiveNormalMapStrength(uint UUID) const;
+
+        //! Get the (u,v) coordinates with which a primitive samples its normal map
+        /**
+         * \param[in] UUID Unique universal identifier of the primitive
+         * \return The primitive's texture (u,v) coordinates, or the corners of the whole image, (0,0), (1,0), (1,1), (0,1), for a patch without any. A triangle without (u,v) coordinates, or a voxel, raises an error.
+         */
+        [[nodiscard]] std::vector<vec2> getPrimitiveNormalMapUV(uint UUID) const;
+
         //! Check that an image can give color to primitives whose shape comes from a given texture, and raise an error explaining the mismatch if not
         /**
          * The two images must have the same resolution and identical transparency, pixel by pixel. Everything that uses the shape of a primitive reads it from its texture, so an image with a different outline would be drawn with a shape that disagrees with the primitive's area and with what other plug-ins see.
@@ -5558,6 +5722,96 @@ namespace helios {
          * \note This will affect all primitives that reference this material
          */
         void setMaterialTwosidedFlag(const std::string &material_label, uint twosided_flag);
+
+        //! Give a material a tangent-space normal map
+        /**
+         * A normal map tilts the shading normal across a primitive's surface without changing its geometry, so that relief such as leaf veins or bark furrows shades as it would on the real surface.
+         * The map is sampled with the primitive's texture (u,v) coordinates, with the tangent space of OpenGL, glTF and Blender: red is the tilt toward increasing u (right in the image), green toward
+         * increasing v (up in the image), and blue the component along the primitive's normal (see \ref NormalMapTexels). Every primitive using the material needs a (u,v) frame: a patch, or a triangle
+         * with texture coordinates. The image is decoded when this is called, so an unreadable image or a grayscale one (a height map, for \ref setMaterialBumpMap()) raises an error here.
+         * \param[in] material_label String identifier for the material
+         * \param[in] normal_map_file Path to the normal map (PNG or JPEG)
+         * \param[in] strength Factor on the tilt of the normals; 1 (default) keeps the map as authored. Must be greater than zero.
+         * \param[in] flip_green True for a map made in the DirectX convention, whose green channel points down the image
+         * \note A material holds either a normal map or a bump map; setting one while the other is set raises an error, so call \ref clearMaterialNormalMap() first. Helios's own materials
+         * (labels beginning with "__", which it shares among every primitive of the same appearance) cannot be edited here; use \ref setPrimitiveNormalMap(uint, const std::string &, float, bool) on the primitives instead.
+         */
+        void setMaterialNormalMap(const std::string &material_label, const std::string &normal_map_file, float strength = 1.f, bool flip_green = false);
+
+        //! Give a material a bump (height) map
+        /**
+         * The heights are converted to tangent-space normals as described for \ref decodeNormalMapImage(), and from then on behave exactly as a normal map would (see \ref setMaterialNormalMap()).
+         * \param[in] material_label String identifier for the material
+         * \param[in] bump_map_file Path to the bump map: an 8- or 16-bit grayscale PNG (read at full precision), or an RGB PNG or JPEG (read as luminance)
+         * \param[in] strength Displacement, in texels of the image, of the full height range from 0 (black) to 1 (white). Must be greater than zero.
+         * \note A material holds either a normal map or a bump map; setting one while the other is set raises an error, so call \ref clearMaterialNormalMap() first.
+         */
+        void setMaterialBumpMap(const std::string &material_label, const std::string &bump_map_file, float strength);
+
+        //! Change the strength of a material's normal or bump map
+        /**
+         * \param[in] material_label String identifier for the material, which must have a normal or bump map
+         * \param[in] strength New strength (see \ref setMaterialNormalMap() and \ref setMaterialBumpMap()). Must be greater than zero.
+         */
+        void setMaterialNormalMapStrength(const std::string &material_label, float strength);
+
+        //! Remove a material's normal or bump map
+        /**
+         * \param[in] material_label String identifier for the material. Nothing happens if it has no map.
+         */
+        void clearMaterialNormalMap(const std::string &material_label);
+
+        //! Get the normal or bump map file of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return The file as it was given, or an empty string if the material has none
+         */
+        [[nodiscard]] std::string getMaterialNormalMapFile(const std::string &material_label) const;
+
+        //! Get the kind of map a material holds in its normal map slot
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return NORMAL_MAP_TANGENT_SPACE, NORMAL_MAP_BUMP, or NORMAL_MAP_NONE
+         */
+        [[nodiscard]] NormalMapKind getMaterialNormalMapKind(const std::string &material_label) const;
+
+        //! Get the strength of a material's normal or bump map
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return The strength, which is 1 for a material without a map
+         */
+        [[nodiscard]] float getMaterialNormalMapStrength(const std::string &material_label) const;
+
+        //! Check whether a material's normal map uses the DirectX convention (green pointing down the image)
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return True if the green channel is flipped when the map is decoded
+         */
+        [[nodiscard]] bool isMaterialNormalMapGreenFlipped(const std::string &material_label) const;
+
+        //! Get the decoded normals of a material's normal or bump map
+        /**
+         * The normals are decoded once and shared with every later request for the same file, kind, strength and flip (see \ref clearNormalMapCache()).
+         * \param[in] materialID Numeric identifier of the material (see \ref getPrimitiveMaterialID())
+         * \return The decoded normals, or nullptr if the material has no map
+         */
+        [[nodiscard]] std::shared_ptr<const NormalMapTexels> getMaterialNormalMapTexels(uint materialID) const;
+
+        //! Get decoded normals of a normal or bump map image
+        /**
+         * \param[in] file Path to the image
+         * \param[in] kind NORMAL_MAP_TANGENT_SPACE or NORMAL_MAP_BUMP
+         * \param[in] strength Strength of the map (see \ref decodeNormalMapImage())
+         * \param[in] flip_green Whether the green channel of a tangent-space map is flipped
+         * \return The decoded normals, decoded once and then shared with every later request with the same arguments
+         */
+        [[nodiscard]] std::shared_ptr<const NormalMapTexels> getNormalMapTexels(const std::string &file, NormalMapKind kind, float strength, bool flip_green) const;
+
+        //! Release the decoded normal and bump maps held by the Context
+        /**
+         * Consumers that have copied the normals elsewhere (for example to a GPU) can free the Context's copy; any later request decodes the image again. Holders of a pointer returned earlier keep it valid.
+         */
+        void clearNormalMapCache();
 
         //! Get the twosided flag for a primitive, checking material first, then primitive data
         /**

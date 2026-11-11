@@ -565,14 +565,14 @@ struct CameraMetadata {
     //! Geographic location properties
     struct LocationProperties {
         float latitude; //!< Latitude in degrees (+N/-S)
-        float longitude; //!< Longitude in degrees (+E/-W)
+        float longitude; //!< Longitude in degrees (+E/-W), the usual (ISO 6709) convention, opposite to the Context's (helios::Location counts longitude positive West)
     } location_properties;
 
     //! Image acquisition properties
     struct AcquisitionProperties {
         std::string date; //!< Acquisition date (YYYY-MM-DD format)
         std::string time; //!< Acquisition time (HH:MM:SS format)
-        float UTC_offset; //!< UTC offset in hours
+        float UTC_offset; //!< Offset of local time from UTC in hours, positive East as in ISO 8601 and the EXIF OffsetTime tags (UTC-8 is -8), opposite to the Context's (helios::Location counts it positive West)
         float camera_height_m; //!< Camera height above ground in meters
         float camera_angle_deg; //!< Camera tilt angle from horizontal (0=horizontal, 90=down)
         std::string light_source; //!< Lighting type: "sunlight", "artificial", "mixed", or "none"
@@ -1511,10 +1511,12 @@ public:
     //! Reconstruct camera images by interpolating the outgoing flux across each facet, instead of holding it constant
     /**
      * A camera builds each pixel from a single outgoing flux value per primitive, so every pixel landing on a facet reads the same value and a coarsely tessellated surface renders as flat panels separated
-     * by visible steps. With smoothing enabled, the direct radiation of the sources is evaluated per facet with a shading normal interpolated from the vertices the facets share, replacing the cosine of
-     * the facet's own normal with that of the shading normal, and the rest of the outgoing radiation is averaged onto those vertices, weighted by facet area, and interpolated across each facet from its
-     * corners. A tessellated curve then reads as a curve, without the darkening that averaging the direct radiation would cause, and a cast shadow stays where the facets put it; a face turned away from a
-     * source takes the irradiance of its sunlit neighbours, so the light fades across the terminator. See the Camera Flux Smoothing section of the radiation plug-in documentation.
+     * by visible steps. With smoothing enabled, the direct radiation of the sources is evaluated for every pixel sample at the point it sees: a shadow ray toward one point on each source, drawn as the
+     * radiation solve draws it, decides whether the source reaches the point, and what reaches it carries the cosine of a shading normal interpolated from the vertices the facets share. The rest of the
+     * outgoing radiation is averaged onto those vertices, weighted by facet area, and interpolated across each facet from its corners. A tessellated curve then reads as a curve, without the darkening that
+     * averaging the direct radiation would cause, a cast shadow falls where the geometry puts it within a facet, and the light fades across the terminator. The penumbra of the sun's disk and of a finite
+     * source is resolved by the camera's antialiasing samples. Each pixel sample on smoothed geometry traces one shadow ray per source, which adds to the time cameras take (see the Camera Flux Smoothing
+     * section of the radiation plug-in documentation).
      *
      * This applies to \a Tube, \a Sphere, \a Cone, \a Polymesh, \a Tile and \a AdaptiveTile objects. A \a Box or \a Disk object, and any primitive that belongs to no object, is left alone: its faces are
      * genuinely flat, so the per-facet value is already correct everywhere on them. A \a Polymesh must carry the face table that \ref helios::Context::loadOBJ() and \ref helios::Context::loadPLY() retain;
@@ -1524,8 +1526,9 @@ public:
      * dependence are evaluated with the shading normal. Vertices are shared across the rings of a \a Sphere and the segments of a \a Tube or \a Cone as well as around them. The transmittance of a
      * translucent cover (`glass_*`) a camera looks through still uses the cover's facet normal.
      *
-     * \note This changes what the camera reports. A pixel no longer carries the outgoing flux of the primitive behind it, but a blend of that primitive's value with those of its neighbours, so pixel values
-     * no longer correspond exactly to the `radiation_flux_*` primitive data. Nothing else is affected: the radiation solve, the `radiation_flux_*` values themselves, and the pixel-label and depth images are
+     * \note This changes what the camera reports. A pixel no longer carries the outgoing flux of the primitive behind it, but a blend of that primitive's value with those of its neighbours and the direct
+     * radiation at the point it sees, so pixel values no longer correspond exactly to the `radiation_flux_*` primitive data; averaged over a flat facet, the direct radiation in the image equals the
+     * facet's own up to sampling noise. Nothing else is affected: the radiation solve, the `radiation_flux_*` values themselves, and the pixel-label and depth images are
      * all unchanged. Smoothing is off by default for this reason, and should be enabled deliberately.
      *
      * \param[in] crease_angle_degrees Angle between adjacent facet normals above which a shared edge is treated as a hard crease, so that flux is not averaged across it. Applies to \a Polymesh objects only,
@@ -2780,6 +2783,26 @@ protected:
     //! File of each class map in geometry_data.class_map_sizes, to check that a primitive's class map is the one its geometry was built with
     std::vector<std::string> spectral_class_map_files;
 
+    //! Normal map of a material as it was when the geometry was last built
+    struct NormalMapBuildKey {
+        std::string file;
+        helios::NormalMapKind kind = helios::NORMAL_MAP_NONE;
+        float strength = 1.f;
+        bool flip_green = false;
+    };
+
+    //! The distinct normal maps (file, kind, strength, flip) primitives had in the last geometry build
+    std::vector<NormalMapBuildKey> normal_map_build_keys;
+
+    //! Index in normal_map_build_keys of each primitive's map (by position) in the last geometry build, or UINT_MAX; empty when no primitive had one
+    std::vector<uint> normal_map_build_key_index;
+
+    //! Raise an error if a primitive's normal map differs from the one it had when the geometry was last built
+    /**
+     * \param[in] UUIDs Primitives of the geometry, in position order
+     */
+    void checkNormalMapsCurrent(const std::vector<uint> &UUIDs) const;
+
     //! Outgoing radiation of each class of each primitive with a spectral texture, as one camera sees it
     /**
      * \param[in] spectral_incident Radiation reaching each face of each primitive, per [face][source slot][primitive][launch band], accumulated over the launches
@@ -2788,8 +2811,9 @@ protected:
      * \param[in] band_launch_flag Which global bands are launched
      * \param[out] class_flux_offset First class-flux slot of each primitive, or UINT32_MAX (see RayTracingBackend::uploadSpectralCameraFlux())
      * \param[out] class_flux Outgoing radiation per [face][class-flux slot][launch band]
+     * \param[in] omit_normal_map_direct Leave out the sources' direct radiation (source slots below the source count) of normal-mapped primitives, which the camera then shades per hit point
      */
-    void computeSpectralCameraFlux(const std::vector<float> &spectral_incident, const std::vector<float> &emitted_flux, uint camera, const std::vector<char> &band_launch_flag, std::vector<uint32_t> &class_flux_offset,
+    void computeSpectralCameraFlux(const std::vector<float> &spectral_incident, const std::vector<float> &emitted_flux, uint camera, const std::vector<char> &band_launch_flag, bool omit_normal_map_direct, std::vector<uint32_t> &class_flux_offset,
                                    std::vector<float> &class_flux) const;
 
     //! Per band label, the first reason the last updateRadiativeProperties() could not weight a primitive's reflectivity/transmissivity spectrum in that band
@@ -2867,7 +2891,7 @@ protected:
     //! Area of each primitive, in GPU buffer order, cached so that it is not recomputed for every band
     std::vector<float> smoothing_primitive_area;
 
-    //! Unit shading normal at each shared vertex, three entries per vertex: the area-weighted mean of the normals of the facets that meet there
+    //! Unit shading normal at each shared vertex, three entries per vertex: the mean of the normals of the facets that meet there, each weighted by its angle at the vertex
     /**
      * Used by cameras for the angle-dependent terms of specular surface layers, which a scalar flux cannot carry. The normals of the facets meeting at a vertex are first oriented to agree with one of them, so
      * that oppositely wound facets do not cancel; the camera program orients each vertex normal to the facet it shades. Empty when smoothing is disabled.
@@ -2877,8 +2901,9 @@ protected:
     //! Whether the backend currently holds smoothing_vertex_normals, which it needs only while smoothing is enabled and there is a radiation source or some primitive has a specular surface layer
     bool smoothing_vertex_normals_uploaded = false;
 
-    //! Whether the backend currently holds the vertex direct irradiance (see accumulateDirectIrradianceAtVertices()), which it needs only while smoothing is enabled and there is a radiation source
-    bool vertex_direct_irradiance_uploaded = false;
+
+    //! Whether the backend currently holds the vertex moments of normal-mapped primitives (see accumulateNormalMapMomentsAtVertices()), which it needs only while smoothing is enabled and there are maps
+    bool vertex_normal_map_moments_uploaded = false;
 
     //! Unit normal of each primitive taking part in smoothing, in GPU buffer order, from its corner positions (zero for the others)
     std::vector<helios::vec3> smoothing_facet_normal;
@@ -2912,9 +2937,9 @@ protected:
 
     //! Remove from a camera's outgoing radiation the part each smoothed primitive reflects and transmits of the sources' direct radiation, before the rest is averaged onto the shared vertices
     /**
-     * With camera flux smoothing, the camera evaluates the direct radiation per facet with the interpolated shading normal instead of interpolating it from the vertices: the direct radiation reaching a
-     * facet carries the cosine of the facet's own normal, which the camera replaces with that of the shading normal, so the brightness follows the curvature of the surface the tessellation stands for and a
-     * shadow edge stays where the facets put it. This removes that part from the values to be averaged, so that the camera does not count it twice. Each facet's direct radiation from source s, E_s, reached
+     * With camera flux smoothing, the camera evaluates the direct radiation per pixel sample, with the interpolated shading normal and a shadow ray toward each source, instead of interpolating it from the
+     * vertices, so the brightness follows the curvature of the surface the tessellation stands for and a shadow edge falls where the geometry puts it. This removes the direct radiation the facet received
+     * from the values to be averaged, so that the camera does not count it twice. Each facet's direct radiation from source s, E_s, reached
      * the face toward the source, which reflects rho_cam E_s and passes tau_cam E_s to the other face; a primitive with a surface layer keeps (1 - a(mu)) of it in its body. The face toward a finite source
      * is decided from the facet's centroid.
      * \param[inout] camera_scatter_top Camera-weighted outgoing radiation of the top faces, [component][primitive][band]; the direct part is removed from the first component.
@@ -2925,22 +2950,22 @@ protected:
      */
     void subtractCameraDirectFlux(std::vector<float> &camera_scatter_top, std::vector<float> &camera_scatter_bottom, const std::vector<float> &direct_flux, uint camera_index, const std::vector<char> &band_launch_flag) const;
 
-    //! Average the unoccluded direct irradiance of each source onto the shared vertices, for the faces that camera flux smoothing finds turned away from a source
+    //! Average the directions of the diffuse radiation reaching the faces of primitives with normal maps onto the shared vertices, for camera flux smoothing
     /**
-     * A facet's direct radiation from source s, E_s, carries the cosine mu of the facet's normal and the fraction of the facet the source reaches, so E_s / |mu| is the irradiance the source delivers
-     * there normal to its direction, reduced by what occludes it. A face turned away from the source records none of it, yet near the terminator its shading normal can still face the source; the camera
-     * then takes this value, interpolated from the vertices, times the cosine of the shading normal, so that the light fades across the terminator instead of stopping at a facet edge. Each vertex averages,
-     * by area, the facets meeting there that received some of the source's radiation; facets nearly edge-on to the source (|mu| < 0.01) are left out, since E_s / |mu| is ill-determined for them.
-     * \param[in] direct_flux Direct radiation reaching each primitive from each source, [source][primitive][launch band] (see RayTracingBackend::getDirectFluxResults()).
+     * The first moment of the radiation reaching each face of a mapped primitive (see RayTracingGeometry::normal_map_slots) shades its scattered light per texel in camera images. Recorded per primitive
+     * from a limited number of rays, it differs a little from one facet to the next, which shows as steps at the facet edges; each vertex therefore averages, by area, the mapped facets meeting there,
+     * and the camera interpolates the vertex values across the facet as it does the outgoing radiation. Each facet contributes only the part of its moment along the facet (the part along
+     * its normal does not shade the relief, and averaging it across a curved surface would turn it into relief). Facets without a map take no part.
+     * \param[in] moments Values per [normal-map slot][face][launch band][3] (see RayTracingBackend::getNormalMapMoments()).
      * \param[in] launch_band_count Number of launched bands.
-     * \param[out] vertex_irradiance Values per [source][vertex][launch band].
+     * \param[out] vertex_moments Values per [vertex][face][launch band][3].
      */
-    void accumulateDirectIrradianceAtVertices(const std::vector<float> &direct_flux, size_t launch_band_count, std::vector<float> &vertex_irradiance) const;
+    void accumulateNormalMapMomentsAtVertices(const std::vector<float> &moments, size_t launch_band_count, std::vector<float> &vertex_moments) const;
 
     //! Average the radiation reaching and leaving the faces of primitives with a spectral texture onto the shared vertices, for camera flux smoothing
     /**
      * Only what the camera interpolates is averaged: the radiation reaching each face from the sky and from other surfaces (the last source slot) and the radiation each face emits. The direct radiation
-     * of the sources, in the other slots, the camera takes from the facet itself (see subtractCameraDirectFlux()), so it is not carried by the vertices. Each vertex takes the area-weighted mean over the
+     * of the sources, in the other slots, the camera evaluates per pixel sample (see subtractCameraDirectFlux()), so it is not carried by the vertices. Each vertex takes the area-weighted mean over the
      * primitives with a spectral texture that meet there, so that the zeros recorded for the others do not dilute it.
      * \param[in] spectral_incident Radiation reaching each face, per [face][source slot][primitive][band] (see RayTracingResults::spectral_incident).
      * \param[in] spectral_emitted Radiation emitted by each face, per [face][primitive][band].

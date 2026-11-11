@@ -148,9 +148,10 @@ static void makeClosedFruitSurfacesOneSided(helios::Context *context_ptr, uint o
             // The one-sided copy: an existing material of the same appearance under the label, or a new one.
             const std::string base_label = ((material.substr(0, 2) == "__") ? fruit_material_name : material) + "_closed";
             auto sameAppearance = [&](const std::string &label) {
-                return context_ptr->getMaterialTwosidedFlag(label) == 0 && context_ptr->getMaterialColor(label) == context_ptr->getMaterialColor(material)
-                       && context_ptr->getMaterialTexture(label) == context_ptr->getMaterialTexture(material)
-                       && context_ptr->isMaterialTextureColorOverridden(label) == context_ptr->isMaterialTextureColorOverridden(material);
+                return context_ptr->getMaterialTwosidedFlag(label) == 0 && context_ptr->getMaterialColor(label) == context_ptr->getMaterialColor(material) && context_ptr->getMaterialTexture(label) == context_ptr->getMaterialTexture(material) &&
+                       context_ptr->isMaterialTextureColorOverridden(label) == context_ptr->isMaterialTextureColorOverridden(material) && context_ptr->getMaterialNormalMapKind(label) == context_ptr->getMaterialNormalMapKind(material) &&
+                       context_ptr->getMaterialNormalMapFile(label) == context_ptr->getMaterialNormalMapFile(material) && context_ptr->getMaterialNormalMapStrength(label) == context_ptr->getMaterialNormalMapStrength(material) &&
+                       context_ptr->isMaterialNormalMapGreenFlipped(label) == context_ptr->isMaterialNormalMapGreenFlipped(material);
             };
             std::string closed_material = base_label;
             for (int suffix = 1; context_ptr->doesMaterialExist(closed_material) && !sameAppearance(closed_material); ++suffix) {
@@ -164,6 +165,12 @@ static void makeClosedFruitSurfacesOneSided(helios::Context *context_ptr, uint o
                     context_ptr->setMaterialTexture(closed_material, texture);
                 }
                 context_ptr->setMaterialTextureColorOverride(closed_material, context_ptr->isMaterialTextureColorOverridden(material));
+                const NormalMapKind map_kind = context_ptr->getMaterialNormalMapKind(material);
+                if (map_kind == NORMAL_MAP_TANGENT_SPACE) {
+                    context_ptr->setMaterialNormalMap(closed_material, context_ptr->getMaterialNormalMapFile(material), context_ptr->getMaterialNormalMapStrength(material), context_ptr->isMaterialNormalMapGreenFlipped(material));
+                } else if (map_kind == NORMAL_MAP_BUMP) {
+                    context_ptr->setMaterialBumpMap(closed_material, context_ptr->getMaterialNormalMapFile(material), context_ptr->getMaterialNormalMapStrength(material));
+                }
                 context_ptr->setMaterialTwosidedFlag(closed_material, 0);
             }
             context_ptr->assignMaterialToPrimitive(UUID, closed_material);
@@ -200,8 +207,9 @@ void PlantArchitecture::nameOrganMaterials(uint objID, const std::string &desire
         // kind of organ from an automatic material of the same texture and, to within rounding, the same color is the organ's material.
         const OrganMaterial *same_appearance = nullptr;
         for (const auto &[other_key, other] : organ_material_labels) {
-            if (other_key.second != desired_base_name || !context_ptr->doesMaterialExist(other.label) || other.texture_file != automatic.texture_file
-                || other.texture_color_overridden != automatic.texture_color_overridden) {
+            if (other_key.second != desired_base_name || !context_ptr->doesMaterialExist(other.label) || other.texture_file != automatic.texture_file || other.texture_color_overridden != automatic.texture_color_overridden ||
+                other.normal_map_file != automatic.normal_map_file || other.normal_map_kind != automatic.normal_map_kind || other.normal_map_strength != automatic.normal_map_strength ||
+                other.normal_map_flip_green != automatic.normal_map_flip_green) {
                 continue;
             }
             if (std::fabs(other.color.r - automatic.color.r) < 1e-4f && std::fabs(other.color.g - automatic.color.g) < 1e-4f && std::fabs(other.color.b - automatic.color.b) < 1e-4f
@@ -217,7 +225,7 @@ void PlantArchitecture::nameOrganMaterials(uint objID, const std::string &desire
             continue;
         }
 
-        const OrganMaterial record{"", automatic.color, automatic.texture_file, automatic.texture_color_overridden};
+        const OrganMaterial record{"", automatic.color, automatic.texture_file, automatic.texture_color_overridden, automatic.normal_map_file, automatic.normal_map_kind, automatic.normal_map_strength, automatic.normal_map_flip_green};
         std::string label = desired_base_name;
         for (int suffix = 1; context_ptr->doesMaterialExist(label); ++suffix) {
             label = desired_base_name + "_" + std::to_string(suffix);
@@ -238,9 +246,14 @@ void PlantArchitecture::nameOrganMaterials(uint objID, const std::string &desire
             }
             context_ptr->setMaterialTextureColorOverride(label, automatic.texture_color_overridden);
             context_ptr->setMaterialTwosidedFlag(label, automatic.twosided_flag);
+            if (automatic.normal_map_kind == NORMAL_MAP_TANGENT_SPACE) {
+                context_ptr->setMaterialNormalMap(label, automatic.normal_map_file, automatic.normal_map_strength, automatic.normal_map_flip_green);
+            } else if (automatic.normal_map_kind == NORMAL_MAP_BUMP) {
+                context_ptr->setMaterialBumpMap(label, automatic.normal_map_file, automatic.normal_map_strength);
+            }
             context_ptr->assignMaterialToPrimitive(primitives, label);
         }
-        organ_material_labels[key] = OrganMaterial{label, record.color, record.texture_file, record.texture_color_overridden};
+        organ_material_labels[key] = OrganMaterial{label, record.color, record.texture_file, record.texture_color_overridden, record.normal_map_file, record.normal_map_kind, record.normal_map_strength, record.normal_map_flip_green};
     }
 }
 
@@ -2657,10 +2670,6 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     this->build_context_geometry_petiole = plantarchitecture_ptr->build_context_geometry_petiole;
     this->build_context_geometry_peduncle = plantarchitecture_ptr->build_context_geometry_peduncle;
 
-    //    if( internode_radius==0.f || internode_length_max==0.f || parent_shoot_parameters.internode_radius_max.val()==0.f ){
-    //        build_context_geometry_internode = false;
-    //    }
-
     // Number of longitudinal segments for internode and petiole
     // if Ndiv=0, use Ndiv=1 (but don't add any primitives to Context)
     uint Ndiv_internode_length = std::max(uint(1), phytomer_parameters.internode.length_segments);
@@ -4388,10 +4397,6 @@ void Phytomer::setInternodeMaxLength(const float internode_length_max_new) {
     scaleInternodeMaxLength(scale_factor);
 }
 
-void Phytomer::setInternodeMaxRadius(float internode_radius_max_new) {
-    this->internode_radius_max = internode_radius_max_new;
-}
-
 void Phytomer::scalePetioleMaxLength(const float scale_factor) {
     if (scale_factor <= 0.f) {
         helios_runtime_error("ERROR (PlantArchitecture::Phytomer::scalePetioleMaxLength): Scale factor must be positive, but " + std::to_string(scale_factor) + " was given.");
@@ -6084,24 +6089,36 @@ LeafShapeValues Phytomer::getLeafShape(uint petiole_index, uint leaf_index) cons
     return {};
 }
 
-void Phytomer::reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested) {
+uint Phytomer::reshapedLeafSubdivisionsY(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested, const char *caller) const {
     const LeafShapeValues current = getLeafShape(petiole_index, leaf_index);
     const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
     if (!context_ptr->doesObjectExist(objID_leaf)) {
-        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): Leaf object " + std::to_string(objID_leaf) + " no longer exists in the Context, so it cannot be reshaped.");
+        helios_runtime_error("ERROR (" + std::string(caller) + "): Leaf object " + std::to_string(objID_leaf) + " no longer exists in the Context, so it cannot be reshaped.");
     }
     if (shape_requested.subdivisions_x != current.subdivisions_x || !(shape_requested.lattice_offset == current.lattice_offset)) {
-        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): The new shape of leaf object " + std::to_string(objID_leaf) +
+        helios_runtime_error("ERROR (" + std::string(caller) + "): The new shape of leaf object " + std::to_string(objID_leaf) +
                              " has a different number of subdivisions along the blade or a different lattice offset from the leaf's own. Start from Phytomer::getLeafShape() and change only the shape terms.");
     }
 
-    LeafShapeValues shape = shape_requested;
     // A roll needs enough cells across the blade to form its arc. Each cell is held to turning through at most pi/16, which keeps the chords' projected area within a fraction of a percent of the arc's.
-    const uint cells_for_roll = 2 * uint(std::ceil(16.f * shape.roll_fraction));
-    shape.subdivisions_y = std::max({current.subdivisions_y, shape_requested.subdivisions_y, cells_for_roll});
-    if (shape.subdivisions_y % 2 != 0) {
-        shape.subdivisions_y++;
+    const uint cells_for_roll = 2 * uint(std::ceil(16.f * shape_requested.roll_fraction));
+    uint subdivisions_y = std::max({current.subdivisions_y, shape_requested.subdivisions_y, cells_for_roll});
+    if (subdivisions_y % 2 != 0) {
+        subdivisions_y++;
     }
+    return subdivisions_y;
+}
+
+bool Phytomer::canReshapeLeafInPlace(uint petiole_index, uint leaf_index, const LeafShapeValues &shape) const {
+    return reshapedLeafSubdivisionsY(petiole_index, leaf_index, shape, "PlantArchitecture::Phytomer::canReshapeLeafInPlace") == getLeafShape(petiole_index, leaf_index).subdivisions_y;
+}
+
+void Phytomer::reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested) {
+    const LeafShapeValues current = getLeafShape(petiole_index, leaf_index);
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+
+    LeafShapeValues shape = shape_requested;
+    shape.subdivisions_y = reshapedLeafSubdivisionsY(petiole_index, leaf_index, shape_requested, "PlantArchitecture::Phytomer::reshapeLeaf");
 
     const uint Nx = current.subdivisions_x;
     const size_t lattice_count_old = size_t(Nx + 1) * size_t(current.subdivisions_y + 1);
@@ -11597,8 +11614,10 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
             // predicate is satisfied on the first timestep and -- because time_since_dormancy is reset to 0
             // just below -- on every step thereafter, repeatedly stripping leaves and killing buds via
             // makeDormant(). Every library plant supplies a positive dd_to_dormancy, so this is inert for them.
+            // The comparison is >=, matching the dormancy-break test below: time_since_dormancy has already been advanced for this
+            // step, so a strict > fired one step late and stretched every cycle to dormancy_period + 1 days (a 366-day year).
             const float dormancy_period = plant_instance.dd_to_dormancy_break + plant_instance.dd_to_dormancy;
-            if (dormancy_period > 0.f && plant_instance.time_since_dormancy > dormancy_period) {
+            if (dormancy_period > 0.f && plant_instance.time_since_dormancy >= dormancy_period) {
                 plant_instance.time_since_dormancy = 0;
 
                 // Self-pruning. Evaluated here, at the season boundary, because this is the point at which a branch has

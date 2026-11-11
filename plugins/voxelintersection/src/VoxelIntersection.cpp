@@ -76,6 +76,14 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         helios_runtime_error("ERROR (VoxelIntersection::slicePrimitive): voxel_face_vertices must contain at least three points.");
     }
 
+    // The pieces keep the primitive's material (see the end of this function). The pieces of an untextured primitive are triangles without (u,v) coordinates, which
+    // cannot carry a normal or bump map.
+    if (context->getPrimitiveNormalMapKind(UUID) != helios::NORMAL_MAP_NONE && context->getPrimitiveTextureFile(UUID).empty()) {
+        helios_runtime_error(
+                "ERROR (VoxelIntersection::slicePrimitive): Primitive " + std::to_string(UUID) + " has the normal or bump map '" + context->getPrimitiveNormalMapFile(UUID) +
+                "' but no texture. Slicing turns it into triangles, which have (u,v) coordinates, and so a frame for the map, only with a texture. Give the primitive a texture, or remove its map with Context::clearPrimitiveNormalMap(), before slicing it.");
+    }
+
     helios::vec3 face_normal = cross(voxel_face_vertices.at(1) - voxel_face_vertices.at(0), voxel_face_vertices.at(2) - voxel_face_vertices.at(1));
     face_normal.normalize();
 
@@ -1159,6 +1167,9 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
             context->overridePrimitiveTextureColor(resulting_UUIDs.at(i));
         }
     }
+
+    // The pieces were made with the primitive's color or texture; they also keep its material, with its label, normal or bump map and other properties
+    context->assignMaterialToPrimitive(resulting_UUIDs, context->getPrimitiveMaterialLabel(UUID));
 
     // compare original and resulting primitive areas to make sure they approximately match
     float resulting_area = context->sumPrimitiveSurfaceArea(resulting_UUIDs);
