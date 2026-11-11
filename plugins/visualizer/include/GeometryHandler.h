@@ -117,6 +117,13 @@ public:
      */
     [[nodiscard]] bool doesBufferNeedFullUpdate() const;
 
+    //! A number that changes whenever a geometry element is added or deleted or the buffers are compacted
+    /**
+     * Anything derived from which element occupies which face slot - such as getFaceContextUUIDs() - stays valid while
+     * this is unchanged. Moving, recoloring or retexturing an existing element does not change it.
+     */
+    [[nodiscard]] size_t getLayoutRevision() const;
+
     [[nodiscard]] bool doesGeometryExist(size_t UUID) const;
 
     [[nodiscard]] std::vector<size_t> getAllGeometryIDs() const;
@@ -597,6 +604,9 @@ private:
     bool buffer_needs_full_update = false;
 
     size_t deleted_primitive_count = 0;
+
+    //! \sa getLayoutRevision()
+    size_t layout_revision = 0;
 
     /**
      * \brief Defragments the internal geometry buffers by removing unused or deleted primitives.

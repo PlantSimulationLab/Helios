@@ -178,34 +178,30 @@ bool spectral_vertex_on() {
     return spectral_vertex_buf.words[0] != 0u;
 }
 
-// With camera flux smoothing: the camera-weighted outgoing radiation of the class of class-flux slot `slot` on primitive prim_idx, from one face
-// in a launch band, interpolated from the facet's vertices v (v.w < 0 for a triangle) with weights w
-float spectral_smoothed_class_flux(uint prim_idx, uint slot, bool top_face, uint launch_band, uint global_band, ivec4 v, vec4 w) {
+// With camera flux smoothing: the part of the camera-weighted outgoing radiation of the class of class-flux slot `slot` on primitive prim_idx, from one face in
+// a launch band, that is interpolated from the facet's vertices v (v.w < 0 for a triangle) with weights w: the emitted radiation (layer 1 of the vertex values)
+// and the class's reflectivity and transmissivity of material slot sky_slot (the sky and other surfaces) times the radiation reaching the two faces from there
+// (layer 0). The camera adds the direct radiation of the sources, which it takes from the facet itself.
+float spectral_smoothed_class_flux(uint prim_idx, uint slot, bool top_face, uint launch_band, uint global_band, ivec4 v, vec4 w, uint sky_slot) {
     uint layers = spectral_vertex_buf.words[0];
     uint num_bands = spectral_vertex_buf.words[1];
     uint num_vertices = spectral_vertex_buf.words[2];
     uint camera = spectral_vertex_buf.words[3];
     uint entry = palette_buf.words[palette_buf.words[3] + prim_idx] + (slot - spectral_camera_flux_buf.words[3u + prim_idx]);
     uint same_face = top_face ? 0u : 1u;
-    float flux = 0.0;
-    for (uint layer = 0u; layer < layers; layer++) {
-        float value[2];
-        for (uint face = 0u; face < 2u; face++) {
+    float value[2][2];
+    for (uint face = 0u; face < 2u; face++) {
+        for (uint layer = 0u; layer < 2u; layer++) {
             uint base = 4u + ((face * layers + layer) * num_vertices) * num_bands + launch_band;
             float sum = w.x * uintBitsToFloat(spectral_vertex_buf.words[base + uint(v.x) * num_bands]) + w.y * uintBitsToFloat(spectral_vertex_buf.words[base + uint(v.y) * num_bands]) +
                         w.z * uintBitsToFloat(spectral_vertex_buf.words[base + uint(v.z) * num_bands]);
             if (v.w >= 0) {
                 sum += w.w * uintBitsToFloat(spectral_vertex_buf.words[base + uint(v.w) * num_bands]);
             }
-            value[face] = sum;
-        }
-        if (layer + 1u == layers) {
-            flux += value[same_face]; // emitted
-        } else {
-            flux += spectral_palette_rho_cam(layer, entry, global_band, camera) * value[same_face] + spectral_palette_tau_cam(layer, entry, global_band, camera) * value[1u - same_face];
+            value[face][layer] = sum;
         }
     }
-    return flux;
+    return value[same_face][1] + spectral_palette_rho_cam(sky_slot, entry, global_band, camera) * value[same_face][0] + spectral_palette_tau_cam(sky_slot, entry, global_band, camera) * value[1u - same_face][0];
 }
 
 #endif // SPECTRAL_TEXTURE_GLSL

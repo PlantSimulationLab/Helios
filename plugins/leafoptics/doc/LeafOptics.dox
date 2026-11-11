@@ -44,6 +44,23 @@ The following object data is used by the nitrogen-based automatic mode (see \ref
  </tr>
 </table>
 
+The following primitive data is used if present (see \ref LeafOpticsClassMaps):
+
+<table>
+ <tr>
+    <th>Primitive Data Label</th>
+    <th>Data Type</th>
+    <th>Description</th>
+    <th>Available Plug-ins</th>
+ </tr>
+ <tr>
+    <td>spectral_class_map</td>
+    <td><span style="font-family: Courier, monospace; color: green;">std::string</span></td>
+    <td>Path of a class map of the leaf's texture, whose classes LeafOptics gives their own spectra.</td>
+    <td>Written by \ref PlantArchitecture for leaves whose prototype has a class map, such as those of the sorghum, maize, wheat and apple library models (and on bark and fruit with a class map, which are for RadiationModel::applySpectralClassMaps() rather than LeafOptics)</td>
+ </tr>
+</table>
+
 \subsection LOOutputGlobalData Output Global Data
 
 The plug-in creates global data containing the computed spectra and the Fluspect-B
@@ -267,7 +284,7 @@ model. See \ref LOModes for details on PROSPECT-D vs PROSPECT-PRO mode selection
 <table>
  <tr><th colspan="4">Dry Matter Parameters (Mode-Dependent)</th></tr>
  <tr><th>Member</th><th>Units</th><th>Description</th><th>Default Value</th></tr>
- <tr><td>drymass</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Total dry matter mass (PROSPECT-D mode)</td><td>0.09</td></tr>
+ <tr><td>drymass</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Total dry matter mass (PROSPECT-D mode), i.e. the leaf mass per area. Typical leaves hold 0.003-0.01 g/cm\f$^2\f$; the leaves of the ANGERS and LOPEX datasets, to which PROSPECT was calibrated, average about 0.005.</td><td>0.006</td></tr>
  <tr><td>protein</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Protein mass (PROSPECT-PRO mode)</td><td>0</td></tr>
  <tr><td>carbonconstituents</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Cellulose, lignin, and other carbon compounds (PROSPECT-PRO mode)</td><td>0</td></tr>
 </table>
@@ -337,7 +354,7 @@ The library contains parameters fitted to measured leaf spectra using robust opt
 
 <table>
  <tr><th>Species Label</th><th>Scientific Name</th><th>N</th><th>Cab<br>(µg/cm²)</th><th>Car<br>(µg/cm²)</th><th>Ant<br>(µg/cm²)</th><th>Cbrown</th><th>Cw<br>(g/cm²)</th><th>Cm<br>(g/cm²)</th><th>R²</th><th>Source</th></tr>
- <tr><td>"default"</td><td>-</td><td>1.50</td><td>30.0</td><td>7.00</td><td>1.00</td><td>0.000</td><td>0.0150</td><td>0.0900</td><td>-</td><td>Original Helios defaults</td></tr>
+ <tr><td>"default"</td><td>-</td><td>1.50</td><td>30.0</td><td>7.00</td><td>1.00</td><td>0.000</td><td>0.0150</td><td>0.0060</td><td>-</td><td>Helios defaults (the defaults of \ref LeafOpticsProperties)</td></tr>
  <tr><td>"garden_lettuce"</td><td>Lactuca sativa L.</td><td>2.01</td><td>30.3</td><td>6.99</td><td>1.36</td><td>0.107</td><td>0.0282</td><td>0.0053</td><td>0.993</td><td>LOPEX93 sample 0021</td></tr>
  <tr><td>"alfalfa"</td><td>Medicago sativa L.</td><td>2.01</td><td>43.6</td><td>10.3</td><td>1.34</td><td>0.000</td><td>0.0190</td><td>0.0047</td><td>0.994</td><td>LOPEX93 sample 0036</td></tr>
  <tr><td>"corn"</td><td>Zea mays L.</td><td>1.59</td><td>22.9</td><td>3.97</td><td>0.00</td><td>0.727</td><td>0.0150</td><td>0.0044</td><td>0.975</td><td>LOPEX93 sample 0041</td></tr>
@@ -359,12 +376,7 @@ The library contains parameters fitted to measured leaf spectra using robust opt
 
 \subsection LOLibraryError Error Handling
 
-If an unknown species name is provided, the method:
-1. Issues a warning message (if messages are enabled)
-2. Populates the properties structure with default values
-3. Does not throw an error
-
-This ensures that code continues to run even if a species name is misspelled or not yet in the library.
+A species name that is not in the library (e.g., a misspelled one) raises an error that lists the species the library holds, and the properties structure is left unchanged. The lookup is case-insensitive. Use "default" for the default leaf.
 
 \subsection LOLibraryExtend Extending the Species Library
 
@@ -561,17 +573,63 @@ Some things to keep in mind:
 - Primitives given spectra by this method cannot also be given spectra by the \ref LONitrogenAuto "nitrogen-based mode" of the same LeafOptics, or the other way around, since each would overwrite the other's. An error is raised instead.
 - LeafOptics does not provide properties for stages of senescence, which differ between species. During senescence, chlorophyll is generally lost faster than carotenoids, which is why leaves turn yellow, and brown pigments accumulate later.
 
+\section LeafOpticsClassMaps Leaves with a Class Map
+
+A leaf photograph used as a leaf texture shows tissues that differ optically, such as the pale midrib of a grass leaf. A <b>class map</b> of the texture (a grayscale PNG of integer classes with the texture's resolution, in which class 0 marks exactly its transparent texels) records where each tissue is, and the XML file of the same name beside it defines each class relative to the leaf:
+
+~~~~~~{.xml}
+<helios>
+  <leaf_class_map provenance="...">
+    <class id="1" chlorophyll_scale="0.87" visible_reflectance_scale="0.43"/>
+    <class id="2" chlorophyll_scale="0.26" visible_reflectance_scale="2.19"/>
+  </leaf_class_map>
+</helios>
+~~~~~~
+
+When \ref LeafOptics::run(const std::vector<uint> &, const LeafOpticsProperties &, const std::string &) is given primitives that carry the primitive data "spectral_class_map", it gives them a spectral texture (see the Spectral Textures section of the User Guide) instead of a single spectrum. Each class has the spectra of the given properties with:
+- the chlorophyll and carotenoid contents multiplied by its <code>chlorophyll_scale</code>, and
+- the reflectivity below 700 nm multiplied by its <code>visible_reflectance_scale</code>, blending linearly to no change at 750 nm, and where that increases it, no further than a reflectivity plus transmissivity of 0.98.
+
+So the classes follow the properties the leaf is given, and a class with both scales equal to 1 has exactly the leaf's spectra. The spectra are written as global data "leaf_reflectivity_[label]_[class map]_class[k]" and "leaf_transmissivity_[label]_[class map]_class[k]", and the palette is named "leaf_[label]_[class map]", where [class map] is the class map's file name without its extension. The primitives are still given "reflectivity_spectrum", "transmissivity_spectrum" and "fluspect_spectrum" as usual, though the radiation model uses the spectral texture rather than the first two. Calling run() again with new properties recalculates the class spectra, and \ref LeafOptics::runFromObjectData() and the \ref LONitrogenAuto "nitrogen-based mode" give each value or nitrogen bin its own palette in the same way.
+
+The sorghum, maize and wheat library models of the PlantArchitecture plug-in, whose leaves use the same sorghum leaf photograph, record its class map (SorghumLeaf_classes.png, which picks out the midrib) on their leaves, as the apple models record AppleLeaf_classes.png on theirs, so running LeafOptics on them is all that is needed:
+
+~~~~~~{.cpp}
+plantarchitecture.loadPlantModelFromLibrary("sorghum");
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+
+LeafOptics leafoptics(&context);
+LeafOpticsProperties properties;
+leafoptics.getPropertiesFromLibrary("corn", properties);
+leafoptics.run(plantarchitecture.getAllPlantUUIDs(plantID), properties, "sorghum");  // leaves with a midrib, stems with one spectrum
+~~~~~~
+
+Without LeafOptics, the class map is not used, and leaves have whatever spectra or values they are given.
+
+Some things to keep in mind:
+- An error is raised, before any primitive is changed, if a class map does not exist, has no class definitions, defines its classes other than as 1, 2, 3 and so on, has a class the definitions lack, or has a scale that is not a positive number.
+- A leaf triangle whose (u,v) coordinates cover only transparent texels of the texture can take no class, so PlantArchitecture does not record the class map on it, and it gets the single spectrum.
+- Class maps and their definitions for other leaf textures can be made with the scripts in utilities/leaf_class_maps (see its README), which fit the classes to the colors of the leaf photograph after removing its shading.
+
 \section LONitrogenAuto Nitrogen-Based Automatic Leaf Optics
 
 The LeafOptics plugin supports automatic computation of leaf optical properties from leaf nitrogen concentration. This enables seamless integration with the PlantArchitecture nitrogen model, where chlorophyll and carotenoid content are derived from nitrogen data while limiting computational overhead through adaptive spectrum binning.
 
 \subsection LONitrogenBackground Scientific Background
 
-The nitrogen-to-chlorophyll relationship is based on Evans (1989) and subsequent literature:
+Chlorophyll is taken to be proportional to leaf nitrogen per unit area:
 
-- **Stoichiometry**: Approximately 50 mol thylakoid N per mol chlorophyll
-- **Photosynthetic fraction**: ~50% of leaf nitrogen is in photosynthetic machinery
-- **Empirical relationship**: \f$C_{ab} (\mu g/cm^2) = N_{area} (g/m^2) \times 100 \times f_{photo} \times k\f$
+\f[ C_{ab} (\mu g/cm^2) = N_{area} (g/m^2) \times 100 \times f_{photo} \times k \f]
+
+where the factor 100 converts g/m\f$^2\f$ to \f$\mu\f$g/cm\f$^2\f$. Only the product \f$f_{photo} \times k\f$ affects the result: it is the mass of chlorophyll per unit mass of leaf nitrogen. The defaults (0.50 \f$\times\f$ 0.40) give 0.20 g chlorophyll per g N, about 3.1 mmol chlorophyll per mol N.
+
+<b>This value is a model assumption, not a measured relationship.</b> No source gives it directly. It is consistent with the following:
+
+- About 1.25\% of leaf N lies in the chlorophyll molecules themselves (each holds 4 N atoms, 6.3\% of its mass). Summaries of leaf N allocation put this share at 0.5-1.5\%.
+- About 12\% of leaf N lies in the chlorophyll-protein complexes, which hold roughly 40 mol N per mol chlorophyll (Evans and Seemann, 1989, as used by <a href="https://doi.org/10.1046/j.1365-3040.2001.00724.x">Evans and Poorter, 2001</a>).
+- Leaf chlorophyll is approximately proportional to leaf N, for example in wheat flag leaves (<a href="https://doi.org/10.1104/pp.72.2.297">Evans, 1983</a>).
+
+The ratio varies. Leaves grown in shade put more of their N into chlorophyll and the thylakoids (<a href="https://doi.org/10.1007/BF00377192">Evans, 1989</a>), so shade leaves can have substantially more chlorophyll per unit N than sun leaves (roughly 1.5-2.5 times, as estimated from the light-harvesting N fractions of tree seedlings grown in full sun and 10\% sun; <a href="https://doi.org/10.3390/plants10102213">doi:10.3390/plants10102213</a>). Plausible values of the product range from about 0.10 g/g (sun-grown, high-N leaves) to 0.30 g/g (shade-grown or low-N leaves). Calibrate it for the species and conditions simulated where measurements are available; for example, a calibration of field wheat to airborne spectra has preferred 0.29-0.41 g/g, although such a fit also absorbs errors in the other leaf parameters.
 
 Carotenoids do not contain nitrogen directly. The relationship is indirect through chlorophyll:
 - Healthy leaves: \f$C_{ar} \approx 0.25 \times C_{ab}\f$
@@ -587,7 +645,7 @@ The \ref LeafOpticsProperties_Nauto structure configures the nitrogen-based auto
  <tr><th colspan="4">Nitrogen-to-Pigment Conversion Coefficients</th></tr>
  <tr><th>Member</th><th>Units</th><th>Description</th><th>Default</th></tr>
  <tr><td>f_photosynthetic</td><td>unitless [0-1]</td><td>Fraction of leaf nitrogen in photosynthetic machinery</td><td>0.50</td></tr>
- <tr><td>N_to_Cab_coefficient</td><td>unitless</td><td>Empirical coefficient for chlorophyll calculation</td><td>0.40</td></tr>
+ <tr><td>N_to_Cab_coefficient</td><td>g chlorophyll per g photosynthetic N</td><td>Chlorophyll per unit photosynthetic nitrogen. Only its product with f_photosynthetic matters (see \ref LONitrogenBackground).</td><td>0.40</td></tr>
  <tr><td>Car_to_Cab_ratio</td><td>unitless</td><td>Carotenoid to chlorophyll ratio</td><td>0.25</td></tr>
 </table>
 
@@ -710,7 +768,7 @@ The relative test is disabled by default because, with evenly spaced bins, it ca
 
 \subsection LONitrogenPFT Parameter Values by Plant Functional Type
 
-Suggested parameter values for different plant types:
+Suggested parameter values for different plant types. These are illustrative starting points, not values fitted to data, and have no source; calibrate them where measurements are available:
 
 <table>
  <tr><th>Parameter</th><th>C3 Crops</th><th>C4 Crops</th><th>Deciduous Trees</th></tr>

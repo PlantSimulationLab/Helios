@@ -20,6 +20,7 @@
 #define RAYTRACING_CUH
 
 #include <stdint.h>
+#include "NormalMapMath.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -52,6 +53,7 @@ rtDeclareVariable(unsigned int, direct_ray_type, , );
 rtDeclareVariable(unsigned int, diffuse_ray_type, , );
 rtDeclareVariable(unsigned int, camera_ray_type, , );
 rtDeclareVariable(unsigned int, pixel_label_ray_type, , );
+rtDeclareVariable(unsigned int, camera_shadow_ray_type, , ); // A camera's shadow ray toward a source (see closest_hit_camera)
 
 rtDeclareVariable(uint3, launch_index, rtLaunchIndex, );
 rtDeclareVariable(uint3, launch_dim, rtLaunchDim, );
@@ -152,6 +154,15 @@ rtDeclareVariable(unsigned int, surface_layer_table_size, , );
 // layout described in shaders/common/spectral_texture.glsl (see helios::packSpectralClassMaps() and helios::packSpectralPalettes())
 rtBuffer<unsigned int, 1> spectral_class_maps;
 rtBuffer<unsigned int, 1> spectral_palette;
+// Normal maps (Context::setMaterialNormalMap()), packed as described in include/NormalMapMath.h; word 0 is 0 when no primitive has one
+rtBuffer<unsigned int, 1> normal_maps;
+// Camera launches: 1 if the host removed the direct launch's deposit from normal-mapped primitives' outgoing radiation, so the camera shades it per hit point
+rtDeclareVariable(unsigned int, normal_map_direct, , );
+rtDeclareVariable(unsigned int, camera_direct_per_pixel, , ); // Camera launches: 1 if smoothed primitives' direct radiation is evaluated per pixel sample
+// Slot of each normal-mapped primitive in normal_map_moments (0xFFFFFFFF for none), and [slot][face][launch band][3] the flux-weighted directions of the diffuse radiation
+// reaching each face (see RayTracingGeometry::normal_map_slots); one-element placeholders when no primitive has a map
+rtBuffer<unsigned int, 1> normal_map_slots;
+rtBuffer<float, 1> normal_map_moments;
 // The radiation reaching primitives with a spectral texture [face][source slot][primitive][launch band], booked when spectral_incident_enabled is 1, and the
 // packed camera-weighted outgoing radiation of each class for the camera being traced (see helios::packSpectralCameraFlux())
 rtBuffer<float, 1> spectral_incident;
@@ -161,6 +172,9 @@ rtBuffer<unsigned int, 1> spectral_camera_flux;
 rtBuffer<unsigned int, 1> spectral_vertex;
 // Class of the spectral texture seen in each pixel by the pixel-label launch (0 = none), sized when some primitive has a spectral texture
 rtBuffer<unsigned int, 1> camera_pixel_class;
+rtBuffer<float, 1> vertex_normals; // Unit shading normal per smoothing vertex [vertex * 3], for camera flux smoothing; a one-element placeholder when there are none
+rtBuffer<float, 1> vertex_normal_map_moments; // normal_map_moments averaged onto the smoothing vertices [vertex][face][band_launch][3]; a one-element placeholder when there is none
+rtBuffer<float, 1> radiation_specular; // Direct flux reaching primitives with a surface layer, and with camera flux smoothing every smoothed primitive [source * Nprimitives * Nbands_launch + primitive * Nbands_launch + band]
 
 //! Texture (u,v) of a launch point sp in a primitive's canonical space, as d_sampleTexture_patch() and d_sampleTexture_triangle() compute it
 __device__ optix::float2 d_originTextureUV(uint ptype, const optix::float3 &sp, int uv_ID) {
@@ -184,6 +198,72 @@ __device__ optix::float2 d_originTextureUV(uint ptype, const optix::float3 &sp, 
     const float du = uvdata[optix::make_uint2(1, uv_ID)].x - uvmin.x;
     const float dv = uvdata[optix::make_uint2(2, uv_ID)].y - uvdata[optix::make_uint2(1, uv_ID)].y;
     return optix::make_float2(uvmin.x + uv.x * du, uvmin.y + uv.y * dv);
+}
+
+// ---------------------------------------------------------------------------
+// Normal maps (the conventions are specified in include/NormalMapMath.h)
+// ---------------------------------------------------------------------------
+
+//! Reads the packed normal-map words for the shared helios_nm functions
+struct NormalMapWords {
+    __device__ __forceinline__ unsigned int operator[](unsigned int i) const {
+        return normal_maps[i];
+    }
+};
+
+__device__ __forceinline__ helios_nm::Vec3 d_toNM(const optix::float3 &v) {
+    return helios_nm::make(v.x, v.y, v.z);
+}
+__device__ __forceinline__ optix::float3 d_fromNM(const helios_nm::Vec3 &v) {
+    return optix::make_float3(v.x, v.y, v.z);
+}
+
+//! Normal map of the primitive at position pos, or helios_nm::NO_MAP
+__device__ __forceinline__ uint d_normalMapOf(uint position) {
+    return helios_nm::mapIndex(NormalMapWords(), position);
+}
+
+//! Whether the primitive at position pos has a specular surface layer
+__device__ __forceinline__ bool d_hasSurfaceLayer(uint position) {
+    return surface_layer_enabled != 0u && surface_model[position] != 0u;
+}
+
+//! Shading normal on the top face of a primitive at canonical point sp (see d_originTextureUV()), about the unit base normal base_top on the side of the facet's top normal: the nearest texel for ray launches, bilinear for cameras
+__device__ optix::float3 d_normalMapShadingNormalAt(uint ptype, uint map, const float *T, int uv_ID, const optix::float3 &base_top, const optix::float3 &sp, bool bilinear) {
+    helios_nm::Vec3 E1, E2;
+    helios_nm::primitiveEdges(T, ptype, E1, E2);
+    optix::float2 uv0 = optix::make_float2(0.f, 0.f), uv1 = uv0, uv2 = uv0;
+    if (uv_ID != -1) {
+        uv0 = uvdata[optix::make_uint2(0, uv_ID)];
+        uv1 = uvdata[optix::make_uint2(1, uv_ID)];
+        uv2 = uvdata[optix::make_uint2(2, uv_ID)];
+    }
+    float ax, ay, bx, by;
+    helios_nm::uvJacobian(ptype, uv_ID != -1, uv0.x, uv0.y, uv1.x, uv1.y, uv2.x, uv2.y, ax, ay, bx, by);
+    const helios_nm::Frame frame = helios_nm::buildFrame(E1, E2, ax, ay, bx, by, d_toNM(base_top));
+    float u, v;
+    helios_nm::texcoord(ptype, uv0.x, uv0.y, ax, ay, bx, by, sp.x, sp.y, u, v);
+    const NormalMapWords words;
+    const helios_nm::Vec3 n_ts = bilinear ? helios_nm::fetchBilinear(words, map, u, v) : helios_nm::fetchNearest(words, map, u, v);
+    return d_fromNM(helios_nm::perturb(frame, n_ts));
+}
+
+//! The canonical point of a hit from the hit attributes (patch-local coordinates in [0,1]^2, or the barycentric weights of a triangle's second and third corners)
+__device__ __forceinline__ optix::float3 d_canonicalPointFromHit(uint ptype, float surface_u, float surface_v) {
+    return ptype == 1 ? optix::make_float3(surface_v, surface_u + surface_v, 0.f) : optix::make_float3(surface_u - 0.5f, surface_v - 0.5f, 0.f);
+}
+
+//! Shading normal on the top face of the primitive at position pos at a hit with attributes (surface_u, surface_v), with the facet's top normal returned in normal_top
+__device__ optix::float3 d_hitShadingNormalTop(uint position, uint map, float surface_u, float surface_v, bool bilinear, optix::float3 &normal_top) {
+    float T[16];
+    for (uint i = 0; i < 16; i++) {
+        T[i] = transform_matrix[optix::make_uint2(i, position)];
+    }
+    const uint ptype = primitive_type[position];
+    helios_nm::Vec3 E1, E2;
+    helios_nm::primitiveEdges(T, ptype, E1, E2);
+    normal_top = d_fromNM(helios_nm::normalize(helios_nm::cross(E1, E2)));
+    return d_normalMapShadingNormalAt(ptype, map, T, uvID[position], normal_top, d_canonicalPointFromHit(ptype, surface_u, surface_v), bilinear);
 }
 
 //! Palette entry of the class of a primitive's spectral texture at texture coordinate (u,v), with the texel convention of the masks, or 0xFFFFFFFF if the primitive has none or the texel is transparent (class 0)
@@ -236,35 +316,74 @@ __device__ float d_spectralClassFlux(uint slot, bool top_face, uint launch_band)
 //! Value of camera-weighted palette table `table` (7 reflectivity, 8 transmissivity) for material slot `slot`
 __device__ float d_spectralPaletteValueCam(uint table, uint slot, uint entry, uint b_global, uint camera);
 
-//! With camera flux smoothing: the camera-weighted outgoing radiation of the class of class-flux slot `slot` on the primitive at `position`, from one face in a
-//! launch band, interpolated from the facet's vertices v (v[3] < 0 for a triangle) with weights w
-__device__ float d_spectralSmoothedClassFlux(uint position, uint slot, bool top_face, uint launch_band, uint b_global, const int v[4], const float w[4]) {
+//! Direction from point to radiation source s: the source's direction for a collimated source or the sun sphere, and toward its centre for a finite source
+__device__ optix::float3 d_directionToSource(uint s, const optix::float3 &point) {
+    if (source_types[s] == 0 || source_types[s] == 2) {
+        return optix::normalize(source_positions[s]);
+    }
+    return optix::normalize(source_positions[s] - point);
+}
+
+//! Direct radiation of a source reaching one face of a normal-mapped facet that is not smoothed, evaluated with the map's shading normal
+/**
+ * face_normal and face_shading_normal are the facet's normal and the shading normal of that face, and facet_value what the face itself received. That carries the cosine of the facet's normal, which is
+ * replaced by that of the shading normal. A face turned away from the source received nothing. With soften, the rescaled value is multiplied by the shadow-terminator softening of Chiang et al. (see
+ * helios_nm::terminatorSoftening()). (A smoothed primitive's direct radiation is evaluated per pixel sample instead; see d_pixelDirectRadiation() in rayHit.cu.)
+ */
+__device__ float d_faceDirect(float facet_value, const optix::float3 &to_source, const optix::float3 &face_normal, const optix::float3 &face_shading_normal, bool soften) {
+    const float mu_facet = optix::dot(face_normal, to_source);
+    const float mu_shading = fmaxf(0.f, optix::dot(face_shading_normal, to_source));
+    if (mu_shading <= 0.f || mu_facet <= 0.f) {
+        return 0.f;
+    }
+    const float softening = soften ? helios_nm::terminatorSoftening(d_toNM(face_normal), d_toNM(face_shading_normal), d_toNM(to_source)) : 1.f;
+    return facet_value * mu_shading / mu_facet * softening;
+}
+
+//! Value of layer `layer` of spectral_vertex on face `face` (0 top, 1 bottom) in a launch band, interpolated from the facet's vertices v with weights w
+__device__ float d_spectralVertexValue(uint face, uint layer, uint launch_band, const int v[4], const float w[4]) {
     const uint layers = spectral_vertex[0];
     const uint num_bands = spectral_vertex[1];
     const uint num_vertices = spectral_vertex[2];
+    const size_t base = 4 + (size_t(face * layers + layer) * num_vertices) * num_bands + launch_band;
+    float sum = 0.f;
+    for (int c = 0; c < 4; c++) {
+        if (v[c] >= 0) {
+            sum += w[c] * __uint_as_float(spectral_vertex[base + size_t(v[c]) * num_bands]);
+        }
+    }
+    return sum;
+}
+
+//! The camera-weighted outgoing radiation of the class of class-flux slot `slot` on a normal-mapped primitive at `position` that is not smoothed, from one face in a launch band, of the sources'
+//! direct radiation alone: taken from the facet itself and carried over to the shading normal (see d_faceDirect()). viewed_normal and shading_normal are on the side of `top_face`, and point is where the
+//! camera ray hit. soften applies the shadow-terminator softening of a normal map.
+__device__ float d_spectralDirectClassFlux(uint position, uint slot, bool top_face, uint launch_band, uint b_global, uint camera, const optix::float3 &viewed_normal, const optix::float3 &shading_normal, const optix::float3 &point, bool soften) {
+    const uint entry = spectral_palette[spectral_palette[3] + position] + (slot - spectral_camera_flux[3 + position]);
+    float flux = 0.f;
+    for (uint source_slot = 0; source_slot < Nsources; source_slot++) {
+        const optix::float3 to_source = d_directionToSource(source_slot, point);
+        const float incident = radiation_specular[(size_t(source_slot) * Nprimitives + position) * Nbands_launch + launch_band];
+        const bool viewed_face_toward_source = optix::dot(viewed_normal, to_source) > 0.f;
+        const float same_value = d_faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, viewed_normal, shading_normal, soften);
+        const float other_value = d_faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, -viewed_normal, -shading_normal, soften);
+        flux += d_spectralPaletteValueCam(7, source_slot, entry, b_global, camera) * same_value + d_spectralPaletteValueCam(8, source_slot, entry, b_global, camera) * other_value;
+    }
+    return flux;
+}
+
+//! With camera flux smoothing: the camera-weighted outgoing radiation of the class of class-flux slot `slot` on the primitive at `position`, from one face in a launch band, of all but the sources'
+//! direct radiation: the radiation from the sky and other surfaces (the last source slot, layer 0 of spectral_vertex) and the emitted radiation (layer 1), interpolated from the facet's vertices v
+//! (v[3] < 0 for a triangle) with weights w. The direct radiation of the sources is evaluated per pixel sample (see d_pixelDirectRadiation() in rayHit.cu).
+__device__ float d_spectralSmoothedClassFlux(uint position, uint slot, bool top_face, uint launch_band, uint b_global, const int v[4], const float w[4]) {
     const uint camera = spectral_vertex[3];
     const uint entry = spectral_palette[spectral_palette[3] + position] + (slot - spectral_camera_flux[3 + position]);
     const uint same_face = top_face ? 0u : 1u;
-    float flux = 0.f;
-    for (uint layer = 0; layer < layers; layer++) {
-        float value[2];
-        for (uint face = 0; face < 2; face++) {
-            const size_t base = 4 + (size_t(face * layers + layer) * num_vertices) * num_bands + launch_band;
-            float sum = 0.f;
-            for (int c = 0; c < 4; c++) {
-                if (v[c] >= 0) {
-                    sum += w[c] * __uint_as_float(spectral_vertex[base + size_t(v[c]) * num_bands]);
-                }
-            }
-            value[face] = sum;
-        }
-        if (layer + 1 == layers) {
-            flux += value[same_face]; // emitted
-        } else {
-            flux += d_spectralPaletteValueCam(7, layer, entry, b_global, camera) * value[same_face] + d_spectralPaletteValueCam(8, layer, entry, b_global, camera) * value[1 - same_face];
-        }
-    }
-    return flux;
+    float flux = d_spectralVertexValue(same_face, 1, launch_band, v, w); // emitted
+    // The radiation from the sky and other surfaces (the last source slot)
+    const float sky_same = d_spectralVertexValue(same_face, 0, launch_band, v, w);
+    const float sky_other = d_spectralVertexValue(1 - same_face, 0, launch_band, v, w);
+    return flux + d_spectralPaletteValueCam(7, Nsources, entry, b_global, camera) * sky_same + d_spectralPaletteValueCam(8, Nsources, entry, b_global, camera) * sky_other;
 }
 
 //! Whether a ray with palette entry `entry` uses the palette in global band `b_global`
@@ -291,6 +410,9 @@ rtBuffer<float, 1> radiation_in;
 // Absorbed radiation that arrived on the top face [primitive * Nbands_launch + band], written only when face_absorption_enabled is set (a one-element placeholder otherwise)
 rtBuffer<float, 1> radiation_in_top;
 rtDeclareVariable(unsigned int, face_absorption_enabled, , );
+// Forward scattering estimate [primitive * Nbands_launch + band], written only when forward_scatter_enabled is set (scattering launches)
+rtBuffer<float, 1> forward_scatter;
+rtDeclareVariable(unsigned int, forward_scatter_enabled, , );
 rtBuffer<float, 1> radiation_in_camera;
 rtBuffer<float, 1> radiation_out_top;
 rtBuffer<float, 1> radiation_out_bottom;
@@ -304,7 +426,6 @@ rtBuffer<float, 1> scatter_buff_bottom_cam;
 // Each camera's white reference [camera * Nprimitives * Nbands_launch + primitive * Nbands_launch + band], accumulated over all the launches of a runBand()
 rtBuffer<float, 1> white_reference_top_cam;
 rtBuffer<float, 1> white_reference_bottom_cam;
-rtBuffer<float, 1> radiation_specular; // Direct flux reaching primitives with a surface layer [source * Nprimitives * Nbands_launch + primitive * Nbands_launch + band]
 
 // Camera variables
 rtBuffer<unsigned int, 1> camera_pixel_label;
@@ -361,6 +482,8 @@ struct PerRayData {
     bool hit_cover;
     //! World-space point just beyond the cover where the ray continues
     optix::float3 cover_exit;
+    //! Set when a camera's shadow ray reaches the source it was traced toward (miss_camera_shadow)
+    bool source_reached;
 };
 
 //! Diffuse, camera and pixel-label rays continue past a translucent cover from this distance (m) beyond it.
@@ -800,6 +923,81 @@ static __host__ __device__ __inline__ float asin_safe(float x) {
     else if (x > 1.0)
         x = 1.0;
     return asin(x);
+}
+
+//! One sample of radiation source s seen from the point `origin`, drawn as the direct launch draws it
+/**
+ * Gives the direction toward the point sampled on the source (the source's direction for a collimated source), the distance to that point (RT_DEFAULT_MAX for a collimated source), and the factor that,
+ * times the source's flux and |n . direction| for a surface of normal n, gives the irradiance the sample stands for: the strength of a direct ray before its division by the number of rays. Cameras draw
+ * their shadow rays with it too, so that the shadows they evaluate per pixel come from the same distribution of points on the source as the radiation solve, including the penumbra of the sun's disk and
+ * of a finite source. Returns false for a sample on the back of a rectangle or disk source, which delivers nothing, and for an unknown source type.
+ */
+__device__ bool d_sampleSourceDirection(uint s, const optix::float3 &origin, uint &seed, optix::float3 &direction, float &tmax, double &factor) {
+    const uint source_type = source_types[s];
+    if (source_type == 0) { // collimated source
+        direction = optix::normalize(source_positions[s]);
+        tmax = RT_DEFAULT_MAX;
+        factor = 1.0;
+        return true;
+    }
+    if (source_type == 1 || source_type == 2) { // sphere source
+        // sample point on surface of sphere
+        const float theta_s = acos_safe(1.f - 2.f * rnd(seed));
+        const float phi_s = rnd(seed) * 2.f * M_PI;
+        const optix::float3 sphere_point = 0.5 * source_widths[s].x * optix::make_float3(sin(theta_s) * cos(phi_s), sin(theta_s) * sin(phi_s), cos(theta_s));
+        direction = sphere_point + source_positions[s] - origin;
+        tmax = d_magnitude(direction);
+        direction = optix::normalize(direction);
+        factor = 0.0;
+        const uint N = 10;
+        for (uint j = 0; j < N; j++) {
+            for (uint i = 0; i < N; i++) {
+                const float theta = acos_safe(1.f - 2.f * (float(i) + 0.5f) / float(N));
+                const float phi = (float(j) + 0.5f) * 2.f * M_PI / float(N);
+                const optix::float3 light_direction = optix::make_float3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
+                if (optix::dot(light_direction, direction) < 0) {
+                    factor += fabs(optix::dot(light_direction, direction)) / (double(tmax) * double(tmax)) / double(N * N) * source_widths[s].x * source_widths[s].x;
+                }
+            }
+        }
+        return true;
+    }
+    if (source_type == 3) { // rectangle source
+        float light_transform[16];
+        d_makeTransformMatrix(source_rotations[s], light_transform);
+        optix::float3 square_point;
+        d_sampleSquare(seed, square_point);
+        square_point = optix::make_float3(source_widths[s].x * square_point.x, source_widths[s].y * square_point.y, square_point.z);
+        d_transformPoint(light_transform, square_point);
+        optix::float3 light_direction = optix::make_float3(0, 0, 1);
+        d_transformPoint(light_transform, light_direction);
+        direction = square_point + source_positions[s] - origin;
+        if (optix::dot(direction, light_direction) > 0.f) { // the ray goes toward the source, so the dot product is negative when the source faces the point
+            return false;
+        }
+        tmax = d_magnitude(direction);
+        direction = optix::normalize(direction);
+        factor = fabs(optix::dot(light_direction, direction)) / (double(tmax) * double(tmax)) * source_widths[s].x * source_widths[s].y / M_PI;
+        return true;
+    }
+    if (source_type == 4) { // disk source
+        float light_transform[16];
+        d_makeTransformMatrix(source_rotations[s], light_transform);
+        optix::float3 disk_point;
+        d_sampleDisk(seed, disk_point);
+        d_transformPoint(light_transform, disk_point);
+        optix::float3 light_direction = optix::make_float3(0, 0, 1);
+        d_transformPoint(light_transform, light_direction);
+        direction = source_widths[s].x * disk_point + source_positions[s] - origin;
+        if (optix::dot(direction, light_direction) > 0.f) {
+            return false;
+        }
+        tmax = d_magnitude(direction);
+        direction = optix::normalize(direction);
+        factor = fabs(optix::dot(light_direction, direction)) / (double(tmax) * double(tmax)) * source_widths[s].x * source_widths[s].x;
+        return true;
+    }
+    return false; // unknown source type
 }
 
 // ----- auxiliary helpers --------------------------------------

@@ -273,5 +273,16 @@ if( ENABLE_OPENMP )
     endif()
 endif()
 
+# -- AI coding agent instructions (AGENTS.md / CLAUDE.md in the project directory) --#
+option(HELIOS_GENERATE_AGENT_FILES "Write AGENTS.md and CLAUDE.md with Helios instructions for AI coding agents into the project directory" ON)
+include( "${BASE_DIRECTORY}/utilities/agents/generate_agent_files.cmake" )
+_helios_agent_files_env_enabled(HELIOS_AGENT_FILES_ENV_ENABLED)
+if( HELIOS_GENERATE_AGENT_FILES AND HELIOS_AGENT_FILES_ENV_ENABLED )
+    get_filename_component(HELIOS_BASE_DIRECTORY_ABSOLUTE "${BASE_DIRECTORY}" ABSOLUTE BASE_DIR "${CMAKE_SOURCE_DIR}")
+    helios_generate_agent_files("${CMAKE_SOURCE_DIR}" "${HELIOS_BASE_DIRECTORY_ABSOLUTE}" "${EXECUTABLE_NAME}" "${PLUGINS}")
+    # Re-run configure (and so regenerate the files) when the hand-written guidance changes.
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${HELIOS_BASE_DIRECTORY_ABSOLUTE}/utilities/agents/helios_agent_guide.md")
+endif()
+
 enable_testing()
 add_test(NAME Test0 COMMAND ${EXECUTABLE_NAME} 0)

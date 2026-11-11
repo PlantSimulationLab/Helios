@@ -92,6 +92,66 @@ uniform samplerBuffer phongMaterialTable;
 uniform int phongMaterialTableSize;
 uniform isamplerBuffer material_index_texture_object;
 
+//Normal and bump maps (Visualizer::enableNormalMaps()). Each map fills one layer of the array as RG8, holding the x and y of the
+//tangent-space normal mapped to [0,1]; z is reconstructed. normalMapMaterialTable gives the layer for each entry of the Phong
+//material table (indexed like phongMaterialTable), or -1 for a material without a map. The tangent space is that of OpenGL,
+//glTF and Blender: +x along increasing u, +y along increasing v, +z along the surface normal.
+uniform sampler2DArray normalMapSampler;
+uniform samplerBuffer normalMapMaterialTable;
+uniform int normalMapsEnabled;
+
+//Screen-space derivatives of the position and the texture coordinates, taken at the top of main() while every fragment of the
+//quad is still running (derivatives are undefined after a fragment discards), for the tangent frame of a normal map.
+vec3 dPositionDx;
+vec3 dPositionDy;
+vec2 dTexcoordDx;
+vec2 dTexcoordDy;
+
+//Shading normal from a normal map, tilted from the surface normal N in the tangent frame of the texture coordinates.
+//dP/du is solved exactly from the derivatives of position and (u,v) across the pixel; the visualizer stores t = 1 - v, so
+//dv = -dt. The frame is orthonormal, as in MikkTSpace and glTF: T is dP/du projected into the plane of N, and the bitangent
+//is cross(N, T) turned to the side of dP/dv, whose sign is that of the (u,v) Jacobian, so mirrored texture coordinates flip it.
+//This is the convention of helios::applyTangentSpaceNormal() and the radiation model.
+vec3 normalMappedNormal(vec3 N, float layer){
+    vec2 duvDx = vec2(dTexcoordDx.x, -dTexcoordDx.y);
+    vec2 duvDy = vec2(dTexcoordDy.x, -dTexcoordDy.y);
+    float jacobian = duvDx.x*duvDy.y - duvDy.x*duvDx.y;
+    if( abs(jacobian) < 1e-20 ){
+        return N;
+    }
+    //dP/du up to the positive factor 1/|jacobian|, which the normalization removes
+    vec3 dPdu = (dPositionDx*duvDy.y - dPositionDy*duvDx.y)*sign(jacobian);
+    vec3 T = dPdu - N*dot(N, dPdu);
+    float lengthT = dot(T, T);
+    if( lengthT < 1e-30 ){
+        return N;
+    }
+    T *= inversesqrt(lengthT);
+    //dP/dv = (dPdy*dudx - dPdx*dudy)/jacobian; the bitangent takes its side of cross(N, T)
+    vec3 dPdv = (dPositionDy*duvDx.x - dPositionDx*duvDy.x)*sign(jacobian);
+    vec3 B = cross(N, T)*(dot(cross(N, T), dPdv) < 0.0 ? -1.0 : 1.0);
+    vec2 xy = textureGrad(normalMapSampler, vec3(texcoord, layer), dTexcoordDx, dTexcoordDy).rg*2.0 - 1.0;
+    float z = sqrt(max(0.0, 1.0 - dot(xy, xy)));
+    return normalize(xy.x*T + xy.y*B + z*N);
+}
+
+//Shadow-terminator term of Chiang, Li and Burley (2019), "Taming the Shadow Terminator". A shading normal Ns can face the light
+//where the surface (normal Ng) does not, or face it more steeply than the surface does; the cosine falloff would then end in a
+//hard edge. This factor goes smoothly to zero at the surface's own terminator and is 1 where Ns and Ng agree.
+float shadowTerminatorTerm(vec3 Ng, vec3 Ns, vec3 L){
+    float NgL = dot(Ng, L);
+    if( NgL <= 0.0 ){
+        return 0.0;
+    }
+    float NsL = dot(Ns, L);
+    float NsNg = dot(Ns, Ng);
+    if( NsL <= 0.0 || NsNg <= 0.0 ){
+        return 0.0;
+    }
+    float G = min(1.0, NgL/(NsL*NsNg));
+    return -G*G*G + G*G + G;
+}
+
 //Hemispheric ambient: incoming ambient light is approximated as a sky color from above and a
 //ground-bounce color from below, blended by the surface normal's vertical component. This gives
 //unlit surfaces soft directional grounding instead of the flat, uniform fill a constant ambient
@@ -198,6 +258,11 @@ uniform isamplerBuffer hidden_flag_texture_object;
 flat in int faceID;
 
 void main(){
+
+    dPositionDx = dFdx(worldPosition);
+    dPositionDy = dFdy(worldPosition);
+    dTexcoordDx = dFdx(texcoord);
+    dTexcoordDy = dFdy(texcoord);
 
     // Delete hidden/deleted primitives
     if( texelFetch(hidden_flag_texture_object, faceID).r == 0 ){
@@ -324,18 +389,38 @@ void main(){
             phongShininess = phongParams.a;
         }
 
+        //A normal map tilts the shading normal from the geometric one. The shadow lookup above keeps
+        //the geometric normal, since it asks whether light reaches the surface, not how it shades.
+        vec3 shadingNormal = geometricNormal;
+        bool normalMapped = false;
+        if( normalMapsEnabled==1 && materialIndex >= 0 && materialIndex < phongMaterialTableSize ){
+            float normalMapLayer = texelFetch(normalMapMaterialTable, materialIndex).r;
+            if( normalMapLayer >= 0.0 ){
+                shadingNormal = normalMappedNormal(geometricNormal, normalMapLayer);
+                normalMapped = true;
+            }
+        }
+
         //Hemispheric ambient uses the view-facing normal: it describes light arriving at the side
         //of the surface being looked at, so the shaded back of a leaf picks up ground bounce rather
         //than rendering black. normal.z is the vertical component in Helios' z-up convention;
-        //remapping it from [-1,1] to [0,1] blends ground bounce into sky light.
-        float hemisphereBlend = 0.5*viewFacingNormal.z + 0.5;
+        //remapping it from [-1,1] to [0,1] blends ground bounce into sky light. The back of a thin
+        //normal-mapped surface sees the mirror of its relief, so it takes the negated shading normal.
+        vec3 ambientNormal = viewFacingNormal;
+        if( normalMapped ){
+            ambientNormal = dot(viewFacingNormal, geometricNormal) < 0.0 ? -shadingNormal : shadingNormal;
+        }
+        float hemisphereBlend = 0.5*ambientNormal.z + 0.5;
         vec3 ambient = phongAmbient*mix(ambientGroundColor, ambientSkyColor, hemisphereBlend)*albedo;
 
-        //Direct illumination uses the true geometric normal, so a surface turned away from the
-        //light receives none of it regardless of which side the camera is on.
-        vec3 N = geometricNormal;
+        //Direct illumination uses the true geometric normal (or the normal map's tilt of it), so a
+        //surface turned away from the light receives none of it regardless of which side the camera
+        //is on. With a normal map the terminator term fades the light out where the shading normal
+        //faces the light but the surface does not.
+        vec3 N = shadingNormal;
+        float terminator = normalMapped ? shadowTerminatorTerm(geometricNormal, shadingNormal, ld) : 1.0;
 
-        float NdotL = max(0.0, dot(N, ld));
+        float NdotL = max(0.0, dot(N, ld))*terminator;
         vec3 diffuse = phongDiffuse*NdotL*albedo;
 
         //Blinn-Phong specular, using the half-vector between the light and view directions. The
@@ -346,7 +431,7 @@ void main(){
         vec3 specular = vec3(0.0);
         if( NdotL > 0.0 ){
             vec3 halfVector = normalize(ld + viewDirection);
-            specular = vec3(phongSpecular*pow(max(0.0, dot(N, halfVector)), phongShininess));
+            specular = vec3(phongSpecular*pow(max(0.0, dot(N, halfVector)), phongShininess)*terminator);
         }
 
         color = vec4( intensity*( ambient + visibility*(diffuse + specular) ), color.a );

@@ -29,7 +29,7 @@ struct LeafOpticsProperties {
     float carotenoidcontent = 7.f; // µg.cm-2
     float anthocyancontent = 1; // µg.cm-2
     float watermass = 0.015f; // g.cm-2
-    float drymass = 0.09f; // g.cm-2
+    float drymass = 0.006f; // g.cm-2 (leaf mass per area; the PROSPECT calibration datasets ANGERS and LOPEX average about 0.005)
     float protein = 0.f; // g.cm-2
     float carbonconstituents = 0.f; // g.cm-2
 
@@ -86,8 +86,9 @@ struct LeafOpticsProperties_Nauto {
     //! Fraction of leaf nitrogen in photosynthetic machinery [0-1]
     float f_photosynthetic = 0.50f;
 
-    //! Empirical coefficient for chlorophyll calculation
-    /** Cab (ug/cm2) = N_area (g/m2) * 100 * f_photosynthetic * N_to_Cab_coefficient */
+    //! Chlorophyll per unit photosynthetic nitrogen (g chlorophyll per g N)
+    /** Cab (ug/cm2) = N_area (g/m2) * 100 * f_photosynthetic * N_to_Cab_coefficient. Only the product with f_photosynthetic matters: the defaults give 0.20 g chlorophyll per g leaf N,
+     * a model assumption rather than a measured value; plausible values of the product range from about 0.10 (sun leaves) to 0.30 (shade leaves). See the LeafOptics documentation. */
     float N_to_Cab_coefficient = 0.40f;
 
     //! Carotenoid to chlorophyll ratio
@@ -141,6 +142,8 @@ public:
      * \param[in] UUIDs UUIDs for primitives that will be assigned the generated reflectivity and transmissivity spectra.
      * \param[in] leafproperties LeafOptics properties.
      * \param[in] label label of spectra that will be created. This label will be appended to "leaf_reflectivity_" and "leaf_transmissivity_" (e.g., "leaf_reflectivity_bean" if the label is "bean").
+     * \note A primitive carrying the primitive data "spectral_class_map" (a class map, as PlantArchitecture records for leaves whose texture has one) is given a spectral texture whose classes are derived from these properties, as described in \ref
+     * LeafOpticsClassMaps.
      */
     void run(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties, const std::string &label);
 
@@ -203,7 +206,7 @@ public:
     //! Get leaf optical properties from the built-in species library
     /**
      * \param[in] species Name of the species to retrieve properties for (e.g., "default"). Species names are case-insensitive.
-     * \param[out] leafproperties LeafOpticsProperties struct to be populated with the species-specific properties. If the species is not found in the library, default properties are used and a warning is issued.
+     * \param[out] leafproperties LeafOpticsProperties struct to be populated with the species-specific properties. It is left unchanged if the species is not in the library, which raises an error listing the species that are.
      */
     void getPropertiesFromLibrary(const std::string &species, LeafOpticsProperties &leafproperties);
 
@@ -236,6 +239,7 @@ public:
      * \param[in] params Nitrogen-auto parameters specifying conversion coefficients, fixed PROSPECT values, and binning configuration
      *
      * \note Requires "leaf_nitrogen_gN_m2" object data to be set on each leaf object (typically by PlantArchitecture::NitrogenModel)
+     * \note A primitive carrying the primitive data "spectral_class_map" is given a spectral texture whose classes are derived from its bin's properties, as described in \ref LeafOpticsClassMaps.
      */
     void run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_Nauto &params);
 
@@ -274,6 +278,30 @@ private:
     helios::Context *context;
     //! Map to track spectrum labels and their corresponding PROSPECT parameters
     std::map<std::string, LeafOpticsProperties> spectrum_parameters_map;
+
+    //! A class of a leaf class map, relative to the leaf's own properties
+    struct LeafClassDefinition {
+        float chlorophyll_scale; //!< Factor on the leaf's chlorophyll and carotenoid contents
+        float visible_reflectance_scale; //!< Factor on its visible reflectance (below 700 nm, blending to 1 at 750 nm)
+    };
+
+    //! Class definitions of each class map read so far, keyed by the class map's path
+    std::map<std::string, std::vector<LeafClassDefinition>> class_map_definitions;
+
+    //! Properties each class palette was last built from, keyed by palette label, so that a palette's spectra are recomputed only when the properties change
+    std::map<std::string, LeafOpticsProperties> class_palette_properties;
+
+    //! The primitives carrying the primitive data "spectral_class_map", grouped by class map, with each class map's definitions read and checked
+    /**
+     * Raises an error, before anything is changed, if a class map or its class definitions cannot be used.
+     */
+    std::map<std::string, std::vector<uint>> collectClassMaps(const std::vector<uint> &UUIDs);
+
+    //! Read and check the class definitions in the XML file beside a class map
+    const std::vector<LeafClassDefinition> &classDefinitions(const std::string &class_map_file);
+
+    //! Give primitives grouped by class map (from collectClassMaps()) spectral textures whose class spectra are derived from the given properties
+    void assignClassMapSpectra(const std::map<std::string, std::vector<uint>> &UUIDs_by_class_map, const LeafOpticsProperties &properties, const std::string &label);
     //! Built-in species library containing PROSPECT-D parameters for common plant species
     std::map<std::string, LeafOpticsProperties> species_library;
     //! Initialize the species library with PROSPECT-D parameters from LOPEX93 dataset

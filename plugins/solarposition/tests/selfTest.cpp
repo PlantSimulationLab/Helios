@@ -6,6 +6,52 @@
 
 using namespace helios;
 
+TEST_CASE("SolarPosition constructor rejects an out-of-range location") {
+    // Regression test. An out-of-range latitude or longitude used to print a warning and silently put the site at Davis, CA, and the UTC offset was not checked at all
+    Context context_s;
+    DOCTEST_CHECK_THROWS_WITH_AS(SolarPosition(8, 95.f, 121.76f, &context_s), doctest::Contains("Latitude"), std::runtime_error);
+    DOCTEST_CHECK_THROWS_WITH_AS(SolarPosition(8, 38.55f, 200.f, &context_s), doctest::Contains("Longitude"), std::runtime_error);
+    DOCTEST_CHECK_THROWS_WITH_AS(SolarPosition(15, 38.55f, 121.76f, &context_s), doctest::Contains("UTC offset"), std::runtime_error);
+}
+
+TEST_CASE("SolarPosition warns when the UTC offset and longitude disagree in sign") {
+    // Both are positive west, so a local-time offset is close to longitude/15. A longitude entered east-positive (as in ISO 6709) with a
+    // west-positive offset puts them many hours apart.
+    Context context_s;
+    auto constructor_warning = [&](float UTC_hrs, float latitude, float longitude) {
+        std::string warning;
+        {
+            capture_cerr cerr_buffer;
+            SolarPosition sun(UTC_hrs, latitude, longitude, &context_s);
+            warning = cerr_buffer.get_captured_output();
+        }
+        return warning;
+    };
+
+    // Davis, CA with its longitude entered east-positive
+    const std::string flipped = constructor_warning(8, 38.55f, -121.76f);
+    DOCTEST_CHECK(flipped.find("longitude") != std::string::npos);
+    DOCTEST_CHECK(flipped.find("positive in the Western hemisphere") != std::string::npos);
+
+    // Consistent locations, including Kiribati's Line Islands across the date line (UTC+14 at 157 W) and western China on Beijing time
+    DOCTEST_CHECK(constructor_warning(8, 38.55f, 121.76f).empty());
+    DOCTEST_CHECK(constructor_warning(-14, 1.87f, 157.4f).empty());
+    DOCTEST_CHECK(constructor_warning(-8, 39.47f, -75.99f).empty());
+    // A UTC setup (offset 0) is valid anywhere
+    DOCTEST_CHECK(constructor_warning(0, 38.55f, 121.76f).empty());
+
+    // The same check applies to a location taken from the Context
+    Context context_flipped;
+    context_flipped.setLocation(make_Location(38.55f, -121.76f, 8.f));
+    std::string warning;
+    {
+        capture_cerr cerr_buffer;
+        SolarPosition sun(&context_flipped);
+        warning = cerr_buffer.get_captured_output();
+    }
+    DOCTEST_CHECK(warning.find("longitude") != std::string::npos);
+}
+
 TEST_CASE("SolarPosition sun position Boulder") {
     Context context_s;
 
@@ -32,9 +78,10 @@ TEST_CASE("SolarPosition fractional UTC offset") {
     const float latitude = 28.6139f; // New Delhi
     const float longitude = -77.2090f; // Helios convention: +West, so New Delhi is negative
 
-    SolarPosition sp_lo(5.f, latitude, longitude, &context_s);
-    SolarPosition sp_mid(5.5f, latitude, longitude, &context_s);
-    SolarPosition sp_hi(6.f, latitude, longitude, &context_s);
+    // India is UTC+5:30, which is an offset of -5.5 in Helios's west-positive convention
+    SolarPosition sp_lo(-5.f, latitude, longitude, &context_s);
+    SolarPosition sp_mid(-5.5f, latitude, longitude, &context_s);
+    SolarPosition sp_hi(-6.f, latitude, longitude, &context_s);
 
     float az_lo = sp_lo.getSunAzimuth();
     float az_mid = sp_mid.getSunAzimuth();
@@ -172,19 +219,8 @@ TEST_CASE("SolarPosition turbidity calibration") {
 
 TEST_CASE("SolarPosition invalid lat/long") {
     Context context_s;
-
-    bool had_output_1, had_output_2;
-    {
-        capture_cerr cerr_buffer;
-        SolarPosition sp_1(7, -100.f, 105.2369f, &context_s);
-        had_output_1 = cerr_buffer.has_output();
-
-        cerr_buffer.clear();
-        SolarPosition sp_2(7, 40.125f, -200.f, &context_s);
-        had_output_2 = cerr_buffer.has_output();
-    } // capture goes out of scope before assertions
-    DOCTEST_CHECK(had_output_1);
-    DOCTEST_CHECK(had_output_2);
+    DOCTEST_CHECK_THROWS_AS(SolarPosition(7, -100.f, 105.2369f, &context_s), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(SolarPosition(7, 40.125f, -200.f, &context_s), std::runtime_error);
 }
 
 TEST_CASE("SolarPosition invalid solar angle") {
@@ -335,6 +371,150 @@ TEST_CASE("SolarPosition cloud calibration preserves PAR/NIR partitioning") {
     // Each band should be attenuated by the same broadband cloud factor.
     DOCTEST_CHECK(par_cloudy == doctest::Approx(cloud_factor * par_clear).epsilon(1e-3));
     DOCTEST_CHECK(nir_cloudy == doctest::Approx(cloud_factor * nir_clear).epsilon(1e-3));
+}
+
+TEST_CASE("SolarPosition cloud calibration PAR fraction of global flux at low sun") {
+    // The measured flux is global (beam + diffuse), so its PAR fraction must be the clear-sky GLOBAL
+    // PAR fraction. Rayleigh scattering removes PAR from the beam into the sky, so the beam alone
+    // reddens strongly at low sun; using the beam PAR/NIR ratio gave PAR/global of about 0.29 at 80
+    // degrees zenith and 0.16 at 85 degrees, versus about 0.43 and 0.38 for the global flux.
+    Context context_s;
+
+    const Date date = make_Date(18, 7, 2024);
+    const Time time = make_Time(12, 0, 0);
+    context_s.setDate(date);
+    context_s.setTime(time);
+
+    SolarPosition sp(6, 40.0061f, 88.29f, &context_s);
+    sp.setAtmosphericConditions(98500.f, 290.f, 0.8f, 0.05f);
+    sp.setOzoneColumn(310.f);
+
+    context_s.addTimeseriesData("R_meas_Wm2", 1.f, date, time);
+    context_s.setCurrentTimeseriesPoint("R_meas_Wm2", 0);
+    sp.enableCloudCalibration("R_meas_Wm2");
+
+    struct LowSunCase {
+        float zenith_deg;
+        float R_meas_Wm2;
+        float min_par_fraction;
+        float max_par_fraction;
+    };
+    const std::vector<LowSunCase> cases = {{80.f, 40.f, 0.38f, 0.50f}, {85.f, 12.f, 0.33f, 0.50f}};
+
+    for (const auto &low_sun: cases) {
+        const float elevation = 0.5f * float(M_PI) - low_sun.zenith_deg * float(M_PI) / 180.f;
+        sp.setSunDirection(make_SphericalCoord(elevation, 0.5f * float(M_PI)));
+        DOCTEST_REQUIRE(std::fabs(sp.getSunZenith() * 180.f / float(M_PI) - low_sun.zenith_deg) < 0.01f);
+
+        context_s.updateTimeseriesData("R_meas_Wm2", date, time, low_sun.R_meas_Wm2);
+
+        const float total = sp.getSolarFlux();
+        const float par = sp.getSolarFluxPAR();
+        DOCTEST_REQUIRE(total > 0.f);
+
+        const float par_fraction = par / total;
+        DOCTEST_INFO("zenith " << low_sun.zenith_deg << " deg: PAR/global = " << par_fraction);
+        DOCTEST_CHECK(par_fraction > low_sun.min_par_fraction);
+        DOCTEST_CHECK(par_fraction < low_sun.max_par_fraction);
+    }
+}
+
+TEST_CASE("SolarPosition direct and diffuse flux getters") {
+    // getDirectSolarFlux*() are normal to the sun (for RadiationModel::setSourceFlux) and getDiffuseSolarFlux*()
+    // are on a horizontal surface (for RadiationModel::setDiffuseRadiationFlux). Together they must reproduce the
+    // global flux of getSolarFlux*() and the diffuse fraction of getDiffuseFraction(), clear or calibrated.
+    Context context_s;
+
+    const Date date = make_Date(18, 7, 2024);
+    const Time time = make_Time(12, 0, 0);
+    context_s.setDate(date);
+    context_s.setTime(time);
+
+    SolarPosition sp(6, 40.0061f, 88.29f, &context_s);
+    sp.setAtmosphericConditions(98500.f, 290.f, 0.8f, 0.05f);
+    sp.setOzoneColumn(310.f);
+
+    const float zenith_deg = 70.f;
+    sp.setSunDirection(make_SphericalCoord(0.5f * float(M_PI) - zenith_deg * float(M_PI) / 180.f, 0.5f * float(M_PI)));
+    const float cos_zenith = std::cos(sp.getSunZenith());
+    DOCTEST_REQUIRE(std::fabs(cos_zenith - std::cos(zenith_deg * float(M_PI) / 180.f)) < 1e-4f);
+
+    // ---- Clear sky ----
+    const float direct_PAR = sp.getDirectSolarFluxPAR();
+    const float direct_NIR = sp.getDirectSolarFluxNIR();
+    const float diffuse_PAR = sp.getDiffuseSolarFluxPAR();
+    const float diffuse_NIR = sp.getDiffuseSolarFluxNIR();
+    DOCTEST_REQUIRE(direct_PAR > 0.f);
+    DOCTEST_REQUIRE(diffuse_PAR > 0.f);
+
+    DOCTEST_CHECK(sp.getDirectSolarFlux() == doctest::Approx(direct_PAR + direct_NIR).epsilon(1e-5));
+    DOCTEST_CHECK(sp.getDiffuseSolarFlux() == doctest::Approx(diffuse_PAR + diffuse_NIR).epsilon(1e-5));
+
+    const float global_horizontal_clear = (direct_PAR + direct_NIR) * cos_zenith + diffuse_PAR + diffuse_NIR;
+    DOCTEST_CHECK(sp.getSolarFlux() * cos_zenith == doctest::Approx(global_horizontal_clear).epsilon(1e-4));
+    DOCTEST_CHECK(sp.getSolarFluxPAR() * cos_zenith == doctest::Approx(direct_PAR * cos_zenith + diffuse_PAR).epsilon(1e-4));
+    DOCTEST_CHECK(sp.getDiffuseFraction() == doctest::Approx((diffuse_PAR + diffuse_NIR) / global_horizontal_clear).epsilon(1e-4));
+
+    // Rayleigh scattering makes clear skylight much bluer than the beam.
+    DOCTEST_CHECK(diffuse_PAR / (diffuse_PAR + diffuse_NIR) > direct_PAR / (direct_PAR + direct_NIR));
+
+    const float clear_PAR_fraction = (direct_PAR * cos_zenith + diffuse_PAR) / global_horizontal_clear;
+
+    // ---- Cloud calibrated ----
+    const float R_meas = 0.4f * global_horizontal_clear;
+    context_s.addTimeseriesData("R_meas_Wm2", R_meas, date, time);
+    context_s.setCurrentTimeseriesPoint("R_meas_Wm2", 0);
+    sp.enableCloudCalibration("R_meas_Wm2");
+
+    const float cal_direct_PAR = sp.getDirectSolarFluxPAR();
+    const float cal_direct_NIR = sp.getDirectSolarFluxNIR();
+    const float cal_diffuse_PAR = sp.getDiffuseSolarFluxPAR();
+    const float cal_diffuse_NIR = sp.getDiffuseSolarFluxNIR();
+    const float cal_fdiff = sp.getDiffuseFraction();
+
+    // Energy closure on the horizontal: direct*cos(zenith) + diffuse equals the measurement.
+    DOCTEST_CHECK((cal_direct_PAR + cal_direct_NIR) * cos_zenith + cal_diffuse_PAR + cal_diffuse_NIR == doctest::Approx(R_meas).epsilon(1e-4));
+    DOCTEST_CHECK(sp.getSolarFlux() * cos_zenith == doctest::Approx(R_meas).epsilon(1e-4));
+
+    // The measurement is split between bands with the clear-sky global PAR fraction.
+    DOCTEST_CHECK(cal_direct_PAR * cos_zenith + cal_diffuse_PAR == doctest::Approx(clear_PAR_fraction * R_meas).epsilon(1e-4));
+
+    // The diffuse share matches getDiffuseFraction(), and the documented old-getter pattern gives the same fluxes.
+    DOCTEST_CHECK((cal_diffuse_PAR + cal_diffuse_NIR) / R_meas == doctest::Approx(cal_fdiff).epsilon(1e-4));
+    DOCTEST_CHECK(sp.getSolarFluxPAR() * (1.f - cal_fdiff) == doctest::Approx(cal_direct_PAR).epsilon(1e-4));
+    DOCTEST_CHECK(sp.getSolarFluxPAR() * cal_fdiff * cos_zenith == doctest::Approx(cal_diffuse_PAR).epsilon(1e-4));
+
+    // A cloudy sky is more diffuse than the clear one.
+    DOCTEST_CHECK(cal_fdiff > (diffuse_PAR + diffuse_NIR) / global_horizontal_clear);
+}
+
+TEST_CASE("SolarPosition cloud calibration fails fast when the sun is at the horizon") {
+    // With the sun essentially on the horizon the clear-sky horizontal flux is below 1 W/m^2, and a
+    // positive measured flux cannot be represented as a flux normal to the sun (it diverges as
+    // 1/cos(zenith)). The measurement must not be silently replaced by the uncalibrated clear-sky value.
+    Context context_s;
+
+    const Date date = make_Date(18, 7, 2024);
+    const Time time = make_Time(12, 0, 0);
+    context_s.setDate(date);
+    context_s.setTime(time);
+
+    SolarPosition sp(6, 40.0061f, 88.29f, &context_s);
+    sp.setAtmosphericConditions(98500.f, 290.f, 0.8f, 0.05f);
+    sp.setOzoneColumn(310.f);
+
+    const float elevation = 0.2f * float(M_PI) / 180.f; // zenith 89.8 degrees
+    sp.setSunDirection(make_SphericalCoord(elevation, 0.5f * float(M_PI)));
+
+    context_s.addTimeseriesData("R_meas_Wm2", 7.f, date, time);
+    context_s.setCurrentTimeseriesPoint("R_meas_Wm2", 0);
+    sp.enableCloudCalibration("R_meas_Wm2");
+
+    {
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_THROWS_AS(static_cast<void>(sp.getSolarFluxPAR()), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(static_cast<void>(sp.getSolarFlux()), std::runtime_error);
+    }
 }
 
 TEST_CASE("SolarPosition cloud calibration diffuse fraction responds to cloud") {

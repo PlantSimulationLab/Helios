@@ -21,10 +21,12 @@
 using namespace helios;
 
 void Visualizer::clearContextGeometry() {
+    rendered_frame_is_current = false; // changes what is drawn
     geometry_handler.clearContextGeometry();
 
     contextUUIDs_build.clear();
     contextUUIDs_uploaded.clear();
+    context_modification_mark = 0; // every primitive is built again
     colorPrimitives_UUIDs.clear();
     colorPrimitives_objIDs.clear();
     color_primitive_set_stale = true;
@@ -35,6 +37,11 @@ void Visualizer::clearContextGeometry() {
 }
 
 void Visualizer::buildContextGeometry(helios::Context *context_ptr) {
+    // A different Context, or one that was built from a list of UUIDs until now, has primitives this Visualizer has not
+    // seen whatever their modification stamps say, so the next build takes them all.
+    if (context_ptr != context || !build_all_context_geometry) {
+        context_modification_mark = 0;
+    }
     context = context_ptr;
     // The data-colored set belongs to the Context it was settled from; a handed-over Context may hold different primitives
     // even at the same count, so the next build settles it again.
@@ -86,14 +93,28 @@ void Visualizer::buildContextGeometry_private() {
     if (context == nullptr) { // If Visualizer::buildContextGeometry() was never called, nothing to do
         return;
     }
+    context_geometry_walk_count++;
 
-    // If building all context geometry, get all dirty UUIDs from the Context
+    // If building all context geometry, take what changed since the last build. The Context's dirty flags stay set until the user
+    // clears them, so taking every dirty primitive made each build examine the whole scene to find the few that changed - and
+    // a change made just before the user marked the geometry clean was never drawn at all. getModifiedUUIDs() keeps this
+    // Visualizer's own mark instead, and also reports a primitive hidden or shown, which marks nothing dirty. Deletions are taken
+    // since the same mark: the Context's list of deleted primitives is emptied by markGeometryClean(), so a primitive deleted and
+    // then cleaned away before the next build stayed on screen.
     if (build_all_context_geometry) {
-        bool include_deleted_UUIDs = true;
-        if (contextUUIDs_build.empty()) {
-            include_deleted_UUIDs = false;
+        const uint64_t previous_modification_mark = context_modification_mark;
+        contextUUIDs_build = context->getModifiedUUIDs(context_modification_mark);
+        const std::vector<uint> deleted_UUIDs = context->getDeletedUUIDs(previous_modification_mark);
+        contextUUIDs_build.insert(contextUUIDs_build.end(), deleted_UUIDs.begin(), deleted_UUIDs.end());
+        // Setting object data marks no primitive dirty, so a primitive colored by object data is examined on every build, as the
+        // fingerprint is what notices that its color-by value changed.
+        if (!colorPrimitivesByObjectData.empty()) {
+            for (const auto &[UUID, fingerprint]: contextUUIDs_uploaded) {
+                contextUUIDs_build.push_back(UUID);
+            }
+            std::sort(contextUUIDs_build.begin(), contextUUIDs_build.end());
+            contextUUIDs_build.erase(std::unique(contextUUIDs_build.begin(), contextUUIDs_build.end()), contextUUIDs_build.end());
         }
-        contextUUIDs_build = context->getDirtyUUIDs(include_deleted_UUIDs);
     }
 
     // Populate contextUUIDs_needupdate based on dirty primitives in the Context
@@ -107,14 +128,28 @@ void Visualizer::buildContextGeometry_private() {
     // cached end iterator - and that located the element it was already positioned on with a
     // std::find, making a scene-wide deletion quadratic.
     bool context_geometry_deleted = false;
+    bool context_geometry_visibility_changed = false;
     size_t surviving_count = 0;
     for (size_t read_index = 0; read_index < contextUUIDs_build.size(); read_index++) {
         const uint UUID = contextUUIDs_build[read_index];
 
-        if (context->doesPrimitiveExist(UUID)) {
+        if (context->doesPrimitiveExist(UUID) && !context->isPrimitiveHidden(UUID)) {
             contextUUIDs_build[surviving_count] = UUID;
             surviving_count++;
             contextUUIDs_needupdate.push_back(UUID);
+            // Drawn again if it was hidden. Its geometry is updated below like any other modified primitive's if it changed.
+            if (setContextPrimitiveFacesVisible(UUID, true)) {
+                context_geometry_visibility_changed = true;
+            }
+        } else if (context->doesPrimitiveExist(UUID)) {
+            // Hidden: not drawn. Its geometry keeps its place in the buffers, flagged invisible, so that hiding and showing it move
+            // nothing and change no layout. It stays in the build list of a list-mode build so that it is drawn again once shown; a
+            // full build finds it again then through its modification stamp.
+            contextUUIDs_build[surviving_count] = UUID;
+            surviving_count++;
+            if (setContextPrimitiveFacesVisible(UUID, false)) {
+                context_geometry_visibility_changed = true;
+            }
         } else {
             // The primitive's type can no longer be asked of the Context, so every face it could have had is looked for.
             for (uint face = 0; face < GeometryHandler::context_voxel_face_count; face++) {
@@ -129,6 +164,10 @@ void Visualizer::buildContextGeometry_private() {
         }
     }
     contextUUIDs_build.resize(surviving_count);
+
+    // Every modified primitive, before the fingerprint filter below drops those whose drawn appearance is unchanged: a primitive
+    // given another material that looks the same is dropped there, and its Phong material index still has to change.
+    const std::vector<uint> modified_context_UUIDs = contextUUIDs_needupdate;
 
     // Settle which primitives are colored by data before fingerprinting. A data-colored primitive's fingerprint includes its
     // color-by value, so fingerprints taken before this set is filled do not match the ones the next build takes, and the
@@ -210,6 +249,7 @@ void Visualizer::buildContextGeometry_private() {
     {
         std::vector<uint> contextUUIDs_changed;
         contextUUIDs_changed.reserve(contextUUIDs_needupdate.size());
+        context_primitives_examined_last_build = contextUUIDs_needupdate.size();
         for (uint UUID: contextUUIDs_needupdate) {
             const uint64_t fingerprint = computeContextPrimitiveFingerprint(UUID);
             const auto uploaded = contextUUIDs_uploaded.find(UUID);
@@ -223,13 +263,14 @@ void Visualizer::buildContextGeometry_private() {
     }
 
     const bool coloring_by_data = !colorPrimitivesByData.empty() || !colorPrimitivesByObjectData.empty();
-    // A deleted primitive may have held an extreme of an automatic colorbar range, so a deletion alone can recolor the rest.
-    const bool colorbar_range_may_have_changed = context_geometry_deleted && coloring_by_data && !colorbar_range_set;
+    // A deleted or hidden primitive may have held an extreme of an automatic colorbar range, so a deletion or a hide alone can
+    // recolor the rest, and so can showing a primitive again.
+    const bool colorbar_range_may_have_changed = (context_geometry_deleted || context_geometry_visibility_changed) && coloring_by_data && !colorbar_range_set;
 
     if (contextUUIDs_needupdate.empty() && !primitiveColorsNeedUpdate && !colorbar_range_may_have_changed) {
         // No geometry work to do, but material data may still have changed without dirtying any
         // primitive, so the per-material Phong pass must still run against the existing geometry.
-        updatePhongMaterialIndices();
+        updatePhongMaterialIndices(modified_context_UUIDs);
         return;
     }
 
@@ -290,6 +331,10 @@ void Visualizer::buildContextGeometry_private() {
     // object here and resolved once per object after the loop, rather than resolving the parent again for every one of its triangles. Applying them after the loop is also required for correctness, because
     // addGeometry() resets a primitive's vertex normals to its face normal, so a primitive re-added later in the loop would otherwise discard normals set earlier.
     std::unordered_map<uint, std::vector<uint>> smooth_shaded_triangles;
+
+    // Primitives with a normal or bump map whose (u,v) coordinates are collinear, which give the map no orientation, so it is not applied to them
+    size_t degenerate_normal_map_frames = 0;
+    uint first_degenerate_frame_UUID = 0;
 
     for (unsigned int UUID: contextUUIDs_needupdate) {
 
@@ -383,15 +428,39 @@ void Visualizer::buildContextGeometry_private() {
             textureID = registerTextureImage(texture_file);
         }
 
+        // An untextured patch or triangle with a normal map is given the (u,v) coordinates the map is sampled with, and is still colored by its RGB color
+        std::vector<vec2> normal_map_uvs;
+        if (ptype != helios::PRIMITIVE_TYPE_VOXEL && context->getPrimitiveNormalMapKind(UUID) != helios::NORMAL_MAP_NONE) {
+            const std::vector<vec2> frame_uvs = context->getPrimitiveNormalMapUV(UUID);
+            if (texture_file.empty()) {
+                normal_map_uvs = frame_uvs;
+            }
+            // The shader takes the map's tangents from the (u,v) coordinates, which must span an area (see Context::validateNormalMapFrame() and the radiation model)
+            const vec2 a = frame_uvs.at(1) - frame_uvs.at(0);
+            const vec2 b = frame_uvs.at(2) - frame_uvs.at(ptype == helios::PRIMITIVE_TYPE_TRIANGLE ? 0 : 1);
+            const float extent = std::max(a.x * a.x + a.y * a.y, b.x * b.x + b.y * b.y);
+            if (!(std::fabs(a.x * b.y - a.y * b.x) > 1e-12f * extent) || extent == 0.f) {
+                if (degenerate_normal_map_frames == 0) {
+                    first_degenerate_frame_UUID = UUID;
+                }
+                degenerate_normal_map_frames++;
+            }
+        }
+
         // ---- PATCHES ---- //
         if (ptype == helios::PRIMITIVE_TYPE_PATCH) {
             // - Patch does not have an associated texture or we are ignoring texture
             if (texture_file.empty()) {
-                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, verts, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
+                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, verts, color, normal_map_uvs, -1, false, false, COORDINATES_CARTESIAN, true, true);
             }
             // - Patch has a texture
             else {
                 std::vector<vec2> uvs = context->getPrimitiveTextureUV(UUID);
+                // A patch without (u,v) coordinates maps the whole image, as it does in the Context (for example a patch given a textured material after it was
+                // created). Without them it would be drawn in its material color and any normal map would have no frame.
+                if (uvs.empty()) {
+                    uvs = {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)};
+                }
 
                 // - coloring primitive based on texture
                 if (!isContextPrimitiveTextureColorOverridden(UUID)) {
@@ -407,7 +476,7 @@ void Visualizer::buildContextGeometry_private() {
         else if (ptype == helios::PRIMITIVE_TYPE_TRIANGLE) {
             // - Triangle does not have an associated texture or we are ignoring texture
             if (texture_file.empty()) {
-                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_TRIANGLE, verts, color, {}, -1, false, false, COORDINATES_CARTESIAN, true, true);
+                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_TRIANGLE, verts, color, normal_map_uvs, -1, false, false, COORDINATES_CARTESIAN, true, true);
             }
             // - Triangle has a texture
             else {
@@ -477,6 +546,12 @@ void Visualizer::buildContextGeometry_private() {
         }
     }
 
+    // Reported whether or not messages are enabled, as the radiation model does: the map is silently missing from these primitives otherwise
+    if (degenerate_normal_map_frames > 0) {
+        std::cerr << "WARNING (Visualizer::buildContextGeometry): " << degenerate_normal_map_frames << " primitive(s) with a normal or bump map, the first UUID " << first_degenerate_frame_UUID
+                  << ", have collinear texture (u,v) coordinates, so the map has no orientation on them and is not applied to them." << std::endl;
+    }
+
     // Apply per-vertex normals, one parent object at a time. Everything expensive - a Polymesh's vertex and face tables, a tube's node tangents and taper rates - is fetched once per object here instead of
     // once per triangle.
     for (const auto &[parent_ObjID, object_UUIDs]: smooth_shaded_triangles) {
@@ -513,7 +588,7 @@ void Visualizer::buildContextGeometry_private() {
         contextUUIDs_uploaded[UUID] = fingerprint;
     }
 
-    updatePhongMaterialIndices();
+    updatePhongMaterialIndices(modified_context_UUIDs);
 }
 
 bool Visualizer::getContextPrimitiveColorValue(uint UUID, float &value) const {
@@ -609,6 +684,10 @@ uint64_t Visualizer::computeContextPrimitiveFingerprint(uint UUID) const {
         hash_bytes(uvs.data(), uvs.size() * sizeof(helios::vec2));
     }
 
+    // A normal map gives an untextured primitive (u,v) coordinates. Which map it is reaches the shader through the material table (see buildPhongMaterialTable()), so only whether there is one matters here.
+    const unsigned char normal_map_kind = static_cast<unsigned char>(context->getPrimitiveNormalMapKind(UUID));
+    hash_bytes(&normal_map_kind, sizeof(normal_map_kind));
+
     float color_value;
     if (getContextPrimitiveColorValue(UUID, color_value)) {
         if (std::isnan(color_value) || std::isinf(color_value)) {
@@ -620,10 +699,26 @@ uint64_t Visualizer::computeContextPrimitiveFingerprint(uint UUID) const {
     return hash;
 }
 
-void Visualizer::updatePhongMaterialIndices() {
+void Visualizer::updatePhongMaterialIndices(const std::vector<uint> &modified_context_UUIDs) {
 
     if (context == nullptr) {
         return;
+    }
+
+    const uint64_t material_revision = context->getMaterialRevision();
+    const size_t layout_revision = geometry_handler.getLayoutRevision();
+    if (phong_material_indices_assigned && !phong_global_material_changed && material_revision == phong_material_revision_seen && layout_revision == phong_layout_revision_seen) {
+        bool material_reassigned = false;
+        for (uint UUID: modified_context_UUIDs) {
+            const auto recorded = phong_material_of.find(UUID);
+            if (recorded == phong_material_of.end() || recorded->second != context->getPrimitiveMaterialID(UUID)) {
+                material_reassigned = true;
+                break;
+            }
+        }
+        if (!material_reassigned) {
+            return; // the table and every primitive's index are still those of the last assignment
+        }
     }
 
     // The geometry handler's live set is the true set of displayed primitives. contextUUIDs_build
@@ -633,17 +728,24 @@ void Visualizer::updatePhongMaterialIndices() {
     // be skipped by its flag, not by asking the Context whether the ID exists: such geometry carries a
     // random 64-bit ID, and truncated to a UUID that can equal an unrelated Context primitive.
     const std::vector<size_t> live_geometry = geometry_handler.getAllGeometryIDs();
+    phong_material_walk_count++;
 
     std::set<uint> referenced_material_IDs;
+    phong_material_of.clear();
     for (size_t geometry_UUID: live_geometry) {
         if (!geometry_handler.isContextGeometry(geometry_UUID)) {
             continue;
         }
         const uint UUID = GeometryHandler::getContextUUID(geometry_UUID);
         if (context->doesPrimitiveExist(UUID)) {
-            referenced_material_IDs.insert(context->getPrimitiveMaterialID(UUID));
+            const uint materialID = context->getPrimitiveMaterialID(UUID);
+            referenced_material_IDs.insert(materialID);
+            phong_material_of[UUID] = materialID;
         }
     }
+    phong_material_revision_seen = material_revision;
+    phong_layout_revision_seen = layout_revision;
+    phong_global_material_changed = false;
 
     const std::unordered_map<uint, int> material_ID_to_index = buildPhongMaterialTable(context, referenced_material_IDs);
 
@@ -706,11 +808,28 @@ std::vector<uint> Visualizer::getDisplayedContextPrimitiveUUIDs() const {
             continue;
         }
         const uint UUID = GeometryHandler::getContextUUID(geometry_ID);
-        if (context->doesPrimitiveExist(UUID)) {
+        // A hidden primitive keeps its geometry, flagged invisible, but is not displayed
+        if (context->doesPrimitiveExist(UUID) && !context->isPrimitiveHidden(UUID)) {
             UUIDs.push_back(UUID);
         }
     }
     return UUIDs;
+}
+
+bool Visualizer::setContextPrimitiveFacesVisible(uint UUID, bool visible) {
+    bool changed = false;
+    for (uint face = 0; face < GeometryHandler::context_voxel_face_count; face++) {
+        const size_t face_ID = GeometryHandler::getContextGeometryID(UUID, face);
+        if (!geometry_handler.doesGeometryExist(face_ID) || geometry_handler.getDeleteFlag(face_ID)) {
+            continue;
+        }
+        // Only a change is written: setting the flag marks the face for upload
+        if (geometry_handler.isPrimitiveVisible(face_ID) != visible) {
+            geometry_handler.setVisibility(face_ID, visible);
+            changed = true;
+        }
+    }
+    return changed;
 }
 
 void Visualizer::updateColorbarRangeFromData(const std::vector<uint> &UUIDs) {
@@ -809,6 +928,7 @@ bool Visualizer::isContextPrimitiveTextureColorOverridden(uint UUID) const {
 }
 
 void Visualizer::colorContextPrimitivesByData(const char *data_name) {
+    rendered_frame_is_current = false; // changes what is drawn
     colorPrimitivesByData = data_name;
     colorPrimitivesByObjectData = "";
     if (!colorPrimitives_UUIDs.empty()) {
@@ -822,6 +942,7 @@ void Visualizer::colorContextPrimitivesByData(const char *data_name) {
 }
 
 void Visualizer::colorContextPrimitivesByData(const char *data_name, const std::vector<uint> &UUIDs) {
+    rendered_frame_is_current = false; // changes what is drawn
     colorPrimitivesByData = data_name;
     colorPrimitivesByObjectData = "";
     for (uint UUID: UUIDs) {
@@ -835,6 +956,7 @@ void Visualizer::colorContextPrimitivesByData(const char *data_name, const std::
 }
 
 void Visualizer::colorContextPrimitivesByObjectData(const char *data_name) {
+    rendered_frame_is_current = false; // changes what is drawn
     colorPrimitivesByObjectData = data_name;
     colorPrimitivesByData = "";
     if (!colorPrimitives_UUIDs.empty()) {
@@ -848,6 +970,7 @@ void Visualizer::colorContextPrimitivesByObjectData(const char *data_name) {
 }
 
 void Visualizer::colorContextPrimitivesByObjectData(const char *data_name, const std::vector<uint> &ObjIDs) {
+    rendered_frame_is_current = false; // changes what is drawn
     colorPrimitivesByObjectData = data_name;
     colorPrimitivesByData = "";
     for (uint objID: ObjIDs) {
@@ -861,6 +984,7 @@ void Visualizer::colorContextPrimitivesByObjectData(const char *data_name, const
 }
 
 void Visualizer::colorContextPrimitivesRandomly(const std::vector<uint> &UUIDs) {
+    rendered_frame_is_current = false; // changes what is drawn
     disableColorbar();
     if (!colorPrimitives_UUIDs.empty()) {
         colorPrimitives_UUIDs.clear();
@@ -883,6 +1007,7 @@ void Visualizer::colorContextPrimitivesRandomly(const std::vector<uint> &UUIDs) 
 }
 
 void Visualizer::colorContextPrimitivesRandomly() {
+    rendered_frame_is_current = false; // changes what is drawn
     disableColorbar();
 
     std::vector<uint> all_UUIDs = context->getAllUUIDs();
@@ -905,6 +1030,7 @@ void Visualizer::colorContextPrimitivesRandomly() {
 
 
 void Visualizer::colorContextObjectsRandomly(const std::vector<uint> &ObjIDs) {
+    rendered_frame_is_current = false; // changes what is drawn
     disableColorbar();
     if (!colorPrimitives_UUIDs.empty()) {
         colorPrimitives_UUIDs.clear();
@@ -920,6 +1046,7 @@ void Visualizer::colorContextObjectsRandomly(const std::vector<uint> &ObjIDs) {
 }
 
 void Visualizer::colorContextObjectsRandomly() {
+    rendered_frame_is_current = false; // changes what is drawn
     std::vector<uint> all_ObjIDs = context->getAllObjectIDs();
     disableColorbar();
     if (!colorPrimitives_UUIDs.empty()) {
@@ -936,6 +1063,7 @@ void Visualizer::colorContextObjectsRandomly() {
 }
 
 void Visualizer::clearColor() {
+    rendered_frame_is_current = false; // changes what is drawn
     colorPrimitivesByData = "";
     colorPrimitivesByObjectData = "";
     colorbar_integer_data = false;

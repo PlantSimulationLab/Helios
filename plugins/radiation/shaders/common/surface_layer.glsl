@@ -39,6 +39,11 @@ bool surface_layers_enabled() {
     return surface_layer_buf.words[0] != 0u;
 }
 
+// Whether primitive prim has a surface layer (in some band)
+bool surface_layer_present(uint prim) {
+    return surface_layer_buf.words[0] != 0u && surface_layer_buf.words[4u + prim] != 0u;
+}
+
 // Start of the albedo table of the surface layer of primitive prim in global band global_band, or -1 if it has none there
 int surface_layer_table(uint prim, uint global_band) {
     uint table_size = surface_layer_buf.words[0];

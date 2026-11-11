@@ -30,15 +30,19 @@ public:
     //! Solar position model default constructor. Initializes location based on the location set in the Context.
     /**
      * \param[in] context_ptr Pointer to the Helios context
+     * \note Helios counts longitude and the UTC offset positive in the Western hemisphere, opposite to ISO 6709 (see \ref helios::Context::setLocation()). A warning is printed if the UTC offset and
+     * longitude are more than 3 hours of solar time apart, which suggests that the sign of one of them was flipped.
      */
     explicit SolarPosition(helios::Context *context_ptr);
 
-    //! Solar position model constructor
+    //! Solar position model constructor. Longitude and UTC offset are positive WEST (opposite to ISO 6709): Davis, CA (121.76 W, UTC-8) is longitude +121.76 and UTC_hrs +8.
     /**
      * \param[in] context_ptr Pointer to the Helios context
-     * \param[in] UTC_hrs Hours from Coordinated Universal Time (UTC) for location of interest.  Convention is that UTC is positive moving Westward.
-     * \param[in] latitude_deg Latitude in degrees for location of interest.  Convention is latitude is positive for Northern hemisphere.
-     * \param[in] longitude_deg Longitude in degrees for location of interest. Convention is longitude is positive for Western hemisphere.
+     * \param[in] UTC_hrs Hours from Coordinated Universal Time (UTC) for location of interest, from -14 to 12.  Convention is that UTC is positive moving Westward, so UTC+1 is -1.
+     * \param[in] latitude_deg Latitude in degrees for location of interest, from -90 to 90.  Convention is latitude is positive for Northern hemisphere.
+     * \param[in] longitude_deg Longitude in degrees for location of interest, from -180 to 180. Convention is longitude is positive for Western hemisphere, so 3.70 W is +3.70 and 116.40 E is -116.40.
+     * \note An out-of-range latitude, longitude or UTC offset raises an error. A warning is printed if the UTC offset and longitude are more than 3 hours of solar time apart, which suggests that
+     * the sign of one of them was flipped; this cannot detect a flipped longitude near the prime meridian or with an offset of 0.
      */
     SolarPosition(float UTC_hrs, float latitude_deg, float longitude_deg, helios::Context *context_ptr);
 
@@ -205,39 +209,90 @@ public:
      */
     [[nodiscard]] float getGroundAlbedo() const;
 
-    //! Get the solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context.
+    //! Get the global (direct + diffuse) solar radiation flux, expressed on a surface perpendicular to the sun direction, using atmospheric conditions from the Context.
     /**
-     * \note The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the \ref getSunZenith() function.
-     * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
+     * \note The returned value is the global flux on a horizontal surface divided by cos(theta), where theta is the solar zenith angle (\ref getSunZenith()). Multiply it by cos(theta) to get the global flux on a horizontal surface.
+     * \note To drive a radiation model, use \ref getDirectSolarFlux() for the sun source (\ref RadiationModel::setSourceFlux() takes a flux perpendicular to the source) and \ref getDiffuseSolarFlux() for the diffuse sky
+     * (\ref RadiationModel::setDiffuseRadiationFlux() takes a flux on a horizontal surface). Equivalently, with R from this function and f from \ref getDiffuseFraction(), the direct flux is R*(1-f) and the diffuse flux is
+     * R*f*cos(theta).
+     * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. With cloud calibration enabled (\ref enableCloudCalibration()), the value is the measured flux divided by cos(theta).
      * \note Atmospheric conditions must be set using \ref setAtmosphericConditions() before calling this method. If not set, default values are used with a warning.
-     * \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+     * \return Global solar radiation flux referenced to a surface NORMAL TO THE SUN DIRECTION in W/m^2
      */
     [[nodiscard]] float getSolarFlux() const;
 
-    //! Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context.
+    //! Get the photosynthetically active (PAR) component of the global solar radiation flux, expressed on a surface perpendicular to the sun direction, using atmospheric conditions from the Context.
     /**
-     * \note The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the \ref getSunZenith() function.
+     * \note The returned value is the global PAR flux on a horizontal surface divided by cos(theta), where theta is the solar zenith angle (\ref getSunZenith()). See \ref getSolarFlux() for how to split it into direct and diffuse
+     * components; \ref getDirectSolarFluxPAR() and \ref getDiffuseSolarFluxPAR() give these directly.
      * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
      * \note Atmospheric conditions must be set using \ref setAtmosphericConditions() before calling this method. If not set, default values are used with a warning.
-     * \return PAR component of solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+     * \return PAR component of global solar radiation flux referenced to a surface NORMAL TO THE SUN DIRECTION in W/m^2
      */
     [[nodiscard]] float getSolarFluxPAR() const;
 
-    //! Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context.
+    //! Get the near-infrared (NIR) component of the global solar radiation flux, expressed on a surface perpendicular to the sun direction, using atmospheric conditions from the Context.
     /**
-     * \note The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the \ref getSunZenith() function.
+     * \note The returned value is the global NIR flux on a horizontal surface divided by cos(theta), where theta is the solar zenith angle (\ref getSunZenith()). See \ref getSolarFlux() for how to split it into direct and diffuse
+     * components; \ref getDirectSolarFluxNIR() and \ref getDiffuseSolarFluxNIR() give these directly.
      * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
      * \note Atmospheric conditions must be set using \ref setAtmosphericConditions() before calling this method. If not set, default values are used with a warning.
-     * \return NIR component of solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+     * \return NIR component of global solar radiation flux referenced to a surface NORMAL TO THE SUN DIRECTION in W/m^2
      */
     [[nodiscard]] float getSolarFluxNIR() const;
 
-    //! Get the fraction of solar radiation flux that is diffuse using atmospheric conditions from the Context.
+    //! Get the fraction of the global solar radiation flux on a horizontal surface that is diffuse, using atmospheric conditions from the Context.
     /**
      * \note Atmospheric conditions must be set using \ref setAtmosphericConditions() before calling this method. If not set, default values are used with a warning.
-     * \return Fraction of global radiation that is diffuse
+     * \return Fraction of global horizontal radiation that is diffuse (1 when the sun is below the horizon)
      */
     [[nodiscard]] float getDiffuseFraction() const;
+
+    //! Get the direct-beam solar radiation flux (PAR + NIR) on a surface perpendicular to the sun direction, using atmospheric conditions from the Context.
+    /**
+     * \note This is the flux to give a collimated sun source with \ref RadiationModel::setSourceFlux(). Multiply by cos(theta), where theta is the solar zenith angle, to get the direct flux on a horizontal surface.
+     * \note With cloud calibration enabled (\ref enableCloudCalibration()), the measured global flux is split into direct and diffuse components using the correlation of Erbs et al. (1982).
+     * \note Atmospheric conditions must be set using \ref setAtmosphericConditions() before calling this method. If not set, default values are used with a warning.
+     * \return Direct solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+     */
+    [[nodiscard]] float getDirectSolarFlux() const;
+
+    //! Get the PAR component of the direct-beam solar radiation flux on a surface perpendicular to the sun direction, using atmospheric conditions from the Context.
+    /**
+     * \note See \ref getDirectSolarFlux().
+     * \return Direct PAR flux NORMAL TO THE SUN DIRECTION in W/m^2
+     */
+    [[nodiscard]] float getDirectSolarFluxPAR() const;
+
+    //! Get the NIR component of the direct-beam solar radiation flux on a surface perpendicular to the sun direction, using atmospheric conditions from the Context.
+    /**
+     * \note See \ref getDirectSolarFlux().
+     * \return Direct NIR flux NORMAL TO THE SUN DIRECTION in W/m^2
+     */
+    [[nodiscard]] float getDirectSolarFluxNIR() const;
+
+    //! Get the diffuse solar radiation flux (PAR + NIR) on a horizontal surface, using atmospheric conditions from the Context.
+    /**
+     * \note This is the flux to give \ref RadiationModel::setDiffuseRadiationFlux(), which takes the diffuse flux on a horizontal surface.
+     * \note With cloud calibration enabled (\ref enableCloudCalibration()), the measured global flux is split into direct and diffuse components using the correlation of Erbs et al. (1982).
+     * \note Atmospheric conditions must be set using \ref setAtmosphericConditions() before calling this method. If not set, default values are used with a warning.
+     * \return Diffuse solar radiation flux ON A HORIZONTAL SURFACE in W/m^2
+     */
+    [[nodiscard]] float getDiffuseSolarFlux() const;
+
+    //! Get the PAR component of the diffuse solar radiation flux on a horizontal surface, using atmospheric conditions from the Context.
+    /**
+     * \note See \ref getDiffuseSolarFlux().
+     * \return Diffuse PAR flux ON A HORIZONTAL SURFACE in W/m^2
+     */
+    [[nodiscard]] float getDiffuseSolarFluxPAR() const;
+
+    //! Get the NIR component of the diffuse solar radiation flux on a horizontal surface, using atmospheric conditions from the Context.
+    /**
+     * \note See \ref getDiffuseSolarFlux().
+     * \return Diffuse NIR flux ON A HORIZONTAL SURFACE in W/m^2
+     */
+    [[nodiscard]] float getDiffuseSolarFluxNIR() const;
 
     //! Calculate the ambient (sky) longwave radiation flux using atmospheric conditions from the Context.
     /**
@@ -436,18 +491,50 @@ private:
 
     [[nodiscard]] helios::vec3 getDirectionAwayFromSun(const helios::vec3 &sun_dir, float zenith_angle_deg) const;
 
-    void GueymardSolarModel(float pressure, float temperature, float humidity, float turbidity, float &Eb_PAR, float &Eb_NIR, float &fdiff) const;
+    //! Broadband direct and diffuse solar flux in the PAR and NIR bands
+    struct BroadbandSolarFlux {
+        //! Direct-beam PAR flux on a surface perpendicular to the sun (W/m^2)
+        float direct_PAR = 0.f;
+        //! Direct-beam NIR flux on a surface perpendicular to the sun (W/m^2)
+        float direct_NIR = 0.f;
+        //! Diffuse PAR flux on a horizontal surface (W/m^2)
+        float diffuse_PAR = 0.f;
+        //! Diffuse NIR flux on a horizontal surface (W/m^2)
+        float diffuse_NIR = 0.f;
+        //! Cosine of the solar zenith angle at which the fluxes were computed
+        float cos_zenith = 0.f;
+    };
 
-    //! Calibrate the clear-sky direct-normal fluxes and diffuse fraction against a measured all-wave flux
+    //! Compute the clear-sky broadband fluxes from the REST2 model of Gueymard (2008)
     /**
-     * The cloud attenuation factor is computed from the ALL-WAVE (PAR+NIR) flux and then applied to
-     * each band, so that the spectral partitioning between PAR and NIR is preserved and the two
-     * bands continue to sum to the broadband total.
-     * \param[in,out] Eb_PAR_Wm2 Clear-sky PAR flux perpendicular to the sun (W/m^2); scaled in place.
-     * \param[in,out] Eb_NIR_Wm2 Clear-sky NIR flux perpendicular to the sun (W/m^2); scaled in place.
-     * \param[in,out] fdiff_calc Clear-sky diffuse fraction; replaced by the cloud-calibrated value.
+     * \param[in] pressure Atmospheric pressure near the ground (Pa)
+     * \param[in] temperature Air temperature near the ground (K)
+     * \param[in] humidity Relative humidity near the ground (0-1)
+     * \param[in] turbidity Ångström turbidity coefficient
+     * \return Clear-sky direct (normal to the sun) and diffuse (horizontal) fluxes; all zero when the sun is below the horizon.
      */
-    void applyCloudCalibration(float &Eb_PAR_Wm2, float &Eb_NIR_Wm2, float &fdiff_calc) const;
+    [[nodiscard]] BroadbandSolarFlux GueymardSolarModel(float pressure, float temperature, float humidity, float turbidity) const;
+
+    //! Compute the broadband fluxes for the given atmospheric conditions, applying cloud calibration if it is enabled
+    [[nodiscard]] BroadbandSolarFlux computeBroadbandSolarFlux(float pressure, float temperature, float humidity, float turbidity) const;
+
+    //! Compute the broadband fluxes for the atmospheric conditions stored in the Context, applying cloud calibration if it is enabled
+    [[nodiscard]] BroadbandSolarFlux computeBroadbandSolarFlux() const;
+
+    //! Global flux in one band expressed on a surface perpendicular to the sun, i.e. global horizontal flux divided by cos(zenith)
+    [[nodiscard]] static float globalFluxNormalToSun(float direct_normal, float diffuse_horizontal, float cos_zenith);
+
+    //! Fraction of the global horizontal flux that is diffuse
+    [[nodiscard]] static float diffuseFractionOfGlobal(const BroadbandSolarFlux &flux);
+
+    //! Calibrate the clear-sky fluxes against the measured global horizontal shortwave flux
+    /**
+     * The measured flux is split between PAR and NIR using the clear-sky GLOBAL (direct + diffuse) PAR fraction, and between
+     * direct and diffuse using the Erbs et al. (1982) correlation, so that direct*cos(zenith) + diffuse summed over both bands
+     * equals the measurement.
+     * \param[in,out] flux Clear-sky fluxes; replaced by the calibrated fluxes.
+     */
+    void applyCloudCalibration(BroadbandSolarFlux &flux) const;
 
     static float turbidityResidualFunction(float turbidity, std::vector<float> &parameters, const void *a_solarpositionmodel);
 

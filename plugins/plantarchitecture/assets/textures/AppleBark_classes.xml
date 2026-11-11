@@ -1,0 +1,16 @@
+<helios>
+  <!-- Class definitions of AppleBark_classes.png, relative to the spectra named below from the radiation plugin's spectral library (see the radiation plugin documentation, "Spectral Textures").
+       reflectance_scale multiplies the surface's reflectivity (and transmissivity) spectrum: the ratio of the class's luminance to the source's mean luminance.
+       No class reflects more than 0.6 at any wavelength from 400 to 700 nm (--max-reflectance).
+       Fitted by utilities/leaf_class_maps/fit_classes --surface to AppleBark_albedo.png. -->
+  <surface_class_map reflectivity_spectrum="bark_reflectivity_0000" transmissivity_spectrum="" provenance="AppleBark.jpg via utilities/leaf_class_maps/fit_classes --surface (fitted to AppleBark_albedo.png, relative to bark_reflectivity_0000)">
+    <class id="1" reflectance_scale="0.2116" texels="67048" source_srgb="73 69 58"/>
+    <class id="2" reflectance_scale="0.5424" texels="79492" source_srgb="114 109 93"/>
+    <class id="3" reflectance_scale="0.8282" texels="97265" source_srgb="138 133 116"/>
+    <class id="4" reflectance_scale="1.085" texels="93885" source_srgb="155 151 134"/>
+    <class id="5" reflectance_scale="1.352" texels="69026" source_srgb="171 166 149"/>
+    <class id="6" reflectance_scale="1.666" texels="40354" source_srgb="187 183 166"/>
+    <class id="7" reflectance_scale="2.054" texels="25031" source_srgb="204 201 184"/>
+    <class id="8" reflectance_scale="2.487" texels="13708" source_srgb="222 219 204"/>
+  </surface_class_map>
+</helios>

@@ -125,6 +125,41 @@ public:
         return visualizer.contextUUIDs_uploaded.size();
     }
 
+    //! glBufferSubData calls the last transferBufferData() made for changed primitives
+    static size_t getPartialUploadCount(const Visualizer &visualizer) {
+        return visualizer.partial_uploads_last_transfer;
+    }
+
+    //! Walks of the Context made since construction
+    static size_t getContextWalkCount(const Visualizer &visualizer) {
+        return visualizer.context_geometry_walk_count;
+    }
+
+    //! Build the Context geometry without rendering, as the start of a render does
+    static void buildContextGeometryPrivate(Visualizer &visualizer) {
+        visualizer.buildContextGeometry_private();
+    }
+
+    //! Renders of the colour frame since construction
+    static size_t getColorFrameRenderCount(const Visualizer &visualizer) {
+        return visualizer.color_frame_render_count;
+    }
+
+    //! Rebuilds of the annotation pass's face-to-primitive lookup since construction
+    static size_t getFaceLookupBuildCount(const Visualizer &visualizer) {
+        return visualizer.annotation_face_lookup_build_count;
+    }
+
+    //! Context primitives the last build examined for changes
+    static size_t getPrimitivesExaminedLastBuild(const Visualizer &visualizer) {
+        return visualizer.context_primitives_examined_last_build;
+    }
+
+    //! Walks of every displayed primitive made to assign Phong material indices
+    static size_t getPhongMaterialWalkCount(const Visualizer &visualizer) {
+        return visualizer.phong_material_walk_count;
+    }
+
     //! Number of geometry elements the handler will push to the GPU on the next transferBufferData()
     static size_t getDirtyGeometryCount(const Visualizer &visualizer) {
         return visualizer.geometry_handler.getDirtyUUIDs().size();
@@ -179,6 +214,21 @@ public:
     //! Texture object backing the packed Phong material table
     static GLuint getPhongMaterialTableTexture(const Visualizer &visualizer) {
         return visualizer.phong_material_table_texture;
+    }
+
+    //! Texture array holding the normal maps
+    static GLuint getNormalMapArrayTexture(const Visualizer &visualizer) {
+        return visualizer.normal_map_array;
+    }
+
+    //! Texture object backing the per-material normal-map layer table
+    static GLuint getNormalMapMaterialTableTexture(const Visualizer &visualizer) {
+        return visualizer.normal_map_material_table_texture;
+    }
+
+    //! Number of normal maps currently held by the GPU texture array
+    static size_t getNormalMapLayerCount(const Visualizer &visualizer) {
+        return visualizer.normal_map_layers_uploaded.size();
     }
 
     //! Force the framebuffer dimensions independently of the window dimensions
@@ -1189,7 +1239,10 @@ TEST_CASE("Visualizer::JPEG texture integration via primitives") {
 }
 
 TEST_CASE("Visualizer::Visualizer") {
-    DOCTEST_CHECK_NOTHROW(Visualizer v1(800, 600, true));
+    // The three-argument constructor always opens a window (its third argument is the anti-aliasing sample count)
+    if (windowedContextAvailable()) {
+        DOCTEST_CHECK_NOTHROW(Visualizer v1(800, 600, 1));
+    }
     DOCTEST_CHECK_NOTHROW(Visualizer v2(1024, 768, 4, false, true));
     DOCTEST_CHECK_NOTHROW(Visualizer v3(1280, 720, 8, false, true));
 }
@@ -1315,7 +1368,7 @@ TEST_CASE("Visualizer::validateTextureFile") {
 }
 
 TEST_CASE("Visualizer::point culling configuration simple") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    Visualizer visualizer(800, 600, 0, false, true); // Headless mode
 
     // Test that the new configuration methods exist and don't crash
     DOCTEST_CHECK_NOTHROW(visualizer.setPointCullingEnabled(true));
@@ -1323,7 +1376,7 @@ TEST_CASE("Visualizer::point culling configuration simple") {
 }
 
 TEST_CASE("Visualizer::addPoint basic functionality") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    Visualizer visualizer(800, 600, 0, false, true); // Headless mode
 
     // Test adding a single point
     size_t point_uuid = visualizer.addPoint(make_vec3(0, 0, 0), RGB::red, 1.0f, Visualizer::COORDINATES_CARTESIAN);
@@ -1331,7 +1384,12 @@ TEST_CASE("Visualizer::addPoint basic functionality") {
 }
 
 TEST_CASE("Visualizer::addPoint with different sizes") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    // Windowed: addPoint() validates and clamps point sizes only when a window exists
+    if (!windowedContextAvailable()) {
+        // Skip test silently when no windowed OpenGL context can be created
+        return;
+    }
+    Visualizer visualizer(800, 600, 0, true, false);
 
     // Test adding points with different sizes
     size_t point1 = visualizer.addPoint(make_vec3(0, 0, 0), RGB::red, 1.0f, Visualizer::COORDINATES_CARTESIAN);
@@ -1354,7 +1412,7 @@ TEST_CASE("Visualizer::addPoint with different sizes") {
 }
 
 TEST_CASE("Visualizer::addPoint RGBA with sizes") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    Visualizer visualizer(800, 600, 0, false, true); // Headless mode
 
     // Test adding RGBA points with different sizes
     size_t point1 = visualizer.addPoint(make_vec3(0, 0, 0), make_RGBAcolor(1.0f, 0.0f, 0.0f, 0.8f), 1.5f, Visualizer::COORDINATES_CARTESIAN);
@@ -1366,7 +1424,7 @@ TEST_CASE("Visualizer::addPoint RGBA with sizes") {
 }
 
 TEST_CASE("Visualizer::point culling metrics functionality") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    Visualizer visualizer(800, 600, 0, false, true); // Headless mode
 
     // Test that metrics can be retrieved
     size_t total, rendered;
@@ -1435,15 +1493,20 @@ TEST_CASE("Visualizer point culling assigns visibility to the point it was compu
 }
 
 TEST_CASE("Visualizer::point size edge cases") {
-    Visualizer visualizer(800, 600, true); // Headless mode
+    // Windowed: addPoint() validates and clamps point sizes only when a window exists
+    if (!windowedContextAvailable()) {
+        // Skip test silently when no windowed OpenGL context can be created
+        return;
+    }
+    Visualizer visualizer(800, 600, 0, true, false);
 
-    // Test with very small point size (should trigger warning and not crash in headless mode)
+    // Test with very small point size (should trigger warning and not crash)
     capture_cerr cerr_buffer1;
     size_t point1 = visualizer.addPoint(make_vec3(0, 0, 0), RGB::white, 0.001f, Visualizer::COORDINATES_CARTESIAN);
     DOCTEST_CHECK(point1 != 0);
     DOCTEST_CHECK(cerr_buffer1.has_output()); // Should capture warning about point size clamping
 
-    // Test with very large point size (should trigger warning and not crash in headless mode)
+    // Test with very large point size (should trigger warning and not crash)
     capture_cerr cerr_buffer2;
     size_t point2 = visualizer.addPoint(make_vec3(1, 0, 0), RGB::white, 1000.0f, Visualizer::COORDINATES_CARTESIAN);
     DOCTEST_CHECK(point2 != 0);
@@ -1492,6 +1555,10 @@ TEST_CASE("CI/Offscreen - Geometry Rendering") {
 TEST_CASE("CI/Offscreen - Environment Variable Detection") {
     // Test that environment variables are properly detected
     // Note: This test runs in normal environment, so we just test the code paths
+    if (!windowedContextAvailable()) {
+        // Skip test silently when no windowed OpenGL context can be created
+        return;
+    }
 
     // Test with explicit headless=false but environment might force it
     DOCTEST_CHECK_NOTHROW({
@@ -1736,6 +1803,10 @@ TEST_CASE("Visualizer::headless render after windowed instance destroyed") {
     // original failure was allocator-layout dependent and only manifested reliably
     // within the full suite, so this case guards the ordering rather than guaranteeing
     // reproduction of the exact memory state.
+    if (!windowedContextAvailable()) {
+        // Skip test silently when no windowed OpenGL context can be created
+        return;
+    }
 
     // First, create and destroy a WINDOWED instance to populate freed memory with
     // plausible GL handle values (mirrors the test-suite ordering that exposed the bug).
@@ -2082,6 +2153,24 @@ DOCTEST_TEST_CASE("Visualizer::Navigation Gizmo") {
     }
 }
 
+DOCTEST_TEST_CASE("GeometryHandler draws geometry re-added under the ID of geometry it deleted") {
+    // Deleted geometry keeps its slot until the buffers are defragmented, so adding geometry under the same ID again takes over the slot
+    GeometryHandler geometry_handler;
+    const size_t geometry_ID = 7;
+    const std::vector<vec3> vertices = {make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec3(0, 1, 0)};
+    const uint coordinates_cartesian = 1;
+    geometry_handler.addGeometry(geometry_ID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, vertices, make_RGBAcolor(1, 0, 0, 1), {}, -1, false, false, coordinates_cartesian, true, true, false, 1.f);
+    geometry_handler.deleteGeometry(geometry_ID);
+    DOCTEST_REQUIRE(!geometry_handler.isPrimitiveVisible(geometry_ID));
+    DOCTEST_REQUIRE(geometry_handler.getPrimitiveCount(false) == 0);
+
+    geometry_handler.addGeometry(geometry_ID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, vertices, make_RGBAcolor(0, 1, 0, 1), {}, -1, false, false, coordinates_cartesian, true, true, false, 1.f);
+    DOCTEST_CHECK(geometry_handler.isPrimitiveVisible(geometry_ID));
+    DOCTEST_CHECK(!geometry_handler.getDeleteFlag(geometry_ID));
+    DOCTEST_CHECK(geometry_handler.getPrimitiveCount(false) == 1);
+    DOCTEST_CHECK(geometry_handler.getAllGeometryIDs() == std::vector<size_t>{geometry_ID});
+}
+
 DOCTEST_TEST_CASE("GeometryHandler::getVertices coordinate system transformation") {
     // Test that getVertices() returns vertices in the same coordinate space they were provided
     // This is a regression test for the bug where COORDINATES_WINDOW_NORMALIZED vertices
@@ -2414,6 +2503,8 @@ DOCTEST_TEST_CASE("Visualizer binds a real texture to every sampler the primary 
 
     DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getShadowMapPlaceholderTexture(visualizer) != 0, "no placeholder depth texture exists, so the shadowMap sampler is bound to texture 0 whenever shadowed lighting has not been used");
     DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getPhongMaterialTableTexture(visualizer) != 0, "no Phong material table texture exists, so the phongMaterialTable sampler is bound to texture 0 for any scene built without a Context");
+    DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getNormalMapArrayTexture(visualizer) != 0, "no normal-map texture array exists, so the normalMapSampler sampler is bound to texture 0 for any scene without normal maps");
+    DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getNormalMapMaterialTableTexture(visualizer) != 0, "no normal-map material table texture exists, so the normalMapMaterialTable sampler is bound to texture 0 for any scene built without a Context");
 }
 
 DOCTEST_TEST_CASE("Visualizer shadows render in headless mode") {
@@ -2985,33 +3076,31 @@ TEST_CASE("Visualizer resolves its assets independently of the working directory
     std::filesystem::remove_all(scratch_directory, ec);
 }
 
-#ifndef _WIN32
+#ifdef __linux__
+#include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+extern char **environ;
 
 DOCTEST_TEST_CASE("Visualizer::plotOnce does not terminate the process") {
     // The bug this guards against is a SIGSEGV inside the GL driver, which doctest cannot catch:
     // an in-process crash takes down the whole test runner instead of reporting a failure. So the
-    // call is made in a forked child and the parent inspects the wait status. Modeled on the
-    // fork()-based test in plugins/radiation/tests/selfTest.cpp.
+    // call is made in a child process and the parent inspects the wait status.
     //
-    // macOS is excluded rather than merely #ifndef _WIN32. doctest runs this whole file in one
-    // process, and the first test case in it constructs a Visualizer, so by the time we get here
-    // the parent has already initialized GLFW/OpenGL and therefore the Objective-C runtime. Apple's
-    // CoreFoundation aborts a forked child that re-enters it, which would surface below as
-    // WIFSIGNALED and be indistinguishable from the very crash this test exists to detect. The
-    // headless test case above is the portable assertion; this one is the crash backstop on
-    // platforms where forking after GL initialization is safe.
-#ifndef __APPLE__
-    std::cout.flush();
-    std::cerr.flush();
+    // The child is a fresh process -- this test binary started again, running only this test case --
+    // not a fork() of the parent. doctest runs this whole file in one process, so by the time we get
+    // here earlier test cases have initialized OpenGL, and GL drivers are not fork-safe: the NVIDIA
+    // EGL driver aborts a forked child that creates a context of its own, which surfaced below as
+    // WIFSIGNALED and was indistinguishable from the very crash this test exists to detect (Apple's
+    // CoreFoundation does the same to a forked child that re-enters it). /proc/self/exe makes this
+    // Linux-only; the headless test case above is the portable assertion, and this one is the crash
+    // backstop.
+    const char *child_flag_name = "HELIOS_VISUALIZER_PLOTONCE_CHILD";
 
-    pid_t child = fork();
-
-    if (child == 0) {
-        // Child: report status through the exit code only - no doctest macros, and _exit() rather
-        // than exit() so the parent's atexit handlers do not run a second time in the child's
-        // inherited copy of that state.
+    if (std::getenv(child_flag_name) != nullptr) {
+        // Child: report status through the exit code only - no doctest macros, and _exit() so that
+        // doctest does not go on to report on a test case whose outcome is the parent's to judge.
         int status = 0;
         try {
             Visualizer visualizer(200, 200, 0, true, true); // headless
@@ -3024,7 +3113,28 @@ DOCTEST_TEST_CASE("Visualizer::plotOnce does not terminate the process") {
         _exit(status);
     }
 
-    DOCTEST_REQUIRE(child > 0);
+    std::error_code error;
+    std::string test_executable = std::filesystem::read_symlink("/proc/self/exe", error).string();
+    DOCTEST_REQUIRE_MESSAGE(!error, "Could not resolve the test executable from /proc/self/exe: " << error.message());
+
+    std::string test_case_filter = "--test-case=Visualizer::plotOnce does not terminate the process";
+    std::string no_intro = "--no-intro";
+    char *child_arguments[] = {test_executable.data(), test_case_filter.data(), no_intro.data(), nullptr};
+
+    std::vector<char *> child_environment;
+    for (char **variable = environ; *variable != nullptr; variable++) {
+        child_environment.push_back(*variable);
+    }
+    std::string child_flag = std::string(child_flag_name) + "=1";
+    child_environment.push_back(child_flag.data());
+    child_environment.push_back(nullptr);
+
+    std::cout.flush();
+    std::cerr.flush();
+
+    pid_t child = 0;
+    const int spawn_error = posix_spawn(&child, test_executable.c_str(), nullptr, nullptr, child_arguments, child_environment.data());
+    DOCTEST_REQUIRE_MESSAGE(spawn_error == 0, "posix_spawn of " << test_executable << " failed: " << std::strerror(spawn_error));
 
     int wait_status = 0;
     DOCTEST_REQUIRE(waitpid(child, &wait_status, 0) == child);
@@ -3038,9 +3148,8 @@ DOCTEST_TEST_CASE("Visualizer::plotOnce does not terminate the process") {
     if (WIFEXITED(wait_status)) {
         DOCTEST_CHECK(WEXITSTATUS(wait_status) == 0);
     }
-#endif // __APPLE__
 }
-#endif // _WIN32
+#endif // __linux__
 
 int Visualizer::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
@@ -5554,6 +5663,42 @@ DOCTEST_TEST_CASE("Visualizer pixel-to-primitive map is independent of anti-alia
     DOCTEST_CHECK(context.listAllPrimitiveDataLabels() == data_labels_before);
 }
 
+DOCTEST_TEST_CASE("Visualizer depth map coverage is independent of anti-aliasing") {
+    // The depth pass renders to a single-sampled framebuffer. Polygon smoothing, which an anti-aliased Visualizer enables
+    // for its color passes, made drivers that honor it (NVIDIA) write depth one pixel beyond every edge of every primitive.
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    Context context;
+    for (int i = 0; i < 5; i++) {
+        context.addPatch(make_vec3(-2.f + float(i), 0.3f * float(i), 0.2f * float(i)), make_vec2(1.3f, 0.9f), make_SphericalCoord(0.3f * float(i), 0.5f * float(i)), RGB::green);
+    }
+
+    auto depthMap = [&](int antialiasing_samples) {
+        Visualizer visualizer(160, 120, antialiasing_samples, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.buildContextGeometry(&context);
+        visualizer.setCameraPosition(make_vec3(1, -6, 6), make_vec3(0, 0, 0));
+        std::vector<float> depth_pixels;
+        uint width, height;
+        visualizer.getDepthMap(depth_pixels, width, height);
+        return depth_pixels;
+    };
+
+    const std::vector<float> depth_aliased = depthMap(0);
+    const std::vector<float> depth_antialiased = depthMap(8);
+    DOCTEST_REQUIRE(depth_aliased.size() == depth_antialiased.size());
+
+    // The background is the farthest depth, which getDepthMap() maps to 0
+    auto coveredPixelCount = [](const std::vector<float> &depth_pixels) { return std::count_if(depth_pixels.begin(), depth_pixels.end(), [](float value) { return value > 0.f; }); };
+    const auto covered_aliased = coveredPixelCount(depth_aliased);
+    DOCTEST_REQUIRE(covered_aliased > 0);
+    DOCTEST_CHECK(coveredPixelCount(depth_antialiased) == covered_aliased);
+    DOCTEST_CHECK(depth_aliased == depth_antialiased);
+}
+
 DOCTEST_TEST_CASE("Visualizer pixel-to-primitive map sees through transparent texture pixels") {
     if (!headlessContextAvailable()) {
         return;
@@ -5726,6 +5871,490 @@ DOCTEST_TEST_CASE("Visualizer pixel-to-primitive map and depth image treat semi-
 
     // The ground is still reported where nothing is above it
     DOCTEST_CHECK(pixel_UUIDs.at(indexOfCenter(nadirPixelBounds(make_vec3(0, 1.5f, 0), make_vec2(0.2f, 0.2f), camera_height, image_size))) == UUID_ground + 1);
+}
+
+DOCTEST_TEST_CASE("Visualizer pixel-window and combined annotation read-back match the whole-image maps") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(6, 6));
+    for (int i = 0; i < 6; i++) {
+        context.addPatch(make_vec3(-2.f + 0.8f * float(i), 0.4f * float(i) - 1.f, 0.3f + 0.2f * float(i)), make_vec2(0.9f, 0.6f), make_SphericalCoord(0.2f * float(i), 0.7f * float(i)));
+        const vec3 base = make_vec3(1.5f - 0.6f * float(i), -1.5f + 0.5f * float(i), 0.5f + 0.1f * float(i));
+        context.addTriangle(base, base + make_vec3(0.7f, 0.1f, 0.2f), base + make_vec3(0.2f, 0.8f, -0.1f));
+    }
+
+    // A non-square image under a tilted camera, so that rows and columns cannot be confused
+    Visualizer visualizer(160, 120, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(1, -6, 5), make_vec3(0, 0, 0));
+
+    std::vector<uint> full_UUIDs;
+    std::vector<float> full_depth;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(full_UUIDs, width, height);
+    visualizer.getDepthImage(full_depth, width, height);
+    DOCTEST_REQUIRE(full_UUIDs.size() == size_t(width) * size_t(height));
+
+    // The combined call gives both maps exactly
+    std::vector<uint> combined_UUIDs;
+    std::vector<float> combined_depth;
+    uint combined_width = 0, combined_height = 0;
+    visualizer.getPixelUUIDsAndDepth(combined_UUIDs, combined_depth, combined_width, combined_height);
+    DOCTEST_CHECK(combined_width == width);
+    DOCTEST_CHECK(combined_height == height);
+    DOCTEST_CHECK(combined_UUIDs == full_UUIDs);
+    DOCTEST_CHECK(combined_depth == full_depth);
+
+    // Each window is the matching crop of the whole-image maps, including windows on the image edges and the whole image itself
+    const std::vector<int4> windows = {make_int4(0, 0, int(width), int(height)), make_int4(0, 0, 37, 21), make_int4(int(width) - 29, int(height) - 17, 29, 17), make_int4(53, 31, 64, 48), make_int4(80, 10, 1, 1)};
+    for (const int4 &window: windows) {
+        std::vector<uint> window_UUIDs;
+        std::vector<float> window_depth;
+        visualizer.getPixelUUIDs(window_UUIDs, uint(window.x), uint(window.y), uint(window.z), uint(window.w));
+        std::vector<float> window_depth_only;
+        visualizer.getDepthImage(window_depth_only, uint(window.x), uint(window.y), uint(window.z), uint(window.w));
+        std::vector<uint> window_UUIDs_combined;
+        visualizer.getPixelUUIDsAndDepth(window_UUIDs_combined, window_depth, uint(window.x), uint(window.y), uint(window.z), uint(window.w));
+        DOCTEST_REQUIRE(window_UUIDs.size() == size_t(window.z) * size_t(window.w));
+        DOCTEST_REQUIRE(window_depth.size() == window_UUIDs.size());
+
+        std::vector<uint> cropped_UUIDs;
+        std::vector<float> cropped_depth;
+        for (int row = window.y; row < window.y + window.w; row++) {
+            for (int column = window.x; column < window.x + window.z; column++) {
+                cropped_UUIDs.push_back(full_UUIDs.at(size_t(row) * width + size_t(column)));
+                cropped_depth.push_back(full_depth.at(size_t(row) * width + size_t(column)));
+            }
+        }
+        DOCTEST_CHECK(window_UUIDs == cropped_UUIDs);
+        DOCTEST_CHECK(window_UUIDs_combined == cropped_UUIDs);
+        DOCTEST_CHECK(window_depth == cropped_depth);
+        DOCTEST_CHECK(window_depth_only == cropped_depth);
+    }
+
+    // The window test is meaningful only if the crops are not all background
+    DOCTEST_CHECK(std::count(full_UUIDs.begin(), full_UUIDs.end(), 0u) < std::ptrdiff_t(full_UUIDs.size()));
+
+    // A window reaching outside the image, or an empty one, is an error
+    std::vector<uint> window_UUIDs;
+    DOCTEST_CHECK(annotationCallThrows([&] { visualizer.getPixelUUIDs(window_UUIDs, width - 10, 0, 11, 5); }));
+    DOCTEST_CHECK(annotationCallThrows([&] { visualizer.getPixelUUIDs(window_UUIDs, 0, height - 4, 5, 5); }));
+    DOCTEST_CHECK(annotationCallThrows([&] { visualizer.getPixelUUIDs(window_UUIDs, 0, 0, 0, 5); }));
+    DOCTEST_CHECK(annotationCallThrows([&] { visualizer.getPixelUUIDs(window_UUIDs, 0, 0, 5, 0); }));
+    DOCTEST_CHECK(annotationCallThrows([&] { visualizer.getPixelUUIDs(window_UUIDs, 4000000000u, 0, 5, 5); }));
+
+    // A window read leaves the whole-image maps unchanged afterwards (the scissor is not left enabled)
+    std::vector<uint> full_UUIDs_after;
+    visualizer.getPixelUUIDs(full_UUIDs_after, width, height);
+    DOCTEST_CHECK(full_UUIDs_after == full_UUIDs);
+}
+
+DOCTEST_TEST_CASE("Visualizer annotation pass does not render the colour frame") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    const uint image_size = 100;
+    const float camera_height = 10.f;
+
+    Context context;
+    const uint UUID_ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4), nullrotation, RGB::green);
+    const uint UUID_moved = context.addPatch(make_vec3(-1, 0, 1), make_vec2(1, 1), nullrotation, RGB::red);
+
+    Visualizer visualizer(image_size, image_size, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(0, 0, camera_height), make_vec3(0, 0, 0));
+
+    std::vector<uint> pixel_UUIDs;
+    uint width = 0, height = 0;
+    const int4 left_bounds = nadirPixelBounds(make_vec3(-1, 0, 1), make_vec2(1, 1), camera_height, image_size);
+    const int4 right_bounds = nadirPixelBounds(make_vec3(1, 0, 1), make_vec2(1, 1), camera_height, image_size);
+    auto centerIndexOf = [&](const int4 &bounds) { return size_t((bounds.z + bounds.w) / 2) * size_t(image_size) + size_t((bounds.x + bounds.y) / 2); };
+
+    // Annotation calls, with and without a change in between, draw only the annotation pass
+    const size_t color_renders_before = VisualizerTestHelper::getColorFrameRenderCount(visualizer);
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(pixel_UUIDs.at(centerIndexOf(left_bounds)) == UUID_moved + 1);
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    context.translatePrimitive(UUID_moved, make_vec3(2, 0, 0));
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(pixel_UUIDs.at(centerIndexOf(right_bounds)) == UUID_moved + 1);
+    DOCTEST_CHECK(pixel_UUIDs.at(centerIndexOf(left_bounds)) == UUID_ground + 1);
+    DOCTEST_CHECK(VisualizerTestHelper::getColorFrameRenderCount(visualizer) == color_renders_before);
+
+    // A saved image taken after an annotation call that picked up a change shows the change, even though that call uploaded the geometry
+    visualizer.plotUpdate(true);
+    context.translatePrimitive(UUID_moved, make_vec3(-2, 0, 0));
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(pixel_UUIDs.at(centerIndexOf(left_bounds)) == UUID_moved + 1);
+    const std::string image_file = "visualizer_annotation_no_color_frame.png";
+    visualizer.printWindow(image_file.c_str(), "png");
+    std::vector<RGBAcolor> image_pixels;
+    uint image_width = 0, image_height = 0;
+    readPNG(image_file, image_width, image_height, image_pixels);
+    std::filesystem::remove(image_file);
+    DOCTEST_REQUIRE(image_width == image_size);
+    const RGBAcolor left_color = image_pixels.at(centerIndexOf(left_bounds));
+    const RGBAcolor right_color = image_pixels.at(centerIndexOf(right_bounds));
+    DOCTEST_CHECK(left_color.r > left_color.g); // the red patch is back on the left
+    DOCTEST_CHECK(right_color.g > right_color.r); // and the right shows the green ground
+}
+
+DOCTEST_TEST_CASE("Visualizer draws opaque patches over exactly the pixels of the same squares built from triangles") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    // Tilted squares under a tilted camera, so that both triangles of each square cover pixels of their own
+    auto pixelMap = [](bool use_triangles, bool delete_second) {
+        Context context;
+        std::vector<uint> UUIDs;
+        for (int i = 0; i < 5; i++) {
+            const vec3 center = make_vec3(-2.f + float(i), 0.3f * float(i), 0.2f * float(i));
+            const SphericalCoord rotation = make_SphericalCoord(0.3f * float(i), 0.5f * float(i));
+            const uint patch = context.addPatch(center, make_vec2(0.8f, 0.6f), rotation);
+            if (use_triangles) {
+                const std::vector<vec3> vertices = context.getPrimitiveVertices(patch);
+                context.deletePrimitive(patch);
+                UUIDs.push_back(context.addTriangle(vertices.at(0), vertices.at(1), vertices.at(2)));
+                UUIDs.push_back(context.addTriangle(vertices.at(0), vertices.at(2), vertices.at(3)));
+            } else {
+                UUIDs.push_back(patch);
+            }
+        }
+        Visualizer visualizer(160, 120, 0, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.buildContextGeometry(&context);
+        visualizer.setCameraPosition(make_vec3(1, -6, 6), make_vec3(0, 0, 0));
+        std::vector<uint> pixel_UUIDs;
+        uint width, height;
+        visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+        if (delete_second) {
+            // Deleting a square in the middle moves the squares after it in the Visualizer's buffers
+            const size_t per_square = use_triangles ? 2 : 1;
+            for (size_t k = 0; k < per_square; k++) {
+                context.deletePrimitive(UUIDs.at(per_square + k));
+            }
+            visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+        }
+        // Whether a pixel is covered, which does not depend on how the squares were built
+        std::vector<bool> covered(pixel_UUIDs.size());
+        for (size_t p = 0; p < pixel_UUIDs.size(); p++) {
+            covered[p] = pixel_UUIDs[p] != 0;
+        }
+        return covered;
+    };
+
+    const std::vector<bool> patches = pixelMap(false, false);
+    DOCTEST_REQUIRE(std::count(patches.begin(), patches.end(), true) > 0);
+    DOCTEST_CHECK(patches == pixelMap(true, false));
+
+    const std::vector<bool> patches_after_deletion = pixelMap(false, true);
+    DOCTEST_CHECK(patches_after_deletion != patches);
+    DOCTEST_CHECK(patches_after_deletion == pixelMap(true, true));
+}
+
+DOCTEST_TEST_CASE("Visualizer hides and shows a Context primitive without rebuilding its geometry layout") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    const uint image_size = 100;
+    const float camera_height = 10.f;
+
+    Context context;
+    const uint UUID_ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    const uint UUID_raised = context.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1));
+    const uint UUID_triangle = context.addTriangle(make_vec3(1, 1, 1), make_vec3(1.8f, 1, 1), make_vec3(1, 1.8f, 1));
+
+    Visualizer visualizer(image_size, image_size, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(0, 0, camera_height), make_vec3(0, 0, 0));
+
+    std::vector<uint> pixel_UUIDs;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    const size_t raised_pixels = countPixelsOf(pixel_UUIDs, UUID_raised);
+    const size_t triangle_pixels = countPixelsOf(pixel_UUIDs, UUID_triangle);
+    DOCTEST_REQUIRE(raised_pixels > 0);
+    DOCTEST_REQUIRE(triangle_pixels > 0);
+    const size_t lookup_builds = VisualizerTestHelper::getFaceLookupBuildCount(visualizer);
+
+    // Hidden: not drawn, the ground shows through, and the face lookup is not rebuilt
+    context.hidePrimitive({UUID_raised, UUID_triangle});
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(countPixelsOf(pixel_UUIDs, UUID_raised) == 0);
+    DOCTEST_CHECK(countPixelsOf(pixel_UUIDs, UUID_triangle) == 0);
+    const size_t center_pixel = size_t(image_size / 2) * size_t(image_size) + size_t(image_size / 2);
+    DOCTEST_CHECK(pixel_UUIDs.at(center_pixel) == UUID_ground + 1);
+    DOCTEST_CHECK(VisualizerTestHelper::getFaceLookupBuildCount(visualizer) == lookup_builds);
+
+    // Moved while hidden, then shown: drawn again where it now is, still without a rebuild
+    context.translatePrimitive(UUID_raised, make_vec3(-1, 0, 0));
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(countPixelsOf(pixel_UUIDs, UUID_raised) == 0);
+    context.showPrimitive({UUID_raised, UUID_triangle});
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    const int4 moved_bounds = nadirPixelBounds(make_vec3(-1, 0, 1), make_vec2(1, 1), camera_height, image_size);
+    const size_t moved_pixels = size_t(moved_bounds.y - moved_bounds.x + 1) * size_t(moved_bounds.w - moved_bounds.z + 1);
+    DOCTEST_CHECK(countPixelsOf(pixel_UUIDs, UUID_raised) == moved_pixels);
+    DOCTEST_CHECK(countPixelsOf(pixel_UUIDs, UUID_triangle) == triangle_pixels);
+    DOCTEST_CHECK(pixel_UUIDs.at(center_pixel) == UUID_ground + 1);
+    DOCTEST_CHECK(pixel_UUIDs.at(size_t((moved_bounds.z + moved_bounds.w) / 2) * size_t(image_size) + size_t((moved_bounds.x + moved_bounds.y) / 2)) == UUID_raised + 1);
+    DOCTEST_CHECK(VisualizerTestHelper::getFaceLookupBuildCount(visualizer) == lookup_builds);
+
+    // Deleted while hidden: gone for good
+    context.hidePrimitive(UUID_triangle);
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    context.deletePrimitive(UUID_triangle);
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(countPixelsOf(pixel_UUIDs, UUID_triangle) == 0);
+    DOCTEST_CHECK(countPixelsOf(pixel_UUIDs, UUID_raised) == moved_pixels);
+}
+
+DOCTEST_TEST_CASE("Visualizer fits its default camera to the displayed primitives only") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    // far_primitive: 0 none, 1 hidden, 2 deleted, in both cases after the Visualizer was given its geometry
+    auto pixelMap = [](int far_primitive) {
+        Context context;
+        context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+        context.addTriangle(make_vec3(-0.5f, -0.5f, 0.5f), make_vec3(0.5f, -0.5f, 0.5f), make_vec3(0, 0.5f, 0.5f));
+        uint far_UUID = 0;
+        if (far_primitive != 0) {
+            far_UUID = context.addPatch(make_vec3(50, 0, 0), make_vec2(1, 1));
+        }
+        Visualizer visualizer(120, 120, 0, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.buildContextGeometry(&context);
+        std::vector<uint> pixel_UUIDs;
+        uint width, height;
+        if (far_primitive != 0) {
+            // Built into the Visualizer, then hidden or deleted, before the camera is fitted (a render would fit it, so only the geometry is built)
+            VisualizerTestHelper::buildContextGeometryPrivate(visualizer);
+            if (far_primitive == 1) {
+                context.hidePrimitive(far_UUID);
+            } else {
+                context.deletePrimitive(far_UUID);
+            }
+        }
+        visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+        return pixel_UUIDs;
+    };
+
+    const std::vector<uint> reference = pixelMap(0);
+    DOCTEST_REQUIRE(std::count(reference.begin(), reference.end(), 0u) < std::ptrdiff_t(reference.size()));
+    DOCTEST_CHECK(pixelMap(1) == reference);
+    DOCTEST_CHECK(pixelMap(2) == reference);
+}
+
+DOCTEST_TEST_CASE("Visualizer pixel read-back refuses a frame that is missing or out of date") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(UUID, "temperature", 300.f);
+    const uint objID = context.addTileObject(make_vec3(2, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2));
+    context.setObjectData(objID, "temperature", 290.f);
+
+    Visualizer visualizer(64, 64, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(0, 0, 5), make_vec3(0, 0, 0));
+
+    auto readBackThrows = [&]() {
+        std::vector<uint> pixels;
+        uint width = 0, height = 0;
+        bool threw = false;
+        capture_cerr capture;
+        try {
+            visualizer.getWindowPixelsRGB(pixels, width, height);
+        } catch (const std::exception &) {
+            threw = true;
+        }
+        return threw;
+    };
+
+    // Nothing has been rendered yet
+    DOCTEST_CHECK(readBackThrows());
+
+    // A frame just rendered can be read, and read again; data that changes nothing drawn does not make it out of date
+    visualizer.plotUpdate(true);
+    DOCTEST_CHECK(!readBackThrows());
+    DOCTEST_CHECK(!readBackThrows());
+    context.setPrimitiveData(UUID, "other_data", 1.f);
+    DOCTEST_CHECK(!readBackThrows());
+
+    // Each change to what is drawn makes the frame out of date until the next render
+    const std::vector<std::pair<std::string, std::function<void()>>> changes = {
+            {"setCameraPosition", [&] { visualizer.setCameraPosition(make_vec3(0, 0.1f, 5), make_vec3(0, 0, 0)); }},
+            {"setBackgroundColor", [&] { visualizer.setBackgroundColor(RGB::red); }},
+            {"setBackgroundTransparent", [&] { visualizer.setBackgroundTransparent(); }},
+            {"setLightDirection", [&] { visualizer.setLightDirection(make_vec3(1, 0, 1)); }},
+            {"setLightingModel", [&] { visualizer.setLightingModel(Visualizer::LIGHTING_PHONG); }},
+            {"setLightIntensityFactor", [&] { visualizer.setLightIntensityFactor(0.5f); }},
+            {"enableExactColorMode", [&] { visualizer.enableExactColorMode(); }},
+            {"disableExactColorMode", [&] { visualizer.disableExactColorMode(); }},
+            {"disableLinearPipeline", [&] { visualizer.disableLinearPipeline(); }},
+            {"enableLinearPipeline", [&] { visualizer.enableLinearPipeline(); }},
+            {"setExposure", [&] { visualizer.setExposure(2.f); }},
+            {"setPhongMaterial", [&] { visualizer.setPhongMaterial(Visualizer::PhongMaterial{0.5f, 0.5f, 0.5f, 8.f}); }},
+            {"setAmbientColors", [&] { visualizer.setAmbientColors(RGB::blue, RGB::green); }},
+            {"enableSmoothShading", [&] { visualizer.enableSmoothShading(); }},
+            {"disableSmoothShading", [&] { visualizer.disableSmoothShading(); }},
+            {"colorContextPrimitivesByData", [&] { visualizer.colorContextPrimitivesByData("temperature"); }},
+            {"enableColorbar", [&] { visualizer.enableColorbar(); }},
+            {"setColorbarPosition", [&] { visualizer.setColorbarPosition(make_vec3(0.5f, 0.2f, 0.1f)); }},
+            {"setColorbarSize", [&] { visualizer.setColorbarSize(make_vec2(0.2f, 0.05f)); }},
+            {"setColorbarRange", [&] { visualizer.setColorbarRange(250.f, 350.f); }},
+            {"setColorbarTicks", [&] { visualizer.setColorbarTicks({250.f, 300.f, 350.f}); }},
+            {"setColorbarTitle", [&] { visualizer.setColorbarTitle("T"); }},
+            {"setColorbarFontColor", [&] { visualizer.setColorbarFontColor(RGB::red); }},
+            {"setColorbarFontSize", [&] { visualizer.setColorbarFontSize(14); }},
+            {"setColormap", [&] { visualizer.setColormap(Visualizer::COLORMAP_RAINBOW); }},
+            {"setColormap (custom)", [&] { visualizer.setColormap({RGB::black, RGB::white}, {0.f, 1.f}); }},
+            {"disableColorbar", [&] { visualizer.disableColorbar(); }},
+            {"colorContextPrimitivesByObjectData", [&] { visualizer.colorContextPrimitivesByObjectData("temperature"); }},
+            {"clearColor", [&] { visualizer.clearColor(); }},
+            {"colorContextPrimitivesRandomly", [&] { visualizer.colorContextPrimitivesRandomly(); }},
+            {"colorContextObjectsRandomly", [&] { visualizer.colorContextObjectsRandomly(); }},
+            {"showWatermark", [&] { visualizer.showWatermark(); }},
+            {"hideWatermark", [&] { visualizer.hideWatermark(); }},
+            {"hideNavigationGizmo", [&] { visualizer.hideNavigationGizmo(); }},
+            {"showNavigationGizmo", [&] { visualizer.showNavigationGizmo(); }},
+            {"setPointCullingEnabled", [&] { visualizer.setPointCullingEnabled(false); }},
+            {"setPointCullingThreshold", [&] { visualizer.setPointCullingThreshold(10); }},
+            {"setPointMaxRenderDistance", [&] { visualizer.setPointMaxRenderDistance(100.f); }},
+            {"setPointLODFactor", [&] { visualizer.setPointLODFactor(2.f); }},
+            {"addCoordinateAxes", [&] { visualizer.addCoordinateAxes(); }},
+            {"disableCoordinateAxes", [&] { visualizer.disableCoordinateAxes(); }},
+            {"addLine", [&] { visualizer.addLine(make_vec3(0, 0, 1), make_vec3(1, 0, 1), RGB::red, 2.f, Visualizer::COORDINATES_CARTESIAN); }},
+            {"clearContextGeometry", [&] { visualizer.clearContextGeometry(); }},
+    };
+    for (const auto &named_change: changes) {
+        const std::string &name = named_change.first;
+        DOCTEST_INFO("after " << name);
+        visualizer.plotUpdate(true);
+        DOCTEST_REQUIRE(!readBackThrows());
+        named_change.second();
+        DOCTEST_CHECK(readBackThrows());
+    }
+    visualizer.plotUpdate(true);
+    DOCTEST_CHECK(!readBackThrows());
+}
+
+DOCTEST_TEST_CASE("Visualizer keeps rendering after another Visualizer is destroyed") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    const uint image_size = 64;
+    const float camera_height = 3.f;
+
+    auto makeVisualizer = [&](Context &context) {
+        auto visualizer = std::make_unique<Visualizer>(image_size, image_size, 0, false, true);
+        visualizer->disableMessages();
+        visualizer->hideWatermark();
+        visualizer->hideNavigationGizmo();
+        visualizer->buildContextGeometry(&context);
+        visualizer->setCameraPosition(make_vec3(0, 0, camera_height), make_vec3(0, 0, 0));
+        return visualizer;
+    };
+
+    Context context_first;
+    Context context_second;
+    const uint UUID_first = context_first.addPatch(make_vec3(0, 0, 0), make_vec2(0.5f, 0.5f));
+    const uint UUID_second = context_second.addPatch(make_vec3(0, 0, 0), make_vec2(0.5f, 0.5f));
+
+    const size_t center_pixel = size_t(image_size / 2) * size_t(image_size) + size_t(image_size / 2);
+    std::vector<uint> pixel_UUIDs;
+    uint width = 0, height = 0;
+
+    // Two Visualizers alive at once render in turn, each describing its own Context
+    std::unique_ptr<Visualizer> visualizer_first = makeVisualizer(context_first);
+    std::unique_ptr<Visualizer> visualizer_second = makeVisualizer(context_second);
+    visualizer_first->getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(pixel_UUIDs.at(center_pixel) == UUID_first + 1);
+    visualizer_second->getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(pixel_UUIDs.at(center_pixel) == UUID_second + 1);
+    visualizer_first->getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(pixel_UUIDs.at(center_pixel) == UUID_first + 1);
+
+    // Destroying the first leaves the second working, including when the second drew last and its context is the current one
+    visualizer_second->getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(pixel_UUIDs.at(center_pixel) == UUID_second + 1);
+    visualizer_first.reset();
+    bool readback_threw = false;
+    {
+        capture_cerr capture;
+        try {
+            visualizer_second->getPixelUUIDs(pixel_UUIDs, width, height);
+        } catch (const std::exception &) {
+            readback_threw = true;
+        }
+    }
+    DOCTEST_REQUIRE(!readback_threw);
+    DOCTEST_CHECK(pixel_UUIDs.at(center_pixel) == UUID_second + 1);
+
+    visualizer_second->plotUpdate(true);
+    std::vector<uint> pixels_RGB;
+    uint rgb_width = 0, rgb_height = 0;
+    visualizer_second->getWindowPixelsRGB(pixels_RGB, rgb_width, rgb_height);
+    DOCTEST_CHECK(pixels_RGB.size() == 3 * size_t(rgb_width) * size_t(rgb_height));
+}
+
+DOCTEST_TEST_CASE("Visualizer removes a primitive deleted and then marked clean before the next render") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+
+    const uint image_size = 100;
+    const float camera_height = 10.f;
+
+    Context context;
+    const uint UUID_ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    const uint UUID_raised = context.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1));
+
+    Visualizer visualizer(image_size, image_size, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(0, 0, camera_height), make_vec3(0, 0, 0));
+
+    std::vector<uint> pixel_UUIDs;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_REQUIRE(countPixelsOf(pixel_UUIDs, UUID_raised) > 0);
+
+    // The user marks the geometry clean between the deletion and the next render
+    context.deletePrimitive(UUID_raised);
+    context.markGeometryClean();
+
+    visualizer.getPixelUUIDs(pixel_UUIDs, width, height);
+    DOCTEST_CHECK(countPixelsOf(pixel_UUIDs, UUID_raised) == 0);
+    const size_t center_pixel = size_t(image_size / 2) * size_t(image_size) + size_t(image_size / 2);
+    DOCTEST_CHECK(pixel_UUIDs.at(center_pixel) == UUID_ground + 1);
 }
 
 DOCTEST_TEST_CASE("Visualizer writeImageBoundingBoxes") {
@@ -6263,4 +6892,830 @@ DOCTEST_TEST_CASE("Visualizer lights each face of a Context voxel from outside t
         const uint unlit = centerGreenLevel(5.f * outward, -1.f * outward);
         DOCTEST_CHECK(lit > unlit + 40);
     }
+}
+
+namespace {
+    //! A grid of small triangles over [-1,1]^2 at z=0, added in order so they sit together in the buffers
+    std::vector<uint> addTriangleGrid(Context &context, int per_side) {
+        std::vector<uint> UUIDs;
+        const float step = 2.f / float(per_side);
+        for (int j = 0; j < per_side; j++) {
+            for (int i = 0; i < per_side; i++) {
+                const vec3 corner = make_vec3(-1.f + step * float(i), -1.f + step * float(j), 0.f);
+                UUIDs.push_back(context.addTriangle(corner, corner + make_vec3(0.8f * step, 0, 0), corner + make_vec3(0, 0.8f * step, 0), RGB::green));
+            }
+        }
+        return UUIDs;
+    }
+
+    void setUpView(Visualizer &visualizer) {
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        // Not (0,0,2) looking at the origin: that is the default camera, which the first build re-frames
+        visualizer.setCameraPosition(make_vec3(0.3f, -0.4f, 3.f), make_vec3(0, 0, 0));
+    }
+} // namespace
+
+TEST_CASE("Moving displayed geometry uploads one run per buffer, not one slice per primitive") {
+    // transferBufferData() uploaded each changed primitive's slice of each of its twelve buffers on
+    // its own: moving a 2900-primitive plant cost ~35000 glBufferSubData calls and ~220 ms per frame
+    // through Apple's OpenGL, against ~10 ms when nothing had changed. Primitives added together sit
+    // together in the buffers, so moving them must cost a handful of uploads however many there are.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 40); // 1600 triangles
+
+    Visualizer visualizer(200, 150, 0, false, true);
+    setUpView(visualizer);
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    const std::vector<uint> moved(UUIDs.begin(), UUIDs.begin() + 800);
+    context.translatePrimitive(moved, make_vec3(0.01f, 0, 0));
+    visualizer.buildContextGeometry(&context);
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    // 800 primitives changed in the triangle buffers: one contiguous run in each of twelve buffers
+    DOCTEST_CHECK(VisualizerTestHelper::getPartialUploadCount(visualizer) <= 12);
+    DOCTEST_CHECK(VisualizerTestHelper::getPartialUploadCount(visualizer) > 0);
+
+    // Nothing changed: nothing is uploaded
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPartialUploadCount(visualizer) == 0);
+}
+
+TEST_CASE("Geometry changed after display renders as a fresh build of the changed scene does") {
+    // The partial uploads must leave every buffer the GPU reads equal to the CPU-side arrays, whatever
+    // the pattern of changes: scattered primitives (runs that do not merge), a block (one run), and a
+    // recolor (only the color buffer is meant to change). Compared against a Visualizer that never saw
+    // the old scene, by primitive identity and by color, pixel for pixel.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 60); // 3600 triangles
+    context.addPatch(make_vec3(0, 0, -0.01f), make_vec2(2.5f, 2.5f), make_SphericalCoord(0, 0), RGB::blue);
+
+    Visualizer incremental(240, 180, 0, false, true);
+    setUpView(incremental);
+    incremental.enableExactColorMode();
+    incremental.buildContextGeometry(&context);
+    std::vector<uint> before;
+    uint width = 0, height = 0;
+    incremental.getPixelUUIDs(before, width, height);
+
+    std::vector<uint> scattered, block;
+    for (size_t k = 0; k < UUIDs.size(); k += 997) {
+        scattered.push_back(UUIDs.at(k)); // far enough apart that their runs stay separate
+    }
+    block.assign(UUIDs.begin() + 1000, UUIDs.begin() + 1600);
+    context.translatePrimitive(scattered, make_vec3(0.05f, 0.05f, 0.1f));
+    context.translatePrimitive(block, make_vec3(-0.1f, 0, 0.05f));
+    context.setPrimitiveColor(std::vector<uint>(UUIDs.begin() + 2000, UUIDs.begin() + 2400), RGB::red);
+
+    incremental.buildContextGeometry(&context);
+    std::vector<uint> after;
+    incremental.getPixelUUIDs(after, width, height);
+    DOCTEST_REQUIRE(after != before); // the change is visible, so the comparison below means something
+    // The annotation pass does not render the colour image, so it is rendered before it is read back
+    incremental.plotUpdate(true);
+    std::vector<uint> incremental_rgb;
+    uint rgb_width = 0, rgb_height = 0;
+    incremental.getWindowPixelsRGB(incremental_rgb, rgb_width, rgb_height);
+
+    Visualizer fresh(240, 180, 0, false, true);
+    setUpView(fresh);
+    fresh.enableExactColorMode();
+    fresh.buildContextGeometry(&context);
+    std::vector<uint> expected;
+    fresh.getPixelUUIDs(expected, width, height);
+    fresh.plotUpdate(true);
+    std::vector<uint> fresh_rgb;
+    fresh.getWindowPixelsRGB(fresh_rgb, rgb_width, rgb_height);
+
+    DOCTEST_CHECK(after == expected);
+    DOCTEST_CHECK(incremental_rgb == fresh_rgb);
+}
+
+
+namespace {
+    //! Where a pinhole camera puts a world point: (column, row) from the top-left corner, in pixels
+    /** Written from the camera's definition, independently of how the Visualizer builds its matrices. */
+    vec2 pinholePixel(const vec3 &eye, const vec3 &lookat, const vec3 &world_up, float vertical_fov_degrees, uint width, uint height, float principal_column, float principal_row, const vec3 &point) {
+        vec3 forward = lookat - eye;
+        forward.normalize();
+        vec3 right = cross(forward, world_up);
+        right.normalize();
+        vec3 image_down = cross(forward, right); // = -(camera up)
+        const float focal = 0.5f * float(height) / std::tan(0.5f * deg2rad(vertical_fov_degrees));
+        const vec3 d = point - eye;
+        const float depth = d * forward;
+        return make_vec2(principal_column + focal * (d * right) / depth, principal_row + focal * (d * image_down) / depth);
+    }
+
+    //! Centroid of the pixels showing one primitive, from the pixel-to-primitive map; (-1,-1) when none do
+    vec2 pixelCentroid(const std::vector<uint> &pixel_UUIDs, uint width, uint UUID) {
+        double column_sum = 0, row_sum = 0;
+        size_t count = 0;
+        for (size_t k = 0; k < pixel_UUIDs.size(); k++) {
+            if (pixel_UUIDs[k] == UUID + 1) {
+                column_sum += double(k % width) + 0.5;
+                row_sum += double(k / width) + 0.5;
+                count++;
+            }
+        }
+        return count == 0 ? make_vec2(-1, -1) : make_vec2(float(column_sum / count), float(row_sum / count));
+    }
+} // namespace
+
+TEST_CASE("A camera set to the default position is not re-framed to fit the scene") {
+    // The first build fitted the camera to the scene whenever the camera still held its default
+    // position, judged by comparing coordinates: a camera set on purpose to (0,0,2) looking at the
+    // origin was moved to a 20-degree oblique view with no notice.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(0.5f, 0.5f));
+
+    Visualizer visualizer(200, 150, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.setCameraPosition(make_vec3(0, 0, 2), make_vec3(0, 0, 0));
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    const std::vector<vec3> camera = visualizer.getCameraPosition(); // {look-at, eye}
+    DOCTEST_CHECK(camera.at(0) == make_vec3(0, 0, 0));
+    DOCTEST_CHECK(camera.at(1) == make_vec3(0, 0, 2));
+
+    // A camera nobody set is still fitted to the scene
+    Visualizer unset(200, 150, 0, false, true);
+    unset.disableMessages();
+    unset.buildContextGeometry(&context);
+    unset.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(unset.getCameraPosition().at(1) != make_vec3(0, 0, 2));
+}
+
+TEST_CASE("The camera projects as a pinhole with its field of view, up direction and principal point") {
+    // Small squares at known positions must appear where a pinhole camera with the same pose, vertical
+    // field of view, up direction and principal point puts them. Covers the automatic up direction,
+    // a set one that rolls the image, and an off-centre principal point.
+    const uint width = 320, height = 240;
+    const float fov = 40.f;
+    const vec3 eye = make_vec3(0.6f, -0.9f, 2.2f);
+    const vec3 lookat = make_vec3(0.05f, 0.1f, 0.f);
+
+    Context context;
+    const std::vector<vec3> centres = {make_vec3(0, 0, 0), make_vec3(0.35f, 0.1f, 0.05f), make_vec3(-0.3f, 0.3f, 0.f), make_vec3(0.1f, -0.35f, 0.1f), make_vec3(-0.25f, -0.2f, 0.2f)};
+    std::vector<uint> UUIDs;
+    for (const vec3 &c: centres) {
+        UUIDs.push_back(context.addPatch(c, make_vec2(0.04f, 0.04f)));
+    }
+
+    struct Case {
+        const char *name;
+        bool set_up;
+        vec3 up;
+        bool set_principal;
+        float principal_column, principal_row;
+    };
+    const std::vector<Case> cases = {{"automatic up, centred", false, make_vec3(0, 0, 1), false, 0.5f * width, 0.5f * height},
+                                     {"rolled by a set up direction", true, make_vec3(1, 0.3f, 0.2f), false, 0.5f * width, 0.5f * height},
+                                     {"off-centre principal point", true, make_vec3(0, 0, 1), true, 0.5f * width + 37.f, 0.5f * height - 21.f}};
+
+    for (const Case &c: cases) {
+        DOCTEST_CAPTURE(c.name);
+        Visualizer visualizer(width, height, 0, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.setCameraPosition(eye, lookat);
+        visualizer.setCameraFieldOfView(fov);
+        if (c.set_up) {
+            visualizer.setCameraUpDirection(c.up);
+        }
+        if (c.set_principal) {
+            visualizer.setCameraPrincipalPoint(c.principal_column, c.principal_row);
+        }
+        visualizer.buildContextGeometry(&context);
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.getPixelUUIDs(pixels, w, h);
+        DOCTEST_REQUIRE(w == width);
+        DOCTEST_REQUIRE(h == height);
+
+        for (size_t k = 0; k < centres.size(); k++) {
+            DOCTEST_CAPTURE(k);
+            const vec2 expected = pinholePixel(eye, lookat, c.up, fov, width, height, c.principal_column, c.principal_row, centres[k]);
+            const vec2 seen = pixelCentroid(pixels, w, UUIDs[k]);
+            DOCTEST_REQUIRE(seen.x >= 0.f); // the square is in view
+            DOCTEST_CHECK(std::fabs(seen.x - expected.x) < 0.75f);
+            DOCTEST_CHECK(std::fabs(seen.y - expected.y) < 0.75f);
+        }
+    }
+}
+
+TEST_CASE("A camera up direction that cannot fix the roll is refused") {
+    Visualizer visualizer(64, 64, 0, false, true);
+    visualizer.disableMessages();
+    DOCTEST_CHECK_THROWS(visualizer.setCameraUpDirection(make_vec3(0, 0, 0)));
+    DOCTEST_CHECK_THROWS(visualizer.setCameraPrincipalPoint(std::nanf(""), 10.f));
+
+    // Parallel to the view: refused when the frame is rendered, rather than replaced by another roll
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(0.5f, 0.5f));
+    visualizer.setCameraPosition(make_vec3(0, 0, 3), make_vec3(0, 0, 0));
+    visualizer.setCameraUpDirection(make_vec3(0, 0, 1));
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    DOCTEST_CHECK_THROWS(visualizer.getPixelUUIDs(pixels, width, height));
+
+    visualizer.clearCameraUpDirection();
+    DOCTEST_CHECK_NOTHROW(visualizer.getPixelUUIDs(pixels, width, height));
+}
+
+TEST_CASE("getPixelUUIDs walks the Context once per call") {
+    // Context dirty flags stay set until the user clears them, so every walk of the Context visits the
+    // whole scene. renderAnnotationBuffers() walked it and then called plotUpdate(), which walked it
+    // again and found nothing new: about 14 ms of a 47 ms call for an 87000-triangle scene.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 30);
+    Visualizer visualizer(160, 120, 0, false, true);
+    setUpView(visualizer);
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    // After a change, which is when the frame has to be rendered again
+    context.translatePrimitive(std::vector<uint>(UUIDs.begin(), UUIDs.begin() + 100), make_vec3(0.01f, 0, 0));
+    const size_t walks_before_change = VisualizerTestHelper::getContextWalkCount(visualizer);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getContextWalkCount(visualizer) - walks_before_change == 1);
+
+    // And when nothing changed
+    const size_t walks_before_repeat = VisualizerTestHelper::getContextWalkCount(visualizer);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getContextWalkCount(visualizer) - walks_before_repeat == 1);
+}
+
+TEST_CASE("The annotation pass reuses its face lookup until primitives are added or deleted") {
+    // Decoding the annotation pass needs, for each face index the shaders see, the Context UUID behind
+    // it. Rebuilding that lookup visits every displayed primitive, about 6 ms for 87000 triangles, and
+    // it only changes when primitives are added or deleted or the buffers are compacted - not when
+    // they move or change color, which is what a fit does between frames.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 30);
+    Visualizer visualizer(160, 120, 0, false, true);
+    setUpView(visualizer);
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+    const size_t builds_after_first = VisualizerTestHelper::getFaceLookupBuildCount(visualizer);
+
+    context.translatePrimitive(std::vector<uint>(UUIDs.begin(), UUIDs.begin() + 100), make_vec3(0.01f, 0, 0));
+    context.setPrimitiveColor(UUIDs.at(200), RGB::red);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getFaceLookupBuildCount(visualizer) == builds_after_first);
+
+    auto shows = [&](uint UUID) { return std::find(pixels.begin(), pixels.end(), UUID + 1) != pixels.end(); };
+
+    // An added primitive is rebuilt into the lookup and is reported, in front of the grid
+    const uint added = context.addPatch(make_vec3(0, 0, 0.5f), make_vec2(0.4f, 0.4f));
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getFaceLookupBuildCount(visualizer) > builds_after_first);
+    DOCTEST_CHECK(shows(added));
+
+    // A deleted one is no longer reported, and what was behind it is
+    const uint behind = UUIDs.at(UUIDs.size() / 2 + 15);
+    DOCTEST_REQUIRE(!shows(behind));
+    context.deletePrimitive(added);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(!shows(added));
+    DOCTEST_CHECK(shows(behind));
+}
+
+TEST_CASE("A build examines only the Context primitives that changed since the last one") {
+    // Context dirty flags stay set until the user clears them, so a build that took every dirty primitive and fingerprinted it to
+    // find the changed ones examined the whole scene every frame: about 8 ms per build for 87000 triangles.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 30); // 900 triangles
+    Visualizer visualizer(160, 120, 0, false, true);
+    setUpView(visualizer);
+    visualizer.enableExactColorMode();
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+
+    context.translatePrimitive(std::vector<uint>(UUIDs.begin(), UUIDs.begin() + 100), make_vec3(0.01f, 0, 0.02f));
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPrimitivesExaminedLastBuild(visualizer) == 100);
+
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPrimitivesExaminedLastBuild(visualizer) == 0);
+
+    // The user marking the geometry clean does not hide a later change, nor a change made before it
+    context.setPrimitiveColor(std::vector<uint>(UUIDs.begin() + 300, UUIDs.begin() + 340), RGB::red);
+    context.markGeometryClean();
+    context.translatePrimitive(std::vector<uint>(UUIDs.begin() + 500, UUIDs.begin() + 550), make_vec3(-0.02f, 0.01f, 0.03f));
+    std::vector<uint> incremental_pixels, incremental_rgb, fresh_pixels, fresh_rgb;
+    visualizer.getPixelUUIDs(incremental_pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPrimitivesExaminedLastBuild(visualizer) == 90);
+    // The annotation pass does not render the colour image, so it is rendered before it is read back
+    visualizer.plotUpdate(true);
+    uint rgb_width = 0, rgb_height = 0;
+    visualizer.getWindowPixelsRGB(incremental_rgb, rgb_width, rgb_height);
+
+    Visualizer fresh(160, 120, 0, false, true);
+    setUpView(fresh);
+    fresh.enableExactColorMode();
+    fresh.buildContextGeometry(&context);
+    fresh.getPixelUUIDs(fresh_pixels, width, height);
+    fresh.plotUpdate(true);
+    fresh.getWindowPixelsRGB(fresh_rgb, rgb_width, rgb_height);
+    DOCTEST_CHECK(incremental_pixels == fresh_pixels);
+    DOCTEST_CHECK(incremental_rgb == fresh_rgb);
+}
+
+TEST_CASE("Phong material indices are reassigned only when a material, or a primitive's material, changes") {
+    // Assigning the indices walked every displayed primitive on every build, to collect the materials in use, because material
+    // data can change without touching a primitive. A build after primitives only moved does not need it.
+    Context context;
+    const std::vector<uint> UUIDs = addTriangleGrid(context, 20);
+    context.addMaterial("glossy");
+    context.setMaterialData("glossy", "phong_specular", 1.f);
+    context.assignMaterialToPrimitive(std::vector<uint>(UUIDs.begin(), UUIDs.begin() + 50), "glossy");
+
+    Visualizer visualizer(160, 120, 0, false, true);
+    setUpView(visualizer);
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    visualizer.getPixelUUIDs(pixels, width, height);
+    size_t walks = VisualizerTestHelper::getPhongMaterialWalkCount(visualizer);
+
+    context.translatePrimitive(std::vector<uint>(UUIDs.begin(), UUIDs.begin() + 100), make_vec3(0.01f, 0, 0));
+    visualizer.getPixelUUIDs(pixels, width, height);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPhongMaterialWalkCount(visualizer) == walks);
+
+    // Material data changes without marking any primitive dirty
+    context.setMaterialData("glossy", "phong_specular", 0.25f);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPhongMaterialWalkCount(visualizer) > walks);
+    walks = VisualizerTestHelper::getPhongMaterialWalkCount(visualizer);
+
+    // A primitive given another material, while moving
+    context.assignMaterialToPrimitive(UUIDs.at(150), "glossy");
+    context.translatePrimitive(UUIDs.at(150), make_vec3(0.01f, 0, 0));
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPhongMaterialWalkCount(visualizer) > walks);
+    walks = VisualizerTestHelper::getPhongMaterialWalkCount(visualizer);
+
+    // A primitive given a material that looks the same, so nothing it draws changes and it is not rebuilt: its Phong index still must
+    context.addMaterial("glossy_twin");
+    context.setMaterialColor("glossy_twin", context.getPrimitiveColorRGBA(UUIDs.at(160)));
+    context.setMaterialData("glossy_twin", "phong_specular", 0.5f);
+    visualizer.getPixelUUIDs(pixels, width, height); // the material changes are taken here
+    walks = VisualizerTestHelper::getPhongMaterialWalkCount(visualizer);
+    context.assignMaterialToPrimitive(UUIDs.at(160), "glossy_twin");
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(VisualizerTestHelper::getPhongMaterialWalkCount(visualizer) > walks);
+}
+
+TEST_CASE("Changing the global Phong material reshades materials that inherit from it, with no overlays on screen") {
+    // A material's Phong parameters that it does not set itself come from the global material, so the per-material table has to
+    // be rebuilt when setPhongMaterial() changes it, even though no material and no primitive changed. With the navigation gizmo
+    // or watermark on screen their geometry is re-registered often enough to hide a table that is never rebuilt, so this renders
+    // with both off, as a headless capture would.
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(10, 10));
+    context.addMaterial("partial");
+    context.assignMaterialToPrimitive(UUID, "partial");
+    context.setPrimitiveColor(UUID, make_RGBcolor(0.5f, 0.5f, 0.5f));
+    context.setMaterialData("partial", "phong_specular", 0.f);
+
+    Visualizer visualizer(64, 64, 0, false, true);
+    visualizer.disableMessages();
+    visualizer.hideWatermark();
+    visualizer.hideNavigationGizmo();
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    visualizer.setLightDirection(make_vec3(0.05f, -0.1f, 1));
+    visualizer.setCameraPosition(make_vec3(0.5f, -2.f, 22), make_vec3(0, 0, 0));
+    visualizer.buildContextGeometry(&context);
+
+    auto renderWithGlobalDiffuse = [&](float diffuse) {
+        Visualizer::PhongMaterial material;
+        material.ambient = 0.2f;
+        material.diffuse = diffuse;
+        material.specular = 0.5f;
+        material.shininess = 32.f;
+        visualizer.setPhongMaterial(material);
+        visualizer.plotUpdate(true);
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        return pixels.at(3 * (size_t(h / 2) * size_t(w) + size_t(w / 2)));
+    };
+
+    const uint dim = renderWithGlobalDiffuse(0.1f);
+    const uint bright = renderWithGlobalDiffuse(0.9f);
+    DOCTEST_REQUIRE(dim > 0);
+    DOCTEST_CHECK(bright > dim);
+}
+
+TEST_CASE("Hidden Context primitives are not drawn, and hiding or showing one takes effect on the next build") {
+    // PlantArchitecture hides the leaf prototypes it copies leaves from and the organs it removes, so a hidden primitive must not
+    // be drawn or reported. Hiding and showing do not mark a primitive dirty, so the build must notice them some other way.
+    Context context;
+    const std::vector<uint> grid = addTriangleGrid(context, 20);
+    const uint cover = context.addPatch(make_vec3(0, 0, 0.5f), make_vec2(0.6f, 0.6f));
+    context.hidePrimitive(cover);
+
+    Visualizer visualizer(160, 120, 0, false, true);
+    setUpView(visualizer);
+    visualizer.buildContextGeometry(&context);
+    std::vector<uint> pixels;
+    uint width = 0, height = 0;
+    auto shows = [&](uint UUID) { return std::find(pixels.begin(), pixels.end(), UUID + 1) != pixels.end(); };
+
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(!shows(cover)); // hidden before it was ever built
+
+    context.showPrimitive(cover);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(shows(cover)); // shown later, with nothing else changed
+
+    context.hidePrimitive(cover);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(!shows(cover)); // hidden while on screen
+
+    // The same through objects
+    const uint object = context.addTileObject(make_vec3(0, 0, 0.6f), make_vec2(0.5f, 0.5f), nullrotation, make_int2(2, 2));
+    context.hideObject(object);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    const std::vector<uint> tiles = context.getObjectPrimitiveUUIDs(object);
+    DOCTEST_CHECK(std::none_of(tiles.begin(), tiles.end(), shows));
+    context.showObject(object);
+    visualizer.getPixelUUIDs(pixels, width, height);
+    DOCTEST_CHECK(std::any_of(tiles.begin(), tiles.end(), shows));
+}
+
+
+// ---------------------------------------------------------------------------------------------
+// Normal and bump maps
+// ---------------------------------------------------------------------------------------------
+
+namespace {
+
+    //! Write a uniform normal-map image whose every texel is (r, g, b) in 0-255
+    std::string writeTestNormalMap(const std::string &name, uint resolution, int r, int g, int b) {
+        const std::string file = (std::filesystem::temp_directory_path() / name).string();
+        writePNG(file, resolution, resolution, std::vector<RGBAcolor>(size_t(resolution) * resolution, make_RGBAcolor(float(r) / 255.f, float(g) / 255.f, float(b) / 255.f, 1.f)));
+        return file;
+    }
+
+    //! Mean red channel over a square of pixels at the centre of the window, after updating the plot
+    double centreBrightness(Visualizer &visualizer) {
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.plotUpdate(true);
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        double sum = 0;
+        int count = 0;
+        for (uint row = h / 2 - 4; row < h / 2 + 4; row++) {
+            for (uint column = w / 2 - 4; column < w / 2 + 4; column++) {
+                sum += pixels.at(3 * (size_t(row) * w + column));
+                count++;
+            }
+        }
+        return sum / count;
+    }
+
+    std::vector<uint> windowPixels(Visualizer &visualizer) {
+        std::vector<uint> pixels;
+        uint w = 0, h = 0;
+        visualizer.plotUpdate(true);
+        visualizer.getWindowPixelsRGB(pixels, w, h);
+        return pixels;
+    }
+
+    //! A headless 64x64 visualizer with Phong lighting looking down on the origin, built from the Context
+    void setUpNormalMapView(Visualizer &visualizer, Context &context) {
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.disableColorbar();
+        visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+        visualizer.buildContextGeometry(&context);
+        // Slightly off-axis: looking straight down the z axis gives a degenerate camera basis
+        visualizer.setCameraPosition(make_vec3(0.1f, 0.1f, 18), make_vec3(0, 0, 0));
+    }
+
+} // namespace
+
+TEST_CASE("Visualizer normal maps tilt the shading normal along u and v") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // A flat untextured patch lit from opposite sides is equally bright either way. A normal map tilted 45 degrees toward +u (red 218) makes the side the light
+    // comes from matter: brighter with the light toward +x (u runs along +x on an unrotated patch), darker with it toward -x. The same with green and v along +y.
+    const std::string tilt_u = writeTestNormalMap("helios_vis_nm_tilt_u.png", 16, 218, 128, 218);
+    const std::string tilt_v = writeTestNormalMap("helios_vis_nm_tilt_v.png", 16, 128, 218, 218);
+
+    Context context;
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20), nullrotation, make_RGBcolor(0.6f, 0.6f, 0.6f));
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+
+    auto litFrom = [&](const vec3 &direction) {
+        visualizer.setLightDirection(direction);
+        return centreBrightness(visualizer);
+    };
+
+    const double flat_plus_x = litFrom(make_vec3(1, 0, 1));
+    const double flat_minus_x = litFrom(make_vec3(-1, 0, 1));
+    DOCTEST_CHECK(std::fabs(flat_plus_x - flat_minus_x) <= 2.0);
+
+    context.setPrimitiveNormalMap(patch, tilt_u);
+    const double u_plus_x = litFrom(make_vec3(1, 0, 1));
+    const double u_minus_x = litFrom(make_vec3(-1, 0, 1));
+    const double u_plus_y = litFrom(make_vec3(0, 1, 1));
+    const double u_minus_y = litFrom(make_vec3(0, -1, 1));
+    DOCTEST_CHECK_MESSAGE(u_plus_x > u_minus_x + 20.0, "a normal map tilted toward +u should be lit from +x: " << u_plus_x << " vs " << u_minus_x);
+    DOCTEST_CHECK(u_plus_x > flat_plus_x);
+    DOCTEST_CHECK(std::fabs(u_plus_y - u_minus_y) <= 2.0);
+
+    context.setPrimitiveNormalMap(patch, tilt_v);
+    const double v_plus_y = litFrom(make_vec3(0, 1, 1));
+    const double v_minus_y = litFrom(make_vec3(0, -1, 1));
+    DOCTEST_CHECK_MESSAGE(v_plus_y > v_minus_y + 20.0, "a normal map tilted toward +v (green up) should be lit from +y: " << v_plus_y << " vs " << v_minus_y);
+
+    // A map in the DirectX convention, whose green points down the image, tilts the other way
+    context.setPrimitiveNormalMap(patch, tilt_v, 1.f, true);
+    const double flipped_plus_y = litFrom(make_vec3(0, 1, 1));
+    const double flipped_minus_y = litFrom(make_vec3(0, -1, 1));
+    DOCTEST_CHECK_MESSAGE(flipped_minus_y > flipped_plus_y + 20.0, "a green-flipped map should tilt toward -v: " << flipped_plus_y << " vs " << flipped_minus_y);
+
+    std::filesystem::remove(tilt_u);
+    std::filesystem::remove(tilt_v);
+}
+
+TEST_CASE("Visualizer normal maps follow mirrored texture coordinates") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // A textured triangle whose u runs along -x: a map tilted toward +u then faces -x
+    const std::string tilt_u = writeTestNormalMap("helios_vis_nm_mirror_tilt_u.png", 16, 218, 128, 218);
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_vis_nm_mirror_texture.png").string();
+    writePNG(texture, 8, 8, std::vector<RGBAcolor>(64, make_RGBAcolor(0.6f, 0.6f, 0.6f, 1.f)));
+
+    Context context;
+    const uint triangle = context.addTriangle(make_vec3(-20, -20, 0), make_vec3(20, -20, 0), make_vec3(0, 20, 0), texture.c_str(), make_vec2(1, 0), make_vec2(0, 0), make_vec2(0.5f, 1));
+    context.setPrimitiveNormalMap(triangle, tilt_u);
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+    const double plus_x = centreBrightness(visualizer);
+    visualizer.setLightDirection(make_vec3(-1, 0, 1));
+    const double minus_x = centreBrightness(visualizer);
+    DOCTEST_CHECK_MESSAGE(minus_x > plus_x + 20.0, "with u mirrored along -x, a map tilted toward +u should be lit from -x: " << plus_x << " vs " << minus_x);
+
+    std::filesystem::remove(tilt_u);
+    std::filesystem::remove(texture);
+}
+
+TEST_CASE("Visualizer bump maps shade as the equivalent normal map") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // A 16-bit ramp rising to the right by a per texel, at strength s, gives the normal normalize(-s*a, 0, 1) at every interior texel
+    const uint resolution = 64;
+    std::vector<uint16_t> ramp(resolution * resolution);
+    for (uint row = 0; row < resolution; row++) {
+        for (uint column = 0; column < resolution; column++) {
+            ramp[row * resolution + column] = uint16_t(1000 * column);
+        }
+    }
+    const std::string bump_file = (std::filesystem::temp_directory_path() / "helios_vis_bump_ramp.png").string();
+    writePNGSingleChannel(bump_file, resolution, resolution, ramp, 16);
+    const float strength = 40.f;
+    const vec3 expected = normalize(make_vec3(-strength * 1000.f / 65535.f, 0.f, 1.f));
+    const std::string normal_file = writeTestNormalMap("helios_vis_bump_equivalent.png", resolution, int(std::lround((expected.x * 0.5f + 0.5f) * 255.f)), 128, int(std::lround((expected.z * 0.5f + 0.5f) * 255.f)));
+
+    Context context;
+    context.addMaterial("surface");
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20), nullrotation, make_RGBcolor(0.6f, 0.6f, 0.6f));
+    context.assignMaterialToPrimitive(patch, "surface");
+    context.setMaterialColor("surface", make_RGBAcolor(0.6f, 0.6f, 0.6f, 1.f));
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+    visualizer.setLightDirection(make_vec3(-1, 0, 1));
+
+    const double flat = centreBrightness(visualizer);
+    context.setMaterialBumpMap("surface", bump_file, strength);
+    const double bump = centreBrightness(visualizer);
+    context.clearMaterialNormalMap("surface");
+    context.setMaterialNormalMap("surface", normal_file);
+    const double normal = centreBrightness(visualizer);
+
+    DOCTEST_CHECK_MESSAGE(bump > flat + 10.0, "the ramp faces -x, so light from -x should brighten it: " << bump << " vs flat " << flat);
+    DOCTEST_CHECK_MESSAGE(std::fabs(bump - normal) <= 3.0, "the bump map and its equivalent normal map should shade alike: " << bump << " vs " << normal);
+
+    std::filesystem::remove(bump_file);
+    std::filesystem::remove(normal_file);
+}
+
+TEST_CASE("Visualizer normal maps update incrementally and can be switched off") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    const std::string tilt_u = writeTestNormalMap("helios_vis_nm_incremental.png", 16, 218, 128, 218);
+
+    Context context;
+    context.addMaterial("bark");
+    context.setMaterialColor("bark", make_RGBAcolor(0.6f, 0.5f, 0.4f, 1.f));
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20));
+    context.assignMaterialToPrimitive(patch, "bark");
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+
+    const std::vector<uint> without_map = windowPixels(visualizer);
+    DOCTEST_CHECK(VisualizerTestHelper::getNormalMapLayerCount(visualizer) == 0);
+
+    context.setMaterialNormalMap("bark", tilt_u);
+    const std::vector<uint> with_map = windowPixels(visualizer);
+    DOCTEST_CHECK(with_map != without_map);
+    DOCTEST_CHECK(VisualizerTestHelper::getNormalMapLayerCount(visualizer) == 1);
+
+    // Turning maps off in the visualizer, or using no lighting, renders exactly as without the map
+    visualizer.disableNormalMaps();
+    DOCTEST_CHECK_FALSE(visualizer.areNormalMapsEnabled());
+    DOCTEST_CHECK(windowPixels(visualizer) == without_map);
+    visualizer.enableNormalMaps();
+    DOCTEST_CHECK(windowPixels(visualizer) == with_map);
+
+    visualizer.setLightingModel(Visualizer::LIGHTING_NONE);
+    const std::vector<uint> unlit_with_map = windowPixels(visualizer);
+    context.clearMaterialNormalMap("bark");
+    const std::vector<uint> unlit_without_map = windowPixels(visualizer);
+    DOCTEST_CHECK(unlit_with_map == unlit_without_map);
+
+    // Clearing the map restores the original image exactly, and the map leaves the GPU
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG);
+    DOCTEST_CHECK(windowPixels(visualizer) == without_map);
+    DOCTEST_CHECK(VisualizerTestHelper::getNormalMapLayerCount(visualizer) == 0);
+
+    std::filesystem::remove(tilt_u);
+}
+
+TEST_CASE("Visualizer normal maps of different sizes keep their orientation") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // A small map tilted toward +u and a larger one tilted toward -u share the texture array, so the small one is resampled to the larger layer size
+    const std::string small_plus_u = writeTestNormalMap("helios_vis_nm_small.png", 8, 218, 128, 218);
+    const std::string large_minus_u = writeTestNormalMap("helios_vis_nm_large.png", 64, 37, 128, 218);
+
+    Context context;
+    const uint left = context.addPatch(make_vec3(-5, 0, 0), make_vec2(9, 9), nullrotation, make_RGBcolor(0.6f, 0.6f, 0.6f));
+    const uint right = context.addPatch(make_vec3(5, 0, 0), make_vec2(9, 9), nullrotation, make_RGBcolor(0.6f, 0.6f, 0.6f));
+    context.setPrimitiveNormalMap(left, small_plus_u);
+    context.setPrimitiveNormalMap(right, large_minus_u);
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+
+    std::vector<uint> pixels;
+    uint w = 0, h = 0;
+    visualizer.plotUpdate(true);
+    visualizer.getWindowPixelsRGB(pixels, w, h);
+    DOCTEST_CHECK(VisualizerTestHelper::getNormalMapLayerCount(visualizer) == 2);
+    const uint left_value = pixels.at(3 * (size_t(h / 2) * w + w / 4 + 2));
+    const uint right_value = pixels.at(3 * (size_t(h / 2) * w + 3 * w / 4 - 2));
+    DOCTEST_CHECK_MESSAGE(left_value > right_value + 20, "the +u map should be lit from +x and the -u map not: " << left_value << " vs " << right_value);
+
+    std::filesystem::remove(small_plus_u);
+    std::filesystem::remove(large_minus_u);
+}
+
+TEST_CASE("Visualizer normal maps on a smooth-shaded textured tube") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    const std::string bark_normal = writeTestNormalMap("helios_vis_nm_tube.png", 32, 180, 140, 230);
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_vis_nm_tube_texture.png").string();
+    writePNG(texture, 8, 8, std::vector<RGBAcolor>(64, make_RGBAcolor(0.5f, 0.4f, 0.3f, 1.f)));
+
+    Context context;
+    const uint tube = context.addTubeObject(8, {make_vec3(0, 0, -3), make_vec3(0, 0, 3)}, {1.f, 1.f}, texture.c_str());
+    context.setPrimitiveNormalMap(context.getObjectPrimitiveUUIDs(tube), bark_normal);
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+    visualizer.setLightDirection(make_vec3(1, 0.3f, 1));
+    visualizer.enableSmoothShading();
+    visualizer.buildContextGeometry(&context);
+    visualizer.setCameraPosition(make_vec3(10, 2, 1), make_vec3(0, 0, 0));
+    std::vector<uint> pixels;
+    uint w = 0, h = 0;
+    DOCTEST_CHECK_NOTHROW(visualizer.plotUpdate(true));
+    visualizer.getWindowPixelsRGB(pixels, w, h);
+    DOCTEST_CHECK(glGetError() == GL_NO_ERROR);
+    DOCTEST_CHECK(VisualizerTestHelper::getNormalMapLayerCount(visualizer) == 1);
+    DOCTEST_CHECK(std::any_of(pixels.begin(), pixels.end(), [](uint value) { return value > 20; }));
+
+    std::filesystem::remove(bark_normal);
+    std::filesystem::remove(texture);
+}
+
+TEST_CASE("Visualizer normal maps reach a patch given a textured material after it was created") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // A patch created without a texture has no (u,v) coordinates; given a textured material it maps the whole image, as in the Context, so its normal map applies
+    const std::string tilt_u = writeTestNormalMap("helios_vis_nm_material_patch.png", 16, 218, 128, 218);
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_vis_nm_material_texture.png").string();
+    writePNG(texture, 8, 8, std::vector<RGBAcolor>(64, make_RGBAcolor(0.6f, 0.6f, 0.6f, 1.f)));
+
+    Context context;
+    const uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(20, 20));
+    context.addMaterial("bark");
+    context.setMaterialTexture("bark", texture);
+    context.setMaterialNormalMap("bark", tilt_u);
+    context.assignMaterialToPrimitive(patch, "bark");
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+    const double plus_x = centreBrightness(visualizer);
+    visualizer.setLightDirection(make_vec3(-1, 0, 1));
+    const double minus_x = centreBrightness(visualizer);
+    DOCTEST_CHECK_MESSAGE(plus_x > minus_x + 20.0, "the material's map tilted toward +u should be lit from +x: " << plus_x << " vs " << minus_x);
+    // The texture is drawn rather than the material's black color
+    DOCTEST_CHECK(plus_x > 20.0);
+
+    std::filesystem::remove(tilt_u);
+    std::filesystem::remove(texture);
+}
+
+TEST_CASE("Visualizer normal maps use an orthonormal tangent frame on skewed texture coordinates") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // u runs along +x and v along the diagonal (+x+y), so dP/dv is not perpendicular to dP/du. In the orthonormal (MikkTSpace, glTF) frame the
+    // bitangent is cross(N, T) = +y, so a map tilted toward +v tilts the surface toward +y only: light from +x and from -x shade it alike. Taking the
+    // bitangent along dP/dv instead would tilt it toward +x as well.
+    const std::string tilt_v = writeTestNormalMap("helios_vis_nm_skew_tilt_v.png", 16, 128, 218, 218);
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_vis_nm_skew_texture.png").string();
+    writePNG(texture, 8, 8, std::vector<RGBAcolor>(64, make_RGBAcolor(0.6f, 0.6f, 0.6f, 1.f)));
+
+    Context context;
+    const uint triangle = context.addTriangle(make_vec3(-30, -20, 0), make_vec3(10, -20, 0), make_vec3(10, 20, 0), texture.c_str(), make_vec2(0, 0), make_vec2(1, 0), make_vec2(0, 1));
+    context.setPrimitiveNormalMap(triangle, tilt_v);
+    Visualizer visualizer(64, 64, 0, true, true);
+    setUpNormalMapView(visualizer, context);
+
+    visualizer.setLightDirection(make_vec3(1, 0, 1));
+    const double plus_x = centreBrightness(visualizer);
+    visualizer.setLightDirection(make_vec3(-1, 0, 1));
+    const double minus_x = centreBrightness(visualizer);
+    visualizer.setLightDirection(make_vec3(0, 1, 1));
+    const double plus_y = centreBrightness(visualizer);
+    visualizer.setLightDirection(make_vec3(0, -1, 1));
+    const double minus_y = centreBrightness(visualizer);
+    DOCTEST_CHECK_MESSAGE(std::fabs(plus_x - minus_x) <= 2.0, "the bitangent should be cross(N, T), with no x component: " << plus_x << " vs " << minus_x);
+    DOCTEST_CHECK_MESSAGE(plus_y > minus_y + 20.0, "a map tilted toward +v should be lit from +y: " << plus_y << " vs " << minus_y);
+
+    std::filesystem::remove(tilt_v);
+    std::filesystem::remove(texture);
+}
+
+TEST_CASE("Visualizer reports normal maps on primitives with collinear texture coordinates") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    // Regression test. Collinear (u,v) coordinates give a map no orientation, so the shader draws such a primitive with its flat normal; the radiation model
+    // warned about it, while the visualizer left the map out without a word.
+    const std::string tilt_u = writeTestNormalMap("helios_vis_nm_collinear_tilt_u.png", 16, 218, 128, 218);
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_vis_nm_collinear_texture.png").string();
+    writePNG(texture, 8, 8, std::vector<RGBAcolor>(64, make_RGBAcolor(0.6f, 0.6f, 0.6f, 1.f)));
+    Context context;
+    const uint degenerate = context.addTriangle(make_vec3(-20, -20, 0), make_vec3(20, -20, 0), make_vec3(0, 20, 0), texture.c_str(), make_vec2(0, 0), make_vec2(0.5f, 0.5f), make_vec2(1, 1));
+    context.setPrimitiveNormalMap(degenerate, tilt_u);
+    Visualizer visualizer(64, 64, 0, true, true);
+    std::string output;
+    {
+        capture_cerr capture;
+        setUpNormalMapView(visualizer, context);
+        (void) windowPixels(visualizer);
+        output = capture.get_captured_output();
+    }
+    DOCTEST_CHECK(output.find("collinear texture (u,v) coordinates") != std::string::npos);
+    std::filesystem::remove(tilt_u);
+    std::filesystem::remove(texture);
 }

@@ -115,6 +115,7 @@ void PlantArchitecture::initializePlantNitrogenPools(uint plantID, float initial
     plant.available_nitrogen_pool_gN = 0;
     plant.cumulative_N_uptake_gN = 0;
     plant.unmet_fruit_N_demand_gN = 0;
+    plant.fruit_nitrogen_pool_gN = 0;
 
     // Initialize per-leaf nitrogen content (area basis) based on current leaf areas
     for (auto &shoot: plant.shoot_tree) {
@@ -183,6 +184,20 @@ float PlantArchitecture::getPlantAvailableNitrogen(uint plantID) const {
         helios_runtime_error("ERROR (PlantArchitecture::getPlantAvailableNitrogen): Plant ID " + std::to_string(plantID) + " does not exist.");
     }
     return plant_instances.at(plantID).available_nitrogen_pool_gN;
+}
+
+float PlantArchitecture::getPlantFruitNitrogen(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantFruitNitrogen): Plant ID " + std::to_string(plantID) + " does not exist.");
+    }
+    return plant_instances.at(plantID).fruit_nitrogen_pool_gN;
+}
+
+float PlantArchitecture::getPlantRootNitrogen(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantRootNitrogen): Plant ID " + std::to_string(plantID) + " does not exist.");
+    }
+    return plant_instances.at(plantID).root_nitrogen_pool_gN;
 }
 
 // ==================== Leaf Senescence ==================== //
@@ -400,7 +415,7 @@ void PlantArchitecture::remobilizeNitrogen(float dt) {
 
         // Expanding leaves and fruit are served first, from any mature leaf. What is collected is delivered in
         // proportion to unmet demand, which was already capped at max_N_accumulation_rate * dt per leaf. The fruit's
-        // share leaves the leaves with the fruit; fruit nitrogen is not tracked as a pool.
+        // share is added to the plant's fruit nitrogen.
         const float growing_unmet_gN = expanding_unmet_gN + fruit_unmet_gN;
         if (growing_unmet_gN > 0) {
             float remaining_gN = growing_unmet_gN;
@@ -416,6 +431,7 @@ void PlantArchitecture::remobilizeNitrogen(float dt) {
                 remaining_gN -= withdrawn_gN;
             }
             const float delivered_fraction = collected_gN / growing_unmet_gN;
+            plant.fruit_nitrogen_pool_gN += delivered_fraction * fruit_unmet_gN;
             for (const LeafNitrogenDemand &sink: expanding_sinks) {
                 sink.shoot->leaf_nitrogen_gN_m2[sink.leaf_objID] += delivered_fraction * sink.demand_gN / sink.area;
             }
@@ -558,6 +574,7 @@ void PlantArchitecture::removeFruitNitrogen() {
         // ---- Deduct from available pool first (supply-limited) ----
         float pool_supply_gN = std::min(total_fruit_demand_gN, plant.available_nitrogen_pool_gN);
         plant.available_nitrogen_pool_gN -= pool_supply_gN;
+        plant.fruit_nitrogen_pool_gN += pool_supply_gN;
         if (plant.available_nitrogen_pool_gN < 0) {
             plant.available_nitrogen_pool_gN = 0; // Safety clamp
         }

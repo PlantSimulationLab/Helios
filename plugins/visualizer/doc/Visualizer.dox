@@ -748,7 +748,17 @@
     <tr><td>\ref Visualizer::writeNormDepthImage() "writeNormDepthImage()"</td><td>Grayscale JPEG for viewing, in which the nearest surface is white and anything at or beyond a given maximum depth is black.</td></tr>
   </table>
 
-  The underlying buffers can also be retrieved directly, without writing a file: \ref Visualizer::getDepthImage() "getDepthImage()" returns the depth of each pixel, and \ref Visualizer::getPixelUUIDs() "getPixelUUIDs()" returns the UUID of the Context primitive visible in each pixel.
+  The underlying buffers can also be retrieved directly, without writing a file: \ref Visualizer::getDepthImage(std::vector<float>&, uint&, uint&) "getDepthImage()" returns the depth of each pixel, and \ref Visualizer::getPixelUUIDs(std::vector<uint>&, uint&, uint&) "getPixelUUIDs()" returns the UUID of the Context primitive visible in each pixel (plus one, so that 0 means none). Both come from the same render, so when both are needed, \ref Visualizer::getPixelUUIDsAndDepth(std::vector<uint>&, std::vector<float>&, uint&, uint&) "getPixelUUIDsAndDepth()" returns them together for the cost of one. Each of the three also takes a rectangle of the image (left column, top row, width and height, in pixels), and then renders and returns only that rectangle, pixel for pixel identical to the same part of the whole-image result. This is much faster when the region of interest, such as the screen box of one plant, is a small part of the image:
+
+  \code{.cpp}
+  std::vector<uint> pixel_UUIDs;
+  std::vector<float> pixel_depth;
+  // a 128 x 96 pixel rectangle whose top-left corner is at column 400, row 250
+  visualizer.getPixelUUIDsAndDepth(pixel_UUIDs, pixel_depth, 400, 250, 128, 96);
+  // pixel_UUIDs.at(row * 128 + column) for row 0..95 and column 0..127
+  \endcode
+
+  These calls render their own pass from the current Context geometry and camera; they do not render the colour image. A primitive hidden with Context::hidePrimitive() is absent from them as from the image, and hiding or showing primitives is cheap: their geometry stays in the Visualizer, flagged invisible.
 
   \note \ref Visualizer::getDepthMap(std::vector<float>&, uint&, uint&) "getDepthMap()" and \ref Visualizer::plotDepthMap() "plotDepthMap()" produce a <i>normalized</i> depth map for display, scaled between the nearest and farthest values in view. It is not a distance. Use getDepthImage() when the depth is needed in world units.
 
@@ -1178,6 +1188,55 @@
   \note On alpha-masked cutouts such as leaf textures, smooth shading can look worse than flat
   shading: the interpolated normal no longer agrees with the visible silhouette, which the alpha mask
   rather than the geometry defines. Use \ref Visualizer::disableSmoothShading() for such scenes.
+
+  \subsubsection NormalMapShading Normal and bump maps
+
+  A primitive whose material has a normal map (\ref helios::Context::setMaterialNormalMap() "setMaterialNormalMap()")
+  or a bump map (\ref helios::Context::setMaterialBumpMap() "setMaterialBumpMap()") is lit with the shading normal the
+  map gives at each pixel, so relief such as bark furrows or leaf veins catches the light without any change to the
+  geometry. The map is sampled with the primitive's texture (u,v) coordinates -- an untextured patch maps the whole
+  image -- in the tangent space of OpenGL, glTF and Blender (+x along increasing u, +y along increasing v), and tilts the
+  geometric normal, or with \ref SmoothShading "smooth shading" the interpolated one. This is the same convention the
+  radiation model uses, so a surface's relief falls on the same side in both.
+
+  Only the lit terms change. The diffuse and specular terms use the shading normal, the hemispheric ambient term uses
+  it on the side being viewed, and the shadow lookup keeps the geometric normal, because whether light reaches a
+  surface does not depend on its relief. A shading normal can face the light where the surface itself does not, which
+  would end the lit region in a hard line; the shadow-terminator term of Chiang, Li and Burley (2019), "Taming the
+  Shadow Terminator", fades the direct light smoothly to zero there instead. With \ref Visualizer::LIGHTING_NONE the
+  maps have no effect.
+
+  \ref Visualizer::disableNormalMaps() turns the maps off without removing them from the GPU, which is convenient for
+  comparing a scene with and without them, and \ref Visualizer::enableNormalMaps() (the default) turns them back on.
+
+  Each distinct map (file, strength and green-channel flip) is stored once on the GPU, whatever the number of
+  primitives using it, as two bytes per texel plus mipmaps. All maps share one texture array whose layers have the size
+  of the largest map (at most 2048x2048), so a smaller map is resampled to that size: a 1024x1024 map costs about 2.8 MB
+  and a 2048x2048 map about 11 MB. If many maps would take more than 256 MiB at that size, the layers are reduced
+  together until they fit (the radiation model keeps every map at its full resolution). Maps are found through the
+  material of each primitive, so they add nothing to the memory per primitive. Maps are sampled with the same texel
+  convention as the radiation model, so relief lines up between visualizer and radiation camera images.
+
+  ~~~~~~{.cpp}
+   #include "Visualizer.h"
+
+   int main(){
+      Context context;
+      uint trunk = context.addTubeObject( 24, {make_vec3(0,0,0), make_vec3(0,0,2)}, {0.15f, 0.12f}, "AlmondBark.jpg" );
+      context.addMaterial( "bark" );
+      context.setMaterialTexture( "bark", "AlmondBark.jpg" );
+      context.setMaterialNormalMap( "bark", "AlmondBark_normal.png" );
+      context.assignMaterialToObject( trunk, "bark" );
+
+      Visualizer vis( 1200 );
+      vis.setLightingModel( Visualizer::LIGHTING_PHONG_SHADOWED );
+      vis.setLightDirection( make_vec3(1, 0.5, 0.4) ); // a low sun brings out relief
+      vis.buildContextGeometry( &context );
+      vis.plotInteractive();
+   }
+  ~~~~~~
+
+  Normal and bump maps can be made from a texture photograph with the script in utilities/pbr_maps.
 
   \subsubsection LinearPipeline Linear-light rendering and tone mapping
 

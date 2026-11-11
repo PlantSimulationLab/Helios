@@ -17,6 +17,7 @@
 */
 
 #include "CollisionDetection.h"
+#include "CollisionGeometry.h"
 #include <atomic>
 #include <functional>
 #include <limits>
@@ -31,6 +32,7 @@
 #endif
 
 using namespace helios;
+using namespace helios::collision;
 
 #ifdef HELIOS_CUDA_AVAILABLE
 // GPU BVH node structure (must match the one in .cu file)
@@ -3058,7 +3060,9 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
 
 // -------- CAPSULE PROXIMITY QUERIES --------
 
-namespace {
+// The exact segment/triangle distance queries are declared in CollisionGeometry.h so that other plug-ins (e.g. the fruit-branch contact resolution of PlantArchitecture) can use them without a BVH.
+namespace helios {
+    namespace collision {
 
     //! Closest points between segments p1-q1 and p2-q2, returning their squared distance
     /**
@@ -3194,6 +3198,11 @@ namespace {
         }
         return nearest_distance_squared;
     }
+
+    } // namespace collision
+} // namespace helios
+
+namespace {
 
     //! Euclidean distance between two axis-aligned boxes (zero if they overlap)
     float aabbSeparation(const vec3 &min1, const vec3 &max1, const vec3 &min2, const vec3 &max2) {

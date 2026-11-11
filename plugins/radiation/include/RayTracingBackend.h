@@ -214,6 +214,31 @@ namespace helios {
         [[nodiscard]] virtual size_t getRadiationInTopBufferSize() const = 0;
 
         /**
+         * @brief Get the forward scattering estimate of the diffuse launches since zeroScatterBuffers()
+         *
+         * In a launch with RayTracingLaunchParams::forward_scatter_enabled set, every ray that leaves a primitive and reaches a surface adds
+         * the flux the primitive sends out along the ray times the fraction of it that surface scatters again (its reflectivity plus
+         * transmissivity, or a cover's reflectance), attenuated by any covers on the way. Summed over a primitive's rays this is the share
+         * of its outgoing flux that the next scattering generation will carry, a forward estimate whose total over all primitives,
+         * weighted by area, cannot exceed the launched power times the largest re-scattered fraction in the scene.
+         *
+         * @param[out] forward_scatter Per [primitive][launch band], in the units of the outgoing flux (per unit area of the launching primitive)
+         * @param[in] launch_band_count Number of launched bands
+         */
+        virtual void getForwardScatterResults(std::vector<float> &forward_scatter, size_t launch_band_count) = 0;
+
+        /**
+         * @brief Get the direct radiation of each source that reached each primitive in the direct launch since zeroRadiationBuffers()
+         *
+         * Recorded for the primitives with a surface layer, and with camera flux smoothing for every smoothed primitive (those whose first smoothing vertex index is not negative), when the direct launch
+         * sets RayTracingLaunchParams::specular_reflection_enabled. Each value is the flux reaching the face toward the source, per unit area, including the attenuation of any translucent covers.
+         *
+         * @param[out] direct_flux Per [source][primitive][launch band]
+         * @param[in] launch_band_count Number of launched bands
+         */
+        virtual void getDirectFluxResults(std::vector<float> &direct_flux, size_t launch_band_count) = 0;
+
+        /**
          * @brief Number of direct and diffuse rays abandoned at the periodic wrap limit
          *
          * @return Rays that reached the periodic-boundary wrap limit (MAX_PERIODIC_WRAPS) and were treated as blocked, accumulated by every
@@ -241,11 +266,14 @@ namespace helios {
          *
          * @param[in] track_face_absorption If true, every following direct and diffuse launch also accumulates the absorbed radiation that arrived on the top face of each primitive
          * (read with getRadiationInTopResults()), in a buffer sized [primitive][launch band]. If false, that buffer is reduced to a placeholder and the launches skip the write.
+         * @param[in] record_normal_map_moments If true, the diffuse launches record, for each primitive with a normal map, the flux-weighted directions of the radiation reaching
+         * each face (see RayTracingGeometry::normal_map_slots), with which cameras shade its scattered light; only needed when there are cameras. If false, the record is reduced to a
+         * placeholder and the launches skip it.
          */
-        virtual void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) = 0;
+        virtual void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption, bool record_normal_map_moments) = 0;
 
         /**
-         * @brief Zero scatter buffers (scatter_buff_top, scatter_buff_bottom)
+         * @brief Zero scatter buffers (scatter_buff_top, scatter_buff_bottom) and the forward scattering estimate (see getForwardScatterResults())
          */
         virtual void zeroScatterBuffers() = 0;
 
@@ -281,13 +309,45 @@ namespace helios {
         /**
          * @brief Upload the outgoing radiation resampled onto the shared mesh vertices, for camera flux smoothing
          *
-         * @param[in] vertex_radiation_out_top Top-face outgoing radiation at each shared vertex [Nvertices * Nbands]
-         * @param[in] vertex_radiation_out_bottom Bottom-face outgoing radiation at each shared vertex [Nvertices * Nbands]
+         * @param[in] vertex_radiation_out_top Top-face outgoing radiation at each shared vertex [component][Nvertices][Nbands]
+         * @param[in] vertex_radiation_out_bottom Bottom-face outgoing radiation at each shared vertex [component][Nvertices][Nbands]
          *
-         * Read by the camera hit program in place of the per-primitive value, and interpolated across the facet from the shared vertices its corners belong to. Both vectors are empty when smoothing is
-         * disabled, in which case the backend has nothing to upload and cameras fall back to the per-primitive value.
+         * Read by the camera hit program in place of the per-primitive value, and interpolated across the facet from the shared vertices its corners belong to. There is one component, or two when some
+         * primitive has a specular surface layer, whose reflection is the second; the camera program reads the second only while uploadVertexNormals() has supplied normals. Both vectors are empty when
+         * smoothing is disabled, in which case the backend has nothing to upload and cameras fall back to the per-primitive value.
          */
         virtual void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) = 0;
+
+        /**
+         * @brief Upload the unit shading normal at each shared mesh vertex, for the specular surface layers seen by cameras with flux smoothing
+         *
+         * @param[in] vertex_normals Three values per shared vertex [Nvertices * 3], or empty to release the buffer
+         *
+         * With these present, the camera hit program interpolates a shading normal across each smoothed facet for the angle-dependent terms of a surface layer, and reads the layer's own outgoing component
+         * from the second component of the vertex radiation (see uploadVertexRadiationOut()), and raises the origin of a shadow ray from a facet turned away from a source onto the smooth surface they
+         * describe. RadiationModel supplies them only while smoothing is enabled and there is a source or some primitive has a layer. A geometry upload (updateGeometry()) releases them, because they
+         * belong to the topology of the geometry they were built from.
+         */
+        virtual void uploadVertexNormals(const std::vector<float> &vertex_normals) = 0;
+
+        /**
+         * @brief Get the directions of the diffuse radiation that reached each primitive with a normal map in the diffuse launches since zeroRadiationBuffers()
+         *
+         * @param[out] moments Flux-weighted sums of the directions the radiation came from, per [normal-map slot][face (top, then bottom)][launch band][3] (see RayTracingGeometry::normal_map_slots), or
+         * empty when the last zeroRadiationBuffers() call did not ask for them to be recorded
+         */
+        virtual void getNormalMapMoments(std::vector<float> &moments) = 0;
+
+        /**
+         * @brief Upload the directions of the diffuse radiation reaching primitives with a normal map, averaged onto the shared vertices of camera flux smoothing
+         *
+         * @param[in] vertex_moments Values per [smoothing vertex][face (top, then bottom)][launch band][3] (see RadiationModel::accumulateNormalMapMomentsAtVertices()), or empty to release the buffer
+         *
+         * With these present, a camera hit on a smoothed primitive with a normal map interpolates the directions from the facet's vertices, as it does the outgoing radiation, instead of reading the
+         * primitive's own, so that the shading of its scattered light is continuous across the facets. A geometry upload (updateGeometry()) releases them.
+         */
+        virtual void uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) = 0;
+
 
         /**
          * @brief Upload the outgoing radiation of each class of each primitive with a spectral texture, for one camera
@@ -304,13 +364,14 @@ namespace helios {
         /**
          * @brief Upload the radiation reaching and leaving the faces of primitives with a spectral texture, averaged onto the vertices of camera flux smoothing
          *
-         * With camera flux smoothing, a camera hit on a primitive with a spectral texture sees the class at the hit point in the radiation interpolated from the
-         * facet's vertices: what the facet's face emits, plus the class's camera-weighted reflectivity and transmissivity for each source slot times the radiation
-         * reaching the same and the opposite face (see RadiationModel::accumulateSpectralIncidentAtVertices()).
+         * With camera flux smoothing, a camera hit on a primitive with a spectral texture sees the class at the hit point in what the facet's face emits, plus the
+         * class's camera-weighted reflectivity and transmissivity times the radiation reaching the same and the opposite face. The radiation from the sky and other
+         * surfaces and the emitted radiation are interpolated from the facet's vertices (see RadiationModel::accumulateSpectralIncidentAtVertices()); the direct
+         * radiation of the sources is taken from the facet itself, as for a primitive without a spectral texture.
          *
-         * @param[in] vertex_values Values per [face (top, bottom)][layer][smoothing vertex][launch band]: layers 0 to layer_count - 2 are the source slots of
-         * RayTracingResults::spectral_incident and the last is the emitted radiation. Empty for none, which clears any earlier upload.
-         * @param[in] layer_count Number of layers (source slots plus one), or 0 for none
+         * @param[in] vertex_values Values per [face (top, bottom)][layer][smoothing vertex][launch band]: layer 0 is the last source slot of
+         * RayTracingResults::spectral_incident (the sky and other surfaces) and layer 1 the emitted radiation. Empty for none, which clears any earlier upload.
+         * @param[in] layer_count Number of layers: 2, or 0 for none
          * @param[in] camera Index of the camera about to be traced, whose camera-weighted palette values the device uses
          */
         virtual void uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) = 0;

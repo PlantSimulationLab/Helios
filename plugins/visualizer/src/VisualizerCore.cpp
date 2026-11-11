@@ -56,6 +56,10 @@ using namespace helios;
 // This avoids macOS-specific issues with reinitializing GLFW after termination
 static int glfw_reference_count = 0;
 
+// Number of Visualizers rendering through each EGL display. eglGetPlatformDisplayEXT returns the same display for the same device to
+// every caller, and eglTerminate is not reference counted, so a display is terminated only when no Visualizer uses it.
+static std::map<void *, int> egl_display_reference_count;
+
 int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, uint &height, uint &width) {
     std::vector<helios::RGBcolor> rgb_data;
     helios::readJPEG(filename, width, height, rgb_data);
@@ -659,6 +663,13 @@ bool Visualizer::createEGLContext() {
     // Devices are tried in order. A node commonly enumerates several, most of which fail to
     // initialize (they are display connectors with nothing attached), and the software rasterizer
     // may appear alongside the GPU. The first device that yields a working 3.3 context wins.
+    // A display that another Visualizer is rendering through must stay initialized: terminating it would destroy that Visualizer's context.
+    auto terminateDisplayIfUnused = [](EGLDisplay display) {
+        if (egl_display_reference_count[(void *) display] == 0) {
+            eglTerminate(display);
+        }
+    };
+
     for (EGLint i = 0; i < device_count; i++) {
         EGLDisplay display = getPlatformDisplay(EGL_PLATFORM_DEVICE_EXT, devices[i], nullptr);
         if (display == EGL_NO_DISPLAY) {
@@ -671,29 +682,30 @@ bool Visualizer::createEGLContext() {
         EGLConfig config;
         EGLint config_count = 0;
         if (eglChooseConfig(display, config_attributes, &config, 1, &config_count) == EGL_FALSE || config_count == 0) {
-            eglTerminate(display);
+            terminateDisplayIfUnused(display);
             continue;
         }
         // Desktop OpenGL, not OpenGL ES: the shaders are GLSL 3.30 core.
         if (eglBindAPI(EGL_OPENGL_API) == EGL_FALSE) {
-            eglTerminate(display);
+            terminateDisplayIfUnused(display);
             continue;
         }
         EGLContext egl_ctx = eglCreateContext(display, config, EGL_NO_CONTEXT, context_attributes);
         if (egl_ctx == EGL_NO_CONTEXT) {
-            eglTerminate(display);
+            terminateDisplayIfUnused(display);
             continue;
         }
         // Surfaceless: all drawing goes to framebuffer objects, which is what headless rendering
         // does anyway (see setupOffscreenFramebuffer()).
         if (eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, egl_ctx) == EGL_FALSE) {
             eglDestroyContext(display, egl_ctx);
-            eglTerminate(display);
+            terminateDisplayIfUnused(display);
             continue;
         }
 
         egl_display = (void *) display;
         egl_context = (void *) egl_ctx;
+        egl_display_reference_count[egl_display]++;
         window = nullptr;
 
         // Offscreen rendering is sized from the requested display size, not from any window.
@@ -710,13 +722,46 @@ void Visualizer::destroyEGLContext() {
 #ifdef HELIOS_VISUALIZER_EGL
     if (egl_context != nullptr) {
         EGLDisplay display = (EGLDisplay) egl_display;
-        eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        if (eglGetCurrentContext() == (EGLContext) egl_context) {
+            eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        }
         eglDestroyContext(display, (EGLContext) egl_context);
-        eglTerminate(display);
+        int &display_users = egl_display_reference_count[egl_display];
+        display_users--;
+        if (display_users <= 0) {
+            egl_display_reference_count.erase(egl_display);
+            eglTerminate(display);
+        }
     }
 #endif
     egl_context = nullptr;
     egl_display = nullptr;
+}
+
+bool Visualizer::tryMakeContextCurrent() const noexcept {
+#ifdef HELIOS_VISUALIZER_EGL
+    if (egl_context != nullptr) {
+        if (eglGetCurrentContext() == (EGLContext) egl_context) {
+            return true;
+        }
+        return eglMakeCurrent((EGLDisplay) egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, (EGLContext) egl_context) == EGL_TRUE;
+    }
+#endif
+    if (window != nullptr) {
+        GLFWwindow *own_window = scast<GLFWwindow *>(window);
+        if (glfwGetCurrentContext() != own_window) {
+            glfwMakeContextCurrent(own_window);
+        }
+        return glfwGetCurrentContext() == own_window;
+    }
+    return false;
+}
+
+void Visualizer::makeContextCurrent(const char *caller) const {
+    if (!tryMakeContextCurrent()) {
+        helios_runtime_error("ERROR (" + std::string(caller) +
+                             "): Could not make this Visualizer's OpenGL context current, so it cannot draw or read back. The Visualizer has no window or EGL context, or the graphics driver refused to switch to it.");
+    }
 }
 
 void Visualizer::createOffscreenContext() {
@@ -1181,6 +1226,7 @@ void Visualizer::cleanupOffscreenFramebuffer() {
 }
 
 std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
+    makeContextCurrent("Visualizer::readOffscreenPixels");
 
     // Headless rendering draws into a multisampled framebuffer; resolve it into the single-sampled
     // color texture before reading, or the read returns the unrendered single-sampled attachment.
@@ -1267,6 +1313,7 @@ std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
 }
 
 std::vector<helios::RGBAcolor> Visualizer::readOffscreenPixelsRGBA(bool read_alpha) const {
+    makeContextCurrent("Visualizer::readOffscreenPixelsRGBA");
 
     // Headless rendering draws into a multisampled framebuffer; resolve it into the single-sampled
     // color texture before reading, or the read returns the unrendered single-sampled attachment.
@@ -1894,6 +1941,8 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     // They are therefore given valid, inert contents up front rather than left at texture 0.
     createShadowMapPlaceholderTexture();
     uploadPhongMaterialTable({});
+    uploadNormalMapMaterialTable({});
+    transferNormalMapData();
 
     // The shadow-map framebuffer is created lazily by createShadowFramebuffer() the first
     // time shadowed lighting is actually rendered, in both windowed and headless modes.
@@ -1949,6 +1998,14 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 }
 
 Visualizer::~Visualizer() {
+    // OpenGL object names belong to a context, and every context numbers its objects from 1. The deletions below must run in this
+    // Visualizer's own context: run in whichever context happened to be current - another Visualizer's, after it was created or drew
+    // - they deleted that Visualizer's framebuffers and buffers, and its next read-back failed. If the context cannot be made current
+    // its objects are left to be released with the context itself, which is destroyed below.
+    const bool own_context_current = tryMakeContextCurrent();
+
+    if (own_context_current) {
+
     // Clean up the shadow-map framebuffer, which either mode may have created. The zero
     // checks cover the common case where shadowed lighting was never used.
     if (framebufferID != 0) {
@@ -1997,11 +2054,18 @@ Visualizer::~Visualizer() {
         cleanupOffscreenFramebuffer();
     }
 
+    } // end of the framebuffer cleanup, which needs this Visualizer's context to be current
+
     // Clean up common OpenGL resources regardless of mode. The test is for a live OpenGL context,
     // which an EGL headless Visualizer has without ever owning a GLFW window.
     if (window != nullptr || egl_context != nullptr) {
 
+        if (own_context_current) {
         glDeleteBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
+        if (rectangle_element_buffer != 0) {
+            glDeleteBuffers(1, &rectangle_element_buffer);
+            rectangle_element_buffer = 0;
+        }
         glDeleteBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
         glDeleteBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
         glDeleteBuffers((GLsizei) vertex_normal_buffer.size(), vertex_normal_buffer.data());
@@ -2014,6 +2078,18 @@ Visualizer::~Visualizer() {
         if (phong_material_table_texture != 0) {
             glDeleteTextures(1, &phong_material_table_texture);
             phong_material_table_texture = 0;
+        }
+        if (normal_map_material_table_buffer != 0) {
+            glDeleteBuffers(1, &normal_map_material_table_buffer);
+            normal_map_material_table_buffer = 0;
+        }
+        if (normal_map_material_table_texture != 0) {
+            glDeleteTextures(1, &normal_map_material_table_texture);
+            normal_map_material_table_texture = 0;
+        }
+        if (normal_map_array != 0) {
+            glDeleteTextures(1, &normal_map_array);
+            normal_map_array = 0;
         }
 
         glDeleteBuffers((GLsizei) color_buffer.size(), color_buffer.data());
@@ -2045,6 +2121,7 @@ Visualizer::~Visualizer() {
         }
         glDeleteBuffers(1, &uv_rescale_buffer);
         glDeleteTextures(1, &uv_rescale_texture_object);
+        } // end of the OpenGL object cleanup
 
         if (window != nullptr) {
 
@@ -2057,7 +2134,9 @@ Visualizer::~Visualizer() {
         // so this must happen first. Without it, in-flight Metal command buffers can
         // outlive the window and accumulate in the per-process pool, eventually
         // crashing later glReadPixels calls inside MTLResourceListPoolCreateResourceList.
-        glFinish();
+        if (own_context_current) {
+            glFinish();
+        }
 #endif
         glfwPollEvents();
 
@@ -2097,18 +2176,51 @@ void Visualizer::disableMessages() {
 void Visualizer::setCameraPosition(const helios::vec3 &cameraPosition, const helios::vec3 &lookAt) {
     camera_eye_location = cameraPosition;
     camera_lookat_center = lookAt;
+    camera_position_set_by_user = true;    // A moved camera changes what would be drawn. cameraHasChanged() cannot be relied on for this: the navigation gizmo consumes it.
+    rendered_frame_is_current = false;
 }
 
 void Visualizer::setCameraPosition(const helios::SphericalCoord &cameraAngle, const helios::vec3 &lookAt) {
     camera_lookat_center = lookAt;
     camera_eye_location = camera_lookat_center + sphere2cart(cameraAngle);
+    camera_position_set_by_user = true;    // A moved camera changes what would be drawn. cameraHasChanged() cannot be relied on for this: the navigation gizmo consumes it.
+    rendered_frame_is_current = false;
 }
 
 void Visualizer::setCameraFieldOfView(float angle_FOV) {
     camera_FOV = angle_FOV;
+    // The view angle changes what would be drawn, which rendered_frame_is_current must not survive;
+    // cameraHasChanged() looks only at the eye and look-at points.
+    rendered_frame_is_current = false;
+}
+
+void Visualizer::setCameraUpDirection(const helios::vec3 &up) {
+    if (!std::isfinite(up.x) || !std::isfinite(up.y) || !std::isfinite(up.z) || up.magnitude() == 0.f) {
+        helios_runtime_error("ERROR (Visualizer::setCameraUpDirection): the up direction must be a finite, non-zero vector; got (" + std::to_string(up.x) + ", " + std::to_string(up.y) + ", " + std::to_string(up.z) + ").");
+    }
+    camera_up_direction = up;
+    camera_up_direction_set = true;
+    rendered_frame_is_current = false;
+}
+
+void Visualizer::clearCameraUpDirection() {
+    camera_up_direction_set = false;
+    rendered_frame_is_current = false;
+}
+
+void Visualizer::setCameraPrincipalPoint(float column, float row) {
+    if (!std::isfinite(column) || !std::isfinite(row)) {
+        helios_runtime_error("ERROR (Visualizer::setCameraPrincipalPoint): the principal point must be finite; got (" + std::to_string(column) + ", " + std::to_string(row) + ").");
+    }
+    camera_principal_column = column;
+    camera_principal_row = row;
+    camera_principal_point_set = true;
+    rendered_frame_is_current = false;
 }
 
 void Visualizer::setLightDirection(const helios::vec3 &direction) {
+    rendered_frame_is_current = false; // changes what is drawn
+    makeContextCurrent("Visualizer::setLightDirection");
     light_direction = direction / direction.magnitude();
     // Send the normalized vector: the shader scales the diffuse term by dot(normal,lightDirection),
     // so passing the raw argument would scale shading by the caller's vector magnitude.
@@ -2116,14 +2228,17 @@ void Visualizer::setLightDirection(const helios::vec3 &direction) {
 }
 
 void Visualizer::setLightingModel(LightingModel lightingmodel) {
+    rendered_frame_is_current = false; // changes what is drawn
     primaryLightingModel = lightingmodel;
 }
 
 void Visualizer::setLightIntensityFactor(float lightintensityfactor) {
+    rendered_frame_is_current = false; // changes what is drawn
     lightintensity = lightintensityfactor;
 }
 
 void Visualizer::enableExactColorMode() {
+    rendered_frame_is_current = false; // changes what is drawn
     colorboost = 1.f;
     // Tone mapping and sRGB encoding are non-linear transformations of the color channels, so they
     // would corrupt any data (e.g. object ID codes) carried through the framebuffer.
@@ -2131,6 +2246,7 @@ void Visualizer::enableExactColorMode() {
 }
 
 void Visualizer::disableExactColorMode() {
+    rendered_frame_is_current = false; // changes what is drawn
     colorboost = 1.5f;
     // enableExactColorMode() turns the linear pipeline off; restore it so that the two calls are a
     // true round trip rather than silently leaving the renderer in a non-default state.
@@ -2138,14 +2254,17 @@ void Visualizer::disableExactColorMode() {
 }
 
 void Visualizer::enableLinearPipeline() {
+    rendered_frame_is_current = false; // changes what is drawn
     linear_pipeline_enabled = true;
 }
 
 void Visualizer::disableLinearPipeline() {
+    rendered_frame_is_current = false; // changes what is drawn
     linear_pipeline_enabled = false;
 }
 
 void Visualizer::setExposure(float a_exposure) {
+    rendered_frame_is_current = false; // changes what is drawn
     if (a_exposure <= 0.f) {
         helios_runtime_error("ERROR (Visualizer::setExposure): Exposure must be positive, but a value of " + std::to_string(a_exposure) +
                              " was given. Exposure is a linear multiplier applied to radiance before tone mapping; use a value greater than 1 to brighten the image and less than 1 to darken it.");
@@ -2162,6 +2281,7 @@ bool Visualizer::isLinearPipelineEnabled() const {
 }
 
 void Visualizer::setPhongMaterial(const PhongMaterial &material) {
+    rendered_frame_is_current = false; // changes what is drawn
     if (material.ambient < 0.f || material.diffuse < 0.f || material.specular < 0.f) {
         helios_runtime_error("ERROR (Visualizer::setPhongMaterial): Reflectance weights must be non-negative, but ambient=" + std::to_string(material.ambient) + ", diffuse=" + std::to_string(material.diffuse) + ", specular=" + std::to_string(material.specular) +
                              " was given. A negative weight would subtract light from the scene.");
@@ -2172,6 +2292,7 @@ void Visualizer::setPhongMaterial(const PhongMaterial &material) {
     }
 
     phong_material = material;
+    phong_global_material_changed = true;
 }
 
 Visualizer::PhongMaterial Visualizer::getPhongMaterial() const {
@@ -2179,6 +2300,7 @@ Visualizer::PhongMaterial Visualizer::getPhongMaterial() const {
 }
 
 void Visualizer::setAmbientColors(const helios::RGBcolor &sky_color, const helios::RGBcolor &ground_color) {
+    rendered_frame_is_current = false; // changes what is drawn
     // No range validation is needed here: helios::RGBcolor clamps its components to [0,1] in its
     // own constructor, so an out-of-range ambient color cannot reach this function.
     ambient_sky_color = sky_color;
@@ -2194,15 +2316,29 @@ helios::RGBcolor Visualizer::getAmbientGroundColor() const {
 }
 
 void Visualizer::enableSmoothShading() {
+    rendered_frame_is_current = false; // changes what is drawn
     smooth_shading_enabled = true;
 }
 
 void Visualizer::disableSmoothShading() {
+    rendered_frame_is_current = false; // changes what is drawn
     smooth_shading_enabled = false;
 }
 
 bool Visualizer::isSmoothShadingEnabled() const {
     return smooth_shading_enabled;
+}
+
+void Visualizer::enableNormalMaps() {
+    normal_maps_enabled = true;
+}
+
+void Visualizer::disableNormalMaps() {
+    normal_maps_enabled = false;
+}
+
+bool Visualizer::areNormalMapsEnabled() const {
+    return normal_maps_enabled;
 }
 
 std::unordered_map<uint, int> Visualizer::buildPhongMaterialTable(const helios::Context *context, const std::set<uint> &referenced_material_IDs) {
@@ -2215,16 +2351,37 @@ std::unordered_map<uint, int> Visualizer::buildPhongMaterialTable(const helios::
 
     std::unordered_map<uint, int> material_ID_to_index;
     std::vector<GLfloat> table;
+    // Normal-map layer of each table entry, and the decoded maps in layer order. A map shared by several materials (same file, kind, strength and flip) is one
+    // decoded object in the Context's cache, and so takes one layer.
+    std::vector<GLfloat> normal_map_table;
+    std::vector<std::shared_ptr<const helios::NormalMapTexels>> layers;
+    std::map<const helios::NormalMapTexels *, int> layer_of;
 
     for (uint materialID: referenced_material_IDs) {
 
         const helios::Material &material = context->getMaterial(materialID);
 
         // A material that specifies none of the four parameters is left out of the table entirely,
-        // so its primitives keep an index of -1 and fall back to the global Phong material.
+        // so its primitives keep an index of -1 and fall back to the global Phong material. One
+        // with a normal map is kept regardless, since the table index is also how its primitives
+        // find their map; it then carries the global parameters.
         const bool has_any = material.doesMaterialDataExist("phong_ambient") || material.doesMaterialDataExist("phong_diffuse") || material.doesMaterialDataExist("phong_specular") || material.doesMaterialDataExist("phong_shininess");
-        if (!has_any) {
+        const bool has_normal_map = material.normal_map_kind != helios::NORMAL_MAP_NONE;
+        if (!has_any && !has_normal_map) {
             continue;
+        }
+
+        int normal_map_layer = -1;
+        if (has_normal_map) {
+            std::shared_ptr<const helios::NormalMapTexels> texels = context->getMaterialNormalMapTexels(materialID);
+            const auto existing = layer_of.find(texels.get());
+            if (existing != layer_of.end()) {
+                normal_map_layer = existing->second;
+            } else {
+                normal_map_layer = static_cast<int>(layers.size());
+                layer_of[texels.get()] = normal_map_layer;
+                layers.push_back(std::move(texels));
+            }
         }
 
         // Parameters the material does not specify individually inherit the global value, so a
@@ -2257,10 +2414,14 @@ std::unordered_map<uint, int> Visualizer::buildPhongMaterialTable(const helios::
         table.push_back(resolved.diffuse);
         table.push_back(resolved.specular);
         table.push_back(resolved.shininess);
+        normal_map_table.push_back(static_cast<GLfloat>(normal_map_layer));
     }
 
     phong_material_table_size = static_cast<GLint>(table.size() / 4);
     uploadPhongMaterialTable(std::move(table));
+    uploadNormalMapMaterialTable(std::move(normal_map_table));
+    // The maps themselves are uploaded by transferBufferData(), which compares this list with what the GPU holds
+    normal_map_layers = std::move(layers);
 
     return material_ID_to_index;
 }
@@ -2285,6 +2446,23 @@ void Visualizer::uploadPhongMaterialTable(std::vector<GLfloat> table) {
     glBindTexture(GL_TEXTURE_BUFFER, 0);
 }
 
+void Visualizer::uploadNormalMapMaterialTable(std::vector<GLfloat> table) {
+    if (normal_map_material_table_buffer == 0) {
+        glGenBuffers(1, &normal_map_material_table_buffer);
+        glGenTextures(1, &normal_map_material_table_texture);
+    }
+    glBindBuffer(GL_TEXTURE_BUFFER, normal_map_material_table_buffer);
+    // As for the Phong table, an empty table is padded to one unused entry so that it is a valid texture buffer source
+    if (table.empty()) {
+        table.assign(1, -1.f);
+    }
+    glBufferData(GL_TEXTURE_BUFFER, GLsizeiptr(table.size() * sizeof(GLfloat)), table.data(), GL_STATIC_DRAW);
+    glBindTexture(GL_TEXTURE_BUFFER, normal_map_material_table_texture);
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, normal_map_material_table_buffer);
+    glBindBuffer(GL_TEXTURE_BUFFER, 0);
+    glBindTexture(GL_TEXTURE_BUFFER, 0);
+}
+
 void Visualizer::removeBackgroundRectangle() {
     // Remove background rectangle if it exists
     if (background_rectangle_ID != 0) {
@@ -2300,6 +2478,7 @@ void Visualizer::removeBackgroundRectangle() {
 }
 
 void Visualizer::setBackgroundColor(const helios::RGBcolor &color) {
+    rendered_frame_is_current = false; // changes what is drawn
     backgroundColor = color;
     background_is_transparent = false;
 
@@ -2314,6 +2493,7 @@ void Visualizer::setBackgroundColor(const helios::RGBcolor &color) {
 }
 
 void Visualizer::setBackgroundGradient() {
+    rendered_frame_is_current = false; // changes what is drawn
     background_is_transparent = false;
 
     // Remove any existing background rectangle
@@ -2342,6 +2522,7 @@ void Visualizer::setBackgroundGradient() {
 }
 
 void Visualizer::setBackgroundTransparent() {
+    rendered_frame_is_current = false; // changes what is drawn
     background_is_transparent = true;
 
     // Save watermark visibility state before hiding it (so we can restore it if user switches back to solid color)
@@ -2377,6 +2558,7 @@ void Visualizer::setBackgroundTransparent() {
 }
 
 void Visualizer::setBackgroundImage(const char *texture_file) {
+    rendered_frame_is_current = false; // changes what is drawn
     background_is_transparent = false;
 
     // Remove any existing background rectangle
@@ -2410,6 +2592,7 @@ void Visualizer::setBackgroundImage(const char *texture_file) {
 }
 
 void Visualizer::setBackgroundSkyTexture(const char *texture_file, uint Ndivisions) {
+    rendered_frame_is_current = false; // changes what is drawn
     using namespace helios;
 
     background_is_transparent = false;
@@ -2535,6 +2718,7 @@ void Visualizer::setBackgroundSkyTexture(const char *texture_file, uint Ndivisio
 }
 
 void Visualizer::hideWatermark() {
+    rendered_frame_is_current = false; // changes what is drawn
     isWatermarkVisible = false;
     if (watermark_ID != 0) {
         geometry_handler.deleteGeometry(watermark_ID);
@@ -2543,11 +2727,13 @@ void Visualizer::hideWatermark() {
 }
 
 void Visualizer::showWatermark() {
+    rendered_frame_is_current = false; // changes what is drawn
     isWatermarkVisible = true;
     updateWatermark();
 }
 
 void Visualizer::hideNavigationGizmo() {
+    rendered_frame_is_current = false; // changes what is drawn
     navigation_gizmo_enabled = false;
     hovered_gizmo_bubble = -1; // Reset hover state
     if (!navigation_gizmo_IDs.empty()) {
@@ -2557,6 +2743,7 @@ void Visualizer::hideNavigationGizmo() {
 }
 
 void Visualizer::showNavigationGizmo() {
+    rendered_frame_is_current = false; // changes what is drawn
     navigation_gizmo_enabled = true;
     updateNavigationGizmo();
 }
@@ -2606,6 +2793,7 @@ void Visualizer::handleGizmoClick(double screen_x, double screen_y) {
 }
 
 void Visualizer::handleGizmoHover(double screen_x, double screen_y) {
+    makeContextCurrent("Visualizer::handleGizmoHover");
     if (!navigation_gizmo_enabled) {
         return;
     }
@@ -2685,7 +2873,7 @@ bool Visualizer::cameraHasChanged() const {
  * roll of the image. +z is kept wherever it works so that ordinary oblique views are unchanged,
  * and a near-vertical view falls back to +y, which puts world +y at the top of the frame.
  */
-static glm::vec3 cameraUpVector(const helios::vec3 &eye, const helios::vec3 &lookat) {
+static glm::vec3 automaticCameraUpVector(const helios::vec3 &eye, const helios::vec3 &lookat) {
     const helios::vec3 forward = lookat - eye;
     const float length = forward.magnitude();
     if (length < 1e-9f) {
@@ -2695,6 +2883,30 @@ static glm::vec3 cameraUpVector(const helios::vec3 &eye, const helios::vec3 &loo
     return vertical_component > 0.999f ? glm::vec3(0, 1, 0) : glm::vec3(0, 0, 1);
 }
 
+glm::vec3 Visualizer::cameraUpVector() const {
+    if (!camera_up_direction_set) {
+        return automaticCameraUpVector(camera_eye_location, camera_lookat_center);
+    }
+    // A set up direction is the caller's statement of the camera's roll; a direction parallel to
+    // the view gives no roll at all, and substituting the automatic one would draw a different image
+    // than the one asked for.
+    const helios::vec3 forward = camera_lookat_center - camera_eye_location;
+    const float forward_length = forward.magnitude();
+    const float up_length = camera_up_direction.magnitude();
+    if (forward_length > 1e-9f && cross(forward, camera_up_direction).magnitude() <= 1e-6f * forward_length * up_length) {
+        helios_runtime_error("ERROR (Visualizer): the camera up direction set by setCameraUpDirection() is parallel to the viewing direction, so it does not fix the camera's roll. Set an up direction perpendicular to the view, or call clearCameraUpDirection().");
+    }
+    return glm_vec3(camera_up_direction);
+}
+
+glm::vec2 Visualizer::principalPointOffsetNDC() const {
+    if (!camera_principal_point_set || Wframebuffer == 0 || Hframebuffer == 0) {
+        return {0.f, 0.f};
+    }
+    // Image rows count down from the top; normalized device y counts up from the bottom.
+    return {2.f * camera_principal_column / float(Wframebuffer) - 1.f, 1.f - 2.f * camera_principal_row / float(Hframebuffer)};
+}
+
 float Visualizer::cameraNearPlane() const {
     float dist = glm::distance(glm_vec3(camera_lookat_center), glm_vec3(camera_eye_location));
     return std::max(0.1f, 0.05f * dist); // avoid 0
@@ -2702,7 +2914,14 @@ float Visualizer::cameraNearPlane() const {
 
 void Visualizer::updatePerspectiveTransformation() {
     cameraProjectionMatrix = glm::infinitePerspective(glm::radians(camera_FOV), float(Wframebuffer) / float(Hframebuffer), cameraNearPlane());
-    cameraViewMatrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), cameraUpVector(camera_eye_location, camera_lookat_center));
+    // An off-centre principal point shifts the image without changing its scale: a point on the
+    // optical axis must land at the principal point in normalized device coordinates. Clip x gains
+    // a term in eye-space z, which is -depth, so after the perspective divide every point moves by
+    // the same offset.
+    const glm::vec2 principal_offset = principalPointOffsetNDC();
+    cameraProjectionMatrix[2][0] -= principal_offset.x;
+    cameraProjectionMatrix[2][1] -= principal_offset.y;
+    cameraViewMatrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), cameraUpVector());
 
     perspectiveTransformationMatrix = cameraProjectionMatrix * cameraViewMatrix;
 }
@@ -2712,10 +2931,12 @@ void Visualizer::updateCustomTransformation(const glm::mat4 &matrix) {
 }
 
 void Visualizer::enableColorbar() {
+    rendered_frame_is_current = false; // changes what is drawn
     colorbar_flag = 2;
 }
 
 void Visualizer::disableColorbar() {
+    rendered_frame_is_current = false; // changes what is drawn
     if (!colorbar_IDs.empty()) {
         geometry_handler.deleteGeometry(colorbar_IDs);
         colorbar_IDs.clear();
@@ -2724,6 +2945,7 @@ void Visualizer::disableColorbar() {
 }
 
 void Visualizer::setColorbarPosition(vec3 position) {
+    rendered_frame_is_current = false; // changes what is drawn
     if (position.x < 0 || position.x > 1 || position.y < 0 || position.y > 1 || position.z < -1 || position.z > 1) {
         helios_runtime_error("ERROR (Visualizer::setColorbarPosition): position is out of range.  Coordinates must be: 0<x<1, 0<y<1, -1<z<1.");
     }
@@ -2731,6 +2953,7 @@ void Visualizer::setColorbarPosition(vec3 position) {
 }
 
 void Visualizer::setColorbarSize(vec2 size) {
+    rendered_frame_is_current = false; // changes what is drawn
     if (size.x < 0 || size.x > 1 || size.y < 0 || size.y > 1) {
         helios_runtime_error("ERROR (Visualizer::setColorbarSize): Size must be greater than 0 and less than the window size (i.e., 1).");
     }
@@ -2744,6 +2967,7 @@ void Visualizer::setColorbarSize(vec2 size) {
 }
 
 void Visualizer::setColorbarRange(float cmin, float cmax) {
+    rendered_frame_is_current = false; // changes what is drawn
     // The validation must not depend on message_flag: gating it there meant an inverted range was
     // silently accepted whenever messages were disabled, and then fed into tick generation.
     if (cmin > cmax) {
@@ -2765,6 +2989,7 @@ void Visualizer::setColorbarRange(float cmin, float cmax) {
 }
 
 void Visualizer::setColorbarTicks(const std::vector<float> &ticks) {
+    rendered_frame_is_current = false; // changes what is drawn
     // check that vector is not empty
     if (ticks.empty()) {
         helios_runtime_error("ERROR (Visualizer::setColorbarTicks): Colorbar ticks vector is empty.");
@@ -3095,10 +3320,12 @@ std::vector<float> Visualizer::generateColorbarTicks(float cmin, float cmax, boo
 }
 
 void Visualizer::setColorbarTitle(const char *title) {
+    rendered_frame_is_current = false; // changes what is drawn
     colorbar_title = title;
 }
 
 void Visualizer::setColorbarFontSize(uint font_size) {
+    rendered_frame_is_current = false; // changes what is drawn
     if (font_size <= 0) {
         helios_runtime_error("ERROR (Visualizer::setColorbarFontSize): Font size must be greater than zero.");
     }
@@ -3106,10 +3333,12 @@ void Visualizer::setColorbarFontSize(uint font_size) {
 }
 
 void Visualizer::setColorbarFontColor(RGBcolor fontcolor) {
+    rendered_frame_is_current = false; // changes what is drawn
     colorbar_fontcolor = fontcolor;
 }
 
 void Visualizer::setColormap(Ctable colormap_name) {
+    rendered_frame_is_current = false; // changes what is drawn
     // The colormaps themselves are defined once in the Context, so they are identical to those used by Context::colorPrimitiveByDataPseudocolor()
     std::string context_colormap_name;
     if (colormap_name == COLORMAP_HOT) {
@@ -3145,6 +3374,7 @@ void Visualizer::setColormap(Ctable colormap_name) {
 }
 
 void Visualizer::setColormap(const std::vector<RGBcolor> &colors, const std::vector<float> &divisions) {
+    rendered_frame_is_current = false; // changes what is drawn
     if (colors.size() != divisions.size()) {
         helios_runtime_error("ERROR (Visualizer::setColormap): The number of colors must be equal to the number of divisions.");
     }
@@ -3263,10 +3493,14 @@ void Visualizer::computeShadowCascades() {
     // Camera basis, matching the view matrix built in updatePerspectiveTransformation()
     const glm::vec3 eye = glm_vec3(camera_eye_location);
     const glm::vec3 forward = glm::normalize(glm_vec3(camera_lookat_center) - eye);
-    const glm::vec3 right = glm::normalize(glm::cross(forward, cameraUpVector(camera_eye_location, camera_lookat_center)));
+    const glm::vec3 right = glm::normalize(glm::cross(forward, cameraUpVector()));
     const glm::vec3 up = glm::cross(right, forward);
-    const float tan_half_fov_vertical = std::tan(glm::radians(camera_FOV) * 0.5f);
-    const float tan_half_fov_horizontal = tan_half_fov_vertical * float(Wframebuffer) / float(Hframebuffer);
+    // An off-centre principal point makes the frustum asymmetric. The search below takes a symmetric
+    // one, so it is widened to contain the shifted frustum: the cascades may then reach a little
+    // farther than needed, never short of what is visible.
+    const glm::vec2 principal_offset = principalPointOffsetNDC();
+    const float tan_half_fov_vertical = std::tan(glm::radians(camera_FOV) * 0.5f) * (1.f + std::fabs(principal_offset.y));
+    const float tan_half_fov_horizontal = std::tan(glm::radians(camera_FOV) * 0.5f) * float(Wframebuffer) / float(Hframebuffer) * (1.f + std::fabs(principal_offset.x));
 
     // The cascades span from the near plane to the farthest point of the shadow casters' bounds that is
     // in view. Nothing beyond that is visible to receive a shadow, so no fixed distance limits shadowing,
@@ -3691,7 +3925,7 @@ glm::mat4 Visualizer::getPerspectiveTransformationMatrix() const {
 glm::mat4 Visualizer::getViewMatrix() const {
     // Built from the same world up vector as updatePerspectiveTransformation(), so that the two
     // agree; cross() against a fixed +z is the zero vector for a camera looking straight down.
-    const glm::vec3 world_up = cameraUpVector(camera_eye_location, camera_lookat_center);
+    const glm::vec3 world_up = cameraUpVector();
 
     vec3 forward = camera_lookat_center - camera_eye_location;
     forward = forward.normalize();

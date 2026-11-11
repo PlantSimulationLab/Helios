@@ -25,6 +25,9 @@
 #include "Visualizer.h"
 #include "annotation_io.h"
 
+#include <algorithm>
+#include <array>
+
 using namespace helios;
 
 float dphi = 0.0;
@@ -37,6 +40,7 @@ float dy_m = 0.0;
 float dscroll = 0.0;
 
 void Visualizer::printWindow() {
+    makeContextCurrent("Visualizer::printWindow");
     char outfile[100];
     if (context != nullptr) { // context has been given to visualizer via buildContextGeometry()
         Date date = context->getDate();
@@ -51,6 +55,7 @@ void Visualizer::printWindow() {
 }
 
 void Visualizer::printWindow(const char *outfile, const std::string &image_format) {
+    makeContextCurrent("Visualizer::printWindow");
 
     // Save current navigation gizmo state and temporarily hide it for screenshot
     bool gizmo_was_visible = navigation_gizmo_enabled;
@@ -164,6 +169,7 @@ void Visualizer::printWindow(const char *outfile, const std::string &image_forma
         primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
         primaryShader.setSmoothShading(smooth_shading_enabled);
         primaryShader.setPhongMaterialTable(phong_material_table_size);
+        primaryShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
         render(false);
 
@@ -246,14 +252,12 @@ void Visualizer::printWindow(const char *outfile, const std::string &image_forma
         background_rectangle_ID = addRectangleByVertices(vertices, texture_path.c_str(), uvs, COORDINATES_WINDOW_NORMALIZED);
     }
 
-    // Restore navigation gizmo state
+    // Restore the navigation gizmo. Only the setting is restored: its geometry is rebuilt by the next render (see prepareFrameGeometry()).
+    // Rebuilding it here put geometry back that the frame just captured does not contain, so the frame was out of date the moment
+    // it was captured: reading its pixels back afterwards was refused, and the next capture rendered again for nothing.
     if (gizmo_was_visible) {
-        showNavigationGizmo();
+        navigation_gizmo_enabled = true;
     }
-
-    // The capture rendered with the gizmo hidden, and restoring it above puts geometry back that the
-    // rendered frame does not contain, so the next capture has to render again.
-    rendered_frame_is_current = false;
 }
 
 helios::vec4 Visualizer::buildImageDisplayGeometry(const std::vector<unsigned char> &pixel_data, uint width_pixels, uint height_pixels) {
@@ -417,11 +421,14 @@ void Visualizer::displayImageWithSegmentationMasks(const std::string &image_file
 }
 
 void Visualizer::getWindowPixelsRGB(uint *buffer) const {
-    // Validate framebuffer completeness
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        helios_runtime_error("ERROR (getWindowPixelsRGB): Framebuffer is not complete");
+    makeContextCurrent("Visualizer::getWindowPixelsRGB");
+    // This reads back whatever frame is on the GPU and renders nothing itself. Before any render that is an empty buffer, and
+    // after a change to what is drawn it is the frame from before the change; either was returned silently as if it were the
+    // current image.
+    if (!rendered_frame_is_current || !geometry_handler.getDirtyUUIDs().empty() || geometry_handler.doesBufferNeedFullUpdate()) {
+        helios_runtime_error("ERROR (Visualizer::getWindowPixelsRGB): No frame has been rendered since the scene or the view was last changed, so the frame buffer does not hold the current image. "
+                             "Call plotUpdate() (or plotOnce()) before reading back the pixels, or use printWindow(), which renders the frame itself when needed.");
     }
-
     std::vector<GLubyte> buff;
     buff.resize(3 * Wframebuffer * Hframebuffer);
 
@@ -441,6 +448,15 @@ void Visualizer::getWindowPixelsRGB(uint *buffer) const {
 
         glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
 
+        // Completeness is checked on the framebuffer being read, after binding it. Whatever was bound on entry is irrelevant
+        // here, and is commonly framebuffer 0 (printWindow() leaves it bound). An EGL context is surfaceless, so it has no
+        // default framebuffer and framebuffer 0 reports GL_FRAMEBUFFER_UNDEFINED.
+        const GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+            glBindFramebuffer(GL_FRAMEBUFFER, current_framebuffer);
+            helios_runtime_error("ERROR (getWindowPixelsRGB): The offscreen framebuffer is not complete (status: " + std::to_string(framebuffer_status) + ")");
+        }
+
         // Framebuffer objects don't use front/back buffer concepts, read directly
         glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
         GLenum error = glGetError();
@@ -452,6 +468,11 @@ void Visualizer::getWindowPixelsRGB(uint *buffer) const {
             helios_runtime_error("ERROR (getWindowPixelsRGB): glReadPixels failed in headless mode (error: " + std::to_string(error) + ")");
         }
     } else {
+        const GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+            helios_runtime_error("ERROR (getWindowPixelsRGB): Framebuffer is not complete (status: " + std::to_string(framebuffer_status) + ")");
+        }
+
         // In windowed mode, robustly determine which buffer contains rendered content
         // Sample multiple pixels to avoid false negatives from legitimately black pixels
         const int num_samples = 9;
@@ -532,6 +553,7 @@ void Visualizer::getWindowPixelsRGB(uint *buffer) const {
 }
 
 void Visualizer::getWindowPixelsRGB(std::vector<uint> &pixel_data, uint &width_pixels, uint &height_pixels) const {
+    makeContextCurrent("Visualizer::getWindowPixelsRGB");
     width_pixels = Wframebuffer;
     height_pixels = Hframebuffer;
 
@@ -608,6 +630,7 @@ void Visualizer::closeWindow() const {
 }
 
 std::vector<helios::vec3> Visualizer::plotInteractive() {
+    makeContextCurrent("Visualizer::plotInteractive");
     // Interactive plotting needs a window to show and a keyboard to read; a headless Visualizer has
     // neither. Saying so is better than the alternatives, which are a 1x1 window that never appears
     // (GLFW headless) or a null window handle passed straight into GLFW (EGL headless).
@@ -623,7 +646,9 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     buildContextGeometry_private();
 
     // Set the view to fit window
-    if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { // default center
+    // Only a camera nobody has set is fitted to the scene. Judging that by the default coordinates
+    // alone moved a camera that had been set to them on purpose.
+    if (!camera_position_set_by_user && camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { // default center
         if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { // default eye position
 
             vec3 center_sph;
@@ -717,6 +742,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
         primaryShader.setSmoothShading(smooth_shading_enabled);
         primaryShader.setPhongMaterialTable(phong_material_table_size);
+        primaryShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
         bindShadowMap();
 
@@ -764,6 +790,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 }
 
 void Visualizer::plotOnce(bool getKeystrokes) {
+    makeContextCurrent("Visualizer::plotOnce");
 
     // plotOnce() is the body of plotInteractive()'s render loop, exposed so an external loop (e.g.
     // ProjectBuilder's ImGui frame) can drive rendering itself. plotInteractive() uploads geometry
@@ -834,12 +861,16 @@ void Visualizer::plotOnce(bool getKeystrokes) {
     primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
     primaryShader.setSmoothShading(smooth_shading_enabled);
     primaryShader.setPhongMaterialTable(phong_material_table_size);
+    primaryShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
     bindShadowMap();
 
     // Set buffer state before rendering (plotOnce doesn't call glfwSwapBuffers)
     buffers_swapped_since_render = false;
     render(false);
+    // The frame on the GPU now reflects the Visualizer's geometry and camera. Anything changed below (the camera moved from the
+    // keyboard) makes it out of date again.
+    rendered_frame_is_current = true;
 
     // glfwPollEvents();
     if (getKeystrokes) {
@@ -869,6 +900,7 @@ void Visualizer::plotOnce(bool getKeystrokes) {
 
 void Visualizer::transferBufferData() {
     assert(checkerrors());
+    partial_uploads_last_transfer = 0;
 
     const auto &dirty = geometry_handler.getDirtyUUIDs();
     if (dirty.empty() && !geometry_handler.doesBufferNeedFullUpdate()) {
@@ -880,11 +912,18 @@ void Visualizer::transferBufferData() {
             transferTextureData();
             textures_dirty = false;
         }
+        if (normal_map_layers != normal_map_layers_uploaded || normal_map_array == 0) {
+            transferNormalMapData();
+        }
         return;
     }
 
     // Geometry changed, so the extent of the shadow casters may have too
     shadow_caster_bounds_dirty = true;
+
+    // The colour frame on the GPU was drawn from the geometry before this upload. The annotation pass uploads geometry without
+    // rendering that frame, and printWindow() must not then capture it as current.
+    rendered_frame_is_current = false;
 
     // Whether a buffer needs reallocating is decided against the size recorded when it was last
     // uploaded, rather than by asking the driver with glGetBufferParameteriv. That query is a
@@ -899,9 +938,13 @@ void Visualizer::transferBufferData() {
     // doesBufferNeedFullUpdate() reports.
     const bool force_full_upload = geometry_handler.doesBufferNeedFullUpdate();
 
-    auto ensureArrayBuffer = [&](GLuint buf, GLenum target, GLsizeiptr size, const void *data, GLsizeiptr &last_uploaded_size) {
+    // Whether each buffer was sent whole by this call, [geometry type][buffer]: its changed
+    // primitives then need no second, partial upload below.
+    std::array<std::array<bool, 12>, GeometryHandler::all_geometry_types.size()> uploaded_whole{};
+
+    auto ensureArrayBuffer = [&](GLuint buf, GLenum target, GLsizeiptr size, const void *data, GLsizeiptr &last_uploaded_size) -> bool {
         if (size == last_uploaded_size && !force_full_upload) {
-            return;
+            return false;
         }
         glBindBuffer(target, buf);
         if (size != last_uploaded_size) {
@@ -910,13 +953,14 @@ void Visualizer::transferBufferData() {
             glBufferSubData(target, 0, size, data);
         }
         last_uploaded_size = size;
+        return true;
     };
 
-    auto ensureTextureBuffer = [&](GLuint buf, GLuint tex, GLenum format, GLsizeiptr size, const void *data, GLsizeiptr &last_uploaded_size) {
+    auto ensureTextureBuffer = [&](GLuint buf, GLuint tex, GLenum format, GLsizeiptr size, const void *data, GLsizeiptr &last_uploaded_size) -> bool {
         if (size == last_uploaded_size && !force_full_upload) {
             glBindTexture(GL_TEXTURE_BUFFER, tex);
             glTexBuffer(GL_TEXTURE_BUFFER, format, buf);
-            return;
+            return false;
         }
         glBindBuffer(GL_TEXTURE_BUFFER, buf);
         if (size != last_uploaded_size) {
@@ -927,6 +971,7 @@ void Visualizer::transferBufferData() {
         last_uploaded_size = size;
         glBindTexture(GL_TEXTURE_BUFFER, tex);
         glTexBuffer(GL_TEXTURE_BUFFER, format, buf);
+        return true;
     };
 
     // Ensure buffers are allocated to the correct size
@@ -945,22 +990,42 @@ void Visualizer::transferBufferData() {
         const auto *sky_geometry_flag_data = geometry_handler.getSkyGeometryFlagData_ptr(geometry_type);
         const auto *visible_flag_data = geometry_handler.getVisibilityFlagData_ptr(geometry_type);
 
-        ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER, vertex_data->size() * sizeof(GLfloat), vertex_data->data(), last_uploaded_buffer_sizes.at(gi).at(0));
-        ensureArrayBuffer(uv_buffer.at(gi), GL_ARRAY_BUFFER, uv_data->size() * sizeof(GLfloat), uv_data->data(), last_uploaded_buffer_sizes.at(gi).at(1));
-        ensureArrayBuffer(vertex_normal_buffer.at(gi), GL_ARRAY_BUFFER, vertex_normal_data->size() * sizeof(GLfloat), vertex_normal_data->data(), last_uploaded_buffer_sizes.at(gi).at(2));
-        ensureArrayBuffer(face_index_buffer.at(gi), GL_ARRAY_BUFFER, face_index_data->size() * sizeof(GLint), face_index_data->data(), last_uploaded_buffer_sizes.at(gi).at(3));
-        ensureTextureBuffer(color_buffer.at(gi), color_texture_object.at(gi), GL_RGBA32F, color_data->size() * sizeof(GLfloat), color_data->data(), last_uploaded_buffer_sizes.at(gi).at(4));
-        ensureTextureBuffer(normal_buffer.at(gi), normal_texture_object.at(gi), GL_RGB32F, normal_data->size() * sizeof(GLfloat), normal_data->data(), last_uploaded_buffer_sizes.at(gi).at(5));
-        ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I, texture_flag_data->size() * sizeof(GLint), texture_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(6));
-        ensureTextureBuffer(material_index_buffer.at(gi), material_index_texture_object.at(gi), GL_R32I, material_index_data->size() * sizeof(GLint), material_index_data->data(), last_uploaded_buffer_sizes.at(gi).at(7));
-        ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I, texture_ID_data->size() * sizeof(GLint), texture_ID_data->data(), last_uploaded_buffer_sizes.at(gi).at(8));
-        ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I, coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(9));
-        ensureTextureBuffer(sky_geometry_flag_buffer.at(gi), sky_geometry_flag_texture_object.at(gi), GL_R8I, sky_geometry_flag_data->size() * sizeof(GLbyte), sky_geometry_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(10));
-        ensureTextureBuffer(hidden_flag_buffer.at(gi), hidden_flag_texture_object.at(gi), GL_R8I, visible_flag_data->size() * sizeof(GLbyte), visible_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(11));
+        uploaded_whole.at(gi).at(0) = ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER, vertex_data->size() * sizeof(GLfloat), vertex_data->data(), last_uploaded_buffer_sizes.at(gi).at(0));
+        uploaded_whole.at(gi).at(1) = ensureArrayBuffer(uv_buffer.at(gi), GL_ARRAY_BUFFER, uv_data->size() * sizeof(GLfloat), uv_data->data(), last_uploaded_buffer_sizes.at(gi).at(1));
+        uploaded_whole.at(gi).at(2) = ensureArrayBuffer(vertex_normal_buffer.at(gi), GL_ARRAY_BUFFER, vertex_normal_data->size() * sizeof(GLfloat), vertex_normal_data->data(), last_uploaded_buffer_sizes.at(gi).at(2));
+        uploaded_whole.at(gi).at(3) = ensureArrayBuffer(face_index_buffer.at(gi), GL_ARRAY_BUFFER, face_index_data->size() * sizeof(GLint), face_index_data->data(), last_uploaded_buffer_sizes.at(gi).at(3));
+        uploaded_whole.at(gi).at(4) = ensureTextureBuffer(color_buffer.at(gi), color_texture_object.at(gi), GL_RGBA32F, color_data->size() * sizeof(GLfloat), color_data->data(), last_uploaded_buffer_sizes.at(gi).at(4));
+        uploaded_whole.at(gi).at(5) = ensureTextureBuffer(normal_buffer.at(gi), normal_texture_object.at(gi), GL_RGB32F, normal_data->size() * sizeof(GLfloat), normal_data->data(), last_uploaded_buffer_sizes.at(gi).at(5));
+        uploaded_whole.at(gi).at(6) = ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I, texture_flag_data->size() * sizeof(GLint), texture_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(6));
+        uploaded_whole.at(gi).at(7) = ensureTextureBuffer(material_index_buffer.at(gi), material_index_texture_object.at(gi), GL_R32I, material_index_data->size() * sizeof(GLint), material_index_data->data(), last_uploaded_buffer_sizes.at(gi).at(7));
+        uploaded_whole.at(gi).at(8) = ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I, texture_ID_data->size() * sizeof(GLint), texture_ID_data->data(), last_uploaded_buffer_sizes.at(gi).at(8));
+        uploaded_whole.at(gi).at(9) = ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I, coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(9));
+        uploaded_whole.at(gi).at(10) = ensureTextureBuffer(sky_geometry_flag_buffer.at(gi), sky_geometry_flag_texture_object.at(gi), GL_R8I, sky_geometry_flag_data->size() * sizeof(GLbyte), sky_geometry_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(10));
+        uploaded_whole.at(gi).at(11) = ensureTextureBuffer(hidden_flag_buffer.at(gi), hidden_flag_texture_object.at(gi), GL_R8I, visible_flag_data->size() * sizeof(GLbyte), visible_flag_data->data(), last_uploaded_buffer_sizes.at(gi).at(11));
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindTexture(GL_TEXTURE_BUFFER, 0);
     }
+
+    // Upload what changed. Each primitive owns one slice of each of the twelve buffers of its
+    // geometry type. Uploading those slices one primitive at a time issued twelve glBufferSubData
+    // calls per primitive, each a few bytes: moving one plant of 2900 primitives cost ~35000 calls
+    // and about 220 ms, nearly all of it driver overhead, against ~10 ms for a frame in which
+    // nothing changed. A plant's primitives were added together and sit next to each other in the
+    // buffers, so the slices are gathered per buffer, sorted, and merged into runs, and each run is
+    // uploaded once. Runs separated by a small gap are merged too: the CPU-side arrays are the
+    // source of truth for every primitive, so re-sending a few unchanged bytes is harmless and much
+    // cheaper than another call.
+    //
+    // No glTexBuffer is needed after these uploads. A texture buffer object is a view of its buffer,
+    // not a copy, and the loop above has already (re)attached every texture buffer on this call.
+    constexpr size_t buffer_count = 12;
+    constexpr GLsizeiptr merge_gap_bytes = 16384;
+    struct Slice {
+        size_t begin; // in elements of the buffer's data array
+        size_t end;
+    };
+    std::array<std::array<std::vector<Slice>, buffer_count>, GeometryHandler::all_geometry_types.size()> slices;
 
     bool rect_dirty = false;
     for (size_t UUID: dirty) {
@@ -969,70 +1034,68 @@ void Visualizer::transferBufferData() {
         }
 
         const auto &index_map = geometry_handler.getIndexMap(UUID);
-        auto geometry_type = index_map.geometry_type;
-        size_t i = std::find(GeometryHandler::all_geometry_types.begin(), GeometryHandler::all_geometry_types.end(), geometry_type) - GeometryHandler::all_geometry_types.begin();
+        const auto geometry_type = index_map.geometry_type;
+        const size_t i = std::find(GeometryHandler::all_geometry_types.begin(), GeometryHandler::all_geometry_types.end(), geometry_type) - GeometryHandler::all_geometry_types.begin();
+        const size_t vcount = GeometryHandler::getVertexCount(geometry_type);
 
-        const char vcount = GeometryHandler::getVertexCount(geometry_type);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.vertex_index * sizeof(GLfloat), vcount * 3 * sizeof(GLfloat), geometry_handler.getVertexData_ptr(geometry_type)->data() + index_map.vertex_index);
-
-        glBindBuffer(GL_ARRAY_BUFFER, uv_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.uv_index * sizeof(GLfloat), vcount * 2 * sizeof(GLfloat), geometry_handler.getUVData_ptr(geometry_type)->data() + index_map.uv_index);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vertex_normal_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.vertex_normal_index * sizeof(GLfloat), vcount * 3 * sizeof(GLfloat), geometry_handler.getVertexNormalData_ptr(geometry_type)->data() + index_map.vertex_normal_index);
-
-        glBindBuffer(GL_ARRAY_BUFFER, face_index_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.face_index_index * sizeof(GLint), vcount * sizeof(GLint), geometry_handler.getFaceIndexData_ptr(geometry_type)->data() + index_map.face_index_index);
-
-        glBindBuffer(GL_TEXTURE_BUFFER, color_buffer.at(i));
-        glBufferSubData(GL_TEXTURE_BUFFER, index_map.color_index * sizeof(GLfloat), 4 * sizeof(GLfloat), geometry_handler.getColorData_ptr(geometry_type)->data() + index_map.color_index);
-        glBindTexture(GL_TEXTURE_BUFFER, color_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, color_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, normal_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.normal_index * sizeof(GLfloat), 3 * sizeof(GLfloat), geometry_handler.getNormalData_ptr(geometry_type)->data() + index_map.normal_index);
-        glBindTexture(GL_TEXTURE_BUFFER, normal_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, normal_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, material_index_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.material_index_index * sizeof(GLint), sizeof(GLint), geometry_handler.getMaterialIndexData_ptr(geometry_type)->data() + index_map.material_index_index);
-        glBindTexture(GL_TEXTURE_BUFFER, material_index_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, material_index_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, texture_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.texture_flag_index * sizeof(GLint), sizeof(GLint), geometry_handler.getTextureFlagData_ptr(geometry_type)->data() + index_map.texture_flag_index);
-        glBindTexture(GL_TEXTURE_BUFFER, texture_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, texture_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, texture_ID_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.texture_ID_index * sizeof(GLint), sizeof(GLint), geometry_handler.getTextureIDData_ptr(geometry_type)->data() + index_map.texture_ID_index);
-        glBindTexture(GL_TEXTURE_BUFFER, texture_ID_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, texture_ID_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, coordinate_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.coordinate_flag_index * sizeof(GLint), sizeof(GLint), geometry_handler.getCoordinateFlagData_ptr(geometry_type)->data() + index_map.coordinate_flag_index);
-        glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, coordinate_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, sky_geometry_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.sky_geometry_flag_index * sizeof(GLbyte), sizeof(GLbyte), geometry_handler.getSkyGeometryFlagData_ptr(geometry_type)->data() + index_map.sky_geometry_flag_index);
-        glBindTexture(GL_TEXTURE_BUFFER, sky_geometry_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R8I, sky_geometry_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, hidden_flag_buffer.at(i));
-        glBufferSubData(GL_ARRAY_BUFFER, index_map.visible_index * sizeof(GLbyte), sizeof(GLbyte), geometry_handler.getVisibilityFlagData_ptr(geometry_type)->data() + index_map.visible_index);
-        glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(i));
-        glTexBuffer(GL_TEXTURE_BUFFER, GL_R8I, hidden_flag_buffer.at(i));
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindTexture(GL_TEXTURE_BUFFER, 0);
+        // In the order of last_uploaded_buffer_sizes: vertex, uv, vertex normal, face index, color,
+        // normal, texture flag, material index, texture ID, coordinate flag, sky flag, visibility.
+        const std::array<size_t, buffer_count> begins = {index_map.vertex_index,         index_map.uv_index,           index_map.vertex_normal_index,   index_map.face_index_index,
+                                                         index_map.color_index,          index_map.normal_index,       index_map.texture_flag_index,    index_map.material_index_index,
+                                                         index_map.texture_ID_index,     index_map.coordinate_flag_index, index_map.sky_geometry_flag_index, index_map.visible_index};
+        const std::array<size_t, buffer_count> lengths = {3 * vcount, 2 * vcount, 3 * vcount, vcount, 4, 3, 1, 1, 1, 1, 1, 1};
+        for (size_t b = 0; b < buffer_count; ++b) {
+            if (!uploaded_whole.at(i).at(b)) {
+                slices.at(i).at(b).push_back({begins.at(b), begins.at(b) + lengths.at(b)});
+            }
+        }
 
         if (geometry_type == GeometryHandler::GEOMETRY_TYPE_RECTANGLE) {
             rect_dirty = true;
         }
     }
+
+    auto uploadSlices = [&](GLuint buf, std::vector<Slice> &runs, const void *data, size_t element_size) {
+        if (runs.empty()) {
+            return;
+        }
+        std::sort(runs.begin(), runs.end(), [](const Slice &a, const Slice &b) { return a.begin < b.begin; });
+        const size_t gap_elements = std::max<size_t>(1, merge_gap_bytes / element_size);
+        const auto *bytes = static_cast<const char *>(data);
+        glBindBuffer(GL_ARRAY_BUFFER, buf);
+        Slice run = runs.front();
+        auto send = [&](const Slice &s) {
+            glBufferSubData(GL_ARRAY_BUFFER, GLintptr(s.begin * element_size), GLsizeiptr((s.end - s.begin) * element_size), bytes + s.begin * element_size);
+            partial_uploads_last_transfer++;
+        };
+        for (size_t k = 1; k < runs.size(); ++k) {
+            if (runs[k].begin <= run.end + gap_elements) {
+                run.end = std::max(run.end, runs[k].end);
+            } else {
+                send(run);
+                run = runs[k];
+            }
+        }
+        send(run);
+    };
+
+    for (size_t i = 0; i < GeometryHandler::all_geometry_types.size(); ++i) {
+        const auto geometry_type = GeometryHandler::all_geometry_types[i];
+        auto &s = slices.at(i);
+        uploadSlices(vertex_buffer.at(i), s.at(0), geometry_handler.getVertexData_ptr(geometry_type)->data(), sizeof(GLfloat));
+        uploadSlices(uv_buffer.at(i), s.at(1), geometry_handler.getUVData_ptr(geometry_type)->data(), sizeof(GLfloat));
+        uploadSlices(vertex_normal_buffer.at(i), s.at(2), geometry_handler.getVertexNormalData_ptr(geometry_type)->data(), sizeof(GLfloat));
+        uploadSlices(face_index_buffer.at(i), s.at(3), geometry_handler.getFaceIndexData_ptr(geometry_type)->data(), sizeof(GLint));
+        uploadSlices(color_buffer.at(i), s.at(4), geometry_handler.getColorData_ptr(geometry_type)->data(), sizeof(GLfloat));
+        uploadSlices(normal_buffer.at(i), s.at(5), geometry_handler.getNormalData_ptr(geometry_type)->data(), sizeof(GLfloat));
+        uploadSlices(texture_flag_buffer.at(i), s.at(6), geometry_handler.getTextureFlagData_ptr(geometry_type)->data(), sizeof(GLint));
+        uploadSlices(material_index_buffer.at(i), s.at(7), geometry_handler.getMaterialIndexData_ptr(geometry_type)->data(), sizeof(GLint));
+        uploadSlices(texture_ID_buffer.at(i), s.at(8), geometry_handler.getTextureIDData_ptr(geometry_type)->data(), sizeof(GLint));
+        uploadSlices(coordinate_flag_buffer.at(i), s.at(9), geometry_handler.getCoordinateFlagData_ptr(geometry_type)->data(), sizeof(GLint));
+        uploadSlices(sky_geometry_flag_buffer.at(i), s.at(10), geometry_handler.getSkyGeometryFlagData_ptr(geometry_type)->data(), sizeof(GLbyte));
+        uploadSlices(hidden_flag_buffer.at(i), s.at(11), geometry_handler.getVisibilityFlagData_ptr(geometry_type)->data(), sizeof(GLbyte));
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     if (rect_dirty) {
         size_t rectangle_count = geometry_handler.getRectangleCount();
@@ -1047,6 +1110,9 @@ void Visualizer::transferBufferData() {
     if (textures_dirty || texArray == 0) {
         transferTextureData();
         textures_dirty = false;
+    }
+    if (normal_map_layers != normal_map_layers_uploaded || normal_map_array == 0) {
+        transferNormalMapData();
     }
 
     geometry_handler.clearDirtyUUIDs();
@@ -1167,6 +1233,84 @@ void Visualizer::transferTextureData() {
 }
 
 
+void Visualizer::transferNormalMapData() {
+
+    // Every layer of an array has the same size, so all maps are resampled to the largest map's size (clamped to the maximum texture size). Each map then
+    // fills its layer, which is what lets the shader sample it with the primitive's (u,v) directly and lets mipmaps be generated without blending a map with
+    // texels outside it. With no maps, a one-texel layer holding the flat normal keeps the sampler bound to a complete texture.
+    uint2 layer_size = make_uint2(1, 1);
+    for (const auto &map: normal_map_layers) {
+        layer_size.x = std::max(layer_size.x, std::min<uint>(uint(map->resolution.x), maximum_texture_size.x));
+        layer_size.y = std::max(layer_size.y, std::min<uint>(uint(map->resolution.y), maximum_texture_size.y));
+    }
+    const size_t layer_count = std::max<size_t>(1, normal_map_layers.size());
+    // Every layer takes the largest map's size, so many small maps beside one large one would take far more memory than the maps themselves. The layers are
+    // shrunk, keeping their aspect ratio, until the array (with its mipmaps) fits a 256 MiB budget; the radiation model keeps every map at full resolution.
+    const double budget_bytes = 256.0 * 1024.0 * 1024.0;
+    const double array_bytes = double(layer_size.x) * double(layer_size.y) * 2.0 * double(layer_count) * 4.0 / 3.0;
+    if (array_bytes > budget_bytes) {
+        const double shrink = std::sqrt(budget_bytes / array_bytes);
+        const uint2 full_size = layer_size;
+        layer_size.x = std::max(1u, uint(double(layer_size.x) * shrink));
+        layer_size.y = std::max(1u, uint(double(layer_size.y) * shrink));
+        if (message_flag) {
+            std::cout << "WARNING (Visualizer::transferNormalMapData): The " << layer_count << " normal and bump maps in the scene would take " << int(array_bytes / (1024.0 * 1024.0)) << " MiB at " << full_size.x << " x " << full_size.y
+                      << " texels each, so they are drawn at " << layer_size.x << " x " << layer_size.y << " (the radiation model uses them at full resolution). Use fewer distinct maps, or maps of similar size, to keep their detail." << std::endl;
+        }
+    }
+
+    GLint max_layers = 0;
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &max_layers);
+    if (max_layers > 0 && layer_count > size_t(max_layers)) {
+        helios_runtime_error("ERROR (Visualizer::transferNormalMapData): The scene uses " + std::to_string(layer_count) + " distinct normal or bump maps, but this OpenGL implementation holds at most " + std::to_string(max_layers) +
+                             " layers in a texture array. Share maps between materials (the same file, strength and green flip) to reduce the count.");
+    }
+
+    GLsizei mip_levels = 1;
+    for (uint extent = std::max(layer_size.x, layer_size.y); extent > 1; extent /= 2) {
+        mip_levels++;
+    }
+
+    // Immutable storage is recreated whenever the set of maps changes, which happens only when materials change
+    if (normal_map_array != 0) {
+        glDeleteTextures(1, &normal_map_array);
+    }
+    glGenTextures(1, &normal_map_array);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, normal_map_array);
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY, mip_levels, GL_RG8, GLsizei(layer_size.x), GLsizei(layer_size.y), GLsizei(layer_count));
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    // Rows are uploaded from the top of the image, as color textures are, because the shader's t coordinate is 1 - v
+    std::vector<unsigned char> layer_texels(size_t(layer_size.x) * size_t(layer_size.y) * 2, 128);
+    for (size_t layer = 0; layer < normal_map_layers.size(); layer++) {
+        const helios::NormalMapTexels &map = *normal_map_layers[layer];
+        for (uint row = 0; row < layer_size.y; row++) {
+            for (uint column = 0; column < layer_size.x; column++) {
+                // The layer texel centred at (u, v) takes the map's value there in the texel convention every Helios consumer of the map uses (that of masks and the
+                // radiation model, see NormalMapTexels::sampleBilinear()), so that relief lines up between visualizer and radiation camera images
+                const vec2 uv = make_vec2((float(column) + 0.5f) / float(layer_size.x), 1.f - (float(row) + 0.5f) / float(layer_size.y));
+                const vec3 normal = map.sampleBilinear(uv);
+                const size_t index = 2 * (size_t(row) * layer_size.x + column);
+                layer_texels[index] = static_cast<unsigned char>(std::lround(std::clamp(normal.x * 0.5f + 0.5f, 0.f, 1.f) * 255.f));
+                layer_texels[index + 1] = static_cast<unsigned char>(std::lround(std::clamp(normal.y * 0.5f + 0.5f, 0.f, 1.f) * 255.f));
+            }
+        }
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, GLint(layer), GLsizei(layer_size.x), GLsizei(layer_size.y), 1, GL_RG, GL_UNSIGNED_BYTE, layer_texels.data());
+    }
+    if (normal_map_layers.empty()) {
+        const unsigned char flat[2] = {128, 128};
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, 1, 1, 1, GL_RG, GL_UNSIGNED_BYTE, flat);
+    }
+    glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+
+    normal_map_layers_uploaded = normal_map_layers;
+}
+
 void Visualizer::bindShadowMap() const {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D_ARRAY, depthTexture != 0 ? depthTexture : shadow_map_placeholder_texture);
@@ -1225,6 +1369,16 @@ void Visualizer::render(bool shadow) const {
     // The annotation pass identifies each face by its geometry type as well as its face index, so it must be told which type each draw call below is drawing.
     const bool annotation_pass = annotationShader.initialized && static_cast<GLuint>(current_shader_program) == annotationShader.shaderID;
 
+    // initialize() enables polygon smoothing for anti-aliased Visualizers, which makes the driver emit a fragment for every
+    // pixel a primitive's edge touches. The color passes are unaffected, as smoothing is ignored while rendering to a
+    // multisampled target. The shadow=true passes (shadow cascades, the depth map, the annotation IDs) render to
+    // single-sampled framebuffers, though, where such a fragment simply overwrites the pixel, and every primitive would
+    // grow by one pixel. NVIDIA drivers honor the flag there; Mesa and macOS largely ignore it.
+    const bool suspend_polygon_smoothing = shadow && glIsEnabled(GL_POLYGON_SMOOTH);
+    if (suspend_polygon_smoothing) {
+        glDisable(GL_POLYGON_SMOOTH);
+    }
+
     // Bind our texture array
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
@@ -1276,6 +1430,12 @@ void Visualizer::render(bool shadow) const {
         glActiveTexture(GL_TEXTURE11);
         glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
 
+        glActiveTexture(GL_TEXTURE12);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, normal_map_array);
+
+        glActiveTexture(GL_TEXTURE13);
+        glBindTexture(GL_TEXTURE_BUFFER, normal_map_material_table_texture);
+
         glBindVertexArray(primaryShader.vertex_array_IDs.at(triangle_ind));
         assert(checkerrors());
         if (annotation_pass) {
@@ -1323,13 +1483,21 @@ void Visualizer::render(bool shadow) const {
         glActiveTexture(GL_TEXTURE11);
         glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
 
+        glActiveTexture(GL_TEXTURE12);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, normal_map_array);
+
+        glActiveTexture(GL_TEXTURE13);
+        glBindTexture(GL_TEXTURE_BUFFER, normal_map_material_table_texture);
+
         glBindVertexArray(primaryShader.vertex_array_IDs.at(rectangle_ind));
         if (annotation_pass) {
             glUniform1i(annotationShader.geometryTypeUniform, static_cast<GLint>(rectangle_ind));
         }
 
-        std::vector<GLint> opaque_firsts;
-        std::vector<GLint> opaque_counts;
+        // Opaque rectangles are drawn together as indexed triangles, two per rectangle: (0,1,2) and (0,2,3), the same two triangles
+        // its triangle fan makes. A glMultiDrawArrays of one fan per rectangle was issued as one draw per rectangle by the macOS
+        // driver, and made a scene of patches about three times slower to render than the same number of triangles.
+        std::vector<GLuint> opaque_rectangle_indices;
         struct TransparentRect {
             size_t index;
             float depth;
@@ -1343,8 +1511,7 @@ void Visualizer::render(bool shadow) const {
         const auto &verts = *geometry_handler.getVertexData_ptr(GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
         const auto &visibilityFlags = *geometry_handler.getVisibilityFlagData_ptr(GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
 
-        opaque_firsts.reserve(rectangle_count);
-        opaque_counts.reserve(rectangle_count);
+        opaque_rectangle_indices.reserve(6 * rectangle_count);
         transparent_rects.reserve(rectangle_count);
 
         for (size_t i = 0; i < rectangle_count; ++i) {
@@ -1364,8 +1531,8 @@ void Visualizer::render(bool shadow) const {
             if (isBlendedImage) {
                 linear_filtered_rects.push_back(i);
             } else if (!isGlyph && alpha >= 1.f) {
-                opaque_firsts.push_back(static_cast<GLint>(i * 4));
-                opaque_counts.push_back(4);
+                const GLuint first_vertex = static_cast<GLuint>(i * 4);
+                opaque_rectangle_indices.insert(opaque_rectangle_indices.end(), {first_vertex, first_vertex + 1, first_vertex + 2, first_vertex, first_vertex + 2, first_vertex + 3});
             } else {
                 glm::vec3 center(0.f);
                 for (int j = 0; j < 4; ++j) {
@@ -1379,8 +1546,18 @@ void Visualizer::render(bool shadow) const {
             }
         }
 
-        if (!opaque_firsts.empty()) {
-            glMultiDrawArrays(GL_TRIANGLE_FAN, opaque_firsts.data(), opaque_counts.data(), static_cast<GLsizei>(opaque_firsts.size()));
+        if (!opaque_rectangle_indices.empty()) {
+            if (rectangle_element_buffer == 0) {
+                glGenBuffers(1, &rectangle_element_buffer);
+            }
+            // The element buffer binding is part of the vertex array object, which is bound above
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rectangle_element_buffer);
+            // The list is the same from one pass and frame to the next unless rectangles were added, deleted, hidden or recolored
+            if (opaque_rectangle_indices != rectangle_element_indices_uploaded) {
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, GLsizeiptr(opaque_rectangle_indices.size() * sizeof(GLuint)), opaque_rectangle_indices.data(), GL_DYNAMIC_DRAW);
+                rectangle_element_indices_uploaded = opaque_rectangle_indices;
+            }
+            glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(opaque_rectangle_indices.size()), GL_UNSIGNED_INT, nullptr);
         }
 
         // Alpha-blended image overlays. Drawn after the opaque batch and with depth writes
@@ -1450,6 +1627,7 @@ void Visualizer::render(bool shadow) const {
             lineShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
             lineShader.setSmoothShading(smooth_shading_enabled);
             lineShader.setPhongMaterialTable(phong_material_table_size);
+            lineShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
             // Set viewport size for geometry shader
             GLint viewportSizeLoc = glGetUniformLocation(lineShader.shaderID, "viewportSize");
@@ -1495,6 +1673,12 @@ void Visualizer::render(bool shadow) const {
 
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
+
+            glActiveTexture(GL_TEXTURE12);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, normal_map_array);
+
+            glActiveTexture(GL_TEXTURE13);
+            glBindTexture(GL_TEXTURE_BUFFER, normal_map_material_table_texture);
 
             glBindVertexArray(lineShader.vertex_array_IDs.at(line_ind));
 
@@ -1548,6 +1732,7 @@ void Visualizer::render(bool shadow) const {
             primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
             primaryShader.setSmoothShading(smooth_shading_enabled);
             primaryShader.setPhongMaterialTable(phong_material_table_size);
+            primaryShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
             // Rebind texture array and uv_rescale for primary shader
             glActiveTexture(GL_TEXTURE0);
@@ -1596,6 +1781,12 @@ void Visualizer::render(bool shadow) const {
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_BUFFER, phong_material_table_texture);
 
+            glActiveTexture(GL_TEXTURE12);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, normal_map_array);
+
+            glActiveTexture(GL_TEXTURE13);
+            glBindTexture(GL_TEXTURE_BUFFER, normal_map_material_table_texture);
+
             glBindVertexArray(primaryShader.vertex_array_IDs.at(point_ind));
 
             // Group points by size and render each group separately
@@ -1641,6 +1832,10 @@ void Visualizer::render(bool shadow) const {
     // This helps prevent texture unit binding issues in headless mode
     glActiveTexture(GL_TEXTURE0);
 
+    if (suspend_polygon_smoothing) {
+        glEnable(GL_POLYGON_SMOOTH);
+    }
+
     assert(checkerrors());
 }
 
@@ -1649,34 +1844,17 @@ void Visualizer::plotUpdate() {
 }
 
 void Visualizer::plotUpdate(bool hide_window) {
-    // Check if window is marked for closure to prevent hanging on glfwSwapBuffers()
-    if (!headless && window != nullptr && glfwWindowShouldClose(scast<GLFWwindow *>(window))) {
-        return; // Don't render to a window that should be closed
-    }
+    plotUpdate_private(hide_window, false);
+}
 
-    if (message_flag) {
-        std::cout << "Updating the plot..." << std::flush;
-    }
-
-    // Warn user if they request visible window in headless mode
-    if (!hide_window && headless) {
-        if (message_flag) {
-            std::cout << "\nWARNING: plotUpdate(false) called in headless mode - window cannot be displayed. Use plotUpdate(true) for headless rendering." << std::endl;
-        }
-    }
-
-    if (!hide_window && !headless && window != nullptr) {
-        glfwShowWindow(scast<GLFWwindow *>(window));
-    }
-
-    // Update the Context geometry
-    buildContextGeometry_private();
-
+void Visualizer::prepareFrameGeometry() {
     // Apply point cloud culling for performance optimization
     updatePointCulling();
 
     // Set the view to fit window
-    if (camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { // default center
+    // Only a camera nobody has set is fitted to the scene. Judging that by the default coordinates
+    // alone moved a camera that had been set to them on purpose.
+    if (!camera_position_set_by_user && camera_lookat_center.x == 0 && camera_lookat_center.y == 0 && camera_lookat_center.z == 0) { // default center
         if (camera_eye_location.x < 1e-4 && camera_eye_location.y < 1e-4 && camera_eye_location.z == 2.f) { // default eye position
 
             vec3 center_sph;
@@ -1707,6 +1885,36 @@ void Visualizer::plotUpdate(bool hide_window) {
     }
 
     transferBufferData();
+}
+
+void Visualizer::plotUpdate_private(bool hide_window, bool context_geometry_is_current) {
+    makeContextCurrent("Visualizer::plotUpdate_private");
+    // Check if window is marked for closure to prevent hanging on glfwSwapBuffers()
+    if (!headless && window != nullptr && glfwWindowShouldClose(scast<GLFWwindow *>(window))) {
+        return; // Don't render to a window that should be closed
+    }
+
+    if (message_flag) {
+        std::cout << "Updating the plot..." << std::flush;
+    }
+
+    // Warn user if they request visible window in headless mode
+    if (!hide_window && headless) {
+        if (message_flag) {
+            std::cout << "\nWARNING: plotUpdate(false) called in headless mode - window cannot be displayed. Use plotUpdate(true) for headless rendering." << std::endl;
+        }
+    }
+
+    if (!hide_window && !headless && window != nullptr) {
+        glfwShowWindow(scast<GLFWwindow *>(window));
+    }
+
+    // Update the Context geometry
+    if (!context_geometry_is_current) {
+        buildContextGeometry_private();
+    }
+
+    prepareFrameGeometry();
 
     bool shadow_flag = (primaryLightingModel == Visualizer::LIGHTING_PHONG_SHADOWED);
 
@@ -1764,11 +1972,16 @@ void Visualizer::plotUpdate(bool hide_window) {
     primaryShader.setAmbientColors(ambient_sky_color, ambient_ground_color);
     primaryShader.setSmoothShading(smooth_shading_enabled);
     primaryShader.setPhongMaterialTable(phong_material_table_size);
+    primaryShader.setNormalMapsEnabled(normal_maps_enabled && !normal_map_layers_uploaded.empty());
 
     bindShadowMap();
 
     buffers_swapped_since_render = false;
     render(false);
+    color_frame_render_count++;
+    // The frame on the GPU now reflects the current geometry and camera, so printWindow() can capture it without rendering again.
+    // A camera moved from the keyboard below rebuilds the navigation gizmo, whose upload makes the frame out of date again.
+    rendered_frame_is_current = true;
 
     // Skip window-specific operations in headless mode
     if (!headless && window != nullptr) {
@@ -1793,16 +2006,13 @@ void Visualizer::plotUpdate(bool hide_window) {
         buffers_swapped_since_render = true;
     }
 
-    // The frame on the GPU now reflects the current geometry and camera, so printWindow() can
-    // capture it without rendering again.
-    rendered_frame_is_current = true;
-
     if (message_flag) {
         std::cout << "done." << std::endl;
     }
 }
 
 void Visualizer::updateDepthBuffer() {
+    makeContextCurrent("Visualizer::updateDepthBuffer");
     // Update the Context geometry (if needed)
     if (true) {
         buildContextGeometry_private();
@@ -1908,20 +2118,50 @@ void Visualizer::plotDepthMap() {
     }
 }
 
-void Visualizer::renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::vector<float> &pixel_depth, uint &width_pixels, uint &height_pixels) {
+//! Pack a pixel window given as unsigned integers into the (x, y, width, height) form taken by Visualizer::renderAnnotationBuffers()
+/**
+ * Raises an error for a window too large to be a pixel window at all; whether it lies within the framebuffer is checked once the frame is rendered.
+ */
+static helios::int4 makePixelWindow(uint x0, uint y0, uint width, uint height, const char *caller) {
+    constexpr uint max_coordinate = uint(std::numeric_limits<int>::max());
+    if (x0 > max_coordinate || y0 > max_coordinate || width > max_coordinate || height > max_coordinate) {
+        helios_runtime_error("ERROR (" + std::string(caller) + "): The pixel window starting at column " + std::to_string(x0) + ", row " + std::to_string(y0) + " with size " + std::to_string(width) + " x " +
+                             std::to_string(height) + " is far larger than any framebuffer. Give a non-empty window inside the image; the framebuffer size is reported by getFramebufferSize().");
+    }
+    return helios::make_int4(int(x0), int(y0), int(width), int(height));
+}
+
+void Visualizer::renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::vector<float> &pixel_depth, uint &width_pixels, uint &height_pixels, const helios::int4 *pixel_window, const char *caller) {
+    makeContextCurrent("Visualizer::renderAnnotationBuffers");
 
     // Pick up any change made to the Context since the last render, so that the annotations never describe primitives that have since moved or been deleted.
     buildContextGeometry_private();
 
-    // Bring the rendered frame up to date, under the same conditions as printWindow(). This also settles anything that is decided at render time, such as the default camera that is fitted to the scene, so
-    // that the annotations describe the same view as the image whichever of the two is produced first.
-    if (!rendered_frame_is_current || !geometry_handler.getDirtyUUIDs().empty() || geometry_handler.doesBufferNeedFullUpdate() || cameraHasChanged()) {
-        plotUpdate(true);
-    }
+    // Upload the geometry and settle what is decided at render time, such as the default camera that is fitted to the scene, so that the annotations describe the same view as the image whichever of the
+    // two is produced first. The colour frame itself is not rendered: the annotation pass does not draw from it, and rendering it made every annotation call cost two renders.
+    prepareFrameGeometry();
 
-    width_pixels = Wframebuffer;
-    height_pixels = Hframebuffer;
-    const size_t pixel_count = size_t(Wframebuffer) * size_t(Hframebuffer);
+    // The rectangle read back, in pixels: its left column and top row in the image, and its size. The whole image unless a window was asked for.
+    uint window_x0 = 0, window_y0 = 0, window_width = Wframebuffer, window_height = Hframebuffer;
+    if (pixel_window != nullptr) {
+        // x, y: left column and top row; z, w: width and height
+        if (pixel_window->x < 0 || pixel_window->y < 0 || pixel_window->z <= 0 || pixel_window->w <= 0 || size_t(pixel_window->x) + size_t(pixel_window->z) > Wframebuffer ||
+            size_t(pixel_window->y) + size_t(pixel_window->w) > Hframebuffer) {
+            helios_runtime_error("ERROR (" + std::string(caller) + "): The pixel window starting at column " + std::to_string(pixel_window->x) + ", row " + std::to_string(pixel_window->y) + " with size " +
+                                 std::to_string(pixel_window->z) + " x " + std::to_string(pixel_window->w) + " does not lie within the " + std::to_string(Wframebuffer) + " x " + std::to_string(Hframebuffer) +
+                                 " framebuffer. Give a non-empty window inside the image; the framebuffer size is reported by getFramebufferSize().");
+        }
+        window_x0 = uint(pixel_window->x);
+        window_y0 = uint(pixel_window->y);
+        window_width = uint(pixel_window->z);
+        window_height = uint(pixel_window->w);
+    }
+    // OpenGL counts rows from the bottom of the image
+    const uint window_gl_row0 = Hframebuffer - window_y0 - window_height;
+
+    width_pixels = window_width;
+    height_pixels = window_height;
+    const size_t pixel_count = size_t(window_width) * size_t(window_height);
 
     GLint previous_framebuffer = 0;
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previous_framebuffer);
@@ -1976,6 +2216,13 @@ void Visualizer::renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::ve
 
     glViewport(0, 0, Wframebuffer, Hframebuffer);
 
+    // The projection is that of the whole image, so a window's pixels are exactly those of the whole-image maps; the scissor confines the
+    // clear and the fragments drawn to the window. The clear below respects it too.
+    if (pixel_window != nullptr) {
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(GLint(window_x0), GLint(window_gl_row0), GLsizei(window_width), GLsizei(window_height));
+    }
+
     // Pixels that no primitive covers keep these values: no primitive, and a depth of -1
     const GLint no_primitive[4] = {0, 0, 0, 0};
     const GLfloat no_depth[4] = {-1.f, 0.f, 0.f, 0.f};
@@ -2003,12 +2250,13 @@ void Visualizer::renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::ve
 
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glReadBuffer(GL_COLOR_ATTACHMENT0);
-    glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RG_INTEGER, GL_INT, primitive_index_data.data());
+    glReadPixels(GLint(window_x0), GLint(window_gl_row0), GLsizei(window_width), GLsizei(window_height), GL_RG_INTEGER, GL_INT, primitive_index_data.data());
     glReadBuffer(GL_COLOR_ATTACHMENT1);
-    glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RED, GL_FLOAT, depth_data.data());
+    glReadPixels(GLint(window_x0), GLint(window_gl_row0), GLsizei(window_width), GLsizei(window_height), GL_RED, GL_FLOAT, depth_data.data());
     const GLenum read_error = glGetError();
 
     // Restore the state that the rest of the Visualizer relies on
+    glDisable(GL_SCISSOR_TEST);
     glEnable(GL_BLEND);
     glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
     glViewport(previous_viewport[0], previous_viewport[1], previous_viewport[2], previous_viewport[3]);
@@ -2018,22 +2266,30 @@ void Visualizer::renderAnnotationBuffers(std::vector<uint> &pixel_UUIDs, std::ve
     }
 
     // Translate (geometry type, face index) into Context primitive UUIDs. Only rectangles and triangles are drawn by this pass.
-    std::vector<std::vector<uint>> face_context_UUIDs(GeometryHandler::all_geometry_types.size());
-    for (size_t type_index = 0; type_index < GeometryHandler::all_geometry_types.size(); type_index++) {
-        const GeometryHandler::VisualizerGeometryType geometry_type = GeometryHandler::all_geometry_types.at(type_index);
-        if (geometry_type == GeometryHandler::GEOMETRY_TYPE_RECTANGLE || geometry_type == GeometryHandler::GEOMETRY_TYPE_TRIANGLE) {
-            face_context_UUIDs.at(type_index) = geometry_handler.getFaceContextUUIDs(geometry_type);
+    // Building the lookup visits every displayed primitive, and it depends only on which primitive occupies which face slot,
+    // so it is kept until a primitive is added or deleted or the buffers are compacted - not rebuilt for a move or recolor.
+    if (!annotation_face_lookup_built || annotation_face_lookup_revision != geometry_handler.getLayoutRevision()) {
+        annotation_face_lookup.assign(GeometryHandler::all_geometry_types.size(), {});
+        for (size_t type_index = 0; type_index < GeometryHandler::all_geometry_types.size(); type_index++) {
+            const GeometryHandler::VisualizerGeometryType geometry_type = GeometryHandler::all_geometry_types.at(type_index);
+            if (geometry_type == GeometryHandler::GEOMETRY_TYPE_RECTANGLE || geometry_type == GeometryHandler::GEOMETRY_TYPE_TRIANGLE) {
+                annotation_face_lookup.at(type_index) = geometry_handler.getFaceContextUUIDs(geometry_type);
+            }
         }
+        annotation_face_lookup_revision = geometry_handler.getLayoutRevision();
+        annotation_face_lookup_built = true;
+        annotation_face_lookup_build_count++;
     }
+    const std::vector<std::vector<uint>> &face_context_UUIDs = annotation_face_lookup;
 
     pixel_UUIDs.assign(pixel_count, 0);
     pixel_depth.assign(pixel_count, -1.f);
 
     // OpenGL returns rows bottom-up; the buffers handed back are top-down, which is the orientation of a saved image and of every annotation format.
-    for (uint j = 0; j < Hframebuffer; j++) {
-        const size_t source_row = size_t(Hframebuffer - 1 - j) * size_t(Wframebuffer);
-        const size_t output_row = size_t(j) * size_t(Wframebuffer);
-        for (uint i = 0; i < Wframebuffer; i++) {
+    for (uint j = 0; j < window_height; j++) {
+        const size_t source_row = size_t(window_height - 1 - j) * size_t(window_width);
+        const size_t output_row = size_t(j) * size_t(window_width);
+        for (uint i = 0; i < window_width; i++) {
             const GLint geometry_type_plus_one = primitive_index_data[2 * (source_row + i)];
             if (geometry_type_plus_one == 0) { // nothing visible in this pixel
                 continue;
@@ -2066,6 +2322,33 @@ void Visualizer::getPixelUUIDs(std::vector<uint> &pixel_UUIDs, uint &width_pixel
 void Visualizer::getDepthImage(std::vector<float> &depth_pixels, uint &width_pixels, uint &height_pixels) {
     std::vector<uint> pixel_UUIDs;
     renderAnnotationBuffers(pixel_UUIDs, depth_pixels, width_pixels, height_pixels);
+}
+
+void Visualizer::getPixelUUIDs(std::vector<uint> &pixel_UUIDs, uint x0, uint y0, uint width, uint height) {
+    static_cast<void>(getContextForAnnotation("Visualizer::getPixelUUIDs"));
+    std::vector<float> pixel_depth;
+    const helios::int4 pixel_window = makePixelWindow(x0, y0, width, height, "Visualizer::getPixelUUIDs");
+    uint width_returned, height_returned;
+    renderAnnotationBuffers(pixel_UUIDs, pixel_depth, width_returned, height_returned, &pixel_window, "Visualizer::getPixelUUIDs");
+}
+
+void Visualizer::getDepthImage(std::vector<float> &depth_pixels, uint x0, uint y0, uint width, uint height) {
+    std::vector<uint> pixel_UUIDs;
+    const helios::int4 pixel_window = makePixelWindow(x0, y0, width, height, "Visualizer::getDepthImage");
+    uint width_returned, height_returned;
+    renderAnnotationBuffers(pixel_UUIDs, depth_pixels, width_returned, height_returned, &pixel_window, "Visualizer::getDepthImage");
+}
+
+void Visualizer::getPixelUUIDsAndDepth(std::vector<uint> &pixel_UUIDs, std::vector<float> &depth_pixels, uint &width_pixels, uint &height_pixels) {
+    static_cast<void>(getContextForAnnotation("Visualizer::getPixelUUIDsAndDepth"));
+    renderAnnotationBuffers(pixel_UUIDs, depth_pixels, width_pixels, height_pixels, nullptr, "Visualizer::getPixelUUIDsAndDepth");
+}
+
+void Visualizer::getPixelUUIDsAndDepth(std::vector<uint> &pixel_UUIDs, std::vector<float> &depth_pixels, uint x0, uint y0, uint width, uint height) {
+    static_cast<void>(getContextForAnnotation("Visualizer::getPixelUUIDsAndDepth"));
+    const helios::int4 pixel_window = makePixelWindow(x0, y0, width, height, "Visualizer::getPixelUUIDsAndDepth");
+    uint width_returned, height_returned;
+    renderAnnotationBuffers(pixel_UUIDs, depth_pixels, width_returned, height_returned, &pixel_window, "Visualizer::getPixelUUIDsAndDepth");
 }
 
 void Visualizer::writeImageBoundingBoxes(const std::string &primitive_data_label, uint object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path) {
@@ -2178,6 +2461,7 @@ void Visualizer::writeDepthImageDataEXR(const std::string &filename) {
 }
 
 void Visualizer::writeNormDepthImage(const std::string &filename, float max_depth) {
+    makeContextCurrent("Visualizer::writeNormDepthImage");
 
     if (max_depth <= 0.f) {
         helios_runtime_error("ERROR (Visualizer::writeNormDepthImage): The maximum depth must be greater than zero, but " + std::to_string(max_depth) + " was given.");
@@ -2494,6 +2778,17 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
     phongMaterialTableSizeUniform = glGetUniformLocation(shaderID, "phongMaterialTableSize");
     glUniform1i(phongMaterialTableSizeUniform, 0);
 
+    // Normal maps: the texture array on unit 12 and the per-material layer table on unit 13. Only the primary (and line) fragment shader declares them.
+    normalMapSamplerUniform = glGetUniformLocation(shaderID, "normalMapSampler");
+    if (normalMapSamplerUniform >= 0)
+        glUniform1i(normalMapSamplerUniform, 12);
+    normalMapMaterialTableUniform = glGetUniformLocation(shaderID, "normalMapMaterialTable");
+    if (normalMapMaterialTableUniform >= 0)
+        glUniform1i(normalMapMaterialTableUniform, 13);
+    normalMapsEnabledUniform = glGetUniformLocation(shaderID, "normalMapsEnabled");
+    if (normalMapsEnabledUniform >= 0)
+        glUniform1i(normalMapsEnabledUniform, 0);
+
     assert(checkerrors());
 
     initialized = true;
@@ -2599,6 +2894,12 @@ void Shader::setPhongMaterialTable(GLint table_size) const {
     glUniform1i(phongMaterialTableSizeUniform, table_size);
 }
 
+void Shader::setNormalMapsEnabled(bool enabled) const {
+    if (normalMapsEnabledUniform >= 0) {
+        glUniform1i(normalMapsEnabledUniform, enabled ? 1 : 0);
+    }
+}
+
 void Shader::setSmoothShading(bool enabled) const {
     glUniform1i(smoothShadingUniform, enabled ? 1 : 0);
 }
@@ -2644,6 +2945,8 @@ void Visualizer::windowResizeCallback(GLFWwindow *window, int width, int height)
         }
         viz->updateWatermark();
         viz->updateNavigationGizmo();
+        // Events are polled for every window at once, so another Visualizer's context may be the current one
+        viz->makeContextCurrent("Visualizer::windowResizeCallback");
         viz->transferBufferData();
     }
 }
@@ -3104,22 +3407,27 @@ std::vector<glm::vec4> Visualizer::extractFrustumPlanes() const {
 }
 
 void Visualizer::setPointCullingEnabled(bool enabled) {
+    rendered_frame_is_current = false; // changes what is drawn
     point_culling_enabled = enabled;
 }
 
 void Visualizer::setPointCullingThreshold(size_t threshold) {
+    rendered_frame_is_current = false; // changes what is drawn
     point_culling_threshold = threshold;
 }
 
 void Visualizer::setPointMaxRenderDistance(float distance) {
+    rendered_frame_is_current = false; // changes what is drawn
     point_max_render_distance = distance;
 }
 
 void Visualizer::setPointLODFactor(float factor) {
+    rendered_frame_is_current = false; // changes what is drawn
     point_lod_factor = factor;
 }
 
 void Visualizer::getPointRenderingMetrics(size_t &total_points, size_t &rendered_points, float &culling_time_ms) const {
+    makeContextCurrent("Visualizer::getPointRenderingMetrics");
     total_points = points_total_count;
     rendered_points = points_rendered_count;
     culling_time_ms = last_culling_time_ms;

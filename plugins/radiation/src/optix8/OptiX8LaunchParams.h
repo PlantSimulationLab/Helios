@@ -66,6 +66,7 @@ struct PerRayData {
     float3 cover_exit;         //!< World-space point just beyond the cover where the ray continues
     float  origin_cos;         //!< |cosine| of the angle between a direct or diffuse ray and the normal of the primitive it left
     uint32_t palette_entry;    //!< Palette entry of the class at the point the ray left, or UINT32_MAX to use the origin primitive's own values
+    bool   source_reached;     //!< Set when a camera's shadow ray reaches the source it was traced toward (__miss__camera_shadow)
 };
 
 // ---------------------------------------------------------------------------
@@ -139,10 +140,13 @@ struct OptiX8LaunchParams {
     float*    radiation_out_top;      //!< [prim * Nbands_global + band]
     float*    radiation_out_bottom;   //!< [prim * Nbands_global + band]
     int32_t*  smoothing_vertex_indices;  //!< Shared vertex index per facet corner, 4 per primitive; entry 4*prim negative if the primitive is not smoothed, entry 4*prim+3 negative for a triangle
-    float*    vertex_radiation_out_top;    //!< [vertex * Nbands_launch + band], null when camera flux smoothing is disabled
-    float*    vertex_radiation_out_bottom; //!< [vertex * Nbands_launch + band], null when camera flux smoothing is disabled
+    float*    vertex_radiation_out_top;    //!< [component][vertex][band], null when camera flux smoothing is disabled
+    float*    vertex_radiation_out_bottom; //!< [component][vertex][band], null when camera flux smoothing is disabled
+    float*    vertex_normals;              //!< Unit shading normal per smoothing vertex [vertex * 3]; null unless smoothing is enabled and there is a source or some primitive has a surface layer
+    uint32_t  vertex_normal_count;         //!< Number of smoothing vertices in vertex_normals (and in each component of vertex_radiation_out_*), 0 when null
     float*    scatter_buff_top;       //!< [prim * Nbands_global + band]
     float*    scatter_buff_bottom;    //!< [prim * Nbands_global + band]
+    float*    forward_scatter;        //!< Forward scattering estimate [prim * Nbands_launch + band]; null except in scattering launches
     float*    radiation_in_camera;    //!< [prim * Nbands_launch + band]
     float*    scatter_buff_top_cam;   //!< [cam * Nprims * Nbands_launch + prim * Nbands_launch + band]
     float*    scatter_buff_bottom_cam; //!< same layout as scatter_buff_top_cam
@@ -192,6 +196,14 @@ struct OptiX8LaunchParams {
     uint32_t* class_map_offsets;      //!< class_map_offsets[k] = start index in class_map_data of class map k
     int32_t*  class_map_sizes;        //!< 2 ints per class map: width, height
     int32_t*  class_map_IDs;          //!< Per-primitive class map (-1 = none), indexed by global pos
+
+    // ---- Normal maps (see include/NormalMapMath.h for the packed layout) ----
+    const uint32_t* normal_maps;      //!< Packed normal maps, or nullptr when no primitive has one
+    uint32_t  normal_map_direct;      //!< Camera launches: 1 if the host removed the direct launch's deposit from normal-mapped primitives' outgoing radiation, so the camera shades it per hit point
+    uint32_t  camera_direct_per_pixel; //!< Camera launches: 1 if the camera evaluates the direct radiation of smoothed primitives per pixel sample (RayTracingLaunchParams::camera_direct_per_pixel)
+    const uint32_t* normal_map_slots; //!< Slot of each normal-mapped primitive in normal_map_moments (UINT32_MAX for none), or nullptr when no primitive has a map
+    float*    normal_map_moments;     //!< [slot][face][launch band][3]: flux-weighted sum of the directions the diffuse radiation reaching each face came from
+    const float* vertex_normal_map_moments; //!< [smoothing vertex][face][launch band][3]: normal_map_moments averaged onto the smoothing vertices; null unless smoothing and maps
     uint32_t* palette_offset;         //!< Per-primitive first palette entry (UINT32_MAX = no spectral texture), indexed by global pos
     float*    palette_rho;            //!< Palette reflectivity [source * Npalette_entries * Nbands_global + entry * Nbands_global + band]
     float*    palette_tau;            //!< Palette transmissivity (same layout)

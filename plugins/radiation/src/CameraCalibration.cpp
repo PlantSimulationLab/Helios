@@ -761,94 +761,6 @@ std::vector<uint> CameraCalibration::readROMCCanopy() {
 
 // Auto-calibration implementation methods
 
-std::vector<CameraCalibration::LabColor> CameraCalibration::getReferenceLab_DGK() const {
-    // DGK-DKK Color Chart Lab values (18 patches)
-    // Data extracted from official DGK documentation
-    std::vector<LabColor> dgk_lab_values = {
-            LabColor(97.0f, 0.0f, 1.0f), // 1: White
-            LabColor(73.0f, 0.0f, 0.0f), // 2: Gray 73
-            LabColor(62.0f, 0.0f, 0.0f), // 3: Gray 62
-            LabColor(50.0f, 0.0f, 0.0f), // 4: Gray 50
-            LabColor(38.0f, 0.0f, 0.0f), // 5: Gray 38
-            LabColor(23.0f, 0.0f, 0.0f), // 6: Black
-            LabColor(48.0f, 59.0f, 39.0f), // 7: Red
-            LabColor(92.0f, 1.0f, 95.0f), // 8: Yellow
-            LabColor(64.0f, -40.0f, 54.0f), // 9: Green
-            LabColor(57.0f, -41.0f, -42.0f), // 10: Cyan
-            LabColor(18.0f, -3.0f, -25.0f), // 11: Blue
-            LabColor(49.0f, 60.0f, -3.0f), // 12: Magenta
-            LabColor(41.0f, 51.0f, 26.0f), // 13: CIE TSC 01
-            LabColor(61.0f, 29.0f, 57.0f), // 14: CIE TSC 02
-            LabColor(52.0f, -24.0f, -24.0f), // 15: CIE TSC 06
-            LabColor(52.0f, 47.0f, -14.0f), // 16: CIE TSC 08
-            LabColor(69.0f, 14.0f, 17.0f), // 17: CIE TSC 09
-            LabColor(64.0f, 12.0f, 17.0f) // 18: CIE TSC 10
-    };
-    return dgk_lab_values;
-}
-
-std::vector<CameraCalibration::LabColor> CameraCalibration::getReferenceLab_Calibrite() const {
-    // Calibrite ColorChecker Classic reference Lab values (D65 illuminant, post-November 2014)
-    // Source: X-Rite/Calibrite official data converted from D50 to D65 using Bradford transform
-    return {
-            LabColor(37.54f, 14.37f, 14.92f), // 01 Dark Skin
-            LabColor(62.73f, 35.83f, 56.5f), // 02 Light Skin
-            LabColor(28.37f, 15.42f, -49.8f), // 03 Blue Sky
-            LabColor(34.26f, -32.46f, 47.33f), // 04 Foliage
-            LabColor(49.57f, -29.71f, -28.32f), // 05 Blue Flower
-            LabColor(54.38f, -40.93f, 32.27f), // 06 Bluish Green
-            LabColor(80.83f, 4.39f, 79.25f), // 07 Orange
-            LabColor(40.76f, 10.75f, -45.17f), // 08 Purplish Blue
-            LabColor(44.06f, 60.11f, 33.05f), // 09 Moderate Red
-            LabColor(24.06f, 47.57f, -22.74f), // 10 Purple
-            LabColor(72.57f, -23.5f, 56.8f), // 11 Yellow Green
-            LabColor(71.52f, 18.24f, 67.37f), // 12 Orange Yellow
-            LabColor(28.78f, 28.28f, -50.3f), // 13 Blue
-            LabColor(50.63f, -39.72f, 21.65f), // 14 Green
-            LabColor(42.43f, 51.05f, 28.62f), // 15 Red
-            LabColor(81.8f, 4.04f, 79.82f), // 16 Yellow
-            LabColor(50.57f, 48.64f, -14.12f), // 17 Magenta
-            LabColor(49.32f, -21.18f, -49.94f), // 18 Cyan
-            LabColor(95.19f, -1.03f, 2.93f), // 19 White
-            LabColor(81.29f, -0.57f, 0.44f), // 20 Neutral 8
-            LabColor(66.89f, -0.75f, -0.06f), // 21 Neutral 6.5
-            LabColor(50.76f, -0.13f, -0.16f), // 22 Neutral 5
-            LabColor(35.63f, -0.46f, -0.41f), // 23 Neutral 3.5
-            LabColor(20.64f, 0.07f, -0.46f) // 24 Black
-    };
-}
-
-std::vector<CameraCalibration::LabColor> CameraCalibration::getReferenceLab_SpyderCHECKR() const {
-    // Datacolor SpyderCHECKR 24 reference Lab values (approximate, compiled from available sources)
-    // Note: These values may need refinement based on official Datacolor documentation
-    return {
-            LabColor(54.38f, -40.93f, 32.27f), // 01 Bluish Green
-            LabColor(49.57f, -29.71f, -28.32f), // 02 Blue Flower (Lavender)
-            LabColor(34.26f, -32.46f, 47.33f), // 03 Foliage (Olive)
-            LabColor(28.37f, 15.42f, -49.8f), // 04 Blue Sky (Blue Gray)
-            LabColor(62.73f, 35.83f, 56.5f), // 05 Light Skin (Light Tan)
-            LabColor(37.54f, 14.37f, 14.92f), // 06 Dark Skin (Brown)
-            LabColor(80.83f, 4.39f, 79.25f), // 07 Orange
-            LabColor(40.76f, 10.75f, -45.17f), // 08 Purplish Blue (Mid Blue)
-            LabColor(44.06f, 60.11f, 33.05f), // 09 Moderate Red (Light Red)
-            LabColor(24.06f, 47.57f, -22.74f), // 10 Purple (Violet)
-            LabColor(72.57f, -23.5f, 56.8f), // 11 Yellow Green
-            LabColor(71.52f, 18.24f, 67.37f), // 12 Orange Yellow (Light Orange)
-            LabColor(49.32f, -21.18f, -49.94f), // 13 Cyan (Light Blue)
-            LabColor(50.57f, 48.64f, -14.12f), // 14 Magenta
-            LabColor(81.8f, 4.04f, 79.82f), // 15 Yellow
-            LabColor(42.43f, 51.05f, 28.62f), // 16 Red
-            LabColor(50.63f, -39.72f, 21.65f), // 17 Green
-            LabColor(28.78f, 28.28f, -50.3f), // 18 Blue
-            LabColor(95.19f, -1.03f, 2.93f), // 19 White
-            LabColor(81.29f, -0.57f, 0.44f), // 20 Light Gray
-            LabColor(66.89f, -0.75f, -0.06f), // 21 Mid Light Gray
-            LabColor(50.76f, -0.13f, -0.16f), // 22 Mid Dark Gray
-            LabColor(35.63f, -0.46f, -0.41f), // 23 Dark Gray
-            LabColor(20.64f, 0.07f, -0.46f) // 24 Black
-    };
-}
-
 std::vector<std::string> CameraCalibration::detectColorBoardTypes() const {
     // Check for each colorboard type by looking for primitive data
     std::vector<uint> all_UUIDs = context->getAllUUIDs();
@@ -929,41 +841,27 @@ std::map<int, std::vector<std::vector<bool>>> CameraCalibration::generateColorBo
 
 
 CameraCalibration::LabColor CameraCalibration::rgbToLab(const helios::vec3 &rgb) const {
-    // Convert RGB [0,1] to XYZ using sRGB transformation
-    // First apply gamma correction
+    // Decode the sRGB transfer function, then convert the linear values
     auto gamma_correct = [](float c) { return (c <= 0.04045f) ? c / 12.92f : powf((c + 0.055f) / 1.055f, 2.4f); };
+    return linearRgbToLab(helios::make_vec3(gamma_correct(rgb.x), gamma_correct(rgb.y), gamma_correct(rgb.z)));
+}
 
-    float r_linear = gamma_correct(rgb.x);
-    float g_linear = gamma_correct(rgb.y);
-    float b_linear = gamma_correct(rgb.z);
+CameraCalibration::LabColor CameraCalibration::linearRgbToLab(const helios::vec3 &linear_rgb) const {
+    // Linear sRGB to XYZ (D65)
+    float X = 0.4124564f * linear_rgb.x + 0.3575761f * linear_rgb.y + 0.1804375f * linear_rgb.z;
+    float Y = 0.2126729f * linear_rgb.x + 0.7151522f * linear_rgb.y + 0.0721750f * linear_rgb.z;
+    float Z = 0.0193339f * linear_rgb.x + 0.1191920f * linear_rgb.y + 0.9503041f * linear_rgb.z;
 
-    // sRGB to XYZ transformation matrix (D65 illuminant)
-    float X = 0.4124564f * r_linear + 0.3575761f * g_linear + 0.1804375f * b_linear;
-    float Y = 0.2126729f * r_linear + 0.7151522f * g_linear + 0.0721750f * b_linear;
-    float Z = 0.0193339f * r_linear + 0.1191920f * g_linear + 0.9503041f * b_linear;
+    // Normalize by the D65 reference white
+    X /= 0.95047f;
+    Z /= 1.08883f;
 
-    // Reference white point D65
-    const float Xn = 0.95047f;
-    const float Yn = 1.00000f;
-    const float Zn = 1.08883f;
-
-    // Normalize by reference white
-    X /= Xn;
-    Y /= Yn;
-    Z /= Zn;
-
-    // Convert to Lab
     auto f_transform = [](float t) { return (t > 0.008856f) ? cbrtf(t) : (7.787f * t + 16.0f / 116.0f); };
+    const float fx = f_transform(X);
+    const float fy = f_transform(Y);
+    const float fz = f_transform(Z);
 
-    float fx = f_transform(X);
-    float fy = f_transform(Y);
-    float fz = f_transform(Z);
-
-    float L = 116.0f * fy - 16.0f;
-    float a = 500.0f * (fx - fy);
-    float b = 200.0f * (fy - fz);
-
-    return LabColor(L, a, b);
+    return LabColor(116.0f * fy - 16.0f, 500.0f * (fx - fy), 200.0f * (fy - fz));
 }
 
 helios::vec3 CameraCalibration::labToRgb(const LabColor &lab) const {

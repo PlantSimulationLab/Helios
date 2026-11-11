@@ -8,6 +8,27 @@ using namespace helios;
 
 float err_tol = 1e-3;
 
+DOCTEST_TEST_CASE("LeafOptics default leaf has a typical near-infrared reflectance") {
+    // Regression test. The default dry matter content was 0.09 g/cm^2, about 20 times that of a typical leaf (the PROSPECT calibration
+    // datasets average about 0.005 g/cm^2), which halved the leaf's near-infrared reflectance and transmittance (0.24 instead of 0.45 at 850 nm).
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    LeafOpticsProperties library_default;
+    leafoptics.getPropertiesFromLibrary("default", library_default);
+    for (const LeafOpticsProperties &props: {LeafOpticsProperties(), library_default}) {
+        std::vector<helios::vec2> reflectivity, transmissivity;
+        leafoptics.getLeafSpectra(props, reflectivity, transmissivity);
+        const float nir_reflectivity = interp1(reflectivity, 850.f);
+        const float nir_transmissivity = interp1(transmissivity, 850.f);
+        DOCTEST_CHECK(nir_reflectivity > 0.40f);
+        DOCTEST_CHECK(nir_reflectivity < 0.55f);
+        DOCTEST_CHECK(nir_transmissivity > 0.40f);
+        DOCTEST_CHECK(nir_transmissivity < 0.55f);
+    }
+}
+
 DOCTEST_TEST_CASE("LeafOpticsProperties Default Constructor") {
     LeafOpticsProperties props;
 
@@ -17,7 +38,7 @@ DOCTEST_TEST_CASE("LeafOpticsProperties Default Constructor") {
     DOCTEST_CHECK(props.carotenoidcontent == doctest::Approx(7.f).epsilon(err_tol));
     DOCTEST_CHECK(props.anthocyancontent == doctest::Approx(1.f).epsilon(err_tol));
     DOCTEST_CHECK(props.watermass == doctest::Approx(0.015f).epsilon(err_tol));
-    DOCTEST_CHECK(props.drymass == doctest::Approx(0.09f).epsilon(err_tol));
+    DOCTEST_CHECK(props.drymass == doctest::Approx(0.006f).epsilon(err_tol));
     DOCTEST_CHECK(props.protein == doctest::Approx(0.f).epsilon(err_tol));
     DOCTEST_CHECK(props.carbonconstituents == doctest::Approx(0.f).epsilon(err_tol));
 }
@@ -818,7 +839,7 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - Default Species") {
     DOCTEST_CHECK(props.anthocyancontent == doctest::Approx(1.0f).epsilon(err_tol));
     DOCTEST_CHECK(props.brownpigments == doctest::Approx(0.0f).epsilon(err_tol));
     DOCTEST_CHECK(props.watermass == doctest::Approx(0.015f).epsilon(err_tol));
-    DOCTEST_CHECK(props.drymass == doctest::Approx(0.09f).epsilon(err_tol));
+    DOCTEST_CHECK(props.drymass == doctest::Approx(0.006f).epsilon(err_tol));
     DOCTEST_CHECK(props.protein == doctest::Approx(0.0f).epsilon(err_tol));
     DOCTEST_CHECK(props.carbonconstituents == doctest::Approx(0.0f).epsilon(err_tol));
 }
@@ -847,13 +868,18 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - Unknown Species") {
 
     LeafOpticsProperties props;
 
-    // Test with unknown species - should use default without crashing
-    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromLibrary("UnknownSpecies", props));
-
-    // Should have default values
-    DOCTEST_CHECK(props.chlorophyllcontent == doctest::Approx(30.0f).epsilon(err_tol));
-    DOCTEST_CHECK(props.watermass == doctest::Approx(0.015f).epsilon(err_tol));
-    DOCTEST_CHECK(props.drymass == doctest::Approx(0.09f).epsilon(err_tol));
+    // Regression test. An unknown (e.g., misspelled) species used to return the default leaf, with a warning that disableMessages() silenced, so
+    // the simulation went on with the wrong leaf. It is now an error that names the species and lists those available, and leaves props unchanged.
+    props.chlorophyllcontent = 55.f;
+    std::string error;
+    try {
+        leafoptics.getPropertiesFromLibrary("grapevine", props);
+    } catch (const std::runtime_error &e) {
+        error = e.what();
+    }
+    DOCTEST_CHECK(error.find("grapevine") != std::string::npos);
+    DOCTEST_CHECK(error.find("wine_grape") != std::string::npos);
+    DOCTEST_CHECK(props.chlorophyllcontent == doctest::Approx(55.f).epsilon(err_tol));
 }
 
 DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - Integration with Run") {
@@ -893,7 +919,7 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - Integration with Run") 
 
     DOCTEST_CHECK(chl == doctest::Approx(30.0f).epsilon(err_tol));
     DOCTEST_CHECK(water == doctest::Approx(0.015f).epsilon(err_tol));
-    DOCTEST_CHECK(dry == doctest::Approx(0.09f).epsilon(err_tol));
+    DOCTEST_CHECK(dry == doctest::Approx(0.006f).epsilon(err_tol));
 }
 
 DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - LOPEX93 Species Library") {
@@ -2109,6 +2135,151 @@ DOCTEST_TEST_CASE("LeafOptics Transmittance Continuity Across Branch Boundaries"
         }
         previous_mean = mean_transmittance;
     }
+}
+
+namespace leaf_class_map_test {
+
+    //! Write a class map (8-bit grayscale PNG) and its class definitions (the XML beside it) to the temporary directory, and return the map's path
+    std::string writeClassMap(const std::string &stem, uint width, uint height, const std::vector<uint16_t> &classes, const std::string &class_elements) {
+        const std::filesystem::path directory = std::filesystem::temp_directory_path();
+        const std::string map_file = (directory / (stem + ".png")).string();
+        helios::writePNGSingleChannel(map_file, width, height, classes, 8);
+        if (!class_elements.empty()) {
+            std::ofstream xml((directory / (stem + ".xml")).string());
+            xml << "<helios>\n  <leaf_class_map provenance=\"test\">\n" << class_elements << "  </leaf_class_map>\n</helios>\n";
+        }
+        return map_file;
+    }
+
+    //! Value of a spectrum at a wavelength it lists
+    float valueAt(const std::vector<vec2> &spectrum, float wavelength) {
+        for (const vec2 &point: spectrum) {
+            if (std::fabs(point.x - wavelength) < 1e-3f) {
+                return point.y;
+            }
+        }
+        DOCTEST_FAIL("the spectrum has no value at " << wavelength << " nm");
+        return 0.f;
+    }
+
+} // namespace leaf_class_map_test
+
+DOCTEST_TEST_CASE("LeafOptics gives a leaf carrying a class map a spectral texture whose classes follow the leaf's own properties") {
+    // A patch carrying a class map (primitive data "spectral_class_map", as PlantArchitecture records it) whose left half is class 1, with
+    // the leaf's own properties, and right half class 2, with a quarter of its chlorophyll and carotenoids and 1.5 times its visible
+    // reflectance. A second patch without a class map gets one spectrum, as before.
+    using namespace leaf_class_map_test;
+    const std::string map_file = writeClassMap("leafoptics_two_classes", 4, 2, {1, 1, 2, 2, 1, 1, 2, 2},
+                                               "    <class id=\"1\" chlorophyll_scale=\"1\" visible_reflectance_scale=\"1\"/>\n"
+                                               "    <class id=\"2\" chlorophyll_scale=\"0.25\" visible_reflectance_scale=\"1.5\"/>\n");
+    Context context;
+    LeafOptics leafoptics(&context);
+    leafoptics.disableMessages();
+    const uint textured = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    const uint plain = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(textured, "spectral_class_map", map_file);
+    LeafOpticsProperties properties;
+    properties.chlorophyllcontent = 40.f;
+    properties.carotenoidcontent = 10.f;
+    leafoptics.run(std::vector<uint>{textured, plain}, properties, "lamina");
+
+    DOCTEST_CHECK(!context.primitiveHasSpectralTexture(plain));
+    std::string plain_label;
+    context.getPrimitiveData(plain, "reflectivity_spectrum", plain_label);
+    DOCTEST_CHECK(plain_label == "leaf_reflectivity_lamina");
+
+    DOCTEST_REQUIRE(context.primitiveHasSpectralTexture(textured));
+    DOCTEST_CHECK(context.getPrimitiveSpectralTextureFile(textured) == map_file);
+    const std::vector<SpectralTextureClass> &palette = context.getSpectralPalette(context.getPrimitiveSpectralPalette(textured));
+    DOCTEST_REQUIRE(palette.size() == 2);
+
+    // Class 1 has the leaf's own spectra
+    std::vector<vec2> leaf_rho, leaf_tau, class_one_rho, class_one_tau;
+    context.getGlobalData("leaf_reflectivity_lamina", leaf_rho);
+    context.getGlobalData("leaf_transmissivity_lamina", leaf_tau);
+    context.getGlobalData(palette[0].reflectivity_spectrum.c_str(), class_one_rho);
+    context.getGlobalData(palette[0].transmissivity_spectrum.c_str(), class_one_tau);
+    DOCTEST_CHECK(class_one_rho == leaf_rho);
+    DOCTEST_CHECK(class_one_tau == leaf_tau);
+
+    // Class 2: PROSPECT with a quarter of the pigments, and the visible reflectance scaled by 1.5 below 700 nm, blending to no scaling at 750 nm
+    LeafOpticsProperties pale = properties;
+    pale.chlorophyllcontent = 10.f;
+    pale.carotenoidcontent = 2.5f;
+    std::vector<vec2> pale_rho, pale_tau, class_two_rho, class_two_tau;
+    leafoptics.getLeafSpectra(pale, pale_rho, pale_tau);
+    context.getGlobalData(palette[1].reflectivity_spectrum.c_str(), class_two_rho);
+    context.getGlobalData(palette[1].transmissivity_spectrum.c_str(), class_two_tau);
+    DOCTEST_CHECK(class_two_tau == pale_tau);
+    DOCTEST_CHECK(valueAt(class_two_rho, 550) == doctest::Approx(std::min(1.5f * valueAt(pale_rho, 550), 0.98f - valueAt(pale_tau, 550))));
+    DOCTEST_CHECK(valueAt(class_two_rho, 725) == doctest::Approx(std::min(1.25f * valueAt(pale_rho, 725), 0.98f - valueAt(pale_tau, 725))));
+    DOCTEST_CHECK(valueAt(class_two_rho, 850) == doctest::Approx(valueAt(pale_rho, 850)));
+    DOCTEST_CHECK(valueAt(class_two_rho, 550) > 1.4f * valueAt(pale_rho, 550));
+
+    // Running again with the same label and new properties updates the class spectra in place
+    properties.chlorophyllcontent = 60.f;
+    leafoptics.run(std::vector<uint>{textured}, properties, "lamina");
+    context.getGlobalData(palette[0].reflectivity_spectrum.c_str(), class_one_rho);
+    context.getGlobalData("leaf_reflectivity_lamina", leaf_rho);
+    DOCTEST_CHECK(class_one_rho == leaf_rho);
+
+    std::filesystem::remove(map_file);
+    std::filesystem::remove(std::filesystem::path(map_file).replace_extension(".xml"));
+}
+
+DOCTEST_TEST_CASE("LeafOptics raises an error for a class map whose class definitions are missing or do not match it") {
+    using namespace leaf_class_map_test;
+    const std::string no_definitions = writeClassMap("leafoptics_no_definitions", 2, 2, {1, 1, 1, 1}, "");
+    const std::string too_few = writeClassMap("leafoptics_too_few_classes", 2, 2, {1, 2, 1, 2}, "    <class id=\"1\" chlorophyll_scale=\"1\" visible_reflectance_scale=\"1\"/>\n");
+    const std::string bad_scale = writeClassMap("leafoptics_bad_scale", 2, 2, {1, 1, 1, 1}, "    <class id=\"1\" chlorophyll_scale=\"-1\" visible_reflectance_scale=\"1\"/>\n");
+    for (const std::string &map_file: {no_definitions, too_few, bad_scale}) {
+        DOCTEST_CAPTURE(map_file);
+        Context context;
+        LeafOptics leafoptics(&context);
+        leafoptics.disableMessages();
+        const uint leaf = context.addPatch();
+        context.setPrimitiveData(leaf, "spectral_class_map", map_file);
+        DOCTEST_CHECK_THROWS(leafoptics.run(std::vector<uint>{leaf}, LeafOpticsProperties(), "leaf"));
+        DOCTEST_CHECK(!context.primitiveHasSpectralTexture(leaf));
+        std::filesystem::remove(map_file);
+        std::filesystem::remove(std::filesystem::path(map_file).replace_extension(".xml"));
+    }
+}
+
+DOCTEST_TEST_CASE("LeafOptics nitrogen mode gives leaves carrying a class map a spectral texture for their bin") {
+    using namespace leaf_class_map_test;
+    const std::string map_file = writeClassMap("leafoptics_nitrogen_classes", 2, 2, {1, 2, 1, 2},
+                                               "    <class id=\"1\" chlorophyll_scale=\"1\" visible_reflectance_scale=\"1\"/>\n"
+                                               "    <class id=\"2\" chlorophyll_scale=\"0.5\" visible_reflectance_scale=\"1.2\"/>\n");
+    Context context;
+    LeafOptics leafoptics(&context);
+    leafoptics.disableMessages();
+    std::vector<uint> UUIDs;
+    for (int i = 0; i < 4; i++) {
+        const uint objID = context.addTileObject(make_vec3(float(i), 0, 0), make_vec2(0.1f, 0.1f), make_SphericalCoord(0, 0), make_int2(2, 2));
+        context.setObjectData(objID, "leaf_nitrogen_gN_m2", 1.f + float(i));
+        const std::vector<uint> leaf = context.getObjectPrimitiveUUIDs(objID);
+        context.setPrimitiveData(leaf, "spectral_class_map", map_file);
+        UUIDs.insert(UUIDs.end(), leaf.begin(), leaf.end());
+    }
+    LeafOpticsProperties_Nauto params;
+    params.num_bins = 2;
+    leafoptics.run(UUIDs, params);
+    for (uint UUID: UUIDs) {
+        DOCTEST_REQUIRE(context.primitiveHasSpectralTexture(UUID));
+        std::string spectrum;
+        context.getPrimitiveData(UUID, "reflectivity_spectrum", spectrum);
+        // Class 1 of the palette is the leaf's own bin spectrum
+        const std::vector<SpectralTextureClass> &palette = context.getSpectralPalette(context.getPrimitiveSpectralPalette(UUID));
+        std::vector<vec2> bin_rho, class_one_rho;
+        context.getGlobalData(spectrum.c_str(), bin_rho);
+        context.getGlobalData(palette[0].reflectivity_spectrum.c_str(), class_one_rho);
+        DOCTEST_CHECK(class_one_rho == bin_rho);
+    }
+    // The lowest and highest nitrogen leaves are in different bins, so they have different palettes
+    DOCTEST_CHECK(context.getPrimitiveSpectralPalette(UUIDs.front()) != context.getPrimitiveSpectralPalette(UUIDs.back()));
+    std::filesystem::remove(map_file);
+    std::filesystem::remove(std::filesystem::path(map_file).replace_extension(".xml"));
 }
 
 DOCTEST_TEST_CASE("LeafOptics Output Vectors Are Overwritten Not Appended") {

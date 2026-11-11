@@ -100,6 +100,8 @@ struct CameraCalibration {
 
     //! Add Datacolor SpyderCHECKR 24 calibration color board
     /**
+     * \warning The board's reflectance spectra (spectral_data/color_board/Datacolor_SpyderCHECKR_24_colorboard.xml) are placeholders, not measurements of a SpyderCHECKR 24: they are the
+     * Calibrite ColorChecker Classic spectra in the SpyderCHECKR patch layout, so a rendered board has ColorChecker colours. They will be replaced with measured spectra.
      * \param[in] centrelocation Location of the board (vec3 on coordinates x,y,z)
      * \param[in] patchsize Size of each color patch in color board
      * \param[in] rotationrad Radians of rotation (vec3 on coordinates x,y,z)
@@ -223,17 +225,11 @@ struct CameraCalibration {
     //! Detect which colorboard types are present in the scene
     std::vector<std::string> detectColorBoardTypes() const;
 
-    //! Get reference Lab values for DGK colorboard (18 patches)
-    std::vector<LabColor> getReferenceLab_DGK() const;
-
-    //! Get reference Lab values for Calibrite ColorChecker Classic (24 patches)
-    std::vector<LabColor> getReferenceLab_Calibrite() const;
-
-    //! Get reference Lab values for Datacolor SpyderCHECKR 24 (24 patches)
-    std::vector<LabColor> getReferenceLab_SpyderCHECKR() const;
-
-    //! Convert RGB color to Lab color space (RGB as vec3 [0,1])
+    //! Convert sRGB-encoded color to Lab color space (RGB as vec3 [0,1], D65 reference white)
     LabColor rgbToLab(const helios::vec3 &rgb) const;
+
+    //! Convert linear sRGB color to Lab color space (D65 reference white, with white at Y = 1)
+    LabColor linearRgbToLab(const helios::vec3 &linear_rgb) const;
 
     //! Convert Lab color to RGB color space (returns vec3 [0,1])
     helios::vec3 labToRgb(const LabColor &lab) const;

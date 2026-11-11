@@ -728,6 +728,12 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
 
                 output_xml << "\t\t\t\t\t\t\t</peduncle>" << std::endl;
 
+                // Swing of the peduncle out of a branch (see PlantArchitecture::enableFruitBranchCollisionAvoidance()), written only when there is one
+                if (fbud.contact_swing_angle > 0.f) {
+                    output_xml << "\t\t\t\t\t\t\t<peduncle_swing_axis>" << fbud.contact_swing_axis.x << " " << fbud.contact_swing_axis.y << " " << fbud.contact_swing_axis.z << "</peduncle_swing_axis>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t<peduncle_swing_angle>" << rad2deg(fbud.contact_swing_angle) << "</peduncle_swing_angle>" << std::endl;
+                }
+
                 // Write inflorescence parameters
                 output_xml << "\t\t\t\t\t\t\t<inflorescence>" << std::endl;
                 output_xml << "\t\t\t\t\t\t\t\t<flower_offset>" << phytomer->phytomer_parameters.inflorescence.flower_offset.val() << "</flower_offset>" << std::endl;
@@ -744,6 +750,12 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                         output_xml << "\t\t\t\t\t\t\t\t\t<flower_azimuth>" << rad2deg(fbud.inflorescence_rotation.at(i).azimuth) << "</flower_azimuth>" << std::endl;
                         if (fbud.inflorescence_rotation.at(i).gravity_fraction > 0.f) {
                             output_xml << "\t\t\t\t\t\t\t\t\t<flower_gravity_fraction>" << fbud.inflorescence_rotation.at(i).gravity_fraction << "</flower_gravity_fraction>" << std::endl;
+                        }
+                        if (i < fbud.inflorescence_rotation.size() && fbud.inflorescence_rotation.at(i).contact_tilt_angle > 0.f) {
+                            // Tilt of the fruit out of a branch (see PlantArchitecture::enableFruitBranchCollisionAvoidance()), written only when there is one
+                            const AxisRotation &rotation = fbud.inflorescence_rotation.at(i);
+                            output_xml << "\t\t\t\t\t\t\t\t\t<flower_contact_tilt_axis>" << rotation.contact_tilt_axis.x << " " << rotation.contact_tilt_axis.y << " " << rotation.contact_tilt_axis.z << "</flower_contact_tilt_axis>" << std::endl;
+                            output_xml << "\t\t\t\t\t\t\t\t\t<flower_contact_tilt_angle>" << rad2deg(rotation.contact_tilt_angle) << "</flower_contact_tilt_angle>" << std::endl;
                         }
                     }
                     // Save individual base scale for this flower/fruit
@@ -939,6 +951,17 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                     // reloaded plant was built from a different set of blades than the one that was saved.
                     if (petiole < phytomer->leaf_prototype_index.size() && leaf < phytomer->leaf_prototype_index.at(petiole).size()) {
                         output_xml << "\t\t\t\t\t\t\t<leaf_prototype>" << phytomer->leaf_prototype_index.at(petiole).at(leaf) << "</leaf_prototype>" << std::endl;
+                    }
+                    // A leaf reshaped in place (setPetioleLeafShape(), setPetioleLeafRoll()) no longer has its prototype's shape, so the shape it has is recorded and the reader reshapes the rebuilt leaf to it.
+                    if (petiole < phytomer->leaf_objIDs.size() && leaf < phytomer->leaf_objIDs.at(petiole).size()) {
+                        const auto shape_state = phytomer->leaf_shape_state.find(phytomer->leaf_objIDs.at(petiole).at(leaf));
+                        if (shape_state != phytomer->leaf_shape_state.end() && shape_state->second.reshaped) {
+                            const LeafShapeValues &shape = shape_state->second.shape;
+                            output_xml << "\t\t\t\t\t\t\t<leaf_shape aspect_ratio=\"" << shape.aspect_ratio << "\" midrib_fold_fraction=\"" << shape.midrib_fold_fraction << "\" longitudinal_curvature=\""
+                                       << shape.longitudinal_curvature << "\" longitudinal_curvature_exponent=\"" << shape.longitudinal_curvature_exponent << "\" lateral_curvature=\"" << shape.lateral_curvature
+                                       << "\" petiole_roll=\"" << shape.petiole_roll << "\" wave_period=\"" << shape.wave_period << "\" wave_amplitude=\"" << shape.wave_amplitude << "\" roll_fraction=\"" << shape.roll_fraction
+                                       << "\" subdivisions_y=\"" << shape.subdivisions_y << "\"/>" << std::endl;
+                        }
                     }
                     // A leaf posed by setPetioleLeafGeometry() is placed and oriented from the caller's values rather than from the petiole, so its base and the fact that its pose was prescribed are recorded.
                     if (petiole < phytomer->leaf_pose_prescribed.size() && leaf < phytomer->leaf_pose_prescribed.at(petiole).size() && phytomer->leaf_pose_prescribed.at(petiole).at(leaf)) {
@@ -1579,6 +1602,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 std::vector<std::vector<float>> leaf_roll;
                 std::vector<std::vector<int>> leaf_prototype; // index of the unique leaf prototype each blade was copied from; -1 for a blade built from the prototype function; -2 when the file does not record it
                 std::vector<std::vector<bool>> leaf_prescribed; // whether each leaf's pose was prescribed by setPetioleLeafGeometry()
+                std::vector<std::vector<bool>> leaf_reshaped; // whether each leaf carries a <leaf_shape> it was reshaped to
+                std::vector<std::vector<LeafShapeValues>> leaf_reshaped_shape; // the shape from <leaf_shape>; only the shape terms and subdivisions_y are meaningful
                 std::vector<std::vector<vec3>> leaf_prescribed_base; // base position of each prescribed leaf
                 std::vector<std::vector<vec3>> prescribed_petiole_nodes_all; // measured centerline of each petiole; empty for a generated petiole
                 std::vector<std::vector<float>> prescribed_petiole_radii_all; // radius at each node of a measured centerline
@@ -1603,6 +1628,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     float peduncle_roll = 0;
                     float peduncle_yaw = 0;
                     float peduncle_curvature = 0;
+                    // Swing of the peduncle out of a branch (zero when absent)
+                    vec3 peduncle_swing_axis = make_vec3(0, 0, 1);
+                    float peduncle_swing_angle_deg = 0;
                 };
                 std::vector<std::vector<FloralBudData>> floral_bud_data; // first index is petiole within internode; second index is bud within petiole
                 auto readFloralBud = [](const pugi::xml_node &floral_bud) -> FloralBudData {
@@ -1660,6 +1688,17 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         }
                     }
 
+                    // Swing of the peduncle out of a branch; absent from files written without fruit-branch collision avoidance
+                    pugi::xml_node swing_angle_node = floral_bud.child("peduncle_swing_angle");
+                    if (swing_angle_node) {
+                        fbud_data.peduncle_swing_angle_deg = parse_xml_tag_float(swing_angle_node, "peduncle_swing_angle", "PlantArchitecture::readPlantStructureXML");
+                        pugi::xml_node swing_axis_node = floral_bud.child("peduncle_swing_axis");
+                        if (!swing_axis_node) {
+                            helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A floral bud has a <peduncle_swing_angle> tag but no <peduncle_swing_axis> tag.");
+                        }
+                        fbud_data.peduncle_swing_axis = parse_xml_tag_vec3(swing_axis_node, "peduncle_swing_axis", "PlantArchitecture::readPlantStructureXML");
+                    }
+
                     // Read inflorescence parameters and flower positions (if present)
                     pugi::xml_node inflorescence = floral_bud.child("inflorescence");
                     if (inflorescence) {
@@ -1713,6 +1752,17 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             pugi::xml_node gravity_node = flower.child("flower_gravity_fraction");
                             if (gravity_node) {
                                 rotation.gravity_fraction = parse_xml_tag_float(gravity_node, "flower_gravity_fraction", "PlantArchitecture::readPlantStructureXML");
+                            }
+
+                            // Tilt of the fruit out of a branch; absent from files written without fruit-branch collision avoidance
+                            pugi::xml_node tilt_angle_node = flower.child("flower_contact_tilt_angle");
+                            if (tilt_angle_node) {
+                                rotation.contact_tilt_angle = deg2rad(parse_xml_tag_float(tilt_angle_node, "flower_contact_tilt_angle", "PlantArchitecture::readPlantStructureXML"));
+                                pugi::xml_node tilt_axis_node = flower.child("flower_contact_tilt_axis");
+                                if (!tilt_axis_node) {
+                                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A flower has a <flower_contact_tilt_angle> tag but no <flower_contact_tilt_axis> tag.");
+                                }
+                                rotation.contact_tilt_axis = parse_xml_tag_vec3(tilt_axis_node, "flower_contact_tilt_axis", "PlantArchitecture::readPlantStructureXML");
                             }
 
                             fbud_data.flower_rotations.push_back(rotation);
@@ -1869,6 +1919,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     leaf_prototype.resize(leaf_prototype.size() + 1);
                     leaf_prescribed.resize(leaf_prescribed.size() + 1);
                     leaf_prescribed_base.resize(leaf_prescribed_base.size() + 1);
+                    leaf_reshaped.resize(leaf_reshaped.size() + 1);
+                    leaf_reshaped_shape.resize(leaf_reshaped_shape.size() + 1);
                     floral_bud_data.resize(floral_bud_data.size() + 1); // Always resize to stay in sync with leaf vectors
 
                     std::vector<vec3> saved_leaf_bases; // Saved leaf attachment positions
@@ -1928,6 +1980,31 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         }
                         leaf_prescribed.back().push_back(prescribed_pose);
                         leaf_prescribed_base.back().push_back(prescribed_base);
+
+                        // The shape of a leaf reshaped in place. Optional: absent for a leaf that kept its prototype's shape and in files written before reshaping was recorded.
+                        LeafShapeValues reshaped_shape;
+                        const pugi::xml_node shape_node = leaf.child("leaf_shape");
+                        if (shape_node) {
+                            auto shapeAttribute = [&](const char *name) {
+                                const pugi::xml_attribute attribute = shape_node.attribute(name);
+                                if (!attribute) {
+                                    helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A <leaf_shape> in '" + filename + "' has no '" + std::string(name) + "' attribute.");
+                                }
+                                return attribute.as_float();
+                            };
+                            reshaped_shape.aspect_ratio = shapeAttribute("aspect_ratio");
+                            reshaped_shape.midrib_fold_fraction = shapeAttribute("midrib_fold_fraction");
+                            reshaped_shape.longitudinal_curvature = shapeAttribute("longitudinal_curvature");
+                            reshaped_shape.longitudinal_curvature_exponent = shapeAttribute("longitudinal_curvature_exponent");
+                            reshaped_shape.lateral_curvature = shapeAttribute("lateral_curvature");
+                            reshaped_shape.petiole_roll = shapeAttribute("petiole_roll");
+                            reshaped_shape.wave_period = shapeAttribute("wave_period");
+                            reshaped_shape.wave_amplitude = shapeAttribute("wave_amplitude");
+                            reshaped_shape.roll_fraction = shapeAttribute("roll_fraction");
+                            reshaped_shape.subdivisions_y = uint(shapeAttribute("subdivisions_y"));
+                        }
+                        leaf_reshaped.back().push_back(bool(shape_node));
+                        leaf_reshaped_shape.back().push_back(reshaped_shape);
                     }
 
                     // Store saved_leaf_bases for this petiole
@@ -2970,6 +3047,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             // Built from the prototype function: either the species caches no prototypes, or the saved leaf was itself built that way (a <leaf_prototype> of -1, as written for a leaf
                             // rebuilt by setPetioleLeafCount() or setPetioleLeafGeometry(), whose leaflet count may exceed the cache). Such a leaf has no cached rest shape, so its prototype index stays -1.
                             objID_leaf = phytomer_ptr->buildLeafPrototype(leaves_per_petiole, ind_from_tip);
+                            phytomer_ptr->recordBuiltLeafShape(objID_leaf);
                             if (phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototypes > 0) {
                                 phytomer_ptr->labelLeafPrototype(objID_leaf);
                                 nameOrganMaterials(objID_leaf, plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_leaf");
@@ -3025,6 +3103,23 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         phytomer_ptr->leaf_objIDs[petiole][leaf] = objID_leaf;
                         phytomer_ptr->leaf_bases[petiole][leaf] = leaf_base;
                         phytomer_ptr->leaf_pose_prescribed.at(petiole).at(leaf) = prescribed_pose;
+
+                        // A leaf saved after being reshaped in place is reshaped again to the saved shape, starting from the prototype it was rebuilt from above.
+                        if (leaf < int(leaf_reshaped[petiole].size()) && leaf_reshaped[petiole][leaf]) {
+                            const LeafShapeValues &saved_shape = leaf_reshaped_shape[petiole][leaf];
+                            LeafShapeValues shape = phytomer_ptr->getLeafShape(uint(petiole), uint(leaf));
+                            shape.aspect_ratio = saved_shape.aspect_ratio;
+                            shape.midrib_fold_fraction = saved_shape.midrib_fold_fraction;
+                            shape.longitudinal_curvature = saved_shape.longitudinal_curvature;
+                            shape.longitudinal_curvature_exponent = saved_shape.longitudinal_curvature_exponent;
+                            shape.lateral_curvature = saved_shape.lateral_curvature;
+                            shape.petiole_roll = saved_shape.petiole_roll;
+                            shape.wave_period = saved_shape.wave_period;
+                            shape.wave_amplitude = saved_shape.wave_amplitude;
+                            shape.roll_fraction = saved_shape.roll_fraction;
+                            shape.subdivisions_y = saved_shape.subdivisions_y;
+                            phytomer_ptr->reshapeLeaf(uint(petiole), uint(leaf), shape);
+                        }
 
                         // The blade is placed at its rest shape above, exactly as the Phytomer constructor
                         // places it. During growth the droop is then applied by setLeafScaleFraction() on every
@@ -3236,29 +3331,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                                         // Generate vertices with peduncle curvature algorithm
                                         for (int i = 1; i <= Ndiv_peduncle_length; i++) {
-                                            if (fabs(fbud_data.peduncle_curvature) > 0) {
-                                                float curvature_value = fbud_data.peduncle_curvature;
-
-                                                // Horizontal bending axis perpendicular to peduncle direction
-                                                vec3 horizontal_bending_axis = cross(peduncle_axis_actual, make_vec3(0, 0, 1));
-                                                float axis_magnitude = horizontal_bending_axis.magnitude();
-
-                                                if (axis_magnitude > 0.001f) {
-                                                    horizontal_bending_axis = horizontal_bending_axis / axis_magnitude;
-
-                                                    float theta_curvature = deg2rad(curvature_value * dr_peduncle);
-                                                    float theta_from_target = (curvature_value > 0) ? std::acos(std::min(1.0f, std::max(-1.0f, peduncle_axis_actual.z))) : std::acos(std::min(1.0f, std::max(-1.0f, -peduncle_axis_actual.z)));
-
-                                                    if (fabs(theta_curvature) >= theta_from_target) {
-                                                        peduncle_axis_actual = (curvature_value > 0) ? make_vec3(0, 0, 1) : make_vec3(0, 0, -1);
-                                                    } else {
-                                                        peduncle_axis_actual = rotatePointAboutLine(peduncle_axis_actual, nullorigin, horizontal_bending_axis, theta_curvature);
-                                                        peduncle_axis_actual.normalize();
-                                                    }
-                                                } else {
-                                                    peduncle_axis_actual = (curvature_value > 0) ? make_vec3(0, 0, 1) : make_vec3(0, 0, -1);
-                                                }
-                                            }
+                                            peduncle_axis_actual = Phytomer::bendPeduncleAxis(peduncle_axis_actual, fbud_data.peduncle_curvature, dr_peduncle);
 
                                             peduncle_vertices_computed.at(i) = peduncle_vertices_computed.at(i - 1) + dr_peduncle * peduncle_axis_actual;
                                             peduncle_radii_computed.at(i) = fbud_data.peduncle_radius;
@@ -3424,29 +3497,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                                         // Generate vertices with peduncle curvature algorithm
                                         for (int i = 1; i <= Ndiv_peduncle_length; i++) {
-                                            if (fabs(fbud_data.peduncle_curvature) > 0) {
-                                                float curvature_value = fbud_data.peduncle_curvature;
-
-                                                // Horizontal bending axis perpendicular to peduncle direction
-                                                vec3 horizontal_bending_axis = cross(peduncle_axis_actual, make_vec3(0, 0, 1));
-                                                float axis_magnitude = horizontal_bending_axis.magnitude();
-
-                                                if (axis_magnitude > 0.001f) {
-                                                    horizontal_bending_axis = horizontal_bending_axis / axis_magnitude;
-
-                                                    float theta_curvature = deg2rad(curvature_value * dr_peduncle);
-                                                    float theta_from_target = (curvature_value > 0) ? std::acos(std::min(1.0f, std::max(-1.0f, peduncle_axis_actual.z))) : std::acos(std::min(1.0f, std::max(-1.0f, -peduncle_axis_actual.z)));
-
-                                                    if (fabs(theta_curvature) >= theta_from_target) {
-                                                        peduncle_axis_actual = (curvature_value > 0) ? make_vec3(0, 0, 1) : make_vec3(0, 0, -1);
-                                                    } else {
-                                                        peduncle_axis_actual = rotatePointAboutLine(peduncle_axis_actual, nullorigin, horizontal_bending_axis, theta_curvature);
-                                                        peduncle_axis_actual.normalize();
-                                                    }
-                                                } else {
-                                                    peduncle_axis_actual = (curvature_value > 0) ? make_vec3(0, 0, 1) : make_vec3(0, 0, -1);
-                                                }
-                                            }
+                                            peduncle_axis_actual = Phytomer::bendPeduncleAxis(peduncle_axis_actual, fbud_data.peduncle_curvature, dr_peduncle);
 
                                             peduncle_vertices_computed.at(i) = peduncle_vertices_computed.at(i - 1) + dr_peduncle * peduncle_axis_actual;
                                             peduncle_radii_computed.at(i) = fbud_data.peduncle_radius;
@@ -3579,6 +3630,18 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                         // returns immediately when the bud is already at the requested fraction.
                                         fbud.current_fruit_scale_factor = 1.f;
                                         phytomer_ptr->setInflorescenceScaleFraction(fbud, fbud_data.current_fruit_scale_factor);
+
+                                        // Restore the swing the peduncle had been given out of a branch. The peduncle and fruit above were rebuilt unswung from the bud's base, which is the hinge,
+                                        // so the saved world-frame rotation applies as it was; the later updateShootNodes() only translates and carries it along.
+                                        if (fbud_data.peduncle_swing_angle_deg > 0.f) {
+                                            phytomer_ptr->applyPeduncleSwing(fbud, fbud_data.peduncle_swing_axis, deg2rad(fbud_data.peduncle_swing_angle_deg));
+                                        }
+                                        // Then each fruit's own tilt, whose saved axis is in the frame of the swung peduncle
+                                        for (size_t i = 0; i < fbud.inflorescence_objIDs.size() && i < fbud_data.flower_rotations.size(); i++) {
+                                            if (fbud_data.flower_rotations.at(i).contact_tilt_angle > 0.f) {
+                                                phytomer_ptr->applyFruitContactTilt(fbud, i, fbud_data.flower_rotations.at(i).contact_tilt_axis, fbud_data.flower_rotations.at(i).contact_tilt_angle);
+                                            }
+                                        }
                                     }
                                 }
                             } else {
@@ -3629,6 +3692,8 @@ struct USDMaterial {
     std::string name;          // Unique material name for USD prim
     std::string texture_file;  // Absolute path to texture image (empty if color-only)
     RGBcolor color;            // Diffuse color (used when no texture, or as fallback)
+    // Decoded normals of the Context material's normal or bump map (strength, green flip and bump conversion applied), written as a tangent-space normal map; null if none
+    std::shared_ptr<const NormalMapTexels> normal_map;
 };
 
 struct USDLink {
@@ -3783,8 +3848,11 @@ struct GrowthFrameSnapshot {
 namespace {
 
 // Look up or create a material entry for the given texture/color combination.
-int getOrCreateMaterial(ArticulationData &data, const std::string &texture_file, const RGBcolor &color) {
+int getOrCreateMaterial(ArticulationData &data, const std::string &texture_file, const RGBcolor &color, std::shared_ptr<const NormalMapTexels> normal_map = nullptr) {
     std::string key = texture_file + "|" + std::to_string(color.r) + "," + std::to_string(color.g) + "," + std::to_string(color.b);
+    if (normal_map) {
+        key += "|" + normal_map->file + "|" + std::to_string(int(normal_map->kind)) + "|" + std::to_string(normal_map->strength) + "|" + std::to_string(normal_map->flip_green);
+    }
     auto it = data.material_cache.find(key);
     if (it != data.material_cache.end()) {
         return it->second;
@@ -3794,6 +3862,7 @@ int getOrCreateMaterial(ArticulationData &data, const std::string &texture_file,
     mat.name = "Material_" + std::to_string(idx);
     mat.texture_file = texture_file;
     mat.color = color;
+    mat.normal_map = std::move(normal_map);
     data.materials.push_back(mat);
     data.material_cache[key] = idx;
     return idx;
@@ -3811,7 +3880,7 @@ int getMaterialFromContextObject(Context *context_ptr, uint objID, ArticulationD
     }
     std::string texture_file = context_ptr->getPrimitiveColorTextureFile(UUIDs[0]);
     RGBcolor color = context_ptr->getPrimitiveColor(UUIDs[0]);
-    return getOrCreateMaterial(data, texture_file, color);
+    return getOrCreateMaterial(data, texture_file, color, context_ptr->getMaterialNormalMapTexels(context_ptr->getPrimitiveMaterialID(UUIDs[0])));
 }
 
 // Apply inverse quaternion rotation to transform a world-space point into the Xform's local frame.
@@ -3871,10 +3940,15 @@ void buildTubeSegmentVisualMesh(Context *context_ptr, uint tube_objID, int segme
     std::vector<vec2> all_uvs;
     std::string texture_file;
     RGBcolor color = make_RGBcolor(0.5f, 0.5f, 0.5f);
+    std::shared_ptr<const NormalMapTexels> normal_map;
 
     for (uint UUID : seg_UUIDs) {
         std::vector<vec3> prim_verts = context_ptr->getPrimitiveVertices(UUID);
         std::vector<vec2> prim_uvs = context_ptr->getPrimitiveTextureUV(UUID);
+        if (prim_uvs.empty() && context_ptr->getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH) {
+            // A patch without its own (u,v) coordinates spans the whole texture (and normal map), corner by corner
+            prim_uvs = {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)};
+        }
         int base_idx = static_cast<int>(world_vertices.size());
         link.mesh_face_vertex_counts.push_back(static_cast<int>(prim_verts.size()));
         for (int i = 0; i < static_cast<int>(prim_verts.size()); i++) {
@@ -3890,6 +3964,7 @@ void buildTubeSegmentVisualMesh(Context *context_ptr, uint tube_objID, int segme
         if (texture_file.empty()) {
             texture_file = context_ptr->getPrimitiveColorTextureFile(UUID);
             color = context_ptr->getPrimitiveColor(UUID);
+            normal_map = context_ptr->getMaterialNormalMapTexels(context_ptr->getPrimitiveMaterialID(UUID));
         }
     }
 
@@ -3901,7 +3976,7 @@ void buildTubeSegmentVisualMesh(Context *context_ptr, uint tube_objID, int segme
     link.mesh_uvs = all_uvs;
 
     // Assign material
-    link.material_index = getOrCreateMaterial(data, texture_file, color);
+    link.material_index = getOrCreateMaterial(data, texture_file, color, normal_map);
 }
 
 // Build mesh data from a Helios context object. Vertices are stored in local space
@@ -3917,10 +3992,15 @@ vec3 buildMeshFromContextObject(Context *context_ptr, uint objID, ArticulationDa
     std::vector<vec2> all_uvs;
     std::string texture_file;
     RGBcolor color = make_RGBcolor(0.5f, 0.5f, 0.5f);
+    std::shared_ptr<const NormalMapTexels> normal_map;
 
     for (uint UUID : UUIDs) {
         std::vector<vec3> prim_verts = context_ptr->getPrimitiveVertices(UUID);
         std::vector<vec2> prim_uvs = context_ptr->getPrimitiveTextureUV(UUID);
+        if (prim_uvs.empty() && context_ptr->getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH) {
+            // A patch without its own (u,v) coordinates spans the whole texture (and normal map), corner by corner
+            prim_uvs = {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)};
+        }
         int base_idx = static_cast<int>(world_vertices.size());
         link.mesh_face_vertex_counts.push_back(static_cast<int>(prim_verts.size()));
         for (int i = 0; i < static_cast<int>(prim_verts.size()); i++) {
@@ -3937,6 +4017,7 @@ vec3 buildMeshFromContextObject(Context *context_ptr, uint objID, ArticulationDa
         if (texture_file.empty()) {
             texture_file = context_ptr->getPrimitiveColorTextureFile(UUID);
             color = context_ptr->getPrimitiveColor(UUID);
+            normal_map = context_ptr->getMaterialNormalMapTexels(context_ptr->getPrimitiveMaterialID(UUID));
         }
     }
 
@@ -3957,7 +4038,7 @@ vec3 buildMeshFromContextObject(Context *context_ptr, uint objID, ArticulationDa
     link.mesh_uvs = all_uvs;
 
     // Assign material
-    link.material_index = getOrCreateMaterial(data, texture_file, color);
+    link.material_index = getOrCreateMaterial(data, texture_file, color, normal_map);
 
     return centroid;
 }
@@ -4740,6 +4821,27 @@ void writeVisualMaterials(std::ofstream &out, const std::vector<USDMaterial> &ma
             tex_path = "./textures/" + src.filename().string();
         }
 
+        // The normal map is written from the Context's decoded normals, so that a bump map, a strength or a DirectX map comes out as the tangent-space (OpenGL) normal map UsdPreviewSurface expects
+        std::string normal_path;
+        if (mat.normal_map) {
+            if (!textures_copied) {
+                std::filesystem::create_directories(tex_dir);
+                textures_copied = true;
+            }
+            const std::string normal_name = mat.name + "_normal.png";
+            const int width = mat.normal_map->resolution.x;
+            const int height = mat.normal_map->resolution.y;
+            std::vector<RGBAcolor> pixels(size_t(width) * size_t(height));
+            for (int row = 0; row < height; row++) {
+                for (int column = 0; column < width; column++) {
+                    const vec3 n = mat.normal_map->getNormal(column, row);
+                    pixels[size_t(row) * size_t(width) + size_t(column)] = make_RGBAcolor(0.5f * n.x + 0.5f, 0.5f * n.y + 0.5f, 0.5f * n.z + 0.5f, 1.f);
+                }
+            }
+            writePNG((tex_dir / normal_name).string(), uint(width), uint(height), pixels);
+            normal_path = "./textures/" + normal_name;
+        }
+
         std::string mat_base = "/" + plant_prim + "/Materials/" + mat.name;
 
         out << inner << "def Material \"" << mat.name << "\"\n";
@@ -4759,6 +4861,9 @@ void writeVisualMaterials(std::ofstream &out, const std::vector<USDMaterial> &ma
             out << inner3 << "float inputs:opacityThreshold = 0.5\n";
         }
 
+        if (!normal_path.empty()) {
+            out << inner3 << "normal3f inputs:normal.connect = <" << mat_base << "/NormalTexture.outputs:rgb>\n";
+        }
         out << inner3 << "float inputs:roughness = 0.8\n";
         out << inner3 << "float inputs:metallic = 0.0\n";
         out << inner3 << "token outputs:surface\n";
@@ -4783,6 +4888,31 @@ void writeVisualMaterials(std::ofstream &out, const std::vector<USDMaterial> &ma
             out << inner3 << "string inputs:varname = \"st\"\n";
             out << inner3 << "float2 outputs:result\n";
             out << inner2 << "}\n";
+        }
+
+        if (!normal_path.empty()) {
+            out << "\n";
+            out << inner2 << "def Shader \"NormalTexture\"\n";
+            out << inner2 << "{\n";
+            out << inner3 << "uniform token info:id = \"UsdUVTexture\"\n";
+            out << inner3 << "asset inputs:file = @" << normal_path << "@\n";
+            out << inner3 << "token inputs:sourceColorSpace = \"raw\"\n";
+            out << inner3 << "float4 inputs:scale = (2, 2, 2, 1)\n";
+            out << inner3 << "float4 inputs:bias = (-1, -1, -1, 0)\n";
+            out << inner3 << "float2 inputs:st.connect = <" << mat_base << "/" << (tex_path.empty() ? "NormalTexCoordReader" : "TexCoordReader") << ".outputs:result>\n";
+            out << inner3 << "token inputs:wrapS = \"repeat\"\n";
+            out << inner3 << "token inputs:wrapT = \"repeat\"\n";
+            out << inner3 << "float3 outputs:rgb\n";
+            out << inner2 << "}\n";
+            if (tex_path.empty()) {
+                out << "\n";
+                out << inner2 << "def Shader \"NormalTexCoordReader\"\n";
+                out << inner2 << "{\n";
+                out << inner3 << "uniform token info:id = \"UsdPrimvarReader_float2\"\n";
+                out << inner3 << "string inputs:varname = \"st\"\n";
+                out << inner3 << "float2 outputs:result\n";
+                out << inner2 << "}\n";
+            }
         }
 
         out << inner << "}\n";

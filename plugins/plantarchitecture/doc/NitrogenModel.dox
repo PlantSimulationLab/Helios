@@ -183,9 +183,14 @@ When fruit grows (detected by increase in fruit scale factor), nitrogen is deduc
 - Nitrogen demand = area increment × `fruit_N_area` (g N/m²)
 - Per-plant fruit demand is aggregated across all fruiting buds before withdrawal
 - Nitrogen is removed from the available pool first (supply-limited), after the leaves have taken theirs
-- Any demand the pool cannot cover is recorded as unmet fruit demand, which remobilization draws from mature leaves (step 3). Demand that even the leaves cannot meet is absorbed
+- Any demand the pool cannot cover is recorded as unmet fruit demand, which remobilization draws from mature leaves (step 3). Demand that even the leaves cannot meet goes unmet: the fruit simply receives less
+- The nitrogen the fruit receives, from the pool and from the leaves, is added up for each plant and returned by \ref PlantArchitecture::getPlantFruitNitrogen(). Together with the root pool (\ref PlantArchitecture::getPlantRootNitrogen()), the available pool (\ref PlantArchitecture::getPlantAvailableNitrogen()) and the nitrogen of the leaves, it accounts for all the nitrogen given to the plant, less what left with leaves that were shed
 
 Fruit nitrogen removal is only active when plants are fruiting.
+
+<b>Limitations.</b> Fruit demand follows the growth of the fruit's surface area, which has two consequences to keep in mind:
+- The area is that of the fruit's mesh, its whole surface. For a compound fruit such as a wheat ear (whose mesh surface is about 97 cm\f$^2\f$, several times its silhouette) this is much more than its projected area, so `fruit_N_area` is a calibration constant per unit mesh area rather than a measurable nitrogen content per unit area.
+- Demand arises only while the fruit is growing in size. Fruit that reaches full size early and then fills, such as a cereal ear, which is full size by anthesis while its grains take up most of their nitrogen afterwards, demands its nitrogen while it expands (for wheat, during booting and heading) and none during grain fill. In a nitrogen-limited plant this draws the upper leaves down around heading and leaves them full during grain fill, the opposite of the field.
 
 \subsection NitroRemob 3. Nitrogen Remobilization
 
@@ -193,7 +198,7 @@ When the plant cannot meet its demand from uptake -- leaves or fruit were left s
 
 <b>Trigger:</b> a shortfall, not leaf age. A plant whose demand is fully met remobilizes nothing.
 
-<b>Sources:</b> mature (fully expanded) leaves, oldest first. Each can release at most `leaf_remobilization_rate` × dt of its nitrogen above `minimum_leaf_N_area` in a step, so the amount moved follows elapsed time rather than the number of steps, and no leaf is drawn below the minimum.
+<b>Sources:</b> mature (fully expanded) leaves, oldest first. Each can release at most `leaf_remobilization_rate` × dt of its nitrogen above `minimum_leaf_N_area` in a step, so the amount moved follows elapsed time rather than the number of steps, and no leaf is drawn below the minimum. At the default rate, which matches the 5-16 % of their nitrogen that mature leaves of nitrogen-limited plants export over ten days (Diaz et al. 2008), remobilization lags the growth of a plant that is short of nitrogen: in a nitrogen-limited wheat plant the leaves formed early hold the most nitrogen per area and the young upper leaves the least for several weeks around heading, the reverse of the profile in field canopies, where nitrogen per area follows light down the canopy (Bertheloot et al. 2008). A faster rate (about 0.1/day) brings the profile closer to the field's, but only later in the season, and exports nitrogen faster than the labelling studies report.
 
 <b>Sinks:</b> first, the unmet demand of expanding leaves and fruit, served in proportion to it from any source. Then mature leaves still below `target_leaf_N_area`, youngest first, each drawing on what the sources have left, and only from sources older than itself. A leaf that expanded while the plant had nothing to give it, and was diluted by its own growth, is therefore topped up from the leaves below it once it is fully expanded, and nitrogen only ever moves from older leaves to younger ones. A leaf never receives more than its accumulation-rate cap allows in the step.
 

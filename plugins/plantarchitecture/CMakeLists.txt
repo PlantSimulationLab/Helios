@@ -17,6 +17,7 @@ add_library( plantarchitecture STATIC "src/PlantArchitecture.cpp"
         "src/CarbohydrateModelTree.cpp"
         "src/CarbohydrateModelGrass.cpp"
         "src/NitrogenModel.cpp"
+        "src/FruitCollision.cpp"
         "src/Hungarian.cpp"
         "tests/selfTest.cpp"
 )

@@ -471,15 +471,6 @@ private:
     //! Sun direction vector
     helios::vec3 sun_dir_vec;
 
-    //! R PAR dir
-    float R_PAR_dir;
-
-    //! R NIR dir
-    float R_NIR_dir;
-
-    //! fdiff
-    float fdiff;
-
     //! XML Error String
     std::string xml_error_string;
 

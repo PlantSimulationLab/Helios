@@ -1,0 +1,14 @@
+[
+ {
+  "case": "3d_drip_cpu",
+  "metric": "rmse_theta_vs_reference",
+  "baseline": "25d7628",
+  "reason": "Backward Euler replaced variable-step BDF2 as the 3D default, because BDF2 does not conserve water when sources change (an emitter switched on and off under adaptive stepping lost 1.6% of its water; MODFLOW 6 Test 2 under adaptive BDF2 ended 29 cm low). Backward Euler's larger time error at this case's fixed 900 s steps raises its RMSE by 7%."
+ },
+ {
+  "case": "3d_drip_gpu",
+  "metric": "rmse_theta_vs_reference",
+  "baseline": "25d7628",
+  "reason": "Backward Euler replaced variable-step BDF2 as the 3D default, because BDF2 does not conserve water when sources change (an emitter switched on and off under adaptive stepping lost 1.6% of its water; MODFLOW 6 Test 2 under adaptive BDF2 ended 29 cm low). Backward Euler's larger time error at this case's fixed 900 s steps raises its RMSE by 7%."
+ }
+]

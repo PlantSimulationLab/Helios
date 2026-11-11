@@ -22,6 +22,48 @@ using namespace helios;
 
 namespace {
 
+    //! Give the triangles of a segment just appended to a tube the named material all of its earlier triangles share, when the segment was appended with that material's
+    //! texture (or, for an untextured material, its color), so that the material's properties (such as a normal map or surface roughness) reach the whole tube. Automatic
+    //! materials need nothing: triangles of the same appearance already share them.
+    void keepNamedTubeMaterial(Context *context, const std::vector<uint> &earlier_UUIDs, const std::vector<uint> &all_UUIDs, const std::string &appended_texture, const RGBcolor &appended_color) {
+        if (earlier_UUIDs.empty()) {
+            return;
+        }
+        const std::string label = context->getPrimitiveMaterialLabel(earlier_UUIDs.front());
+        if (label.rfind("__", 0) == 0) {
+            return;
+        }
+        for (uint UUID: earlier_UUIDs) {
+            if (context->getPrimitiveMaterialLabel(UUID) != label) {
+                return;
+            }
+        }
+        const std::string material_texture = context->getMaterialTexture(label);
+        if (material_texture.empty() != appended_texture.empty()) {
+            return;
+        }
+        if (!material_texture.empty()) {
+            std::error_code error;
+            const bool same_file = material_texture == appended_texture || std::filesystem::equivalent(material_texture, appended_texture, error);
+            if (!same_file) {
+                return;
+            }
+        } else {
+            const RGBAcolor material_color = context->getMaterialColor(label);
+            if (material_color.r != appended_color.r || material_color.g != appended_color.g || material_color.b != appended_color.b) {
+                return;
+            }
+        }
+        const std::set<uint> earlier(earlier_UUIDs.begin(), earlier_UUIDs.end());
+        std::vector<uint> appended;
+        for (uint UUID: all_UUIDs) {
+            if (earlier.count(UUID) == 0) {
+                appended.push_back(UUID);
+            }
+        }
+        context->assignMaterialToPrimitive(appended, label);
+    }
+
     //! Compute the inverse transpose of the upper-left 3x3 block of a Helios 4x4 affine transformation matrix
     /**
      * Normals must be transformed by the inverse transpose rather than by the matrix itself, otherwise they no longer remain perpendicular to the surface under non-uniform scaling. Returns false when the
@@ -3346,6 +3388,8 @@ float Tube::getSegmentVolume(uint segment_index) const {
 void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radius, const helios::RGBcolor &node_color) {
     //\todo This is a computationally inefficient method for appending the tube, but it ensures that there is no twisting of the tube relative to the previous tube segments.
 
+    const std::vector<uint> earlier_UUIDs = UUIDs;
+
     if (node_radius < 0) {
         helios_runtime_error("ERROR (Tube::appendTubeSegment): Node radius must be positive.");
     }
@@ -3496,11 +3540,15 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
         context->setPrimitiveParentObjectID(p, this->OID);
     }
 
+    keepNamedTubeMaterial(context, earlier_UUIDs, UUIDs, "", node_color);
+
     updateTriangleVertices();
 }
 
 void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radius, const char *texturefile, const helios::vec2 &textureuv_ufrac) {
     //\todo This is a computationally inefficient method for appending the tube, but it ensures that there is no twisting of the tube relative to the previous tube segments.
+
+    const std::vector<uint> earlier_UUIDs = UUIDs;
 
     if (node_radius < 0) {
         helios_runtime_error("ERROR (Tube::appendTubeSegment): Node radius must be positive.");
@@ -3657,6 +3705,8 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
     for (uint p: UUIDs) {
         context->setPrimitiveParentObjectID(p, this->OID);
     }
+
+    keepNamedTubeMaterial(context, earlier_UUIDs, UUIDs, texturefile, RGB::black);
 
     updateTriangleVertices();
 }

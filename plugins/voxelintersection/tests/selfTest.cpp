@@ -202,6 +202,34 @@ DOCTEST_TEST_CASE("VoxelIntersection - Basic functionality test") {
     DOCTEST_CHECK(sliced_UUIDs.size() >= 1);
 }
 
+DOCTEST_TEST_CASE("VoxelIntersection - sliced primitives keep their material, normal map included") {
+    // Regression test. The pieces were rebuilt from the primitive's color or texture alone, so a named material (with its normal map, two-sided flag and other
+    // properties) was lost when a primitive was sliced. The pieces of a textured primitive now keep its material; an untextured one with a normal map cannot,
+    // since its triangle pieces have no (u,v) frame, so slicing it raises an error.
+    const std::string normal_map = (std::filesystem::temp_directory_path() / "helios_slice_normal_map.png").string();
+    writePNG(normal_map, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.7f, 0.5f, 0.9f, 1.f)));
+    Context context;
+    context.addMaterial("bark");
+    context.setMaterialTexture("bark", "lib/images/disk_texture.png");
+    context.setMaterialNormalMap("bark", normal_map);
+    context.setMaterialTwosidedFlag("bark", 0);
+    const uint textured = context.addPatch(make_vec3(0.5, 0, 0), make_vec2(2, 2), make_SphericalCoord(0, 0), "lib/images/disk_texture.png");
+    context.assignMaterialToPrimitive(textured, "bark");
+    VoxelIntersection slicer(&context);
+    slicer.disableMessages();
+    const std::vector<uint> pieces = slicer.slicePrimitivesUsingGrid(std::vector<uint>{textured}, make_vec3(0, 0, 0), make_vec3(1, 10, 10), make_int3(2, 1, 1));
+    DOCTEST_REQUIRE(pieces.size() > 1);
+    for (uint UUID: pieces) {
+        DOCTEST_CHECK(context.getPrimitiveMaterialLabel(UUID) == "bark");
+        DOCTEST_CHECK(context.getPrimitiveNormalMapKind(UUID) == NORMAL_MAP_TANGENT_SPACE);
+    }
+
+    const uint untextured = context.addPatch(make_vec3(0.5, 0, 0), make_vec2(2, 2));
+    context.setPrimitiveNormalMap(untextured, normal_map);
+    DOCTEST_CHECK_THROWS(slicer.slicePrimitivesUsingGrid(std::vector<uint>{untextured}, make_vec3(0, 0, 0), make_vec3(1, 10, 10), make_int3(2, 1, 1)));
+    std::filesystem::remove(normal_map);
+}
+
 int VoxelIntersection::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

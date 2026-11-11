@@ -473,8 +473,7 @@ int PlantHydraulicsModel::getPlantID(uint UUID) {
 
 int PlantHydraulicsModel::getPlantID(const std::vector<uint> &UUIDs) {
     if (UUIDs.empty()) {
-        std::cout << "(PlantHydraulicsModel::getPlantID): UUIDs is empty. Returning -1. " << std::endl;
-        return 0;
+        helios_runtime_error("ERROR (PlantHydraulicsModel::getPlantID): the list of primitive UUIDs is empty, so there is no plant to look up.");
     }
     int plantIDfront;
     int plantIDback;
@@ -527,6 +526,41 @@ std::vector<uint> PlantHydraulicsModel::getPrimitivesByPlantID(const int plantID
     leafUUIDs.erase(it, leafUUIDs.end());
 
     return leafUUIDs;
+}
+
+std::map<int, std::vector<uint>> PlantHydraulicsModel::getPrimitivesByPlantIDs(const std::vector<int> &plantIDs) {
+    std::map<int, std::vector<uint>> byPlant;
+    for (int plantID: plantIDs)
+        byPlant[plantID];
+
+    // Same sources as getPrimitivesByPlantID(), but one pass over the Context for all plants
+    auto allUUIDs = context->getAllUUIDs();
+    auto objectIDs = context->getUniquePrimitiveParentObjectIDs(allUUIDs);
+    for (uint objID: objectIDs) {
+        if (objID != 0u && context->doesObjectDataExist(objID, "plantID")) {
+            int objPlantID;
+            context->getObjectData(objID, "plantID", objPlantID);
+            auto it = byPlant.find(objPlantID);
+            if (it != byPlant.end()) {
+                auto objectUUIDs = context->getObjectPrimitiveUUIDs(objID);
+                it->second.insert(it->second.end(), objectUUIDs.begin(), objectUUIDs.end());
+            }
+        }
+    }
+    for (uint UUID: allUUIDs) {
+        if (context->doesPrimitiveDataExist(UUID, "plantID")) {
+            int primPlantID;
+            context->getPrimitiveData(UUID, "plantID", primPlantID);
+            auto it = byPlant.find(primPlantID);
+            if (it != byPlant.end())
+                it->second.push_back(UUID);
+        }
+    }
+    for (auto &kv: byPlant) {
+        std::sort(kv.second.begin(), kv.second.end());
+        kv.second.erase(std::unique(kv.second.begin(), kv.second.end()), kv.second.end());
+    }
+    return byPlant;
 }
 
 std::vector<int> PlantHydraulicsModel::getUniquePlantIDs(const std::vector<uint> &UUIDs) {
@@ -633,8 +667,9 @@ void PlantHydraulicsModel::run(int timespan, int timestep) {
 
     plantIDs = getUniquePlantIDs(UUIDs);
 
+    const auto byPlant = getPrimitivesByPlantIDs(plantIDs);
     for (int plantID: plantIDs) {
-        std::vector<uint> leavesOfPlant = getPrimitivesByPlantID(plantID);
+        const std::vector<uint> &leavesOfPlant = byPlant.at(plantID);
         updateRootAndStemWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);
         updateLeafWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);
     }
@@ -663,8 +698,9 @@ void PlantHydraulicsModel::run(const std::vector<uint> &UUIDs, int timespan, int
 
     plantIDs = getUniquePlantIDs(UUIDs);
 
+    const auto byPlant = getPrimitivesByPlantIDs(plantIDs); // one Context pass for all plants (was one per plant)
     for (int plantID: plantIDs) {
-        std::vector<uint> leavesOfPlant = getPrimitivesByPlantID(plantID);
+        const std::vector<uint> &leavesOfPlant = byPlant.at(plantID);
         updateRootAndStemWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);
         updateLeafWaterPotentialsOfPlant(leavesOfPlant, timespan, timestep);
     }
