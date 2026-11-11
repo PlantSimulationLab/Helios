@@ -194,7 +194,9 @@ DOCTEST_TEST_CASE("Plant Library Model Building - almond") {
     PlantArchitecture plantarchitecture(&context);
     plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("almond"));
-    DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
+    // Four seasons, the oldest almond any test grows. Growth cost roughly doubles each further season (the 3000-day maximum age takes
+    // several minutes), so this stops short of the full lifespan.
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 1460));
 }
 
 DOCTEST_TEST_CASE("Plant Library Model Building - apple") {
@@ -7781,22 +7783,31 @@ DOCTEST_TEST_CASE("Build Parameters - Grapevine Wye Trellis Parameters") {
 }
 
 DOCTEST_TEST_CASE("Build Parameters - Tree Training System (Almond)") {
-    // Test tree training parameters
-    Context context;
-    PlantArchitecture plantarchitecture(&context);
-    plantarchitecture.disableMessages();
+    // The training parameters shape the tree when it is built: the trunk is laid out to trunk_height and num_scaffolds scaffolds
+    // are attached to it. Both are in place at age 0, so the tree is not grown. num_scaffolds is passed as a float, like every
+    // build parameter, and must arrive as that exact whole number of scaffolds.
+    for (float trunk_height: {0.5f, 1.0f}) {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("almond");
+        const std::map<std::string, float> tree_params = {{"trunk_height", trunk_height}, {"num_scaffolds", 5.0f}, {"scaffold_angle", 35.0f}};
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, tree_params);
 
-    plantarchitecture.loadPlantModelFromLibrary("almond");
-    std::map<std::string, float> tree_params = {
-            {"trunk_height", 0.5f}, // 50 cm total trunk height
-            {"num_scaffolds", 5.0f}, // 5 scaffold branches
-            {"scaffold_angle", 35.0f} // 35 degree scaffold angle
-    };
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, tree_params);
-
-    DOCTEST_CHECK(plantID != uint(-1));
-    std::vector<uint> plant_primitives = plantarchitecture.getAllPlantObjectIDs(plantID);
-    DOCTEST_CHECK(plant_primitives.size() > 0);
+        uint scaffold_count = 0;
+        for (uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            const std::shared_ptr<Shoot> &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+            if (shoot->shoot_type_label == "scaffold" && !shoot->phytomers.empty()) {
+                scaffold_count++;
+            }
+        }
+        DOCTEST_INFO("requested trunk_height = ", trunk_height);
+        DOCTEST_CHECK(scaffold_count == 5);
+        // The trunk is a whole number of 3 cm internodes, and leans slightly, so its top is within one internode of the request.
+        const float stem_height = plantarchitecture.getPlantStemHeight(plantID);
+        DOCTEST_INFO("stem height = ", stem_height);
+        DOCTEST_CHECK(std::fabs(stem_height - trunk_height) < 0.03f);
+    }
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture shade-driven branch shedding thins the branching tail") {
@@ -7956,6 +7967,8 @@ DOCTEST_TEST_CASE("PlantArchitecture almond scaffolds carry no lateral from the 
     // The bud at a scaffold's base sits in the trunk/scaffold crotch, and left alone it grows into a long limb straight out of
     // the junction -- the largest lateral on the scaffold. The almond builders kill it, as orchard training clears the crotch,
     // so a grown tree must carry no shoot borne on node 0 of any scaffold. The laterals further up must still be there.
+    // A live crotch bud breaks in the first season, but almond_independence carries only about ten scaffold laterals after one
+    // season, so the tree is grown for two (25-60 laterals across seeds).
     for (const std::string &model: {std::string("almond"), std::string("almond_independence")}) {
         Context context;
         context.seedRandomGenerator(100);
@@ -7963,7 +7976,7 @@ DOCTEST_TEST_CASE("PlantArchitecture almond scaffolds carry no lateral from the 
         plantarchitecture.disableMessages();
         plantarchitecture.loadPlantModelFromLibrary(model);
         uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
-        plantarchitecture.advanceTime(plantID, 2555.f);
+        plantarchitecture.advanceTime(plantID, 730.f);
 
         uint crotch_laterals = 0;
         uint scaffold_laterals = 0;
@@ -8104,40 +8117,46 @@ DOCTEST_TEST_CASE("Build Parameters - Almond trunk_height spans its full documen
 }
 
 DOCTEST_TEST_CASE("Build Parameters - Apple Tree") {
-    // Test apple tree with custom parameters
-    Context context;
-    PlantArchitecture plantarchitecture(&context);
-    plantarchitecture.disableMessages();
-
+    // The training parameters shape the tree when it is built: the trunk is laid out to trunk_height and num_scaffolds scaffolds
+    // are attached to it, so both are checked at age 0 without growing the tree.
     // Note: trunk_height limited by trunk max_nodes (20) * internode_length (0.04m) = 0.8m max
-    plantarchitecture.loadPlantModelFromLibrary("apple");
-    std::map<std::string, float> apple_params = {
-            {"trunk_height", 0.7f}, // 70 cm trunk height (within max_nodes limit)
-            {"num_scaffolds", 6.0f}, // 6 scaffold branches
-            {"scaffold_angle", 45.0f} // 45 degree scaffold angle
-    };
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, apple_params);
+    for (float trunk_height: {0.4f, 0.7f}) {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("apple");
+        const std::map<std::string, float> apple_params = {{"trunk_height", trunk_height}, {"num_scaffolds", 6.0f}, {"scaffold_angle", 45.0f}};
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, apple_params);
 
-    DOCTEST_CHECK(plantID != uint(-1));
+        DOCTEST_INFO("requested trunk_height = ", trunk_height);
+        // The apple scaffolds are the trunk's only child shoots at planting.
+        DOCTEST_CHECK(plantarchitecture.getChildShootIDs(plantID, 0).size() == 6);
+        // The trunk is a whole number of 4 cm internodes, and leans slightly, so its top is within one internode of the request.
+        const float stem_height = plantarchitecture.getPlantStemHeight(plantID);
+        DOCTEST_INFO("stem height = ", stem_height);
+        DOCTEST_CHECK(std::fabs(stem_height - trunk_height) < 0.04f);
+    }
 }
 
 DOCTEST_TEST_CASE("Build Parameters - Pistachio Tree Fixed Scaffold System") {
-    // Test pistachio tree with different scaffold count
-    Context context;
-    PlantArchitecture plantarchitecture(&context);
-    plantarchitecture.disableMessages();
+    // The scaffolds are attached to the trunk when the tree is built, so the requested count is checked at age 0 without growing
+    // the tree: the minimum of 2 and an odd count, where the last opposite pair has a single member.
+    for (float num_scaffolds: {2.0f, 3.0f}) {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("pistachio");
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, {{"num_scaffolds", num_scaffolds}});
 
-    plantarchitecture.loadPlantModelFromLibrary("pistachio");
-
-    // Test with 2 scaffolds (minimum)
-    std::map<std::string, float> pistachio_params_min = {{"num_scaffolds", 2.0f}};
-    uint plantID_min = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, pistachio_params_min);
-    DOCTEST_CHECK(plantID_min != uint(-1));
-
-    // Test with 4 scaffolds (default)
-    std::map<std::string, float> pistachio_params_def = {{"num_scaffolds", 4.0f}};
-    uint plantID_def = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(5, 0, 0), 5000, pistachio_params_def);
-    DOCTEST_CHECK(plantID_def != uint(-1));
+        uint scaffold_count = 0;
+        for (uint shootID: plantarchitecture.getChildShootIDs(plantID, 0)) {
+            if (plantarchitecture.getPlantShoot(plantID, shootID)->shoot_type_label == "scaffold") {
+                scaffold_count++;
+            }
+        }
+        DOCTEST_INFO("requested num_scaffolds = ", num_scaffolds);
+        DOCTEST_CHECK(scaffold_count == uint(num_scaffolds));
+    }
 }
 
 DOCTEST_TEST_CASE("Build Parameters - Pistachio builds every requested scaffold") {
@@ -8262,25 +8281,6 @@ DOCTEST_TEST_CASE("Build Parameters - Canopy Building passes num_scaffolds to ev
     for (uint plantID: plantIDs_extent) {
         DOCTEST_CHECK(plantarchitecture.getAllShootIDs(plantID).size() == 7);
     }
-}
-
-DOCTEST_TEST_CASE("Build Parameters - Type Casting Float to Uint") {
-    // Test that float parameters correctly cast to uint for node counts
-    Context context;
-    PlantArchitecture plantarchitecture(&context);
-    plantarchitecture.disableMessages();
-
-    plantarchitecture.loadPlantModelFromLibrary("almond");
-
-    // Specify parameters as floats (should cast to uint internally where needed)
-    std::map<std::string, float> float_params = {
-            {"trunk_height", 0.5f}, // Height as float
-            {"num_scaffolds", 5.0f}, // Should cast to uint(5)
-            {"scaffold_angle", 42.5f} // Angle as float
-    };
-
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, float_params);
-    DOCTEST_CHECK(plantID != uint(-1));
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData 'all' keyword") {

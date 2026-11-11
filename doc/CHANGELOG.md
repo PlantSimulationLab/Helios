@@ -55,6 +55,8 @@
 
 ## Utilities
 - Added `utilities/pbr_maps`, a Python script (numpy, scipy, Pillow) that makes a tangent-space normal map and a 16-bit bump map from an RGB(A) texture photograph for `Context::setMaterialNormalMap()` and `setMaterialBumpMap()`. It treats brightness at each feature's scale as relief, after removing large-scale lighting and filling the transparent and blended edge texels of cut-outs; a `--height-source shading` mode uses the shading image of `utilities/leaf_class_maps/decompose.py` so that albedo marks are not read as grooves. The normal map is computed with the same kernel Helios applies to bump maps, so both maps give the same normals.
+- Added `run_tests.sh --shards <N>`, which runs each test executable as N concurrent processes over interleaved ranges of its test cases, each in its own working and temporary directory, and replays their output in test order. It cannot be combined with `--memcheck` or a doctest `--out` file.
+- Fixed `run_tests.sh` exiting with status 0, reported as success, when it was interrupted (Ctrl-C or SIGTERM, e.g. a cancelled CI job) before any test had failed. It now exits with 130 or 143.
 
 # [1.3.96] 2026-11-08
 
