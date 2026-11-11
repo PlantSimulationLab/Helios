@@ -94,6 +94,30 @@ struct BBcoefficients {
     float chi; // mol/m^2-s-MPa
 };
 
+//! Coefficients for the Buckley et al. (2026) stomatal conductance model
+/**
+ * Buckley, T. N., J. Lamour, D. M. Barnard, D. W. Buckley, A. J. Jarvis, A. Diaz-Espejo, A. Rogers, and L. Sack. 2026. A Simple Stomatal Model That Unifies the Metabolic and Hydraulic Control of Carbon and
+ * Water Flux. Global Change Biology 32: e70999. https://doi.org/10.1111/gcb.70999
+ *
+ * \f$g_s = \beta\,s\,b\,(\psi_{soil}-\psi_c)/(1+s\,b\,D_s/K_{plant})\f$ with \f$b = J/4 - R_d - A + b_o\f$ (floored at zero), where \f$J/4-R_d\f$ is the CO2-saturated electron-transport-limited
+ * photosynthetic rate. \f$J\f$, \f$R_d\f$, and \f$A\f$ come from the Farquhar photosynthesis model, and \f$K_{plant}\f$ is the whole-plant (soil-to-leaf) hydraulic conductance per unit leaf area.
+ */
+struct Buckley2026coefficients {
+
+    Buckley2026coefficients() {
+        // Pistachio (see the species library)
+        s = 0.08766f;
+        K_plant_at_25C = 0.007411f;
+        b_o = 1.11f;
+        psi_c = -4.103f;
+    }
+
+    float s; // mol/umol/MPa, stomatal scaling and sensitivity coefficient (mol m^-2 s^-1 MPa^-1 of stomatal conductance per umol m^-2 s^-1 of b)
+    float K_plant_at_25C; // mol/m^2/s/MPa, whole-plant (soil-to-leaf) hydraulic conductance per unit leaf area at 25 C; scaled by the fluidity of water at leaf temperature. Not the leaf conductance K_leaf.
+    float b_o; // umol/m^2/s
+    float psi_c; // MPa, leaf water potential at which stomata close (Buckley et al. 2026 recommend the turgor loss point when it is not measured)
+};
+
 class StomatalConductanceModel {
 public:
     //! Default constructor
@@ -169,6 +193,57 @@ public:
      * \param[in] UUIDs Universal unique identifiers for primitives to set
      */
     void setModelCoefficients(const BBcoefficients &coeffs, const std::vector<uint> &UUIDs);
+
+    //! Set the model coefficient values for all primitives - Buckley et al. (2026) model
+    /**
+     * \param[in] coeffs Model coefficient values
+     * \note Selecting this model sets global data "buckley2026_stomatal_model_enabled" to 1, which makes the PhotosynthesisModel write "electron_transport_rate" and "dark_respiration", and the
+     * PlantHydraulicsModel write "plant_hydraulic_conductance" and "soil_water_potential", on their next run. The global data is not reset when another model is selected.
+     */
+    void setModelCoefficients(const Buckley2026coefficients &coeffs);
+
+    //! Set the model coefficient values for a subset of primitives based on their UUIDs - Buckley et al. (2026) model
+    /**
+     * \param[in] coeffs Model coefficient values
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
+     */
+    void setModelCoefficients(const Buckley2026coefficients &coeffs, const std::vector<uint> &UUIDs);
+
+    //! Set Buckley et al. (2026) model coefficients for a material by label
+    /**
+     * \param[in] material_label String identifier for the material
+     * \param[in] coeffs Model coefficient values
+     */
+    void setModelCoefficients(const std::string &material_label, const Buckley2026coefficients &coeffs);
+
+    //! Set the Buckley et al. (2026) model coefficients for all primitives using one of the available species in the library
+    /**
+     * \param[in] species Name of species
+     * \note Each entry was fitted together with the PhotosynthesisModel Farquhar library entry of the same species, so use it with PhotosynthesisModel::setFarquharCoefficientsFromLibrary() for that species.
+     * \note Throws a runtime error if the species is not in the library; see the stomatal conductance plug-in documentation for the list of valid names.
+     */
+    void setBuckley2026CoefficientsFromLibrary(const std::string &species);
+
+    //! Set the Buckley et al. (2026) model coefficients for a subset of primitives using one of the available species in the library
+    /**
+     * \param[in] species Name of species
+     * \param[in] UUIDs Universal unique identifiers for primitives to set
+     */
+    void setBuckley2026CoefficientsFromLibrary(const std::string &species, const std::vector<uint> &UUIDs);
+
+    //! Set the Buckley et al. (2026) model coefficients for a material using one of the available species in the library
+    /**
+     * \param[in] species Name of species
+     * \param[in] material_label String identifier for the material
+     */
+    void setBuckley2026CoefficientsFromLibrary(const std::string &species, const std::string &material_label);
+
+    //! Get the Buckley et al. (2026) model coefficients of one of the available species in the library
+    /**
+     * \param[in] species Name of species
+     * \note Throws a runtime error if the species is not in the library; see the stomatal conductance plug-in documentation for the list of valid names.
+     */
+    Buckley2026coefficients getBuckley2026CoefficientsFromLibrary(const std::string &species);
 
     //! Set the model coefficient values for a subset of primitives based on their UUIDs
     /**
@@ -317,6 +392,7 @@ private:
     MOPTcoefficients MOPTcoeffs;
     BMFcoefficients BMFcoeffs;
     BBcoefficients BBcoeffs;
+    Buckley2026coefficients Buckley2026coeffs;
 
     float i_default;
     float TL_default;
@@ -329,12 +405,14 @@ private:
     float air_CO2_default;
     float blconductance_default;
     float beta_default;
+    float soil_water_potential_default;
 
     std::map<uint, BWBcoefficients> BWBmodel_coefficients;
     std::map<uint, BBLcoefficients> BBLmodel_coefficients;
     std::map<uint, MOPTcoefficients> MOPTmodel_coefficients;
     std::map<uint, BMFcoefficients> BMFmodel_coefficients;
     std::map<uint, BBcoefficients> BBmodel_coefficients;
+    std::map<uint, Buckley2026coefficients> Buckley2026model_coefficients;
 
     // Cache to avoid repeated Context lookups during run()
     mutable std::map<uint, BWBcoefficients> material_coefficient_cache_BWB;
@@ -342,6 +420,7 @@ private:
     mutable std::map<uint, MOPTcoefficients> material_coefficient_cache_MOPT;
     mutable std::map<uint, BMFcoefficients> material_coefficient_cache_BMF;
     mutable std::map<uint, BBcoefficients> material_coefficient_cache_BB;
+    mutable std::map<uint, Buckley2026coefficients> material_coefficient_cache_Buckley2026;
 
     // Helper to retrieve coefficients with caching
     BWBcoefficients getCoefficientsForPrimitive_BWB(uint UUID) const;
@@ -349,6 +428,10 @@ private:
     MOPTcoefficients getCoefficientsForPrimitive_MOPT(uint UUID) const;
     BMFcoefficients getCoefficientsForPrimitive_BMF(uint UUID) const;
     BBcoefficients getCoefficientsForPrimitive_BB(uint UUID) const;
+    Buckley2026coefficients getCoefficientsForPrimitive_Buckley2026(uint UUID) const;
+
+    //! Select the Buckley et al. (2026) model and signal the photosynthesis and plant hydraulics plug-ins (global data "buckley2026_stomatal_model_enabled") to write the inputs it needs
+    void selectBuckley2026Model();
 
     std::map<uint, helios::vec2> dynamic_time_constants; // .x is tau_open, .y is tau_close
 
@@ -357,6 +440,21 @@ private:
     static float evaluate_MOPTmodel(float esurf, std::vector<float> &variables, const void *parameters);
     static float evaluate_BMFmodel(float esurf, std::vector<float> &variables, const void *parameters);
     static float evaluate_BBmodel(float esurf, std::vector<float> &variables, const void *parameters);
+    static float evaluate_Buckley2026model(float esurf, std::vector<float> &variables, const void *parameters);
+
+    //! Buckley et al. (2026) conductance for a given surface vapor pressure deficit
+    /**
+     * \param[in] Ds Vapor pressure deficit between the stomatal cavity and the leaf surface (mol/mol)
+     * \param[in] b \f$J/4-R_d-A+b_o\f$ (umol/m^2/s), floored at zero by the caller
+     * \param[in] psi_soil Soil (source) water potential (MPa)
+     * \param[in] K_plant Whole-plant hydraulic conductance per unit leaf area at the leaf temperature (mol/m^2/s/MPa)
+     * \param[in] beta Soil moisture factor
+     * \param[in] coeffs Model coefficients
+     */
+    static float evaluate_Buckley2026conductance(float Ds, float b, float psi_soil, float K_plant, float beta, const Buckley2026coefficients &coeffs);
+
+    //! Fluidity of liquid water at temperature T relative to 25 C (the temperature scaling of K_plant_at_25C)
+    static float waterFluidityRelativeTo25C(float T_in_Kelvin);
 
     //! Closed-form solution of the implicit Bailey guard-cell relation for a given surface vapor pressure deficit
     static float evaluate_BBconductance(float Ds, float Psix, float i, float beta, const BBcoefficients &coeffs);

@@ -949,6 +949,17 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
     WarningAggregator warnings;
     warnings.setEnabled(message_flag); // Respect existing message flag
 
+    // The electron transport rate and day respiration are written when requested as optional output, and also whenever the StomatalConductanceModel Buckley et al. (2026) model is in use,
+    // which signals this through global data and computes the CO2-saturated electron-transport-limited rate J/4 - Rd from them.
+    bool buckley_inputs_requested = false;
+    if (context->doesGlobalDataExist("buckley2026_stomatal_model_enabled") && context->getGlobalDataType("buckley2026_stomatal_model_enabled") == HELIOS_TYPE_INT) {
+        int buckley_enabled = 0;
+        context->getGlobalData("buckley2026_stomatal_model_enabled", buckley_enabled);
+        buckley_inputs_requested = (buckley_enabled == 1);
+    }
+    const bool write_electron_transport_rate = buckley_inputs_requested || std::find(output_prim_data.begin(), output_prim_data.end(), "electron_transport_rate") != output_prim_data.end();
+    const bool write_dark_respiration = buckley_inputs_requested || std::find(output_prim_data.begin(), output_prim_data.end(), "dark_respiration") != output_prim_data.end();
+
     for (uint UUID: lUUIDs) {
 
         float i_PAR;
@@ -1164,6 +1175,18 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 context->setPrimitiveData(UUID, "Vp", Vp_c4);
             }
         }
+
+        if (model == "farquhar" && (write_electron_transport_rate || write_dark_respiration)) {
+            double J;
+            float Rd;
+            evaluateElectronTransportAndRespiration(getCoefficientsForPrimitive_Farquhar(UUID), i_PAR, TL, J, Rd);
+            if (write_electron_transport_rate) {
+                context->setPrimitiveData(UUID, "electron_transport_rate", static_cast<float>(J));
+            }
+            if (write_dark_respiration) {
+                context->setPrimitiveData(UUID, "dark_respiration", Rd);
+            }
+        }
     }
 
     warnings.report(std::cerr);
@@ -1293,7 +1316,7 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
 
     const FarquharModelCoefficients modelcoeffs = *reinterpret_cast<const FarquharModelCoefficients *>(parameters);
 
-    float Vcmax, Jmax, TPU, Rd, alpha, theta;
+    float Vcmax, TPU, Rd, alpha;
 
     float CO2 = variables[0];
     float Q = variables[1];
@@ -1318,17 +1341,9 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
         Vcmax = respondToTemperature(&modelcoeffs.VcmaxTempResponse, TL);
     }
 
-    if (modelcoeffs.Jmax > 0) {
-        Jmax = modelcoeffs.Jmax * expf(modelcoeffs.dH_Jmax * (invDiffRT));
-    } else {
-        Jmax = respondToTemperature(&modelcoeffs.JmaxTempResponse, TL);
-    }
-
-    if (modelcoeffs.Rd > 0) {
-        Rd = modelcoeffs.Rd * expf(modelcoeffs.dH_Rd * (invDiffRT));
-    } else {
-        Rd = respondToTemperature(&modelcoeffs.RdTempResponse, TL);
-    }
+    // Electron transport rate J and day respiration Rd do not depend on Ci
+    double J;
+    evaluateElectronTransportAndRespiration(modelcoeffs, Q, TL, J, Rd);
 
     if (modelcoeffs.alpha > 0) {
         alpha = modelcoeffs.alpha;
@@ -1338,7 +1353,6 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
 
 
     TPU = respondToTemperature(&modelcoeffs.TPUTempResponse, TL);
-    theta = respondToTemperature(&modelcoeffs.thetaTempResponse, TL);
 
     // Mesophyll conductance gm (mol CO2 / m^2 / s / bar). If gm is infinite/huge,
     // Cc ≡ Ci and we take the original legacy path below. Otherwise we solve a
@@ -1352,14 +1366,6 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
     float Kc = exp(c_Kc - dH_Kc / (R * TL));
     float Ko = exp(c_Ko - dH_Ko / (R * TL));
     float Kco = Kc * (1.f + O / Ko);
-
-    // thetaJ^2 + -(alphaQ+Jmax)J + alphaQJmax = 0
-    double a = std::max(theta, 0.0001f);
-    double ia = 1.000f / a;
-    double b = -(alpha * Q + Jmax);
-    double c = alpha * Q * Jmax;
-    double J = (-b - sqrt(pow(b, 2.000f) - 4.f * a * c)) * 0.5f * ia;
-    // J = Jmax * alpha * Q / (alpha * Q + Jmax);
 
     float A;
     float limitation_state;
@@ -1693,6 +1699,40 @@ float PhotosynthesisModel::evaluateC4Model(const C4ModelCoefficients &params, fl
 }
 
 
+void PhotosynthesisModel::evaluateElectronTransportAndRespiration(const FarquharModelCoefficients &params, float i_PAR, float TL, double &J, float &Rd) {
+
+    const float R = 0.0083144598; // molar gas constant (kJ/K/mol)
+    const float invDiffRT = (1.f / 298.15f - 1.f / TL) / R;
+
+    float Jmax;
+    if (params.Jmax > 0) {
+        Jmax = params.Jmax * expf(params.dH_Jmax * (invDiffRT));
+    } else {
+        Jmax = respondToTemperature(&params.JmaxTempResponse, TL);
+    }
+
+    if (params.Rd > 0) {
+        Rd = params.Rd * expf(params.dH_Rd * (invDiffRT));
+    } else {
+        Rd = respondToTemperature(&params.RdTempResponse, TL);
+    }
+
+    float alpha;
+    if (params.alpha > 0) {
+        alpha = params.alpha;
+    } else {
+        alpha = respondToTemperature(&params.alphaTempResponse, TL);
+    }
+    const float theta = respondToTemperature(&params.thetaTempResponse, TL);
+
+    // thetaJ^2 + -(alphaQ+Jmax)J + alphaQJmax = 0
+    double a = std::max(theta, 0.0001f);
+    double ia = 1.000f / a;
+    double b = -(alpha * i_PAR + Jmax);
+    double c = alpha * i_PAR * Jmax;
+    J = (-b - sqrt(pow(b, 2.000f) - 4.f * a * c)) * 0.5f * ia;
+}
+
 float PhotosynthesisModel::respondToTemperature(const PhotosyntheticTemperatureResponseParameters *params, float T_in_Kelvin) {
     float T = T_in_Kelvin;
     float R = 0.0083144598f;
@@ -1779,7 +1819,8 @@ void PhotosynthesisModel::enableMessages() {
 
 void PhotosynthesisModel::optionalOutputPrimitiveData(const char *label) {
 
-    if (strcmp(label, "Ci") == 0 || strcmp(label, "limitation_state") == 0 || strcmp(label, "Gamma_CO2") == 0 || strcmp(label, "electron_transport_ratio") == 0 || strcmp(label, "Cm") == 0 || strcmp(label, "Vp") == 0) {
+    if (strcmp(label, "Ci") == 0 || strcmp(label, "limitation_state") == 0 || strcmp(label, "Gamma_CO2") == 0 || strcmp(label, "electron_transport_ratio") == 0 || strcmp(label, "Cm") == 0 || strcmp(label, "Vp") == 0 ||
+        strcmp(label, "electron_transport_rate") == 0 || strcmp(label, "dark_respiration") == 0) {
         output_prim_data.emplace_back(label);
     } else {
         if (message_flag) {

@@ -145,7 +145,7 @@
          <td>\f$\mu\f$mol/m<sup>2</sup>-s</td>
          <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
          <td>Net CO<sub>2</sub> (photosynthetic) flux.</td>
-         <td>BWB, BBL, Mopt</td>
+         <td>BWB, BBL, Mopt, Buckley2026</td>
          <td>Can be computed by \ref PhotosynthesisModel plug-in.</td>
          <td>0</td>
      </tr>
@@ -178,6 +178,46 @@
          <td>BB</td>
          <td>N/A</td>
          <td>-0.1 MPa</td>
+     </tr>
+     <tr>
+         <td>electron_transport_rate</td>
+         <td>\f$J\f$</td>
+         <td>\f$\mu\f$mol/m<sup>2</sup>-s</td>
+         <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
+         <td>Potential electron transport rate at the leaf's light and temperature.</td>
+         <td>Buckley2026</td>
+         <td>Computed by the \ref PhotosynthesisModel plug-in (Farquhar model), automatically once the Buckley2026 model is selected.</td>
+         <td>None (required)</td>
+     </tr>
+     <tr>
+         <td>dark_respiration</td>
+         <td>\f$R_d\f$</td>
+         <td>\f$\mu\f$mol/m<sup>2</sup>-s</td>
+         <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
+         <td>Day respiration at the leaf temperature.</td>
+         <td>Buckley2026</td>
+         <td>Computed by the \ref PhotosynthesisModel plug-in (Farquhar model), automatically once the Buckley2026 model is selected.</td>
+         <td>None (required)</td>
+     </tr>
+     <tr>
+         <td>soil_water_potential</td>
+         <td>\f$\psi_{soil}\f$</td>
+         <td>MPa</td>
+         <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
+         <td>Water potential of the soil (source) supplying the plant.</td>
+         <td>Buckley2026</td>
+         <td>Written by the \ref PlantHydraulicsModel plug-in (for plants whose soil water potential was set with setSoilWaterPotentialOfPlant()), automatically once the Buckley2026 model is selected, or set directly.</td>
+         <td>-0.1 MPa</td>
+     </tr>
+     <tr>
+         <td>plant_hydraulic_conductance</td>
+         <td>\f$K_{plant}\f$</td>
+         <td>mol/m<sup>2</sup>-s-MPa</td>
+         <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
+         <td>Whole-plant (soil-to-leaf) hydraulic conductance per unit leaf area, at the leaf temperature. Not the leaf conductance \f$K_{leaf}\f$.</td>
+         <td>Buckley2026</td>
+         <td>Written by the \ref PlantHydraulicsModel plug-in, automatically once the Buckley2026 model is selected.</td>
+         <td>Model coefficient \f$K_{plant,25}\f$ scaled to leaf temperature</td>
      </tr>
 
   </table>
@@ -215,7 +255,7 @@
 
  <table>
     <tr><th>Primitive Data Label</th><th>Units</th><th>Data Type</th><th>Description</th></tr>
-    <tr><td>vapor\_pressure\_deficit</td><td>mmol/mol</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Vapor pressure deficit between the stomatal cavity and leaf surface. Only applicable for BMF model.</td></tr>
+    <tr><td>vapor\_pressure\_deficit</td><td>mmol/mol</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Vapor pressure deficit between the stomatal cavity and leaf surface. Only applicable for the BMF and Buckley2026 models.</td></tr>
     <tr><td>model\_parameters</td><td>N/A</td><td>\htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly</td><td>Model parameters for each primitive. See table below for the actual primitive data labels that are created.</td></tr>
  </table>
 
@@ -257,6 +297,18 @@
     </tr>
     <tr>
         <td>\f$b\f$</td><td>b_BMF</td>
+    </tr>
+    <tr>
+        <td rowspan="4">Buckley et al. (2026)</td><td>\f$s\f$</td><td>s_Buckley2026</td>
+    </tr>
+    <tr>
+        <td>\f$K_{plant}\f$ (value used, at leaf temperature)</td><td>K_plant_Buckley2026</td>
+    </tr>
+    <tr>
+        <td>\f$b_o\f$</td><td>b_o_Buckley2026</td>
+    </tr>
+    <tr>
+        <td>\f$\psi_c\f$</td><td>psi_c_Buckley2026</td>
     </tr>
  </table>
 
@@ -713,6 +765,105 @@ Because \f$g_s\f$ appears on both sides of these expressions but enters only lin
 
 As with the other models, \f$D_s\f$ is obtained by iteratively solving the water vapor flux balance at the leaf surface, so the Bailey model responds to the boundary-layer conductance. This model requires the xylem water potential (primitive data "xylem_water_potential") rather than the net photosynthetic flux.
 
+\section Buckley2026Theory Buckley et al. (2026) Model
+
+The model of <a href="https://doi.org/10.1111/gcb.70999">Buckley et al. (2026)</a> (Buckley, T. N., J. Lamour, D. M. Barnard, D. W. Buckley, A. J. Jarvis, A. Diaz-Espejo, A. Rogers, and L. Sack. 2026. "A Simple Stomatal Model That Unifies the Metabolic and Hydraulic Control of Carbon and Water Flux." <i>Global Change Biology</i> 32: e70999) simplifies the hydromechanical/biochemical model of Buckley, Mott, and Farquhar (2003). Stomatal conductance is driven by the residual photosynthetic capacity, the excess of the CO<sub>2</sub>-saturated assimilation rate \f$A_m\f$ over the actual net assimilation rate, and limited by the water supply from the soil through the plant (their Equation 3):
+
+\f[g_s = \frac{\beta\, s\, b\,(\psi_{soil}-\psi_c)}{1+s\,b\,D_s/K_{plant}},\qquad b = \max\left(0,\ \frac{J}{4}-R_d-A+b_o\right),\f]
+
+where \f$J\f$ is the potential electron transport rate at the leaf's light and temperature, \f$R_d\f$ is day respiration, \f$A\f$ is net photosynthesis, \f$\psi_{soil}\f$ is the soil (source) water potential, \f$D_s\f$ is the vapor pressure deficit between the stomatal cavity and the leaf surface (mol/mol; calculated as described for the other models above), and \f$K_{plant}\f$ is the whole-plant (soil-to-leaf) hydraulic conductance per unit leaf area. \f$J/4-R_d\f$ is the limit of the Farquhar electron-transport-limited rate \f$J(C_c-\Gamma^*)/(4C_c+8\Gamma^*)-R_d\f$ as \f$C_c\to\infty\f$. The denominator accounts for the fall in leaf water potential with transpiration, \f$\psi_{leaf}=\psi_{soil}-g_sD_s/K_{plant}\f$. The parameters are \f$s\f$ (mol \f$\mu\f$mol<sup>-1</sup> MPa<sup>-1</sup>), the closure water potential \f$\psi_c\f$ (MPa), \f$b_o\f$ (\f$\mu\f$mol/m<sup>2</sup>-s), and \f$K_{plant,25}\f$ (mol/m<sup>2</sup>-s-MPa), the whole-plant hydraulic conductance at 25 \f$^\circ\f$C. When primitive data "plant_hydraulic_conductance" is not available, \f$K_{plant}=K_{plant,25}\,\phi(T_L)\f$, where \f$\phi(T)=4.891\times10^{10}\exp(-4209/T-0.04527T+3.376\times10^{-5}T^2)\f$ is the fluidity of water relative to 25 \f$^\circ\f$C. Conductance is zero when \f$\psi_{soil}\le\psi_c\f$.
+
+Note that \f$A\f$, \f$J\f$, and \f$R_d\f$ must be computed by the \ref PhotosynthesisModel plug-in (Farquhar model); once this model is selected, the photosynthesis plug-in writes \f$J\f$ and \f$R_d\f$ automatically. \f$\psi_{soil}\f$ and \f$K_{plant}\f$ can be computed by the \ref PlantHydraulicsModel plug-in, or \f$\psi_{soil}\f$ can be set directly as primitive data, in which case \f$K_{plant}\f$ is given by the model coefficient \f$K_{plant,25}\f$.
+
+\subsection Buckley2026Library Species library
+
+The coefficients below were fitted to diurnal LI-600 porometer surveys of field and orchard trees (gsdb, Davis, CA; conductances corrected per Rizzo & Bailey) with soft-L1 least squares. \f$\psi_{soil}\f$ was the first (predawn or early-morning) stem water potential measured on each tree and day. \f$\psi_c\f$ was fixed at the pressure-volume turgor loss point \f$\psi_{TLP}\f$ of the species (measured, or from the literature where marked), as recommended by Buckley et al. (2026), and fitted for eastern redbud, which has no pressure-volume data. With a single \f$\psi_{soil}\f$ per day only \f$s(\psi_{soil}-\psi_c)\f$ and \f$K_{plant}(\psi_{soil}-\psi_c)\f$ are identified, so \f$s\f$ and \f$K_{plant,25}\f$ depend on the value used for \f$\psi_c\f$. \f$A\f$, \f$J\f$, and \f$R_d\f$ were computed with the \ref PhotosynthesisModel Farquhar library entry listed for each species, and the fit depends on those photosynthesis parameters through \f$b\f$: <b>use each entry together with that Farquhar library entry</b>. \f$K_{plant,25}\f$ was fitted, so it is the value consistent with \f$s\f$ and \f$b_o\f$. \f$R^2\f$ is for the means of each date and hour, with the leave-one-hour-out cross-validated value in parentheses.
+
+<table>
+    <tr>
+        <th>Species</th>
+        <th>\f$s\f$ (mol \f$\mu\f$mol<sup>-1</sup> MPa<sup>-1</sup>)</th>
+        <th>\f$K_{plant,25}\f$ (mol/m<sup>2</sup>-s-MPa)</th>
+        <th>\f$b_o\f$ (\f$\mu\f$mol/m<sup>2</sup>-s)</th>
+        <th>\f$\psi_c\f$ (MPa)</th>
+        <th>Farquhar library entry</th>
+        <th>Readings / days</th>
+        <th>\f$R^2\f$ (CV)</th>
+    </tr>
+    <tr>
+        <td>Almond</td>
+        <td>0.01595</td>
+        <td>0.03266</td>
+        <td>1.416</td>
+        <td>-2.329 (turgor loss point, literature)</td>
+        <td>Almond</td>
+        <td>147 / 1</td>
+        <td>0.75 (0.56)</td>
+    </tr>
+    <tr>
+        <td>Elderberry</td>
+        <td>0.0271</td>
+        <td>0.007491</td>
+        <td>1.27</td>
+        <td>-2.752 (turgor loss point)</td>
+        <td>Elderberry</td>
+        <td>389 / 2</td>
+        <td>0.83 (0.77)</td>
+    </tr>
+    <tr>
+        <td>Cowpea</td>
+        <td>0.2626</td>
+        <td>0.05714</td>
+        <td>1.074</td>
+        <td>-0.846 (turgor loss point)</td>
+        <td>Cowpea</td>
+        <td>258 / 1</td>
+        <td>0.76 (0.65)</td>
+    </tr>
+    <tr>
+        <td>EasternRedbud</td>
+        <td>0.004195</td>
+        <td>0.001744</td>
+        <td>1.774</td>
+        <td>-3.667 (fitted)</td>
+        <td>EasternRedbudSunlit, EasternRedbudShaded</td>
+        <td>2548 / 4</td>
+        <td>0.63 (0.57)</td>
+    </tr>
+    <tr>
+        <td>Grape</td>
+        <td>0.03341</td>
+        <td>0.007471</td>
+        <td>1.268</td>
+        <td>-1.718 (turgor loss point, literature)</td>
+        <td>Grape</td>
+        <td>231 / 1</td>
+        <td>0.55 (0.16)</td>
+    </tr>
+    <tr>
+        <td>Olive</td>
+        <td>0.02156</td>
+        <td>0.004562</td>
+        <td>5.033</td>
+        <td>-2.043 (turgor loss point)</td>
+        <td>Olive</td>
+        <td>57 / 1</td>
+        <td>0.88 (0.73)</td>
+    </tr>
+    <tr>
+        <td>Pistachio</td>
+        <td>0.08766</td>
+        <td>0.007411</td>
+        <td>1.11</td>
+        <td>-4.103 (turgor loss point)</td>
+        <td>PistachioFemale (or Pistachio)</td>
+        <td>824 / 1</td>
+        <td>0.76 (0.60)</td>
+    </tr>
+</table>
+
+The default \ref Buckley2026coefficients are the pistachio entry. The cowpea entry is a single genotype measured on one day.
+
 \section StomatalErrors Error Conditions
 
 The plug-in follows a fail-fast philosophy: physically meaningless inputs produce an error rather than a silently substituted value. \ref StomatalConductanceModel::run() "run()" will throw an error if any of the following conditions is encountered.
@@ -769,6 +920,14 @@ Each model has a data structure containing member variables for each of the mode
     <tr>
         <td>Buckley, Mott, Farquhar</td>
         <td>\ref BMFcoefficients "BMFcoefficients"</td>
+    </tr>
+    <tr>
+        <td>Bailey</td>
+        <td>\ref BBcoefficients "BBcoefficients"</td>
+    </tr>
+    <tr>
+        <td>Buckley et al. (2026)</td>
+        <td>\ref Buckley2026coefficients "Buckley2026coefficients"</td>
     </tr>
 </table>
 

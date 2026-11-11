@@ -41,8 +41,10 @@
 
 | Primitive Data Label | Symbol | Units | Data Type | Description |
 | -------------------- | ------ | ------ | --------- | ----------- |
-| hydraulic_conductance  | \f$K\f$   | mol m\f$^{-2}\f$ s\f$^{-1}\f$ MPa\f$^{-1}\f$ | \htmlonly<span style="color: green;"><tt>float</tt></span>\endhtmlonly    | Hydraulic conductance |
-| hydraulic_capacitance | \f$C\f$    | mol m\f$^{-2}\f$ MPa\f$^{-1}\f$ | \htmlonly<span style="color: green;"><tt>float</tt></span>\endhtmlonly | Hydraulic capacitance |
+| hydraulic_conductance  | \f$K_{leaf}\f$   | mol m\f$^{-2}\f$ s\f$^{-1}\f$ MPa\f$^{-1}\f$ | \htmlonly<span style="color: green;"><tt>float</tt></span>\endhtmlonly    | Leaf hydraulic conductance. Enabled with PlantHydraulicsModel::outputConductancePrimitiveData(). |
+| hydraulic_capacitance | \f$C\f$    | mol m\f$^{-2}\f$ MPa\f$^{-1}\f$ | \htmlonly<span style="color: green;"><tt>float</tt></span>\endhtmlonly | Hydraulic capacitance. Enabled with PlantHydraulicsModel::outputCapacitancePrimitiveData(). |
+| plant_hydraulic_conductance | \f$K_{plant}\f$ | mol m\f$^{-2}\f$ s\f$^{-1}\f$ MPa\f$^{-1}\f$ | \htmlonly<span style="color: green;"><tt>float</tt></span>\endhtmlonly | Whole-plant (soil-to-leaf) hydraulic conductance per unit leaf area, \f$K_{plant}=\left(K_{root}^{-1}+K_{stem}^{-1}+K_{leaf}^{-1}\right)^{-1}\f$. Enabled with PlantHydraulicsModel::outputPlantConductancePrimitiveData(), or automatically when the Buckley et al. (2026) stomatal conductance model is in use. |
+| soil_water_potential | \f$\psi_{soil}\f$ | MPa | \htmlonly<span style="color: green;"><tt>float</tt></span>\endhtmlonly | Soil water potential of the leaf's plant. Written together with plant_hydraulic_conductance, but only for plants whose soil water potential was set with PlantHydraulicsModel::setSoilWaterPotentialOfPlant(), so that a value set directly as primitive data is not replaced by the default placeholder. |
 
 \section PH_Intro Introduction
 The Plant Hydraulics plugin models the water potentials, water contents, hydraulic conductances, and

@@ -1499,3 +1499,240 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Intermediate stomatal sidedness do
     // An assimilation rate that cannot be supplied even with both faces' full boundary-layer conductance is still rejected.
     DOCTEST_CHECK_THROWS(gs = runModel(60.f));
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Buckley et al. (2026) model
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace {
+    // A leaf at air temperature with a very large boundary-layer conductance, so that the leaf-surface vapor pressure is that of the air and Ds = (es - ea)/P
+    uint addBuckleyTestLeaf(Context &context, float TL, float rh, float A, float J, float Rd, float psi_soil) {
+        uint UUID = context.addPatch();
+        context.setPrimitiveData(UUID, "temperature", TL);
+        context.setPrimitiveData(UUID, "air_temperature", TL);
+        context.setPrimitiveData(UUID, "air_humidity", rh);
+        context.setPrimitiveData(UUID, "air_pressure", 101000.f);
+        context.setPrimitiveData(UUID, "boundarylayer_conductance", 1.0e5f);
+        context.setPrimitiveData(UUID, "net_photosynthesis", A);
+        context.setPrimitiveData(UUID, "electron_transport_rate", J);
+        context.setPrimitiveData(UUID, "dark_respiration", Rd);
+        context.setPrimitiveData(UUID, "soil_water_potential", psi_soil);
+        return UUID;
+    }
+
+    float buckleyTestVPD(float TL, float rh) { // mol/mol, with the plug-in's saturation vapor pressure
+        const float es = 611.f * std::exp(17.502f * (TL - 273.f) / ((TL - 273.f) + 240.97f));
+        return (es - rh * es) / 101000.f;
+    }
+
+    float buckleyClosedForm(const Buckley2026coefficients &c, float A, float J, float Rd, float psi_soil, float K_plant, float Ds) {
+        const float sb = c.s * std::max(0.f, 0.25f * J - Rd - A + c.b_o);
+        return std::max(0.f, sb * (psi_soil - c.psi_c) / (1.f + sb * Ds / K_plant));
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Buckley2026 reproduces the coupled steady state of the fitting code") {
+    // Reference values: steady state of Buckley et al. (2026) Eqn 3a coupled to the Helios Farquhar model (PhotosynthesisModel library entry "PistachioFemale"), solved independently
+    // in Python with the code used to fit the species library. Given that solution's A, J, and Rd, the stomatal model must return its conductance.
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+    gsm.setBuckley2026CoefficientsFromLibrary("Pistachio");
+
+    uint leaf1 = addBuckleyTestLeaf(context, 303.15f, 0.4f, 28.16217f, 183.7890f, 2.04238f, -0.5f);
+    uint leaf2 = addBuckleyTestLeaf(context, 298.15f, 0.6f, 9.08960f, 57.7394f, 1.5f, -1.5f);
+    gsm.run();
+
+    float gs1, gs2;
+    context.getPrimitiveData(leaf1, "moisture_conductance", gs1);
+    context.getPrimitiveData(leaf2, "moisture_conductance", gs2);
+    DOCTEST_CHECK(gs1 == doctest::Approx(0.959348f).epsilon(1e-3));
+    DOCTEST_CHECK(gs2 == doctest::Approx(0.649252f).epsilon(1e-3));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Buckley2026 matches its closed form and uses K_plant from primitive data") {
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    Buckley2026coefficients coeffs;
+    coeffs.s = 0.05f;
+    coeffs.K_plant_at_25C = 0.02f;
+    coeffs.b_o = 1.0f;
+    coeffs.psi_c = -2.0f;
+    gsm.setModelCoefficients(coeffs);
+
+    const float TL = 298.15f, rh = 0.5f, A = 15.f, J = 120.f, Rd = 1.2f, psi_soil = -0.4f;
+    uint leaf_coefficient = addBuckleyTestLeaf(context, TL, rh, A, J, Rd, psi_soil);
+    uint leaf_hydraulics = addBuckleyTestLeaf(context, TL, rh, A, J, Rd, psi_soil);
+    const float K_plant_hydraulics = 0.005f; // mol/m^2/s/MPa, as written by the plant hydraulics plug-in
+    context.setPrimitiveData(leaf_hydraulics, "plant_hydraulic_conductance", K_plant_hydraulics);
+    gsm.run();
+
+    const float Ds = buckleyTestVPD(TL, rh);
+    const float fluidity_25C = 4.891e10f * std::exp(-4209.f / TL - 0.04527f * TL + 3.376e-5f * TL * TL);
+    float gs_coefficient, gs_hydraulics;
+    context.getPrimitiveData(leaf_coefficient, "moisture_conductance", gs_coefficient);
+    context.getPrimitiveData(leaf_hydraulics, "moisture_conductance", gs_hydraulics);
+    DOCTEST_CHECK(gs_coefficient == doctest::Approx(buckleyClosedForm(coeffs, A, J, Rd, psi_soil, coeffs.K_plant_at_25C * fluidity_25C, Ds)).epsilon(1e-3));
+    DOCTEST_CHECK(gs_hydraulics == doctest::Approx(buckleyClosedForm(coeffs, A, J, Rd, psi_soil, K_plant_hydraulics, Ds)).epsilon(1e-3));
+    DOCTEST_CHECK(gs_hydraulics < gs_coefficient); // the smaller K_plant limits the conductance
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Buckley2026 responds to soil water potential, VPD, and photosynthesis") {
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+    gsm.setBuckley2026CoefficientsFromLibrary("Almond");
+    const Buckley2026coefficients coeffs = gsm.getBuckley2026CoefficientsFromLibrary("Almond");
+
+    uint wet = addBuckleyTestLeaf(context, 298.15f, 0.5f, 10.f, 100.f, 1.f, -0.2f);
+    uint dry = addBuckleyTestLeaf(context, 298.15f, 0.5f, 10.f, 100.f, 1.f, -1.2f);
+    uint closed = addBuckleyTestLeaf(context, 298.15f, 0.5f, 10.f, 100.f, 1.f, coeffs.psi_c - 0.1f); // soil below the closure potential
+    uint humid = addBuckleyTestLeaf(context, 298.15f, 0.9f, 10.f, 100.f, 1.f, -0.2f);
+    uint high_A = addBuckleyTestLeaf(context, 298.15f, 0.5f, 20.f, 100.f, 1.f, -0.2f); // same capacity J/4 - Rd, smaller excess b
+    gsm.run();
+
+    auto gs = [&](uint UUID) {
+        float value;
+        context.getPrimitiveData(UUID, "moisture_conductance", value);
+        return value;
+    };
+    DOCTEST_CHECK(gs(wet) > 0.f);
+    DOCTEST_CHECK(gs(dry) < gs(wet));
+    DOCTEST_CHECK(gs(closed) == 0.f);
+    DOCTEST_CHECK(gs(humid) > gs(wet));
+    DOCTEST_CHECK(gs(high_A) < gs(wet));
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Buckley2026 requests its inputs through global data") {
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+    uint leaf = addBuckleyTestLeaf(context, 298.15f, 0.5f, 10.f, 100.f, 1.f, -0.2f);
+
+    auto flag = [&]() {
+        int value = -1;
+        if (context.doesGlobalDataExist("buckley2026_stomatal_model_enabled")) {
+            context.getGlobalData("buckley2026_stomatal_model_enabled", value);
+        }
+        return value;
+    };
+    DOCTEST_CHECK(flag() == -1); // not requested by the default model
+
+    gsm.setBuckley2026CoefficientsFromLibrary("Olive");
+    DOCTEST_CHECK(flag() == 1);
+
+    // A second instance using another model does not withdraw the request
+    StomatalConductanceModel gsm_other(&context);
+    gsm_other.disableMessages();
+    gsm_other.setModelCoefficients(BMFcoefficients());
+    gsm_other.run(std::vector<uint>{leaf});
+    DOCTEST_CHECK(flag() == 1);
+
+    // The request is not withdrawn automatically, even when the instance that made it selects another model, since another instance may still use the Buckley et al. (2026) model
+    gsm.setModelCoefficients(BMFcoefficients());
+    gsm.run(std::vector<uint>{leaf});
+    DOCTEST_CHECK(flag() == 1);
+
+    // UUID- and material-based coefficients also make the request, and run() restores it if the global data was cleared
+    for (int setter = 0; setter < 3; setter++) {
+        context.setGlobalData("buckley2026_stomatal_model_enabled", 0);
+        StomatalConductanceModel gsm_new(&context);
+        gsm_new.disableMessages();
+        if (setter == 0) {
+            gsm_new.setModelCoefficients(Buckley2026coefficients(), std::vector<uint>{leaf});
+        } else if (setter == 1) {
+            context.addMaterial("buckley_leaf_material");
+            gsm_new.setBuckley2026CoefficientsFromLibrary("Grape", "buckley_leaf_material");
+        } else {
+            gsm_new.setBuckley2026CoefficientsFromLibrary("Grape");
+            context.setGlobalData("buckley2026_stomatal_model_enabled", 0);
+            gsm_new.run(std::vector<uint>{leaf});
+        }
+        DOCTEST_CHECK(flag() == 1);
+    }
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Buckley2026 library, UUID, and material coefficients") {
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+
+    for (const std::string species: {"Almond", "Elderberry", "blue_elderberry", "Cowpea", "EasternRedbud", "Grape", "Olive", "Pistachio", "PistachioFemale", "pistachio"}) {
+        Buckley2026coefficients coeffs;
+        DOCTEST_CHECK_NOTHROW(coeffs = gsm.getBuckley2026CoefficientsFromLibrary(species));
+        DOCTEST_CHECK(coeffs.s > 0.f);
+        DOCTEST_CHECK(coeffs.K_plant_at_25C > 0.f);
+        DOCTEST_CHECK(coeffs.b_o >= 0.f);
+        DOCTEST_CHECK(coeffs.psi_c < 0.f);
+    }
+    DOCTEST_CHECK_THROWS_AS(gsm.getBuckley2026CoefficientsFromLibrary("UnknownSpecies"), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(gsm.setBuckley2026CoefficientsFromLibrary("UnknownSpecies"), std::runtime_error);
+
+    // The default coefficients are the pistachio entry
+    const Buckley2026coefficients pistachio = gsm.getBuckley2026CoefficientsFromLibrary("Pistachio");
+    const Buckley2026coefficients defaults;
+    DOCTEST_CHECK(defaults.s == pistachio.s);
+    DOCTEST_CHECK(defaults.K_plant_at_25C == pistachio.K_plant_at_25C);
+    DOCTEST_CHECK(defaults.b_o == pistachio.b_o);
+    DOCTEST_CHECK(defaults.psi_c == pistachio.psi_c);
+
+    // Coefficients by UUID and by material, reported through the optional model_parameters output
+    uint leaf_global = addBuckleyTestLeaf(context, 298.15f, 0.5f, 10.f, 100.f, 1.f, -0.2f);
+    uint leaf_uuid = addBuckleyTestLeaf(context, 298.15f, 0.5f, 10.f, 100.f, 1.f, -0.2f);
+    uint leaf_material = addBuckleyTestLeaf(context, 298.15f, 0.5f, 10.f, 100.f, 1.f, -0.2f);
+    context.addMaterial("olive_leaves");
+    context.assignMaterialToPrimitive(leaf_material, "olive_leaves");
+
+    gsm.optionalOutputPrimitiveData("model_parameters");
+    gsm.optionalOutputPrimitiveData("vapor_pressure_deficit");
+    gsm.setBuckley2026CoefficientsFromLibrary("Almond");
+    gsm.setBuckley2026CoefficientsFromLibrary("Cowpea", std::vector<uint>{leaf_uuid});
+    gsm.setBuckley2026CoefficientsFromLibrary("Olive", "olive_leaves");
+    gsm.run();
+
+    auto s_of = [&](uint UUID) {
+        float value;
+        context.getPrimitiveData(UUID, "s_Buckley2026", value);
+        return value;
+    };
+    DOCTEST_CHECK(s_of(leaf_global) == gsm.getBuckley2026CoefficientsFromLibrary("Almond").s);
+    DOCTEST_CHECK(s_of(leaf_uuid) == gsm.getBuckley2026CoefficientsFromLibrary("Cowpea").s);
+    DOCTEST_CHECK(s_of(leaf_material) == gsm.getBuckley2026CoefficientsFromLibrary("Olive").s);
+    for (const char *label: {"K_plant_Buckley2026", "b_o_Buckley2026", "psi_c_Buckley2026", "vapor_pressure_deficit"}) {
+        DOCTEST_CHECK(context.doesPrimitiveDataExist(leaf_global, label));
+    }
+    float Ds_out;
+    context.getPrimitiveData(leaf_global, "vapor_pressure_deficit", Ds_out);
+    DOCTEST_CHECK(Ds_out == doctest::Approx(buckleyTestVPD(298.15f, 0.5f) * 1000.f).epsilon(1e-3)); // mmol/mol
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Buckley2026 without photosynthesis outputs, and invalid K_plant") {
+    Context context;
+    StomatalConductanceModel gsm(&context);
+    gsm.disableMessages();
+    gsm.setBuckley2026CoefficientsFromLibrary("Pistachio");
+
+    // A, J, and Rd are required (no meaningful defaults): missing any of them is an error, e.g. photosynthesis not run, or a C4 or empirical photosynthesis model
+    uint bare = context.addPatch();
+    DOCTEST_CHECK_THROWS_AS(gsm.run(std::vector<uint>{bare}), std::runtime_error);
+    for (const char *missing: {"net_photosynthesis", "electron_transport_rate", "dark_respiration"}) {
+        uint leaf_missing = addBuckleyTestLeaf(context, 298.15f, 0.5f, 10.f, 100.f, 1.f, -0.2f);
+        context.clearPrimitiveData(leaf_missing, missing);
+        DOCTEST_CHECK_THROWS_AS(gsm.run(std::vector<uint>{leaf_missing}), std::runtime_error);
+    }
+    DOCTEST_CHECK_NOTHROW(gsm.printDefaultValueReport(std::vector<uint>{bare}));
+
+    // A missing soil water potential falls back to the default (with a warning), and K_plant to the coefficient
+    uint no_soil = addBuckleyTestLeaf(context, 298.15f, 0.5f, 10.f, 100.f, 1.f, -0.2f);
+    context.clearPrimitiveData(no_soil, "soil_water_potential");
+    DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{no_soil}));
+    float gs;
+    context.getPrimitiveData(no_soil, "moisture_conductance", gs);
+    DOCTEST_CHECK(gs > 0.f);
+
+    uint leaf = addBuckleyTestLeaf(context, 298.15f, 0.5f, 10.f, 100.f, 1.f, -0.2f);
+    context.setPrimitiveData(leaf, "plant_hydraulic_conductance", -0.01f);
+    DOCTEST_CHECK_THROWS_AS(gsm.run(std::vector<uint>{leaf}), std::runtime_error);
+}

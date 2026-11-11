@@ -2357,6 +2357,80 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Farquhar library values match documentati
     DOCTEST_CHECK(pist_male.getVcmaxTempResponse().value_at_25C != doctest::Approx(pist_female.getVcmaxTempResponse().value_at_25C).epsilon(1e-4));
 }
 
+DOCTEST_TEST_CASE("PhotosynthesisModel - electron_transport_rate and dark_respiration optional outputs") {
+    Context context;
+    PhotosynthesisModel photosynthesis(&context);
+    photosynthesis.disableMessages();
+
+    FarquharModelCoefficients coeffs;
+    coeffs.setVcmax(100.f);
+    coeffs.setJmax(150.f);
+    coeffs.setRd(1.5f);
+    coeffs.setQuantumEfficiency_alpha(0.3f);
+    coeffs.setLightResponseCurvature_theta(0.7f);
+    photosynthesis.setModelCoefficients(coeffs);
+
+    const float PAR = 200.f; // W/m^2
+    uint leaf = context.addPatch();
+    context.setPrimitiveData(leaf, "radiation_flux_PAR", PAR);
+    context.setPrimitiveData(leaf, "temperature", 298.15f);
+    context.setPrimitiveData(leaf, "moisture_conductance", 0.3f);
+
+    // Not written unless requested
+    photosynthesis.run();
+    DOCTEST_CHECK(!context.doesPrimitiveDataExist(leaf, "electron_transport_rate"));
+    DOCTEST_CHECK(!context.doesPrimitiveDataExist(leaf, "dark_respiration"));
+
+    photosynthesis.optionalOutputPrimitiveData("electron_transport_rate");
+    photosynthesis.optionalOutputPrimitiveData("dark_respiration");
+    photosynthesis.run();
+
+    // J is the smaller root of theta J^2 - (alpha Q + Jmax) J + alpha Q Jmax = 0, with the temperature-independent coefficients above
+    const double aQ = 0.3 * PAR * 4.57, Jmax = 150.0, theta = 0.7;
+    const double J_expected = ((aQ + Jmax) - std::sqrt((aQ + Jmax) * (aQ + Jmax) - 4.0 * theta * aQ * Jmax)) / (2.0 * theta);
+    float J, Rd;
+    context.getPrimitiveData(leaf, "electron_transport_rate", J);
+    context.getPrimitiveData(leaf, "dark_respiration", Rd);
+    DOCTEST_CHECK(J == doctest::Approx(J_expected).epsilon(1e-4));
+    DOCTEST_CHECK(Rd == doctest::Approx(1.5f).epsilon(1e-6));
+
+    // J and Rd do not depend on Ci, so J/4 - Rd bounds the electron-transport-limited net assimilation from above
+    float A;
+    context.getPrimitiveData(leaf, "net_photosynthesis", A);
+    DOCTEST_CHECK(A < 0.25f * J - Rd);
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel - electron_transport_rate and dark_respiration are written when the Buckley et al. (2026) stomatal model requests them") {
+    Context context;
+    PhotosynthesisModel photosynthesis(&context);
+    photosynthesis.disableMessages();
+    photosynthesis.setModelCoefficients(photosynthesis.getFarquharCoefficientsFromLibrary("Almond"));
+
+    uint leaf = context.addPatch();
+    context.setPrimitiveData(leaf, "radiation_flux_PAR", 300.f);
+    context.setPrimitiveData(leaf, "temperature", 303.15f);
+
+    context.setGlobalData("buckley2026_stomatal_model_enabled", 0);
+    photosynthesis.run();
+    DOCTEST_CHECK(!context.doesPrimitiveDataExist(leaf, "electron_transport_rate"));
+
+    context.setGlobalData("buckley2026_stomatal_model_enabled", 1);
+    photosynthesis.run();
+    float J, Rd;
+    DOCTEST_REQUIRE(context.doesPrimitiveDataExist(leaf, "electron_transport_rate"));
+    DOCTEST_REQUIRE(context.doesPrimitiveDataExist(leaf, "dark_respiration"));
+    context.getPrimitiveData(leaf, "electron_transport_rate", J);
+    context.getPrimitiveData(leaf, "dark_respiration", Rd);
+    DOCTEST_CHECK(J > 0.f);
+    DOCTEST_CHECK(Rd > 0.2f); // almond Rd25 = 0.2, higher at 30 C
+
+    // In the dark J is zero
+    context.setPrimitiveData(leaf, "radiation_flux_PAR", 0.f);
+    photosynthesis.run();
+    context.getPrimitiveData(leaf, "electron_transport_rate", J);
+    DOCTEST_CHECK(J == doctest::Approx(0.f).epsilon(1e-6));
+}
+
 int PhotosynthesisModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
