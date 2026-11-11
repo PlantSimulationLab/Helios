@@ -62,9 +62,11 @@ to be missing something or to misbehave, stop and tell the user.
 - **A default `CameraProperties` is a shallow-focus lens:** f/1.0 (`lens_diameter = 0.05`,
   `lens_focal_length = 0.05`) focused at 1 m, so anything at another distance renders blurred. Set
   `lens_diameter = 0` for a pinhole camera, or set `focal_plane_distance` to the subject distance.
-- **Camera flux smoothing does not smooth direct-sun shadows.** They are still resolved facet by
-  facet, so a coarse curved mesh that is partly shaded renders faceted. Tessellate curved organs
-  finely if close-ups matter.
+- **Without camera flux smoothing, cast shadows step at facet edges.** Each facet is shaded at its
+  lit fraction. With `enableCameraFluxSmoothing()`, every pixel sample traces a shadow ray toward
+  each source, so a shadow edge falls within the facet and the sun's penumbra is resolved by the
+  camera's antialiasing samples (noisy with few). Geometry that smoothing skips still steps:
+  standalone patches/triangles, `Box`, `Disk`, and a `Polymesh` without a face table.
 - **Run the executable from `build/`** (or one directory below it), or set the `HELIOS_BUILD`
   environment variable to the build directory. Plugin assets are resolved relative to the working
   directory, so running from elsewhere fails with "Could not resolve asset file".

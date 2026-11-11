@@ -18035,8 +18035,8 @@ GPU_TEST_CASE("Camera Flux Smoothing - an adaptive tile stays continuous across 
         }
 
         // A small occluder above the tile shades it from part of the sky, so the flux varies across sub-patches of both sizes and the reconstruction is exercised where it actually varies. The light is
-        // the sky's only: the direct radiation of a source is evaluated per facet rather than interpolated from the vertices, so a source's shadow edge stays where the facets put it and would not test
-        // the vertices at a refinement boundary.
+        // the sky's only: the direct radiation of a source is evaluated per pixel sample with a shadow ray rather than interpolated from the vertices, so it would not test the vertices at a refinement
+        // boundary.
         const uint occluder = context.addPatch(make_vec3(0.5f, 0.5f, 1.5f), make_vec2(1.2f, 1.2f));
         context.setPrimitiveData(occluder, "reflectivity_SW", 0.f);
         context.setPrimitiveData(occluder, "transmissivity_SW", 0.f);
