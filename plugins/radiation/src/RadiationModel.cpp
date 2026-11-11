@@ -2261,7 +2261,6 @@ void RadiationModel::buildCameraFluxSmoothingTopology() {
     smoothing_vertex_count = 0;
     // A rebuilt topology invalidates whatever normals the backend holds; the backend releases them with the geometry upload that follows (see RayTracingBackend::uploadVertexNormals()).
     smoothing_vertex_normals_uploaded = false;
-    vertex_direct_irradiance_uploaded = false;
     vertex_normal_map_moments_uploaded = false;
     geometry_data.smoothing_vertex_indices.clear();
     geometry_data.smoothing_vertex_count = 0;
@@ -2308,7 +2307,7 @@ void RadiationModel::buildCameraFluxSmoothingTopology() {
         }
 
         // Every coincident vertex is shared, across the rings of a sphere and the segments of a tube or cone as well as around them. What smoothing averages onto the vertices is the radiation other than the
-        // direct radiation of the sources, which the camera evaluates per facet with the shading normal (see subtractCameraDirectFlux()); that remainder has no sharp shadow edges to preserve.
+        // direct radiation of the sources, which the camera evaluates per pixel sample (see subtractCameraDirectFlux()); that remainder has no sharp shadow edges to preserve.
         const size_t local_vertex_count = context->getObjectSharedVertexCount(parent_ObjID, helios::WELD_FULL);
         if (local_vertex_count == 0) {
             continue; // the object could not locate its own facets, so no topology is available
@@ -2326,8 +2325,10 @@ void RadiationModel::buildCameraFluxSmoothingTopology() {
         const bool object_can_have_creases = (context->getObjectType(parent_ObjID) == helios::OBJECT_TYPE_POLYMESH);
         const float crease_angle_radians = object_can_have_creases ? crease_angle_radians_mesh : float(M_PI);
 
-        // Facet normals, for the crease test and the vertex shading normals. Computed from the corner positions rather than read from any stored vertex normal, which smoothing does not use.
+        // Facet normals, for the crease test and the vertex shading normals, and each facet's interior angle at each corner, which weights its normal in the vertex normals. Computed from the corner
+        // positions rather than read from any stored vertex normal, which smoothing does not use.
         std::vector<helios::vec3> facet_normal(object_UUIDs.size(), helios::make_vec3(0, 0, 0));
+        std::vector<std::vector<float>> corner_angle(object_UUIDs.size());
         for (size_t k = 0; k < object_UUIDs.size(); k++) {
             if (local_indices.at(k).empty()) {
                 continue;
@@ -2347,6 +2348,16 @@ void RadiationModel::buildCameraFluxSmoothingTopology() {
             }
             smoothing_facet_normal.at(positions.at(k)) = facet_normal.at(k);
             smoothing_facet_centroid.at(positions.at(k)) = centroid / float(corners.size());
+            corner_angle.at(k).assign(corners.size(), 0.f);
+            for (size_t c = 0; c < corners.size(); c++) {
+                helios::vec3 to_next = corners.at((c + 1) % corners.size()) - corners.at(c);
+                helios::vec3 to_previous = corners.at((c + corners.size() - 1) % corners.size()) - corners.at(c);
+                const float next_length = to_next.magnitude();
+                const float previous_length = to_previous.magnitude();
+                if (next_length > 0.f && previous_length > 0.f) {
+                    corner_angle.at(k).at(c) = acos_safe((to_next * to_previous) / (next_length * previous_length));
+                }
+            }
         }
 
         // Which facets meet at each of the object's shared vertices.
@@ -2403,7 +2414,9 @@ void RadiationModel::buildCameraFluxSmoothingTopology() {
             }
         }
 
-        // Record where each facet's corners landed, and how much area meets at each shared vertex.
+        // Record where each facet's corners landed, how much area meets at each shared vertex, and the vertex normals: the mean of the normals of the facets meeting at each vertex, weighted by the angle
+        // each makes there. Weighting by angle rather than area makes a vertex normal independent of how a quad is split into triangles: a quad's two triangles together span its corner whichever
+        // diagonal splits it, while weighting by area leaned the normal toward the side with two triangles at the vertex, the opposite way at the other end of each diagonal.
         for (size_t k = 0; k < local_indices.size(); k++) {
             const std::vector<int> &corners = local_indices.at(k);
             if (corners.size() != 3 && corners.size() != 4) {
@@ -2438,7 +2451,8 @@ void RadiationModel::buildCameraFluxSmoothingTopology() {
             for (size_t c = 0; c < corners.size(); c++) {
                 smoothing_vertex_indices.at(4 * position + c) = resolved[c];
                 vertex_area.at(size_t(resolved[c])) += facet_area;
-                vertex_normal_sum.at(size_t(resolved[c])) += orientation[c] * facet_area * facet_normal.at(k);
+                const float angle = c < corner_angle.at(k).size() ? corner_angle.at(k).at(c) : 0.f;
+                vertex_normal_sum.at(size_t(resolved[c])) += orientation[c] * angle * facet_normal.at(k);
             }
         }
     }
@@ -2677,59 +2691,6 @@ void RadiationModel::accumulateNormalMapMomentsAtVertices(const std::vector<floa
         }
         for (size_t value = 0; value < values_per_slot; value++) {
             vertex_moments.at(vertex * values_per_slot + value) /= mapped_area.at(vertex);
-        }
-    }
-}
-
-void RadiationModel::accumulateDirectIrradianceAtVertices(const std::vector<float> &direct_flux, size_t launch_band_count, std::vector<float> &vertex_irradiance) const {
-    const size_t primitive_count = context_UUIDs.size();
-    const size_t source_count = source_data.size();
-    vertex_irradiance.assign(source_count * smoothing_vertex_count * launch_band_count, 0.f);
-    if (smoothing_vertex_count == 0 || source_count == 0) {
-        return;
-    }
-    if (direct_flux.size() != source_count * primitive_count * launch_band_count) {
-        helios_runtime_error("ERROR (RadiationModel::accumulateDirectIrradianceAtVertices): The direct radiation reaching the primitives holds " + std::to_string(direct_flux.size()) + " values, but " + std::to_string(source_count) + " source(s), " +
-                             std::to_string(primitive_count) + " primitives and " + std::to_string(launch_band_count) + " launched band(s) require " + std::to_string(source_count * primitive_count * launch_band_count) + ".");
-    }
-    if (smoothing_vertex_indices.size() != 4 * primitive_count || smoothing_facet_normal.size() != primitive_count || smoothing_primitive_area.size() != primitive_count) {
-        helios_runtime_error("ERROR (RadiationModel::accumulateDirectIrradianceAtVertices): The camera flux smoothing topology describes a different number of primitives than the geometry's " + std::to_string(primitive_count) +
-                             ". Call updateGeometry() after changing the geometry.");
-    }
-    std::vector<float> weight(vertex_irradiance.size(), 0.f);
-    for (size_t position = 0; position < primitive_count; position++) {
-        const float facet_area = smoothing_primitive_area.at(position);
-        if (smoothing_vertex_indices.at(4 * position) < 0 || facet_area <= 0.f) {
-            continue;
-        }
-        for (size_t s = 0; s < source_count; s++) {
-            const bool directional = source_data.at(s).type == RADIATION_SOURCE_TYPE_COLLIMATED || source_data.at(s).type == RADIATION_SOURCE_TYPE_SUN_SPHERE;
-            helios::vec3 to_source = directional ? source_data.at(s).position : source_data.at(s).position - smoothing_facet_centroid.at(position);
-            to_source.normalize();
-            const float mu_facet = std::fabs(smoothing_facet_normal.at(position) * to_source);
-            if (mu_facet < 0.01f) {
-                continue;
-            }
-            for (size_t b = 0; b < launch_band_count; b++) {
-                const float incident = direct_flux.at((s * primitive_count + position) * launch_band_count + b);
-                if (incident <= 0.f) {
-                    continue; // turned away from the source or occluded, so it says nothing about what its neighbours' turned-away faces would receive
-                }
-                for (size_t c = 0; c < 4; c++) {
-                    const int vertex = smoothing_vertex_indices.at(4 * position + c);
-                    if (vertex < 0) {
-                        continue;
-                    }
-                    const size_t index = (s * smoothing_vertex_count + size_t(vertex)) * launch_band_count + b;
-                    vertex_irradiance.at(index) += facet_area * incident / mu_facet;
-                    weight.at(index) += facet_area;
-                }
-            }
-        }
-    }
-    for (size_t index = 0; index < vertex_irradiance.size(); index++) {
-        if (weight.at(index) > 0.f) {
-            vertex_irradiance.at(index) /= weight.at(index);
         }
     }
 }
@@ -6425,19 +6386,13 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 accumulateSpectralIncidentAtVertices(spectral_incident, spectral_emitted, Nsources + 1, Nbands_launch, spectral_vertex_values);
             }
 
-            // With smoothing, the camera evaluates the direct radiation of the sources per facet with the interpolated shading normal, and the angle-dependent terms of a specular surface layer likewise. The
-            // direct radiation reaching each primitive is fetched once for all cameras, and the vertex normals are held by the backend only while smoothing is enabled and there is a source or a layer.
+            // With smoothing, the camera evaluates the direct radiation of the sources per pixel sample with the interpolated shading normal and a shadow ray toward each source, and the angle-dependent
+            // terms of a specular surface layer likewise; the direct radiation each primitive received, which the vertices must not carry, is fetched once for all cameras. The vertex normals are held
+            // by the backend only while smoothing is enabled and there is a source or a layer.
             const bool camera_rescales_direct = cameraflux_smoothing_enabled && smoothing_vertex_count > 0 && Nsources > 0;
             std::vector<float> direct_flux;
             if (camera_rescales_direct) {
                 backend->getDirectFluxResults(direct_flux, Nbands_launch);
-                std::vector<float> vertex_irradiance;
-                accumulateDirectIrradianceAtVertices(direct_flux, Nbands_launch, vertex_irradiance);
-                backend->uploadVertexDirectIrradiance(vertex_irradiance);
-                vertex_direct_irradiance_uploaded = true;
-            } else if (vertex_direct_irradiance_uploaded) {
-                backend->uploadVertexDirectIrradiance({});
-                vertex_direct_irradiance_uploaded = false;
             }
             const bool camera_needs_vertex_normals = cameraflux_smoothing_enabled && smoothing_vertex_count > 0 && (outgoing_components == 2 || camera_rescales_direct);
             if (camera_needs_vertex_normals != smoothing_vertex_normals_uploaded) {
@@ -6583,6 +6538,9 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                     std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
                     params.band_launch_flag = band_flags;
                     params.normal_map_direct = normal_map_direct_recorded ? 1 : 0;
+                    // Smoothed primitives' direct radiation is evaluated per pixel sample when the host removed what the direct launch deposited from what their vertices carry; with no direct rays the
+                    // radiation solve delivered none, and neither does the camera
+                    params.camera_direct_per_pixel = (camera_rescales_direct && directRayCount > 0) ? 1 : 0;
 
                     // Progress message
                     if (message_flag) {

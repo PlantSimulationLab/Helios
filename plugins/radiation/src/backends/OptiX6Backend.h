@@ -30,7 +30,7 @@
 namespace helios {
 
     // Ray type enumeration
-    enum RayType { RAYTYPE_DIRECT = 0, RAYTYPE_DIFFUSE = 1, RAYTYPE_CAMERA = 2, RAYTYPE_PIXEL_LABEL = 3 };
+    enum RayType { RAYTYPE_DIRECT = 0, RAYTYPE_DIFFUSE = 1, RAYTYPE_CAMERA = 2, RAYTYPE_PIXEL_LABEL = 3, RAYTYPE_CAMERA_SHADOW = 4 };
 
 // OptiX error checking macros
 #define RT_CHECK_ERROR(func)                                                                                                                                                                                                                             \
@@ -115,7 +115,6 @@ namespace helios {
         void uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) override;
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) override;
         void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
-        void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
         void getNormalMapMoments(std::vector<float> &moments) override;
         void uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) override;
         void uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) override;
@@ -188,6 +187,7 @@ namespace helios {
         RTprogram miss_diffuse;
         RTprogram miss_camera;
         RTprogram miss_pixel_label;
+        RTprogram miss_camera_shadow;
         RTprogram any_hit_direct;
 
         // Buffers: Geometry/Topology (17 buffers)
@@ -306,8 +306,6 @@ namespace helios {
         RTvariable vertex_radiation_out_bottom_RTvariable;
         RTbuffer vertex_normals_RTbuffer; //!< Shading normal per smoothing vertex; one element unless smoothing is enabled and some primitive has a surface layer
         RTvariable vertex_normals_RTvariable;
-        RTbuffer vertex_direct_irradiance_RTbuffer; //!< Unoccluded direct irradiance per [source][smoothing vertex][band]; one element unless smoothing is enabled and there is a source
-        RTvariable vertex_direct_irradiance_RTvariable;
         RTbuffer vertex_normal_map_moments_RTbuffer; //!< normal_map_moments averaged onto the smoothing vertices [vertex][face][launch band][3]; one element unless smoothing is enabled and there are maps
         RTvariable vertex_normal_map_moments_RTvariable;
         RTbuffer radiation_specular_RTbuffer;
@@ -393,6 +391,7 @@ namespace helios {
         RTvariable diffuse_ray_type_RTvariable;
         RTvariable camera_ray_type_RTvariable;
         RTvariable pixel_label_ray_type_RTvariable;
+        RTvariable camera_shadow_ray_type_RTvariable;
         RTvariable random_seed_RTvariable;
         RTvariable launch_offset_RTvariable;
         RTvariable launch_face_RTvariable;
@@ -417,6 +416,7 @@ namespace helios {
         RTvariable camera_ID_RTvariable;
         RTvariable camera_resolution_full_RTvariable;
         RTvariable specular_reflection_enabled_RTvariable;
+        RTvariable camera_direct_per_pixel_RTvariable; //!< Camera launches: 1 if smoothed primitives' direct radiation is evaluated per pixel sample (RayTracingLaunchParams::camera_direct_per_pixel)
         RTvariable normal_map_direct_RTvariable; //!< Camera launches: 1 if normal-mapped primitives' direct radiation is shaded per hit point (RayTracingLaunchParams::normal_map_direct)
         RTvariable below_horizon_diffuse_enabled_RTvariable;
         RTvariable scattering_iteration_RTvariable;

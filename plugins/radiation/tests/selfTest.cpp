@@ -18864,9 +18864,10 @@ GPU_TEST_CASE("Camera Flux Smoothing - smooths a sphere across its rings under t
     DOCTEST_CHECK(result.smoothed_error < 0.7f * result.flat_error);
 }
 
-GPU_TEST_CASE("Camera Flux Smoothing - keeps a cast shadow where the facets put it") {
+GPU_TEST_CASE("Camera Flux Smoothing - brings a cast shadow on a coarse tube close to that on a finely tessellated one") {
     // A plate above a tube casts a shadow edge across it. Averaging the flux onto the vertices spread the shadow over the neighbouring facets, which made the smoothed image further from a finely
-    // tessellated tube than the unsmoothed one. The direct radiation, which carries the shadow, is evaluated per facet.
+    // tessellated tube than the unsmoothed one. With the direct radiation, which carries the shadow, evaluated per facet the smoothed image came to 0.63 of the unsmoothed image's difference from the
+    // fine tube, the shadow still filling each facet it crossed at the facet's lit fraction; evaluated per pixel sample, with a shadow ray, it comes to about 0.3.
     DirectSmoothingScene scene;
     scene.collimated = {{make_vec3(0.6f, -1.f, 1.2f), 1000.f}};
     scene.extra = [](Context &context, const std::vector<uint> &) {
@@ -18887,7 +18888,7 @@ GPU_TEST_CASE("Camera Flux Smoothing - keeps a cast shadow where the facets put 
     };
     const DirectSmoothingComparison result = compareDirectSmoothing(segmented_tube(8, 10), segmented_tube(96, 100), scene);
     DOCTEST_INFO("difference from the fine tube: flat " << result.flat_error << ", smoothed " << result.smoothed_error);
-    DOCTEST_CHECK(result.smoothed_error < 0.85f * result.flat_error);
+    DOCTEST_CHECK(result.smoothed_error < 0.45f * result.flat_error);
 }
 
 GPU_TEST_CASE("Camera Flux Smoothing - evaluates the light of a nearby sphere source with the shading normal") {
@@ -23267,4 +23268,994 @@ GPU_TEST_CASE("RadiationModel normal map shading of scattered light is continuou
     DOCTEST_CHECK(interior_step > 0.0);
     DOCTEST_CHECK(edge_step < 3.0 * interior_step);
     std::filesystem::remove(map);
+}
+
+// Per-pixel shadows of the direct sources (camera flux smoothing)
+//
+// With camera flux smoothing a camera evaluates, with a shadow ray from the point a pixel sees, whether each source reaches that point, so a cast shadow falls where the geometry puts it within a facet
+// instead of stepping from facet to facet. The scenes are seen by a distant, narrow camera on the -y axis, nearly an orthographic view along +y, whose pixels are 0.025 m across in the plane y = 0 and
+// whose pixel edges fall on x = 0 and z = 0, so that the analytic position of a shadow edge can be compared with the image pixel by pixel. The sun comes from -x, and the default occluder is a black wall
+// in the plane x = -1.5, outside the view, whose lower edge is horizontal: with the sun horizontal, or a source at the height of that edge, it casts a shadow whose edge is the horizontal line z = edge
+// on any surface, however the surface is tessellated.
+
+namespace pixel_shadow_test {
+
+    constexpr int resolution = 96;
+    constexpr float camera_distance = 40.f;
+    constexpr float pixel_size = 0.025f; //!< Width of a pixel in the plane y = 0
+    //! Direction toward the default sun: horizontal, from -x and slightly from the camera's side
+    const vec3 sun_direction = make_vec3(-1.f, -0.3f, 0.f);
+
+    //! Horizontal field of view giving pixels of pixel_size in the plane y = 0
+    inline float fieldOfViewDegrees() {
+        return 2.f * std::atan(0.5f * float(resolution) * pixel_size / camera_distance) * 180.f / float(M_PI);
+    }
+
+    //! Height z seen at the centre of image row j on a surface at depth y (the pixel data and the pixel UUID map share this row order; row 0 is the top of the image)
+    inline float heightOfRow(float j, float y) {
+        return (0.5f * float(resolution) - 0.5f - j) * pixel_size * (camera_distance + y) / camera_distance;
+    }
+
+    //! Direction of the camera ray through image position (column + a, row + b), with a and b in [0, 1] across the pixel (column 0 is at +x, row 0 at the top)
+    inline vec3 rayDirection(int column, int row, float a, float b) {
+        const float half_width = 0.5f * float(resolution) * pixel_size / camera_distance; // tan(HFOV / 2)
+        return make_vec3((1.f - 2.f * (float(column) + a) / float(resolution)) * half_width, 1.f, (1.f - 2.f * (float(row) + b) / float(resolution)) * half_width);
+    }
+
+    //! Two triangles forming a black wall in the plane x = x_wall, spanning y_min..y_max and z_min..z_max, returning their UUIDs
+    inline std::vector<uint> addWall(Context &context, const std::string &band, float x_wall, float y_min, float y_max, float z_min, float z_max, bool black = true) {
+        const std::vector<uint> UUIDs = {context.addTriangle(make_vec3(x_wall, y_min, z_min), make_vec3(x_wall, y_max, z_min), make_vec3(x_wall, y_max, z_max)),
+                                         context.addTriangle(make_vec3(x_wall, y_min, z_min), make_vec3(x_wall, y_max, z_max), make_vec3(x_wall, y_min, z_max))};
+        if (black) {
+            context.setPrimitiveData(UUIDs, ("reflectivity_" + band).c_str(), 0.f);
+            context.setPrimitiveData(UUIDs, ("transmissivity_" + band).c_str(), 0.f);
+        }
+        return UUIDs;
+    }
+
+    //! A scene rendered by render(): an object, its occluders and its sources
+    struct Scene {
+        std::function<std::vector<uint>(Context &)> build; //!< Adds the object, with its optical properties, and returns its primitives
+        std::function<void(Context &, const std::string &)> occluder; //!< Adds the occluders for the band; by default a black wall at x = -1.5 above z = edge
+        std::function<void(RadiationModel &, const std::string &)> sources; //!< Adds the sources and their flux in the band; by default a collimated sun of 1000 from sun_direction
+        float edge = 0.23f; //!< Height of the lower edge of the default occluder
+        std::string band = "SW";
+        bool band_wavelengths = false; //!< Give the band the wavelengths 400-700 nm, for spectra
+        bool periodic = false; //!< Periodic in x
+        bool smoothing = true; //!< Enable camera flux smoothing
+        uint antialiasing = 16;
+        uint direct_rays = 100;
+    };
+
+    //! The camera image of a scene, and the map of the object's primitives (UUID + 1) seen at each pixel centre, 0 elsewhere
+    struct Image {
+        std::vector<float> pixels;
+        std::vector<uint> object;
+        std::vector<uint> object_UUIDs;
+        float at(int column, int row) const {
+            return pixels.at(size_t(row) * resolution + size_t(column));
+        }
+        bool sees(int column, int row) const {
+            return column >= 0 && row >= 0 && column < resolution && row < resolution && object.at(size_t(row) * resolution + size_t(column)) != 0;
+        }
+        //! A pixel well inside the object: it and its four neighbours see it
+        bool inside(int column, int row) const {
+            return sees(column, row) && sees(column - 1, row) && sees(column + 1, row) && sees(column, row - 1) && sees(column, row + 1);
+        }
+    };
+
+    inline Image render(const Scene &scene, Context *external_context = nullptr) {
+        Context local_context;
+        Context &context = external_context ? *external_context : local_context;
+        const std::vector<uint> UUIDs = scene.build(context);
+        if (scene.occluder) {
+            scene.occluder(context, scene.band);
+        } else {
+            addWall(context, scene.band, -1.5f, -2.f, 2.f, scene.edge, 2.f);
+        }
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        if (scene.smoothing) {
+            model.enableCameraFluxSmoothing();
+        }
+        if (scene.band_wavelengths) {
+            model.addRadiationBand(scene.band, 400, 700);
+        } else {
+            model.addRadiationBand(scene.band);
+        }
+        model.disableEmission(scene.band);
+        model.setScatteringDepth(scene.band, 1);
+        model.setDirectRayCount(scene.band, scene.direct_rays);
+        model.setDiffuseRayCount(scene.band, 100);
+        model.setDiffuseRadiationFlux(scene.band, 0.f);
+        if (scene.sources) {
+            scene.sources(model, scene.band);
+        } else {
+            const uint sun = model.addCollimatedRadiationSource(sun_direction);
+            model.setSourceFlux(sun, scene.band, 1000.f);
+        }
+        if (scene.periodic) {
+            model.enforcePeriodicBoundary("x");
+        }
+
+        CameraProperties properties;
+        properties.camera_resolution = make_int2(resolution, resolution);
+        properties.HFOV = fieldOfViewDegrees();
+        properties.lens_diameter = 0.f;
+        properties.exposure = "manual";
+        properties.white_balance = "off";
+        model.addRadiationCamera("shadow_cam", {scene.band}, make_vec3(0, -camera_distance, 0), make_vec3(0, 0, 0), properties, scene.antialiasing);
+        model.updateGeometry();
+        model.runBand(scene.band);
+
+        Image image;
+        image.pixels = model.getCameraPixelData("shadow_cam", scene.band);
+        context.getGlobalData("camera_shadow_cam_pixel_UUID", image.object);
+        const std::set<uint> object(UUIDs.begin(), UUIDs.end());
+        for (uint &label: image.object) {
+            label = (label != 0 && object.count(label - 1)) ? label : 0;
+        }
+        image.object_UUIDs = UUIDs;
+        DOCTEST_REQUIRE(image.pixels.size() == size_t(resolution * resolution));
+        DOCTEST_REQUIRE(image.object.size() == image.pixels.size());
+        for (float pixel: image.pixels) {
+            DOCTEST_REQUIRE(std::isfinite(pixel));
+        }
+        return image;
+    }
+
+    //! How an image renders a horizontal shadow edge, column by column
+    struct EdgeResult {
+        int columns = 0; //!< Columns of the object lit well enough to be measured
+        int misplaced = 0; //!< Columns whose image does not fall below half its lit level within two pixels of the analytic edge
+        float largest_offset = 0.f; //!< Largest distance, in pixels, between the analytic edge and the first row below half the lit level (columns with no such row count as misplaced only)
+        float shadow_ratio = 0.f; //!< Mean of the shadowed rows relative to the lit level, over the measured columns
+    };
+
+    //! Measure the shadow edge z = edge in an image: for each column of the object, its lit level is the median of the rows with heights in [lit_low, lit_high] (below the edge), the transition is the
+    //! first row above lit_high that falls below half that level, and the shadow is the mean of the rows with heights in [shadow_low, shadow_high] (above the edge). Heights are those at depth y.
+    inline EdgeResult measureShadowEdge(const Image &image, float edge, float lit_low, float lit_high, float shadow_low, float shadow_high, float y) {
+        std::vector<float> lit_levels(resolution, 0.f);
+        float brightest = 0.f;
+        for (int column = 0; column < resolution; column++) {
+            std::vector<float> lit;
+            for (int row = 0; row < resolution; row++) {
+                const float z = heightOfRow(float(row), y);
+                if (z >= lit_low && z <= lit_high && image.inside(column, row)) {
+                    lit.push_back(image.at(column, row));
+                }
+            }
+            if (lit.size() >= 4) {
+                std::nth_element(lit.begin(), lit.begin() + lit.size() / 2, lit.end());
+                lit_levels.at(column) = lit.at(lit.size() / 2);
+                brightest = std::max(brightest, lit_levels.at(column));
+            }
+        }
+        EdgeResult result;
+        if (brightest <= 0.f) {
+            return result;
+        }
+        double shadow_sum = 0.0;
+        for (int column = 0; column < resolution; column++) {
+            const float lit_level = lit_levels.at(column);
+            if (lit_level < 0.3f * brightest) {
+                continue;
+            }
+            // Rows run downward in height, so the rows above the lit region are scanned from the bottom up
+            bool found = false;
+            float shadow = 0.f;
+            int shadow_count = 0;
+            bool column_complete = true;
+            for (int row = resolution - 1; row >= 0; row--) {
+                const float z = heightOfRow(float(row), y);
+                if (z <= lit_high || z > shadow_high) {
+                    continue;
+                }
+                if (!image.inside(column, row)) {
+                    column_complete = false;
+                    break;
+                }
+                if (!found && image.at(column, row) < 0.5f * lit_level) {
+                    found = true;
+                    result.largest_offset = std::max(result.largest_offset, std::fabs(z - edge) / pixel_size);
+                    if (std::fabs(z - edge) > 2.f * pixel_size) {
+                        result.misplaced++;
+                    }
+                }
+                if (z >= shadow_low) {
+                    shadow += image.at(column, row);
+                    shadow_count++;
+                }
+            }
+            if (!column_complete || shadow_count == 0) {
+                continue;
+            }
+            result.columns++;
+            if (!found) {
+                result.misplaced++;
+            }
+            shadow_sum += shadow / float(shadow_count) / lit_level;
+        }
+        if (result.columns > 0) {
+            result.shadow_ratio = float(shadow_sum / double(result.columns));
+        }
+        return result;
+    }
+
+    //! A single-segment tube of `radial` divisions along z from -1 to 0.8 (not symmetric, so that the row order can be checked), of radius 0.4, reflecting `reflectivity` in `band`
+    inline std::vector<uint> addEdgeTube(Context &context, uint radial, float reflectivity = 0.5f, const std::string &band = "SW") {
+        const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(context.addTubeObject(radial, {make_vec3(0, 0, -1.f), make_vec3(0, 0, 0.8f)}, {0.4f, 0.4f}));
+        context.setPrimitiveData(UUIDs, ("reflectivity_" + band).c_str(), reflectivity);
+        context.setPrimitiveData(UUIDs, ("transmissivity_" + band).c_str(), 0.f);
+        return UUIDs;
+    }
+
+    //! Check a tube shadow-edge render (edge at `edge`, the tube from addEdgeTube()): the image must fall from lit to shadow within two pixels of the analytic edge in every measured column, and the
+    //! shadowed rows must be dark
+    inline void checkTubeShadowEdge(const Image &image, float edge, const std::string &label) {
+        const EdgeResult result = measureShadowEdge(image, edge, edge - 0.35f, edge - 0.1f, edge + 0.1f, 0.7f, -0.35f);
+        DOCTEST_INFO(label << ": " << result.columns << " columns measured, " << result.misplaced << " misplaced, largest offset " << result.largest_offset << " pixels, shadow at " << result.shadow_ratio << " of the lit level");
+        DOCTEST_CHECK(result.columns >= 8);
+        DOCTEST_CHECK(result.misplaced == 0);
+        DOCTEST_CHECK(result.shadow_ratio < 0.05f);
+    }
+
+    //! The pixels of a flat object in the plane y = 0 grouped by the primitive seen at their centres, with the analytic direct irradiance at each pixel given by `irradiance(x, z)` averaged over the pixel
+    struct FacetPixels {
+        std::map<uint, std::vector<float>> pixels; //!< Per primitive UUID: pixel values
+    };
+
+    inline FacetPixels groupPixelsByFacet(const Image &image) {
+        FacetPixels grouped;
+        for (int row = 0; row < resolution; row++) {
+            for (int column = 0; column < resolution; column++) {
+                if (image.sees(column, row)) {
+                    grouped.pixels[image.object.at(size_t(row) * resolution + column) - 1].push_back(image.at(column, row));
+                }
+            }
+        }
+        return grouped;
+    }
+
+    //! A 1 x 1 tile of 4 x 4 sub-patches in the plane y = 0 centred on the origin, reflecting 0.5 in SW
+    inline std::vector<uint> addEdgeTile(Context &context) {
+        const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(context.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0.5f * float(M_PI), 0.f), make_int2(4, 4)));
+        for (uint UUID: UUIDs) {
+            const vec3 normal = context.getPrimitiveNormal(UUID);
+            DOCTEST_REQUIRE(std::fabs(std::fabs(normal.y) - 1.f) < 1e-4f);
+        }
+        context.setPrimitiveData(UUIDs, "reflectivity_SW", 0.5f);
+        context.setPrimitiveData(UUIDs, "transmissivity_SW", 0.f);
+        return UUIDs;
+    }
+
+    //! Direction toward the sun of the tile scenes, and the black triangle in the plane x = -1.5 that shades a tile in the plane y = 0 where z > 0.1 - 0.7 x, a line that crosses the tile's sub-patches
+    //! away from their corners
+    const vec3 tile_sun_direction = make_vec3(-1.f, -0.6f, 0.3f);
+    inline void addDiagonalOccluder(Context &context, const std::string &band) {
+        const uint occluder = context.addTriangle(make_vec3(-1.5f, -2.f, 1.15f - 2.f / 1.5f), make_vec3(-1.5f, 0.5f, 1.15f + 0.5f / 1.5f), make_vec3(-1.5f, -2.f, 4.f));
+        context.setPrimitiveData(occluder, ("reflectivity_" + band).c_str(), 0.f);
+        context.setPrimitiveData(occluder, ("transmissivity_" + band).c_str(), 0.f);
+    }
+
+    //! Sub-patches of a tile image that the shadow edge splits: at least 15% of their pixels read above 0.8 of the lit level and at least 15% below 0.2 of it
+    inline int countSplitFacets(const FacetPixels &grouped, float lit_level) {
+        int split = 0;
+        for (const auto &[UUID, values]: grouped.pixels) {
+            size_t bright = 0, dark = 0;
+            for (float value: values) {
+                bright += value > 0.8f * lit_level ? 1 : 0;
+                dark += value < 0.2f * lit_level ? 1 : 0;
+            }
+            if (bright >= values.size() * 15 / 100 && dark >= values.size() * 15 / 100 && bright > 0 && dark > 0) {
+                split++;
+            }
+        }
+        return split;
+    }
+
+} // namespace pixel_shadow_test
+
+GPU_TEST_CASE("Camera Flux Smoothing - places a cast shadow where the geometry puts it, within a facet") {
+    // A black wall casts a horizontal shadow edge across a coarse tube, whose facets run its whole length, and across a coarse sphere, between two of its rings. The camera must show the edge where it
+    // falls, within two pixels, for every type of source: the sun as a direction and as a sphere seen from the Earth, and a small sphere, disk and rectangle at the height of the wall's edge. With the
+    // shadow taken from each facet's own direct radiation, a facet the edge crosses read evenly at the fraction of it that was lit, and the edge sat on the facet boundaries.
+    using namespace pixel_shadow_test;
+    const vec3 lamp_position_offset = make_vec3(-10.f, -3.f, 0.f);
+    struct SourceCase {
+        std::string name;
+        std::function<void(RadiationModel &, const std::string &, float)> add; //!< Adds the source for a wall edge at the given height
+    };
+    const std::vector<SourceCase> sources = {
+            {"collimated", [](RadiationModel &model, const std::string &band, float) { model.setSourceFlux(model.addCollimatedRadiationSource(sun_direction), band, 1000.f); }},
+            {"sun sphere", [](RadiationModel &model, const std::string &band, float) { model.setSourceFlux(model.addSunSphereRadiationSource(sun_direction), band, 1000.f); }},
+            {"sphere", [&](RadiationModel &model, const std::string &band, float edge) { model.setSourceFlux(model.addSphereRadiationSource(lamp_position_offset + make_vec3(0, 0, edge), 0.02f), band, 1e5f); }},
+            {"disk", [&](RadiationModel &model, const std::string &band, float edge) { model.setSourceFlux(model.addDiskRadiationSource(lamp_position_offset + make_vec3(0, 0, edge), 0.02f, make_vec3(0, 0.5f * float(M_PI), 0)), band, 1e5f); }},
+            {"rectangle", [&](RadiationModel &model, const std::string &band,
+                              float edge) { model.setSourceFlux(model.addRectangleRadiationSource(lamp_position_offset + make_vec3(0, 0, edge), make_vec2(0.04f, 0.04f), make_vec3(0, 0.5f * float(M_PI), 0)), band, 1e5f); }},
+    };
+
+    for (const SourceCase &source: sources) {
+        // The tube: an edge at z = 0.23, along facets that run from z = -1 to 0.8
+        {
+            Scene scene;
+            scene.build = [](Context &context) { return addEdgeTube(context, 8); };
+            scene.edge = 0.23f;
+            const float edge = scene.edge;
+            scene.sources = [&source, edge](RadiationModel &model, const std::string &band) { source.add(model, band, edge); };
+            const Image image = render(scene);
+            if (source.name == "collimated") {
+                // The rows the tube spans in the middle column must be those of its ends, which also checks the row order heightOfRow() assumes
+                int top = resolution, bottom = -1;
+                for (int row = 0; row < resolution; row++) {
+                    if (image.sees(resolution / 2, row)) {
+                        top = std::min(top, row);
+                        bottom = std::max(bottom, row);
+                    }
+                }
+                DOCTEST_CHECK(std::fabs(heightOfRow(float(top), -0.4f) - 0.8f) < 1.5f * pixel_size);
+                DOCTEST_CHECK(std::fabs(heightOfRow(float(bottom), -0.4f) + 1.f) < 1.5f * pixel_size);
+            }
+            checkTubeShadowEdge(image, edge, "tube, " + source.name);
+        }
+        // The sphere: an edge at z = 0.15, halfway between the rings at z = 0 and 0.3
+        {
+            Scene scene;
+            scene.build = [](Context &context) {
+                const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(context.addSphereObject(6, make_vec3(0, 0, 0), 0.6f));
+                context.setPrimitiveData(UUIDs, "reflectivity_SW", 0.5f);
+                context.setPrimitiveData(UUIDs, "transmissivity_SW", 0.f);
+                return UUIDs;
+            };
+            scene.edge = 0.15f;
+            const float edge = scene.edge;
+            scene.sources = [&source, edge](RadiationModel &model, const std::string &band) { source.add(model, band, edge); };
+            const Image image = render(scene);
+            const EdgeResult result = measureShadowEdge(image, edge, -0.2f, 0.05f, 0.25f, 0.45f, -0.5f);
+            DOCTEST_INFO("sphere, " << source.name << ": " << result.columns << " columns measured, " << result.misplaced << " misplaced, largest offset " << result.largest_offset << " pixels, shadow at " << result.shadow_ratio
+                                    << " of the lit level");
+            DOCTEST_CHECK(result.columns >= 8);
+            DOCTEST_CHECK(result.misplaced == 0);
+            DOCTEST_CHECK(result.shadow_ratio < 0.05f);
+        }
+    }
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - lights a coarse tube right up to its terminator") {
+    // A tube of six divisions under the sun from the side, with nothing in the way. Each pixel must read rho S max(0, n . s) / pi, where s is the direction of the sun and n the shading normal at the
+    // point the pixel sees, rebuilt here independently: the mean of the outward normals of the triangles meeting at each vertex, weighted by each triangle's angle there, interpolated across the triangle
+    // hit. Near the terminator
+    // a facet can face away from the sun while its shading normal still faces it; a shadow ray from such a facet passes through the tube, and must not shade the point. Such a facet received no
+    // direct radiation of its own, and took the irradiance of its sunlit neighbours interpolated from its vertices, which fell short wherever a vertex had no sunlit facet: up to 8% of rho S / pi.
+    using namespace pixel_shadow_test;
+    const vec3 sun = make_vec3(1.f, -0.4f, 0.f);
+    const float rho = 0.5f, flux = 1000.f;
+    Context context;
+    Scene scene;
+    scene.build = [&](Context &c) { return addEdgeTube(c, 6, rho); };
+    scene.occluder = [](Context &, const std::string &) {};
+    scene.sources = [&](RadiationModel &model, const std::string &band) { model.setSourceFlux(model.addCollimatedRadiationSource(sun), band, flux); };
+    scene.antialiasing = 64; // the expected value is the pixel's mean, which 64 jittered samples estimate to well within the tolerance
+    context.seedRandomGenerator(5);
+    const Image image = render(scene, &context);
+
+    // The tube's triangles, their outward normals, and the vertices they share, welded by position
+    struct Triangle {
+        uint UUID;
+        vec3 corner[3];
+        int vertex[3];
+        vec3 normal;
+    };
+    std::vector<Triangle> triangles;
+    std::vector<vec3> vertex_positions;
+    std::vector<vec3> vertex_normals;
+    auto vertexIndex = [&](const vec3 &position) {
+        for (size_t v = 0; v < vertex_positions.size(); v++) {
+            if ((vertex_positions[v] - position).magnitude() < 1e-5f) {
+                return int(v);
+            }
+        }
+        vertex_positions.push_back(position);
+        vertex_normals.push_back(make_vec3(0, 0, 0));
+        return int(vertex_positions.size() - 1);
+    };
+    for (uint UUID: image.object_UUIDs) {
+        const std::vector<vec3> corners = context.getPrimitiveVertices(UUID);
+        DOCTEST_REQUIRE(corners.size() == 3);
+        Triangle triangle;
+        triangle.UUID = UUID;
+        vec3 normal = cross(corners[1] - corners[0], corners[2] - corners[0]);
+        const vec3 centroid = (corners[0] + corners[1] + corners[2]) / 3.f;
+        if (normal.x * centroid.x + normal.y * centroid.y < 0.f) {
+            normal = -1.f * normal;
+        }
+        normal.normalize();
+        for (int c = 0; c < 3; c++) {
+            vec3 to_next = corners[(c + 1) % 3] - corners[c];
+            vec3 to_previous = corners[(c + 2) % 3] - corners[c];
+            to_next.normalize();
+            to_previous.normalize();
+            const float angle = std::acos(std::clamp(to_next * to_previous, -1.f, 1.f));
+            triangle.corner[c] = corners[c];
+            triangle.vertex[c] = vertexIndex(corners[c]);
+            vertex_normals[triangle.vertex[c]] = vertex_normals[triangle.vertex[c]] + angle * normal;
+        }
+        triangle.normal = normal;
+        triangles.push_back(triangle);
+    }
+    for (vec3 &normal: vertex_normals) {
+        normal.normalize();
+    }
+
+    // The triangle a camera ray hits first, its index, and the barycentric weights of its second and third corners there (Moller-Trumbore), or -1
+    const vec3 camera = make_vec3(0, -camera_distance, 0);
+    auto hitTriangle = [&](const vec3 &direction, float &w1, float &w2) {
+        int nearest = -1;
+        float nearest_t = 1e30f;
+        for (size_t t = 0; t < triangles.size(); t++) {
+            const vec3 e1 = triangles[t].corner[1] - triangles[t].corner[0];
+            const vec3 e2 = triangles[t].corner[2] - triangles[t].corner[0];
+            const vec3 p = cross(direction, e2);
+            const float determinant = e1 * p;
+            if (std::fabs(determinant) < 1e-12f) {
+                continue;
+            }
+            const vec3 offset = camera - triangles[t].corner[0];
+            const float u = (offset * p) / determinant;
+            const vec3 q = cross(offset, e1);
+            const float v = (direction * q) / determinant;
+            const float distance = (e2 * q) / determinant;
+            if (u >= 0.f && v >= 0.f && u + v <= 1.f && distance > 0.f && distance < nearest_t) {
+                nearest_t = distance;
+                nearest = int(t);
+                w1 = u;
+                w2 = v;
+            }
+        }
+        return nearest;
+    };
+    auto shadingNormal = [&](int t, float w1, float w2) {
+        const Triangle &triangle = triangles.at(t);
+        vec3 normal = (1.f - w1 - w2) * vertex_normals[triangle.vertex[0]] + w1 * vertex_normals[triangle.vertex[1]] + w2 * vertex_normals[triangle.vertex[2]];
+        normal.normalize();
+        return normal;
+    };
+
+    const vec3 s = sun / sun.magnitude();
+    const float full = rho * flux / float(M_PI);
+    int checked = 0, terminator_pixels = 0, label_disagreements = 0, wrong = 0, wrong_on_sunlit_facets = 0;
+    float largest_error = 0.f;
+    for (int row = 0; row < resolution; row++) {
+        for (int column = 0; column < resolution; column++) {
+            if (!image.inside(column, row)) {
+                continue;
+            }
+            // The expected value, averaged over a 4 x 4 grid across the pixel; a pixel some of whose grid misses the tube is left out
+            double expected = 0.0;
+            bool complete = true;
+            for (int a = 0; a < 4 && complete; a++) {
+                for (int b = 0; b < 4 && complete; b++) {
+                    float w1, w2;
+                    const int t = hitTriangle(rayDirection(column, row, (float(a) + 0.5f) / 4.f, (float(b) + 0.5f) / 4.f), w1, w2);
+                    if (t < 0) {
+                        complete = false;
+                        break;
+                    }
+                    expected += full * std::max(0.f, shadingNormal(t, w1, w2) * s) / 16.0;
+                }
+            }
+            if (!complete) {
+                continue;
+            }
+            // The camera's label at the pixel centre must be a triangle of the facet the centre ray hits (this checks the pixel order rayDirection() assumes); the two triangles of a facet share its normal
+            float w1, w2;
+            const int centre = hitTriangle(rayDirection(column, row, 0.5f, 0.5f), w1, w2);
+            const uint label = image.object.at(size_t(row) * resolution + column) - 1;
+            bool label_on_facet = false;
+            for (const Triangle &triangle: triangles) {
+                label_on_facet = label_on_facet || (triangle.UUID == label && (triangle.normal - triangles.at(centre).normal).magnitude() < 1e-4f);
+            }
+            label_disagreements += label_on_facet ? 0 : 1;
+            // A pixel past the facet terminator: the facet faces away from the sun, but the shading normal still faces it
+            if (triangles.at(centre).normal * s <= 0.f && shadingNormal(centre, w1, w2) * s > 0.05f) {
+                terminator_pixels++;
+            }
+            const float error = std::fabs(image.at(column, row) - float(expected));
+            largest_error = std::max(largest_error, error / full);
+            wrong += error > 0.02f * full ? 1 : 0;
+            wrong_on_sunlit_facets += (error > 0.02f * full && triangles.at(centre).normal * s > 0.f) ? 1 : 0;
+            checked++;
+        }
+    }
+    DOCTEST_INFO(checked << " pixels checked, " << terminator_pixels << " past the facet terminator, " << wrong << " off by more than 2% of rho S / pi (" << wrong_on_sunlit_facets << " on facets facing the sun), largest error " << largest_error
+                         << " of rho S / pi; " << label_disagreements << " labels disagreeing with the expected facet");
+    DOCTEST_REQUIRE(checked > 300);
+    DOCTEST_CHECK(label_disagreements <= checked / 50);
+    DOCTEST_CHECK(terminator_pixels >= 20);
+    DOCTEST_CHECK(wrong == 0);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - splits a sub-patch of a tile along a shadow edge, keeping its solved mean") {
+    // A diagonal shadow edge across a tile of 4 x 4 sub-patches, seen face on. A flat tile's shading normal is its own, so with the shadow evaluated per pixel the image of each sub-patch the edge
+    // crosses must split into a lit and a dark part, and the mean of its pixels must still be the direct radiation the radiation solve gave the sub-patch: the pixels of a sub-patch line up with it
+    // exactly. With the shadow taken from each sub-patch's own direct radiation, each read evenly at its mean.
+    using namespace pixel_shadow_test;
+    const float rho = 0.5f, flux = 1000.f;
+    Context context;
+    Scene scene;
+    scene.build = [](Context &c) { return addEdgeTile(c); };
+    scene.occluder = addDiagonalOccluder;
+    scene.sources = [&](RadiationModel &model, const std::string &band) { model.setSourceFlux(model.addCollimatedRadiationSource(tile_sun_direction), band, flux); };
+    scene.direct_rays = 4096;
+    const Image image = render(scene, &context);
+
+    const float mu = std::fabs(tile_sun_direction.y) / tile_sun_direction.magnitude();
+    const float lit_level = rho * flux * mu / float(M_PI);
+    const FacetPixels grouped = groupPixelsByFacet(image);
+    DOCTEST_REQUIRE(grouped.pixels.size() == 16);
+    const int split = countSplitFacets(grouped, lit_level);
+    int compared = 0;
+    float largest_difference = 0.f;
+    for (const auto &[UUID, values]: grouped.pixels) {
+        DOCTEST_REQUIRE(values.size() == 100);
+        double mean = 0.0;
+        for (float value: values) {
+            mean += value / double(values.size());
+        }
+        float absorbed;
+        context.getPrimitiveData(UUID, "radiation_flux_SW", absorbed);
+        const float solved_direct = absorbed / (1.f - rho);
+        const float imaged_direct = float(mean) * float(M_PI) / rho;
+        largest_difference = std::max(largest_difference, std::fabs(imaged_direct - solved_direct) / (flux * mu));
+        compared++;
+    }
+    DOCTEST_INFO(split << " sub-patches split by the edge; largest difference between a sub-patch's mean image and its solved direct radiation " << largest_difference << " of S mu");
+    DOCTEST_CHECK(compared == 16);
+    DOCTEST_CHECK(split >= 3);
+    DOCTEST_CHECK(largest_difference < 0.02f);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - shows the shadow of a translucent cover per pixel, at the cover's transmittance") {
+    // The lower part of the wall is a glass cover and the rest opaque, so the tube shows three bands: lit, lit through the glass at its transmittance, and dark, with both edges across the middle of
+    // the tube's facets. Each pixel is compared with the same pixel of a render in which the glass is taken away, which leaves only the effect of the cover.
+    using namespace pixel_shadow_test;
+    const float glass_bottom = -0.25f, glass_top = 0.35f, glass_KL = 1.f;
+    auto renderWall = [&](bool with_glass) {
+        Scene scene;
+        scene.build = [](Context &context) { return addEdgeTube(context, 8); };
+        scene.occluder = [&, with_glass](Context &context, const std::string &band) {
+            if (with_glass) {
+                const std::vector<uint> glass = addWall(context, band, -1.5f, -2.f, 2.f, glass_bottom, glass_top, false);
+                context.setPrimitiveData(glass, ("glass_n_" + band).c_str(), 1.5f);
+                context.setPrimitiveData(glass, ("glass_KL_" + band).c_str(), glass_KL);
+            }
+            addWall(context, band, -1.5f, -2.f, 2.f, glass_top, 2.f);
+        };
+        return render(scene);
+    };
+    const Image image = renderWall(true);
+    const Image open = renderWall(false);
+
+    const float cos_incidence = std::fabs(sun_direction.x) / sun_direction.magnitude();
+    const float transmittance = glass_tau_rho_alpha_ref(cos_incidence, 1.5f, glass_KL).x;
+    DOCTEST_REQUIRE(transmittance < 0.8f);
+
+    // Per column: the median ratio to the open render below the glass, through the glass and above it, and the first row up from the bottom whose ratio falls below halfway between 1 and the
+    // transmittance, which must be within two pixels of the glass's lower edge
+    int columns = 0, misplaced = 0;
+    float largest_offset = 0.f;
+    std::vector<float> below_ratios, glass_ratios, above_ratios;
+    auto median = [](std::vector<float> values) {
+        std::nth_element(values.begin(), values.begin() + values.size() / 2, values.end());
+        return values.at(values.size() / 2);
+    };
+    // Columns too close to the terminator to read a ratio from (below 0.3 of the brightest in the open render) are left out
+    float brightest = 0.f;
+    for (int row = 0; row < resolution; row++) {
+        for (int column = 0; column < resolution; column++) {
+            if (open.inside(column, row)) {
+                brightest = std::max(brightest, open.at(column, row));
+            }
+        }
+    }
+    for (int column = 0; column < resolution; column++) {
+        std::vector<float> below, glass, above;
+        bool complete = true, found = false, edge_misplaced = false;
+        float edge_offset = 0.f;
+        float open_level = 0.f;
+        for (int row = resolution - 1; row >= 0; row--) {
+            const float z = heightOfRow(float(row), -0.35f);
+            if (z < -0.75f || z > 0.7f) {
+                continue;
+            }
+            if (!image.inside(column, row) || !open.inside(column, row)) {
+                complete = false;
+                break;
+            }
+            const float reference = open.at(column, row);
+            if (z <= glass_top - 0.1f) {
+                open_level = std::max(open_level, reference);
+            }
+            if (reference <= 0.f) {
+                complete = complete && z > glass_top; // the open render is lit everywhere below the opaque wall
+                continue;
+            }
+            const float ratio = image.at(column, row) / reference;
+            if (z < glass_bottom - 0.1f) {
+                below.push_back(ratio);
+            } else if (z > glass_bottom + 0.1f && z < glass_top - 0.1f) {
+                glass.push_back(ratio);
+            }
+            if (!found && z > glass_bottom - 0.3f && ratio < 0.5f * (1.f + transmittance)) {
+                found = true;
+                edge_misplaced = std::fabs(z - glass_bottom) > 2.f * pixel_size;
+                edge_offset = std::fabs(z - glass_bottom) / pixel_size;
+            }
+        }
+        if (!complete || below.size() < 4 || glass.size() < 4 || open_level < 0.3f * brightest) {
+            continue;
+        }
+        // Above the glass the opaque wall shades the tube in both renders; the shaded image is compared with the open render's level through the glass
+        for (int row = 0; row < resolution; row++) {
+            const float z = heightOfRow(float(row), -0.35f);
+            if (z > glass_top + 0.1f && z < 0.7f && image.inside(column, row)) {
+                above.push_back(image.at(column, row) / open_level);
+            }
+        }
+        misplaced += (!found || edge_misplaced) ? 1 : 0;
+        largest_offset = std::max(largest_offset, edge_offset);
+        below_ratios.push_back(median(below));
+        glass_ratios.push_back(median(glass));
+        if (!above.empty()) {
+            above_ratios.push_back(median(above));
+        }
+        columns++;
+    }
+    DOCTEST_REQUIRE(columns >= 8);
+    DOCTEST_REQUIRE(!above_ratios.empty());
+    const float below_ratio = median(below_ratios), glass_ratio = median(glass_ratios), above_ratio = median(above_ratios);
+    DOCTEST_INFO(columns << " columns: below the glass " << below_ratio << " of the open render, through it " << glass_ratio << " (cover transmittance " << transmittance << "), above it " << above_ratio << "; " << misplaced
+                         << " columns with the glass's edge misplaced, largest offset " << largest_offset << " pixels");
+    DOCTEST_CHECK(below_ratio == doctest::Approx(1.f).epsilon(0.02));
+    DOCTEST_CHECK(glass_ratio == doctest::Approx(transmittance).epsilon(0.04));
+    DOCTEST_CHECK(above_ratio < 0.02f);
+    DOCTEST_CHECK(misplaced == 0);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - shows a shadow cast across a periodic boundary per pixel") {
+    // The domain is periodic in x and the wall stands on the far side of the tube from the sun, so its shadow reaches the tube only through the boundary. Two specks set the domain to -1.2 < x < 1.2.
+    using namespace pixel_shadow_test;
+    Scene scene;
+    scene.build = [](Context &context) { return addEdgeTube(context, 8); };
+    scene.periodic = true;
+    scene.occluder = [](Context &context, const std::string &band) {
+        addWall(context, band, 0.9f, -1.5f, 1.5f, 0.23f, 2.f);
+        for (float x: {-1.2f, 1.2f}) {
+            const uint speck = context.addPatch(make_vec3(x, 3.f, -3.f), make_vec2(0.01f, 0.01f));
+            context.setPrimitiveData(speck, ("reflectivity_" + band).c_str(), 0.f);
+            context.setPrimitiveData(speck, ("transmissivity_" + band).c_str(), 0.f);
+        }
+    };
+    checkTubeShadowEdge(render(scene), 0.23f, "periodic");
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - shows a cast shadow per pixel on a surface with a specular layer") {
+    // The layer's highlight must stop at the shadow edge. The surface reflects 0.04 in all, which a layer of refractive index 1.5 reflects at normal incidence by itself, so its body reflects
+    // nothing and what the camera sees of the direct radiation is the layer's highlight alone: without it the tube would read black and no column could be measured.
+    using namespace pixel_shadow_test;
+    Scene scene;
+    scene.build = [](Context &context) {
+        const std::vector<uint> UUIDs = addEdgeTube(context, 8, 0.04f);
+        context.setPrimitiveData(UUIDs, "specular_roughness", 0.5f);
+        context.setPrimitiveData(UUIDs, "specular_n", 1.5f);
+        return UUIDs;
+    };
+    checkTubeShadowEdge(render(scene), 0.23f, "specular layer");
+
+    // The highlight itself: on a flat tile the shading normal is the facet's, so where a sub-patch is lit all over, the highlight evaluated per pixel must be the one a camera without smoothing
+    // computes from the sub-patch's own direct radiation
+    auto renderTile = [&](bool smoothing, Context &context) {
+        Scene tile_scene;
+        tile_scene.smoothing = smoothing;
+        tile_scene.build = [](Context &c) {
+            const std::vector<uint> UUIDs = addEdgeTile(c);
+            c.setPrimitiveData(UUIDs, "reflectivity_SW", 0.04f);
+            c.setPrimitiveData(UUIDs, "specular_roughness", 0.5f);
+            c.setPrimitiveData(UUIDs, "specular_n", 1.5f);
+            return UUIDs;
+        };
+        tile_scene.occluder = addDiagonalOccluder;
+        tile_scene.sources = [](RadiationModel &model, const std::string &band) { model.setSourceFlux(model.addCollimatedRadiationSource(tile_sun_direction), band, 1000.f); };
+        return render(tile_scene, &context);
+    };
+    Context smoothed_context, flat_context;
+    const Image smoothed = renderTile(true, smoothed_context);
+    const Image flat = renderTile(false, flat_context);
+    double smoothed_sum = 0.0, flat_sum = 0.0;
+    size_t compared = 0;
+    for (size_t p = 0; p < flat.pixels.size(); p++) {
+        if (flat.object.at(p) == 0 || smoothed.object.at(p) != flat.object.at(p)) {
+            continue;
+        }
+        bool lit_all_over = true; // the tile is shaded where z > 0.1 - 0.7 x
+        for (const vec3 &corner: flat_context.getPrimitiveVertices(flat.object.at(p) - 1)) {
+            lit_all_over = lit_all_over && corner.z < 0.1f - 0.7f * corner.x - 0.01f;
+        }
+        if (lit_all_over) {
+            smoothed_sum += smoothed.pixels.at(p);
+            flat_sum += flat.pixels.at(p);
+            compared++;
+        }
+    }
+    DOCTEST_INFO("highlight on the sub-patches lit all over: per pixel " << smoothed_sum << ", from the sub-patches' direct radiation " << flat_sum << ", over " << compared << " pixels");
+    DOCTEST_REQUIRE(compared > 500);
+    DOCTEST_REQUIRE(flat_sum > 0.0);
+    DOCTEST_CHECK(smoothed_sum / flat_sum == doctest::Approx(1.0).epsilon(0.02));
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - shows a cast shadow per pixel on a surface with a spectral texture") {
+    // A textured tube whose spectral texture has two classes in bands along its length: one reflecting 0.6 over the lower part (below z = -0.3), one reflecting 0.2 above it. The shadow edge, at
+    // z = 0.23, crosses the second class. The classes' share of the direct radiation must stop at the edge, and the two classes must read in the ratio of their reflectivities, 3, which a camera taking
+    // the primitive's own (area-weighted) reflectivity instead of the class's would not show.
+    using namespace pixel_shadow_test;
+    using namespace spectral_texture_test;
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_radiation_shadow_texture.jpg").string();
+    helios::writeJPEG(texture, 18, 9, std::vector<RGBcolor>(18 * 9, make_RGBcolor(0.2f, 0.6f, 0.2f)));
+    // Columns of the class map run along the tube; its texture coordinate u runs from 0 at z = -1 to 1 at z = 0.8, so z = -0.3 is u = 0.39, after 7 of 18 columns
+    std::vector<uint16_t> classes(18 * 9, 2);
+    for (uint row = 0; row < 9; row++) {
+        for (uint column = 0; column < 7; column++) {
+            classes.at(row * 18 + column) = 1;
+        }
+    }
+    const std::string class_map = writeClassMap("helios_radiation_shadow_two_classes.png", 18, 9, classes);
+    Scene scene;
+    scene.band = "VIS";
+    scene.band_wavelengths = true;
+    scene.build = [&](Context &context) {
+        addFlatSpectrum(context, "rho_bright", 0.6f);
+        addFlatSpectrum(context, "rho_dim", 0.2f);
+        addFlatSpectrum(context, "tau_none", 0.f);
+        const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(context.addTubeObject(8, {make_vec3(0, 0, -1.f), make_vec3(0, 0, 0.8f)}, {0.4f, 0.4f}, texture.c_str()));
+        context.addSpectralPalette("two", {{"rho_bright", "tau_none", ""}, {"rho_dim", "tau_none", ""}});
+        context.setPrimitiveSpectralTexture(UUIDs, class_map, "two");
+        return UUIDs;
+    };
+    const Image image = render(scene);
+
+    // The edge across the dim class
+    const EdgeResult edge = measureShadowEdge(image, 0.23f, -0.2f, 0.13f, 0.33f, 0.7f, -0.35f);
+    // The two classes' lit levels, column by column
+    auto median = [](std::vector<float> values) {
+        std::nth_element(values.begin(), values.begin() + values.size() / 2, values.end());
+        return values.at(values.size() / 2);
+    };
+    float brightest = 0.f;
+    for (float pixel: image.pixels) {
+        brightest = std::max(brightest, pixel);
+    }
+    std::vector<float> ratios;
+    for (int column = 0; column < resolution; column++) {
+        std::vector<float> bright, dim;
+        for (int row = 0; row < resolution; row++) {
+            const float z = heightOfRow(float(row), -0.35f);
+            if (!image.inside(column, row)) {
+                continue;
+            }
+            if (z > -0.85f && z < -0.45f) {
+                bright.push_back(image.at(column, row));
+            } else if (z > -0.15f && z < 0.13f) {
+                dim.push_back(image.at(column, row));
+            }
+        }
+        if (bright.size() < 4 || dim.size() < 4) {
+            continue;
+        }
+        const float bright_level = median(bright), dim_level = median(dim);
+        if (bright_level > 0.3f * brightest && dim_level > 0.f) {
+            ratios.push_back(bright_level / dim_level);
+        }
+    }
+    DOCTEST_REQUIRE(ratios.size() >= 8);
+    const float ratio = median(ratios);
+    DOCTEST_INFO("edge: " << edge.columns << " columns measured, " << edge.misplaced << " misplaced, shadow at " << edge.shadow_ratio << " of the lit level; the classes read in the ratio " << ratio);
+    DOCTEST_CHECK(edge.columns >= 8);
+    DOCTEST_CHECK(edge.misplaced == 0);
+    DOCTEST_CHECK(edge.shadow_ratio < 0.05f);
+    DOCTEST_CHECK(ratio == doctest::Approx(3.f).epsilon(0.1));
+    std::filesystem::remove(texture);
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - evaluates the direct radiation per pixel in every band of a launch of more than 32 bands") {
+    // 66 bands in one launch, seen by a camera in the first and the last. Those past the 32nd reflect half what the others do, so the last band's image must be exactly half the first's, shadow
+    // included. The per-pixel direct radiation was held in arrays of 32 bands, so beyond the 32nd band it was written past their end (OptiX) or read from outside them (Vulkan, where the last band
+    // then had no direct radiation at all).
+    using namespace pixel_shadow_test;
+    Context context;
+    const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(context.addTubeObject(8, {make_vec3(0, 0, -1.f), make_vec3(0, 0, 0.8f)}, {0.4f, 0.4f}));
+    std::vector<std::string> bands;
+    for (int b = 0; b < 66; b++) {
+        bands.push_back("B" + std::to_string(b));
+    }
+    for (size_t b = 0; b < bands.size(); b++) {
+        context.setPrimitiveData(UUIDs, ("reflectivity_" + bands[b]).c_str(), b < 32 ? 0.5f : 0.25f);
+        context.setPrimitiveData(UUIDs, ("transmissivity_" + bands[b]).c_str(), 0.f);
+    }
+    const std::vector<uint> wall = addWall(context, "B0", -1.5f, -2.f, 2.f, 0.23f, 2.f);
+    for (const std::string &band: bands) {
+        context.setPrimitiveData(wall, ("reflectivity_" + band).c_str(), 0.f);
+        context.setPrimitiveData(wall, ("transmissivity_" + band).c_str(), 0.f);
+    }
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.enableCameraFluxSmoothing();
+    const uint sun = model.addCollimatedRadiationSource(sun_direction);
+    for (const std::string &band: bands) {
+        model.addRadiationBand(band);
+        model.disableEmission(band);
+        model.setScatteringDepth(band, 1);
+        model.setDirectRayCount(band, 100);
+        model.setDiffuseRayCount(band, 100);
+        model.setDiffuseRadiationFlux(band, 0.f);
+        model.setSourceFlux(sun, band, 1000.f);
+    }
+    CameraProperties properties;
+    properties.camera_resolution = make_int2(resolution, resolution);
+    properties.HFOV = fieldOfViewDegrees();
+    properties.lens_diameter = 0.f;
+    properties.exposure = "manual";
+    properties.white_balance = "off";
+    model.addRadiationCamera("many_cam", {"B0", "B65"}, make_vec3(0, -camera_distance, 0), make_vec3(0, 0, 0), properties, 16);
+    model.updateGeometry();
+    model.runBand(bands);
+
+    Image first, last;
+    first.pixels = model.getCameraPixelData("many_cam", "B0");
+    last.pixels = model.getCameraPixelData("many_cam", "B65");
+    context.getGlobalData("camera_many_cam_pixel_UUID", first.object);
+    const std::set<uint> object(UUIDs.begin(), UUIDs.end());
+    for (uint &label: first.object) {
+        label = (label != 0 && object.count(label - 1)) ? label : 0;
+    }
+    last.object = first.object;
+    DOCTEST_REQUIRE(first.pixels.size() == size_t(resolution * resolution));
+    DOCTEST_REQUIRE(last.pixels.size() == first.pixels.size());
+    float largest = 0.f, largest_difference = 0.f;
+    for (size_t p = 0; p < first.pixels.size(); p++) {
+        DOCTEST_REQUIRE(std::isfinite(last.pixels.at(p)));
+        largest = std::max(largest, first.pixels.at(p));
+        largest_difference = std::max(largest_difference, std::fabs(last.pixels.at(p) - 0.5f * first.pixels.at(p)));
+    }
+    DOCTEST_INFO("largest pixel " << largest << ", largest difference between the last band and half the first " << largest_difference);
+    DOCTEST_REQUIRE(largest > 0.f);
+    DOCTEST_CHECK(largest_difference <= 1e-4f * largest);
+    checkTubeShadowEdge(last, 0.23f, "band 65");
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - shows no direct radiation that the radiation solve did not launch") {
+    // With no direct rays the radiation solve delivers none of the sources' direct radiation, so the camera must not show any either
+    using namespace pixel_shadow_test;
+    Context context;
+    const std::vector<uint> UUIDs = addEdgeTube(context, 8);
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.enableCameraFluxSmoothing();
+    model.addRadiationBand("SW");
+    model.disableEmission("SW");
+    model.setScatteringDepth("SW", 1);
+    model.setDirectRayCount("SW", 0);
+    model.setDiffuseRayCount("SW", 100);
+    model.setDiffuseRadiationFlux("SW", 0.f);
+    model.setSourceFlux(model.addCollimatedRadiationSource(sun_direction), "SW", 1000.f);
+    CameraProperties properties;
+    properties.camera_resolution = make_int2(resolution, resolution);
+    properties.HFOV = fieldOfViewDegrees();
+    properties.lens_diameter = 0.f;
+    properties.exposure = "manual";
+    properties.white_balance = "off";
+    model.addRadiationCamera("no_direct_cam", {"SW"}, make_vec3(0, -camera_distance, 0), make_vec3(0, 0, 0), properties, 4);
+    model.updateGeometry();
+    model.runBand("SW");
+
+    float absorbed = 0.f;
+    for (uint UUID: UUIDs) {
+        float flux;
+        context.getPrimitiveData(UUID, "radiation_flux_SW", flux);
+        absorbed = std::max(absorbed, flux);
+    }
+    const std::vector<float> pixels = model.getCameraPixelData("no_direct_cam", "SW");
+    std::vector<uint> labels;
+    context.getGlobalData("camera_no_direct_cam_pixel_UUID", labels);
+    DOCTEST_REQUIRE(labels.size() == pixels.size());
+    size_t tube_pixels = 0;
+    float brightest = 0.f;
+    const std::set<uint> object(UUIDs.begin(), UUIDs.end());
+    for (size_t p = 0; p < pixels.size(); p++) {
+        if (labels.at(p) != 0 && object.count(labels.at(p) - 1)) {
+            tube_pixels++;
+            brightest = std::max(brightest, pixels.at(p));
+        }
+    }
+    DOCTEST_INFO("the solve's largest absorbed flux " << absorbed << ", the brightest tube pixel " << brightest << " (a sunlit pixel would read up to " << 0.5f * 1000.f / float(M_PI) << ")");
+    DOCTEST_REQUIRE(tube_pixels > 100);
+    DOCTEST_REQUIRE(absorbed == 0.f);
+    DOCTEST_CHECK(brightest < 1e-3f);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - splits a normal-mapped sub-patch along a shadow edge") {
+    // The tile scene with a normal map tilting the shading normal: the shadow edge must still split the sub-patches it crosses
+    using namespace pixel_shadow_test;
+    using namespace normal_map_test;
+    const std::string map = writeTiltedNormalMap("helios_rad_nm_pixel_shadow.png", 20.f * float(M_PI) / 180.f, 0);
+    const float rho = 0.5f, flux = 1000.f;
+    Scene scene;
+    scene.build = [&](Context &context) {
+        const std::vector<uint> UUIDs = addEdgeTile(context);
+        context.setPrimitiveNormalMap(UUIDs, map);
+        return UUIDs;
+    };
+    scene.occluder = addDiagonalOccluder;
+    scene.sources = [&](RadiationModel &model, const std::string &band) { model.setSourceFlux(model.addCollimatedRadiationSource(tile_sun_direction), band, flux); };
+    const Image image = render(scene);
+    const FacetPixels grouped = groupPixelsByFacet(image);
+    DOCTEST_REQUIRE(grouped.pixels.size() == 16);
+    // The map tilts the shading normal, so the lit level is that of the brightest sub-patch rather than of the facet
+    float lit_level = 0.f;
+    for (const auto &[UUID, values]: grouped.pixels) {
+        for (float value: values) {
+            lit_level = std::max(lit_level, value);
+        }
+    }
+    DOCTEST_REQUIRE(lit_level > 0.f);
+    const int split = countSplitFacets(grouped, 0.9f * lit_level);
+    DOCTEST_INFO(split << " sub-patches split by the edge");
+    DOCTEST_CHECK(split >= 3);
+    std::filesystem::remove(map);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - shades a straight tube evenly along its length") {
+    // A straight tube of six divisions in one segment under a horizontal sun: the radiation reaching it does not change along its length, so neither may any column of its image. Each quad of the tube is
+    // split into two triangles, and a vertex normal averaged over the triangles by area leaned toward the facet with two triangles at that vertex, by about 10 degrees, and the opposite way at the other
+    // end of the tube: the shading drifted by about a third of the brightest pixel along the tube. Averaged by the angle each facet makes at the vertex, a quad counts its full corner however it is split.
+    using namespace pixel_shadow_test;
+    Scene scene;
+    scene.build = [](Context &context) { return addEdgeTube(context, 6); };
+    scene.occluder = [](Context &, const std::string &) {};
+    scene.sources = [](RadiationModel &model, const std::string &band) { model.setSourceFlux(model.addCollimatedRadiationSource(make_vec3(1.f, -0.4f, 0.f)), band, 1000.f); };
+    const Image image = render(scene);
+
+    float brightest = 0.f;
+    for (int row = 0; row < resolution; row++) {
+        for (int column = 0; column < resolution; column++) {
+            if (image.inside(column, row)) {
+                brightest = std::max(brightest, image.at(column, row));
+            }
+        }
+    }
+    DOCTEST_REQUIRE(brightest > 0.f);
+    int columns = 0;
+    float largest_drift = 0.f;
+    for (int column = 0; column < resolution; column++) {
+        float lowest = std::numeric_limits<float>::max(), highest = 0.f;
+        int rows = 0;
+        for (int row = 0; row < resolution; row++) {
+            const float z = heightOfRow(float(row), -0.35f);
+            if (z > -0.85f && z < 0.65f && image.inside(column, row)) {
+                lowest = std::min(lowest, image.at(column, row));
+                highest = std::max(highest, image.at(column, row));
+                rows++;
+            }
+        }
+        if (rows < 40 || highest < 0.2f * brightest) {
+            continue;
+        }
+        columns++;
+        largest_drift = std::max(largest_drift, (highest - lowest) / brightest);
+    }
+    DOCTEST_INFO(columns << " columns; largest change along a column " << largest_drift << " of the brightest pixel");
+    DOCTEST_REQUIRE(columns >= 8);
+    DOCTEST_CHECK(largest_drift < 0.03f);
 }

@@ -118,7 +118,6 @@ namespace helios {
         void uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) override;
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) override;
         void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
-        void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
         void getNormalMapMoments(std::vector<float> &moments) override;
         void uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) override;
         void uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) override;
@@ -293,15 +292,12 @@ namespace helios {
         //! Bind a one-element placeholder in place of the vertex normals, which the camera shader takes to mean that there are none
         void bindVertexNormalsPlaceholder();
 
-        //! Bind a one-element placeholder in place of the vertex direct irradiance, which the camera shader takes to mean that there is none
-        void bindVertexDirectIrradiancePlaceholder();
         void bindVertexNormalMapMomentsPlaceholder();
         Buffer vertex_radiation_out_top_buffer;
         Buffer vertex_radiation_out_bottom_buffer;
         Buffer vertex_normals_buffer; //!< Shading normal per smoothing vertex [vertex × 3]; a one-element placeholder unless smoothing is enabled and there is a source or a surface layer
         Buffer vertex_normal_map_moment_buffer; //!< normal_map_moment_buffer averaged onto the smoothing vertices [vertex][face][launch band][3], set 2 binding 24; a one-element placeholder unless smoothing and maps
         size_t normal_map_moment_count = 0; //!< Number of values recorded in normal_map_moment_buffer, 0 when nothing is recorded
-        Buffer vertex_direct_irradiance_buffer; //!< Unoccluded direct irradiance per [source × smoothing vertex × band]; a one-element placeholder unless smoothing is enabled and there is a source
         Buffer scatter_top_buffer;
         Buffer scatter_bottom_buffer;
         Buffer camera_radiation_buffer; //!< Camera pixel radiation values

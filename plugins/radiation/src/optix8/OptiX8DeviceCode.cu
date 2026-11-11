@@ -953,48 +953,114 @@ static __forceinline__ __device__ float3 directionToSource(uint32_t s, const flo
     return normalize(make_float3(params.source_positions[s].x - point.x, params.source_positions[s].y - point.y, params.source_positions[s].z - point.z));
 }
 
-//! With camera flux smoothing: unoccluded direct irradiance of source s at the hit point, interpolated from the facet's vertices v with weights w (see RadiationModel::accumulateDirectIrradianceAtVertices())
-static __forceinline__ __device__ float vertexDirectIrradiance(uint32_t s, uint32_t b_launch, const int32_t v[4], const float w[4]) {
-    if (params.vertex_direct_irradiance == nullptr) {
-        return 0.f;
+//! One sample of radiation source s seen from the point `origin`, drawn as the direct launch draws it
+/**
+ * Gives the direction toward the point sampled on the source (the source's direction for a collimated source), the distance to that point (1e38 for a collimated source), and the factor that, times
+ * the source's flux and |n . direction| for a surface of normal n, gives the irradiance the sample stands for: the strength of a direct ray before its division by the number of rays. Cameras draw their
+ * shadow rays with it too, so that the shadows they evaluate per pixel come from the same distribution of points on the source as the radiation solve, including the penumbra of the sun's disk and of a
+ * finite source. Returns false for a sample on the back of a rectangle or disk source, which delivers nothing, and for an unknown source type.
+ */
+static __forceinline__ __device__ bool sampleSourceDirection(uint32_t s, const float3 &origin, uint32_t &seed, float3 &direction, float &tmax, double &factor) {
+    const uint32_t src_type = params.source_types[s];
+    if (src_type == 0) { // Collimated source
+        direction = normalize(params.source_positions[s]);
+        tmax = 1e38f;
+        factor = 1.0;
+        return true;
     }
-    const float *values = params.vertex_direct_irradiance + size_t(s) * params.vertex_normal_count * params.Nbands_launch;
-    float value = 0.f;
-    for (int c = 0; c < 4; c++) {
-        if (v[c] >= 0) {
-            value += w[c] * values[uint32_t(v[c]) * params.Nbands_launch + b_launch];
+    if (src_type == 1 || src_type == 2) { // Sphere source (type 1 = point, type 2 = sphere)
+        const float theta_s = acos_safe(1.f - 2.f * rnd(seed));
+        const float phi_s = rnd(seed) * 2.f * M_PI;
+        const float3 sphere_pt = make_float3(0.5f * params.source_widths[s].x * sinf(theta_s) * cosf(phi_s), 0.5f * params.source_widths[s].x * sinf(theta_s) * sinf(phi_s), 0.5f * params.source_widths[s].x * cosf(theta_s));
+        direction = sphere_pt + params.source_positions[s] - origin;
+        tmax = d_magnitude(direction);
+        direction = normalize(direction);
+
+        // Integrate over the sphere's surface for the strength
+        factor = 0.0;
+        const uint32_t N = 10;
+        for (uint32_t j = 0; j < N; j++) {
+            for (uint32_t i = 0; i < N; i++) {
+                const float theta = acos_safe(1.f - 2.f * (float(i) + 0.5f) / float(N));
+                const float phi = (float(j) + 0.5f) * 2.f * M_PI / float(N);
+                const float3 ldir = make_float3(sinf(theta) * cosf(phi), sinf(theta) * sinf(phi), cosf(theta));
+                if (dot(ldir, direction) < 0.f) {
+                    factor += (double) fabsf(dot(ldir, direction)) / ((double) tmax * (double) tmax) / double(N * N) * (double) params.source_widths[s].x * (double) params.source_widths[s].x;
+                }
+            }
         }
+        return true;
     }
-    return value;
+    if (src_type == 3) { // Rectangle source
+        float light_transform[16];
+        float3 rot3 = params.source_rotations[s];
+        d_makeTransformMatrix(rot3, light_transform);
+
+        float3 square_pt;
+        d_sampleSquare(seed, square_pt);
+        square_pt = make_float3(params.source_widths[s].x * square_pt.x, params.source_widths[s].y * square_pt.y, square_pt.z);
+        d_transformPoint(light_transform, square_pt);
+
+        float3 light_dir = make_float3(0.f, 0.f, 1.f);
+        d_transformPoint(light_transform, light_dir);
+
+        direction = square_pt + params.source_positions[s] - origin;
+        if (dot(direction, light_dir) > 0.f) {
+            return false; // the source does not emit from its back
+        }
+        tmax = d_magnitude(direction);
+        direction = normalize(direction);
+        factor = (double) fabsf(dot(light_dir, direction)) / ((double) tmax * (double) tmax) * (double) params.source_widths[s].x * (double) params.source_widths[s].y / M_PI;
+        return true;
+    }
+    if (src_type == 4) { // Disk source
+        float light_transform[16];
+        float3 rot3 = params.source_rotations[s];
+        d_makeTransformMatrix(rot3, light_transform);
+
+        float3 disk_pt;
+        d_sampleDisk(seed, disk_pt);
+        d_transformPoint(light_transform, disk_pt);
+
+        float3 light_dir = make_float3(0.f, 0.f, 1.f);
+        d_transformPoint(light_transform, light_dir);
+
+        direction = params.source_widths[s].x * disk_pt + params.source_positions[s] - origin;
+        if (dot(direction, light_dir) > 0.f) {
+            return false; // the source does not emit from its back
+        }
+        tmax = d_magnitude(direction);
+        direction = normalize(direction);
+        factor = (double) fabsf(dot(light_dir, direction)) / ((double) tmax * (double) tmax) * (double) params.source_widths[s].x * (double) params.source_widths[s].x;
+        return true;
+    }
+    return false; // unknown source type
 }
 
-//! With camera flux smoothing: direct radiation of source s reaching one face of a facet, evaluated with the shading normal. face_normal and face_shading_normal are the facet's normal and the shading
-//! normal of that face, and facet_value what the face itself received. That carries the cosine of the facet's normal, which is replaced by that of the shading normal. A face turned away from the source
-//! received nothing of its own, yet near the terminator its shading normal can still face the source; it takes the irradiance its vertices carry from the neighbouring facets that the source reached.
-//! With soften (a normal map), the rescaled value is multiplied by the shadow-terminator softening of Chiang et al. (see helios_nm::terminatorSoftening()), so that relief does not end in a hard edge where the
-//! facet still faces the source but the shading normal barely does. v[0] < 0 (no smoothing vertices) leaves a face turned away from the source with nothing.
-static __forceinline__ __device__ float faceDirect(float facet_value, const float3 &to_source, const float3 &face_normal, const float3 &face_shading_normal, uint32_t s, uint32_t b_launch, const int32_t v[4], const float w[4], bool soften) {
+//! Direct radiation of a source reaching one face of a normal-mapped facet that is not smoothed, evaluated with the map's shading normal
+/**
+ * face_normal and face_shading_normal are the facet's normal and the shading normal of that face, and facet_value what the face itself received (see RadiationModel::subtractCameraDirectFlux()). That
+ * carries the cosine of the facet's normal, which is replaced by that of the shading normal. A face turned away from the source received nothing. With soften, the rescaled value is multiplied by the
+ * shadow-terminator softening of Chiang et al. (see helios_nm::terminatorSoftening()), so that relief does not end in a hard edge where the facet still faces the source but the shading normal barely
+ * does. (A smoothed primitive's direct radiation is evaluated per pixel sample instead; see pixelDirectRadiation().)
+ */
+static __forceinline__ __device__ float faceDirect(float facet_value, const float3 &to_source, const float3 &face_normal, const float3 &face_shading_normal, bool soften) {
     const float mu_facet = dot(face_normal, to_source);
     const float mu_shading = fmaxf(0.f, dot(face_shading_normal, to_source));
-    if (mu_shading <= 0.f) {
+    if (mu_shading <= 0.f || mu_facet <= 0.f) {
         return 0.f;
     }
-    if (mu_facet > 0.f) {
-        const float softening = soften ? helios_nm::terminatorSoftening(toNM(face_normal), toNM(face_shading_normal), toNM(to_source)) : 1.f;
-        return facet_value * mu_shading / mu_facet * softening;
-    }
-    if (v[0] < 0) {
-        return 0.f;
-    }
-    return vertexDirectIrradiance(s, b_launch, v, w) * mu_shading;
+    const float softening = soften ? helios_nm::terminatorSoftening(toNM(face_normal), toNM(face_shading_normal), toNM(to_source)) : 1.f;
+    return facet_value * mu_shading / mu_facet * softening;
 }
 
-//! With camera flux smoothing: the outgoing radiation, first component, that the face of the primitive at position pos seen along the camera ray sends out of the direct radiation of every source,
-//! evaluated with the shading normal (see RadiationModel::subtractCameraDirectFlux(), which removes the facet's own value from what the vertices carry). viewed_normal and shading_normal are on the viewed
-//! side. The viewed face reflects what reaches it and passes on what reaches the other face; a surface layer, whose albedo table is `layer` (null for none), keeps 1 - a(mu) of it in the body. The
-//! direct radiation a facet records reached the face toward the source.
-static __forceinline__ __device__ float smoothedDirectBodyFlux(uint32_t pos, uint32_t b_launch, uint32_t b_global, const float *layer, const float3 &viewed_normal, const float3 &shading_normal, const float3 &point, const int32_t v[4],
-                                                               const float w[4], bool soften) {
+//! The outgoing radiation, first component, that the face seen of a normal-mapped primitive that is not smoothed sends out of the direct radiation of every source, evaluated with the shading normal
+/**
+ * See RadiationModel::subtractCameraDirectFlux(), which removes the facet's own value from what the camera reads. viewed_normal and shading_normal are on the viewed side. The viewed face reflects what
+ * reaches it and passes on what reaches the other face; a surface layer, whose albedo table is `layer` (null for none), keeps 1 - a(mu) of it in the body. The direct radiation a facet records reached
+ * the face toward the source.
+ */
+static __forceinline__ __device__ float shadedDirectBodyFlux(uint32_t pos, uint32_t b_launch, uint32_t b_global, const float *layer, const float3 &viewed_normal, const float3 &shading_normal, const float3 &point, bool soften) {
     const float3 back_normal = make_float3(-viewed_normal.x, -viewed_normal.y, -viewed_normal.z);
     const float3 back_shading_normal = make_float3(-shading_normal.x, -shading_normal.y, -shading_normal.z);
     float flux = 0.f;
@@ -1006,28 +1072,29 @@ static __forceinline__ __device__ float smoothedDirectBodyFlux(uint32_t pos, uin
         const float rho = params.rho_cam[material];
         const float tau = params.tau_cam ? params.tau_cam[material] : 0.f;
         if (rho > 0.f) {
-            const float reaching = faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, viewed_normal, shading_normal, s, b_launch, v, w, soften);
+            const float reaching = faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, viewed_normal, shading_normal, soften);
             flux += rho * reaching * (layer ? 1.f - surfaceLayerAlbedo(layer, fmaxf(0.f, dot(shading_normal, to_source))) : 1.f);
         }
         if (tau > 0.f) {
-            const float reaching = faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, back_normal, back_shading_normal, s, b_launch, v, w, soften);
+            const float reaching = faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, back_normal, back_shading_normal, soften);
             flux += tau * reaching * (layer ? 1.f - surfaceLayerAlbedo(layer, fmaxf(0.f, dot(back_shading_normal, to_source))) : 1.f);
         }
     }
     return flux;
 }
 
-//! With camera flux smoothing: flux, in the units of the outgoing buffers, that the surface layer of the primitive at position pos reflects toward to_viewer from the direct radiation of every source,
-//! evaluated with the interpolated shading normal rather than the facet's. viewed_normal is the facet's own unit normal on the side the camera sees, and shading_normal the interpolated one on that side.
-//! The incident flux carries the cosine of the facet, so it is rescaled to the cosine of the shading normal; it reached the face toward the source, so only a source on the viewed side counts.
-static __forceinline__ __device__ float directLayerReflectionSmoothed(uint32_t pos, uint32_t b_launch, const float *table, const float3 &viewed_normal, const float3 &shading_normal, const float3 &to_viewer, const float3 &point, int camera,
-                                                                      const int32_t v[4], const float w[4], bool soften) {
+//! Flux, in the units of the outgoing buffers, that the surface layer of a normal-mapped primitive that is not smoothed reflects toward to_viewer from the direct radiation of every source
+/**
+ * Evaluated with the shading normal rather than the facet's. viewed_normal is the facet's own unit normal on the side seen, and shading_normal the shading normal on that side. The incident flux carries
+ * the cosine of the facet, so it is rescaled to the cosine of the shading normal; it reached the face toward the source, so only a source on the viewed side counts.
+ */
+static __forceinline__ __device__ float directLayerReflectionShaded(uint32_t pos, uint32_t b_launch, const float *table, const float3 &viewed_normal, const float3 &shading_normal, const float3 &to_viewer, const float3 &point, int camera,
+                                                                    bool soften) {
     float reflected = 0.f;
     for (uint32_t s = 0; s < params.Nsources; s++) {
         const float3 to_source = directionToSource(s, point);
-        // What reached the face toward the source; a viewed face turned away from it takes the irradiance its vertices carry (see faceDirect())
         const float facet_value = dot(viewed_normal, to_source) > 0.f ? params.radiation_specular[(s * params.Nprimitives + pos) * params.Nbands_launch + b_launch] : 0.f;
-        float incident = faceDirect(facet_value, to_source, viewed_normal, shading_normal, s, b_launch, v, w, soften);
+        float incident = faceDirect(facet_value, to_source, viewed_normal, shading_normal, soften);
         if (incident <= 0.f)
             continue;
         if (camera >= 0) {
@@ -1036,6 +1103,158 @@ static __forceinline__ __device__ float directLayerReflectionSmoothed(uint32_t p
         reflected += incident * surfaceLayerLobe(table, shading_normal, to_source, to_viewer);
     }
     return float(M_PI) * reflected; // radiance to flux units
+}
+
+//! With camera flux smoothing: the direct radiation of every source at the point a camera ray hit, evaluated for this pixel sample with a shadow ray toward one point sampled on each source
+/**
+ * Whether a source reaches the point is decided here, by the point itself, rather than taken from the direct radiation its facet received, so that a cast shadow falls where the geometry puts it within a
+ * facet. What reaches a face is the source's flux times the factor of the sample (see sampleSourceDirection()) times the cosine of the face's shading normal, times the transmittance of any translucent
+ * covers on the way. The face of the shading normal toward the source receives it; a one-sided primitive's bottom face receives nothing, as in the direct launch. The shadow ray is traced with the
+ * direct ray type, so it is blocked, passes covers and wraps at periodic boundaries exactly as a direct ray does, and reaches the source if it misses everything (__miss__camera_shadow). A ray that
+ * reaches the wrap limit counts as blocked.
+ *
+ * Near the terminator a facet can face away from the source while the shading normal still faces it, and a ray from the flat facet would pass through the surface the facets stand for. Such a ray
+ * starts instead from the hit point raised onto the smooth surface the vertex normals describe: the point projected onto the tangent plane of each corner it lies below, blended with the corner weights
+ * (Hanika, "Hacking the shadow terminator", Ray Tracing Gems II, 2021). Every shadow ray also starts a few times the rounding error of the hit point (hit_distance from the camera) off the receiving face,
+ * so that it cannot strike the facet it leaves, or a coplanar neighbour, from just behind it.
+ *
+ * Accumulates, for the launch bands from band_begin on (at most HELIOS_MAX_RADIATION_BANDS of them, indexed from band_begin), into `body` what the face seen sends out of that radiation (the primitive's camera-weighted reflectivity of what reaches
+ * the face seen and transmissivity of what reaches the other face, with 1 - a(mu) of it for a surface layer), into `class_flux` the same through the camera-weighted spectra of the spectral-texture class `entry` (when it is not UINT32_MAX), and into
+ * `lobe` what a surface layer reflects into the camera, in the units of the outgoing buffers. viewed_normal is the facet's normal, base_normal the smoothed normal and shading_normal the normal the camera shades with (the smoothed one tilted by a
+ * normal map), all on the side the camera sees; v and w are the facet's smoothing vertices and their weights at the hit point.
+ */
+static __forceinline__ __device__ void pixelDirectRadiation(uint32_t hit_uuid, uint32_t pos, uint32_t prim_type, const float (&T)[16], const float3 &viewed_normal, const float3 &base_normal, const float3 &shading_normal, bool normal_mapped,
+                                                            bool face_top, const float3 &point, float hit_distance, const float3 &to_viewer, const int32_t v[4], const float w[4], uint32_t entry, uint32_t band_begin, uint32_t &seed, float *body,
+                                                            float *class_flux, float *lobe) {
+    const uint32_t Nbands_l = params.Nbands_launch;
+    const uint32_t band_end = band_begin + HELIOS_MAX_RADIATION_BANDS < Nbands_l ? band_begin + HELIOS_MAX_RADIATION_BANDS : Nbands_l;
+    for (uint32_t b = 0; b < HELIOS_MAX_RADIATION_BANDS; b++) {
+        body[b] = 0.f;
+        class_flux[b] = 0.f;
+        lobe[b] = 0.f;
+    }
+    const int8_t twosided = params.twosided_flag[pos];
+
+    for (uint32_t s = 0; s < params.Nsources; s++) {
+        float3 direction;
+        float tmax;
+        double factor;
+        if (!sampleSourceDirection(s, point, seed, direction, tmax, factor)) {
+            continue;
+        }
+
+        // The face whose shading normal faces the sampled point receives its radiation
+        const float mu_viewed = dot(shading_normal, direction);
+        if (mu_viewed == 0.f) {
+            continue;
+        }
+        const bool reaches_viewed_face = mu_viewed > 0.f;
+        const float sign = reaches_viewed_face ? 1.f : -1.f;
+        const float mu = fabsf(mu_viewed);
+        const bool receiving_top = reaches_viewed_face == face_top;
+        if (twosided == 3 || (!receiving_top && twosided != 1)) {
+            continue; // an invisible primitive, or the bottom face of a one-sided one
+        }
+        const float3 face_normal = sign * viewed_normal;
+        const float3 face_base_normal = sign * base_normal;
+        const float3 face_shading_normal = sign * shading_normal;
+
+        // Where the facet faces away from the source, start from the point raised onto the smooth surface
+        float3 origin = point;
+        if (dot(face_normal, direction) <= 0.f && (prim_type == 0 || prim_type == 1 || prim_type == 3)) {
+            for (int c = 0; c < 4; c++) {
+                if (v[c] < 0) {
+                    continue;
+                }
+                float3 corner = prim_type == 1 ? make_float3(c == 2 ? 1.f : 0.f, c == 0 ? 0.f : 1.f, 0.f) : make_float3((c == 1 || c == 2) ? 0.5f : -0.5f, (c == 2 || c == 3) ? 0.5f : -0.5f, 0.f);
+                d_transformPoint(T, corner);
+                float3 corner_normal = make_float3(params.vertex_normals[3 * v[c] + 0], params.vertex_normals[3 * v[c] + 1], params.vertex_normals[3 * v[c] + 2]);
+                if (dot(corner_normal, face_normal) < 0.f) {
+                    corner_normal = -1.f * corner_normal;
+                }
+                const float below = dot(point - corner, corner_normal);
+                if (below < 0.f) {
+                    origin = origin - (w[c] * below) * corner_normal;
+                }
+            }
+        }
+
+        // Off the receiving face by a few times the rounding error of the hit point
+        origin = origin + (1e-6f * (1.f + fmaxf(fmaxf(fabsf(point.x), fabsf(point.y)), fabsf(point.z)) + hit_distance)) * face_normal;
+
+        // The shadow ray: the direct ray type's hit programs, and a miss program that marks the source reached
+        PerRayData shadow;
+        shadow.strength = 0.0;
+        shadow.origin_UUID = hit_uuid;
+        shadow.face = receiving_top;
+        shadow.seed = seed;
+        shadow.source_ID = (unsigned char) s;
+        shadow.skip_origin = true;
+        shadow.hit_periodic_boundary = false;
+        shadow.hit_cover = false;
+        shadow.origin_cos = mu;
+        shadow.palette_entry = 0xFFFFFFFFu;
+        shadow.source_reached = false;
+        initCoverTransmittance(shadow);
+        float3 current_origin = origin;
+        for (int wrap = 0; wrap < MAX_PERIODIC_WRAPS; ++wrap) {
+            uint32_t u0, u1;
+            packPointer(&shadow, u0, u1);
+            optixTrace(params.traversable, current_origin, direction, 0.f, tmax, 0.f, OptixVisibilityMask(255), OPTIX_RAY_FLAG_NONE, 0u, 0u, 4u, // SBT: offset=0 (direct hit), stride=0, miss=4 (camera shadow)
+                       u0, u1);
+            if (!shadow.hit_periodic_boundary) {
+                break;
+            }
+            current_origin = shadow.periodic_hit;
+            if (params.source_types[s] != 0) {
+                tmax = fmaxf(tmax - shadow.periodic_hit_t, 2e-4f);
+            }
+            shadow.hit_periodic_boundary = false;
+        }
+        if (!shadow.source_reached) {
+            continue;
+        }
+
+        // A normal map softens the shading cosine where it tilts the normal past the smooth surface's terminator (see faceDirect())
+        const float softening = normal_mapped ? helios_nm::terminatorSoftening(toNM(face_base_normal), toNM(face_shading_normal), toNM(direction)) : 1.f;
+        const float irradiance_factor = float(factor) * mu * softening;
+        if (irradiance_factor <= 0.f) {
+            continue;
+        }
+
+        int b = -1;
+        for (uint32_t b_global = 0; b_global < params.Nbands_global; b_global++) {
+            if (!params.band_launch_flag[b_global]) {
+                continue;
+            }
+            b++;
+            if (uint32_t(b) < band_begin || uint32_t(b) >= band_end) {
+                continue;
+            }
+            const uint32_t slot = uint32_t(b) - band_begin;
+            const float cover_tau = (b < HELIOS_MAX_RADIATION_BANDS) ? shadow.cover_transmittance[b] : 1.f;
+            const float reaching = params.source_fluxes[s * Nbands_l + uint32_t(b)] * irradiance_factor * cover_tau;
+            if (reaching <= 0.f) {
+                continue;
+            }
+            const size_t material = ((size_t(s) * params.Nprimitives + pos) * params.Nbands_global + b_global) * params.Ncameras + params.camera_ID;
+            const float *layer = surfaceLayerTable(pos, b_global);
+            const float body_fraction = layer ? 1.f - surfaceLayerAlbedo(layer, mu) : 1.f;
+            if (reaches_viewed_face) {
+                body[slot] += params.rho_cam[material] * reaching * body_fraction;
+            } else if (params.tau_cam) {
+                body[slot] += params.tau_cam[material] * reaching * body_fraction;
+            }
+            if (entry != 0xFFFFFFFFu) {
+                const size_t ind_cam = ((size_t(s) * params.Npalette_entries + entry) * params.Nbands_global + b_global) * params.Ncameras + params.camera_ID;
+                class_flux[slot] += (reaches_viewed_face ? params.palette_rho_cam[ind_cam] : params.palette_tau_cam[ind_cam]) * reaching;
+            }
+            if (layer && reaches_viewed_face && params.specular_reflection_enabled != 0u) {
+                const float camera_weight = params.source_fluxes_cam[(s * Nbands_l + uint32_t(b)) * params.Ncameras + params.camera_ID];
+                lobe[slot] += float(M_PI) * reaching * camera_weight * surfaceLayerLobe(layer, shading_normal, direction, to_viewer);
+            }
+        }
+    }
 }
 
 //! Global index of the launched band with launch index b_launch
@@ -1388,6 +1607,11 @@ extern "C" __global__ void __miss__camera() {
     }
 }
 
+//! A camera's shadow ray toward a source missed everything: the source reaches the point it was traced from (see pixelDirectRadiation())
+extern "C" __global__ void __miss__camera_shadow() {
+    getPayloadPRD()->source_reached = true;
+}
+
 extern "C" __global__ void __miss__pixel_label() {
     PerRayData *prd = getPayloadPRD();
     if (params.camera_pixel_depth) {
@@ -1632,9 +1856,7 @@ extern "C" __global__ void __closesthit__diffuse() {
             if (hit_shaded) {
                 // The lobe around the shading normal, with the incident flux carried from the facet's cosine to the shading normal's
                 const float3 viewed_shading = dot(hit_normal_top, face_normal) > 0.f ? hit_shading_top : make_float3(-hit_shading_top.x, -hit_shading_top.y, -hit_shading_top.z);
-                const int32_t no_vertices[4] = {-1, -1, -1, -1};
-                const float no_weights[4] = {0.f, 0.f, 0.f, 0.f};
-                outgoing += directLayerReflectionSmoothed(hit_position, (uint32_t) b, hit_layer, face_normal, viewed_shading, to_viewer, point, -1, no_vertices, no_weights, true);
+                outgoing += directLayerReflectionShaded(hit_position, (uint32_t) b, hit_layer, face_normal, viewed_shading, to_viewer, point, -1, true);
             } else {
                 outgoing += directLayerReflection(hit_position, (uint32_t) b, hit_layer, face_normal, to_viewer, point, -1);
             }
@@ -1869,7 +2091,25 @@ extern "C" __global__ void __closesthit__camera() {
         }
     }
 
+    // With smoothing, the sources' direct radiation is evaluated for this pixel sample, with a shadow ray toward each source, so that a cast shadow falls where the geometry puts it within the facet (see
+    // pixelDirectRadiation()). A translucent cover's own direct radiation stays in the outgoing radiation its vertices carry.
+    // It is evaluated for up to HELIOS_MAX_RADIATION_BANDS bands at a time; every group of bands draws the same points on the sources, so all bands see the same shadows.
+    const bool per_pixel_direct = params.camera_direct_per_pixel != 0u && shade_direct_per_hit && smooth_shading && params.Nsources > 0 && !coverInAllLaunchedBands(hit_position);
+    float pixel_body[HELIOS_MAX_RADIATION_BANDS];
+    float pixel_class[HELIOS_MAX_RADIATION_BANDS];
+    float pixel_lobe[HELIOS_MAX_RADIATION_BANDS];
+    uint32_t pixel_band_begin = 0;
+    const uint32_t seed_at_hit = prd->seed;
+
     for (uint32_t b = 0; b < Nbands_l; b++) {
+        if (per_pixel_direct && b % HELIOS_MAX_RADIATION_BANDS == 0) {
+            const float3 to_viewer = make_float3(-ray_direction.x, -ray_direction.y, -ray_direction.z);
+            uint32_t band_group_seed = seed_at_hit;
+            pixelDirectRadiation(hit_uuid, hit_position, params.primitive_type[hit_position], T, normal, base_viewed, shading_normal, normal_mapped, face_top, hit_point, t_hit, to_viewer, smooth_corners, smooth_weights, hit_entry, b, band_group_seed,
+                                 pixel_body, pixel_class, pixel_lobe);
+            prd->seed = band_group_seed;
+            pixel_band_begin = b;
+        }
         // Radiance from hit surface (outgoing flux / pi = radiance)
         const uint32_t ind_hit = hit_position * Nbands_l + b;
         float outgoing_flux;
@@ -1883,9 +2123,12 @@ extern "C" __global__ void __closesthit__camera() {
             outgoing_flux = face_top ? params.radiation_out_top[ind_hit] : params.radiation_out_bottom[ind_hit];
         }
         const bool class_applies = hit_class_slot != 0xFFFFFFFFu && params.palette_band_active[globalBandIndex(b)] != 0u;
-        // With smoothing, the vertices carry the radiation other than the sources' direct radiation, which is evaluated here per facet with the shading normal
-        if (shade_direct_per_hit && params.radiation_specular != nullptr && !class_applies) {
-            outgoing_flux += smoothedDirectBodyFlux(hit_position, b, globalBandIndex(b), surfaceLayerTable(hit_position, globalBandIndex(b)), normal, shading_normal, hit_point, smooth_corners, smooth_weights, normal_mapped);
+        // With smoothing, the vertices carry the radiation other than the sources' direct radiation, which is evaluated here for this pixel sample. A normal-mapped primitive that is not smoothed
+        // carries its facet's direct radiation over to the shading normal.
+        if (per_pixel_direct && !class_applies) {
+            outgoing_flux += pixel_body[b - pixel_band_begin];
+        } else if (shade_direct_per_hit && !smooth_shading && params.radiation_specular != nullptr && !class_applies) {
+            outgoing_flux += shadedDirectBodyFlux(hit_position, b, globalBandIndex(b), surfaceLayerTable(hit_position, globalBandIndex(b)), normal, shading_normal, hit_point, normal_mapped);
         }
         // The class's own outgoing radiation: flat over the facet, or with camera flux smoothing, the class's camera-weighted reflectivity and
         // transmissivity applied to the radiation reaching the two faces, and the emitted radiation, interpolated from the facet's vertices
@@ -1905,25 +2148,12 @@ extern "C" __global__ void __closesthit__camera() {
                 const uint32_t b_global = globalBandIndex(b);
                 const uint32_t camera = params.vertex_spectral_camera;
                 // The vertices carry the radiation from the sky and other surfaces (layer 0, the last source slot) and the emitted radiation (layer 1). The direct radiation of the sources (slots below
-                // Nsources) is taken from the facet itself and carried over to the shading normal, like that of an untextured facet; a primitive with a spectral texture has no surface layer, so what
-                // its face toward a source received is the direct flux the facet records.
+                // Nsources) is evaluated for this pixel sample, through the class's spectra (see pixelDirectRadiation()).
                 outgoing_flux = vertexValue(same_face, 1); // emitted
-                const float3 back_normal = make_float3(-normal.x, -normal.y, -normal.z);
-                const float3 back_shading_normal = make_float3(-shading_normal.x, -shading_normal.y, -shading_normal.z);
-                for (uint32_t slot = 0; slot <= params.Nsources; slot++) {
-                    const size_t ind_cam = ((size_t(slot) * params.Npalette_entries + hit_entry) * params.Nbands_global + b_global) * params.Ncameras + camera;
-                    float same_value, other_value;
-                    if (slot < params.Nsources) {
-                        const float3 to_source = directionToSource(slot, hit_point);
-                        const float incident = params.radiation_specular[(slot * Nprims + hit_position) * Nbands_l + b];
-                        const bool viewed_face_toward_source = dot(normal, to_source) > 0.f;
-                        same_value = faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, normal, shading_normal, slot, b, smooth_corners, smooth_weights, normal_mapped);
-                        other_value = faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, back_normal, back_shading_normal, slot, b, smooth_corners, smooth_weights, normal_mapped);
-                    } else {
-                        same_value = vertexValue(same_face, 0);
-                        other_value = vertexValue(1u - same_face, 0);
-                    }
-                    outgoing_flux += params.palette_rho_cam[ind_cam] * same_value + params.palette_tau_cam[ind_cam] * other_value;
+                const size_t ind_cam = ((size_t(params.Nsources) * params.Npalette_entries + hit_entry) * params.Nbands_global + b_global) * params.Ncameras + camera;
+                outgoing_flux += params.palette_rho_cam[ind_cam] * vertexValue(same_face, 0) + params.palette_tau_cam[ind_cam] * vertexValue(1u - same_face, 0);
+                if (per_pixel_direct) {
+                    outgoing_flux += pixel_class[b - pixel_band_begin];
                 }
             } else {
                 outgoing_flux = params.class_flux[((face_top ? 0u : params.class_flux_slots) + hit_class_slot) * Nbands_l + b];
@@ -1937,8 +2167,8 @@ extern "C" __global__ void __closesthit__camera() {
                         const float3 to_source = directionToSource(slot, hit_point);
                         const float incident = params.radiation_specular[(slot * Nprims + hit_position) * Nbands_l + b];
                         const bool viewed_face_toward_source = dot(normal, to_source) > 0.f;
-                        const float same_value = faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, normal, shading_normal, slot, b, smooth_corners, smooth_weights, true);
-                        const float other_value = faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, back_normal, back_shading_normal, slot, b, smooth_corners, smooth_weights, true);
+                        const float same_value = faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, normal, shading_normal, true);
+                        const float other_value = faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, back_normal, back_shading_normal, true);
                         outgoing_flux += params.palette_rho_cam[ind_cam] * same_value + params.palette_tau_cam[ind_cam] * other_value;
                     }
                 }
@@ -2078,8 +2308,10 @@ extern "C" __global__ void __closesthit__camera() {
             if (const float *layer = surfaceLayerTable(hit_position, globalBandIndex(b))) {
                 const float3 point = make_float3(ray_origin.x + t_hit * ray_direction.x, ray_origin.y + t_hit * ray_direction.y, ray_origin.z + t_hit * ray_direction.z);
                 const float3 to_viewer = make_float3(-ray_direction.x, -ray_direction.y, -ray_direction.z);
-                if (use_shading_normal) {
-                    strength_spec = directLayerReflectionSmoothed(hit_position, b, layer, normal, shading_normal, to_viewer, point, int(params.camera_ID), smooth_corners, smooth_weights, normal_mapped) * (float) prd->strength;
+                if (per_pixel_direct) {
+                    strength_spec = pixel_lobe[b - pixel_band_begin] * (float) prd->strength;
+                } else if (use_shading_normal) {
+                    strength_spec = directLayerReflectionShaded(hit_position, b, layer, normal, shading_normal, to_viewer, point, int(params.camera_ID), normal_mapped) * (float) prd->strength;
                 } else {
                     strength_spec = directLayerReflection(hit_position, b, layer, normal, to_viewer, point, int(params.camera_ID)) * (float) prd->strength;
                 }
@@ -2266,92 +2498,11 @@ extern "C" __global__ void __raygen__direct() {
 
                 float3 ray_direction;
                 float  ray_tmax;
-                double strength;
-
-                if (src_type == 0) { // Collimated source
-                    ray_direction = normalize(params.source_positions[rr]);
-                    ray_tmax      = 1e38f;
-                    strength = (1.0 / double(dim_x * dim_y)) * (double)fabsf(dot(normal, ray_direction));
-
-                } else if (src_type == 1 || src_type == 2) { // Sphere source (type 1 = point, type 2 = sphere)
-                    float theta_s = acos_safe(1.f - 2.f * rnd(seed));
-                    float phi_s   = rnd(seed) * 2.f * M_PI;
-                    float3 sphere_pt = make_float3(0.5f * params.source_widths[rr].x * sinf(theta_s) * cosf(phi_s),
-                                                   0.5f * params.source_widths[rr].x * sinf(theta_s) * sinf(phi_s),
-                                                   0.5f * params.source_widths[rr].x * cosf(theta_s));
-                    ray_direction = sphere_pt + params.source_positions[rr] - ray_origin;
-                    ray_tmax      = d_magnitude(ray_direction);
-                    ray_direction = normalize(ray_direction);
-
-                    // Integrate over sphere surface for strength
-                    strength = 0.0;
-                    const uint32_t N = 10;
-                    for (uint32_t j = 0; j < N; j++) {
-                        for (uint32_t i = 0; i < N; i++) {
-                            float theta = acos_safe(1.f - 2.f * (float(i) + 0.5f) / float(N));
-                            float phi   = (float(j) + 0.5f) * 2.f * M_PI / float(N);
-                            float3 ldir = make_float3(sinf(theta)*cosf(phi), sinf(theta)*sinf(phi), cosf(theta));
-                            if (dot(ldir, ray_direction) < 0.f) {
-                                strength += (1.0 / double(dim_x * dim_y)) * (double)fabsf(dot(normal, ray_direction))
-                                          * (double)fabsf(dot(ldir, ray_direction))
-                                          / ((double)ray_tmax * (double)ray_tmax)
-                                          / double(N * N)
-                                          * (double)params.source_widths[rr].x * (double)params.source_widths[rr].x;
-                            }
-                        }
-                    }
-
-                } else if (src_type == 3) { // Rectangle source
-                    float light_transform[16];
-                    float3 rot3 = params.source_rotations[rr];
-                    d_makeTransformMatrix(rot3, light_transform);
-
-                    float3 square_pt;
-                    d_sampleSquare(seed, square_pt);
-                    square_pt = make_float3(params.source_widths[rr].x * square_pt.x, params.source_widths[rr].y * square_pt.y, square_pt.z);
-                    d_transformPoint(light_transform, square_pt);
-
-                    float3 light_dir = make_float3(0.f, 0.f, 1.f);
-                    d_transformPoint(light_transform, light_dir);
-
-                    ray_direction = square_pt + params.source_positions[rr] - ray_origin;
-                    if (dot(ray_direction, light_dir) > 0.f) continue; // don't emit from back of source
-
-                    ray_tmax      = d_magnitude(ray_direction);
-                    ray_direction = normalize(ray_direction);
-                    strength = (1.0 / double(dim_x * dim_y))
-                             * (double)fabsf(dot(normal, ray_direction))
-                             * (double)fabsf(dot(light_dir, ray_direction))
-                             / ((double)ray_tmax * (double)ray_tmax)
-                             * (double)params.source_widths[rr].x * (double)params.source_widths[rr].y
-                             / M_PI;
-
-                } else if (src_type == 4) { // Disk source
-                    float light_transform[16];
-                    float3 rot3 = params.source_rotations[rr];
-                    d_makeTransformMatrix(rot3, light_transform);
-
-                    float3 disk_pt;
-                    d_sampleDisk(seed, disk_pt);
-                    d_transformPoint(light_transform, disk_pt);
-
-                    float3 light_dir = make_float3(0.f, 0.f, 1.f);
-                    d_transformPoint(light_transform, light_dir);
-
-                    ray_direction = params.source_widths[rr].x * disk_pt + params.source_positions[rr] - ray_origin;
-                    if (dot(ray_direction, light_dir) > 0.f) continue; // don't emit from back of source
-
-                    ray_tmax      = d_magnitude(ray_direction);
-                    ray_direction = normalize(ray_direction);
-                    strength = (1.0 / double(dim_x * dim_y))
-                             * (double)fabsf(dot(normal, ray_direction))
-                             * (double)fabsf(dot(light_dir, ray_direction))
-                             / ((double)ray_tmax * (double)ray_tmax)
-                             * (double)params.source_widths[rr].x * (double)params.source_widths[rr].x;
-
-                } else {
-                    continue; // Unknown source type
+                double source_factor;
+                if (!sampleSourceDirection(rr, ray_origin, seed, ray_direction, ray_tmax, source_factor)) {
+                    continue; // the back of a rectangle or disk source, or an unknown source type
                 }
+                const double strength = (1.0 / double(dim_x * dim_y)) * (double) fabsf(dot(normal, ray_direction)) * source_factor;
 
                 PerRayData prd;
                 prd.seed                 = seed;

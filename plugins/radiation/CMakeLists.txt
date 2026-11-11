@@ -639,6 +639,7 @@ set(SHADER_COMMON_INCLUDES
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/surface_layer.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/spectral_texture.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/normal_map.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/source_sampling.glsl
 )
 
 # Shader source files

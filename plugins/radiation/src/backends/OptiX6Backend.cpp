@@ -73,8 +73,8 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtContextSetPrintEnabled(OptiX_Context, 1));
 
     /* Set ray type and entry point counts */
-    RT_CHECK_ERROR(rtContextSetRayTypeCount(OptiX_Context, 4));
-    // ray types: 0=direct, 1=diffuse, 2=camera, 3=pixel_label
+    RT_CHECK_ERROR(rtContextSetRayTypeCount(OptiX_Context, 5));
+    // ray types: 0=direct, 1=diffuse, 2=camera, 3=pixel_label, 4=camera shadow (traced from the camera's closest-hit toward each source)
 
     RT_CHECK_ERROR(rtContextSetEntryPointCount(OptiX_Context, 4));
     // entry points: 0=direct_raygen, 1=diffuse_raygen, 2=camera_raygen, 3=pixel_label_raygen
@@ -88,6 +88,8 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtVariableSet1ui(camera_ray_type_RTvariable, RAYTYPE_CAMERA));
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "pixel_label_ray_type", &pixel_label_ray_type_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1ui(pixel_label_ray_type_RTvariable, RAYTYPE_PIXEL_LABEL));
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "camera_shadow_ray_type", &camera_shadow_ray_type_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet1ui(camera_shadow_ray_type_RTvariable, RAYTYPE_CAMERA_SHADOW));
 
     /* Load ray generation programs from PTX */
     std::string ptx_path = helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string();
@@ -110,6 +112,7 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "miss_diffuse", &miss_diffuse));
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "miss_camera", &miss_camera));
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "miss_pixel_label", &miss_pixel_label));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "miss_camera_shadow", &miss_camera_shadow));
     // Translucent cover (glass/plastic) any-hit programs: let direct/diffuse rays pass through covers.
     RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, hit_ptx_path.c_str(), "any_hit_direct", &any_hit_direct));
 
@@ -118,6 +121,7 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_DIFFUSE, miss_diffuse));
     RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_CAMERA, miss_camera));
     RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_PIXEL_LABEL, miss_pixel_label)); // sky pixels get depth -1
+    RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_CAMERA_SHADOW, miss_camera_shadow)); // the source is reached
 
     /* Load intersection programs from PTX */
     std::string intersect_ptx_path = helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string();
@@ -178,6 +182,8 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(patch_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
     // Translucent-cover pass-through (glass/plastic) for direct/diffuse rays only.
     RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(patch_material, RAYTYPE_DIRECT, any_hit_direct));
+    RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(patch_material, RAYTYPE_CAMERA_SHADOW, closest_hit_direct)); // a camera's shadow ray is blocked, passes covers and wraps as a direct ray
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(patch_material, RAYTYPE_CAMERA_SHADOW, any_hit_direct));
 
     // Triangle material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &triangle_material));
@@ -186,6 +192,8 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(triangle_material, RAYTYPE_CAMERA, closest_hit_camera));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(triangle_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
     RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(triangle_material, RAYTYPE_DIRECT, any_hit_direct));
+    RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(triangle_material, RAYTYPE_CAMERA_SHADOW, closest_hit_direct)); // a camera's shadow ray is blocked, passes covers and wraps as a direct ray
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(triangle_material, RAYTYPE_CAMERA_SHADOW, any_hit_direct));
 
     // Disk material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &disk_material));
@@ -194,6 +202,8 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(disk_material, RAYTYPE_CAMERA, closest_hit_camera));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(disk_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
     RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(disk_material, RAYTYPE_DIRECT, any_hit_direct));
+    RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(disk_material, RAYTYPE_CAMERA_SHADOW, closest_hit_direct)); // a camera's shadow ray is blocked, passes covers and wraps as a direct ray
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(disk_material, RAYTYPE_CAMERA_SHADOW, any_hit_direct));
 
     // Tile material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &tile_material));
@@ -202,10 +212,13 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(tile_material, RAYTYPE_CAMERA, closest_hit_camera));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(tile_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
     RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(tile_material, RAYTYPE_DIRECT, any_hit_direct));
+    RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(tile_material, RAYTYPE_CAMERA_SHADOW, closest_hit_direct)); // a camera's shadow ray is blocked, passes covers and wraps as a direct ray
+    RT_CHECK_ERROR(rtMaterialSetAnyHitProgram(tile_material, RAYTYPE_CAMERA_SHADOW, any_hit_direct));
 
     // Bbox material
     RT_CHECK_ERROR(rtMaterialCreate(OptiX_Context, &bbox_material));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(bbox_material, RAYTYPE_DIRECT, closest_hit_direct));
+    RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(bbox_material, RAYTYPE_CAMERA_SHADOW, closest_hit_direct));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(bbox_material, RAYTYPE_DIFFUSE, closest_hit_diffuse));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(bbox_material, RAYTYPE_CAMERA, closest_hit_camera));
     RT_CHECK_ERROR(rtMaterialSetClosestHitProgram(bbox_material, RAYTYPE_PIXEL_LABEL, closest_hit_pixel_label));
@@ -365,7 +378,6 @@ void OptiX6Backend::initialize() {
     addBuffer("vertex_radiation_out_top", vertex_radiation_out_top_RTbuffer, vertex_radiation_out_top_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("vertex_radiation_out_bottom", vertex_radiation_out_bottom_RTbuffer, vertex_radiation_out_bottom_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("vertex_normals", vertex_normals_RTbuffer, vertex_normals_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
-    addBuffer("vertex_direct_irradiance", vertex_direct_irradiance_RTbuffer, vertex_direct_irradiance_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     addBuffer("vertex_normal_map_moments", vertex_normal_map_moments_RTbuffer, vertex_normal_map_moments_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
     zeroBuffer1D(vertex_normal_map_moments_RTbuffer, 1);
     addBuffer("radiation_in_camera", radiation_in_camera_RTbuffer, radiation_in_camera_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
@@ -447,6 +459,8 @@ void OptiX6Backend::initialize() {
     RT_CHECK_ERROR(rtVariableSet1ui(specular_reflection_enabled_RTvariable, 0));
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "normal_map_direct", &normal_map_direct_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1ui(normal_map_direct_RTvariable, 0));
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "camera_direct_per_pixel", &camera_direct_per_pixel_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet1ui(camera_direct_per_pixel_RTvariable, 0));
 
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "below_horizon_diffuse_enabled", &below_horizon_diffuse_enabled_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1ui(below_horizon_diffuse_enabled_RTvariable, 0));
@@ -1016,17 +1030,6 @@ void OptiX6Backend::uploadVertexRadiationOut(const std::vector<float> &vertex_ra
 
     initializeBuffer1Df(vertex_radiation_out_top_RTbuffer, vertex_radiation_out_top);
     initializeBuffer1Df(vertex_radiation_out_bottom_RTbuffer, vertex_radiation_out_bottom);
-}
-
-void OptiX6Backend::uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) {
-    if (!is_initialized) {
-        helios_runtime_error("ERROR (OptiX6Backend::uploadVertexDirectIrradiance): Backend not initialized.");
-    }
-    if (vertex_irradiance.empty()) {
-        zeroBuffer1D(vertex_direct_irradiance_RTbuffer, 1); // a single element reads as none
-        return;
-    }
-    initializeBuffer1Df(vertex_direct_irradiance_RTbuffer, vertex_irradiance);
 }
 
 void OptiX6Backend::getNormalMapMoments(std::vector<float> &moments) {
@@ -1743,7 +1746,6 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry &geometry) {
     }
     // Vertex normals describe the topology of the geometry they were built from, so a new geometry releases them; RadiationModel uploads them again when a camera needs them. A single element reads as none.
     zeroBuffer1D(vertex_normals_RTbuffer, 1);
-    zeroBuffer1D(vertex_direct_irradiance_RTbuffer, 1);
     zeroBuffer1D(vertex_normal_map_moments_RTbuffer, 1);
 
     // Solid fractions: append bbox fractions for OptiX
@@ -2103,6 +2105,7 @@ void OptiX6Backend::launchParamsToVariables(const RayTracingLaunchParams &params
 
     RT_CHECK_ERROR(rtVariableSet1ui(below_horizon_diffuse_enabled_RTvariable, params.below_horizon_diffuse_enabled ? 1 : 0));
     RT_CHECK_ERROR(rtVariableSet1ui(normal_map_direct_RTvariable, params.normal_map_direct));
+    RT_CHECK_ERROR(rtVariableSet1ui(camera_direct_per_pixel_RTvariable, params.camera_direct_per_pixel));
 }
 
 void OptiX6Backend::buffersToResults(RayTracingResults &results) {

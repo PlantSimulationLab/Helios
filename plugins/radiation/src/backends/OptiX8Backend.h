@@ -142,7 +142,6 @@ namespace helios {
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top,
                                       const std::vector<float> &vertex_radiation_out_bottom) override;
         void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
-        void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
         void getNormalMapMoments(std::vector<float> &moments) override;
         void uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) override;
         void zeroCameraScatterBuffers(size_t launch_band_count) override;
@@ -170,6 +169,7 @@ namespace helios {
         OptixProgramGroup pg_miss_diffuse        = nullptr;
         OptixProgramGroup pg_miss_camera         = nullptr;
         OptixProgramGroup pg_miss_pixel_label    = nullptr;
+        OptixProgramGroup pg_miss_camera_shadow  = nullptr;
 
         OptixProgramGroup pg_hit_direct          = nullptr;
         OptixProgramGroup pg_hit_diffuse         = nullptr;
@@ -248,7 +248,6 @@ namespace helios {
         CUdeviceptr d_vertex_radiation_out_top = 0;
         CUdeviceptr d_vertex_radiation_out_bottom = 0;
         CUdeviceptr d_vertex_normals = 0; //!< Shading normal per smoothing vertex; allocated only while smoothing is enabled and there is a source or a surface layer
-        CUdeviceptr d_vertex_direct_irradiance = 0; //!< Unoccluded direct irradiance per [source][smoothing vertex][band]; allocated only while smoothing is enabled and there is a source
         CUdeviceptr d_scatter_buff_top       = 0;
         CUdeviceptr d_scatter_buff_bottom    = 0;
         CUdeviceptr d_forward_scatter        = 0; //!< Forward scattering estimate [prim][launch band] (see getForwardScatterResults())

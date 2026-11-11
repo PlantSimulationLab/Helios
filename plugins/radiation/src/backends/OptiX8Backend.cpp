@@ -166,6 +166,7 @@ void OptiX8Backend::initialize() {
     createMiss("__miss__diffuse",      pg_miss_diffuse);
     createMiss("__miss__camera",       pg_miss_camera);
     createMiss("__miss__pixel_label",  pg_miss_pixel_label);
+    createMiss("__miss__camera_shadow", pg_miss_camera_shadow); // a camera's shadow ray toward a source, traced with the direct hit group
 
     // Hit groups: one per ray type (4 total). All geometry uses __intersection__patch,
     // which dispatches internally on primitive type. With a single GAS and numSbtRecords=1,
@@ -195,12 +196,12 @@ void OptiX8Backend::initialize() {
     // ---- Create pipeline ----
     OptixProgramGroup all_groups[] = {
         pg_raygen_direct, pg_raygen_diffuse, pg_raygen_camera, pg_raygen_pixel_label,
-        pg_miss_direct,   pg_miss_diffuse,   pg_miss_camera,   pg_miss_pixel_label,
+        pg_miss_direct,   pg_miss_diffuse,   pg_miss_camera,   pg_miss_pixel_label, pg_miss_camera_shadow,
         pg_hit_direct,    pg_hit_diffuse,    pg_hit_camera,    pg_hit_pixel_label
     };
 
     OptixPipelineLinkOptions link_options = {};
-    link_options.maxTraceDepth = 1;
+    link_options.maxTraceDepth = 2; // the camera's closest-hit traces shadow rays toward the sources
 
     log_size = sizeof(log);
     OPTIX_CHECK(optixPipelineCreate(
@@ -217,7 +218,7 @@ void OptiX8Backend::initialize() {
     for (auto &pg : all_groups) {
         OPTIX_CHECK(optixUtilAccumulateStackSizes(pg, &stack_sizes, optix_pipeline));
     }
-    uint32_t max_trace_depth = 1;
+    uint32_t max_trace_depth = 2;
     uint32_t direct_callable_stack_size_from_traversal = 0;
     uint32_t direct_callable_stack_size_from_state     = 0;
     uint32_t continuation_stack_size                   = 0;
@@ -269,7 +270,6 @@ void OptiX8Backend::shutdown() {
     freePtr(d_vertex_radiation_out_top);
     freePtr(d_vertex_radiation_out_bottom);
     freePtr(d_vertex_normals);
-    freePtr(d_vertex_direct_irradiance);
     freePtr(d_vertex_normal_map_moments);
     freePtr(d_scatter_buff_top);
     freePtr(d_scatter_buff_bottom);
@@ -322,6 +322,7 @@ void OptiX8Backend::shutdown() {
     destroyPG(pg_raygen_camera); destroyPG(pg_raygen_pixel_label);
     destroyPG(pg_miss_direct);   destroyPG(pg_miss_diffuse);
     destroyPG(pg_miss_camera);   destroyPG(pg_miss_pixel_label);
+    destroyPG(pg_miss_camera_shadow);
     destroyPG(pg_hit_direct);    destroyPG(pg_hit_diffuse);
     destroyPG(pg_hit_camera);    destroyPG(pg_hit_pixel_label);
 
@@ -528,8 +529,6 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     freeCUdeviceptr(d_vertex_normals);
     h_params.vertex_normals = nullptr;
     h_params.vertex_normal_count = 0;
-    freeCUdeviceptr(d_vertex_direct_irradiance);
-    h_params.vertex_direct_irradiance = nullptr;
     freeCUdeviceptr(d_vertex_normal_map_moments);
     h_params.vertex_normal_map_moments = nullptr;
     h_params.patch_vertices           = reinterpret_cast<float3 *>(d_patch_vertices);
@@ -1520,18 +1519,6 @@ void OptiX8Backend::uploadVertexRadiationOut(const std::vector<float> &vertex_ra
     h_params.vertex_radiation_out_bottom = reinterpret_cast<float *>(d_vertex_radiation_out_bottom);
 }
 
-void OptiX8Backend::uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) {
-    if (vertex_irradiance.empty()) {
-        freeCUdeviceptr(d_vertex_direct_irradiance);
-        h_params.vertex_direct_irradiance = nullptr;
-        return;
-    }
-    const size_t bytes = vertex_irradiance.size() * sizeof(float);
-    reallocDevice(d_vertex_direct_irradiance, bytes);
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_vertex_direct_irradiance), vertex_irradiance.data(), bytes, cudaMemcpyHostToDevice));
-    h_params.vertex_direct_irradiance = reinterpret_cast<float *>(d_vertex_direct_irradiance);
-}
-
 void OptiX8Backend::uploadVertexNormals(const std::vector<float> &vertex_normals) {
     if (vertex_normals.size() % 3 != 0) {
         helios_runtime_error("ERROR (OptiX8Backend::uploadVertexNormals): The vertex normals hold " + std::to_string(vertex_normals.size()) + " values, which is not three per vertex.");
@@ -1704,8 +1691,6 @@ void OptiX8Backend::freeGeometryBuffers() {
     freeCUdeviceptr(d_vertex_normals);
     h_params.vertex_normals = nullptr;
     h_params.vertex_normal_count = 0;
-    freeCUdeviceptr(d_vertex_direct_irradiance);
-    h_params.vertex_direct_irradiance = nullptr;
     freeCUdeviceptr(d_vertex_normal_map_moments);
     h_params.vertex_normal_map_moments = nullptr;
     freeCUdeviceptr(d_patch_vertices);
@@ -1952,12 +1937,13 @@ void OptiX8Backend::buildSBT() {
     struct alignas(OPTIX_SBT_RECORD_ALIGNMENT) MissRecord {
         char header[OPTIX_SBT_RECORD_HEADER_SIZE];
     };
-    constexpr int N_ms = 4;
+    constexpr int N_ms = 5;
     std::vector<MissRecord> ms_recs(N_ms);
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_direct,      &ms_recs[0]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_diffuse,     &ms_recs[1]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_camera,      &ms_recs[2]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_pixel_label, &ms_recs[3]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_camera_shadow, &ms_recs[4]));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_miss_records), N_ms * sizeof(MissRecord)));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_miss_records), ms_recs.data(),
                           N_ms * sizeof(MissRecord), cudaMemcpyHostToDevice));
@@ -2008,6 +1994,7 @@ void OptiX8Backend::applyLaunchParams(const RayTracingLaunchParams &params) {
     h_params.scattering_iteration   = params.scattering_iteration;
     h_params.specular_reflection_enabled = params.specular_reflection_enabled;
     h_params.normal_map_direct = params.normal_map_direct;
+    h_params.camera_direct_per_pixel = params.camera_direct_per_pixel;
     h_params.below_horizon_diffuse_enabled = params.below_horizon_diffuse_enabled;
     h_params.camera_ID              = params.camera_id;
     h_params.camera_position        = make_float3(params.camera_position.x, params.camera_position.y, params.camera_position.z);

@@ -314,6 +314,9 @@ namespace helios {
         uint below_horizon_diffuse_enabled = 0; //!< 1 = diffuse sky radiation also reaches rays that leave the domain below the horizon (diffuse and camera rays)
         //! Camera launches: 1 if the outgoing radiation uploaded for normal-mapped primitives leaves out what the direct launch deposited, which the camera then shades per hit point with the shading normal
         uint normal_map_direct = 0;
+        //! Camera launches: 1 if the camera evaluates the sources' direct radiation on smoothed primitives per pixel sample, which the host left out of what their vertices carry (camera flux smoothing, a
+        //! radiation source, and a direct launch that deposited the direct radiation the host removed)
+        uint camera_direct_per_pixel = 0;
     };
 
     /**

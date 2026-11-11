@@ -176,7 +176,6 @@ namespace helios {
         destroyBuffer(vertex_radiation_out_top_buffer);
         destroyBuffer(vertex_radiation_out_bottom_buffer);
         destroyBuffer(vertex_normals_buffer);
-        destroyBuffer(vertex_direct_irradiance_buffer);
         destroyBuffer(vertex_normal_map_moment_buffer);
         destroyBuffer(scatter_top_buffer);
         destroyBuffer(scatter_bottom_buffer);
@@ -344,9 +343,8 @@ namespace helios {
             descriptors_dirty = true;
         }
 
-        // Vertex normals and the vertex direct irradiance describe the topology of the geometry they were built from, so a new geometry releases them; RadiationModel uploads them again when a camera needs them.
+        // Vertex normals describe the topology of the geometry they were built from, so a new geometry releases them; RadiationModel uploads them again when a camera needs them.
         bindVertexNormalsPlaceholder();
-        bindVertexDirectIrradiancePlaceholder();
         bindVertexNormalMapMomentsPlaceholder();
 
         // Upload twosided flags
@@ -1737,7 +1735,7 @@ namespace helios {
         if (params.camera_id >= camera_count) {
             helios_runtime_error("ERROR (VulkanComputeBackend::launchCameraRays): Camera " + std::to_string(params.camera_id) + " was launched, but the backend was given " + std::to_string(camera_count) + " camera(s).");
         }
-        const uint32_t camera_info[3] = {params.camera_id, uint32_t(camera_count), params.normal_map_direct};
+        const uint32_t camera_info[4] = {params.camera_id, uint32_t(camera_count), params.normal_map_direct, params.camera_direct_per_pixel};
         uploadBufferData(camera_info_buffer, camera_info, sizeof(camera_info));
 
         // Build band mapping (same logic as direct/diffuse)
@@ -2791,35 +2789,6 @@ namespace helios {
         uploadBufferData(vertex_normal_map_moment_buffer, vertex_moments.data(), bytes);
     }
 
-    void VulkanComputeBackend::bindVertexDirectIrradiancePlaceholder() {
-        if (vertex_direct_irradiance_buffer.buffer != VK_NULL_HANDLE && vertex_direct_irradiance_buffer.size == sizeof(float)) {
-            return; // already the placeholder
-        }
-        if (vertex_direct_irradiance_buffer.buffer != VK_NULL_HANDLE) {
-            destroyBuffer(vertex_direct_irradiance_buffer);
-        }
-        const float none = 0.f;
-        vertex_direct_irradiance_buffer = createBuffer(sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
-        uploadBufferData(vertex_direct_irradiance_buffer, &none, sizeof(float));
-        descriptors_dirty = true;
-    }
-
-    void VulkanComputeBackend::uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) {
-        if (vertex_irradiance.empty()) {
-            bindVertexDirectIrradiancePlaceholder();
-            return;
-        }
-        const size_t bytes = vertex_irradiance.size() * sizeof(float);
-        if (vertex_direct_irradiance_buffer.buffer == VK_NULL_HANDLE || vertex_direct_irradiance_buffer.size != bytes) {
-            if (vertex_direct_irradiance_buffer.buffer != VK_NULL_HANDLE) {
-                destroyBuffer(vertex_direct_irradiance_buffer);
-            }
-            vertex_direct_irradiance_buffer = createBuffer(bytes, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
-            descriptors_dirty = true;
-        }
-        uploadBufferData(vertex_direct_irradiance_buffer, vertex_irradiance.data(), bytes);
-    }
-
     void VulkanComputeBackend::uploadVertexNormals(const std::vector<float> &vertex_normals) {
         if (vertex_normals.size() % 3 != 0) {
             helios_runtime_error("ERROR (VulkanComputeBackend::uploadVertexNormals): The vertex normals hold " + std::to_string(vertex_normals.size()) + " values, which is not three per vertex.");
@@ -3414,7 +3383,6 @@ namespace helios {
                 {19, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Smoothing-vertex radiation of primitives with a spectral texture (packed)
                 {20, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // forward_scatter
                 {21, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // vertex_normals (camera flux smoothing)
-                {22, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // vertex_direct_irradiance (camera flux smoothing)
                 {23, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Directions of the diffuse radiation reaching normal-mapped primitives
                 {24, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // The same averaged onto the smoothing vertices
         };
@@ -3546,7 +3514,6 @@ namespace helios {
         forward_scatter_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         zeroBuffer(forward_scatter_buffer);
         bindVertexNormalsPlaceholder();
-        bindVertexDirectIrradiancePlaceholder();
         bindVertexNormalMapMomentsPlaceholder();
 
         // ========== Create placeholder specular buffers ==========
@@ -3565,7 +3532,7 @@ namespace helios {
         surface_layer_buffer = createBuffer(4 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(surface_layer_buffer);
         // Binding 19: camera index, camera count and the normal-map direct flag, written before each camera launch
-        camera_info_buffer = createBuffer(3 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        camera_info_buffer = createBuffer(4 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         zeroBuffer(camera_info_buffer);
         // Material binding 18 and geometry binding 19: a zeroed header means no primitive has a spectral texture
         spectral_palette_buffer = createBuffer(16 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
@@ -4915,23 +4882,6 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &vertex_normals_info;
-            descriptor_writes.push_back(write);
-        }
-
-        VkDescriptorBufferInfo vertex_direct_irradiance_info{};
-        vertex_direct_irradiance_info.buffer = vertex_direct_irradiance_buffer.buffer;
-        vertex_direct_irradiance_info.offset = 0;
-        vertex_direct_irradiance_info.range = VK_WHOLE_SIZE;
-
-        if (vertex_direct_irradiance_buffer.buffer != VK_NULL_HANDLE) {
-            VkWriteDescriptorSet write{};
-            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write.dstSet = set_results;
-            write.dstBinding = 22;
-            write.dstArrayElement = 0;
-            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            write.descriptorCount = 1;
-            write.pBufferInfo = &vertex_direct_irradiance_info;
             descriptor_writes.push_back(write);
         }
 

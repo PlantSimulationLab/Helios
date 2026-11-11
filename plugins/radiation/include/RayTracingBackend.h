@@ -324,20 +324,11 @@ namespace helios {
          * @param[in] vertex_normals Three values per shared vertex [Nvertices * 3], or empty to release the buffer
          *
          * With these present, the camera hit program interpolates a shading normal across each smoothed facet for the angle-dependent terms of a surface layer, and reads the layer's own outgoing component
-         * from the second component of the vertex radiation (see uploadVertexRadiationOut()). RadiationModel supplies them only while smoothing is enabled and some primitive has a layer, so that smoothing
-         * of Lambertian surfaces costs no memory for them. A geometry upload (updateGeometry()) releases them, because they belong to the topology of the geometry they were built from.
+         * from the second component of the vertex radiation (see uploadVertexRadiationOut()), and raises the origin of a shadow ray from a facet turned away from a source onto the smooth surface they
+         * describe. RadiationModel supplies them only while smoothing is enabled and there is a source or some primitive has a layer. A geometry upload (updateGeometry()) releases them, because they
+         * belong to the topology of the geometry they were built from.
          */
         virtual void uploadVertexNormals(const std::vector<float> &vertex_normals) = 0;
-
-        /**
-         * @brief Upload each source's unoccluded direct irradiance averaged onto the shared mesh vertices, for camera flux smoothing
-         *
-         * @param[in] vertex_irradiance Values per [source][vertex][launch band] (see RadiationModel::accumulateDirectIrradianceAtVertices()), or empty to release the buffer
-         *
-         * Read by the camera hit program for a face turned away from a source, which takes the value interpolated from its vertices times the cosine of its shading normal, so that the light fades across
-         * the terminator. The vertex count is that of uploadVertexNormals(), which RadiationModel always supplies with these. A geometry upload (updateGeometry()) releases them.
-         */
-        virtual void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) = 0;
 
         /**
          * @brief Get the directions of the diffuse radiation that reached each primitive with a normal map in the diffuse launches since zeroRadiationBuffers()

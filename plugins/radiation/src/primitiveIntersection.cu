@@ -40,11 +40,11 @@ rtDeclareVariable(float, periodic_face_t, attribute periodic_face_t, );
 
 //! Whether the primitive with this UUID launched the current ray, which must not intersect it again
 /**
- * Only direct and diffuse rays are launched from a primitive. Camera and pixel-label rays carry the pixel index in
+ * Only direct, diffuse and camera shadow rays are launched from a primitive. Camera and pixel-label rays carry the pixel index in
  * prd.origin_UUID, which is not a primitive UUID, so no primitive is excluded for them.
  */
 static __device__ __inline__ bool isRayOrigin(uint primitive_UUID) {
-    return (ray.ray_type == direct_ray_type || ray.ray_type == diffuse_ray_type) && prd.origin_UUID == primitive_UUID;
+    return (ray.ray_type == direct_ray_type || ray.ray_type == diffuse_ray_type || ray.ray_type == camera_shadow_ray_type) && prd.origin_UUID == primitive_UUID;
 }
 
 //----------------- Rectangle Primitive ----------------------//
