@@ -22,6 +22,10 @@ usage() {
     echo "  --doctestargs <args> Pass arguments directly to doctest (e.g., --doctestargs \"--help --list-test-cases\"); words are split on spaces, so quote any containing one (e.g., --doctestargs \"'--subcase=*a b*'\")"
     echo "  --list-tests         Build test executables and list available test cases without running them"
     echo "  --project-dir <dir>  Use specified directory for project (persistent, not cleaned up)"
+    echo "  --shards <N>         Run each test executable as N concurrent processes, each over a share of its test cases."
+    echo "                       Each process can use several GB of memory for the heavier plugins (e.g. plantarchitecture),"
+    echo "                       and GPU plugins share one device, so choose N with that in mind. Not combinable with"
+    echo "                       --memcheck or a doctest --out file."
     echo "  --disableopenmp      Disable OpenMP by passing -DENABLE_OPENMP=OFF to cmake"
     echo "  --cmake-args <args>  Pass custom arguments to cmake (e.g., --cmake-args \"-DSOME_OPTION=ON -DANOTHER=OFF\")"
     echo
@@ -56,6 +60,123 @@ run_command() {
         fi
         return ${quiet_status}
     fi
+}
+
+# Run one test executable as several concurrent processes ("shards"), each over its own share of the test cases.
+#
+# doctest has no parallel mode, but it can run a contiguous range of the test cases that pass the filters (--first/--last,
+# 1-based and inclusive). The filtered list is cut into SHARD_CHUNKS_PER_WORKER ranges per worker, and worker w runs ranges
+# w, w + workers, w + 2 * workers, ... one after another. Interleaving the ranges spreads a cluster of slow neighbouring
+# tests across the workers, which one contiguous range per worker would not, and each range still runs in file order.
+#
+# Each worker runs in its own directory under the build directory, with TMPDIR (TMP and TEMP on Windows) inside it, so
+# tests that write a file by a relative name or into the system temp directory cannot collide with another worker.
+# HELIOS_BUILD is set to the build directory so that assets still resolve from there.
+#
+# Arguments: the executable's file name in the current (build) directory. Reads the global arrays TEST_ARGS_ARRAY (all
+# doctest arguments) and FILTER_ARGS (the test-selecting subset, used to count the cases). Returns non-zero if any range
+# failed or did not finish.
+SHARD_CHUNKS_PER_WORKER=8
+SHARD_PIDS=()
+run_sharded_test() {
+  local executable_file="$1"
+  local build_dir
+  build_dir="$(pwd)"
+
+  local case_count
+  case_count=$("./${executable_file}" --count "${FILTER_ARGS[@]}" 2>/dev/null | grep -o 'passing the current filters: [0-9]*' | grep -o '[0-9]*$')
+  if [ -z "$case_count" ]; then
+    echo "" >&2
+    echo "Error: could not count the test cases of ${executable_file} with 'doctest --count'." >&2
+    return 1
+  fi
+  if [ "$case_count" -eq 0 ]; then
+    return 0
+  fi
+
+  local chunk_count=$((SHARDS * SHARD_CHUNKS_PER_WORKER))
+  if [ "$chunk_count" -gt "$case_count" ]; then
+    chunk_count=$case_count
+  fi
+  local worker_count=$SHARDS
+  if [ "$worker_count" -gt "$chunk_count" ]; then
+    worker_count=$chunk_count
+  fi
+
+  local shard_root="${build_dir}/shards_${executable_file%.exe}"
+  rm -rf "$shard_root"
+  mkdir -p "$shard_root" || return 1
+
+  SHARD_PIDS=()
+  local worker
+  for ((worker = 0; worker < worker_count; worker++)); do
+    local worker_dir="${shard_root}/worker_${worker}"
+    mkdir -p "${worker_dir}/tmp" || return 1
+    (
+      cd "$worker_dir" || exit 1
+      export HELIOS_BUILD="$build_dir" TMPDIR="${worker_dir}/tmp" TMP="${worker_dir}/tmp" TEMP="${worker_dir}/tmp"
+      for ((chunk = worker; chunk < chunk_count; chunk += worker_count)); do
+        first=$((chunk * case_count / chunk_count + 1))
+        last=$(((chunk + 1) * case_count / chunk_count))
+        "${build_dir}/${executable_file}" "${TEST_ARGS_ARRAY[@]}" "--first=${first}" "--last=${last}" > "${shard_root}/chunk_${chunk}.log" 2>&1
+        echo $? > "${shard_root}/chunk_${chunk}.status"
+      done
+    ) &
+    SHARD_PIDS+=($!)
+  done
+  local pid
+  for pid in "${SHARD_PIDS[@]}"; do
+    wait "$pid"
+  done
+  SHARD_PIDS=()
+
+  # Replay the output in test order: all of it under --verbose or --log-file, otherwise only the ranges that failed. A range
+  # with no status file was cut short (its worker was killed), which counts as a failure.
+  local failed_chunks=0
+  local total_assertions=0
+  local failed_assertions=0
+  local chunk
+  for ((chunk = 0; chunk < chunk_count; chunk++)); do
+    # doctest's "test cases:" summary line counts every test case passing the filters, including those outside the range, so
+    # only the assertion counts are summed across ranges.
+    local assertion_line
+    assertion_line=$(grep '^\[doctest\] assertions:' "${shard_root}/chunk_${chunk}.log" 2>/dev/null | tail -1)
+    if [ -n "$assertion_line" ]; then
+      total_assertions=$((total_assertions + $(echo "$assertion_line" | awk -F'[:|]' '{print $2+0}')))
+      failed_assertions=$((failed_assertions + $(echo "$assertion_line" | awk -F'|' '{print $3+0}')))
+    fi
+    local chunk_status
+    chunk_status=$(cat "${shard_root}/chunk_${chunk}.status" 2>/dev/null)
+    local chunk_header="--- ${executable_file} shard range $((chunk + 1))/${chunk_count}: test cases $((chunk * case_count / chunk_count + 1))-$(((chunk + 1) * case_count / chunk_count)) of ${case_count} ---"
+    if [ "$chunk_status" != "0" ]; then
+      failed_chunks=$((failed_chunks + 1))
+    fi
+    if [ -n "$LOG_FILE" ]; then
+      { echo "$chunk_header"; cat "${shard_root}/chunk_${chunk}.log" 2>/dev/null; } >> "$LOG_FILE"
+    fi
+    if [ "$VERBOSE" == "ON" ] || { [ "$chunk_status" != "0" ] && [ -z "$LOG_FILE" ]; }; then
+      echo "" >&2
+      echo "$chunk_header" >&2
+      cat "${shard_root}/chunk_${chunk}.log" >&2 2>/dev/null || echo "(no output: the range did not run)" >&2
+    fi
+  done
+
+  local shard_summary="[shards] ${case_count} test cases in ${chunk_count} ranges over ${worker_count} processes: ${failed_chunks} ranges failed | assertions: ${total_assertions} | ${failed_assertions} failed"
+  if [ -n "$LOG_FILE" ]; then
+    echo "$shard_summary" >> "$LOG_FILE"
+  fi
+  if [ "$VERBOSE" == "ON" ] || [ "$failed_chunks" -gt 0 ]; then
+    echo "$shard_summary" >&2
+  fi
+
+  if [ "$failed_chunks" -eq 0 ]; then
+    rm -rf "$shard_root"
+    return 0
+  fi
+  # Kept so that files the failing tests wrote can be inspected.
+  echo "" >&2
+  echo "${failed_chunks} of ${chunk_count} shard ranges of ${executable_file} failed. Their working directories are kept under ${shard_root}" >&2
+  return 1
 }
 
 # Test plugins to include in unified build
@@ -218,6 +339,15 @@ while [ $# -gt 0 ]; do
     LIST_TESTS="ON"
     ;;
 
+  --shards)
+    if ! [[ "$2" =~ ^[1-9][0-9]*$ ]]; then
+      echo "Error: --shards requires a positive whole number of processes (got '$2')."
+      usage
+    fi
+    SHARDS="$2"
+    shift
+    ;;
+
   --disableopenmp)
     DISABLE_OPENMP="ON"
     ;;
@@ -255,6 +385,22 @@ if [ -n "$DOCTEST_ARGS" ]; then
       echo -e "\x1B[31mError: --doctestargs \"$DOCTEST_ARGS\" contains '$test_arg', which is not a doctest option: an option containing a space was split there. Quote that option inside the argument (e.g., --doctestargs \"'--test-case=*a b*'\"), or give test cases with --testcase \"*first*,*second*\".\x1B[39m"
       exit 1
     fi
+  done
+fi
+
+# Sharded processes would all write the same doctest --out file, and memcheck wraps a single process.
+if [ -n "$SHARDS" ] && [ "$SHARDS" -gt 1 ]; then
+  if [ "${MEMCHECK}" == "ON" ]; then
+    echo "Error: --shards cannot be combined with --memcheck, which checks a single test process."
+    exit 1
+  fi
+  for test_arg in "${DOCTEST_ARGS_CHECK[@]}"; do
+    case "$test_arg" in
+      -o|-o=*|--out|--out=*|-dt-o|-dt-o=*|--dt-out|--dt-out=*)
+        echo "Error: --shards cannot be combined with a doctest --out file: every shard would write the same file."
+        exit 1
+        ;;
+    esac
   done
 fi
 
@@ -338,17 +484,34 @@ else
 fi
 
 # Cleanup function for errors and interruptions
+# Remove the temporary project and exit. The optional argument is the exit status; without it the status is the error
+# count, which every failure path increments before calling here. The signal traps pass 128 + the signal number (the shell
+# convention), because an interrupted run has tested nothing and must not report success: with the error count it exited 0
+# whenever nothing had failed yet.
 cleanup() {
+  local exit_status="${1:-$ERROR_COUNT}"
   echo ""
+  # Stop any shard workers and the test processes they started, so an interrupted sharded run leaves nothing running. Each
+  # worker is stopped before its test process: stopping the test process first would let the worker start its next range.
+  for shard_pid in "${SHARD_PIDS[@]}"; do
+    shard_children=$(pgrep -P "$shard_pid" 2>/dev/null)
+    kill "$shard_pid" 2>/dev/null
+    if [ -n "$shard_children" ]; then
+      kill $shard_children 2>/dev/null
+    fi
+  done
   if [ -d "$TEMP_DIR" ] && [ "$PERSISTENT_PROJECT" != "ON" ]; then
     chmod -R 755 "$TEMP_DIR" 2>/dev/null || true
     rm -rf "$TEMP_DIR"
   fi
-  exit $ERROR_COUNT
+  exit "$exit_status"
 }
 
-# Set up signal traps for cleanup on interruption only
-trap cleanup INT TERM
+# Set up signal traps for cleanup on interruption only. Bash runs a trap once the foreground command finishes, so a signal
+# sent to this script alone (rather than to its process group, as Ctrl-C does) takes effect after the current build or
+# test command completes.
+trap 'cleanup 130' INT
+trap 'cleanup 143' TERM
 
 # Validate requested test names up front so an invalid name (e.g. "core" instead of "context", or a
 # misspelled plugin) fails immediately with a clear message instead of building every other target
@@ -616,7 +779,7 @@ else
         echo ""
       done
 
-      cd "$TEMP_BASE" || cleanup
+      cd "$TEMP_BASE" || cleanup 1
 
       # Clean up temp directory if not persistent
       if [ -d "$TEMP_DIR" ] && [ "$PERSISTENT_PROJECT" != "ON" ]; then
@@ -676,13 +839,23 @@ else
         fi
       fi
 
-      if [ ${#TEST_ARGS_ARRAY[@]} -gt 0 ]; then
-        echo -ne "Running test $test_exe with args: ${TEST_ARGS_ARRAY[*]}..."
-      else
-        echo -ne "Running test $test_exe..."
+      SHARD_NOTE=""
+      if [ -n "$SHARDS" ] && [ "$SHARDS" -gt 1 ]; then
+        SHARD_NOTE=" in ${SHARDS} shards"
       fi
-      
-      if [[ "${OSTYPE}" == "msys"* ]]; then
+      if [ ${#TEST_ARGS_ARRAY[@]} -gt 0 ]; then
+        echo -ne "Running test $test_exe${SHARD_NOTE} with args: ${TEST_ARGS_ARRAY[*]}..."
+      else
+        echo -ne "Running test $test_exe${SHARD_NOTE}..."
+      fi
+
+      if [ -n "$SHARD_NOTE" ]; then
+        if [[ "${OSTYPE}" == "msys"* ]]; then
+          run_sharded_test "${test_exe}.exe"
+        else
+          run_sharded_test "${test_exe}"
+        fi
+      elif [[ "${OSTYPE}" == "msys"* ]]; then
         if [ ${#TEST_ARGS_ARRAY[@]} -gt 0 ]; then
           run_command "./${test_exe}.exe" "${TEST_ARGS_ARRAY[@]}"
         else
@@ -746,7 +919,7 @@ else
 
     done
 
-    cd "$TEMP_BASE" || cleanup
+    cd "$TEMP_BASE" || cleanup 1
 
   fi
 fi
