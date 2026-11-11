@@ -62,6 +62,29 @@ namespace {
         xml << " rgba=\"" << color.r << " " << color.g << " " << color.b << " 1\"";
     }
 
+    std::string geomName(const std::string &body_name, size_t shape_index) {
+        return body_name + "#" + std::to_string(shape_index);
+    }
+
+    // Unit quaternion (w,x,y,z) of a link's orientation
+    void linkQuaternion(const PhysicsLink &link, mjtNum (&quat)[4]) {
+        quat[0] = link.qw;
+        quat[1] = link.qx;
+        quat[2] = link.qy;
+        quat[3] = link.qz;
+        mju_normalize4(quat);
+    }
+
+    // Pose of a frame given in the world, expressed in another frame given in the world: the second pose composed with the inverse of the first
+    void relativePose(const mjtNum (&frame_pos)[3], const mjtNum (&frame_quat)[4], const mjtNum (&pos)[3], const mjtNum (&quat)[4], mjtNum (&relative_pos)[3], mjtNum (&relative_quat)[4]) {
+        mjtNum conjugate[4];
+        mju_negQuat(conjugate, frame_quat);
+        mjtNum offset[3];
+        mju_sub3(offset, pos, frame_pos);
+        mju_rotVecQuat(relative_pos, offset, conjugate);
+        mju_mulQuat(relative_quat, conjugate, quat);
+    }
+
     void writeShapePose(std::ostringstream &xml, const PhysicsCollisionShape &shape) {
         if (shape.position.x != 0.f || shape.position.y != 0.f || shape.position.z != 0.f) {
             writeVec(xml, "pos", shape.position.x, shape.position.y, shape.position.z);
@@ -274,6 +297,9 @@ std::string PhysicsEngine::buildMJCF(const PhysicsEngineParameters &params) cons
         const auto &links = articulation.links;
         std::vector<std::vector<size_t>> children(links.size());
         std::vector<size_t> roots;
+        // The links whose shapes and mass each body carries, and those the world carries
+        std::vector<std::vector<size_t>> members(links.size());
+        std::vector<size_t> world_members;
         for (size_t i = 0; i < links.size(); i++) {
             // A detachable link is a free body at the top of the tree, which a weld holds to its parent until it is released
             if (links[i].parent_index < 0 || links[i].joint_type == PHYSICS_JOINT_DETACHABLE) {
@@ -281,17 +307,38 @@ std::string PhysicsEngine::buildMJCF(const PhysicsEngineParameters &params) cons
             } else {
                 children.at(links[i].parent_index).push_back(i);
             }
+            if (record.link_host[i] < 0) {
+                world_members.push_back(i);
+            } else {
+                members.at(record.link_host[i]).push_back(i);
+            }
             if (links[i].parent_index >= 0 && links[i].joint_type == PHYSICS_JOINT_DETACHABLE) {
                 const std::string body_name = linkBodyName(articulation.name, links[i].name);
-                equalities << "    <weld name=\"" << detachEqualityName(body_name) << "\" body1=\"" << body_name << "\" body2=\"" << linkBodyName(articulation.name, links[links[i].parent_index].name) << "\" solref=\"" << params.contact_time_constant << " 1\"/>\n";
+                equalities << "    <weld name=\"" << detachEqualityName(body_name) << "\" body1=\"" << body_name << "\"";
+                // Without a second body, the weld holds the link to the world
+                if (record.link_host[links[i].parent_index] >= 0) {
+                    equalities << " body2=\"" << hostBodyName(record, links[i].parent_index) << "\"";
+                }
+                // The weld is anchored at the parent link, wherever its body is: MuJoCo would otherwise anchor it at the origin of the body that carries the parent, which for the world can be far away,
+                // and the weld's small angular give would then move the link by much more
+                const vec3 &anchor = record.link_offset[links[i].parent_index];
+                writeVec(equalities, "anchor", anchor.x, anchor.y, anchor.z);
+                equalities << " solref=\"" << params.contact_time_constant << " 1\"/>\n";
             }
         }
+        for (size_t member: world_members) {
+            writeLinkShapes(bodies, assets, record, member, -1, "    ");
+        }
         for (size_t root: roots) {
-            writeLinkBody(bodies, assets, articulation, root, children, 2);
+            writeLinkBody(bodies, assets, record, root, children, members, 2);
         }
         if (params.articulation_collisions) {
             for (const auto &[link_a, link_b]: articulation.contact_exclusions) {
-                exclusions << "    <exclude body1=\"" << linkBodyName(articulation.name, links[link_a].name) << "\" body2=\"" << linkBodyName(articulation.name, links[link_b].name) << "\"/>\n";
+                // Shapes of one body never collide with each other, and MuJoCo rejects an exclusion of a body from itself
+                if (record.link_host[link_a] == record.link_host[link_b]) {
+                    continue;
+                }
+                exclusions << "    <exclude body1=\"" << hostBodyName(record, link_a) << "\" body2=\"" << hostBodyName(record, link_b) << "\"/>\n";
             }
         }
     }
@@ -327,28 +374,157 @@ std::string PhysicsEngine::buildMJCF(const PhysicsEngineParameters &params) cons
     return xml.str();
 }
 
-void PhysicsEngine::writeLinkBody(std::ostringstream &xml, std::ostringstream &assets, const PhysicsArticulation &articulation, size_t link_index, const std::vector<std::vector<size_t>> &children, int depth) const {
+void PhysicsEngine::computeLinkHosts(bool merge_welded_links) {
+    for (ArticulationRecord &record: articulations) {
+        const auto &links = record.description.links;
+        record.link_host.assign(links.size(), -2);
+        // MuJoCo never lets a body collide with its parent body, unless the parent is the world. A link with a jointed child keeps a body of its own, so that the
+        // child still does not collide with it, as links built overlapping what they grow from (a petiole and its internode) should not.
+        std::vector<char> has_jointed_child(links.size(), 0);
+        for (const PhysicsLink &link: links) {
+            if (link.parent_index >= 0 && link.joint_type == PHYSICS_JOINT_BALL) {
+                has_jointed_child[link.parent_index] = 1;
+            }
+        }
+        // A link's host is found from its parent's, so each chain is followed up to a link whose host is known
+        std::function<int(size_t)> hostOf = [&](size_t i) -> int {
+            if (record.link_host[i] != -2) {
+                return record.link_host[i];
+            }
+            const PhysicsLink &link = links[i];
+            int host;
+            if (!merge_welded_links || has_jointed_child[i] || link.joint_type == PHYSICS_JOINT_BALL || (link.parent_index >= 0 && link.joint_type == PHYSICS_JOINT_DETACHABLE)) {
+                host = static_cast<int>(i);
+            } else if (link.parent_index < 0) {
+                host = -1; // a root is welded to the world
+            } else {
+                host = hostOf(static_cast<size_t>(link.parent_index));
+            }
+            record.link_host[i] = host;
+            return host;
+        };
+        record.link_offset.resize(links.size());
+        for (size_t i = 0; i < links.size(); i++) {
+            const int host = hostOf(i);
+            if (host < 0) {
+                record.link_offset[i] = links[i].position;
+            } else {
+                mjtNum R_host[9];
+                quaternionToMatrix(links[host].qw, links[host].qx, links[host].qy, links[host].qz, R_host);
+                record.link_offset[i] = rotateToBodyFrame(R_host, links[i].position - links[host].position);
+            }
+        }
+    }
+}
 
-    const auto &links = articulation.links;
+std::string PhysicsEngine::hostBodyName(const ArticulationRecord &record, size_t link_index) const {
+    const int host = record.link_host.at(link_index);
+    return host < 0 ? std::string("world") : linkBodyName(record.description.name, record.description.links.at(host).name);
+}
+
+void PhysicsEngine::writeLinkShapes(std::ostringstream &xml, std::ostringstream &assets, const ArticulationRecord &record, size_t link_index, int host, const std::string &indent) const {
+    const PhysicsLink &link = record.description.links.at(link_index);
+    const std::string body_name = linkBodyName(record.description.name, link.name);
+
+    // The pose of the link in the frame of the body that carries it: none for its own body, and its world pose for the world
+    const bool own_frame = host == static_cast<int>(link_index);
+    mjtNum link_pos[3] = {0, 0, 0};
+    mjtNum link_quat[4] = {1, 0, 0, 0};
+    if (!own_frame) {
+        mjtNum world_pos[3] = {link.position.x, link.position.y, link.position.z};
+        mjtNum world_quat[4];
+        linkQuaternion(link, world_quat);
+        if (host < 0) {
+            mju_copy3(link_pos, world_pos);
+            mju_copy4(link_quat, world_quat);
+        } else {
+            const PhysicsLink &host_link = record.description.links.at(host);
+            mjtNum host_pos[3] = {host_link.position.x, host_link.position.y, host_link.position.z};
+            mjtNum host_quat[4];
+            linkQuaternion(host_link, host_quat);
+            relativePose(host_pos, host_quat, world_pos, world_quat, link_pos, link_quat);
+        }
+    }
+
+    uint mesh_count = 0;
+    for (size_t k = 0; k < link.shapes.size(); k++) {
+        const PhysicsCollisionShape &shape = link.shapes[k];
+        xml << indent << "<geom name=\"" << geomName(body_name, k) << "\"";
+        switch (shape.type) {
+            case PHYSICS_SHAPE_CAPSULE:
+                xml << " type=\"capsule\" size=\"" << shape.size.x << " " << shape.size.y << "\"";
+                break;
+            case PHYSICS_SHAPE_SPHERE:
+                xml << " type=\"sphere\" size=\"" << shape.size.x << "\"";
+                break;
+            case PHYSICS_SHAPE_BOX:
+            case PHYSICS_SHAPE_ELLIPSOID:
+                xml << " type=\"" << (shape.type == PHYSICS_SHAPE_BOX ? "box" : "ellipsoid") << "\"";
+                writeVec(xml, "size", shape.size.x, shape.size.y, shape.size.z);
+                break;
+            case PHYSICS_SHAPE_CONVEX_MESH: {
+                std::string mesh_name = body_name + "_t" + std::to_string(mesh_count++);
+                assets << "    <mesh name=\"" << mesh_name << "\" vertex=\"";
+                for (const vec3 &vertex: shape.mesh_vertices) {
+                    assets << vertex.x << " " << vertex.y << " " << vertex.z << " ";
+                }
+                assets << "\"/>\n";
+                xml << " type=\"mesh\" mesh=\"" << mesh_name << "\"";
+                break;
+            }
+        }
+        if (own_frame) {
+            writeShapePose(xml, shape);
+        } else {
+            // The shape's pose in the link, composed with the link's pose in the body that carries it
+            mjtNum shape_pos[3] = {shape.position.x, shape.position.y, shape.position.z};
+            mjtNum shape_quat[4] = {shape.orientation[0], shape.orientation[1], shape.orientation[2], shape.orientation[3]};
+            mju_normalize4(shape_quat);
+            mjtNum pos[3];
+            mju_rotVecQuat(pos, shape_pos, link_quat);
+            mju_addTo3(pos, link_pos);
+            mjtNum quat[4];
+            mju_mulQuat(quat, link_quat, shape_quat);
+            writeVec(xml, "pos", float(pos[0]), float(pos[1]), float(pos[2]));
+            xml << " quat=\"" << quat[0] << " " << quat[1] << " " << quat[2] << " " << quat[3] << "\"";
+        }
+        writeColor(xml, shape.color);
+        xml << "/>\n";
+    }
+}
+
+void PhysicsEngine::writeLinkBody(std::ostringstream &xml, std::ostringstream &assets, const ArticulationRecord &record, size_t link_index, const std::vector<std::vector<size_t>> &children, const std::vector<std::vector<size_t>> &members, int depth) const {
+
+    const auto &links = record.description.links;
     const PhysicsLink &link = links.at(link_index);
+
+    // A link merged into another body has had its shapes and mass written with that body. Its children are nested in that body.
+    if (record.link_host[link_index] != static_cast<int>(link_index)) {
+        for (size_t child: children.at(link_index)) {
+            writeLinkBody(xml, assets, record, child, children, members, depth);
+        }
+        return;
+    }
+
     const std::string indent(2 * depth, ' ');
-    const std::string body_name = linkBodyName(articulation.name, link.name);
+    const std::string body_name = linkBodyName(record.description.name, link.name);
 
     mjtNum R_link[9];
     quaternionToMatrix(link.qw, link.qx, link.qy, link.qz, R_link);
 
-    // MJCF bodies are positioned relative to their parent body. A detachable link has no parent body.
+    // MJCF bodies are positioned relative to the body they are nested in, which carries the parent link. A detachable link has no parent body.
     const bool detachable = link.parent_index >= 0 && link.joint_type == PHYSICS_JOINT_DETACHABLE;
+    const int frame_host = link.parent_index >= 0 && !detachable ? record.link_host.at(link.parent_index) : -1;
     vec3 position = link.position;
-    mjtNum quat[4] = {link.qw, link.qx, link.qy, link.qz};
-    mju_normalize4(quat);
-    if (link.parent_index >= 0 && !detachable) {
-        const PhysicsLink &parent = links.at(link.parent_index);
+    mjtNum quat[4];
+    linkQuaternion(link, quat);
+    if (frame_host >= 0) {
+        const PhysicsLink &parent = links.at(frame_host);
         mjtNum R_parent[9];
         quaternionToMatrix(parent.qw, parent.qx, parent.qy, parent.qz, R_parent);
         position = rotateToBodyFrame(R_parent, link.position - parent.position);
-        mjtNum parent_quat[4] = {parent.qw, parent.qx, parent.qy, parent.qz};
-        mju_normalize4(parent_quat);
+        mjtNum parent_quat[4];
+        linkQuaternion(parent, parent_quat);
         mjtNum parent_conjugate[4];
         mju_negQuat(parent_conjugate, parent_quat);
         mjtNum relative_quat[4];
@@ -360,10 +536,57 @@ void PhysicsEngine::writeLinkBody(std::ostringstream &xml, std::ostringstream &a
     writeVec(xml, "pos", position.x, position.y, position.z);
     xml << " quat=\"" << quat[0] << " " << quat[1] << " " << quat[2] << " " << quat[3] << "\">\n";
 
-    float mass = std::max(link.mass, 1e-9f);
-    xml << indent << "  <inertial pos=\"0 0 0\" mass=\"" << mass << "\"";
-    writeVec(xml, "diaginertia", std::max(link.inertia_diagonal.x, 1e-14f), std::max(link.inertia_diagonal.y, 1e-14f), std::max(link.inertia_diagonal.z, 1e-14f));
-    xml << "/>\n";
+    const std::vector<size_t> &carried = members.at(link_index);
+    if (carried.size() == 1) {
+        float mass = std::max(link.mass, 1e-9f);
+        xml << indent << "  <inertial pos=\"0 0 0\" mass=\"" << mass << "\"";
+        writeVec(xml, "diaginertia", std::max(link.inertia_diagonal.x, 1e-14f), std::max(link.inertia_diagonal.y, 1e-14f), std::max(link.inertia_diagonal.z, 1e-14f));
+        xml << "/>\n";
+    } else {
+        // The mass of every link the body carries, about their common center of mass, in the body frame. Each link's mass is centered on its origin, as for a body of its own.
+        double total_mass = 0;
+        mjtNum center[3] = {0, 0, 0};
+        for (size_t member: carried) {
+            const double mass = std::max(links[member].mass, 1e-9f);
+            total_mass += mass;
+            for (int k = 0; k < 3; k++) {
+                center[k] += mass * mjtNum(k == 0 ? record.link_offset[member].x : (k == 1 ? record.link_offset[member].y : record.link_offset[member].z));
+            }
+        }
+        mju_scl3(center, center, 1.0 / total_mass);
+        mjtNum inertia[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+        mjtNum link_quat[4];
+        linkQuaternion(link, link_quat);
+        mjtNum link_conjugate[4];
+        mju_negQuat(link_conjugate, link_quat);
+        for (size_t member: carried) {
+            const PhysicsLink &carried_link = links[member];
+            const double mass = std::max(carried_link.mass, 1e-9f);
+            // Rotation of the member in the body frame
+            mjtNum member_quat[4];
+            linkQuaternion(carried_link, member_quat);
+            mjtNum relative_quat[4];
+            mju_mulQuat(relative_quat, link_conjugate, member_quat);
+            mjtNum R[9];
+            mju_quat2Mat(R, relative_quat);
+            const mjtNum diagonal[3] = {std::max(carried_link.inertia_diagonal.x, 1e-14f), std::max(carried_link.inertia_diagonal.y, 1e-14f), std::max(carried_link.inertia_diagonal.z, 1e-14f)};
+            const mjtNum d[3] = {record.link_offset[member].x - center[0], record.link_offset[member].y - center[1], record.link_offset[member].z - center[2]};
+            const mjtNum d_squared = mju_dot3(d, d);
+            for (int r = 0; r < 3; r++) {
+                for (int c = 0; c < 3; c++) {
+                    // R diag(I) R^T, plus the parallel-axis term m (|d|^2 E - d d^T)
+                    mjtNum rotated = 0;
+                    for (int k = 0; k < 3; k++) {
+                        rotated += R[3 * r + k] * diagonal[k] * R[3 * c + k];
+                    }
+                    inertia[3 * r + c] += rotated + mass * ((r == c ? d_squared : 0) - d[r] * d[c]);
+                }
+            }
+        }
+        xml << indent << "  <inertial";
+        writeVec(xml, "pos", float(center[0]), float(center[1]), float(center[2]));
+        xml << " mass=\"" << total_mass << "\" fullinertia=\"" << inertia[0] << " " << inertia[4] << " " << inertia[8] << " " << inertia[1] << " " << inertia[2] << " " << inertia[5] << "\"/>\n";
+    }
 
     if (detachable) {
         xml << indent << "  <freejoint/>\n";
@@ -390,38 +613,12 @@ void PhysicsEngine::writeLinkBody(std::ostringstream &xml, std::ostringstream &a
         xml << "/>\n";
     }
 
-    uint mesh_count = 0;
-    for (const PhysicsCollisionShape &shape: link.shapes) {
-        switch (shape.type) {
-            case PHYSICS_SHAPE_CAPSULE:
-                xml << indent << "  <geom type=\"capsule\" size=\"" << shape.size.x << " " << shape.size.y << "\"";
-                break;
-            case PHYSICS_SHAPE_SPHERE:
-                xml << indent << "  <geom type=\"sphere\" size=\"" << shape.size.x << "\"";
-                break;
-            case PHYSICS_SHAPE_BOX:
-            case PHYSICS_SHAPE_ELLIPSOID:
-                xml << indent << "  <geom type=\"" << (shape.type == PHYSICS_SHAPE_BOX ? "box" : "ellipsoid") << "\"";
-                writeVec(xml, "size", shape.size.x, shape.size.y, shape.size.z);
-                break;
-            case PHYSICS_SHAPE_CONVEX_MESH: {
-                std::string mesh_name = body_name + "_t" + std::to_string(mesh_count++);
-                assets << "    <mesh name=\"" << mesh_name << "\" vertex=\"";
-                for (const vec3 &vertex: shape.mesh_vertices) {
-                    assets << vertex.x << " " << vertex.y << " " << vertex.z << " ";
-                }
-                assets << "\"/>\n";
-                xml << indent << "  <geom type=\"mesh\" mesh=\"" << mesh_name << "\"";
-                break;
-            }
-        }
-        writeShapePose(xml, shape);
-        writeColor(xml, shape.color);
-        xml << "/>\n";
+    for (size_t member: carried) {
+        writeLinkShapes(xml, assets, record, member, static_cast<int>(link_index), indent + "  ");
     }
 
     for (size_t child: children.at(link_index)) {
-        writeLinkBody(xml, assets, articulation, child, children, depth + 1);
+        writeLinkBody(xml, assets, record, child, children, members, depth + 1);
     }
 
     xml << indent << "</body>\n";
@@ -441,12 +638,16 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
     if (params.articulation_collision_margin < 0.f) {
         helios_runtime_error("ERROR (PhysicsEngine::initialize): The articulation collision margin must not be negative.");
     }
+    if (params.memory_arena_megabytes < 0.f) {
+        helios_runtime_error("ERROR (PhysicsEngine::initialize): The memory arena size must not be negative; use 0 to choose it automatically.");
+    }
     // MuJoCo silently replaces contacts stiffer than the time step can resolve, so a smaller value would not take effect
     if (params.contact_time_constant < 2.f * params.timestep) {
         helios_runtime_error("ERROR (PhysicsEngine::initialize): The contact time constant (" + std::to_string(params.contact_time_constant) + " s) must be at least twice the time step (" + std::to_string(params.timestep) +
                              " s). Reduce the time step to allow stiffer contacts.");
     }
 
+    computeLinkHosts(params.merge_welded_links);
     mjcf_text = buildMJCF(params);
 
     char error[1024] = "";
@@ -466,6 +667,9 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
         }
         spec->memory = 16 * 1024 * 1024 + 8 * shape_count * shape_count;
     }
+    if (params.memory_arena_megabytes > 0.f) {
+        spec->memory = static_cast<mjtSize>(double(params.memory_arena_megabytes) * 1024.0 * 1024.0);
+    }
 
     model = mj_compile(spec, nullptr);
     if (model == nullptr) {
@@ -481,7 +685,7 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
         const auto &links = record.description.links;
         record.link_body_IDs.resize(links.size());
         for (size_t i = 0; i < links.size(); i++) {
-            std::string name = linkBodyName(record.description.name, links[i].name);
+            const std::string name = hostBodyName(record, i);
             int body_ID = mj_name2id(model, mjOBJ_BODY, name.c_str());
             if (body_ID < 0) {
                 helios_runtime_error("ERROR (PhysicsEngine::initialize): Body " + name + " is missing from the compiled model.");
@@ -498,16 +702,23 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
             }
         }
     }
-    body_articulation.assign(model->nbody, -1);
+    geom_link_articulation.assign(model->ngeom, -1);
+    geom_link_index.assign(model->ngeom, -1);
+    body_is_external.assign(model->nbody, 1);
+    body_is_external[0] = 0;
     for (size_t a = 0; a < articulations.size(); a++) {
-        for (int body_ID: articulations[a].link_body_IDs) {
-            body_articulation[body_ID] = static_cast<int>(a);
-        }
-    }
-    body_is_external.assign(model->nbody, 0);
-    for (int body_ID = 1; body_ID < model->nbody; body_ID++) {
-        if (body_articulation[body_ID] < 0) {
-            body_is_external[body_ID] = 1;
+        const ArticulationRecord &record = articulations[a];
+        for (size_t i = 0; i < record.description.links.size(); i++) {
+            body_is_external[record.link_body_IDs[i]] = 0;
+            const std::string body_name = linkBodyName(record.description.name, record.description.links[i].name);
+            for (size_t k = 0; k < record.description.links[i].shapes.size(); k++) {
+                const int geom_ID = mj_name2id(model, mjOBJ_GEOM, geomName(body_name, k).c_str());
+                if (geom_ID < 0) {
+                    helios_runtime_error("ERROR (PhysicsEngine::initialize): Collision shape " + geomName(body_name, k) + " is missing from the compiled model.");
+                }
+                geom_link_articulation[geom_ID] = static_cast<int>(a);
+                geom_link_index[geom_ID] = static_cast<int>(i);
+            }
         }
     }
     for (size_t b = 0; b < boxes.size(); b++) {
@@ -1154,6 +1365,35 @@ int PhysicsEngine::getLinkBodyID(uint articulationID, uint link_index) const {
     return articulations[articulationID].link_body_IDs[link_index];
 }
 
+bool PhysicsEngine::hasOwnBody(uint articulationID, uint link_index) const {
+    requireInitialized("hasOwnBody");
+    requireLink(articulationID, link_index, "hasOwnBody");
+    return articulations[articulationID].link_host[link_index] == static_cast<int>(link_index);
+}
+
+bool PhysicsEngine::getGeomLink(int geom_ID, uint &articulationID, uint &link_index) const {
+    requireInitialized("getGeomLink");
+    if (geom_ID < 0 || geom_ID >= model->ngeom) {
+        helios_runtime_error("ERROR (PhysicsEngine::getGeomLink): Geom " + std::to_string(geom_ID) + " does not exist; the model has " + std::to_string(model->ngeom) + " geoms.");
+    }
+    if (geom_link_articulation[geom_ID] < 0) {
+        return false;
+    }
+    articulationID = static_cast<uint>(geom_link_articulation[geom_ID]);
+    link_index = static_cast<uint>(geom_link_index[geom_ID]);
+    return true;
+}
+
+vec3 PhysicsEngine::linkWorldPosition(const mjData *data, const ArticulationRecord &record, size_t link_index) const {
+    const int body_ID = record.link_body_IDs[link_index];
+    const vec3 &offset = record.link_offset[link_index];
+    const mjtNum local[3] = {offset.x, offset.y, offset.z};
+    mjtNum world[3];
+    mju_mulMatVec3(world, data->xmat + 9 * body_ID, local);
+    mju_addTo3(world, data->xpos + 3 * body_ID);
+    return make_vec3(float(world[0]), float(world[1]), float(world[2]));
+}
+
 uint PhysicsEngine::getContactCount(uint instance) const {
     return static_cast<uint>(getInstance(instance, "getContactCount").data->ncon);
 }
@@ -1161,13 +1401,11 @@ uint PhysicsEngine::getContactCount(uint instance) const {
 float PhysicsEngine::getMaxLinkDisplacement(uint instance) const {
     const mjData *data = getInstance(instance, "getMaxLinkDisplacement").data;
     float max_displacement = 0.f;
-    for (const BodyRestPose &pose: rest_poses) {
-        if (body_is_external[pose.body_ID]) {
-            continue;
+    for (const ArticulationRecord &record: articulations) {
+        for (size_t i = 0; i < record.description.links.size(); i++) {
+            const vec3 displacement = linkWorldPosition(data, record, i) - record.description.links[i].position;
+            max_displacement = std::max(max_displacement, displacement.magnitude());
         }
-        const mjtNum *p = data->xpos + 3 * pose.body_ID;
-        vec3 displacement = make_vec3(float(p[0]), float(p[1]), float(p[2])) - pose.position;
-        max_displacement = std::max(max_displacement, displacement.magnitude());
     }
     return max_displacement;
 }
@@ -1176,10 +1414,17 @@ float PhysicsEngine::getMaxLinkSpeed(uint instance) const {
     const mjData *data = getInstance(instance, "getMaxLinkSpeed").data;
     mjtNum max_speed = 0;
     for (const ArticulationRecord &record: articulations) {
-        for (int body_ID: record.link_body_IDs) {
+        for (size_t i = 0; i < record.description.links.size(); i++) {
+            const int body_ID = record.link_body_IDs[i];
             mjtNum velocity[6]; // rotational then translational velocity of the body origin, in the world frame
             mj_objectVelocity(model, data, mjOBJ_BODY, body_ID, velocity, 0);
-            max_speed = std::max(max_speed, mju_norm3(velocity + 3));
+            // A link merged into a body moves with it, so its velocity adds the body's rotation about the body origin
+            const vec3 link_position = linkWorldPosition(data, record, i);
+            const mjtNum arm[3] = {link_position.x - data->xpos[3 * body_ID], link_position.y - data->xpos[3 * body_ID + 1], link_position.z - data->xpos[3 * body_ID + 2]};
+            mjtNum turning[3];
+            mju_cross(turning, velocity, arm);
+            mju_addTo3(turning, velocity + 3);
+            max_speed = std::max(max_speed, mju_norm3(turning));
         }
     }
     return float(max_speed);
@@ -1214,15 +1459,25 @@ uint PhysicsEngine::getLinkOverlapCount(float min_depth, uint instance) const {
 
 // Exclude from collisions every pair of articulation links that overlap in the compiled model as built, and compile it again
 void PhysicsEngine::excludeInitialLinkOverlaps() {
+    // The bodies that carry links: their own, those they were merged into, and the world for links welded to it
     std::unordered_map<int, std::string> link_body_names;
     for (const ArticulationRecord &record: articulations) {
-        for (const PhysicsLink &link: record.description.links) {
-            const std::string name = linkBodyName(record.description.name, link.name);
+        for (size_t i = 0; i < record.description.links.size(); i++) {
+            const std::string name = hostBodyName(record, i);
             const int body_ID = mj_name2id(model, mjOBJ_BODY, name.c_str());
             if (body_ID < 0) {
                 helios_runtime_error("ERROR (PhysicsEngine::initialize): Body " + name + " is missing from the compiled model.");
             }
             link_body_names[body_ID] = name;
+        }
+    }
+    // Only the shapes of links count: the world body also carries the ground
+    std::unordered_set<int> link_geom_IDs;
+    for (const ArticulationRecord &record: articulations) {
+        for (const PhysicsLink &link: record.description.links) {
+            for (size_t k = 0; k < link.shapes.size(); k++) {
+                link_geom_IDs.insert(mj_name2id(model, mjOBJ_GEOM, geomName(linkBodyName(record.description.name, link.name), k).c_str()));
+            }
         }
     }
 
@@ -1240,7 +1495,7 @@ void PhysicsEngine::excludeInitialLinkOverlaps() {
         }
         const int body_0 = model->geom_bodyid[contact.geom[0]];
         const int body_1 = model->geom_bodyid[contact.geom[1]];
-        if (body_0 != body_1 && link_body_names.count(body_0) > 0 && link_body_names.count(body_1) > 0) {
+        if (body_0 != body_1 && link_geom_IDs.count(contact.geom[0]) > 0 && link_geom_IDs.count(contact.geom[1]) > 0) {
             overlapping.emplace(std::min(body_0, body_1), std::max(body_0, body_1));
         }
     }
@@ -1293,9 +1548,9 @@ vec3 PhysicsEngine::getExternalContactForce(uint articulationID, uint instance) 
         const int body_1 = model->geom_bodyid[contact.geom[1]];
         // MuJoCo gives the force that geom 0 exerts on geom 1, with the contact normal as the first axis of the contact frame
         mjtNum sign = 0;
-        if (body_articulation[body_1] == static_cast<int>(articulationID) && body_is_external[body_0]) {
+        if (geom_link_articulation[contact.geom[1]] == static_cast<int>(articulationID) && body_is_external[body_0]) {
             sign = 1;
-        } else if (body_articulation[body_0] == static_cast<int>(articulationID) && body_is_external[body_1]) {
+        } else if (geom_link_articulation[contact.geom[0]] == static_cast<int>(articulationID) && body_is_external[body_1]) {
             sign = -1;
         } else {
             continue;
@@ -1314,6 +1569,5 @@ vec3 PhysicsEngine::getExternalContactForce(uint articulationID, uint instance) 
 vec3 PhysicsEngine::getLinkPosition(uint articulationID, uint link_index, uint instance) const {
     const mjData *data = getInstance(instance, "getLinkPosition").data;
     requireLink(articulationID, link_index, "getLinkPosition");
-    const mjtNum *p = data->xpos + 3 * articulations[articulationID].link_body_IDs[link_index];
-    return make_vec3(float(p[0]), float(p[1]), float(p[2]));
+    return linkWorldPosition(data, articulations[articulationID], link_index);
 }

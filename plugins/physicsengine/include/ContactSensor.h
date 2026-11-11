@@ -98,7 +98,7 @@ public:
 private:
     [[nodiscard]] size_t findPartner(const std::string &partner, const std::string &method) const;
     [[nodiscard]] std::vector<char> excludedPartnerMask(const std::vector<std::string> &excluded_partners, const std::string &method) const;
-    [[nodiscard]] int partnerOfBody(int body_ID, uint instance) const;
+    [[nodiscard]] int partnerOfGeom(int geom_ID, uint instance) const;
     void requireInstance(uint instance, const std::string &method) const;
 
     // Calls a function for every contact of the last step between a sensed body and a partner, with the contact index, the partner index, and the sign that turns MuJoCo's force of geom 0 on geom 1 into the force on the sensed body
@@ -107,10 +107,12 @@ private:
 
     const PhysicsEngine *engine;
     std::vector<char> body_is_sensed; // indexed by MuJoCo body ID
-    std::vector<int> body_partner; // indexed by MuJoCo body ID: the partner of an unsensed body, before any target link
+    std::vector<int> geom_partner; // indexed by MuJoCo geom ID: the partner of a geom of an unsensed body, before any target link
+    std::vector<int> geom_link_key; // indexed by MuJoCo geom ID: a number for the articulation link the geom belongs to, unique over articulations, otherwise -1
+    std::vector<uint> link_key_base; // per articulation: the key of its first link
     std::vector<std::string> partner_names;
     size_t target_partner = 0;
-    std::vector<int> target_body_IDs; // per instance, -1 when there is no target
+    std::vector<int> target_link_keys; // per instance, -1 when there is no target
 };
 
 #endif

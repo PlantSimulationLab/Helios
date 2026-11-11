@@ -466,6 +466,9 @@ DOCTEST_TEST_CASE("PhysicsEngine - misuse is reported") {
     params = PhysicsEngineParameters();
     params.timestep = 0.f;
     DOCTEST_CHECK_THROWS(engine.initialize(params));
+    params = PhysicsEngineParameters();
+    params.memory_arena_megabytes = -1.f;
+    DOCTEST_CHECK_THROWS(engine.initialize(params));
 
     engine.initialize();
 
@@ -614,6 +617,147 @@ DOCTEST_TEST_CASE("PhysicsEngine - a link with a detach force is released by its
     DOCTEST_CHECK_THROWS(engine.setDetachForce(branchID, 0, 10.f));
     DOCTEST_CHECK_THROWS(engine.setDetachForce(branchID, 1, 0.f));
     DOCTEST_CHECK_THROWS(engine.setDetachForce(branchID, 1, 10.f, 5));
+}
+
+DOCTEST_TEST_CASE("PhysicsEngine - memory arena of each instance") {
+    auto arenaBytes = [](bool articulation_collisions, float megabytes) {
+        Context context;
+        PhysicsEngine engine(&context);
+        engine.disableMessages();
+        PhysicsArticulation pendulum;
+        pendulum.name = "pendulum";
+        PhysicsLink link;
+        link.name = "bob";
+        link.position = make_vec3(0, 0, 1);
+        link.mass = 0.1f;
+        link.inertia_diagonal = make_vec3(1e-4f, 1e-4f, 1e-4f);
+        link.joint_type = PHYSICS_JOINT_BALL;
+        PhysicsCollisionShape shape;
+        shape.type = PHYSICS_SHAPE_SPHERE;
+        shape.size.x = 0.02f;
+        link.shapes.push_back(shape);
+        pendulum.links.push_back(link);
+        engine.addArticulation(pendulum);
+        PhysicsEngineParameters params;
+        params.articulation_collisions = articulation_collisions;
+        params.memory_arena_megabytes = megabytes;
+        engine.initialize(params);
+        engine.createInstance();
+        engine.step(10);
+        return static_cast<double>(engine.getMuJoCoModel()->narena);
+    };
+    const double megabyte = 1024.0 * 1024.0;
+    // Chosen automatically, a large arena for articulation collisions and one sized by the collision search otherwise
+    DOCTEST_CHECK(arenaBytes(true, 0.f) == doctest::Approx(512 * megabyte));
+    DOCTEST_CHECK(arenaBytes(false, 0.f) < 512 * megabyte);
+    // Or the size asked for, either way
+    DOCTEST_CHECK(arenaBytes(true, 8.f) == doctest::Approx(8 * megabyte).epsilon(0.001));
+    DOCTEST_CHECK(arenaBytes(false, 24.f) == doctest::Approx(24 * megabyte).epsilon(0.001));
+}
+
+DOCTEST_TEST_CASE("PhysicsEngine - welded links merged into the body that carries them simulate as they would on their own") {
+    // A post welded to the world, an arm welded to it, a swinging link hung from the arm with a tip welded below it, and a detachable fruit on the post
+    auto makeTree = []() {
+        PhysicsArticulation tree;
+        tree.name = "tree";
+        auto addLink = [&](const std::string &name, int parent, const vec3 &position, PhysicsJointType joint, float mass, const vec3 &shape_offset) {
+            PhysicsLink link;
+            link.name = name;
+            link.parent_index = parent;
+            link.position = position;
+            link.mass = mass;
+            link.inertia_diagonal = make_vec3(1e-3f, 2e-3f, 3e-3f) * mass;
+            link.joint_type = joint;
+            link.stiffness = 0.5f;
+            link.damping = 0.05f;
+            link.label = name;
+            PhysicsCollisionShape shape;
+            shape.type = PHYSICS_SHAPE_SPHERE;
+            shape.size.x = 0.02f;
+            shape.position = shape_offset;
+            link.shapes.push_back(shape);
+            tree.links.push_back(link);
+        };
+        addLink("post", -1, make_vec3(0, 0, 1), PHYSICS_JOINT_WELDED, 1.f, make_vec3(0, 0, 0));
+        addLink("arm", 0, make_vec3(0.3f, 0, 1.1f), PHYSICS_JOINT_WELDED, 0.5f, make_vec3(0.05f, 0, 0));
+        addLink("swing", 1, make_vec3(0.5f, 0, 0.9f), PHYSICS_JOINT_BALL, 0.4f, make_vec3(0, 0, 0));
+        addLink("tip", 2, make_vec3(0.6f, 0.05f, 0.7f), PHYSICS_JOINT_WELDED, 0.3f, make_vec3(0, 0.02f, 0));
+        addLink("fruit", 0, make_vec3(-0.2f, 0, 0.9f), PHYSICS_JOINT_DETACHABLE, 0.15f, make_vec3(0, 0, 0));
+        return tree;
+    };
+
+    struct Run {
+        std::vector<vec3> positions;
+        float speed;
+        float displacement;
+        int bodies;
+    };
+    auto simulate = [&](bool merge, uint steps) {
+        Context context;
+        PhysicsEngine engine(&context);
+        engine.disableMessages();
+        uint treeID = engine.addArticulation(makeTree());
+        PhysicsEngineParameters params;
+        params.merge_welded_links = merge;
+        engine.initialize(params);
+        engine.step(steps);
+        Run run;
+        for (uint i = 0; i < 5; i++) {
+            run.positions.push_back(engine.getLinkPosition(treeID, i));
+        }
+        run.speed = engine.getMaxLinkSpeed();
+        run.displacement = engine.getMaxLinkDisplacement();
+        run.bodies = engine.getMuJoCoModel()->nbody;
+        return run;
+    };
+
+    // The swinging link and its tip swing the same, carried as one body or as two, and the fruit hangs from its weld the same
+    const Run separate = simulate(false, 300);
+    const Run merged = simulate(true, 300);
+    DOCTEST_CHECK(merged.bodies < separate.bodies);
+    for (uint i = 0; i < 5; i++) {
+        INFO("link " << i);
+        DOCTEST_CHECK((merged.positions[i] - separate.positions[i]).magnitude() < 2e-4f);
+    }
+    DOCTEST_CHECK((separate.positions[3] - make_vec3(0.6f, 0.05f, 0.7f)).magnitude() > 0.01f); // the tip did swing
+    DOCTEST_CHECK((merged.positions[4] - make_vec3(-0.2f, 0, 0.9f)).magnitude() < 1e-3f); // the fruit stays where its weld holds it
+    DOCTEST_CHECK(merged.speed == doctest::Approx(separate.speed).epsilon(0.02));
+    DOCTEST_CHECK(merged.displacement == doctest::Approx(separate.displacement).epsilon(0.02));
+
+    // Which links have bodies of their own, and which body carries each of the others
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint treeID = engine.addArticulation(makeTree());
+    engine.initialize();
+    DOCTEST_CHECK_FALSE(engine.hasOwnBody(treeID, 0)); // welded to the world, with no jointed child
+    DOCTEST_CHECK(engine.getLinkBodyID(treeID, 0) == 0);
+    DOCTEST_CHECK(engine.hasOwnBody(treeID, 1)); // the swinging link must not collide with it, as a child never does with its parent body
+    DOCTEST_CHECK(engine.hasOwnBody(treeID, 2));
+    DOCTEST_CHECK_FALSE(engine.hasOwnBody(treeID, 3));
+    DOCTEST_CHECK(engine.getLinkBodyID(treeID, 3) == engine.getLinkBodyID(treeID, 2));
+    DOCTEST_CHECK(engine.hasOwnBody(treeID, 4));
+    DOCTEST_CHECK_THROWS(static_cast<void>(engine.hasOwnBody(treeID, 5)));
+
+    // Every collision shape still names its link, including those carried by another body or the world
+    const mjModel *model = engine.getMuJoCoModel();
+    std::vector<int> shapes_per_link(5, 0);
+    for (int geom_ID = 0; geom_ID < model->ngeom; geom_ID++) {
+        uint articulationID = 0;
+        uint link = 0;
+        if (engine.getGeomLink(geom_ID, articulationID, link)) {
+            DOCTEST_CHECK(articulationID == treeID);
+            DOCTEST_CHECK(model->geom_bodyid[geom_ID] == engine.getLinkBodyID(treeID, link));
+            shapes_per_link[link]++;
+        }
+    }
+    DOCTEST_CHECK(shapes_per_link == std::vector<int>{1, 1, 1, 1, 1});
+    uint articulationID = 0;
+    uint link = 0;
+    const int ground = mj_name2id(model, mjOBJ_GEOM, "ground");
+    DOCTEST_REQUIRE(ground >= 0);
+    DOCTEST_CHECK_FALSE(engine.getGeomLink(ground, articulationID, link));
+    DOCTEST_CHECK_THROWS(static_cast<void>(engine.getGeomLink(model->ngeom, articulationID, link)));
 }
 
 DOCTEST_TEST_CASE("PhysicsEngine - instances reset to a pose set from a settled instance") {

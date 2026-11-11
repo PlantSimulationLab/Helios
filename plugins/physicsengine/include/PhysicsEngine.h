@@ -48,6 +48,20 @@ struct PhysicsEngineParameters {
     float friction = 0.5f;
     //! Apply gravity
     bool gravity = true;
+    //! Simulate each link welded to its parent (\ref PHYSICS_JOINT_WELDED) as part of the body of the nearest link above it that can move, or as part of the static world if none can, rather than as a body of its own.
+    /**
+     * The simulation is the same, since a welded link cannot move relative to that body, but much faster for plants whose wood is mostly rigid (PlantPhysicsParameters::rigid_internodes): MuJoCo otherwise computes the pose of every welded link and
+     * tests its collision shapes on their own at every step. Links keep working as before, through getLinkPosition(), ContactSensor, and Context geometry, but a merged link has no MuJoCo body of its own: getLinkBodyID() gives the body that
+     * carries it, and hasOwnBody() is false.
+     */
+    bool merge_welded_links = true;
+    //! Size in megabytes of the MuJoCo memory arena of each instance, which holds the contacts, the constraints, and the solver's working memory. Zero chooses it automatically: 512 MB when articulation_collisions is enabled, and otherwise enough for the collision search between every pair of shapes.
+    /**
+     * The arena is allocated in full for every instance, so many instances of a large model can exhaust the memory the operating system will commit (on Windows, physical memory plus the page file) although little of each arena is used.
+     * Set a smaller size when simulating many instances; mjData::maxuse_arena (see getMuJoCoData()) gives the most each instance has used. When the contacts or constraints do not fit, step() raises an error, but MuJoCo ends the program if
+     * its solver runs out of working memory, so leave a wide margin above the largest use seen.
+     */
+    float memory_arena_megabytes = 0.f;
 };
 
 //! Type of a link collision shape
@@ -427,12 +441,29 @@ ef PHYSICS_JOINT_DETACHABLE.
      */
     [[nodiscard]] std::string getLinkLabel(uint articulationID, uint link_index) const;
 
-    //! Get the MuJoCo body ID of an articulation link, for direct use of the MuJoCo API
+    //! Get the MuJoCo body ID of the body that carries an articulation link, for direct use of the MuJoCo API
     /**
+     * This is the link's own body, unless the link is welded to its parent and was merged into the body of a link above it, or into the world body (0), by PhysicsEngineParameters::merge_welded_links; hasOwnBody() tells which.
      * \param[in] articulationID ID of the articulation returned by addArticulation().
      * \param[in] link_index Index of the link within the articulation.
      */
     [[nodiscard]] int getLinkBodyID(uint articulationID, uint link_index) const;
+
+    //! Check whether an articulation link is simulated as a MuJoCo body of its own, rather than merged into the body of a link above it or into the world (PhysicsEngineParameters::merge_welded_links)
+    /**
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     * \param[in] link_index Index of the link within the articulation.
+     */
+    [[nodiscard]] bool hasOwnBody(uint articulationID, uint link_index) const;
+
+    //! Find the articulation link that a MuJoCo collision shape (geom) belongs to
+    /**
+     * \param[in] geom_ID MuJoCo geom ID, such as one of the two geoms of a contact.
+     * \param[out] articulationID ID of the articulation of the link, when there is one.
+     * \param[out] link_index Index of the link within the articulation, when there is one.
+     * \return Whether the geom belongs to an articulation link. Kinematic boxes, the ground, and loaded models do not.
+     */
+    bool getGeomLink(int geom_ID, uint &articulationID, uint &link_index) const;
 
     //! Get the number of contacts found in the last step
     /**
@@ -504,7 +535,9 @@ ef PHYSICS_JOINT_DETACHABLE.
 private:
     struct ArticulationRecord {
         PhysicsArticulation description;
-        std::vector<int> link_body_IDs; // MuJoCo body ID of each link
+        std::vector<int> link_body_IDs; // MuJoCo body ID of the body that carries each link: its own, its host's, or the world (0)
+        std::vector<int> link_host; // index of the link whose body carries each link: the link itself if it has its own body, or -1 for the world
+        std::vector<helios::vec3> link_offset; // position of each link in the frame of the body that carries it
         std::vector<size_t> link_rest_pose_indices;
         std::vector<int> link_detach_equality_IDs; // MuJoCo equality ID of each detachable link, otherwise -1
     };
@@ -594,7 +627,11 @@ private:
     void attachModelFiles(const PhysicsEngineParameters &params);
     void addServosAndSensors();
     void excludeInitialLinkOverlaps();
-    void writeLinkBody(std::ostringstream &xml, std::ostringstream &assets, const PhysicsArticulation &articulation, size_t link_index, const std::vector<std::vector<size_t>> &children, int depth) const;
+    void computeLinkHosts(bool merge_welded_links);
+    void writeLinkBody(std::ostringstream &xml, std::ostringstream &assets, const ArticulationRecord &record, size_t link_index, const std::vector<std::vector<size_t>> &children, const std::vector<std::vector<size_t>> &members, int depth) const;
+    void writeLinkShapes(std::ostringstream &xml, std::ostringstream &assets, const ArticulationRecord &record, size_t link_index, int host, const std::string &indent) const;
+    [[nodiscard]] std::string hostBodyName(const ArticulationRecord &record, size_t link_index) const;
+    [[nodiscard]] helios::vec3 linkWorldPosition(const mjData_ *data, const ArticulationRecord &record, size_t link_index) const;
     void bindContextGeometry();
     void bindObjectPrimitives(uint objID, size_t rest_pose_index);
     size_t addRestPose(int body_ID);
@@ -627,7 +664,8 @@ private:
     std::vector<PrimitiveBinding> primitive_bindings;
     std::vector<TubeBinding> tube_bindings;
     std::vector<char> body_is_external; // indexed by MuJoCo body ID: true for kinematic boxes and bodies of loaded models
-    std::vector<int> body_articulation; // indexed by MuJoCo body ID: the articulation the body belongs to, otherwise -1
+    std::vector<int> geom_link_articulation; // indexed by MuJoCo geom ID: the articulation of the link the geom belongs to, otherwise -1
+    std::vector<int> geom_link_index; // indexed by MuJoCo geom ID: the index of the link the geom belongs to, otherwise -1
 
     std::string mjcf_text; // MJCF model that was compiled, before any exclusions excludeInitialLinkOverlaps() added to the spec
     uint excluded_initial_overlaps = 0; // pairs of links excluded from colliding because they overlapped as built

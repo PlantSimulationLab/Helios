@@ -98,6 +98,11 @@ void VacuumCup::resetInstance(uint instance) {
 
 void VacuumCup::setTarget(uint articulationID, uint link_index, uint instance) {
     InstanceState &cup = state(instance, "setTarget");
+    // The grip pulls on the target's body, so the target must be a body of its own rather than part of the body of what it grows on
+    if (!engine->hasOwnBody(articulationID, link_index)) {
+        helios_runtime_error("ERROR (VacuumCup::setTarget): Link " + std::to_string(link_index) + " of articulation " + std::to_string(articulationID) +
+                             " is welded to its parent and simulated as part of another body, so the cup cannot pull on it alone. Make it detachable (PHYSICS_JOINT_DETACHABLE, or PlantPhysicsParameters::detachable_links), or give it a ball joint.");
+    }
     const int target_body_ID = engine->getLinkBodyID(articulationID, link_index);
     const mjModel *model = engine->getMuJoCoModel();
     if (model->body_geomnum[target_body_ID] < 1 || model->geom_type[model->body_geomadr[target_body_ID]] != mjGEOM_SPHERE) {

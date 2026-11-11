@@ -44,7 +44,7 @@ namespace {
     const float max_detach_force = 28.f; // N
 
     const std::string plant_model = "apple_fruitingwall";
-    const float plant_age = 650.f; // days
+    const float plant_age = 2114.f; // days: harvest season of the sixth leaf, when the tall spindle is a mature wall (about 1830 days)
 
     // Fruit that can be targeted must be within reach of the arm
     const float min_fruit_height = 0.8f; // m
@@ -56,7 +56,8 @@ namespace {
     // settling leaves the tree out of balance and it swings for much of each episode. That also costs time to render, since all the wood that swings has to be redrawn.
     const uint settling_physics_steps = 10000; // 20 s
 
-    const vec3 robot_base = make_vec3(-1.05f, 0, 0);
+    // In the alley, whose middle is at x = -1.65 for a 3.3 m row: the tucked cup then starts 12 cm clear of the widest part of the wall, which is hedged 0.75 m to each side of the row
+    const vec3 robot_base = make_vec3(-1.55f, 0, 0);
     const vec3 cup_face = make_vec3(0.32f, 0, 0); // the center of the cup's mouth, in the tool's frame; the cup's axis is the tool's x axis
     const std::vector<float> tucked_pose = {0.f, 0.f, 110.f, -150.f, 40.f, 0.f}; // drive, yaw, shoulder, elbow, wrist, roll
     // A robot stops itself when it presses on something this hard, as a protective stop does. Chosen for this task, not taken from a particular robot.
@@ -258,6 +259,9 @@ namespace {
             // overlapping stay as they are: pushing them apart would bend the wood against the fruit and load their stems before the arm touches them.
             parameters.articulation_collisions = true;
             parameters.keep_initial_link_overlaps = true;
+            // Harvest episodes use well under 1 MB of each instance's arena, so the 512 MB it gets by default would commit gigabytes for a training run's
+            // dozens of instances without being used
+            parameters.memory_arena_megabytes = 32.f;
             engine.initialize(parameters);
             robot->initialize();
 

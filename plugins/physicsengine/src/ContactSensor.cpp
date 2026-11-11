@@ -23,7 +23,7 @@
 using namespace helios;
 
 namespace {
-    const int ground_body_ID = 0; // the ground plane is a geom of MuJoCo's world body
+    const int world_body_ID = 0; // MuJoCo's world body, which carries the ground plane and any links welded to the world
 } // namespace
 
 ContactSensor::ContactSensor(const PhysicsEngine *engine, const std::string &body_name) : engine(engine) {
@@ -55,37 +55,53 @@ ContactSensor::ContactSensor(const PhysicsEngine *engine, const std::string &bod
         return static_cast<int>(partner_names.size() - 1);
     };
 
+    // Partners are told apart by geom, since one body can carry several links (PhysicsEngineParameters::merge_welded_links), and the world body carries the ground as well
     const int other = partnerIndex("other");
-    body_partner.assign(model->nbody, other);
-    body_partner[ground_body_ID] = partnerIndex("ground");
+    const int ground = partnerIndex("ground");
     target_partner = static_cast<size_t>(partnerIndex("target"));
+    link_key_base.resize(engine->getArticulationCount());
+    uint key_base = 0;
     for (uint articulationID = 0; articulationID < engine->getArticulationCount(); articulationID++) {
+        link_key_base[articulationID] = key_base;
+        key_base += engine->getArticulationLinkCount(articulationID);
+        // Every label is a partner, including those of links without collision shapes, so the partners do not depend on the shapes
         for (uint link = 0; link < engine->getArticulationLinkCount(articulationID); link++) {
             const std::string label = engine->getLinkLabel(articulationID, link);
-            body_partner[engine->getLinkBodyID(articulationID, link)] = partnerIndex(label.empty() ? "articulation" : label);
+            static_cast<void>(partnerIndex(label.empty() ? "articulation" : label));
         }
     }
-    if (body_is_sensed[ground_body_ID]) {
+    geom_partner.assign(model->ngeom, other);
+    geom_link_key.assign(model->ngeom, -1);
+    for (int geom_ID = 0; geom_ID < model->ngeom; geom_ID++) {
+        uint articulationID = 0;
+        uint link = 0;
+        if (engine->getGeomLink(geom_ID, articulationID, link)) {
+            const std::string label = engine->getLinkLabel(articulationID, link);
+            geom_partner[geom_ID] = partnerIndex(label.empty() ? "articulation" : label);
+            geom_link_key[geom_ID] = static_cast<int>(link_key_base[articulationID] + link);
+            if (body_is_sensed[model->geom_bodyid[geom_ID]]) {
+                helios_runtime_error("ERROR (ContactSensor): Body " + body_name + " has articulation links below it. Sense a body of a loaded model.");
+            }
+        } else if (model->geom_bodyid[geom_ID] == world_body_ID) {
+            geom_partner[geom_ID] = ground;
+        }
+    }
+    if (body_is_sensed[world_body_ID]) {
         helios_runtime_error("ERROR (ContactSensor): Body " + body_name + " is the world body. Sense a body of a loaded model.");
-    }
-    for (int body_ID = 0; body_ID < model->nbody; body_ID++) {
-        if (body_is_sensed[body_ID] && body_partner[body_ID] != other) {
-            helios_runtime_error("ERROR (ContactSensor): Body " + body_name + " has articulation links below it. Sense a body of a loaded model.");
-        }
     }
     prepareInstances();
 }
 
 void ContactSensor::prepareInstances() {
-    target_body_IDs.resize(engine->getInstanceCount(), -1);
+    target_link_keys.resize(engine->getInstanceCount(), -1);
 }
 
 uint ContactSensor::getPreparedInstanceCount() const {
-    return static_cast<uint>(target_body_IDs.size());
+    return static_cast<uint>(target_link_keys.size());
 }
 
 void ContactSensor::requireInstance(uint instance, const std::string &method) const {
-    if (instance >= target_body_IDs.size()) {
+    if (instance >= target_link_keys.size()) {
         if (instance < engine->getInstanceCount()) {
             helios_runtime_error("ERROR (ContactSensor::" + method + "): Instance " + std::to_string(instance) + " was created after the sensor. Call prepareInstances() after creating instances.");
         }
@@ -95,12 +111,15 @@ void ContactSensor::requireInstance(uint instance, const std::string &method) co
 
 void ContactSensor::setTargetLink(uint articulationID, uint link_index, uint instance) {
     requireInstance(instance, "setTargetLink");
-    target_body_IDs[instance] = engine->getLinkBodyID(articulationID, link_index);
+    if (articulationID >= link_key_base.size() || link_index >= engine->getArticulationLinkCount(articulationID)) {
+        helios_runtime_error("ERROR (ContactSensor::setTargetLink): Link " + std::to_string(link_index) + " of articulation " + std::to_string(articulationID) + " does not exist.");
+    }
+    target_link_keys[instance] = static_cast<int>(link_key_base[articulationID] + link_index);
 }
 
 void ContactSensor::clearTargetLink(uint instance) {
     requireInstance(instance, "clearTargetLink");
-    target_body_IDs[instance] = -1;
+    target_link_keys[instance] = -1;
 }
 
 const std::vector<std::string> &ContactSensor::getPartnerNames() const {
@@ -127,8 +146,9 @@ std::vector<char> ContactSensor::excludedPartnerMask(const std::vector<std::stri
     return excluded;
 }
 
-int ContactSensor::partnerOfBody(int body_ID, uint instance) const {
-    return body_ID == target_body_IDs[instance] ? static_cast<int>(target_partner) : body_partner[body_ID];
+int ContactSensor::partnerOfGeom(int geom_ID, uint instance) const {
+    const int key = geom_link_key[geom_ID];
+    return key >= 0 && key == target_link_keys[instance] ? static_cast<int>(target_partner) : geom_partner[geom_ID];
 }
 
 template<typename Function>
@@ -144,9 +164,9 @@ void ContactSensor::forEachSensedContact(uint instance, Function function) const
         }
         // MuJoCo gives the force that geom 0 exerts on geom 1
         if (body_is_sensed[body_1]) {
-            function(c, partnerOfBody(body_0, instance), 1.);
+            function(c, partnerOfGeom(contact.geom[0], instance), 1.);
         } else {
-            function(c, partnerOfBody(body_1, instance), -1.);
+            function(c, partnerOfGeom(contact.geom[1], instance), -1.);
         }
     }
 }

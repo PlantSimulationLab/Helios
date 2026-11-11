@@ -1,7 +1,9 @@
 # Apple harvesting: training a policy
 
 A robot arm with a vacuum cup reaches a fruit on a fruiting-wall apple tree, grips it, and pulls until it detaches. Each tree seed
-gives a tree with a different structure.
+gives a tree with a different structure. The trees are the tall-spindle `apple_fruitingwall` of PlantArchitecture (Helios 1.3.96 and
+later), grown from a nursery tree to 2114 days, the harvest season of its sixth leaf, when the wall is mature. The robot stands 1.55 m
+from the middle of the row, 10 cm short of the middle of the alley.
 
 ## Setup and use
 
@@ -93,7 +95,24 @@ Success over 240 episodes (2 simulations of each of trees 301-312, never used in
 | Must touch the fruit (5 mm), pulls toward its center | 57.9% | 69.2% | timeout 15%, collision 16% |
 | Must touch, holds the fruit on the face, seal limits on pull, sliding and peeling | 45.0% | 52.1% | slipped 23%, collision 15% |
 | Seals only with the whole lip on the fruit, which sits in the cup's mouth | 50.0% | 17.1% (31.7% after 1,500,000 steps) | timeout 48%, collision 23% (after 1.5M: collision 37%, timeout 17%) |
-| Same grip, and the tree's parts collide with each other (this version) | 65.4% | 31.7% | collision 29%, knocked off 21%, timeout 16% |
+| Same grip, and the tree's parts collide with each other | 65.4% | 31.7% | collision 29%, knocked off 21%, timeout 16% |
+| Same task on the mature tall-spindle wall (this version) | 75.4% | 0.0% from scratch; 55.4% starting from a copy of the scripted controller | from scratch: timeout 90%; from the copy: knocked off 21%, collision 18% |
+
+The trees of the rows above were the earlier `apple_fruitingwall`, a smaller wall that Helios 1.3.96 replaced, so only the last row is
+for the current trees.
+
+On the mature tall-spindle wall the scripted controller succeeds 75.4% of the time (69.6-80.4%), with protective stops at 17.5%, knocked-off
+fruit at 3.3%, and timeouts at 3.8% (`results/mature_scripted_*`). The wall is 1.5 m wide, so the robot stands back near the middle of the alley:
+from the old position, 0.5 m closer, the tucked arm started inside the canopy and the scripted controller froze until time ran out. Of the
+positions tried on trees 301-306, 1.35 m from the row timed out in 10% of episodes, 1.45 m in 0.8%, and 1.55 m in none. That
+choice among three positions was made on evaluation trees, which they are otherwise kept from, so the scripted controller's figure may be
+slightly high; the policies were trained without them.
+PPO trained from scratch for 500,000 steps never picked a fruit, in training or on the held-out trees, and timed out in 90% of evaluation
+episodes. Starting instead from a policy that copies the scripted controller (`train.py --imitate-scripted 200000 --value-warmup 100000
+--initial-log-std -1`, so 600,000 steps in all) gives 55.4% (49.1-61.6%). The copy alone picked 4 of 16 held-out fruit, so PPO
+improves on it, but not to the scripted controller: it has as many protective stops (17.5%) but knocks off six times as many fruit
+(21.2%), pushing the fruit off its stem before the seal holds. It succeeded in 66% of episodes on its training trees and 37.5% on the
+held-out trees, so it fits the 8 training trees more than it learns what carries over. The results are in `results/mature_in_helios_*`.
 
 With the face grip the policy pulls mostly downward (mean direction -0.34, -0.09, -0.75), where the earlier ones pulled toward the robot,
 and detaches fruit with a pull out of the face of only half the force to detach: the rest of the load goes along the face or into the
