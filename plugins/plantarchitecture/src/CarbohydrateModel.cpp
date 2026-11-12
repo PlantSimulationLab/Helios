@@ -619,9 +619,9 @@ void PlantArchitecture::checkCarbonPool_redistributeCarbon(uint plantID, float d
     PlantInstance &plant_instance = plant_instances.at(plantID);
     const CarbohydrateParameters &carbohydrate_params = plant_instance.carb_parameters;
 
-    if (carbohydrate_params.starch_temperature_warm <= carbohydrate_params.starch_temperature_cold) {
-        helios_runtime_error("ERROR (PlantArchitecture::checkCarbonPool_redistributeCarbon): CarbohydrateParameters::starch_temperature_warm (" + std::to_string(carbohydrate_params.starch_temperature_warm) +
-                             " C) must be greater than starch_temperature_cold (" + std::to_string(carbohydrate_params.starch_temperature_cold) + " C).");
+    if (carbohydrate_params.sugar_target_intercept < 0.f || carbohydrate_params.sugar_target_slope < 0.f || carbohydrate_params.sugar_target_slope > 1.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::checkCarbonPool_redistributeCarbon): CarbohydrateParameters::sugar_target_intercept (" + std::to_string(carbohydrate_params.sugar_target_intercept) +
+                             " g C/g DW) must be non-negative and sugar_target_slope (" + std::to_string(carbohydrate_params.sugar_target_slope) + ") must be between 0 and 1.");
     }
 
     // A storage compartment: a living shoot's wood, or the root system.
@@ -729,10 +729,8 @@ void PlantArchitecture::checkCarbonPool_redistributeCarbon(uint plantID, float d
         }
     }
 
-    // (4) Sugar-starch partitioning. Tissue holds carbohydrate as soluble sugar up to a saturation level and stores the
-    // rest as starch; cold raises the sugar level, converting starch to sugar over winter.
-    const float warmth = std::clamp((plant_instance.carbon_model_temperature_C - carbohydrate_params.starch_temperature_cold) / (carbohydrate_params.starch_temperature_warm - carbohydrate_params.starch_temperature_cold), 0.f, 1.f);
-    const float sugar_saturation_gC_gDW = carbohydrate_params.sugar_saturation_cold + (carbohydrate_params.sugar_saturation_warm - carbohydrate_params.sugar_saturation_cold) * warmth;
+    // (4) Sugar-starch partitioning. Tissue holds as soluble sugar an intercept plus a fixed share of its carbohydrate
+    // (per g DW), at most all of it, and stores the rest as starch: the sugar share falls as carbohydrate rises.
     const float conversion = 1.f - std::exp(-carbohydrate_params.starch_conversion_rate * dt);
     for (const Compartment &compartment: compartments) {
         hydrolyzeStarchToCoverSugar(*compartment.sugar_molC, *compartment.starch_molC);
@@ -740,7 +738,7 @@ void PlantArchitecture::checkCarbonPool_redistributeCarbon(uint plantID, float d
         if (carbohydrate <= 0.f) {
             continue;
         }
-        const float sugar_target = std::min(carbohydrate, sugar_saturation_gC_gDW * compartment.dry_mass_gDW / C_molecular_wt);
+        const float sugar_target = std::min(carbohydrate, carbohydrate_params.sugar_target_intercept * compartment.dry_mass_gDW / C_molecular_wt + carbohydrate_params.sugar_target_slope * carbohydrate);
         const float starch_change = conversion * ((carbohydrate - sugar_target) - *compartment.starch_molC);
         *compartment.starch_molC += starch_change;
         *compartment.sugar_molC -= starch_change;
@@ -939,7 +937,6 @@ void PlantArchitecture::adjustPlantMaintenanceRespiration(float Ta) {
     for (auto &[plantID, plant_instance]: plant_instances) {
         const float Ta_C = Ta - 273.15f;
         plant_instance.respiration_temperature_factor = powf(plant_instance.carb_parameters.respiration_Q10, (Ta_C - 20.f) / 10.f);
-        plant_instance.carbon_model_temperature_C = Ta_C;
     }
 }
 

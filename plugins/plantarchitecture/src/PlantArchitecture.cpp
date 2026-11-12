@@ -11312,7 +11312,6 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
 
         copy.carb_parameters = source.carb_parameters;
         copy.respiration_temperature_factor = source.respiration_temperature_factor;
-        copy.carbon_model_temperature_C = source.carbon_model_temperature_C;
         copy.nitrogen_parameters = source.nitrogen_parameters;
 
         // Attraction points are absolute world coordinates anchored to the plant's base (the library

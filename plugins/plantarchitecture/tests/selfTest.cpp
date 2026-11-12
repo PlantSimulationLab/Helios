@@ -2613,12 +2613,14 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate shortage stops radial growth")
     DOCTEST_CHECK(thickened == 0);
 }
 
-DOCTEST_TEST_CASE("PlantArchitecture carbohydrate sugar-starch partition follows temperature") {
-    // Tissue holds carbohydrate as sugar up to a saturation concentration that rises in the cold, storing the rest as
-    // starch; over winter starch is converted to sugar. At 100 mg glucose/g DW (0.04 g C/g DW) the sugar share settles
-    // at sugar_saturation_warm / 0.04 when warm and sugar_saturation_cold / 0.04 when cold.
-    constexpr float carbohydrate_gC_gDW = 0.04f;
-    auto shootSugarFraction = [&](float temperature_C) {
+DOCTEST_TEST_CASE("PlantArchitecture carbohydrate sugar-starch partition follows a linear sugar target") {
+    // Sugar settles at sugar_target_intercept + sugar_target_slope x total carbohydrate (per g DW), the rest is starch,
+    // whatever the temperature. The old rule held sugar at a temperature-dependent ceiling (0.018 g C/g warm, 0.036 cold)
+    // and put everything above it into starch: at 120 mg glucose/g DW (0.048 g C/g) that gave a sugar share of 0.375 warm and
+    // 0.75 cold, and at 40 mg/g (0.016 g C/g) no starch at all, whereas almond wood keeps a sugar share that falls as total
+    // NSC rises and holds some starch even at its spring minimum (Davidson et al. 2021). Expected shares use the defaults
+    // 0.0064 g C/g and 0.37 (Carbohydrate Observatory almond wood).
+    auto shootSugarFraction = [&](float carbohydrate_gC_gDW, float temperature_C) {
         Context context;
         context.seedRandomGenerator(12345);
         PlantArchitecture plantarchitecture(&context);
@@ -2634,9 +2636,14 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate sugar-starch partition follows
         return shoot->sugar_pool_molC / (shoot->sugar_pool_molC + shoot->starch_pool_molC);
     };
 
-    const CarbohydrateParameters defaults;
-    DOCTEST_CHECK(shootSugarFraction(25.f) == doctest::Approx(defaults.sugar_saturation_warm / carbohydrate_gC_gDW).epsilon(0.01));
-    DOCTEST_CHECK(shootSugarFraction(0.f) == doctest::Approx(defaults.sugar_saturation_cold / carbohydrate_gC_gDW).epsilon(0.01));
+    constexpr float intercept_gC_gDW = 0.0064f;
+    constexpr float slope = 0.37f;
+    for (float carbohydrate_gC_gDW: {0.016f, 0.048f}) {
+        const float expected_fraction = (intercept_gC_gDW + slope * carbohydrate_gC_gDW) / carbohydrate_gC_gDW;
+        DOCTEST_CAPTURE(carbohydrate_gC_gDW);
+        DOCTEST_CHECK(shootSugarFraction(carbohydrate_gC_gDW, 25.f) == doctest::Approx(expected_fraction).epsilon(0.01));
+        DOCTEST_CHECK(shootSugarFraction(carbohydrate_gC_gDW, 0.f) == doctest::Approx(expected_fraction).epsilon(0.01));
+    }
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture carbohydrate maintenance respiration follows its Q10") {

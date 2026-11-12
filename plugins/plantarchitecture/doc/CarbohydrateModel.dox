@@ -12,7 +12,7 @@ Key features of the carbohydrate model include:
 - Construction and growth respiration of stem, roots, leaves, flowers and fruit
 - A root carbohydrate reserve
 - Phloem transport that evens out carbohydrate between shoots and roots
-- Temperature-dependent partitioning between sugar and starch
+- Partitioning between sugar and starch, with a sugar share that falls as carbohydrate rises
 - Dynamic modulation of phyllochron, internode elongation, leaf expansion, vegetative bud break and radial growth
 - Organ abortion (flowers, fruits, shoots) under carbon stress
 - A per-plant carbon budget reporting every flux
@@ -86,11 +86,9 @@ The parameters shared by every sub-model are members of \ref CarbohydrateParamet
 || storage_capacity | 0.05 | g C/g DW | Largest carbohydrate concentration wood holds (~125 mg glucose/g DW); roots hold root_storage_ratio times as much per unit dry mass. |
 || storage_refill_rate | 0.03 | 1/day | Rate at which storage takes up surplus photosynthate toward capacity, competing with radial growth; photosynthate beyond both is forgone. |
 | **Sugar and starch** |||||
-|| sugar_saturation_warm | 0.018 | g C/g DW | Sugar held before storing starch, in warm conditions (~45 mg glucose/g DW). |
-|| sugar_saturation_cold | 0.036 | g C/g DW | Sugar held before storing starch, in cold conditions (~90 mg glucose/g DW). |
-|| starch_temperature_warm | 15 | °C | Temperature at and above which sugar_saturation_warm applies. |
-|| starch_temperature_cold | 5 | °C | Temperature at and below which sugar_saturation_cold applies. |
-|| starch_conversion_rate | 0.2 | 1/day | Rate at which sugar and starch relax toward their partition. |
+|| sugar_target_intercept | 0.0064 | g C/g DW | Intercept of the sugar target (16 mg glucose/g DW): tissue holds sugar_target_intercept + sugar_target_slope x its carbohydrate concentration as sugar, the rest as starch. |
+|| sugar_target_slope | 0.37 | - | Sugar gained per unit of carbohydrate in the sugar target. |
+|| starch_conversion_rate | 0.2 | 1/day | Rate at which sugar and starch relax toward the sugar target. |
 | **Starvation and growth modulation** |||||
 || carbohydrate_starvation_days | 2 | days | Days below carbohydrate_growth_threshold before a shoot's flowers and fruit are aborted. |
 || carbohydrate_growth_threshold | 0.02 | g C/g DW | Concentration below which a shoot is short of carbon: the phyllochron lengthens, elongation, leaf expansion and bud break slow, radial growth stops, and after carbohydrate_starvation_days its flowers and fruit are aborted. |
@@ -142,7 +140,7 @@ The parameters shared by every sub-model are members of \ref CarbohydrateParamet
 || root_allocation_early | 0.35 | - | Fraction of net photosynthate allocated to roots at emergence. |
 || root_allocation_late | 0.05 | - | Fraction of net photosynthate allocated to roots at flag leaf; 0 after anthesis. |
 
-Sources: wood, leaf and fruit carbon contents and the respiration coefficients are from the PEACH model (Grossman & DeJong 1994, Tree Physiology 14:37-48 and 14:329-345); growth respiration from DeJong & Goudriaan (1989); almond leaf mass per area from Pica et al. (2022); the root storage ratio from almond tree excavations (Esparza et al. 2001); the shoot:root ratio from excavated mature almond (Muhammad et al. 2020). The sugar-starch and threshold values are set from seasonal almond twig NSC measurements (20-170 mg glucose/g DW over the year).
+Sources: wood, leaf and fruit carbon contents and the respiration coefficients are from the PEACH model (Grossman & DeJong 1994, Tree Physiology 14:37-48 and 14:329-345); growth respiration from DeJong & Goudriaan (1989); almond leaf mass per area from Pica et al. (2022); the root storage ratio from almond tree excavations (Esparza et al. 2001); the shoot:root ratio from excavated mature almond (Muhammad et al. 2020). The sugar target is a linear fit to monthly medians of sugar against total NSC in debarked almond twig wood across California orchards, 2017-2019 (Davidson et al. 2021, Scientific Reports 11:5181, Fig. 5), and the threshold values are set from seasonal almond twig NSC measurements (20-170 mg glucose/g DW over the year).
 
 \subsection CarbParamSet Setting Parameters
 
@@ -264,7 +262,11 @@ The plant's carbohydrate is held in its shoots and its root system. The root sys
 where \f$N_i\f$ is the carbohydrate in compartment \f$i\f$ and \f$m_i\f$ its storage capacity (wood dry mass, or root dry mass times root_storage_ratio). The exchange sums to zero, so carbon is conserved. Setting carbon_mixing_rate to 0 leaves each shoot to live on its own carbon.
 2. <b>Deficits.</b> A compartment that spent more than it held (for example a shoot that has just been charged for new leaves and wood) imports like any active sink: it is brought up to the plant's mean fill, drawn from the other compartments in proportion to their holdings.
 3. <b>Storage capacity.</b> The plant stores at most storage_capacity (g C/g DW) per unit of storage capacity \f$m_i\f$. Carbohydrate above that, which the plant can neither spend nor store, leaves it below ground as root exudation and respiration, taken from every compartment in proportion to its holding, and is reported in PlantCarbonBudget::storage_overflow. \ref PlantArchitecture::getPlantCarbohydrateStorageFill() returns the plant's carbohydrate as a fraction of its capacity.
-4. <b>Sugar and starch.</b> Tissue holds carbohydrate as sugar up to a saturation concentration and stores the rest as starch. The saturation is sugar_saturation_warm at and above starch_temperature_warm, sugar_saturation_cold at and below starch_temperature_cold, and interpolated between, so starch is converted to sugar in winter. The pools relax toward this partition at starch_conversion_rate, and starch is hydrolysed immediately whenever sugar would otherwise go negative.
+4. <b>Sugar and starch.</b> Tissue holds as soluble sugar a target that rises linearly with its carbohydrate concentration \f$c\f$ (g C/g DW), and stores the rest as starch:
+\f[
+S^{*} = \min\left(c,\ a + b\,c\right)
+\f]
+with \f$a\f$ = sugar_target_intercept and \f$b\f$ = sugar_target_slope. The sugar share therefore falls as carbohydrate rises, and starch is kept even at low concentrations, as in almond wood, where sugar tracks total NSC with a positive intercept and starch is never exhausted at the spring minimum (Davidson et al. 2021). The pools relax toward this partition at starch_conversion_rate, and starch is hydrolysed immediately whenever sugar would otherwise go negative. Temperature does not enter the partition: in California almond wood the winter rise in sugar share is small and reverses before bloom, and cold conversion of starch to sugar below ~5 C is not represented.
 
 \subsection CarbSurplus Surplus Carbohydrate
 

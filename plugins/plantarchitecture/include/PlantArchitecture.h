@@ -693,15 +693,13 @@ struct CarbohydrateParameters {
     float storage_refill_rate = 0.03f;
 
     // -- Sugar-starch partitioning -- //
-    //! Sugar concentration (g C / g DW) held as soluble sugar in warm conditions; carbohydrate above it is stored as starch (~45 mg glucose/g DW)
-    float sugar_saturation_warm = 0.018f;
-    //! Sugar concentration (g C / g DW) held as soluble sugar in cold conditions, when starch is converted to sugar (~90 mg glucose/g DW)
-    float sugar_saturation_cold = 0.036f;
-    //! Temperature (C) at and above which sugar_saturation_warm applies
-    float starch_temperature_warm = 15.f;
-    //! Temperature (C) at and below which sugar_saturation_cold applies
-    float starch_temperature_cold = 5.f;
-    //! Rate (1/day) at which sugar and starch relax toward their temperature-dependent partitioning
+    //! Intercept of the sugar target (g C / g DW). Tissue holds as soluble sugar sugar_target_intercept + sugar_target_slope x its carbohydrate concentration (at most all of
+    //! it) and the rest as starch, so the sugar share falls as carbohydrate rises and some starch remains at low concentrations. 0.0064 g C/g DW is 16 mg glucose/g DW, from a linear fit to monthly
+    //! medians of debarked almond twig wood across California orchards, 2017-2019 (Carbohydrate Observatory; Davidson et al. 2021, Sci. Rep. 11:5181, Fig. 5).
+    float sugar_target_intercept = 0.0064f;
+    //! Slope of the sugar target: soluble sugar gained per unit of carbohydrate (see sugar_target_intercept; Davidson et al. 2021).
+    float sugar_target_slope = 0.37f;
+    //! Rate (1/day) at which sugar and starch relax toward the sugar target
     float starch_conversion_rate = 0.2f;
 
     // -- Starvation and growth modulation -- //
@@ -3688,8 +3686,6 @@ struct PlantInstance {
 
     //! Temperature factor applied to the 20 C maintenance respiration rates, set by PlantArchitecture::adjustPlantMaintenanceRespiration()
     float respiration_temperature_factor = 1.f;
-    //! Temperature (C) most recently passed to PlantArchitecture::adjustPlantMaintenanceRespiration(); drives sugar-starch partitioning
-    float carbon_model_temperature_C = 20.f;
     //! Soluble sugar held in the root system (mol C)
     float root_sugar_pool_molC = 0;
     //! Starch held in the root system (mol C)
