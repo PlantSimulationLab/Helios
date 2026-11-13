@@ -65,9 +65,29 @@ const uint slot_masks[8] = uint[8](0x00u, 0x01u, 0x03u, 0x07u, 0x0Fu, 0x1Fu, 0x3
 // - Branchless byte extraction via bitfieldExtract
 // This overload also reports where on the facet the closest hit landed, which the camera shader interpolates a per-vertex quantity with. For a triangle the components are the barycentric weights of the
 // second and third vertices; for a patch they run from zero at the first vertex to one at the second and fourth.
+// Leaf-record flags of the primitives the ray being traced cannot hit, and whether it can hit nothing at all. Set by set_periodic_tile() in periodic_boundary.glsl: a primitive excluded from the
+// periodic boundary exists only in the central periodic copy of the domain, and nothing exists beyond a limited number of copies.
+uint traversal_hidden_flags = 0u;
+bool traversal_hide_all = false;
+// Whether the ray being traced is in the periodic copy of the domain of the primitive it was launched from (origin_prim_idx), which it does not hit there; its other periodic copies are hit like any
+// other primitive. Set by set_periodic_tile().
+bool traversal_skip_origin = true;
+// Whether the ray being traced is a dual ray: a direct or diffuse ray that books what it delivers in both radiation fields (see common/buffer_indexing.glsl), launched from a primitive that is not
+// excluded from the periodic boundary in a scene with a background field. Such a ray is traced like any other until its closest hit is on an excluded primitive, which is where it ends in the scene as
+// it is (field 0). The shader tracing it then sets traversal_excluded_passed and traces the same segment again: from there on the ray follows the background field, which does not contain the excluded
+// primitives, so they are hidden from it in every copy of the domain (see set_periodic_tile()). The nearest excluded primitive a segment would have hit is thus found without any test of its own in
+// the traversal. The raygen shader sets traversal_record_excluded for the primitive it launches from, and resets traversal_excluded_passed for each ray. Must match passExcludedPrimitive() in
+// OptiX8DeviceCode.cu and passExcludedPrimitive() in primitiveIntersection.cu, which pass the excluded primitives in any-hit programs.
+bool traversal_record_excluded = false;
+bool traversal_excluded_passed = false;
+
 uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t, out vec2 closest_uv) {
 
     closest_uv = vec2(0.0);
+    if (traversal_hide_all) {
+        closest_t = 1e30;
+        return UINT_MAX;
+    }
 
 
     vec3 ray_dir_inv = safe_inv_dir(ray_dir);
@@ -192,7 +212,7 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
                     uint flags = floatBitsToUint(leaf_records_buf.records[slot * 4u + 1u].w);
                     uint prim_idx = floatBitsToUint(anchor_and_index.w);
 
-                    if (prim_idx == origin_prim_idx || (flags & LEAF_RECORD_NEVER_HIT) != 0u) continue;
+                    if ((prim_idx == origin_prim_idx && traversal_skip_origin) || (flags & (LEAF_RECORD_NEVER_HIT | traversal_hidden_flags)) != 0u) continue;
 
                     float hit_t;
                     vec2 hit_uv;

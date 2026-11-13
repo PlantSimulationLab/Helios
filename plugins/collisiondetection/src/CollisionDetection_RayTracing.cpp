@@ -1061,30 +1061,33 @@ bool CollisionDetection::aabbIntersectSoA(const helios::vec3 &ray_origin, const 
     __m128 aabb_min_vec = _mm_set_ps(0.0f, aabb_min.z, aabb_min.y, aabb_min.x);
     __m128 aabb_max_vec = _mm_set_ps(0.0f, aabb_max.z, aabb_max.y, aabb_max.x);
 
-    // Compute inverse ray direction. Clamp near-zero direction components away from zero before the reciprocal so an
-    // axis-aligned ray lying exactly on a box face computes (bound-origin)*huge == 0 (finite) instead of
-    // (bound-origin==0)*inf == NaN, which would corrupt the min/max slab test and spuriously reject the box.
+    // A ray parallel to an axis (as in the scalar path below) can hit the box only if its origin lies within that axis's
+    // slab, and the slab then sets no limit on t. Dividing by a small stand-in for the zero component instead would cut
+    // the slab off at (distance to the face) / (stand-in), culling the box for an axis-aligned ray on or near a face.
     constexpr float PARALLEL_EPS = 1e-8f;
-    __m128 abs_dir = _mm_andnot_ps(_mm_set1_ps(-0.0f), ray_dir); // |ray_dir|
-    __m128 too_small = _mm_cmplt_ps(abs_dir, _mm_set1_ps(PARALLEL_EPS));
-    // Replace near-zero components with +/-PARALLEL_EPS preserving sign (sign bit of the original component).
-    __m128 sign = _mm_and_ps(ray_dir, _mm_set1_ps(-0.0f));
-    __m128 clamped = _mm_or_ps(sign, _mm_set1_ps(PARALLEL_EPS));
-    __m128 safe_dir = _mm_or_ps(_mm_and_ps(too_small, clamped), _mm_andnot_ps(too_small, ray_dir));
-    __m128 inv_dir = _mm_div_ps(_mm_set1_ps(1.0f), safe_dir);
+    const __m128 abs_dir = _mm_andnot_ps(_mm_set1_ps(-0.0f), ray_dir); // |ray_dir|
+    const __m128 parallel = _mm_cmplt_ps(abs_dir, _mm_set1_ps(PARALLEL_EPS));
+    const __m128 outside_slab = _mm_or_ps(_mm_cmplt_ps(ray_orig, aabb_min_vec), _mm_cmpgt_ps(ray_orig, aabb_max_vec));
+    if ((_mm_movemask_ps(_mm_and_ps(parallel, outside_slab)) & 0x7) != 0) { // x, y and z lanes only
+        return false;
+    }
+    // Parallel axes divide by 1 to keep the arithmetic finite; their t-values are replaced below
+    const __m128 safe_dir = _mm_blendv_ps(ray_dir, _mm_set1_ps(1.0f), parallel);
+    const __m128 inv_dir = _mm_div_ps(_mm_set1_ps(1.0f), safe_dir);
 
     // Compute t1 and t2 for all axes
     __m128 t1 = _mm_mul_ps(_mm_sub_ps(aabb_min_vec, ray_orig), inv_dir);
     __m128 t2 = _mm_mul_ps(_mm_sub_ps(aabb_max_vec, ray_orig), inv_dir);
 
-    // Get min and max for each axis
-    __m128 tmin = _mm_min_ps(t1, t2);
-    __m128 tmax = _mm_max_ps(t1, t2);
+    // Get min and max for each axis; a parallel axis imposes no limit
+    const float infinity = std::numeric_limits<float>::infinity();
+    __m128 tmin = _mm_blendv_ps(_mm_min_ps(t1, t2), _mm_set1_ps(-infinity), parallel);
+    __m128 tmax = _mm_blendv_ps(_mm_max_ps(t1, t2), _mm_set1_ps(infinity), parallel);
 
-    // Extract components
+    // Extract components (unaligned stores: the arrays are not guaranteed 16-byte alignment)
     float tmin_vals[4], tmax_vals[4];
-    _mm_store_ps(tmin_vals, tmin);
-    _mm_store_ps(tmax_vals, tmax);
+    _mm_storeu_ps(tmin_vals, tmin);
+    _mm_storeu_ps(tmax_vals, tmax);
 
     float t_near = std::max({tmin_vals[0], tmin_vals[1], tmin_vals[2], 0.0f});
     float t_far = std::min({tmax_vals[0], tmax_vals[1], tmax_vals[2], max_distance});

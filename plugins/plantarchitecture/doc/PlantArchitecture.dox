@@ -115,13 +115,22 @@ A number of plant models are available in the plant architecture library, which 
 | Puncturevine (*Tribulus terrestris*)     | generic                            | "puncturevine"             | base, offshoots, children                          |
 | Rice (*Oryza sativa*)                    | semi-dwarf irrigated               | "rice"                     | mainstem, tiller                                           |
 | Sorghum (*Sorghum bicolor*)              | grain sorghum                      | "sorghum"                  | mainstem, tiller                                   |
-| Soybean (*Glycine max*)                  | upright growth habit (determinate) | "soybean"                  | unifoliate, trifoliate                             |
+| Soybean (*Glycine max*)                  | indeterminate field soybean        | "soybean"                  | unifoliate, trifoliate, branch                     |
 | Strawberry (*Fragaria × ananassa*)       | generic                            | "strawberry"               | mainstem                                           |
 | Sugar Beet (*Beta vulgaris*)             | generic                            | "sugarbeet"                | mainstem                                           |
 | Tomato (*Solanum lycopersicum*)          | determinate growth                 | "tomato"                   | mainstem                                           |
 | Cherry Tomato (*Solanum lycopersicum*)   | upright trained                    | "cherrytomato"             | mainstem                                           |
 | Walnut Tree (*Juglans regia*)            | generic                            | "walnut"                   | trunk, scaffold, proleptic                         |
 | Wheat (*Triticum aestivum*)              | generic                            | "wheat"                    | mainstem, tiller                                   |
+| Long greenhouse cucumber (high-wire) (*Cucumis sativus*) | trained on a string | "cucumber" | main |
+
+The "cucumber" model is a single unbranched stem trained up a vertical string in the high-wire system. Once its head reaches the wire, 3.8 m above the plant base, the stem is lowered and leaned as growers do: the older stem is laid along the row (the +y direction) 0.3 m above the floor, and the head stays at the wire while the stem as a whole keeps growing, to about 8 m by 120 days. The string moves along the row with the head. Fruit are picked as they reach full size, so a plant carries only the few still growing near its head, and the stem laid along the row is bare. The crop is grown for about 165 days, as high-wire crops are replanted about twice a year: the stem stops at 125 nodes, after which its remaining leaves age and fall. The plant structure XML stores neither the string, which is a set of attraction points, nor the lowered shape of the stem, so a plant read back with \ref PlantArchitecture::readPlantStructureXML() stands straight up, and advancing it raises an error until its string is re-attached. Re-attach it with \ref PlantArchitecture::enableAttractionPoints(uint, const std::vector<helios::vec3>&, float, float, float) "enableAttractionPoints()" before advancing; the plant is then lowered again on its first time steps:
+
+~~~~~~
+uint plantID = plantarchitecture.readPlantStructureXML("cucumber.xml").front();
+plantarchitecture.enableAttractionPoints(plantID, CucumberStringAttractionPoints(plantarchitecture.getPlantBasePosition(plantID)), 80.f, 0.15f, 0.8f);
+plantarchitecture.advanceTime(plantID, 1);
+~~~~~~
 
 \subsection PlantArchBuild_default Loading a Plant from the Library with Default Parameters
 
@@ -280,13 +289,19 @@ Tree species use a simplified height-based training system. The code automatical
 
 | Parameter | Default | Valid Range | Units | Description |
 |-----------|---------|-------------|-------|-------------|
-| trunk_height | 0.78-1.0* | 0.1-3.0 | m | Total desired trunk height |
+| trunk_height | 0.78-1.0* | 0.1-3.0 | m | Total desired trunk height. Each scaffold is attached to its own trunk node, so a short trunk must have at least num_scaffolds nodes (at 4 cm internodes, 0.1 m carries at most 3 scaffolds). |
 | num_scaffolds | 4 | 2-8 | - | Number of scaffold branches |
 | scaffold_angle | 40-57* | 20-70** | deg | Scaffold branch angle from vertical |
 
 *Default values: almond and almond_independence: 0.78 m trunk, 52° scaffolds; apple: 0.8 m trunk, 40° scaffolds; walnut: 0.8 m trunk, 40° scaffolds; pistachio: 1.0 m trunk, 57° scaffolds
 
 **25-60 for walnut
+
+The olive model ("olive") takes only trunk_height, with its own range, and always carries four scaffolds:
+
+| Parameter | Default | Valid Range | Units | Description |
+|-----------|---------|-------------|-------|-------------|
+| trunk_height | 0.6 | 0.2-1.5 | m | Trunk height, built from 3 cm internodes. 0.5-0.6 m is typical of super-high-density hedgerows and 0.8-1.2 m of traditional orchards. |
 
 The pistachio model also trains the young tree as California orchards do (UC ANR pistachio establishment guidelines): each scaffold is tipped at 0.45 m during its first growing season and regrows from the buds below the cut, and in the first winter the secondaries on each scaffold are thinned to three and headed to 0.30 m, regrowing from below those cuts the next season. After that the tree grows without further pruning. The training runs from the model's phytomer callback (see \ref PlantArchCallbackEdits) and is always applied.
 
@@ -297,7 +312,7 @@ The apple fruiting wall is a tall spindle (Hoying, Robinson & Fargione, "The Tal
 | Parameter | Default | Valid Range | Units | Description |
 |-----------|---------|-------------|-------|-------------|
 | tree_height | 3.1 | 2.0-4.5 | m | Height at which the leader is headed (the top wire) |
-| trunk_height | 0.7 | 0.1-3.0 | m | Height of the lowest fruiting branch; must be at least 0.5 m below tree_height |
+| trunk_height | 0.7 | 0.1-1.0 | m | Height of the lowest feather on the nursery leader. The upper limit keeps it below the dormant buds at the top of the shortest (1.5 m) nursery leader. |
 | num_feathers | 10 | 6-15 | - | Number of feathers on the nursery tree |
 | tree_spacing | 0.9 | 0.5-2.0 | m | In-row tree spacing, to which the branches are hedged along the row |
 | row_spacing | 3.3 | 2.0-5.0 | m | Between-row spacing, which scales the wall's width (1.5 m at the base and 0.75 m at the top for a 3.3 m row) |
@@ -491,6 +506,7 @@ Plant type string argument | time_to_dormancy_break | time_to_flower_initiation 
 "tomato" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "walnut" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1095 days (3 years) |
 "wheat" | 0 | -1 | -1 | 4 | 39 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"cucumber" | 0 | 12 | 6 | 2 | 14 | \f$\infty\f$ | 0 | 165 days |
 
 \subsection PlantArchCollision Collision Avoidance
 
@@ -762,7 +778,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | flower_prototype_function | function pointer | - | Pointer to a function that generates the flower prototype model. Function takes arguments ( helios::Context*, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters ) and returns an object ID (uint). The build parameters are those the plant was built with (see \ref PlantArchBuildParams), and are empty for a plant not built from the library. |
 | fruit_prototype_scale | RandomParameter_float | - | Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit. |
 | fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, const std::map<std::string, float> &build_parameters ) and returns an object ID (uint). The build parameters are those the plant was built with (see \ref PlantArchBuildParams), and are empty for a plant not built from the library. |
-| fruit_class_map_file | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | empty | Class map of the texture the fruit prototype is mapped with, from which RadiationModel::applySpectralClassMaps() gives the fruit's lighter and darker parts their own spectra. Recorded on each textured fruit triangle as the primitive data "spectral_class_map". Cannot be combined with a specular surface layer on the fruit. The apple library models ship AppleFruit_classes.png but do not set it, since their fruit carries a surface layer (see below). See the radiation plug-in documentation, "Spectral Textures". |
+| fruit_class_map_file | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | empty | Class map of the texture the fruit prototype is mapped with, from which RadiationModel::applySpectralClassMaps() gives the fruit's lighter and darker parts their own spectra. Recorded on each textured fruit triangle as the primitive data "spectral_class_map". The apple library models set AppleFruit_classes.png, whose classes scale the body under the fruit's specular surface layer. See the radiation plug-in documentation, "Spectral Textures". |
 | inflorescence_maturity_period | RandomParameter_float | days | Time for the inflorescence to expand from its initial quarter size to full size. Zero means it is already full size when it forms, and a negative value (the default) defers to the plant-level fruit-maturity threshold set by <code>setPlantPhenologicalThresholds()</code>. Set this where the inflorescence finishes elongating on a different schedule from the fruit, as in maize, where the tassel is fully expanded at VT roughly two months before the ear finishes grain fill. |
 | unique_prototypes | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of unique flower/fruit prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
 

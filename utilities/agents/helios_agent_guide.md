@@ -52,6 +52,12 @@ to be missing something or to misbehave, stop and tell the user.
   `RadiationModel` throws without one.
 - **Periodic scenes need `RadiationModel::enforcePeriodicBoundary()`** (rows, a plot cut from a
   larger field). Without it, edge plants get extra side light and see a dark void below the horizon.
+- **The periodic period is the bounding box of *all* geometry, not the ground.**
+  `enforcePeriodicBoundary()` places the wrap faces on `Context::getDomainBoundingBox()`. A leaf that
+  overhangs the ground widens the period, which leaves ground-free gaps between copies (rays fall
+  through and see nothing) and makes the plant spacing wrong. After building the scene, crop to the
+  ground's extent with `Context::cropDomain()` / `cropDomainX()` / `cropDomainY()`, or make the ground
+  cover every primitive.
 - **Radiation camera images need `SolarPosition` for realistic light:** the sun direction plus
   `calculateDirectSolarSpectrum()` and `calculateDiffuseSolarSpectrum()`, and for the most realistic
   sky `enablePragueSkyModel()` / `updatePragueSkyModel()`. Without a diffuse flux the sky renders
@@ -67,9 +73,19 @@ to be missing something or to misbehave, stop and tell the user.
   each source, so a shadow edge falls within the facet and the sun's penumbra is resolved by the
   camera's antialiasing samples (noisy with few). Geometry that smoothing skips still steps:
   standalone patches/triangles, `Box`, `Disk`, and a `Polymesh` without a face table.
+- **Camera images need geometry fine enough to resolve shadows.** Flux smoothing lets leaves get by
+  with coarser facets, but the grid must still roughly resolve the shadows falling on it. The usual
+  culprit is the ground: one large patch or a coarse tile shows little or no shadow. Build the
+  ground with `Context::addAdaptiveTileObject()`, which refines sub-patches toward a target point
+  (`AdaptiveTileRefinement::target`, `subpatch_size_min` / `subpatch_size_max`), not a uniform tile.
 - **Run the executable from `build/`** (or one directory below it), or set the `HELIOS_BUILD`
   environment variable to the build directory. Plugin assets are resolved relative to the working
   directory, so running from elsewhere fails with "Could not resolve asset file".
 - **Assign a material before setting a primitive's color.** The color is stored on the material, so
   setting it first and then assigning a new material leaves the primitive black.
+- **A polymesh's transformation-matrix translation is not its origin.** `Context::rotateObject()`
+  and `scaleObject()` pivot about the object origin, which is the bounding-box center at creation
+  (as for every object type). The translation in `getObjectTransformationMatrix()` for a polymesh
+  is the first primitive's first vertex at creation, an arbitrary frame anchor. Use
+  `getObjectCenter()` for the center; never read the origin out of the matrix.
 - **No display:** construct the `Visualizer` with `headless = true`.

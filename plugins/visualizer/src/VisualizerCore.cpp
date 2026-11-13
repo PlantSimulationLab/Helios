@@ -27,6 +27,7 @@ extern "C" {
 }
 
 #include "Visualizer.h"
+#include "VisualizerMacOS.h"
 
 #include "json.hpp"
 
@@ -55,6 +56,9 @@ using namespace helios;
 // GLFW should be initialized once and kept alive for the entire application lifetime
 // This avoids macOS-specific issues with reinitializing GLFW after termination
 static int glfw_reference_count = 0;
+
+// Number of Visualizers with a GLFW window that can be shown (not headless). On macOS a headless Visualizer makes the process a background application, with no Dock icon, only while there are none.
+static int glfw_windowed_visualizer_count = 0;
 
 // Number of Visualizers rendering through each EGL display. eglGetPlatformDisplayEXT returns the same display for the same device to
 // every caller, and eglTerminate is not reference counted, so a display is terminated only when no Visualizer uses it.
@@ -1594,6 +1598,20 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         openWindow();
     }
 
+#ifdef __APPLE__
+    // GLFW makes the process a regular Cocoa application, with a Dock icon, when it creates its first window, although a headless Visualizer's window is never shown. A process using only headless
+    // Visualizers is made an accessory application instead, which has no Dock icon or menu bar, and, having no visible window, does not take focus. (Not a prohibited application: macOS refuses to make
+    // one regular again.) A windowed Visualizer makes it a regular application again, which a headless one created earlier would otherwise have left without an icon or a menu bar.
+    if (headless) {
+        if (glfw_windowed_visualizer_count == 0) {
+            visualizer_macos::setActivationPolicy(visualizer_macos::ActivationPolicy::Accessory);
+        }
+    } else {
+        glfw_windowed_visualizer_count++;
+        visualizer_macos::setActivationPolicy(visualizer_macos::ActivationPolicy::Regular);
+    }
+#endif
+
     } // end of the GLFW context branch
 
     // Initialize GLEW - required for both headless and windowed modes
@@ -2151,6 +2169,10 @@ Visualizer::~Visualizer() {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         glfwPollEvents();
 #endif
+
+        if (!headless) {
+            glfw_windowed_visualizer_count--;
+        }
 
         // Decrement reference count and only terminate GLFW when last Visualizer is destroyed
         // Keeping GLFW initialized avoids macOS issues with pixel format caching and context reinitialization

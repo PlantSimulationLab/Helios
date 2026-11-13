@@ -456,7 +456,13 @@ if [[ "${OSTYPE}" == "linux"* ]]; then
     # After ~25-35 vkCreateInstance/vkDestroyInstance cycles, NVIDIA driver fails with VK_ERROR_INITIALIZATION_FAILED
 
     # Solution 1: Use only NVIDIA ICD (modern Vulkan loader method)
-    export VK_LOADER_DRIVERS_SELECT="nvidia*"
+    # Only where an NVIDIA driver is installed, and never over a driver choice the caller already made: the loader applies
+    # this filter on top of VK_ICD_FILENAMES / VK_DRIVER_FILES, so on a machine without an NVIDIA driver (an AMD or Intel GPU,
+    # or lavapipe in CI) it leaves no driver at all and every Vulkan test skips for "no GPU".
+    if [ -z "${VK_ICD_FILENAMES:-}${VK_DRIVER_FILES:-}${VK_LOADER_DRIVERS_SELECT:-}" ] &&
+       ls /usr/share/vulkan/icd.d/nvidia*.json /etc/vulkan/icd.d/nvidia*.json /usr/local/share/vulkan/icd.d/nvidia*.json >/dev/null 2>&1; then
+        export VK_LOADER_DRIVERS_SELECT="nvidia*"
+    fi
 
     # Solution 2: Increase file descriptor limit
     # NVIDIA driver has FD leak issue with VkFence objects

@@ -73,6 +73,17 @@ layout(set = 0, binding = 14) readonly buffer MaskIDsBuffer { int mask_ids[]; } 
 layout(set = 0, binding = 15) readonly buffer UVDataBuffer { vec2 uv_data[]; } uv_data_buf;
 layout(set = 0, binding = 16) readonly buffer UVIDsBuffer { int uv_ids[]; } uv_ids_buf;
 layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer { float vertices[]; } bbox_verts_buf;
+// Periodic copies of the domain rays track (see common/periodic_boundary.glsl and VulkanComputeBackend::uploadPeriodicInfo())
+layout(set = 0, binding = 22) readonly buffer PeriodicInfoBuffer {
+    uint tile_tracking; // 1 if rays track the periodic copy of the domain they are in
+    int max_repeats_x; // periodic copies on each side of the central domain; -1 for no limit
+    int max_repeats_y;
+    float repeated_zmin; // z-range of the geometry that repeats
+    float repeated_zmax;
+    float escape_offset; // distance beyond a face from which a ray leaving the periodic copies continues
+    int camera_tile_x; // periodic copy of the domain the camera is in (camera and pixel-label launches)
+    int camera_tile_y;
+} periodic_info_buf;
 
 // ========== Descriptor Set 1: Materials ==========
 // Translucent cover (glass/plastic) material, read to pass camera rays through covers. Same
@@ -147,7 +158,8 @@ void main() {
     float accumulated_depth = 0.0;
     uint hit_prim = UINT_MAX;
 
-    // A ray starting above or below a periodic domain is moved to it in one step
+    // The ray starts in the periodic copy of the domain the camera is in; a ray starting above or below a periodic domain is moved to it in one step
+    set_periodic_tile(ivec2(periodic_info_buf.camera_tile_x, periodic_info_buf.camera_tile_y));
     if (pc.bbox_count != 0) {
         accumulated_depth = advance_to_periodic_faces(ray_origin, ray_dir, pc.periodic_flags & 1u, (pc.periodic_flags >> 1) & 1u, pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax);
     }

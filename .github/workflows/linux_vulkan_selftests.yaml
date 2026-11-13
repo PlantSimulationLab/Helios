@@ -83,7 +83,7 @@ jobs:
           # which take minutes even on a real GPU. This group is analytic, covers the paths the
           # backend actually gets wrong (multi-source, per-band sky, occlusion and alpha-mask
           # energy, finite camera output), and runs in well under a second on a real GPU.
-          if ! ./run_tests.sh --test radiation --force-vulkan --requiregpu --doctestargs "-tc=*Backend Invariant*" --log-file ../linux_vulkan_selftests.log; then
+          if ! ./run_tests.sh --test radiation --force-vulkan --requiregpu --testcase "*Backend Invariant*" --log-file ../linux_vulkan_selftests.log; then
             echo "==== run_tests.sh failed; dumping linux_vulkan_selftests.log ===="
             cat ../linux_vulkan_selftests.log
             exit 1

@@ -873,7 +873,7 @@ public:
      * By default, the diffuse sky only fills the upper hemisphere: a ray that leaves all geometry heading downward (e.g., past the edge of a finite ground, or from the underside of an isolated object) receives no ambient radiation. Calling this
      * function makes the sky fill the full sphere, so that such rays receive the same ambient radiation as rays leaving upward. This applies to all bands. Camera rays leaving below the horizon always see sky; by default
      * they see the sky radiance at the horizon in the same azimuth, and with this function called they see the sky's full-sphere angular pattern.
-     * \note To avoid edge effects from a finite ground (where the domain edges are dark from below), use \ref RadiationModel::enforcePeriodicBoundary() "enforcePeriodicBoundary()" rather than this function.
+     * \note To avoid edge effects from a finite ground (where the domain edges are dark from below), use \ref RadiationModel::enforcePeriodicBoundary(const std::string &) "enforcePeriodicBoundary()" rather than this function.
      */
     void enableBelowHorizonDiffuseRadiation();
 
@@ -1347,10 +1347,38 @@ public:
 
     //! Use a periodic boundary condition in one or more lateral directions
     /**
-     * \param[in] boundary Lateral direction to enforce periodic boundary - choices are "x" (periodic only in x-direction), "y" (periodic only in y-direction), or "xy" (periodic in both x- and y-directions).
-     * \note This method should be called prior to calling RadiationModel::updateGeometry(), otherwise the boundary condition will not be enforced.
+     * The scene repeats without limit in the periodic direction(s): a ray leaving the domain through one side re-enters it through the opposite side.
+     * \param[in] boundary Lateral direction to enforce periodic boundary - choices are "x" (periodic only in x-direction), "y" (periodic only in y-direction), "xy" (periodic in both x- and y-directions),
+     * or "none" (or an empty string) for no periodic boundary.
+     * \note This method should be called prior to calling RadiationModel::updateGeometry(), otherwise the boundary condition will not be enforced. Each call replaces the boundary set by an earlier
+     * call, including its excluded primitives and repeat limit.
      */
     void enforcePeriodicBoundary(const std::string &boundary);
+
+    //! Use a periodic boundary condition in one or more lateral directions, with some primitives that do not repeat
+    /**
+     * The excluded primitives exist only in the central copy of the domain, for example a single object standing in an infinite canopy. The period is the width of the bounding box of the
+     * primitives that do repeat, and every excluded primitive must lie laterally within it.
+     * \param[in] boundary Lateral direction to enforce periodic boundary - choices are "x", "y", or "xy" (see \ref RadiationModel::enforcePeriodicBoundary(const std::string &) "enforcePeriodicBoundary()").
+     * \param[in] excluded_UUIDs UUIDs of the primitives that are not repeated. Primitives added to the Context later are not excluded; excluded primitives deleted later are dropped from the list.
+     * \note This method should be called prior to calling RadiationModel::updateGeometry(). The radiation fluxes of the repeated primitives are those of their copies in the central domain, which
+     * every other copy shares: in camera images, light scattered by an excluded object, and the sky it hides, are seen around every copy of the primitives near it. Direct (beam) radiation is
+     * evaluated per pixel, so cast shadows fall only where the object puts them.
+     */
+    void enforcePeriodicBoundary(const std::string &boundary, const std::vector<uint> &excluded_UUIDs);
+
+    //! Use a periodic boundary condition that repeats the scene a limited number of times, optionally with some primitives that do not repeat
+    /**
+     * The scene is repeated max_repeats.x times on each side of the central domain in x, and max_repeats.y times on each side in y, giving a finite field of (2 max_repeats.x + 1) by
+     * (2 max_repeats.y + 1) copies. A ray that leaves the field continues as one that leaves the scene (it reaches the sky or the radiation source). A limit of 0 gives the same result as no periodic
+     * boundary in that direction.
+     * \param[in] boundary Lateral direction to enforce periodic boundary - choices are "x", "y", or "xy" (see \ref RadiationModel::enforcePeriodicBoundary(const std::string &) "enforcePeriodicBoundary()").
+     * \param[in] excluded_UUIDs UUIDs of the primitives that are not repeated, or an empty list (see \ref RadiationModel::enforcePeriodicBoundary(const std::string &, const std::vector<uint> &)
+     * "enforcePeriodicBoundary()").
+     * \param[in] max_repeats Number of copies on each side of the central domain in x and y. The value for a direction that is not periodic must be 0.
+     * \note This method should be called prior to calling RadiationModel::updateGeometry(). Example: enforcePeriodicBoundary("xy", {}, make_int2(5, 5)) for an 11 by 11 field of copies.
+     */
+    void enforcePeriodicBoundary(const std::string &boundary, const std::vector<uint> &excluded_UUIDs, const helios::int2 &max_repeats);
 
     //! Add a radiation camera sensor
     /**
@@ -1489,6 +1517,10 @@ public:
      * transmissivity are kept from summing to more than 1), registers the palette "surface_[class map]", where [class map] is the class map's file name without its extension, and assigns the
      * spectral texture to the primitives (see \ref helios::Context::setPrimitiveSpectralTexture()). Primitives without the data are left alone, as are those carrying a class map defined
      * relative to a leaf (a <leaf_class_map>, as PlantArchitecture records on leaves), whose classes LeafOptics::run() derives from the leaf's properties; so a plant can be given whole.
+     *
+     * A class map marked scales="body" is for a surface with a specular surface layer: each class's reflectance_scale s scales only the body under the layer, so its reflectivity is
+     * a(1) + s (rho - a(1)) and its transmissivity s tau, where a(1) is what the layer of the primitives (their "specular_roughness" and "specular_n") reflects at normal incidence. The primitives'
+     * layers are read here, so they must be set first, and primitives with different layers get separate palettes, "surface_[class map]_n[refractive index]_r[roughness]".
      * \param[in] UUIDs Primitives to consider.
      * \note Call this before \ref updateGeometry(), as a spectral texture assigned after it is not seen until the geometry is updated again.
      */
@@ -2573,6 +2605,16 @@ protected:
      */
     void updateSurfaceLayers(helios::WarningAggregator &warnings);
 
+    //! Read a surface-layer parameter of a primitive, such as "specular_roughness": the value in its material if the material has it (material data take precedence, as elsewhere in Helios), otherwise its primitive data
+    /**
+     * \param[in] UUID Primitive to read.
+     * \param[in] label Label of the parameter.
+     * \param[out] value The parameter's value, if it is set.
+     * \param[in,out] warnings [optional] Aggregator that records a primitive value shadowed by the material's.
+     * \return Whether the parameter is set.
+     */
+    bool readSurfaceLayerParameter(uint UUID, const std::string &label, float &value, helios::WarningAggregator *warnings) const;
+
     //! Albedo table of the surface layer of the primitive at position u in global band b, or nullptr if it has none there (see helios::computeSurfaceLayerAlbedoTable())
     [[nodiscard]] const float *surfaceLayerTable(size_t u, size_t b_global) const;
 
@@ -2868,6 +2910,34 @@ protected:
     //! y-extent (min, max) of the periodic boundary faces, i.e. the domain bounding box plus its padding; the period in y is its width
     helios::vec2 periodic_ybounds;
 
+    //! UUIDs of the primitives excluded from the periodic boundary condition, which exist only in the central copy of the domain
+    std::vector<uint> periodic_excluded_UUIDs;
+
+    //! Per primitive position: whether what the direct launch deposited in the cameras' outgoing radiation is removed exactly before they read it, because they shade that direct radiation per hit
+    //! point (normal-mapped primitives) or per pixel (every primitive but a translucent cover when primitives are excluded from the periodic boundary). Set by runBand().
+    std::vector<bool> camera_direct_removed_exactly;
+
+    //! Whether cameras evaluate the direct radiation of every primitive (but a translucent cover) per pixel sample, which they do when primitives are excluded from the periodic boundary
+    [[nodiscard]] bool cameraDirectPerPixelForAll() const;
+
+    //! Whether the primitive at a position in the ray-tracing geometry is excluded from the periodic boundary (see enforcePeriodicBoundary())
+    [[nodiscard]] bool excludedFromPeriodicBoundary(size_t position) const;
+
+    //! Whether the direct radiation the direct launch deposited in the cameras' outgoing radiation of the primitive at this position is removed exactly (see camera_direct_removed_exactly)
+    [[nodiscard]] bool cameraDirectRemovedExactly(size_t position) const;
+
+    //! Whether the primitive at this position is a translucent cover (glass) in every launched band, as the backends decide it
+    [[nodiscard]] bool coverInAllLaunchedBands(size_t position, const std::vector<char> &band_launch_flag) const;
+
+    //! Number of periodic copies of the domain on each side of the central one in x and y; -1 for no limit
+    helios::int2 periodic_max_repeats;
+
+    //! Periodic boundary flags (x, y) for the boundary string given to enforcePeriodicBoundary(); raises an error for an unknown string
+    [[nodiscard]] static helios::vec2 parsePeriodicBoundary(const std::string &boundary);
+
+    //! The UUIDs given to enforcePeriodicBoundary() to exclude from the periodic boundary, sorted and without duplicates; raises an error for a primitive that does not exist
+    [[nodiscard]] std::vector<uint> validatePeriodicExcludedUUIDs(const std::vector<uint> &excluded_UUIDs) const;
+
     bool radiativepropertiesneedupdate = true;
 
     //! Whether camera images interpolate the outgoing flux across each facet rather than holding it constant
@@ -2932,8 +3002,10 @@ protected:
      * \param[in] component_count Number of outgoing components: 2 when some primitive has a specular surface layer, whose reflection is the second, and 1 otherwise.
      * \param[out] vertex_flux_top Area-weighted mean top-face radiation at each shared vertex, indexed [component][vertex][band].
      * \param[out] vertex_flux_bottom Area-weighted mean bottom-face radiation at each shared vertex, indexed [component][vertex][band].
+     * \param[in] background_field [optional] True to average the background radiation field (see RayTracingGeometry::periodicDualField()), which leaves out the primitives excluded from the periodic boundary.
      */
-    void accumulateCameraFluxAtVertices(const std::vector<float> &flux_top, const std::vector<float> &flux_bottom, size_t band_count, size_t component_count, std::vector<float> &vertex_flux_top, std::vector<float> &vertex_flux_bottom) const;
+    void accumulateCameraFluxAtVertices(const std::vector<float> &flux_top, const std::vector<float> &flux_bottom, size_t band_count, size_t component_count, std::vector<float> &vertex_flux_top, std::vector<float> &vertex_flux_bottom,
+                                        bool background_field = false) const;
 
     //! Remove from a camera's outgoing radiation the part each smoothed primitive reflects and transmits of the sources' direct radiation, before the rest is averaged onto the shared vertices
     /**
@@ -2959,8 +3031,9 @@ protected:
      * \param[in] moments Values per [normal-map slot][face][launch band][3] (see RayTracingBackend::getNormalMapMoments()).
      * \param[in] launch_band_count Number of launched bands.
      * \param[out] vertex_moments Values per [vertex][face][launch band][3].
+     * \param[in] background_field [optional] True to average the background radiation field (see RayTracingGeometry::periodicDualField()), which leaves out the primitives excluded from the periodic boundary.
      */
-    void accumulateNormalMapMomentsAtVertices(const std::vector<float> &moments, size_t launch_band_count, std::vector<float> &vertex_moments) const;
+    void accumulateNormalMapMomentsAtVertices(const std::vector<float> &moments, size_t launch_band_count, std::vector<float> &vertex_moments, bool background_field = false) const;
 
     //! Average the radiation reaching and leaving the faces of primitives with a spectral texture onto the shared vertices, for camera flux smoothing
     /**
@@ -2972,8 +3045,9 @@ protected:
      * \param[in] slot_count Number of source slots: the sources and, last, the sky and other surfaces.
      * \param[in] band_count Number of bands in the current launch.
      * \param[out] vertex_values Values per [face][layer][vertex][band], where layer 0 is the last source slot and layer 1 the emitted radiation (see RayTracingBackend::uploadSpectralVertexIncident()).
+     * \param[in] background_field [optional] True to average the background radiation field (see RayTracingGeometry::periodicDualField()), which leaves out the primitives excluded from the periodic boundary.
      */
-    void accumulateSpectralIncidentAtVertices(const std::vector<float> &spectral_incident, const std::vector<float> &spectral_emitted, size_t slot_count, size_t band_count, std::vector<float> &vertex_values) const;
+    void accumulateSpectralIncidentAtVertices(const std::vector<float> &spectral_incident, const std::vector<float> &spectral_emitted, size_t slot_count, size_t band_count, std::vector<float> &vertex_values, bool background_field = false) const;
 
     //! Sum a camera's white reference over the surfaces its pixels see, for its "auto" white balance
     /**

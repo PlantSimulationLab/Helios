@@ -191,6 +191,8 @@ namespace helios {
         destroyBuffer(white_reference_cam_buffer);
         destroyBuffer(surface_layer_buffer);
         destroyBuffer(camera_info_buffer);
+        destroyBuffer(periodic_info_buffer);
+        destroyBuffer(periodic_excluded_buffer);
         destroyBuffer(spectral_palette_buffer);
         destroyBuffer(spectral_class_map_buffer);
         destroyBuffer(normal_map_buffer);
@@ -237,6 +239,10 @@ namespace helios {
         validateGeometryBeforeUpload(geometry);
 
         primitive_count = geometry.primitive_count;
+        // The background radiation field (see RayTracingGeometry::periodicDualField()): the buffers of outgoing and scattered radiation, of what cameras read and of the direct flux hold a second set
+        // of flux slots for it. Must match OptiX8Backend::updateGeometry().
+        flux_slot_count = geometry.fluxSlotCount();
+        flux_field_count = geometry.periodicDualField() ? 2 : 1;
 
         if (primitive_count == 0) {
             return; // Empty geometry
@@ -374,6 +380,7 @@ namespace helios {
             // Must match LEAF_RECORD_TRIANGLE / LEAF_RECORD_NEVER_HIT in intersections.glsl
             const uint32_t record_flag_triangle = 1u;
             const uint32_t record_flag_never_hit = 2u;
+            const uint32_t record_flag_periodic_excluded = 4u; // LEAF_RECORD_PERIODIC_EXCLUDED in shaders/common/intersections.glsl
 
             const std::vector<uint32_t> &leaf_prim_indices = bvh_builder.getPrimitiveIndices();
             std::vector<float> leaf_records(std::max<size_t>(1, leaf_prim_indices.size()) * 16, 0.f);
@@ -406,6 +413,9 @@ namespace helios {
                 // backend has no intersector for (disks and bboxes are never emitted; voxels are rejected below)
                 if (geometry.twosided_flags[prim_idx] >= 2 || n_length < 1e-20 || (!is_triangle && !is_quad)) {
                     flags |= record_flag_never_hit;
+                }
+                if (!geometry.periodic_excluded.empty() && geometry.periodic_excluded[prim_idx] != 0) {
+                    flags |= record_flag_periodic_excluded;
                 }
 
                 double dual_u[3] = {0, 0, 0};
@@ -735,7 +745,46 @@ namespace helios {
             }
         }
 
+        // Whether each primitive is excluded from the periodic boundary, which the direct and diffuse shaders read for the primitive they launch from
+        {
+            periodic_excluded_flags = geometry.periodic_excluded;
+            std::vector<uint32_t> excluded_flags(1, 0u);
+            if (!geometry.periodic_excluded.empty()) {
+                if (geometry.periodic_excluded.size() != primitive_count) {
+                    helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): periodic_excluded size mismatch. Expected " + std::to_string(primitive_count) + " entries, got " + std::to_string(geometry.periodic_excluded.size()));
+                }
+                excluded_flags.assign(primitive_count, 0u);
+                for (size_t p = 0; p < primitive_count; p++) {
+                    excluded_flags[p] = geometry.periodic_excluded[p] != 0 ? 1u : 0u;
+                }
+            }
+            if (periodic_excluded_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(periodic_excluded_buffer);
+            }
+            periodic_excluded_buffer = createBuffer(excluded_flags.size() * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(periodic_excluded_buffer, excluded_flags.data(), excluded_flags.size() * sizeof(uint32_t));
+        }
+
+        // The layout of the background radiation field, for the shaders (see common/buffer_indexing.glsl)
+        periodic_info[8] = static_cast<uint32_t>(flux_field_count);
+        periodic_info[9] = static_cast<uint32_t>(flux_slot_count);
+        periodic_info[10] = static_cast<uint32_t>(geometry.normal_map_slot_count);
+
+        periodic_info[0] = geometry.periodicTileTracking() ? 1u : 0u;
+        std::memcpy(&periodic_info[1], &geometry.periodic_max_repeats.x, sizeof(int32_t));
+        std::memcpy(&periodic_info[2], &geometry.periodic_max_repeats.y, sizeof(int32_t));
+        std::memcpy(&periodic_info[3], &geometry.periodic_repeated_zbounds.x, sizeof(float));
+        std::memcpy(&periodic_info[4], &geometry.periodic_repeated_zbounds.y, sizeof(float));
+        std::memcpy(&periodic_info[5], &geometry.periodic_escape_offset, sizeof(float));
+        uploadPeriodicInfo(helios::make_int2(0, 0));
+
         descriptors_dirty = true; // Geometry changed, need descriptor update
+    }
+
+    void VulkanComputeBackend::uploadPeriodicInfo(const helios::int2 &camera_tile) {
+        std::memcpy(&periodic_info[6], &camera_tile.x, sizeof(int32_t));
+        std::memcpy(&periodic_info[7], &camera_tile.y, sizeof(int32_t));
+        uploadBufferData(periodic_info_buffer, periodic_info, sizeof(periodic_info));
     }
 
     void VulkanComputeBackend::buildAccelerationStructure() {
@@ -1051,6 +1100,12 @@ namespace helios {
     }
 
     void VulkanComputeBackend::launchDirectRays(const RayTracingLaunchParams &params) {
+        // With a background radiation field this launch leaves the background's slots to be completed from the scene's when it is done (see completeBackgroundField()), which
+        // holds only if the buffers it books in were zeroed since the last direct launch
+        if (flux_field_count == 2 && background_field_completed) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): Direct rays were already launched since the radiation buffers were last zeroed. With primitives excluded from the periodic "
+                                 "boundary, zeroRadiationBuffers() must be called before each direct launch.");
+        }
         last_launch_description = "a direct-ray launch (" + std::to_string(params.launch_count) + " primitives, " + std::to_string(params.rays_per_primitive) + " rays each, " + std::to_string(params.num_bands_launch) + " bands)";
         if (primitive_count == 0 || source_count == 0) {
             return; // No geometry or sources
@@ -1078,7 +1133,7 @@ namespace helios {
         uploadBufferData(band_map_buffer, launch_to_global_band.data(), launch_to_global_band.size() * sizeof(uint32_t));
 
         // Ensure scatter and radiation_out buffers exist (direct shader writes scatter buffers), one block per outgoing component
-        size_t buf_size = outgoing_components * primitive_count * launch_band_count * sizeof(float);
+        size_t buf_size = outgoing_components * flux_slot_count * launch_band_count * sizeof(float);
         VkBufferUsageFlags scatter_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
         if (scatter_top_buffer.buffer == VK_NULL_HANDLE || scatter_top_buffer.size != buf_size) {
@@ -1316,6 +1371,54 @@ namespace helios {
                 }
             } while (wait_result == VK_TIMEOUT);
         }
+
+        // With a background radiation field, the direct shader leaves in the background's flux slots only what the excluded primitives kept from the scene as it is (see
+        // direct_raygen.comp); every buffer this launch booked in both fields is completed here. A buffer the launch did not book in is a placeholder or left over from an
+        // earlier launch, and is left alone.
+        if (flux_field_count == 2) {
+            completeBackgroundField(scatter_top_buffer, "scatter_top");
+            completeBackgroundField(scatter_bottom_buffer, "scatter_bottom");
+            if (camera_count > 0) {
+                completeBackgroundField(camera_scatter_top_buffer, "camera_scatter_top");
+                completeBackgroundField(camera_scatter_bottom_buffer, "camera_scatter_bottom");
+                if (spectral_incident_count > 0) {
+                    completeBackgroundField(spectral_incident_buffer, "spectral_incident");
+                }
+            }
+            if (specular_reflection_enabled && source_count > 0) {
+                completeBackgroundField(radiation_specular_buffer, "radiation_specular");
+            }
+            background_field_completed = true;
+        }
+    }
+
+    void VulkanComputeBackend::completeBackgroundField(Buffer &buffer, const char *buffer_name) {
+        // The buffer is a whole number of blocks of [flux slot][launch band], the scene as it is in the first half of each block and the background field in the second
+        const size_t field_bytes = primitive_count * launch_band_count * sizeof(float);
+        if (buffer.buffer == VK_NULL_HANDLE || field_bytes == 0 || buffer.size < 2 * field_bytes || buffer.size % (2 * field_bytes) != 0) {
+            helios_runtime_error(std::string("ERROR (VulkanComputeBackend::completeBackgroundField): The ") + buffer_name + " buffer holds " + std::to_string(buffer.buffer == VK_NULL_HANDLE ? 0 : buffer.size) +
+                                 " bytes, which is not a whole number of blocks of two radiation fields of " + std::to_string(primitive_count) + " primitives and " + std::to_string(launch_band_count) +
+                                 " launched band(s). It must be sized and zeroed for the current geometry and bands before direct rays are launched.");
+        }
+        if (periodic_excluded_flags.size() != primitive_count) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::completeBackgroundField): There are " + std::to_string(periodic_excluded_flags.size()) + " periodic-exclusion flags for " + std::to_string(primitive_count) +
+                                 " primitives. updateGeometry() must be called before direct rays are launched.");
+        }
+        std::vector<float> values(buffer.size / sizeof(float));
+        downloadBufferData(buffer, values.data(), buffer.size);
+        const size_t field_values = field_bytes / sizeof(float);
+        for (size_t block = 0; block < values.size(); block += 2 * field_values) {
+            for (size_t p = 0; p < primitive_count; p++) {
+                if (periodic_excluded_flags[p] != 0) {
+                    continue; // the background field does not contain the primitive, and its slots stay zero
+                }
+                for (size_t b = 0; b < launch_band_count; b++) {
+                    const size_t i = p * launch_band_count + b;
+                    values[block + field_values + i] += values[block + i];
+                }
+            }
+        }
+        uploadBufferData(buffer, values.data(), buffer.size);
     }
 
     void VulkanComputeBackend::launchDiffuseRays(const RayTracingLaunchParams &params) {
@@ -1332,7 +1435,7 @@ namespace helios {
 
 
         // Ensure radiation_out_top/bottom buffers exist (required by shader), one block per outgoing component
-        size_t rad_out_size = outgoing_components * primitive_count * launch_band_count * sizeof(float);
+        size_t rad_out_size = outgoing_components * flux_slot_count * launch_band_count * sizeof(float);
         if (radiation_out_top_buffer.buffer == VK_NULL_HANDLE || radiation_out_top_buffer.size != rad_out_size) {
             if (radiation_out_top_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(radiation_out_top_buffer);
@@ -1735,8 +1838,9 @@ namespace helios {
         if (params.camera_id >= camera_count) {
             helios_runtime_error("ERROR (VulkanComputeBackend::launchCameraRays): Camera " + std::to_string(params.camera_id) + " was launched, but the backend was given " + std::to_string(camera_count) + " camera(s).");
         }
-        const uint32_t camera_info[4] = {params.camera_id, uint32_t(camera_count), params.normal_map_direct, params.camera_direct_per_pixel};
+        const uint32_t camera_info[5] = {params.camera_id, uint32_t(camera_count), params.normal_map_direct, params.camera_direct_per_pixel, params.camera_direct_all};
         uploadBufferData(camera_info_buffer, camera_info, sizeof(camera_info));
+        uploadPeriodicInfo(params.camera_tile);
 
         // Build band mapping (same logic as direct/diffuse)
         launch_to_global_band.clear();
@@ -1909,6 +2013,7 @@ namespace helios {
         }
 
         uploadCameraBandMap(params, "launchPixelLabelRays");
+        uploadPeriodicInfo(params.camera_tile);
 
         // Update descriptor sets if buffers changed
         if (descriptors_dirty) {
@@ -2085,12 +2190,12 @@ namespace helios {
         }
 
         size_t buffer_size = primitive_count * launch_band_count;
-        // The outgoing and scattered buffers hold one block per outgoing component
-        const size_t outgoing_size = outgoing_components * buffer_size;
+        // The outgoing and scattered buffers hold one block of [flux slot][launch band] per outgoing component
+        const size_t outgoing_size = outgoing_components * flux_slot_count * launch_band_count;
         for (const Buffer *outgoing_buffer: {&radiation_out_top_buffer, &radiation_out_bottom_buffer, &scatter_top_buffer, &scatter_bottom_buffer}) {
             if (outgoing_buffer->buffer != VK_NULL_HANDLE && outgoing_buffer->size < outgoing_size * sizeof(float)) {
                 helios_runtime_error("ERROR (VulkanComputeBackend::getRadiationResults): An outgoing or scattered radiation buffer holds " + std::to_string(outgoing_buffer->size) + " bytes, fewer than the " +
-                                     std::to_string(outgoing_size * sizeof(float)) + " its " + std::to_string(outgoing_components) + " component(s), " + std::to_string(primitive_count) + " primitives and " + std::to_string(launch_band_count) +
+                                     std::to_string(outgoing_size * sizeof(float)) + " its " + std::to_string(outgoing_components) + " component(s), " + std::to_string(flux_slot_count) + " flux slots and " + std::to_string(launch_band_count) +
                                      " launched band(s) require. zeroRadiationBuffers() must size them for the current materials.");
             }
         }
@@ -2211,7 +2316,7 @@ namespace helios {
         // buffers are read back only when they are sized for the current camera set; otherwise the vectors are left
         // empty rather than zero-filled, so a caller that consumes camera scatter detects the mismatch instead of
         // silently integrating zeros (and a caller that does not, such as a sky-energy query, is unaffected).
-        const size_t camera_buffer_size = outgoing_components * camera_count * buffer_size;
+        const size_t camera_buffer_size = outgoing_components * camera_count * flux_slot_count * launch_band_count;
         const size_t camera_buffer_bytes = camera_buffer_size * sizeof(float);
         results.scatter_buff_top_cam.clear();
         results.scatter_buff_bottom_cam.clear();
@@ -2264,10 +2369,10 @@ namespace helios {
     }
 
     void VulkanComputeBackend::getDirectFluxResults(std::vector<float> &direct_flux, size_t launch_band_count_param) {
-        const size_t count = source_count * primitive_count * launch_band_count_param;
+        const size_t count = source_count * flux_slot_count * launch_band_count_param;
         if (count == 0 || radiation_specular_buffer.size != count * sizeof(float)) {
             helios_runtime_error("ERROR (VulkanComputeBackend::getDirectFluxResults): The direct radiation reaching the primitives holds " + std::to_string(radiation_specular_buffer.size) + " bytes, but " + std::to_string(source_count) +
-                                 " source(s), " + std::to_string(primitive_count) + " primitives and " + std::to_string(launch_band_count_param) + " launched band(s) require " + std::to_string(count * sizeof(float)) +
+                                 " source(s), " + std::to_string(flux_slot_count) + " flux slots and " + std::to_string(launch_band_count_param) + " launched band(s) require " + std::to_string(count * sizeof(float)) +
                                  ". updateMaterials() must ask for it to be recorded, and zeroRadiationBuffers() be called, before the direct launch.");
         }
         direct_flux.resize(count);
@@ -2373,6 +2478,7 @@ namespace helios {
     }
 
     void VulkanComputeBackend::zeroRadiationBuffers(size_t launch_band_count_param, bool track_face_absorption, bool record_normal_map_moments) {
+        background_field_completed = false; // the buffers a direct launch books in are zeroed below, or before it launches
         // Store the launch band count for this runBand() call up front, even when there is no
         // geometry/bands to allocate buffers for. Other per-launch operations (notably
         // uploadSourceFluxes()) validate their input sizes against launch_band_count, so it must
@@ -2387,7 +2493,8 @@ namespace helios {
 
         // The directions of the diffuse radiation reaching normal-mapped primitives, accumulated by every diffuse launch of a runBand() for the cameras
         {
-            normal_map_moment_count = record_normal_map_moments ? normal_map_slot_count * 2 * launch_band_count * 3 : 0;
+            // With a background field, its moments follow in a second set of slots
+            normal_map_moment_count = record_normal_map_moments ? flux_field_count * normal_map_slot_count * 2 * launch_band_count * 3 : 0;
             const size_t moment_bytes = std::max<size_t>(1, normal_map_moment_count) * sizeof(float);
             if (normal_map_moment_buffer.buffer == VK_NULL_HANDLE || normal_map_moment_buffer.size != moment_bytes) {
                 if (normal_map_moment_buffer.buffer != VK_NULL_HANDLE) {
@@ -2423,9 +2530,9 @@ namespace helios {
             radiation_in_buffer = createBuffer(buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         }
 
-        // Create or resize radiation_specular buffer [source * primitive * band]. It is needed only when there are sources and specular
+        // Create or resize radiation_specular buffer [source][flux slot][band]. It is needed only when there are sources and specular
         // reflection is enabled; otherwise the shaders never touch it, and a one-element placeholder keeps the descriptor set complete.
-        const size_t specular_bytes = specular_reflection_enabled ? source_count * primitive_count * launch_band_count * sizeof(float) : 0;
+        const size_t specular_bytes = specular_reflection_enabled ? source_count * flux_slot_count * launch_band_count * sizeof(float) : 0;
         const size_t specular_buffer_bytes = specular_bytes > 0 ? specular_bytes : sizeof(float);
         if (radiation_specular_buffer.buffer == VK_NULL_HANDLE || radiation_specular_buffer.size != specular_buffer_bytes) {
             if (radiation_specular_buffer.buffer != VK_NULL_HANDLE) {
@@ -2472,7 +2579,7 @@ namespace helios {
         // and a camera can read radiation_out without anything being uploaded first, so both must start this runBand() empty. They are
         // also sized here for the current outgoing components and launched bands, which may differ from the previous runBand()'s even
         // when this one launches no rays.
-        const size_t outgoing_bytes = outgoing_components * buffer_size * sizeof(float);
+        const size_t outgoing_bytes = outgoing_components * flux_slot_count * launch_band_count * sizeof(float);
         for (Buffer *carried_over_buffer: {&scatter_top_buffer, &scatter_bottom_buffer, &radiation_out_top_buffer, &radiation_out_bottom_buffer}) {
             if (carried_over_buffer->buffer == VK_NULL_HANDLE) {
                 continue; // created by the first launch that needs it, at the size it needs
@@ -2505,7 +2612,7 @@ namespace helios {
             return; // No geometry or bands
         }
 
-        size_t buffer_size = outgoing_components * primitive_count * launch_band_count; // every outgoing component
+        size_t buffer_size = outgoing_components * flux_slot_count * launch_band_count; // every outgoing component
 
         // Create or resize scatter_top buffer
         if (scatter_top_buffer.buffer == VK_NULL_HANDLE || scatter_top_buffer.size != buffer_size * sizeof(float)) {
@@ -2612,7 +2719,7 @@ namespace helios {
         // larger size than the source buffer and crash via OOB read in memcpy whenever
         // the launch is a strict subset of all bands (e.g. SIF emission dispatch after
         // a recursive excitation-band dispatch raises the global band_count).
-        size_t buffer_size = outgoing_components * primitive_count * launch_band_count * sizeof(float); // every outgoing component
+        size_t buffer_size = outgoing_components * flux_slot_count * launch_band_count * sizeof(float); // every outgoing component
 
         // Create radiation_out_top/bottom buffers if they don't exist
         if (radiation_out_top_buffer.buffer == VK_NULL_HANDLE || radiation_out_top_buffer.size != buffer_size) {
@@ -2735,6 +2842,16 @@ namespace helios {
 
         uploadBufferData(vertex_radiation_out_top_buffer, vertex_radiation_out_top.data(), top_bytes);
         uploadBufferData(vertex_radiation_out_bottom_buffer, vertex_radiation_out_bottom.data(), bottom_bytes);
+
+        // The buffers are [component][field][vertex][launch band]; the camera shader finds the background field's vertex values a whole field of vertices after those of the scene as it is
+        const size_t values_per_vertex = outgoing_components * flux_field_count * launch_band_count;
+        if (values_per_vertex == 0 || vertex_radiation_out_top.size() % values_per_vertex != 0 || bottom_bytes != top_bytes) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::uploadVertexRadiationOut): The vertex outgoing radiation holds " + std::to_string(vertex_radiation_out_top.size()) + " and " + std::to_string(vertex_radiation_out_bottom.size()) +
+                                 " values, which is not a whole number of vertices for " + std::to_string(outgoing_components) + " component(s), " + std::to_string(flux_field_count) + " field(s) and " + std::to_string(launch_band_count) +
+                                 " launched band(s).");
+        }
+        periodic_info[11] = static_cast<uint32_t>(vertex_radiation_out_top.size() / values_per_vertex);
+        uploadBufferData(periodic_info_buffer, periodic_info, sizeof(periodic_info));
     }
 
     void VulkanComputeBackend::bindVertexNormalsPlaceholder() {
@@ -2812,10 +2929,10 @@ namespace helios {
         if (camera_count == 0) {
             return; // The shaders loop over zero cameras and never touch the camera-scatter buffers
         }
-        const size_t required_bytes = outgoing_components * camera_count * primitive_count * launch_band_count * sizeof(float);
+        const size_t required_bytes = outgoing_components * camera_count * flux_slot_count * launch_band_count * sizeof(float);
         if (camera_scatter_top_buffer.size != required_bytes || camera_scatter_bottom_buffer.size != required_bytes) {
             helios_runtime_error(std::string("ERROR (VulkanComputeBackend::") + caller + "): The camera-weighted scatter buffers hold " + std::to_string(camera_scatter_top_buffer.size) + " bytes, but " + std::to_string(camera_count) +
-                                 " camera(s) x " + std::to_string(primitive_count) + " primitives x " + std::to_string(launch_band_count) + " launched band(s) require " + std::to_string(required_bytes) +
+                                 " camera(s) x " + std::to_string(flux_slot_count) + " flux slots x " + std::to_string(launch_band_count) + " launched band(s) require " + std::to_string(required_bytes) +
                                  ". zeroCameraScatterBuffers() must be called for the current camera set before rays are launched.");
         }
     }
@@ -2850,11 +2967,10 @@ namespace helios {
         if (params.specular_reflection_enabled == 0 || source_count == 0) {
             return; // The shaders do not touch radiation_specular
         }
-        const size_t required_bytes = source_count * primitive_count * launch_band_count * sizeof(float);
+        const size_t required_bytes = source_count * flux_slot_count * launch_band_count * sizeof(float);
         if (radiation_specular_buffer.size != required_bytes) {
-            helios_runtime_error(std::string("ERROR (VulkanComputeBackend::") + caller + "): Specular reflection is enabled for this launch, but radiation_specular holds " + std::to_string(radiation_specular_buffer.size) +
-                                 " bytes instead of the " + std::to_string(required_bytes) +
-                                 " its sources, primitives and launched bands require. updateMaterials() must enable specular reflection, and zeroRadiationBuffers() be called, before rays are launched.");
+            helios_runtime_error(std::string("ERROR (VulkanComputeBackend::") + caller + "): Specular reflection is enabled for this launch, but radiation_specular holds " + std::to_string(radiation_specular_buffer.size) + " bytes instead of the " +
+                                 std::to_string(required_bytes) + " its sources, flux slots and launched bands require. updateMaterials() must enable specular reflection, and zeroRadiationBuffers() be called, before rays are launched.");
         }
     }
 
@@ -2863,9 +2979,9 @@ namespace helios {
             return; // No geometry or bands
         }
 
-        // One [primitive][band] block per camera (see getRadiationResults); the shaders index it camera-major. One set of them per
+        // One [flux slot][band] block per camera (see getRadiationResults); the shaders index it camera-major. One set of them per
         // outgoing component.
-        size_t buffer_size = outgoing_components * camera_count * primitive_count * launch_band_count_param * sizeof(float);
+        size_t buffer_size = outgoing_components * camera_count * flux_slot_count * launch_band_count_param * sizeof(float);
         if (buffer_size == 0) {
             return; // No cameras registered, so the shaders never touch these buffers
         }
@@ -2894,8 +3010,8 @@ namespace helios {
         zeroBuffer(camera_scatter_top_buffer);
         zeroBuffer(camera_scatter_bottom_buffer);
 
-        // The radiation reaching primitives with a spectral texture, which cameras need to see their classes: [face][source slot][primitive][band]
-        spectral_incident_count = palette_entry_count > 0 ? 2 * (source_count + 1) * primitive_count * launch_band_count_param : 0;
+        // The radiation reaching primitives with a spectral texture, which cameras need to see their classes: [face][source slot][flux slot][band]
+        spectral_incident_count = palette_entry_count > 0 ? 2 * (source_count + 1) * flux_slot_count * launch_band_count_param : 0;
         if (spectral_incident_count > 0) {
             const size_t incident_bytes = spectral_incident_count * sizeof(float);
             if (spectral_incident_buffer.buffer == VK_NULL_HANDLE || spectral_incident_buffer.size != incident_bytes) {
@@ -2911,8 +3027,8 @@ namespace helios {
     }
 
     void VulkanComputeBackend::uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) {
-        if (!class_flux_offset.empty() && class_flux_offset.size() != primitive_count) {
-            helios_runtime_error("ERROR (VulkanComputeBackend::uploadSpectralCameraFlux): There are " + std::to_string(class_flux_offset.size()) + " class-flux offsets for " + std::to_string(primitive_count) + " primitives.");
+        if (!class_flux_offset.empty() && class_flux_offset.size() != flux_slot_count) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::uploadSpectralCameraFlux): There are " + std::to_string(class_flux_offset.size()) + " class-flux offsets for " + std::to_string(flux_slot_count) + " flux slots.");
         }
         const std::vector<uint32_t> packed = packSpectralCameraFlux(class_flux_offset, class_flux, launch_band_count);
         if (spectral_camera_flux_buffer.buffer != VK_NULL_HANDLE) {
@@ -3319,6 +3435,8 @@ namespace helios {
                 {19, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Spectral texture class maps (packed)
                 {20, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Normal maps (packed)
                 {21, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Normal-map slot of each primitive
+                {22, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Periodic copies of the domain rays track
+                {23, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Whether each primitive is excluded from the periodic boundary
         };
 
         VkDescriptorSetLayoutCreateInfo layout_info{};
@@ -3531,9 +3649,12 @@ namespace helios {
         // Binding 17: a zeroed header means no primitive has a surface layer
         surface_layer_buffer = createBuffer(4 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(surface_layer_buffer);
-        // Binding 19: camera index, camera count and the normal-map direct flag, written before each camera launch
-        camera_info_buffer = createBuffer(4 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        // Binding 19: camera index, camera count, the normal-map direct flag and the per-pixel direct flags, written before each camera launch
+        camera_info_buffer = createBuffer(5 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         zeroBuffer(camera_info_buffer);
+        // Geometry binding 22: the periodic copies of the domain rays track, written with the geometry and before each camera launch
+        periodic_info_buffer = createBuffer(sizeof(periodic_info), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        uploadBufferData(periodic_info_buffer, periodic_info, sizeof(periodic_info));
         // Material binding 18 and geometry binding 19: a zeroed header means no primitive has a spectral texture
         spectral_palette_buffer = createBuffer(16 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(spectral_palette_buffer);
@@ -3542,6 +3663,9 @@ namespace helios {
         // Geometry binding 20: a zeroed header means no primitive has a normal map
         normal_map_buffer = createBuffer(4 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(normal_map_buffer);
+        // Geometry binding 23: no primitive is excluded from the periodic boundary until a geometry that excludes some is uploaded
+        periodic_excluded_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(periodic_excluded_buffer);
         // Geometry binding 21 and result binding 23: no slots until a geometry with normal maps is uploaded
         normal_map_slot_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         {
@@ -4276,6 +4400,38 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &normal_map_slot_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo periodic_info_info{};
+        periodic_info_info.buffer = periodic_info_buffer.buffer;
+        periodic_info_info.offset = 0;
+        periodic_info_info.range = VK_WHOLE_SIZE;
+        if (periodic_info_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 22;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &periodic_info_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo periodic_excluded_info{};
+        periodic_excluded_info.buffer = periodic_excluded_buffer.buffer;
+        periodic_excluded_info.offset = 0;
+        periodic_excluded_info.range = VK_WHOLE_SIZE;
+        if (periodic_excluded_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 23;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &periodic_excluded_info;
             descriptor_writes.push_back(write);
         }
 

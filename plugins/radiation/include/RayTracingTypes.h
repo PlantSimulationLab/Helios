@@ -106,6 +106,38 @@ namespace helios {
 
         // Periodic boundary condition
         helios::vec2 periodic_flag; //!< Periodic boundary flags (x, y directions)
+        //! Per-primitive flag (indexed by position): 1 if the primitive is excluded from the periodic boundary condition and exists only in the central copy of the domain; empty when none is
+        std::vector<uint8_t> periodic_excluded;
+        //! Number of periodic copies of the domain on each side of the central one in x and y; -1 for no limit. A ray that leaves the copies continues as one that leaves the scene.
+        helios::int2 periodic_max_repeats = helios::make_int2(-1, -1);
+        //! z-range (min, max) of the geometry that repeats. A ray outside the central copy that is above it and heading up, or below it and heading down, can hit nothing more.
+        helios::vec2 periodic_repeated_zbounds = helios::make_vec2(0.f, 0.f);
+        //! Distance beyond a periodic boundary face from which a ray that leaves the periodic copies continues, far enough that it cannot hit a boundary face again
+        float periodic_escape_offset = 0.f;
+
+        //! Whether rays must track which periodic copy of the domain they are in (some primitives are excluded from the periodic boundary, or the number of copies is limited)
+        [[nodiscard]] bool periodicTileTracking() const {
+            return (periodic_flag.x == 1 || periodic_flag.y == 1) && (!periodic_excluded.empty() || periodic_max_repeats.x >= 0 || periodic_max_repeats.y >= 0);
+        }
+
+        //! Whether the radiation is solved for two fields at once: the scene as it is, and the "background" scene without the primitives excluded from the periodic boundary
+        /**
+         * Periodic copies of a primitive are the same primitive, so they all show its one outgoing radiation, which near an excluded primitive carries that primitive's shade and
+         * scattered light. The background field is what the repeated geometry sends out where no excluded primitive stands; rays and cameras read it for every copy of the domain
+         * but the central one. See fluxSlotCount().
+         */
+        [[nodiscard]] bool periodicDualField() const {
+            return (periodic_flag.x == 1 || periodic_flag.y == 1) && !periodic_excluded.empty();
+        }
+
+        //! Number of per-primitive slots in the buffers of outgoing radiation and of what cameras read
+        /**
+         * The primitive count, or twice it with a background field (see periodicDualField()): slot p holds primitive p in the scene as it is, and slot primitive_count + p
+         * holds it in the background field (zero for an excluded primitive, which the background does not contain). Buffers of absorbed radiation have no background slots.
+         */
+        [[nodiscard]] size_t fluxSlotCount() const {
+            return periodicDualField() ? 2 * primitive_count : primitive_count;
+        }
 
         // Counts
         size_t primitive_count = 0; //!< Total number of primitives (all types)
@@ -287,6 +319,8 @@ namespace helios {
         helios::int2 camera_pixel_offset; //!< Pixel offset for tiled rendering
         float camera_viewplane_length = 0.0f; //!< Viewplane length computed from effective_HFOV/zoom
         helios::int2 camera_resolution_full; //!< Full resolution for tiled rendering (global coordinates)
+        //! Periodic copy of the domain the camera is in (x, y): the whole periods its position was moved by to bring it into the domain (see RayTracingGeometry::periodicTileTracking())
+        helios::int2 camera_tile = helios::make_int2(0, 0);
 
         // Diffuse radiation parameters (for diffuse ray launches)
         //! Diffuse sky flux per launched band, followed by the flux of each launched band's reference blackbody field (2 x Nbands_launch values)
@@ -317,6 +351,9 @@ namespace helios {
         //! Camera launches: 1 if the camera evaluates the sources' direct radiation on smoothed primitives per pixel sample, which the host left out of what their vertices carry (camera flux smoothing, a
         //! radiation source, and a direct launch that deposited the direct radiation the host removed)
         uint camera_direct_per_pixel = 0;
+        //! Camera launches: 1 if the camera evaluates the direct radiation of every primitive, not only smoothed ones, per pixel sample (primitives are excluded from the periodic boundary), the host having
+        //! left it out of the outgoing radiation of every primitive but a translucent cover
+        uint camera_direct_all = 0;
     };
 
     /**

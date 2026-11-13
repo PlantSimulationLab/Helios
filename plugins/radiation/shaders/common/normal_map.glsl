@@ -32,7 +32,8 @@ layout(set = 0, binding = 20) readonly buffer NormalMapBuffer {
 } normal_map_buf;
 
 // Slot of each normal-mapped primitive in normal_map_moment_buf (0xFFFFFFFF for none), and [slot][face][launch band][3] the flux-weighted directions of the diffuse
-// radiation reaching each face (see RayTracingGeometry::normal_map_slots); one-element placeholders when no primitive has a map
+// radiation reaching each face (see RayTracingGeometry::normal_map_slots); one-element placeholders when no primitive has a map. With a background radiation field
+// (see buffer_indexing.glsl), its moments are in a second set of slots after those of the scene as it is.
 layout(set = 0, binding = 21) readonly buffer NormalMapSlotBuffer {
     uint slots[];
 } normal_map_slot_buf;
@@ -41,7 +42,7 @@ layout(set = 2, binding = 23) buffer NormalMapMomentBuffer {
     float values[];
 } normal_map_moment_buf;
 
-// normal_map_moment_buf averaged onto the smoothing vertices of camera flux smoothing, [vertex][face][launch band][3]; a one-element placeholder when there is none
+// normal_map_moment_buf averaged onto the smoothing vertices of camera flux smoothing, [field][vertex][face][launch band][3]; a one-element placeholder when there is none
 layout(set = 2, binding = 24) readonly buffer VertexNormalMapMomentBuffer {
     float values[];
 } vertex_normal_map_moment_buf;
@@ -61,11 +62,14 @@ uint nm_slot(uint prim_idx) {
 // (the facet's or the smoothed one) by the tangential vector m_t (see normalMapDiffuseRelief() in the CUDA backends): (8/3) m_t . (rho M_same - tau M_other), for the
 // parts of the moments along the facet (unit normal facet_normal) they were gathered on
 // With camera flux smoothing (corners.x >= 0) and moments averaged onto the smoothing vertices, they are interpolated from the facet's corners with the given weights.
-float nm_diffuse_relief(uint prim_idx, bool face_top, uint band, uint band_count, vec3 shading_normal, vec3 base_normal, vec3 facet_normal, float rho_d, float tau_d, ivec4 corners, vec4 weights) {
+// The moments are those of one radiation field: field_slot_offset and field_vertex_offset are the numbers of slots and of vertices before those of that field (zero for the scene as it is).
+float nm_diffuse_relief(uint prim_idx, bool face_top, uint band, uint band_count, vec3 shading_normal, vec3 base_normal, vec3 facet_normal, float rho_d, float tau_d, ivec4 corners, vec4 weights,
+                        uint field_slot_offset, uint field_vertex_offset) {
     uint slot = nm_slot(prim_idx);
     if (slot == NO_NORMAL_MAP_SLOT) {
         return 0.0;
     }
+    slot += field_slot_offset;
     uint same = ((slot * 2u + (face_top ? 0u : 1u)) * band_count + band) * 3u;
     uint other = ((slot * 2u + (face_top ? 1u : 0u)) * band_count + band) * 3u;
     if (max(same, other) + 3u > uint(normal_map_moment_buf.values.length())) {
@@ -81,8 +85,9 @@ float nm_diffuse_relief(uint prim_idx, bool face_top, uint band, uint band_count
             if (corners[c] < 0) {
                 continue;
             }
-            uint vertex_same = ((uint(corners[c]) * 2u + face_same) * band_count + band) * 3u;
-            uint vertex_other = ((uint(corners[c]) * 2u + (1u - face_same)) * band_count + band) * 3u;
+            uint vertex = uint(corners[c]) + field_vertex_offset;
+            uint vertex_same = ((vertex * 2u + face_same) * band_count + band) * 3u;
+            uint vertex_other = ((vertex * 2u + (1u - face_same)) * band_count + band) * 3u;
             if (max(vertex_same, vertex_other) + 3u > uint(vertex_normal_map_moment_buf.values.length())) {
                 return 0.0;
             }

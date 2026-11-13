@@ -184,6 +184,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_
 endif()
 if(APPLE) #get rid of annoying duplicate library warning on Mac
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-no_warn_duplicate_libraries")
+    # The visualizer compiles an Objective-C++ source (.mm) and projectbuilder an Objective-C one (.m). CMake requires a language to be enabled in the highest directory common to every target that uses it, so both are enabled here rather than in the plug-ins' directories, and regardless of the plug-in list since the visualizer can be loaded indirectly by other plug-ins. OBJC must be enabled along with OBJCXX: with OBJCXX alone, CMake compiles .m files as Objective-C++, which nativefiledialog's C code does not compile as.
+    enable_language(OBJC OBJCXX)
 endif()
 
 # -- linking plug-ins --#

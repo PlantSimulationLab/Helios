@@ -5,6 +5,7 @@
 #include "doctest.h"
 #include "annotation_io.h"
 #include "doctest_utils.h"
+#include "../src/VisualizerMacOS.h"
 
 using namespace helios;
 
@@ -1565,6 +1566,24 @@ TEST_CASE("CI/Offscreen - Environment Variable Detection") {
         Visualizer visualizer(100, 100, 0, true, false); // headless=false
         // Should still work - environment detection might force headless mode in CI
     });
+}
+
+TEST_CASE("Visualizer on macOS: a headless Visualizer puts no icon in the Dock, and a windowed one does") {
+#ifdef __APPLE__
+    {
+        Visualizer headless_visualizer(64, 64, 0, true, true);
+        DOCTEST_CHECK(visualizer_macos::getActivationPolicy() == visualizer_macos::ActivationPolicy::Accessory);
+    }
+    if (windowedContextAvailable()) {
+        Visualizer windowed_visualizer(64, 64, 0, true, false);
+        DOCTEST_CHECK(visualizer_macos::getActivationPolicy() == visualizer_macos::ActivationPolicy::Regular);
+        // A headless Visualizer created while a windowed one exists leaves the windowed one its icon
+        {
+            Visualizer headless_visualizer(64, 64, 0, true, true);
+            DOCTEST_CHECK(visualizer_macos::getActivationPolicy() == visualizer_macos::ActivationPolicy::Regular);
+        }
+    }
+#endif
 }
 
 TEST_CASE("CI/Offscreen - Render Target Switching") {

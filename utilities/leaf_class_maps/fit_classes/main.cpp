@@ -3,7 +3,7 @@
 Usage (from a build directory below this one):
 
     ./fit_classes TEXTURE.png SOURCE.png SPECIES CLASS_COUNT OUTPUT.png
-    ./fit_classes --surface [--scale-exponent G] [--max-reflectance R] [--reflectance-factor F] TEXTURE SOURCE REFLECTIVITY_LABEL[,TRANSMISSIVITY_LABEL] CLASS_COUNT OUTPUT.png
+    ./fit_classes --surface [--scale-exponent G] [--max-reflectance R] [--reflectance-factor F] [--layer N] TEXTURE SOURCE REFLECTIVITY_LABEL[,TRANSMISSIVITY_LABEL] CLASS_COUNT OUTPUT.png
 
 Leaf mode: TEXTURE is the leaf texture (its transparency decides which texels are leaf), SOURCE an image of the same size and transparency
 whose colours the classes are fitted to (the albedo from decompose.py, or the hybrid albedo from midrib.py), and SPECIES the LeafOptics
@@ -29,8 +29,13 @@ the classes nearer the spectrum. Whatever the exponent, no class may reflect mor
 wavelength from 400 to 700 nm: the brightest parts of a photograph of a matte natural surface are its gloss and its lit curvature, not
 a reflectance a diffuse surface can have, and a class scaled past this renders washed out. A class that would exceed it is held at it,
 and the program says so. --reflectance-factor F multiplies every class by F (default 1), for a surface that is darker overall than the
-spectrum it is fitted relative to (an apple skin fitted relative to a strawberry, say). Writes OUTPUT.png and OUTPUT.xml, which
-RadiationModel::applySpectralClassMaps() reads.
+spectrum it is fitted relative to (an apple skin fitted relative to a strawberry, say). --layer N fits classes for a surface with a
+specular surface layer of refractive index N (a waxy fruit skin, say): the layer reflects a(1) at normal incidence whatever the class,
+so each class's reflectance_scale scales only the body under the layer, and the definitions are marked scales="body" (see the radiation
+plugin documentation, "Spectral Textures"). A class's total reflectance is then a(1) + s (rho - a(1)) for the spectrum rho, and s is
+chosen so that its luminance is the one the scale above would give; a class darker than the layer alone is held at s = 0, and the
+program says so. The fit takes a(1) as the Fresnel reflectance ((N - 1)/(N + 1))^2; RadiationModel::applySpectralClassMaps() uses the
+layer the primitives actually have. Writes OUTPUT.png and OUTPUT.xml, which RadiationModel::applySpectralClassMaps() reads.
 */
 
 #include "LeafOptics.h"
@@ -289,6 +294,7 @@ static int fitSurface(int argc, char **argv) {
     float scale_exponent = 1.f;
     float max_reflectance = 0.6f;
     float reflectance_factor = 1.f;
+    float layer_n = 1.f; // 1: no surface layer, the classes scale the whole spectrum
     int first = 2;
     while (argc >= first + 2 && std::string(argv[first]).rfind("--", 0) == 0) {
         const std::string option = argv[first];
@@ -307,13 +313,18 @@ static int fitSurface(int argc, char **argv) {
             if (!(reflectance_factor > 0.f)) {
                 helios_runtime_error("ERROR (fit_classes): --reflectance-factor must be positive.");
             }
+        } else if (option == "--layer") {
+            layer_n = std::stof(argv[first + 1]);
+            if (!(layer_n > 1.f && layer_n <= 3.f)) {
+                helios_runtime_error("ERROR (fit_classes): --layer must be a refractive index above 1 and at most 3.");
+            }
         } else {
             helios_runtime_error("ERROR (fit_classes): unknown option " + option + ".");
         }
         first += 2;
     }
     if (argc != first + 5) {
-        std::cerr << "Usage: fit_classes --surface [--scale-exponent G] [--max-reflectance R] [--reflectance-factor F] TEXTURE SOURCE REFLECTIVITY_LABEL[,TRANSMISSIVITY_LABEL] CLASS_COUNT OUTPUT.png" << std::endl;
+        std::cerr << "Usage: fit_classes --surface [--scale-exponent G] [--max-reflectance R] [--reflectance-factor F] [--layer N] TEXTURE SOURCE REFLECTIVITY_LABEL[,TRANSMISSIVITY_LABEL] CLASS_COUNT OUTPUT.png" << std::endl;
         return 1;
     }
     const std::string texture = argv[first];
@@ -359,25 +370,54 @@ static int fitSurface(int argc, char **argv) {
     if (!(peak_visible_reflectance > 0.f)) {
         helios_runtime_error("ERROR (fit_classes): the spectrum '" + reflectivity_label + "' has no reflectance between 400 and 700 nm.");
     }
-    const float scale_cap = max_reflectance / peak_visible_reflectance;
+    // With a surface layer, which reflects layer_albedo at normal incidence at every wavelength, a class's total reflectance is layer_albedo + s (rho - layer_albedo) for a body scale s
+    const float layer_albedo = layer_n > 1.f ? (layer_n - 1.f) * (layer_n - 1.f) / ((layer_n + 1.f) * (layer_n + 1.f)) : 0.f;
+    float source_luminance = 0.f; // the spectrum's luminance as a reflectance factor, from the camera's channels under the sun
+    if (layer_n > 1.f) {
+        for (const vec2 &point: base_reflectivity) {
+            if (point.y < layer_albedo) {
+                helios_runtime_error("ERROR (fit_classes): the spectrum '" + reflectivity_label + "' reflects " + std::to_string(point.y) + " at " + std::to_string(point.x) + " nm, less than the " + std::to_string(layer_albedo) +
+                                     " a layer of refractive index " + std::to_string(layer_n) + " reflects at normal incidence, so it cannot be the total reflectance of a surface with that layer. Use a lower --layer.");
+            }
+        }
+        const std::array<float, 3> rgb = cameraReflectance(loadCameraSpectra(context), base_reflectivity);
+        source_luminance = 0.2126f * rgb[0] + 0.7152f * rgb[1] + 0.0722f * rgb[2];
+    }
+    if (max_reflectance <= layer_albedo) {
+        helios_runtime_error("ERROR (fit_classes): --max-reflectance " + std::to_string(max_reflectance) + " is not above the " + std::to_string(layer_albedo) + " the layer of --layer " + std::to_string(layer_n) +
+                             " reflects at normal incidence by itself. Raise --max-reflectance or lower --layer.");
+    }
+    const float scale_cap = (max_reflectance - layer_albedo) / (peak_visible_reflectance - layer_albedo);
 
     auto luminance = [](const std::array<float, 3> &c) { return 0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2]; };
     const float mean_luminance = luminance({float(clustered.mean[0]), float(clustered.mean[1]), float(clustered.mean[2])});
     std::ostringstream body;
-    body << "  <!-- Class definitions of " << std::filesystem::path(map_file).filename().string() << ", relative to the spectra named below from the radiation plugin's spectral library (see the radiation plugin documentation, \"Spectral Textures\").\n"
-         << "       reflectance_scale multiplies the surface's reflectivity (and transmissivity) spectrum: the ratio of the class's luminance to the source's mean luminance"
+    body << "  <!-- Class definitions of " << std::filesystem::path(map_file).filename().string()
+         << ", relative to the spectra named below from the radiation plugin's spectral library (see the radiation plugin documentation, \"Spectral Textures\").\n"
+         << (layer_n > 1.f ? "       The surface has a specular layer of refractive index " + std::to_string(layer_n).substr(0, 4) +
+                                     " (--layer), so reflectance_scale scales the body under it (scales=\"body\"), and the class's total reflectance is\n"
+                                     "       a(1) + reflectance_scale (rho - a(1)): its luminance is the source's mean luminance times the ratio of the class's luminance to the source's mean luminance"
+                           : "       reflectance_scale multiplies the surface's reflectivity (and transmissivity) spectrum: the ratio of the class's luminance to the source's mean luminance")
          << (scale_exponent == 1.f ? std::string(".\n") : ", raised to the power " + std::to_string(scale_exponent).substr(0, 4) + " (--scale-exponent).\n")
          << (reflectance_factor == 1.f ? std::string("") : "       Every class is multiplied by " + std::to_string(reflectance_factor).substr(0, 4) + " (--reflectance-factor), the surface being darker than the spectrum it is fitted relative to.\n")
          << "       No class reflects more than " << max_reflectance << " at any wavelength from 400 to 700 nm (--max-reflectance).\n"
          << "       Fitted by utilities/leaf_class_maps/fit_classes --surface to " << std::filesystem::path(source).filename().string() << ". -->\n"
-         << "  <surface_class_map reflectivity_spectrum=\"" << reflectivity_label << "\" transmissivity_spectrum=\"" << transmissivity_label << "\" provenance=\"" << std::filesystem::path(texture).filename().string()
-         << " via utilities/leaf_class_maps/fit_classes --surface (fitted to " << std::filesystem::path(source).filename().string() << ", relative to " << reflectivity_label << ")\">\n";
+         << "  <surface_class_map" << (layer_n > 1.f ? " scales=\"body\"" : "") << " reflectivity_spectrum=\"" << reflectivity_label << "\" transmissivity_spectrum=\"" << transmissivity_label << "\" provenance=\""
+         << std::filesystem::path(texture).filename().string() << " via utilities/leaf_class_maps/fit_classes --surface (fitted to " << std::filesystem::path(source).filename().string() << ", relative to " << reflectivity_label << ")\">\n";
     for (int k = 0; k < class_count; k++) {
         char line[256];
         float scale = reflectance_factor * std::pow(luminance(clustered.centres[k]) / mean_luminance, scale_exponent);
+        if (layer_n > 1.f) {
+            // The body scale that gives the class the same luminance under the layer
+            const float body_scale = (scale * source_luminance - layer_albedo) / (source_luminance - layer_albedo);
+            if (body_scale < 0.f) {
+                std::cout << "Class " << k + 1 << " would be darker than the surface layer alone (luminance " << scale * source_luminance << " against " << layer_albedo << "); its body scale is held at 0." << std::endl;
+            }
+            scale = std::max(0.f, body_scale);
+        }
         if (scale > scale_cap) {
-            std::cout << "Class " << k + 1 << " would reflect " << scale * peak_visible_reflectance << " at the peak of " << reflectivity_label << " in the visible; its scale is held at " << scale_cap << " (from " << scale
-                      << ") so that it reflects at most " << max_reflectance << "." << std::endl;
+            std::cout << "Class " << k + 1 << " would reflect " << layer_albedo + scale * (peak_visible_reflectance - layer_albedo) << " at the peak of " << reflectivity_label << " in the visible; its scale is held at " << scale_cap << " (from "
+                      << scale << ") so that it reflects at most " << max_reflectance << "." << std::endl;
             scale = scale_cap;
         }
         std::snprintf(line, sizeof(line), "    <class id=\"%d\" reflectance_scale=\"%.4g\" texels=\"%zu\" source_srgb=\"%s\"/>\n", k + 1, scale, clustered.class_texels[k], srgbAttribute(clustered.centres[k]).c_str());
@@ -393,7 +433,9 @@ int main(int argc, char **argv) {
         return fitSurface(argc, argv);
     }
     if (argc != 6) {
-        std::cerr << "Usage: fit_classes TEXTURE.png SOURCE.png SPECIES CLASS_COUNT OUTPUT.png\n       fit_classes --surface [--scale-exponent G] TEXTURE SOURCE REFLECTIVITY_LABEL[,TRANSMISSIVITY_LABEL] CLASS_COUNT OUTPUT.png" << std::endl;
+        std::cerr << "Usage: fit_classes TEXTURE.png SOURCE.png SPECIES CLASS_COUNT OUTPUT.png\n       fit_classes --surface [--scale-exponent G] [--max-reflectance R] [--reflectance-factor F] [--layer N] TEXTURE SOURCE "
+                     "REFLECTIVITY_LABEL[,TRANSMISSIVITY_LABEL] CLASS_COUNT OUTPUT.png"
+                  << std::endl;
         return 1;
     }
     const std::string texture = argv[1];

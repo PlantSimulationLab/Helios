@@ -6763,6 +6763,38 @@ DOCTEST_TEST_CASE("CollisionDetection Mathematical Accuracy - Ray-Voxel Edge Cas
     DOCTEST_CHECK(std::abs(corner_result.intersection_point.z + 1.0f) < 1e-6f);
 }
 
+DOCTEST_TEST_CASE("CollisionDetection Mathematical Accuracy - Axis-parallel ray just inside a face hits at long range") {
+    // A ray parallel to an axis is inside the slab of that axis along its whole length, however close to the slab's face it runs. The
+    // bounding-box test must not turn that closeness into a distance limit: one that replaced the zero direction component with a tiny
+    // number cut the slab off at (distance to the face) / (tiny number), and so culled the box for hits farther away than that.
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+
+    const float inset = 1e-6f; // ray runs this far inside the faces at x = 1 and x = -1
+    const float start_z = -500.f; // the box's near face is at z = -1, 499 m away
+
+    const uint voxel_uuid = context.addVoxel(make_vec3(0, 0, 0), make_vec3(2, 2, 2));
+    for (float x: {1.f - inset, -1.f + inset}) {
+        const CollisionDetection::HitResult result = collision.castRay(make_vec3(x, 0, start_z), make_vec3(0, 0, 1));
+        DOCTEST_INFO("voxel, ray at x = " << x);
+        DOCTEST_CHECK(result.hit);
+        DOCTEST_CHECK(result.primitive_UUID == voxel_uuid);
+        DOCTEST_CHECK(result.distance == doctest::Approx(499.f).epsilon(1e-6));
+    }
+
+    context.deletePrimitive(voxel_uuid);
+    const uint patch_uuid = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    for (float y: {1.f - inset, -1.f + inset}) {
+        const CollisionDetection::HitResult result = collision.castRay(make_vec3(0, y, start_z), make_vec3(0, 0, 1));
+        DOCTEST_INFO("patch, ray at y = " << y);
+        DOCTEST_CHECK(result.hit);
+        DOCTEST_CHECK(result.primitive_UUID == patch_uuid);
+        DOCTEST_CHECK(result.distance == doctest::Approx(500.f).epsilon(1e-6));
+    }
+}
+
 DOCTEST_TEST_CASE("CollisionDetection Complex Geometry - Multi-Voxel Accuracy") {
     Context context;
     CollisionDetection collision(&context);

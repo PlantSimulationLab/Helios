@@ -50,6 +50,7 @@
 
 const uint LEAF_RECORD_TRIANGLE = 1u; //!< Record is a triangle (otherwise a patch or tile)
 const uint LEAF_RECORD_NEVER_HIT = 2u; //!< Never intersected: invisible (twosided_flag >= 2) or zero-area primitive
+const uint LEAF_RECORD_PERIODIC_EXCLUDED = 4u; //!< Excluded from the periodic boundary: exists only in the central periodic copy of the domain
 
 // Ray test against leaf record `slot`. On a hit with t_min < t < t_max, returns true and writes the
 // hit distance and the surface coordinates described above.

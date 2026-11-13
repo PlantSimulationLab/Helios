@@ -19,7 +19,7 @@
 // programs.
 //
 // The including shader must declare the source buffers (source_types_buf, source_widths_buf, with get_source_position() and get_source_rotation()), normals_buf, and the functions sample_disk() and
-// sample_square(), acos_safe() and PI (sky_distribution.glsl provides the last two), and include random.glsl, transforms.glsl, bvh_traversal.glsl, periodic_boundary.glsl and glass_cover.glsl first.
+// sample_square(), acos_safe() and PI (sky_distribution.glsl provides the last two), periodic_excluded_buf, and include random.glsl, transforms.glsl, bvh_traversal.glsl, periodic_boundary.glsl and glass_cover.glsl first.
 #ifndef SOURCE_SAMPLING_GLSL
 #define SOURCE_SAMPLING_GLSL
 
@@ -116,8 +116,11 @@ bool sample_source_direction(uint s, vec3 origin, inout RNGState rng, out vec3 r
 // Trace a ray from `origin` along ray_dir toward a source, distance_to_source away for a finite source (ignored for a collimated one), skipping the primitive origin_prim it leaves. A translucent cover
 // (glass in every launched band) passes the ray and multiplies cover_tau by its transmittance in each band; anything else blocks it, and the ray wraps through periodic boundaries. A ray that runs out
 // of wraps or segments counts as blocked.
-uint trace_to_source(vec3 origin, vec3 ray_dir, uint origin_prim, bool finite_source, float distance_to_source, uint periodic_flag_x, uint periodic_flag_y, uint bbox_count, float domain_xmin, float domain_xmax,
-                     float domain_ymin, float domain_ymax, uint band_count, uint material_band_count, inout float cover_tau[GLASS_MAX_BANDS]) {
+// A dual ray (see traversal_record_excluded in bvh_traversal.glsl) also passes the primitives excluded from the periodic boundary: it reaches the source if it does in the background radiation field,
+// and traversal_excluded_passed tells on return whether an excluded primitive blocks it in the scene as it is. Must match __anyhit__direct_dual in OptiX8DeviceCode.cu.
+// The ray starts in the periodic copy of the domain the caller's ray is in (see set_periodic_tile()), which is restored on return.
+uint trace_to_source_from_tile(vec3 origin, vec3 ray_dir, uint origin_prim, bool finite_source, float distance_to_source, uint periodic_flag_x, uint periodic_flag_y, uint bbox_count, float domain_xmin,
+                               float domain_xmax, float domain_ymin, float domain_ymax, uint band_count, uint material_band_count, inout float cover_tau[GLASS_MAX_BANDS]) {
     vec3 trace_origin = origin;
     int boundary_hits = 0;
     // No minimum distance: the primitive the ray was launched from is skipped (origin_prim), and a minimum distance let a ray launched that close to an adjacent surface pass through it where the two meet
@@ -151,8 +154,14 @@ uint trace_to_source(vec3 origin, vec3 ray_dir, uint origin_prim, bool finite_so
         if (finite_source && occlusion_t >= distance_to_source) {
             return SOURCE_REACHED; // the hit is behind the source
         }
+        // A dual ray whose closest hit is on an excluded primitive is blocked in the scene as it is; the segment is traced again without the excluded primitives, for the background field
+        if (traversal_record_excluded && !traversal_excluded_passed && periodic_excluded_buf.excluded[occluder] != 0u) {
+            traversal_excluded_passed = true;
+            set_periodic_tile(periodic_tile);
+            continue;
+        }
         // A primitive that is not a translucent cover in all launched bands is an opaque blocker
-        if (occluder == origin_prim || !glass_cover_all_bands(occluder, band_count, material_band_count)) {
+        if (!glass_cover_all_bands(occluder, band_count, material_band_count)) { // origin_prim is hit only in another periodic copy, as any other primitive
             return SOURCE_BLOCKED;
         }
 
@@ -169,6 +178,19 @@ uint trace_to_source(vec3 origin, vec3 ray_dir, uint origin_prim, bool finite_so
         segment_t_min = 1e-4;
     }
     return SOURCE_BLOCKED; // out of segments
+}
+
+uint trace_to_source(vec3 origin, vec3 ray_dir, uint origin_prim, bool finite_source, float distance_to_source, uint periodic_flag_x, uint periodic_flag_y, uint bbox_count, float domain_xmin, float domain_xmax,
+                     float domain_ymin, float domain_ymax, uint band_count, uint material_band_count, inout float cover_tau[GLASS_MAX_BANDS]) {
+    ivec2 caller_tile = periodic_tile;
+    ivec2 caller_origin_tile = periodic_origin_tile;
+    traversal_excluded_passed = false;
+    start_periodic_ray(caller_tile); // the point the ray leaves is on the copy of origin_prim in the caller's copy of the domain
+    uint outcome = trace_to_source_from_tile(origin, ray_dir, origin_prim, finite_source, distance_to_source, periodic_flag_x, periodic_flag_y, bbox_count, domain_xmin, domain_xmax, domain_ymin, domain_ymax,
+                                             band_count, material_band_count, cover_tau);
+    periodic_origin_tile = caller_origin_tile;
+    set_periodic_tile(caller_tile);
+    return outcome;
 }
 
 #endif // SOURCE_SAMPLING_GLSL

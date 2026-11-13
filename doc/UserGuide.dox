@@ -1019,7 +1019,7 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   }
  ~~~~~~
 
- <b>Ground area basis.</b> The overloads that do not take a ground area use the horizontal (x-y) footprint of the bounding box of <i>all</i> primitives in the Context. This is the same extent the radiation model derives when a periodic boundary is enforced via <code>RadiationModel::enforcePeriodicBoundary()</code>, so for a periodic scene whose ground is set exactly to the periodic domain edge, the automatically-determined basis is the correct one.
+ <b>Ground area basis.</b> The overloads that do not take a ground area use the horizontal (x-y) footprint of the bounding box of <i>all</i> primitives in the Context. This is the same extent the radiation model derives when a periodic boundary is enforced via <code>RadiationModel::enforcePeriodicBoundary()</code> with no excluded primitives, so for a periodic scene whose ground is set exactly to the periodic domain edge, the automatically-determined basis is the correct one.
 
  In other situations it may not be. Because every primitive contributes to the bounding box, a ground primitive that extends beyond the canopy will enlarge the area basis and correspondingly reduce the reported area index, even though the ground itself is not counted in the numerator. The same applies to any other geometry placed away from the canopy. Whenever the domain is not cropped tightly to the canopy, pass the ground area explicitly.
 

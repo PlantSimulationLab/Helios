@@ -14,6 +14,12 @@ set( VISUALIZER_SOURCES
 	"tests/selfTest.cpp"
 )
 
+# Sets the activation policy of the Cocoa application, so that a headless Visualizer puts no icon in the Dock. AppKit reaches the link through GLFW's Cocoa framework.
+if(APPLE)
+	enable_language(OBJCXX)
+	list(APPEND VISUALIZER_SOURCES "src/VisualizerMacOS.mm")
+endif()
+
 add_library(visualizer STATIC ${VISUALIZER_SOURCES})
 
 target_include_directories(visualizer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/lib/glm" )

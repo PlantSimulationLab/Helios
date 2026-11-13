@@ -19933,6 +19933,844 @@ GPU_TEST_CASE("RadiationModel - periodic copies of the domain meet without a gap
     DOCTEST_CHECK(flux_below_gap < 0.001f);
 }
 
+// ----- Periodic boundary: excluded primitives and a limited number of copies -----
+
+namespace periodic_exclusion_test {
+
+    //! Ground strips 0.1 m wide in x covering 0 < x < 1, 0 < y < 1, returning their UUIDs in order of x
+    inline std::vector<uint> addGroundStrips(Context &context) {
+        std::vector<uint> strips;
+        for (int i = 0; i < 10; i++) {
+            strips.push_back(context.addPatch(make_vec3(0.05f + 0.1f * float(i), 0.5f, 0), make_vec2(0.1f, 1.f)));
+        }
+        return strips;
+    }
+
+    //! Ground patches on a 5 x 5 grid covering -0.5 < x, y < 0.5, returning their UUIDs
+    inline std::vector<uint> addGroundGrid(Context &context, const vec3 &offset = make_vec3(0, 0, 0)) {
+        std::vector<uint> patches;
+        for (int j = 0; j < 5; j++) {
+            for (int i = 0; i < 5; i++) {
+                patches.push_back(context.addPatch(offset + make_vec3(-0.4f + 0.2f * float(i), -0.4f + 0.2f * float(j), 0), make_vec2(0.2f, 0.2f)));
+            }
+        }
+        return patches;
+    }
+
+    //! A model with one band "SW" of diffuse sky flux 1 and no emission, tracing diffuse rays only
+    inline void setupDiffuseBand(RadiationModel &radiation, uint diffuse_rays) {
+        radiation.disableMessages();
+        radiation.addRadiationBand("SW");
+        radiation.disableEmission("SW");
+        radiation.setScatteringDepth("SW", 1);
+        radiation.setDiffuseRayCount("SW", diffuse_rays);
+        radiation.setDiffuseRadiationFlux("SW", 1.f);
+    }
+
+    inline float flux(Context &context, uint UUID, const std::string &band = "SW") {
+        float value;
+        context.getPrimitiveData(UUID, ("radiation_flux_" + band).c_str(), value);
+        return value;
+    }
+
+    //! Number of camera pixels whose label is the given primitive
+    inline size_t pixelsShowing(Context &context, const std::string &camera, uint UUID) {
+        std::vector<uint> labels;
+        context.getGlobalData(("camera_" + camera + "_pixel_UUID").c_str(), labels);
+        return size_t(std::count(labels.begin(), labels.end(), UUID + 1));
+    }
+
+    //! Camera image statistics of periodic ground under a plate excluded from the periodic boundary, against the same ground with no plate
+    struct PlateGhost {
+        double mean_copies_with = 0; //!< mean ground pixel in the copies around the central one, with the plate
+        double mean_copies_without = 0; //!< the same pixels without the plate
+        double mean_central_with = 0; //!< mean ground pixel in the central copy, with the plate
+        float largest_difference = 0; //!< largest difference of a pixel in the copies between the two images
+        size_t copies_count = 0;
+        size_t central_count = 0;
+        size_t pixel_count = 0;
+    };
+
+    //! Renders, in band "SW", an xy-periodic ground 1 m wide under a uniform sky, with and without a black plate over its centre that is excluded from the periodic boundary
+    /**
+     * The plate is 0.6 m wide and 0.15 m above the ground, which is tiled by 0.1 m patches, so it hides most of the sky from the
+     * patches below it. A camera 40 m above sees 3 x 3 copies of the domain at 0.05 m per pixel. Only the central copy has a plate
+     * over it, so the eight copies around it must look as they do when there is no plate at all, while the ground around the plate
+     * in the central copy is darker. A repeated speck 1 mm wide at z = 1, on edge to the camera, puts the plate within the height of the repeated geometry.
+     * \param[in] decorate Sets the radiative properties of the ground patches.
+     * \param[in] configure Adds the band "SW" with its radiation and ray counts.
+     * \param[in] ground_is_tile_object [optional] True to build the ground as one tile object, whose patches share vertices for camera flux smoothing.
+     */
+    inline PlateGhost plateGhost(const std::function<void(Context &, const std::vector<uint> &)> &decorate, const std::function<void(RadiationModel &)> &configure, bool ground_is_tile_object = false) {
+        const int resolution = 60;
+        auto render = [&](bool with_plate, std::vector<float> &pixels, std::vector<bool> &shows_ground) {
+            Context context;
+            std::vector<uint> ground;
+            if (ground_is_tile_object) {
+                ground = context.getObjectPrimitiveUUIDs(context.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(10, 10)));
+            } else {
+                for (int j = 0; j < 10; j++) {
+                    for (int i = 0; i < 10; i++) {
+                        ground.push_back(context.addPatch(make_vec3(-0.45f + 0.1f * float(i), -0.45f + 0.1f * float(j), 0), make_vec2(0.1f, 0.1f)));
+                    }
+                }
+            }
+            decorate(context, ground);
+            // The speck stands on edge, so that the camera above, whose samples are jittered within each pixel, does not catch it
+            context.addPatch(make_vec3(0.45f, 0.45f, 1.f), make_vec2(0.001f, 0.001f), make_SphericalCoord(0.5f * float(M_PI), 0));
+            std::vector<uint> excluded;
+            if (with_plate) {
+                excluded.push_back(context.addPatch(make_vec3(0, 0, 0.15f), make_vec2(0.6f, 0.6f)));
+            }
+            RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+            configure(radiation);
+            radiation.enforcePeriodicBoundary("xy", excluded);
+            CameraProperties properties;
+            properties.camera_resolution = make_int2(resolution, resolution);
+            properties.HFOV = 2.f * std::atan(1.5f / 40.f) * 180.f / float(M_PI); // 3 m wide at the ground
+            properties.lens_diameter = 0.f;
+            properties.exposure = "manual";
+            properties.white_balance = "off";
+            radiation.addRadiationCamera("above", {"SW"}, make_vec3(0, 0, 40), make_vec3(0, 0, 0), properties, 1);
+            radiation.updateGeometry();
+            radiation.runBand("SW");
+
+            pixels = radiation.getCameraPixelData("above", "SW");
+            std::vector<uint> labels;
+            context.getGlobalData("camera_above_pixel_UUID", labels);
+            shows_ground.assign(labels.size(), false);
+            for (size_t p = 0; p < labels.size(); p++) {
+                shows_ground.at(p) = labels.at(p) != 0 && std::find(ground.begin(), ground.end(), labels.at(p) - 1) != ground.end();
+            }
+        };
+        std::vector<float> with_plate, without_plate;
+        std::vector<bool> ground_with_plate, ground_without_plate;
+        render(true, with_plate, ground_with_plate);
+        render(false, without_plate, ground_without_plate);
+        PlateGhost ghost;
+        ghost.pixel_count = with_plate.size();
+        if (with_plate.size() != size_t(resolution * resolution) || without_plate.size() != with_plate.size()) {
+            return ghost;
+        }
+        // The central copy of the domain covers the middle third of the image in each direction
+        for (int j = 0; j < resolution; j++) {
+            for (int i = 0; i < resolution; i++) {
+                const size_t p = size_t(j * resolution + i);
+                const bool central = i >= resolution / 3 && i < 2 * resolution / 3 && j >= resolution / 3 && j < 2 * resolution / 3;
+                if (central) {
+                    if (ground_with_plate.at(p)) {
+                        ghost.mean_central_with += with_plate.at(p);
+                        ghost.central_count++;
+                    }
+                } else if (ground_with_plate.at(p) && ground_without_plate.at(p)) {
+                    ghost.mean_copies_with += with_plate.at(p);
+                    ghost.mean_copies_without += without_plate.at(p);
+                    ghost.copies_count++;
+                    ghost.largest_difference = std::max(ghost.largest_difference, std::abs(with_plate.at(p) - without_plate.at(p)));
+                }
+            }
+        }
+        if (ghost.copies_count > 0) {
+            ghost.mean_copies_with /= double(ghost.copies_count);
+            ghost.mean_copies_without /= double(ghost.copies_count);
+        }
+        if (ghost.central_count > 0) {
+            ghost.mean_central_with /= double(ghost.central_count);
+        }
+        return ghost;
+    }
+
+    //! The copies look as they do without the plate, and the central copy's ground is shaded by it
+    inline void checkPlateGhost(const PlateGhost &ghost) {
+        DOCTEST_REQUIRE(ghost.pixel_count == 3600);
+        DOCTEST_REQUIRE(ghost.copies_count >= 3200 - 20);
+        DOCTEST_REQUIRE(ghost.central_count > 0);
+        DOCTEST_CAPTURE(ghost.mean_copies_with);
+        DOCTEST_CAPTURE(ghost.mean_copies_without);
+        DOCTEST_CAPTURE(ghost.mean_central_with);
+        DOCTEST_CAPTURE(ghost.largest_difference);
+        DOCTEST_CHECK(ghost.mean_copies_without > 0);
+        // The two renders trace the same rays, so the copies differ only where the plate changes what a ray does
+        DOCTEST_CHECK(ghost.mean_copies_with == doctest::Approx(ghost.mean_copies_without).epsilon(0.001));
+        DOCTEST_CHECK(ghost.largest_difference < 0.01 * ghost.mean_copies_without);
+        DOCTEST_CHECK(ghost.mean_central_with < 0.93 * ghost.mean_copies_without);
+    }
+
+} // namespace periodic_exclusion_test
+
+GPU_TEST_CASE("RadiationModel - a primitive excluded from the periodic boundary casts no shadow from its periodic copies") {
+    // An opaque roof over 0.8 < x < 1 at z = 0.5 stands over x-periodic ground strips covering 0 < x < 1. The sun is at 45 degrees
+    // elevation toward +x, so the roof's shadow falls on 1.3 < x < 1.5, beyond the domain. Repeated, its copy over -0.2 < x < 0
+    // shades the strips over 0.3 < x < 0.5 through the boundary; excluded from the periodic boundary, it has no copies and every
+    // strip is in the sun. A repeated wall 1 m tall along the edge y = 1, parallel to the sunlight, shades nothing but puts the roof
+    // within the height of the repeated geometry, where the roof's copies must be skipped rather than lie above all that repeats.
+    using namespace periodic_exclusion_test;
+    for (const bool exclude: {false, true}) {
+        Context context;
+        const std::vector<uint> strips = addGroundStrips(context);
+        const uint roof = context.addPatch(make_vec3(0.9f, 0.5f, 0.5f), make_vec2(0.2f, 1.f));
+        context.addPatch(make_vec3(0.5f, 1.f, 0.5f), make_vec2(1.f, 1.f), make_SphericalCoord(0.5f * float(M_PI), 0)); // wall in the plane y = 1
+
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SW");
+        radiation.disableEmission("SW");
+        radiation.setScatteringDepth("SW", 0);
+        radiation.setDiffuseRadiationFlux("SW", 0.f);
+        radiation.setDirectRayCount("SW", 100);
+        const uint sun = radiation.addCollimatedRadiationSource(make_vec3(-1, 0, 1));
+        radiation.setSourceFlux(sun, "SW", std::sqrt(2.f)); // unit flux on a horizontal surface
+        if (exclude) {
+            radiation.enforcePeriodicBoundary("x", {roof});
+        } else {
+            radiation.enforcePeriodicBoundary("x");
+        }
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+
+        DOCTEST_CAPTURE(exclude);
+        for (size_t i = 0; i < strips.size(); i++) {
+            const float strip_flux = flux(context, strips.at(i));
+            DOCTEST_CAPTURE(i);
+            DOCTEST_CAPTURE(strip_flux);
+            if (!exclude && (i == 3 || i == 4)) {
+                DOCTEST_CHECK(strip_flux < 0.01f);
+            } else {
+                DOCTEST_CHECK(strip_flux == doctest::Approx(1.f).epsilon(0.01));
+            }
+        }
+        DOCTEST_CHECK(flux(context, roof) == doctest::Approx(1.f).epsilon(0.01));
+    }
+}
+
+GPU_TEST_CASE("RadiationModel - a primitive excluded from the periodic boundary shades the direct radiation below it") {
+    // An opaque roof over 0.3 < x < 0.5 at z = 0.5 stands over x-periodic ground strips covering 0 < x < 1 and is excluded from the
+    // periodic boundary, under a sun at the zenith. In the central copy of the domain, whose fluxes are reported, the two strips
+    // below the roof are in its shade and the others in full sun. A repeated wall 1 m tall along the edge y = 1, parallel to the
+    // sunlight, shades nothing but puts the roof within the height of the repeated geometry.
+    using namespace periodic_exclusion_test;
+    Context context;
+    const std::vector<uint> strips = addGroundStrips(context);
+    const uint roof = context.addPatch(make_vec3(0.4f, 0.5f, 0.5f), make_vec2(0.2f, 1.f));
+    context.addPatch(make_vec3(0.5f, 1.f, 0.5f), make_vec2(1.f, 1.f), make_SphericalCoord(0.5f * float(M_PI), 0)); // wall in the plane y = 1
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    radiation.setScatteringDepth("SW", 0);
+    radiation.setDiffuseRadiationFlux("SW", 0.f);
+    radiation.setDirectRayCount("SW", 100);
+    const uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(sun, "SW", 1.f);
+    radiation.enforcePeriodicBoundary("x", {roof});
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    for (size_t i = 0; i < strips.size(); i++) {
+        const float strip_flux = flux(context, strips.at(i));
+        DOCTEST_CAPTURE(i);
+        DOCTEST_CAPTURE(strip_flux);
+        if (i == 3 || i == 4) {
+            DOCTEST_CHECK(strip_flux < 0.01f);
+        } else {
+            DOCTEST_CHECK(strip_flux == doctest::Approx(1.f).epsilon(0.01));
+        }
+    }
+    DOCTEST_CHECK(flux(context, roof) == doctest::Approx(1.f).epsilon(0.01));
+}
+
+GPU_TEST_CASE("RadiationModel - a primitive excluded from the periodic boundary blocks the sky as a single object") {
+    // A black roof 0.6 m wide at z = 0.3 over a black xy-periodic ground tile 1 m wide is excluded from the periodic boundary.
+    // The ground then sees the sky past the one roof as it does when the scene is not periodic at all: rays from the ground travel
+    // upward, so the ground's own copies never intercept them. Repeated, the roofs leave the ground far less sky. A repeated speck
+    // 1 mm wide at z = 1, which hides a negligible part of the sky, puts the roof within the height of the repeated geometry, where
+    // the roof's copies must be skipped rather than lie above all that repeats.
+    using namespace periodic_exclusion_test;
+    const uint rays = 20000;
+    auto groundFluxes = [&](int mode, float &roof_flux) { // 0: not periodic, 1: periodic with the roof excluded, 2: periodic
+        Context context;
+        const std::vector<uint> ground = addGroundGrid(context);
+        const uint roof = context.addPatch(make_vec3(0, 0, 0.3f), make_vec2(0.6f, 0.6f));
+        context.addPatch(make_vec3(0.45f, 0.45f, 1.f), make_vec2(0.001f, 0.001f)); // speck
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        setupDiffuseBand(radiation, rays);
+        if (mode == 1) {
+            radiation.enforcePeriodicBoundary("xy", {roof});
+        } else if (mode == 2) {
+            radiation.enforcePeriodicBoundary("xy");
+        }
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+        std::vector<float> fluxes;
+        for (uint UUID: ground) {
+            fluxes.push_back(flux(context, UUID));
+        }
+        roof_flux = flux(context, roof);
+        return fluxes;
+    };
+    float roof_flux_open, roof_flux_excluded, roof_flux_repeated;
+    const std::vector<float> open = groundFluxes(0, roof_flux_open);
+    const std::vector<float> excluded = groundFluxes(1, roof_flux_excluded);
+    const std::vector<float> repeated = groundFluxes(2, roof_flux_repeated);
+    for (size_t p = 0; p < open.size(); p++) {
+        DOCTEST_CAPTURE(p);
+        DOCTEST_CAPTURE(open.at(p));
+        DOCTEST_CAPTURE(excluded.at(p));
+        DOCTEST_CAPTURE(repeated.at(p));
+        DOCTEST_CHECK(excluded.at(p) == doctest::Approx(open.at(p)).epsilon(0.03));
+        DOCTEST_CHECK(repeated.at(p) < 0.92f * open.at(p));
+    }
+    // The roof's top sees the whole sky, its bottom the black ground
+    DOCTEST_CHECK(roof_flux_excluded == doctest::Approx(roof_flux_open).epsilon(0.02));
+}
+
+GPU_TEST_CASE("RadiationModel - a limited number of periodic copies matches the explicitly copied scene") {
+    // A black post 0.2 m wide and 1 m tall stands in an xy-periodic domain 1 m wide, and a small black receiver 0.5 m from it sees
+    // the low sky between the post's periodic copies. With N copies on each side the receiver must receive what it receives in a
+    // scene that is not periodic, with the (2N + 1) x (2N + 1) copies built explicitly; N = 0 is the scene without a periodic
+    // boundary. The more copies, the less sky it sees.
+    using namespace periodic_exclusion_test;
+    const uint rays = 20000;
+    auto receiverFlux = [&](int repeats, bool explicit_copies) { // repeats < 0: unlimited
+        Context context;
+        uint receiver = 0;
+        const int copies = explicit_copies ? repeats : 0;
+        const SphericalCoord facing_x = make_SphericalCoord(0.5f * float(M_PI), 0.5f * float(M_PI)); // vertical, normal along x
+        for (int j = -copies; j <= copies; j++) {
+            for (int i = -copies; i <= copies; i++) {
+                const vec3 offset = make_vec3(float(i), float(j), 0);
+                context.addPatch(offset, make_vec2(1, 1)); // ground
+                context.addPatch(offset + make_vec3(0.2f, 0, 0.5f), make_vec2(0.2f, 1), facing_x); // post
+                const uint UUID = context.addPatch(offset + make_vec3(-0.3f, 0, 0.5f), make_vec2(0.05f, 0.05f), facing_x);
+                if (i == 0 && j == 0) {
+                    receiver = UUID;
+                }
+            }
+        }
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        setupDiffuseBand(radiation, rays);
+        if (!explicit_copies) {
+            if (repeats < 0) {
+                radiation.enforcePeriodicBoundary("xy");
+            } else {
+                radiation.enforcePeriodicBoundary("xy", {}, make_int2(repeats, repeats));
+            }
+        }
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+        return flux(context, receiver);
+    };
+    const float none = receiverFlux(0, true);
+    const float zero_copies = receiverFlux(0, false);
+    const float two_copies = receiverFlux(2, false);
+    const float two_explicit = receiverFlux(2, true);
+    const float unlimited = receiverFlux(-1, false);
+    DOCTEST_CAPTURE(none);
+    DOCTEST_CAPTURE(zero_copies);
+    DOCTEST_CAPTURE(two_copies);
+    DOCTEST_CAPTURE(two_explicit);
+    DOCTEST_CAPTURE(unlimited);
+    DOCTEST_CHECK(zero_copies == doctest::Approx(none).epsilon(0.02));
+    DOCTEST_CHECK(two_copies == doctest::Approx(two_explicit).epsilon(0.02));
+    DOCTEST_CHECK(two_copies < 0.9f * zero_copies);
+    DOCTEST_CHECK(unlimited < 0.98f * two_copies);
+}
+
+GPU_TEST_CASE("RadiationModel - a ray that leaves a limited field of periodic copies reaches the sun") {
+    // The sun is 0.03 degrees above the horizon toward -x, over x-periodic ground strips 1 m wide with a repeated wall 1 m tall along
+    // their edge y = 1, parallel to the sunlight. A ray from the ground climbs above the wall only after about 1900 m, so in an
+    // unlimited periodic domain it reaches the wrap limit and is treated as blocked. With 2 copies on each side, nothing lies beyond
+    // 2.5 m: the ray leaves the field after 3 wraps and reaches the sun.
+    using namespace periodic_exclusion_test;
+    auto stripFluxes = [](bool limited, std::string &warnings) {
+        Context context;
+        const std::vector<uint> strips = addGroundStrips(context);
+        context.addPatch(make_vec3(0.5f, 1.f, 0.5f), make_vec2(1.f, 1.f), make_SphericalCoord(0.5f * float(M_PI), 0)); // wall in the plane y = 1
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SW");
+        radiation.disableEmission("SW");
+        radiation.setScatteringDepth("SW", 0);
+        radiation.setDiffuseRadiationFlux("SW", 0.f);
+        radiation.setDirectRayCount("SW", 100);
+        const float elevation = 0.03f * float(M_PI) / 180.f;
+        const uint sun = radiation.addCollimatedRadiationSource(make_vec3(-std::cos(elevation), 0, std::sin(elevation)));
+        radiation.setSourceFlux(sun, "SW", 1.f / std::sin(elevation)); // unit flux on a horizontal surface
+        if (limited) {
+            radiation.enforcePeriodicBoundary("x", {}, make_int2(2, 0));
+        } else {
+            radiation.enforcePeriodicBoundary("x");
+        }
+        radiation.updateGeometry();
+        {
+            capture_cerr capture;
+            radiation.runBand("SW");
+            warnings = capture.get_captured_output();
+        }
+        std::vector<float> fluxes;
+        for (uint UUID: strips) {
+            fluxes.push_back(flux(context, UUID));
+        }
+        return fluxes;
+    };
+    std::string warnings_unlimited, warnings_limited;
+    const std::vector<float> unlimited = stripFluxes(false, warnings_unlimited);
+    const std::vector<float> limited = stripFluxes(true, warnings_limited);
+    DOCTEST_CHECK(warnings_unlimited.find("maximum number of times") != std::string::npos);
+    DOCTEST_CHECK(warnings_limited.empty());
+    for (size_t i = 0; i < limited.size(); i++) {
+        DOCTEST_CAPTURE(i);
+        DOCTEST_CAPTURE(unlimited.at(i));
+        DOCTEST_CAPTURE(limited.at(i));
+        DOCTEST_CHECK(unlimited.at(i) < 0.01f);
+        DOCTEST_CHECK(limited.at(i) == doctest::Approx(1.f).epsilon(0.01));
+    }
+}
+
+GPU_TEST_CASE("RadiationModel - a primitive sees its own periodic copies") {
+    // Regression test. A ray never hit the primitive it was launched from, in any periodic copy of the domain, so a primitive was
+    // blind to its own copies. A black vertical panel 1 m wide and tall, alone in an x-periodic domain 1 m wide, then saw the low
+    // sky through all its copies. It must receive what it receives in a scene that is not periodic, with its copies built
+    // explicitly: with 2 copies on each side, and with no limit (approximated by 40 copies on each side), and also see its own
+    // direct shadow: under a sun at 30 degrees elevation toward +x, the copy 1 m away in -x shades the panel's lower 0.42 m.
+    using namespace periodic_exclusion_test;
+    const uint rays = 20000;
+    auto panelFluxes = [&](int repeats, bool explicit_copies, bool sun) { // repeats < 0: unlimited
+        Context context;
+        uint panel = 0;
+        const int copies = explicit_copies ? repeats : 0;
+        for (int k = -copies; k <= copies; k++) {
+            context.addPatch(make_vec3(float(k), 0, 0), make_vec2(1, 1)); // ground
+            const uint UUID = context.addPatch(make_vec3(float(k), 0, 0.5f), make_vec2(1, 1), make_SphericalCoord(0.5f * float(M_PI), 0.5f * float(M_PI))); // normal along x
+            if (k == 0) {
+                panel = UUID;
+            }
+        }
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SW");
+        radiation.disableEmission("SW");
+        radiation.setScatteringDepth("SW", 1);
+        if (sun) {
+            radiation.setDiffuseRadiationFlux("SW", 0.f);
+            radiation.setDirectRayCount("SW", rays);
+            const float elevation = 30.f * float(M_PI) / 180.f;
+            const uint source = radiation.addCollimatedRadiationSource(make_vec3(-std::cos(elevation), 0, std::sin(elevation)));
+            radiation.setSourceFlux(source, "SW", 1.f);
+        } else {
+            radiation.setDiffuseRayCount("SW", rays);
+            radiation.setDiffuseRadiationFlux("SW", 1.f);
+        }
+        if (!explicit_copies) {
+            if (repeats < 0) {
+                radiation.enforcePeriodicBoundary("x");
+            } else {
+                radiation.enforcePeriodicBoundary("x", {}, make_int2(repeats, 0));
+            }
+        }
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+        return flux(context, panel);
+    };
+    const float two_copies = panelFluxes(2, false, false);
+    const float two_explicit = panelFluxes(2, true, false);
+    const float unlimited = panelFluxes(-1, false, false);
+    const float many_explicit = panelFluxes(40, true, false);
+    DOCTEST_CAPTURE(two_copies);
+    DOCTEST_CAPTURE(two_explicit);
+    DOCTEST_CAPTURE(unlimited);
+    DOCTEST_CAPTURE(many_explicit);
+    DOCTEST_CHECK(two_copies == doctest::Approx(two_explicit).epsilon(0.02));
+    DOCTEST_CHECK(unlimited == doctest::Approx(many_explicit).epsilon(0.02));
+    // The sun reaches the panel's face toward -x at cos 30 degrees above the 1 - tan(30) = 0.42 m the copy 1 m away hides
+    const float sunlit = panelFluxes(-1, false, true);
+    const float expected = std::cos(30.f * float(M_PI) / 180.f) * std::tan(30.f * float(M_PI) / 180.f);
+    DOCTEST_CAPTURE(sunlit);
+    DOCTEST_CHECK(sunlit == doctest::Approx(expected).epsilon(0.02));
+}
+
+GPU_TEST_CASE("RadiationModel - a camera sees a primitive excluded from the periodic boundary only once") {
+    // A small patch 0.2 m wide at z = 0.1 stands in the middle of an xy-periodic ground tile 1 m wide. A camera 10 m above the
+    // tile, looking down, sees 3 x 3 copies of the tile at 0.1 m per pixel: the patch appears in each copy when it repeats, and
+    // only in the middle when it is excluded. A camera 5 periods away in x looking straight down sees no copy of it; one looking
+    // back at it from there sees it at the centre of its image. Limited to 1 copy on each side, the ground ends 1.5 m from the
+    // middle and the camera sees sky beyond it.
+    using namespace periodic_exclusion_test;
+    struct Result {
+        size_t object_pixels_above;
+        size_t object_pixels_far_down;
+        uint far_oblique_centre;
+        float far_oblique_centre_depth;
+        size_t ground_pixels_above;
+    };
+    auto render = [](int mode, uint &object) { // 0: object repeats, 1: excluded, 2: excluded with 1 copy on each side
+        Context context;
+        const uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        object = context.addPatch(make_vec3(0, 0, 0.1f), make_vec2(0.2f, 0.2f));
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        periodic_exclusion_test::setupDiffuseBand(radiation, 100);
+        if (mode == 0) {
+            radiation.enforcePeriodicBoundary("xy");
+        } else if (mode == 1) {
+            radiation.enforcePeriodicBoundary("xy", {object});
+        } else {
+            radiation.enforcePeriodicBoundary("xy", {object}, make_int2(1, 1));
+        }
+        CameraProperties properties;
+        properties.camera_resolution = make_int2(30, 30);
+        const float half_width = mode == 2 ? 2.5f : 1.5f; // 5 m or 3 m wide at the ground
+        properties.HFOV = 2.f * std::atan(half_width / 10.f) * 180.f / float(M_PI);
+        properties.lens_diameter = 0.f;
+        properties.exposure = "manual";
+        properties.white_balance = "off";
+        radiation.addRadiationCamera("above", {"SW"}, make_vec3(0, 0, 10), make_vec3(0, 0, 0), properties, 1);
+        radiation.addRadiationCamera("far_down", {"SW"}, make_vec3(5, 0, 10), make_vec3(5, 0, 0), properties, 1);
+        radiation.addRadiationCamera("far_oblique", {"SW"}, make_vec3(5, 0, 10), make_vec3(0, 0, 0.1f), glass_camera_properties(0.5f), 1);
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+
+        Result result;
+        result.object_pixels_above = pixelsShowing(context, "above", object);
+        result.object_pixels_far_down = pixelsShowing(context, "far_down", object);
+        result.ground_pixels_above = pixelsShowing(context, "above", ground);
+        std::vector<uint> labels;
+        context.getGlobalData("camera_far_oblique_pixel_UUID", labels);
+        std::vector<float> depths;
+        context.getGlobalData("camera_far_oblique_pixel_depth", depths);
+        result.far_oblique_centre = labels.at(40);
+        result.far_oblique_centre_depth = depths.at(40);
+        return result;
+    };
+    uint object;
+    const Result repeated = render(0, object);
+    DOCTEST_CHECK(repeated.object_pixels_above >= 9 * 3); // about 4 pixels for each of the 9 copies
+    DOCTEST_CHECK(repeated.object_pixels_far_down >= 3);
+    DOCTEST_CHECK(repeated.far_oblique_centre == object + 1);
+
+    const Result excluded = render(1, object);
+    DOCTEST_CAPTURE(excluded.object_pixels_above);
+    DOCTEST_CHECK(excluded.object_pixels_above >= 3);
+    DOCTEST_CHECK(excluded.object_pixels_above <= 9);
+    DOCTEST_CHECK(excluded.object_pixels_far_down == 0);
+    DOCTEST_CHECK(excluded.ground_pixels_above + excluded.object_pixels_above == 900);
+    DOCTEST_CHECK(excluded.far_oblique_centre == object + 1);
+    const float expected_depth = std::sqrt(25.f + 9.9f * 9.9f);
+    DOCTEST_CHECK(excluded.far_oblique_centre_depth == doctest::Approx(expected_depth).epsilon(1e-3));
+
+    // Limited to 1 copy on each side, the ground covers the middle 3 m of the 5 m the camera sees: 18 x 18 of its 30 x 30 pixels
+    const Result limited = render(2, object);
+    DOCTEST_CAPTURE(limited.ground_pixels_above);
+    DOCTEST_CHECK(limited.object_pixels_above >= 1);
+    DOCTEST_CHECK(limited.object_pixels_above <= 4);
+    DOCTEST_CHECK(limited.ground_pixels_above + limited.object_pixels_above >= 17 * 17);
+    DOCTEST_CHECK(limited.ground_pixels_above + limited.object_pixels_above <= 19 * 19);
+    DOCTEST_CHECK(limited.object_pixels_far_down == 0);
+    DOCTEST_CHECK(limited.far_oblique_centre == object + 1);
+}
+
+GPU_TEST_CASE("RadiationModel - a camera shows the shadow of a primitive excluded from the periodic boundary only where it falls") {
+    // An opaque plate 0.2 m wide at z = 0.5 is excluded from an xy-periodic domain of reflective ground 1 m wide, tiled by 0.1 m
+    // patches, and the sun is at 45 degrees elevation toward +x. A camera 40 m above sees 3 x 3 copies of the domain at 0.05 m per
+    // pixel. The plate's shadow must appear once, 4 x 4 pixels, wherever it falls: inside the central copy (plate at -0.35 < x <
+    // -0.15), where the shaded patches' own radiation would show the shadow in every copy, and across the boundary in the next copy
+    // (plate at 0.15 < x < 0.35), which the central patches' radiation would not show at all.
+    using namespace periodic_exclusion_test;
+    auto shadowPixels = [](float plate_x, size_t &ground_pixels) {
+        Context context;
+        std::vector<uint> ground;
+        for (int j = 0; j < 10; j++) {
+            for (int i = 0; i < 10; i++) {
+                ground.push_back(context.addPatch(make_vec3(-0.45f + 0.1f * float(i), -0.45f + 0.1f * float(j), 0), make_vec2(0.1f, 0.1f)));
+            }
+        }
+        context.setPrimitiveData(ground, "reflectivity_SW", 0.5f);
+        const uint plate = context.addPatch(make_vec3(plate_x, 0, 0.5f), make_vec2(0.2f, 0.2f));
+        // Bright, so that a pixel at the plate's edge whose sample lands on it is not taken for shadow
+        context.setPrimitiveData(plate, "reflectivity_SW", 0.9f);
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SW");
+        radiation.disableEmission("SW");
+        radiation.setScatteringDepth("SW", 1);
+        radiation.setDiffuseRadiationFlux("SW", 0.f);
+        radiation.setDirectRayCount("SW", 100);
+        const uint sun = radiation.addCollimatedRadiationSource(make_vec3(-1, 0, 1));
+        radiation.setSourceFlux(sun, "SW", 1000.f);
+        radiation.enforcePeriodicBoundary("xy", {plate});
+        CameraProperties properties;
+        properties.camera_resolution = make_int2(60, 60);
+        properties.HFOV = 2.f * std::atan(1.5f / 40.f) * 180.f / float(M_PI); // 3 m wide at the ground
+        properties.lens_diameter = 0.f;
+        properties.exposure = "manual";
+        properties.white_balance = "off";
+        radiation.addRadiationCamera("above", {"SW"}, make_vec3(0, 0, 40), make_vec3(0, 0, 0), properties, 1);
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+
+        const std::vector<float> pixels = radiation.getCameraPixelData("above", "SW");
+        std::vector<uint> labels;
+        context.getGlobalData("camera_above_pixel_UUID", labels);
+        DOCTEST_REQUIRE(pixels.size() == labels.size());
+        // Ground pixels darker than a third of the brightest ground pixel are in the shadow
+        float brightest = 0.f;
+        std::vector<float> ground_values;
+        for (size_t p = 0; p < pixels.size(); p++) {
+            if (labels.at(p) != 0 && labels.at(p) != plate + 1) {
+                ground_values.push_back(pixels.at(p));
+                brightest = std::max(brightest, pixels.at(p));
+            }
+        }
+        ground_pixels = ground_values.size();
+        return size_t(std::count_if(ground_values.begin(), ground_values.end(), [brightest](float value) { return value < brightest / 3.f; }));
+    };
+    size_t ground_pixels;
+    const size_t shadow_inside = shadowPixels(-0.25f, ground_pixels);
+    DOCTEST_CAPTURE(shadow_inside);
+    DOCTEST_CHECK(ground_pixels >= 3600 - 20);
+    DOCTEST_CHECK(shadow_inside == 16);
+    const size_t shadow_across = shadowPixels(0.25f, ground_pixels);
+    DOCTEST_CAPTURE(shadow_across);
+    DOCTEST_CHECK(shadow_across == 16);
+}
+
+GPU_TEST_CASE("RadiationModel - a tall primitive excluded from the periodic boundary does not exhaust the wrap limit") {
+    // A black mast 100 m tall stands on a black xy-periodic ground 1 m wide and is excluded from the periodic boundary, so the
+    // boundary faces reach 100 m up. A ray leaving the ground below about 7 degrees elevation climbs past the 100 m only after more
+    // than the 1000 wraps a ray is allowed (about 1.5% of the sky's cosine-weighted rays), but nothing above the ground repeats, so it
+    // can hit nothing once it has left the mast's copy of the domain. The ground must see the sky as it does without a periodic
+    // boundary, without rays abandoned at the wrap limit.
+    using namespace periodic_exclusion_test;
+    const uint rays = 20000;
+    auto groundFluxes = [&](bool periodic, std::string &warnings) {
+        Context context;
+        const std::vector<uint> ground = addGroundGrid(context);
+        const uint mast = context.addPatch(make_vec3(0, 0.45f, 50), make_vec2(0.1f, 100), make_SphericalCoord(0.5f * float(M_PI), 0)); // normal along y, at the +y edge
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        setupDiffuseBand(radiation, rays);
+        if (periodic) {
+            radiation.enforcePeriodicBoundary("xy", {mast});
+        }
+        radiation.updateGeometry();
+        {
+            capture_cerr capture;
+            radiation.runBand("SW");
+            warnings = capture.get_captured_output();
+        }
+        std::vector<float> fluxes;
+        for (uint UUID: ground) {
+            fluxes.push_back(flux(context, UUID));
+        }
+        return fluxes;
+    };
+    std::string warnings_open, warnings_periodic;
+    const std::vector<float> open = groundFluxes(false, warnings_open);
+    const std::vector<float> periodic = groundFluxes(true, warnings_periodic);
+    DOCTEST_CHECK(warnings_periodic.empty());
+    float mean_open = 0.f, mean_periodic = 0.f;
+    for (size_t p = 0; p < open.size(); p++) {
+        DOCTEST_CAPTURE(p);
+        DOCTEST_CAPTURE(open.at(p));
+        DOCTEST_CAPTURE(periodic.at(p));
+        DOCTEST_CHECK(periodic.at(p) == doctest::Approx(open.at(p)).epsilon(0.02));
+        mean_open += open.at(p) / float(open.size());
+        mean_periodic += periodic.at(p) / float(open.size());
+    }
+    // Over all 25 patches the noise is about 0.1%, well below the 1.5% that abandoned rays would remove
+    DOCTEST_CHECK(mean_periodic == doctest::Approx(mean_open).epsilon(0.006));
+}
+
+GPU_TEST_CASE("RadiationModel - periodic copies do not show the sky hidden by a primitive excluded from the periodic boundary") {
+    // See periodic_exclusion_test::plateGhost(). Shown in every copy, the plate's shade would darken the copies by about a quarter.
+    using namespace periodic_exclusion_test;
+    const PlateGhost ghost = plateGhost([](Context &context, const std::vector<uint> &ground) { context.setPrimitiveData(ground, "reflectivity_SW", 0.5f); }, [](RadiationModel &radiation) { setupDiffuseBand(radiation, 20000); });
+    checkPlateGhost(ghost);
+}
+
+GPU_TEST_CASE("RadiationModel - periodic copies do not show the shadow or the hidden sky of a primitive excluded from the periodic boundary under a sun") {
+    // As under the sky alone (see periodic_exclusion_test::plateGhost()), with a sun 17 degrees from the zenith: the plate's shadow falls on the central
+    // copy's ground, whose scattered sunlight the copies must not lack, and cameras add the sunlight each pixel receives.
+    using namespace periodic_exclusion_test;
+    const PlateGhost ghost = plateGhost([](Context &context, const std::vector<uint> &ground) { context.setPrimitiveData(ground, "reflectivity_SW", 0.5f); },
+                                        [](RadiationModel &radiation) {
+                                            setupDiffuseBand(radiation, 20000);
+                                            radiation.setDirectRayCount("SW", 100);
+                                            const uint sun = radiation.addCollimatedRadiationSource(make_vec3(0.3f, 0, 1));
+                                            radiation.setSourceFlux(sun, "SW", 2.f);
+                                        });
+    checkPlateGhost(ghost);
+}
+
+GPU_TEST_CASE("RadiationModel - periodic copies of a smoothed surface with a specular layer do not show a primitive excluded from the periodic boundary") {
+    // As above, with the ground one tile object whose patches share vertices, shaded with camera flux smoothing, and a specular surface layer, whose
+    // reflection of the sun and sky the copies must show as with no plate.
+    using namespace periodic_exclusion_test;
+    const PlateGhost ghost = plateGhost(
+            [](Context &context, const std::vector<uint> &ground) {
+                context.setPrimitiveData(ground, "reflectivity_SW", 0.5f);
+                context.setPrimitiveData(ground, "specular_roughness", 0.3f);
+            },
+            [](RadiationModel &radiation) {
+                setupDiffuseBand(radiation, 20000);
+                radiation.setScatteringDepth("SW", 2);
+                radiation.setDirectRayCount("SW", 100);
+                const uint sun = radiation.addCollimatedRadiationSource(make_vec3(0.3f, 0, 1));
+                radiation.setSourceFlux(sun, "SW", 2.f);
+                radiation.enableCameraFluxSmoothing();
+            },
+            true);
+    checkPlateGhost(ghost);
+}
+
+GPU_TEST_CASE("RadiationModel - primitives can be excluded from the periodic boundary, repeated again and excluded again on one model") {
+    // The roof scene of "blocks the sky as a single object", run three times on one model: roof excluded, roof repeating, roof excluded. Each run must give
+    // the ground fluxes of a model set up that way from the start.
+    using namespace periodic_exclusion_test;
+    const uint rays = 20000;
+    Context context;
+    const std::vector<uint> ground = addGroundGrid(context);
+    const uint roof = context.addPatch(make_vec3(0, 0, 0.3f), make_vec2(0.6f, 0.6f));
+    context.addPatch(make_vec3(0.45f, 0.45f, 1.f), make_vec2(0.001f, 0.001f)); // speck
+    auto groundFluxes = [&](RadiationModel &radiation, bool exclude) {
+        if (exclude) {
+            radiation.enforcePeriodicBoundary("xy", {roof});
+        } else {
+            radiation.enforcePeriodicBoundary("xy");
+        }
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+        std::vector<float> fluxes;
+        for (uint UUID: ground) {
+            fluxes.push_back(flux(context, UUID));
+        }
+        return fluxes;
+    };
+    std::vector<float> fresh[2];
+    for (int exclude = 0; exclude < 2; exclude++) {
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        setupDiffuseBand(radiation, rays);
+        fresh[exclude] = groundFluxes(radiation, exclude == 1);
+    }
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    setupDiffuseBand(radiation, rays);
+    const bool sequence[3] = {true, false, true};
+    for (int run = 0; run < 3; run++) {
+        const std::vector<float> fluxes = groundFluxes(radiation, sequence[run]);
+        for (size_t p = 0; p < fluxes.size(); p++) {
+            DOCTEST_CAPTURE(run);
+            DOCTEST_CAPTURE(p);
+            DOCTEST_CHECK(fluxes.at(p) == doctest::Approx(fresh[sequence[run] ? 1 : 0].at(p)).epsilon(0.03));
+        }
+    }
+    // The roof hides far more sky when it repeats, so the two setups are told apart
+    DOCTEST_CHECK(fresh[0].at(12) < 0.92f * fresh[1].at(12));
+}
+
+GPU_TEST_CASE("RadiationModel - light gathered from periodic copies does not carry the shade of a primitive excluded from the periodic boundary") {
+    // A black plate 0.8 m wide stands 0.1 m above an xy-periodic reflective ground 1 m wide and is excluded from the periodic
+    // boundary, so it shades most of the central ground but not the copies around it. A small black sensor 0.5 m up faces down: the
+    // plate fills its view of the central copy, so nearly all the light it receives is reflected by the copies of the ground, which
+    // are in full skylight. With 4 copies on each side the sensor must receive what it receives in a scene that is not periodic, with
+    // the 9 x 9 copies of the ground and the sensor built explicitly around the one plate. Read from the central ground, which the
+    // plate shades, the copies would send the sensor about a third of that. The same must hold with a repeated sheet of glass between
+    // the ground and the plate, which every ray between the ground and the sensor or the sky crosses, and the rays between the ground
+    // and the plate too; and with a sun at the zenith, whose light the plate keeps from the central ground but not from its copies.
+    using namespace periodic_exclusion_test;
+    auto fluxes = [](bool explicit_copies, bool glass_sheet, bool sun, float &sensor_flux, float &ground_flux, float &plate_flux) {
+        Context context;
+        uint sensor = 0, central_ground = 0;
+        const int copies = explicit_copies ? 4 : 0;
+        for (int j = -copies; j <= copies; j++) {
+            for (int i = -copies; i <= copies; i++) {
+                const vec3 offset = make_vec3(float(i), float(j), 0);
+                const uint ground = context.addPatch(offset, make_vec2(1, 1));
+                context.setPrimitiveData(ground, "reflectivity_SW", 0.8f);
+                const uint facing_down = context.addPatch(offset + make_vec3(0, 0, 0.5f), make_vec2(0.1f, 0.1f), make_SphericalCoord(float(M_PI), 0));
+                context.setPrimitiveData(facing_down, "twosided_flag", uint(0));
+                if (glass_sheet) {
+                    const uint glass = context.addPatch(offset + make_vec3(0, 0, 0.05f), make_vec2(1, 1));
+                    context.setPrimitiveData(glass, "glass_n_SW", 1.5f);
+                }
+                if (i == 0 && j == 0) {
+                    sensor = facing_down;
+                    central_ground = ground;
+                }
+            }
+        }
+        const uint plate = context.addPatch(make_vec3(0, 0, 0.1f), make_vec2(0.8f, 0.8f));
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        setupDiffuseBand(radiation, 50000);
+        radiation.setScatteringDepth("SW", 3);
+        if (sun) {
+            radiation.setDirectRayCount("SW", 1000);
+            const uint source = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+            radiation.setSourceFlux(source, "SW", 3.f);
+        }
+        if (!explicit_copies) {
+            radiation.enforcePeriodicBoundary("xy", {plate}, make_int2(4, 4));
+        }
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+        sensor_flux = flux(context, sensor);
+        ground_flux = flux(context, central_ground);
+        plate_flux = flux(context, plate);
+    };
+    for (int variant = 0; variant < 3; variant++) {
+        const bool glass_sheet = variant == 1;
+        const bool sun = variant == 2;
+        float sensor_explicit, ground_explicit, plate_explicit, sensor_periodic, ground_periodic, plate_periodic;
+        fluxes(true, glass_sheet, sun, sensor_explicit, ground_explicit, plate_explicit);
+        fluxes(false, glass_sheet, sun, sensor_periodic, ground_periodic, plate_periodic);
+        DOCTEST_CAPTURE(glass_sheet);
+        DOCTEST_CAPTURE(sun);
+        DOCTEST_CAPTURE(sensor_explicit);
+        DOCTEST_CAPTURE(sensor_periodic);
+        DOCTEST_CAPTURE(ground_explicit);
+        DOCTEST_CAPTURE(ground_periodic);
+        DOCTEST_CAPTURE(plate_explicit);
+        DOCTEST_CAPTURE(plate_periodic);
+        DOCTEST_CHECK(sensor_explicit > 0.2f); // the sensor does face the ground
+        DOCTEST_CHECK(sensor_periodic == doctest::Approx(sensor_explicit).epsilon(0.03));
+        DOCTEST_CHECK(ground_periodic == doctest::Approx(ground_explicit).epsilon(0.03));
+        DOCTEST_CHECK(plate_periodic == doctest::Approx(plate_explicit).epsilon(0.03));
+    }
+}
+
+GPU_TEST_CASE("RadiationModel - periodic boundary exclusion and repeat limit errors") {
+    // GPU_TEST_CASE: constructing the RadiationModel needs a ray-tracing backend.
+    Context context;
+    const uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    const uint outside = context.addPatch(make_vec3(0.6f, 0, 0.5f), make_vec2(0.4f, 0.2f)); // reaches x = 0.8, beyond the ground
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    DOCTEST_CHECK_THROWS_WITH_AS(radiation.enforcePeriodicBoundary("z"), doctest::Contains("Unknown periodic boundary 'z'"), std::runtime_error);
+    DOCTEST_CHECK_THROWS_WITH_AS(radiation.enforcePeriodicBoundary("x", {ground, 99999u}), doctest::Contains("UUID 99999"), std::runtime_error);
+    DOCTEST_CHECK_THROWS_WITH_AS(radiation.enforcePeriodicBoundary("x", {}, make_int2(2, 1)), doctest::Contains("not periodic in y"), std::runtime_error);
+    DOCTEST_CHECK_THROWS_WITH_AS(radiation.enforcePeriodicBoundary("xy", {}, make_int2(-2, 1)), doctest::Contains("must not be negative"), std::runtime_error);
+
+    // Excluded geometry beyond the repeated geometry in a periodic direction
+    radiation.enforcePeriodicBoundary("x", {outside});
+    DOCTEST_CHECK_THROWS_WITH_AS(radiation.updateGeometry(), doctest::Contains("beyond the periodic domain"), std::runtime_error);
+    // ... is fine in a direction that is not periodic (the patch lies within the ground in y)
+    radiation.enforcePeriodicBoundary("y", {outside});
+    DOCTEST_CHECK_NOTHROW(radiation.updateGeometry());
+
+    // Nothing left to repeat
+    radiation.enforcePeriodicBoundary("y", {ground, outside});
+    DOCTEST_CHECK_THROWS_WITH_AS(radiation.updateGeometry(), doctest::Contains("Every primitive"), std::runtime_error);
+
+    // An excluded translucent cover
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    radiation.setDiffuseRayCount("SW", 100);
+    radiation.setDiffuseRadiationFlux("SW", 1.f);
+    context.setPrimitiveData(outside, "glass_n_SW", 1.5f);
+    radiation.enforcePeriodicBoundary("y", {outside});
+    radiation.updateGeometry();
+    DOCTEST_CHECK_THROWS_WITH_AS(radiation.runBand("SW"), doctest::Contains("translucent cover"), std::runtime_error);
+}
+
 GPU_TEST_CASE("RadiationModel - a patch with a mirrored transform is seen from the correct face") {
     // Regression test. The top face of a patch is the side its normal, cross(x-axis, y-axis) of its transform, points to. For a
     // patch with a mirrored transform (scaled by -1 along one axis) this is opposite to the third column of the transform, which the
@@ -20222,6 +21060,150 @@ GPU_TEST_CASE("RadiationModel::applySpectralClassMaps builds a palette from a su
     // Calling it again registers the same palette and spectra without complaint
     DOCTEST_CHECK_NOTHROW(model.applySpectralClassMaps(std::vector<uint>{patch}));
     removeSurfaceClassMap("helios_radiation_surface");
+}
+
+GPU_TEST_CASE("RadiationModel::applySpectralClassMaps builds classes that scale the body under a surface layer") {
+    // With scales="body", a class of scale s has the reflectivity a(1) + s (rho - a(1)) and the transmissivity s tau, for the a(1) of the layer of the primitives it is given; two layers give two
+    // palettes. Class 2 (s = 3) would reflect a(1) + 3 (0.4 - a(1)), more than 1 - 0.3, so it is held at 0.7.
+    using namespace spectral_texture_test;
+    using namespace surface_class_map_test;
+    const std::string stem = "helios_radiation_surface_body";
+    const std::string class_map = writeSurfaceClassMap(stem, R"(<helios>
+  <surface_class_map scales="body" reflectivity_spectrum="surface_body_rho" transmissivity_spectrum="surface_body_tau" provenance="test">
+    <class id="1" reflectance_scale="0.5"/>
+    <class id="2" reflectance_scale="3"/>
+  </surface_class_map>
+</helios>
+)");
+    const std::string map_name = stem + "_classes";
+    auto setup = [&](Context &context, float rho, float tau = 0.1f) {
+        addFlatSpectrum(context, "surface_body_rho", rho);
+        addFlatSpectrum(context, "surface_body_tau", tau);
+        std::vector<uint> patches;
+        for (int i = 0; i < 3; i++) {
+            patches.push_back(context.addPatch(make_vec3(1.5f * float(i), 0, 0), make_vec2(1, 1), nullrotation, "lib/images/solid.jpg"));
+            context.setPrimitiveData(patches.back(), "spectral_class_map", class_map);
+            context.setPrimitiveData(patches.back(), "specular_roughness", 0.3f);
+        }
+        context.setPrimitiveData(patches.at(0), "specular_n", 2.f);
+        context.setPrimitiveData(patches.at(1), "specular_n", 2.f);
+        context.setPrimitiveData(patches.at(2), "specular_n", 1.5f);
+        return patches;
+    };
+    auto errorOf = [](const std::function<void()> &call) {
+        std::string message;
+        try {
+            call();
+        } catch (const std::runtime_error &error) {
+            message = error.what();
+        }
+        return message;
+    };
+
+    SUBCASE("the classes' spectra and palettes") {
+        Context context;
+        const std::vector<uint> patches = setup(context, 0.4f);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.applySpectralClassMaps();
+        const float a_n2 = computeSurfaceLayerAlbedoTable(2.f, 0.3f, 65).at(64);
+        const float a_n15 = computeSurfaceLayerAlbedoTable(1.5f, 0.3f, 65).at(64);
+        DOCTEST_CHECK(context.getPrimitiveSpectralPalette(patches.at(0)) == "surface_" + map_name + "_n2_r0.3");
+        DOCTEST_CHECK(context.getPrimitiveSpectralPalette(patches.at(1)) == "surface_" + map_name + "_n2_r0.3");
+        DOCTEST_CHECK(context.getPrimitiveSpectralPalette(patches.at(2)) == "surface_" + map_name + "_n1.5_r0.3");
+        auto valueOf = [&](const std::string &label) {
+            std::vector<vec2> spectrum;
+            context.getGlobalData(label.c_str(), spectrum);
+            return interp1(spectrum, 550.f);
+        };
+        DOCTEST_CHECK(valueOf("surface_body_rho_" + map_name + "_n2_r0.3_class1") == doctest::Approx(a_n2 + 0.5f * (0.4f - a_n2)));
+        DOCTEST_CHECK(valueOf("surface_body_tau_" + map_name + "_n2_r0.3_class1") == doctest::Approx(0.05f));
+        DOCTEST_CHECK(valueOf("surface_body_rho_" + map_name + "_n2_r0.3_class2") == doctest::Approx(0.7f));
+        DOCTEST_CHECK(valueOf("surface_body_rho_" + map_name + "_n1.5_r0.3_class1") == doctest::Approx(a_n15 + 0.5f * (0.4f - a_n15)));
+        float recorded;
+        context.getGlobalData(("surface_" + map_name + "_n2_r0.3_layer_albedo").c_str(), recorded);
+        DOCTEST_CHECK(recorded == doctest::Approx(a_n2));
+        // The palettes run
+        addOverheadBeam(model, 1000);
+        model.updateGeometry();
+        DOCTEST_CHECK_NOTHROW(model.runBand("VIS"));
+    }
+    SUBCASE("a primitive without a layer") {
+        Context context;
+        const std::vector<uint> patches = setup(context, 0.4f);
+        context.clearPrimitiveData(patches.at(1), "specular_roughness");
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        const std::string message = errorOf([&]() { model.applySpectralClassMaps(); });
+        DOCTEST_CAPTURE(message);
+        DOCTEST_CHECK(message.find("has no surface layer") != std::string::npos);
+    }
+    SUBCASE("a refractive index for one band") {
+        Context context;
+        const std::vector<uint> patches = setup(context, 0.4f);
+        context.setPrimitiveData(patches.at(0), "specular_n_VIS", 1.4f);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        const std::string message = errorOf([&]() { model.applySpectralClassMaps(); });
+        DOCTEST_CAPTURE(message);
+        DOCTEST_CHECK(message.find("specular_n_VIS") != std::string::npos);
+    }
+    SUBCASE("a spectrum darker than the layer") {
+        Context context;
+        setup(context, 0.05f); // a(1) is 0.11 for a refractive index of 2
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        const std::string message = errorOf([&]() { model.applySpectralClassMaps(); });
+        DOCTEST_CAPTURE(message);
+        DOCTEST_CHECK(message.find("surface_body_rho") != std::string::npos);
+        DOCTEST_CHECK(message.find("Lower the layer's refractive index") != std::string::npos);
+    }
+    SUBCASE("a class whose transmissivity leaves it less reflectivity than the layer") {
+        Context context;
+        setup(context, 0.4f, 0.35f); // class 2 transmits 3 x 0.35, held at 1, which leaves it no reflectivity
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        const std::string message = errorOf([&]() { model.applySpectralClassMaps(); });
+        DOCTEST_CAPTURE(message);
+        DOCTEST_CHECK(message.find("Class 2") != std::string::npos);
+        DOCTEST_CHECK(message.find("reflectance_scale") != std::string::npos);
+    }
+    SUBCASE("two layers that differ only slightly") {
+        Context context;
+        const std::vector<uint> patches = setup(context, 0.4f);
+        context.setPrimitiveData(patches.at(1), "specular_n", std::nextafter(2.f, 3.f));
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.applySpectralClassMaps();
+        DOCTEST_CHECK(context.getPrimitiveSpectralPalette(patches.at(0)) != context.getPrimitiveSpectralPalette(patches.at(1)));
+    }
+    SUBCASE("a band without a layer") {
+        Context context;
+        const std::vector<uint> patches = setup(context, 0.4f);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.applySpectralClassMaps();
+        context.setPrimitiveData(patches.at(0), "specular_n_VIS", 1.f);
+        addOverheadBeam(model, 100);
+        model.updateGeometry();
+        const std::string message = errorOf([&]() { model.runBand("VIS"); });
+        DOCTEST_CAPTURE(message);
+        DOCTEST_CHECK(message.find("has no layer in band 'VIS'") != std::string::npos);
+    }
+    SUBCASE("a layer changed after the classes were built") {
+        Context context;
+        const std::vector<uint> patches = setup(context, 0.4f);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.applySpectralClassMaps();
+        context.setPrimitiveData(patches.at(0), "specular_n", 1.8f);
+        addOverheadBeam(model, 100);
+        model.updateGeometry();
+        const std::string message = errorOf([&]() { model.runBand("VIS"); });
+        DOCTEST_CAPTURE(message);
+        DOCTEST_CHECK(message.find("applySpectralClassMaps() again") != std::string::npos);
+    }
+    removeSurfaceClassMap(stem);
 }
 
 GPU_TEST_CASE("RadiationModel::applySpectralClassMaps leaves a leaf class map alone and rejects bad definitions") {
@@ -21498,10 +22480,6 @@ GPU_TEST_CASE("RadiationModel - spectral textures that cannot be traced correctl
         context.setPrimitiveData(square, "glass_n_VIS", 1.5f);
         DOCTEST_CHECK(rejectsWith([&]() { model.runBand("VIS"); }, "glass_n_VIS"));
     }
-    SUBCASE("a specular surface layer") {
-        context.setPrimitiveData(square, "specular_roughness", 0.2f);
-        DOCTEST_CHECK(rejectsWith([&]() { model.runBand("VIS"); }, "surface layer"));
-    }
     SUBCASE("classes that differ in a band with emission") {
         model.enableEmission("VIS");
         context.setPrimitiveData(square, "emissivity_VIS", 0.f);
@@ -21874,6 +22852,613 @@ namespace normal_map_test {
     }
 
 } // namespace normal_map_test
+
+GPU_TEST_CASE("RadiationModel - periodic copies of a normal-mapped surface do not show the sky hidden by a primitive excluded from the periodic boundary") {
+    // As for the plain ground (see periodic_exclusion_test::plateGhost()), with a tilted normal map on the ground, whose relief the
+    // camera shades from the directions the sky light arrived from.
+    using namespace periodic_exclusion_test;
+    const std::string map = normal_map_test::writeTiltedNormalMap("helios_rad_nm_periodic_ghost.png", 0.5f, 0);
+    const PlateGhost ghost = plateGhost(
+            [&map](Context &context, const std::vector<uint> &ground) {
+                context.setPrimitiveData(ground, "reflectivity_SW", 0.5f);
+                context.setPrimitiveNormalMap(ground, map);
+            },
+            [](RadiationModel &radiation) { setupDiffuseBand(radiation, 20000); });
+    checkPlateGhost(ghost);
+    std::filesystem::remove(map);
+}
+
+GPU_TEST_CASE("RadiationModel - periodic copies of a spectral texture do not show the sky hidden by a primitive excluded from the periodic boundary") {
+    // As for the plain ground (see periodic_exclusion_test::plateGhost()), with a two-class spectral texture on the ground, whose
+    // classes the camera shades from the light that arrived at each patch.
+    using namespace periodic_exclusion_test;
+    const std::string class_map = spectral_texture_test::writeClassMap("helios_radiation_periodic_ghost_classes.png", 2, 2, {1, 2, 2, 1});
+    const PlateGhost ghost = plateGhost(
+            [&class_map](Context &context, const std::vector<uint> &ground) {
+                spectral_texture_test::addFlatSpectrum(context, "rho_dim", 0.3f);
+                spectral_texture_test::addFlatSpectrum(context, "rho_bright", 0.7f);
+                context.addSpectralPalette("checks", {{"rho_dim", "", ""}, {"rho_bright", "", ""}});
+                for (uint UUID: ground) {
+                    context.setPrimitiveSpectralTexture(UUID, class_map, "checks");
+                }
+            },
+            [](RadiationModel &radiation) {
+                radiation.disableMessages();
+                radiation.addRadiationBand("SW", 400, 700);
+                radiation.disableEmission("SW");
+                radiation.setScatteringDepth("SW", 1);
+                radiation.setDiffuseRayCount("SW", 20000);
+                radiation.setDiffuseRadiationFlux("SW", 1.f);
+            });
+    checkPlateGhost(ghost);
+    std::filesystem::remove(class_map);
+}
+
+namespace textured_layer_test {
+
+    //! Gives primitives a specular surface layer of refractive index n and GGX roughness
+    void addLayer(Context &context, const std::vector<uint> &UUIDs, float n, float roughness) {
+        context.setPrimitiveData(UUIDs, "specular_roughness", roughness);
+        context.setPrimitiveData(UUIDs, "specular_n", n);
+    }
+
+    //! Largest difference between two images, relative to the brightest pixel of the reference
+    float largestRelativeDifference(const std::vector<float> &image, const std::vector<float> &reference) {
+        DOCTEST_REQUIRE(image.size() == reference.size());
+        DOCTEST_REQUIRE(!reference.empty());
+        float brightest = 0.f;
+        float largest_difference = 0.f;
+        for (size_t i = 0; i < reference.size(); i++) {
+            brightest = std::max(brightest, reference.at(i));
+            largest_difference = std::max(largest_difference, std::fabs(image.at(i) - reference.at(i)));
+        }
+        DOCTEST_REQUIRE(brightest > 0.f);
+        return largest_difference / brightest;
+    }
+
+    //! Spectra for two bands, "VIS" (400-650 nm) and "NIR" (750-1000 nm): a surface whose reflectivity and transmissivity step within VIS, and a source and sky that light different parts of VIS,
+    //! so that the source and diffuse slots of each band take different values. Every reflectivity is well above what a layer of refractive index up to 2.5 reflects at normal incidence (0.18).
+    void addTwoBandSpectra(Context &context) {
+        context.setGlobalData("layer_rho", std::vector<vec2>{make_vec2(300, 0.45f), make_vec2(499, 0.45f), make_vec2(501, 0.6f), make_vec2(719, 0.6f), make_vec2(721, 0.5f), make_vec2(1100, 0.5f)});
+        context.setGlobalData("layer_tau", std::vector<vec2>{make_vec2(300, 0.1f), make_vec2(499, 0.1f), make_vec2(501, 0.2f), make_vec2(1100, 0.2f)});
+        context.setGlobalData("source_blue_nir", std::vector<vec2>{make_vec2(300, 0), make_vec2(399, 0), make_vec2(401, 1), make_vec2(489, 1), make_vec2(491, 0), make_vec2(739, 0), make_vec2(741, 1), make_vec2(1100, 1)});
+        context.setGlobalData("sky_green_nir", std::vector<vec2>{make_vec2(300, 0), make_vec2(509, 0), make_vec2(511, 1), make_vec2(649, 1), make_vec2(651, 0), make_vec2(739, 0), make_vec2(741, 1), make_vec2(1100, 1)});
+        context.setGlobalData("response_below_550", std::vector<vec2>{make_vec2(300, 1), make_vec2(549, 1), make_vec2(551, 0), make_vec2(1100, 0)});
+    }
+
+    //! What a run of the three-square scene recorded
+    struct ThreeSquares {
+        std::vector<float> flux; //!< absorbed flux of each square, VIS then NIR
+        std::vector<float> image; //!< camera "plain" in VIS and NIR, then camera "blue" in VIS
+    };
+
+    /**
+     * Three 1 m squares over a grey ground, lit by an oblique sun and a sky of different spectra in two bands, scattering three times. Square 0 has a surface layer of refractive index 2.5, square 1
+     * none, and square 2 one of refractive index 1.8 and roughness 0.5. With textured, all three carry a one-class spectral texture of the same palette, whose class has the spectra the untextured
+     * squares are given otherwise. Two cameras near the mirror direction of the sun, one with a spectral response below 550 nm only, see the three squares and their highlights.
+     */
+    ThreeSquares renderThreeSquares(bool textured, const std::string &class_map) {
+        Context context;
+        context.seedRandomGenerator(17);
+        addTwoBandSpectra(context);
+        std::vector<uint> squares;
+        for (int i = 0; i < 3; i++) {
+            squares.push_back(context.addPatch(make_vec3(-1.5f + 1.5f * float(i), 0, 0), make_vec2(1, 1)));
+        }
+        const uint ground = context.addPatch(make_vec3(0, 0, -0.5f), make_vec2(6, 3));
+        context.setPrimitiveData(ground, "reflectivity_VIS", 0.3f);
+        context.setPrimitiveData(ground, "reflectivity_NIR", 0.3f);
+        if (textured) {
+            context.addSpectralPalette("layered", {{"layer_rho", "layer_tau", ""}});
+            context.setPrimitiveSpectralTexture(squares, class_map, "layered");
+        } else {
+            context.setPrimitiveData(squares, "reflectivity_spectrum", "layer_rho");
+            context.setPrimitiveData(squares, "transmissivity_spectrum", "layer_tau");
+        }
+        addLayer(context, {squares.at(0)}, 2.5f, 0.3f);
+        addLayer(context, {squares.at(2)}, 1.8f, 0.5f);
+
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        for (const auto &band: std::vector<std::pair<std::string, vec2>>{{"VIS", make_vec2(400, 650)}, {"NIR", make_vec2(750, 1000)}}) {
+            model.addRadiationBand(band.first, band.second.x, band.second.y);
+            model.disableEmission(band.first);
+            model.setScatteringDepth(band.first, 3);
+            model.setDirectRayCount(band.first, 5000);
+            model.setDiffuseRayCount(band.first, 5000);
+            model.setDiffuseRadiationFlux(band.first, 200.f);
+        }
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(0.3f, 0, 1));
+        model.setSourceSpectrum(sun, "source_blue_nir");
+        model.setSourceFlux(sun, "VIS", 1000.f);
+        model.setSourceFlux(sun, "NIR", 500.f);
+        model.setDiffuseSpectrum("sky_green_nir");
+        CameraProperties properties;
+        properties.camera_resolution = make_int2(48, 48);
+        properties.HFOV = 50.f;
+        properties.lens_diameter = 0.f;
+        properties.exposure = "manual";
+        properties.white_balance = "off";
+        model.addRadiationCamera("plain", {"VIS", "NIR"}, make_vec3(-2.1f, -0.001f, 7), make_vec3(0, 0, 0), properties, 4);
+        model.addRadiationCamera("blue", {"VIS"}, make_vec3(-2.1f, 0.001f, 7), make_vec3(0, 0, 0), properties, 4);
+        model.setCameraSpectralResponse("blue", "VIS", "response_below_550");
+        model.updateGeometry();
+        model.runBand(std::vector<std::string>{"VIS", "NIR"});
+
+        ThreeSquares result;
+        for (const std::string band: {"VIS", "NIR"}) {
+            for (uint square: squares) {
+                float value;
+                context.getPrimitiveData(square, ("radiation_flux_" + band).c_str(), value);
+                result.flux.push_back(value);
+            }
+            const std::vector<float> pixels = model.getCameraPixelData("plain", band);
+            result.image.insert(result.image.end(), pixels.begin(), pixels.end());
+        }
+        const std::vector<float> blue = model.getCameraPixelData("blue", "VIS");
+        result.image.insert(result.image.end(), blue.begin(), blue.end());
+        return result;
+    }
+
+} // namespace textured_layer_test
+
+GPU_TEST_CASE("RadiationModel - a spectral texture under a surface layer absorbs what the same spectra under the layer absorb") {
+    // The reflectivity and transmissivity of a class are totals at normal incidence, like a primitive's, so a one-class texture under a layer must absorb exactly what an untextured
+    // primitive with the class's spectra under the same layer absorbs, in every band and slot. The three squares share one palette, with a layer of refractive index 2.5, no layer, and a
+    // layer of refractive index 1.8, so the class's values under one layer must not leak to a primitive with another layer or none.
+    using namespace textured_layer_test;
+    const std::string class_map = spectral_texture_test::writeClassMap("helios_radiation_textured_layer_flux.png", 3, 1, {1, 1, 1});
+    const ThreeSquares untextured = renderThreeSquares(false, class_map);
+    const ThreeSquares textured = renderThreeSquares(true, class_map);
+    DOCTEST_REQUIRE(textured.flux.size() == 6);
+    DOCTEST_REQUIRE(untextured.flux.size() == 6);
+    for (size_t i = 0; i < 6; i++) {
+        DOCTEST_INFO("square " << i % 3 << " in band " << (i < 3 ? "VIS" : "NIR"));
+        DOCTEST_CAPTURE(untextured.flux.at(i));
+        DOCTEST_CAPTURE(textured.flux.at(i));
+        DOCTEST_REQUIRE(untextured.flux.at(i) > 0.f);
+        DOCTEST_CHECK(std::fabs(textured.flux.at(i) - untextured.flux.at(i)) <= 1e-3f * untextured.flux.at(i));
+    }
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - a camera sees a spectral texture under a surface layer as it sees the same spectra under the layer") {
+    // As for the absorbed flux, two cameras with different spectral responses must see the same image of the three squares of the test above, body reflection, layer reflection
+    // of the sky and highlight, whether the squares carry the one-class texture or its spectra.
+    using namespace textured_layer_test;
+    const std::string class_map = spectral_texture_test::writeClassMap("helios_radiation_textured_layer_camera.png", 3, 1, {1, 1, 1});
+    const ThreeSquares untextured = renderThreeSquares(false, class_map);
+    const ThreeSquares textured = renderThreeSquares(true, class_map);
+    const float difference = largestRelativeDifference(textured.image, untextured.image);
+    DOCTEST_CAPTURE(difference);
+    DOCTEST_CHECK(difference <= 1e-3f);
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("Camera Flux Smoothing - gives a one-class spectral texture under a surface layer on a curved surface the image of the same spectra") {
+    // With smoothing the camera evaluates the sources' direct radiation per pixel sample. Under a layer, the body of each class receives only 1 - a(mu) of it, as an untextured surface's does.
+    using namespace spectral_texture_test;
+    using namespace textured_layer_test;
+    const std::string texture = (std::filesystem::temp_directory_path() / "helios_radiation_curved_layer_texture.jpg").string();
+    helios::writeJPEG(texture, 9, 9, std::vector<RGBcolor>(81, make_RGBcolor(0.2f, 0.6f, 0.2f)));
+    const std::string class_map = writeClassMap("helios_radiation_curved_layer_one_class.png", 9, 9, std::vector<uint16_t>(81, 1));
+    LayeredSmoothingRender renders[2];
+    for (int textured = 0; textured < 2; textured++) {
+        Context context;
+        context.seedRandomGenerator(23);
+        addFlatSpectrum(context, "rho_flat", 0.4f);
+        addFlatSpectrum(context, "tau_flat", 0.1f);
+        const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(context.addTubeObject(6, {make_vec3(0, 0, -1), make_vec3(0, 0, 1)}, {0.4f, 0.4f}, texture.c_str()));
+        if (textured == 1) {
+            context.addSpectralPalette("one", {{"rho_flat", "tau_flat", ""}});
+            context.setPrimitiveSpectralTexture(UUIDs, class_map, "one");
+        } else {
+            context.setPrimitiveData(UUIDs, "reflectivity_spectrum", "rho_flat");
+            context.setPrimitiveData(UUIDs, "transmissivity_spectrum", "tau_flat");
+        }
+        addLayer(context, UUIDs, 2.f, 0.3f);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.enableCameraFluxSmoothing();
+        model.addRadiationBand("VIS", 400, 700);
+        model.disableEmission("VIS");
+        model.setScatteringDepth("VIS", 1);
+        model.setDirectRayCount("VIS", 200);
+        model.setDiffuseRayCount("VIS", 400);
+        model.setDiffuseRadiationFlux("VIS", 100.f);
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(1.f, -1.2f, 0.25f));
+        model.setSourceFlux(sun, "VIS", 1000.f);
+        CameraProperties properties;
+        properties.camera_resolution = make_int2(64, 64);
+        properties.HFOV = 30.f;
+        properties.lens_diameter = 0.f;
+        properties.exposure = "manual";
+        properties.white_balance = "off";
+        model.addRadiationCamera("tube_cam", {"VIS"}, make_vec3(0, -4, 0.3f), make_vec3(0, 0, 0), properties, 4);
+        model.updateGeometry();
+        model.runBand("VIS");
+        renders[textured].pixels = model.getCameraPixelData("tube_cam", "VIS");
+        context.getGlobalData("camera_tube_cam_pixel_UUID", renders[textured].pixel_UUIDs);
+    }
+    const float difference = meanRelativeDifference(renders[1], renders[0], 64);
+    DOCTEST_CAPTURE(difference);
+    DOCTEST_CHECK(difference < 0.005f);
+    std::filesystem::remove(texture);
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - a spectral texture under a surface layer next to a primitive excluded from the periodic boundary is seen as the same spectra") {
+    // With a primitive excluded from the periodic boundary, cameras evaluate every primitive's direct radiation per pixel sample, flat primitives included. Periodic ground under a layer,
+    // partly shaded by the excluded plate, must look the same with a one-class texture as with its spectra.
+    using namespace spectral_texture_test;
+    using namespace textured_layer_test;
+    const std::string class_map = writeClassMap("helios_radiation_excluded_layer_one_class.png", 2, 2, {1, 1, 1, 1});
+    std::vector<float> images[2];
+    for (int textured = 0; textured < 2; textured++) {
+        Context context;
+        context.seedRandomGenerator(31);
+        addFlatSpectrum(context, "rho_flat", 0.4f);
+        const std::vector<uint> ground = periodic_exclusion_test::addGroundGrid(context);
+        if (textured == 1) {
+            context.addSpectralPalette("one", {{"rho_flat", "", ""}});
+            context.setPrimitiveSpectralTexture(ground, class_map, "one");
+        } else {
+            context.setPrimitiveData(ground, "reflectivity_spectrum", "rho_flat");
+        }
+        addLayer(context, ground, 2.f, 0.3f);
+        // A repeated speck on edge at z = 1 puts the plate within the height of the repeated geometry (see periodic_exclusion_test::plateGhost())
+        context.addPatch(make_vec3(0.45f, 0.45f, 1.f), make_vec2(0.001f, 0.001f), make_SphericalCoord(0.5f * float(M_PI), 0));
+        const uint plate = context.addPatch(make_vec3(0, 0, 0.15f), make_vec2(0.4f, 0.4f));
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        model.disableMessages();
+        model.addRadiationBand("VIS", 400, 700);
+        model.disableEmission("VIS");
+        model.setScatteringDepth("VIS", 2);
+        model.setDirectRayCount("VIS", 2000);
+        model.setDiffuseRayCount("VIS", 2000);
+        model.setDiffuseRadiationFlux("VIS", 100.f);
+        const uint sun = model.addCollimatedRadiationSource(make_vec3(0.4f, 0.2f, 1));
+        model.setSourceFlux(sun, "VIS", 1000.f);
+        model.enforcePeriodicBoundary("xy", {plate});
+        CameraProperties properties;
+        properties.camera_resolution = make_int2(40, 40);
+        properties.HFOV = 2.f * std::atan(0.75f / 20.f) * 180.f / float(M_PI);
+        properties.lens_diameter = 0.f;
+        properties.exposure = "manual";
+        properties.white_balance = "off";
+        model.addRadiationCamera("above", {"VIS"}, make_vec3(-0.2f, -0.1f, 20), make_vec3(0, 0, 0), properties, 4);
+        model.updateGeometry();
+        model.runBand("VIS");
+        images[textured] = model.getCameraPixelData("above", "VIS");
+    }
+    const float difference = largestRelativeDifference(images[1], images[0]);
+    DOCTEST_CAPTURE(difference);
+    DOCTEST_CHECK(difference <= 1e-3f);
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel normal map on a primitive with a spectral texture and a surface layer") {
+    // A normal-mapped primitive that is not smoothed is shaded per hit point from the direct radiation its facet received. Under a layer, the body of each class receives only
+    // 1 - a(m.L) of it, as an untextured primitive's does, so a one-class texture must look like its spectra, with and without sky light.
+    using namespace normal_map_test;
+    using namespace spectral_texture_test;
+    using namespace textured_layer_test;
+    const float tilt = 30.f * float(M_PI) / 180.f;
+    const std::string map = writeTiltedNormalMap("helios_rad_nm_layer_spectral.png", tilt, 0);
+    const std::string class_map = writeClassMap("helios_rad_nm_layer_spectral_classes.png", 3, 1, {1, 1, 1});
+    for (float sky: {0.f, 200.f}) {
+        std::vector<float> images[2];
+        for (int textured = 0; textured < 2; textured++) {
+            Context context;
+            context.seedRandomGenerator(9);
+            addFlatSpectrum(context, "rho_flat", 0.4f);
+            const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+            context.setPrimitiveData(square, "twosided_flag", uint(0));
+            if (textured == 1) {
+                context.addSpectralPalette("one", {{"rho_flat", "", ""}});
+                context.setPrimitiveSpectralTexture(square, class_map, "one");
+            } else {
+                context.setPrimitiveData(square, "reflectivity_spectrum", "rho_flat");
+            }
+            context.setPrimitiveNormalMap(square, map);
+            addLayer(context, {square}, 2.f, 0.3f);
+            RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+            radiation.disableMessages();
+            radiation.addRadiationBand("VIS", 400, 700);
+            radiation.disableEmission("VIS");
+            radiation.setScatteringDepth("VIS", 1);
+            radiation.setDiffuseRadiationFlux("VIS", sky);
+            radiation.setDiffuseRayCount("VIS", 1000);
+            const uint sun = radiation.addCollimatedRadiationSource(make_vec3(sinf(1.2f * tilt), 0, cosf(1.2f * tilt)));
+            radiation.setSourceFlux(sun, "VIS", 1000.f);
+            radiation.setDirectRayCount("VIS", 100);
+            CameraProperties camera_properties;
+            camera_properties.camera_resolution = make_int2(16, 16);
+            camera_properties.HFOV = 20.f;
+            camera_properties.lens_diameter = 0.f;
+            camera_properties.exposure = "manual";
+            camera_properties.white_balance = "off";
+            radiation.addRadiationCamera("view", {"VIS"}, make_vec3(-2, 0, 10), make_vec3(0, 0, 0), camera_properties, 1);
+            radiation.updateGeometry();
+            radiation.runBand("VIS");
+            images[textured] = radiation.getCameraPixelData("view", "VIS");
+        }
+        const float difference = largestRelativeDifference(images[1], images[0]);
+        DOCTEST_INFO("sky flux " << sky);
+        DOCTEST_CAPTURE(difference);
+        DOCTEST_CHECK(difference <= 1e-3f);
+    }
+    std::filesystem::remove(map);
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - a spectral texture under a surface layer emits and fluoresces as the same spectra under the layer") {
+    // In a band with thermal emission the palette does not apply and the primitive's own values are used; in a fluorescence band it applies. Either way a one-class texture under a
+    // layer must absorb and look as its spectra under the layer do.
+    using namespace spectral_texture_test;
+    using namespace textured_layer_test;
+    const std::string class_map = writeClassMap("helios_radiation_emitting_layer_one_class.png", 2, 2, {1, 1, 1, 1});
+    SUBCASE("thermal emission") {
+        float fluxes[2];
+        std::vector<float> images[2];
+        for (int textured = 0; textured < 2; textured++) {
+            Context context;
+            context.seedRandomGenerator(41);
+            context.setGlobalData("rho_thermal", std::vector<vec2>{make_vec2(300, 0.1f), make_vec2(20000, 0.1f)});
+            const uint square = context.addPatch(make_vec3(0, 0, 0.3f), make_vec2(1, 1));
+            const uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(3, 3));
+            if (textured == 1) {
+                context.addSpectralPalette("one", {{"rho_thermal", "", ""}});
+                context.setPrimitiveSpectralTexture(square, class_map, "one");
+            } else {
+                context.setPrimitiveData(square, "reflectivity_spectrum", "rho_thermal");
+            }
+            addLayer(context, {square}, 1.5f, 0.3f);
+            context.setPrimitiveData(square, "emissivity_LW", 0.9f);
+            context.setPrimitiveData(square, "temperature", 310.f);
+            context.setPrimitiveData(ground, "temperature", 290.f);
+            RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+            model.disableMessages();
+            model.addRadiationBand("LW", 8000, 14000);
+            model.setScatteringDepth("LW", 3);
+            model.setDiffuseRayCount("LW", 4000);
+            model.setDiffuseRadiationFlux("LW", 150.f);
+            CameraProperties properties;
+            properties.camera_resolution = make_int2(24, 24);
+            properties.HFOV = 30.f;
+            properties.lens_diameter = 0.f;
+            properties.exposure = "manual";
+            properties.white_balance = "off";
+            model.addRadiationCamera("thermal", {"LW"}, make_vec3(1, -0.5f, 4), make_vec3(0, 0, 0), properties, 1);
+            model.updateGeometry();
+            model.runBand("LW");
+            context.getPrimitiveData(square, "radiation_flux_LW", fluxes[textured]);
+            images[textured] = model.getCameraPixelData("thermal", "LW");
+        }
+        DOCTEST_CAPTURE(fluxes[0]);
+        DOCTEST_CAPTURE(fluxes[1]);
+        DOCTEST_CHECK(std::fabs(fluxes[1] - fluxes[0]) <= 1e-3f * std::fabs(fluxes[0]));
+        const float difference = largestRelativeDifference(images[1], images[0]);
+        DOCTEST_CAPTURE(difference);
+        DOCTEST_CHECK(difference <= 1e-3f);
+    }
+    SUBCASE("fluorescence") {
+        for (const bool smoothing: {false, true}) {
+            DOCTEST_CAPTURE(smoothing);
+            std::vector<float> images[2];
+            for (int textured = 0; textured < 2; textured++) {
+                Context context;
+                context.seedRandomGenerator(5);
+                addFlatSpectrum(context, "leaf_ten_percent", 0.1f);
+                const std::vector<uint> leaf = context.getObjectPrimitiveUUIDs(context.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2)));
+                sif_stamp_biochem(context, leaf, "textured_layer_sif");
+                context.setPrimitiveData(leaf, "electron_transport_ratio", 1.f);
+                context.setPrimitiveData(leaf, "temperature", 298.15f);
+                if (textured == 1) {
+                    context.addSpectralPalette("one", {{"leaf_ten_percent", "leaf_ten_percent", ""}});
+                    context.setPrimitiveSpectralTexture(leaf, class_map, "one");
+                } else {
+                    context.setPrimitiveData(leaf, "reflectivity_spectrum", "leaf_ten_percent");
+                    context.setPrimitiveData(leaf, "transmissivity_spectrum", "leaf_ten_percent");
+                }
+                addLayer(context, leaf, 1.5f, 0.3f);
+                RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+                model.disableMessages();
+                if (smoothing) {
+                    model.enableCameraFluxSmoothing();
+                }
+                model.addRadiationBand("SIF_farred", 740.f, 760.f);
+                model.setDirectRayCount("SIF_farred", 1000);
+                model.setDiffuseRayCount("SIF_farred", 1000);
+                model.setScatteringDepth("SIF_farred", 1);
+                const uint sun = model.addCollimatedRadiationSource(make_vec3(0.3f, 0, 1));
+                model.setSourceSpectrum(sun, "solar_spectrum_direct_ASTMG173");
+                SIFCameraProperties properties;
+                properties.camera_resolution = make_int2(8, 8);
+                properties.HFOV = 10.f;
+                properties.excitation_bin_width_nm = 50.f;
+                properties.exposure = "manual";
+                model.addSIFCamera("sif_view", {"SIF_farred"}, make_vec3(-0.6f, -0.001f, 3), make_vec3(0, 0, 0), properties, 1);
+                model.updateGeometry();
+                model.runBand(std::vector<std::string>{"SIF_farred"});
+                images[textured] = model.getCameraPixelData("sif_view", "SIF_farred");
+            }
+            const float difference = largestRelativeDifference(images[1], images[0]);
+            DOCTEST_CAPTURE(difference);
+            DOCTEST_CHECK(difference <= 1e-3f);
+        }
+    }
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - cameras see an asymmetric spectral texture under a surface layer where the same pattern of separate layered primitives would be") {
+    // Each class of a texture under a layer has the body that class's spectra give under the layer: the two-class corner pattern of the test without a layer, all of it under one layer, must
+    // look like the same pattern of separate primitives each under that layer, from above and below and through two spectral responses. A square out of view, added first, uses the same
+    // palette under another layer, so the square in view takes the second converted copy of the palette, whose entries do not start at the palette's first.
+    using namespace spectral_texture_test;
+    using namespace textured_layer_test;
+    std::vector<uint16_t> classes(81, 1);
+    for (int row = 0; row <= 2; row++) {
+        for (int column = 0; column <= 3; column++) {
+            classes.at(row * 9 + column) = 2;
+        }
+    }
+    const std::string class_map = writeClassMap("helios_radiation_corner_layer_class.png", 9, 9, classes);
+    struct Views {
+        CameraView top;
+        CameraView bottom;
+        uint class_two_UUID = 0;
+    };
+    auto render = [&](bool textured) {
+        Context context;
+        context.seedRandomGenerator(3);
+        addCornerSpectra(context);
+        Views views;
+        const uint out_of_view = context.addPatch(make_vec3(20, 0, 0), make_vec2(1, 1));
+        if (textured) {
+            context.setPrimitiveSpectralTexture(out_of_view, class_map, "corner");
+        } else {
+            context.setPrimitiveData(out_of_view, "reflectivity_spectrum", "corner_rho_1");
+            context.setPrimitiveData(out_of_view, "transmissivity_spectrum", "corner_tau_1");
+        }
+        addLayer(context, {out_of_view}, 1.8f, 0.5f);
+        std::vector<uint> UUIDs;
+        if (textured) {
+            UUIDs.push_back(context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)));
+            context.setPrimitiveSpectralTexture(UUIDs.front(), class_map, "corner");
+        } else {
+            // Class 2 lies at x < 0, y > 0.125
+            const float height = 0.375f;
+            views.class_two_UUID = context.addPatch(make_vec3(-0.25f, 0.5f - 0.5f * height, 0), make_vec2(0.5f, height));
+            const uint beside = context.addPatch(make_vec3(0.25f, 0.5f - 0.5f * height, 0), make_vec2(0.5f, height));
+            const uint below = context.addPatch(make_vec3(0, -0.5f + 0.5f * (1.f - height), 0), make_vec2(1, 1.f - height));
+            context.setPrimitiveData(views.class_two_UUID, "reflectivity_spectrum", "corner_rho_2");
+            context.setPrimitiveData(views.class_two_UUID, "transmissivity_spectrum", "corner_tau_2");
+            for (const uint piece: {beside, below}) {
+                context.setPrimitiveData(piece, "reflectivity_spectrum", "corner_rho_1");
+                context.setPrimitiveData(piece, "transmissivity_spectrum", "corner_tau_1");
+            }
+            UUIDs = {views.class_two_UUID, beside, below};
+        }
+        addLayer(context, UUIDs, 1.5f, 0.3f);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        addTopAndBottomCameras(model);
+        model.updateGeometry();
+        model.runBand("VIS");
+        views.top = recordCameraView(context, model, "top");
+        views.bottom = recordCameraView(context, model, "bottom");
+        return views;
+    };
+    const Views separate = render(false);
+    const Views textured = render(true);
+    {
+        DOCTEST_INFO("camera above, seeing the top face");
+        checkAgainstSeparatePrimitives(textured.top, separate.top, separate.class_two_UUID);
+    }
+    {
+        DOCTEST_INFO("camera below, seeing the bottom face");
+        checkAgainstSeparatePrimitives(textured.bottom, separate.bottom, separate.class_two_UUID);
+    }
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - each class of a spectral texture under a surface layer must reflect at least what the layer reflects") {
+    // A class's reflectivity is its total reflectance at normal incidence, so it cannot be less than the layer alone reflects there, a(1) = 0.11 for a refractive index of 2. Class 2 of the
+    // palette reflects 0.05; class 1 reflects 0.5 in the band but only 0.02 below 550 nm, which a camera responding only there sees as less than the layer.
+    using namespace spectral_texture_test;
+    using namespace textured_layer_test;
+    const std::string class_map = writeClassMap("helios_radiation_layer_class_check.png", 3, 1, {1, 2, 2});
+    auto message = [&](bool camera, const std::string &palette) {
+        Context context;
+        context.setGlobalData("rho_dark_blue", std::vector<vec2>{make_vec2(300, 0.02f), make_vec2(549, 0.02f), make_vec2(551, 0.9f), make_vec2(800, 0.9f)});
+        context.setGlobalData("response_below_550", std::vector<vec2>{make_vec2(300, 1), make_vec2(549, 1), make_vec2(551, 0), make_vec2(800, 0)});
+        addFlatSpectrum(context, "rho_bright", 0.5f);
+        addFlatSpectrum(context, "rho_dark", 0.05f);
+        context.addSpectralPalette("dark_class_two", {{"rho_bright", "", ""}, {"rho_dark", "", ""}});
+        context.addSpectralPalette("dark_blue_class_one", {{"rho_dark_blue", "", ""}, {"rho_bright", "", ""}});
+        const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveSpectralTexture(square, class_map, palette);
+        addLayer(context, {square}, 2.f, 0.3f);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        addOverheadBeam(model, 100);
+        if (camera) {
+            addOverheadCamera(model, {"VIS"});
+            model.setCameraSpectralResponse("overhead", "VIS", "response_below_550");
+        }
+        model.updateGeometry();
+        std::string what;
+        try {
+            model.runBand("VIS");
+        } catch (const std::runtime_error &error) {
+            what = error.what();
+        }
+        return what;
+    };
+    SUBCASE("a class darker than the layer") {
+        const std::string what = message(false, "dark_class_two");
+        DOCTEST_CAPTURE(what);
+        DOCTEST_CHECK(what.find("class 2") != std::string::npos);
+        DOCTEST_CHECK(what.find("'dark_class_two'") != std::string::npos);
+        DOCTEST_CHECK(what.find("'VIS'") != std::string::npos);
+        DOCTEST_CHECK(what.find("surface layer") != std::string::npos);
+    }
+    SUBCASE("a class darker than the layer that the primitive does not show") {
+        // The class map of the square below shows class 1 only, so the dark class 2 of its palette is never seen
+        const std::string class_one_map = writeClassMap("helios_radiation_layer_class_check_one.png", 3, 1, {1, 1, 1});
+        Context context;
+        addFlatSpectrum(context, "rho_bright", 0.5f);
+        addFlatSpectrum(context, "rho_dark", 0.05f);
+        context.addSpectralPalette("dark_class_two", {{"rho_bright", "", ""}, {"rho_dark", "", ""}});
+        const uint square = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveSpectralTexture(square, class_one_map, "dark_class_two");
+        addLayer(context, {square}, 2.f, 0.3f);
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        addOverheadBeam(model, 100);
+        model.updateGeometry();
+        DOCTEST_CHECK_NOTHROW(model.runBand("VIS"));
+        std::filesystem::remove(class_one_map);
+    }
+    SUBCASE("a class darker than the layer within a camera's response") {
+        DOCTEST_CHECK(message(false, "dark_blue_class_one").empty());
+        const std::string what = message(true, "dark_blue_class_one");
+        DOCTEST_CAPTURE(what);
+        DOCTEST_CHECK(what.find("class 1") != std::string::npos);
+        DOCTEST_CHECK(what.find("'dark_blue_class_one'") != std::string::npos);
+        DOCTEST_CHECK(what.find("camera") != std::string::npos);
+    }
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel::applySpectralClassMaps accepts the apple fruit class map under the fruit's surface layer") {
+    // PlantArchitecture's apple fruit carries AppleFruit_classes.png, whose classes scale the body under the layer its prototype sets (apple_fruit_reflectivity_0000, roughness 0.15,
+    // refractive index 1.45). Every class must be valid under that layer in a broad visible band, in a narrow band at the spectrum's minimum (516 nm), and through a camera.
+    using namespace textured_layer_test;
+    // The map ships with the PlantArchitecture plug-in, whose assets are not copied into this plug-in's build, so it is read from the source tree
+    const std::filesystem::path class_map = std::filesystem::path(__FILE__).parent_path() / "../../plantarchitecture/assets/textures/AppleFruit_classes.png";
+    DOCTEST_REQUIRE(std::filesystem::exists(class_map));
+    Context context;
+    const uint fruit = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(fruit, "reflectivity_spectrum", "apple_fruit_reflectivity_0000");
+    context.setPrimitiveData(fruit, "spectral_class_map", class_map.string());
+    addLayer(context, {fruit}, 1.45f, 0.15f);
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.applySpectralClassMaps();
+    DOCTEST_CHECK(context.getPrimitiveSpectralPalette(fruit) == "surface_AppleFruit_classes_n1.45_r0.15");
+    for (const auto &band: std::vector<std::pair<std::string, vec2>>{{"VIS", make_vec2(400, 700)}, {"G516", make_vec2(511, 521)}}) {
+        model.addRadiationBand(band.first, band.second.x, band.second.y);
+        model.disableEmission(band.first);
+        model.setScatteringDepth(band.first, 1);
+        model.setDirectRayCount(band.first, 100);
+        model.setDiffuseRadiationFlux(band.first, 0.f);
+    }
+    const uint sun = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    model.setSourceFlux(sun, "VIS", 1000.f);
+    model.setSourceFlux(sun, "G516", 30.f);
+    spectral_texture_test::addOverheadCamera(model, {"VIS", "G516"});
+    model.updateGeometry();
+    DOCTEST_CHECK_NOTHROW(model.runBand(std::vector<std::string>{"VIS", "G516"}));
+}
 
 DOCTEST_TEST_CASE("Normal map math: packed layout, texel convention and tangent frames") {
     using namespace normal_map_test;

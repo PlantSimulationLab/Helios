@@ -946,6 +946,12 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                     output_xml << "\t\t\t\t\t\t\t<leaf_pitch>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).pitch) << "</leaf_pitch>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_yaw>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).yaw) << "</leaf_yaw>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_roll>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).roll) << "</leaf_roll>" << std::endl;
+                    // The leaflet's own offset from the leaf's angles (setPetioleLeafletAngleOffsets()), in degrees as pitch, yaw, roll. The angles above already hold it for every leaflet but the
+                    // terminal, whose roll is its offset alone and is not in <leaf_roll>; and a later rebuild of the petiole needs all of them to turn the leaflets the same way again.
+                    if (petiole < phytomer->leaflet_angle_offsets.size() && leaf < phytomer->leaflet_angle_offsets.at(petiole).size()) {
+                        const vec3 &own = phytomer->leaflet_angle_offsets.at(petiole).at(leaf);
+                        output_xml << "\t\t\t\t\t\t\t<leaflet_angle_offset>" << own.x << " " << own.y << " " << own.z << "</leaflet_angle_offset>" << std::endl;
+                    }
                     // Which of the species' interchangeable leaf prototypes this blade is a copy of. The
                     // prototypes differ in shape, so without this the reader had to pick one at random and a
                     // reloaded plant was built from a different set of blades than the one that was saved.
@@ -968,6 +974,11 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                         const vec3 &leaf_base = phytomer->leaf_bases.at(petiole).at(leaf);
                         output_xml << "\t\t\t\t\t\t\t<leaf_prescribed>1</leaf_prescribed>" << std::endl;
                         output_xml << "\t\t\t\t\t\t\t<leaf_base>" << leaf_base.x << " " << leaf_base.y << " " << leaf_base.z << "</leaf_base>" << std::endl;
+                        // Where its stalk leaves the petiole, when it was placed with one of its own rather than built back along its blade's line.
+                        const auto stalk_base = phytomer->leaf_stalk_base_placed.find(phytomer->leaf_objIDs.at(petiole).at(leaf));
+                        if (stalk_base != phytomer->leaf_stalk_base_placed.end()) {
+                            output_xml << "\t\t\t\t\t\t\t<leaf_stalk_base>" << stalk_base->second.x << " " << stalk_base->second.y << " " << stalk_base->second.z << "</leaf_stalk_base>" << std::endl;
+                        }
                     }
                     output_xml << "\t\t\t\t\t\t</leaf>" << std::endl;
                 }
@@ -1600,11 +1611,14 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 std::vector<std::vector<float>> leaf_pitch;
                 std::vector<std::vector<float>> leaf_yaw;
                 std::vector<std::vector<float>> leaf_roll;
+                std::vector<std::vector<vec3>> leaflet_angle_offset; // each leaflet's own (pitch, yaw, roll) offset in degrees; empty for a petiole whose file records none
                 std::vector<std::vector<int>> leaf_prototype; // index of the unique leaf prototype each blade was copied from; -1 for a blade built from the prototype function; -2 when the file does not record it
                 std::vector<std::vector<bool>> leaf_prescribed; // whether each leaf's pose was prescribed by setPetioleLeafGeometry()
                 std::vector<std::vector<bool>> leaf_reshaped; // whether each leaf carries a <leaf_shape> it was reshaped to
                 std::vector<std::vector<LeafShapeValues>> leaf_reshaped_shape; // the shape from <leaf_shape>; only the shape terms and subdivisions_y are meaningful
                 std::vector<std::vector<vec3>> leaf_prescribed_base; // base position of each prescribed leaf
+                std::vector<std::vector<bool>> leaf_stalk_placed; // whether each leaf's stalk was placed with a base of its own
+                std::vector<std::vector<vec3>> leaf_stalk_base; // where such a stalk leaves the petiole
                 std::vector<std::vector<vec3>> prescribed_petiole_nodes_all; // measured centerline of each petiole; empty for a generated petiole
                 std::vector<std::vector<float>> prescribed_petiole_radii_all; // radius at each node of a measured centerline
 
@@ -1916,9 +1930,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     leaf_pitch.resize(leaf_pitch.size() + 1);
                     leaf_yaw.resize(leaf_yaw.size() + 1);
                     leaf_roll.resize(leaf_roll.size() + 1);
+                    leaflet_angle_offset.resize(leaflet_angle_offset.size() + 1);
                     leaf_prototype.resize(leaf_prototype.size() + 1);
                     leaf_prescribed.resize(leaf_prescribed.size() + 1);
                     leaf_prescribed_base.resize(leaf_prescribed_base.size() + 1);
+                    leaf_stalk_placed.resize(leaf_stalk_placed.size() + 1);
+                    leaf_stalk_base.resize(leaf_stalk_base.size() + 1);
                     leaf_reshaped.resize(leaf_reshaped.size() + 1);
                     leaf_reshaped_shape.resize(leaf_reshaped_shape.size() + 1);
                     floral_bud_data.resize(floral_bud_data.size() + 1); // Always resize to stay in sync with leaf vectors
@@ -1954,6 +1971,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         node_string = "leaf_roll";
                         leaf_roll.back().push_back(parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
 
+                        // The leaflet's own angle offsets. Optional: absent for a leaf given none and in files written before they were recorded.
+                        node_string = "leaflet_angle_offset";
+                        if (leaf.child(node_string.c_str())) {
+                            leaflet_angle_offset.back().push_back(parse_xml_tag_vec3(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
+                        }
+
                         // Which unique leaf prototype this blade is a copy of. Optional: files written before
                         // this tag existed do not record it, and such a leaf is assigned a prototype at random
                         // as it always was.
@@ -1980,6 +2003,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         }
                         leaf_prescribed.back().push_back(prescribed_pose);
                         leaf_prescribed_base.back().push_back(prescribed_base);
+                        // Where a placed leaf's own stalk leaves the petiole. Optional: absent for a stalk built along its blade's line and in files written before stalks could be placed.
+                        node_string = "leaf_stalk_base";
+                        const bool stalk_placed = prescribed_pose && leaf.child(node_string.c_str());
+                        leaf_stalk_placed.back().push_back(stalk_placed);
+                        leaf_stalk_base.back().push_back(stalk_placed ? parse_xml_tag_vec3(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") : make_vec3(0, 0, 0));
 
                         // The shape of a leaf reshaped in place. Optional: absent for a leaf that kept its prototype's shape and in files written before reshaping was recorded.
                         LeafShapeValues reshaped_shape;
@@ -3079,7 +3107,18 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                         // A prescribed leaf is oriented from its angles in its rest frame on the petiole and put back where it was placed, exactly as setPetioleLeafGeometry() posed it on the saved plant.
                         const bool prescribed_pose = leaf < int(leaf_prescribed[petiole].size()) && leaf_prescribed[petiole][leaf];
-                        phytomer_ptr->orientLeaf(objID_leaf, petiole, leaf, leaves_per_petiole, ind_from_tip, compound_rotation, petiole_tip_axis, saved_roll, saved_pitch, saved_yaw, prescribed_pose);
+                        // The leaflets' own offsets go back on the phytomer when every leaflet of the petiole has one, and the terminal's roll, which no saved angle holds, is applied from its.
+                        float terminal_roll = 0.f;
+                        if (int(leaflet_angle_offset[petiole].size()) == leaves_per_petiole) {
+                            if (phytomer_ptr->leaflet_angle_offsets.size() <= size_t(petiole)) {
+                                phytomer_ptr->leaflet_angle_offsets.resize(petiole + 1);
+                            }
+                            phytomer_ptr->leaflet_angle_offsets[petiole] = leaflet_angle_offset[petiole];
+                            if (leaves_per_petiole > 1 && ind_from_tip == 0) {
+                                terminal_roll = deg2rad(leaflet_angle_offset[petiole][leaf].z);
+                            }
+                        }
+                        phytomer_ptr->orientLeaf(objID_leaf, petiole, leaf, leaves_per_petiole, ind_from_tip, compound_rotation, petiole_tip_axis, saved_roll, saved_pitch, saved_yaw, prescribed_pose, terminal_roll);
 
                         // Auto-calculate leaf base from petiole geometry (handles compound leaves)
                         vec3 leaf_base = prescribed_pose ? leaf_prescribed_base[petiole][leaf] : phytomer_ptr->petiole_vertices[petiole].back(); // Default: petiole tip
@@ -3099,6 +3138,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             }
                         }
                         context_ptr->translateObject(objID_leaf, leaf_base);
+                        if (leaf < int(leaf_stalk_placed[petiole].size()) && leaf_stalk_placed[petiole][leaf]) {
+                            phytomer_ptr->placeLeafStalk(objID_leaf, uint(petiole), leaf_stalk_base[petiole][leaf], leaf_scale[petiole][leaf]);
+                        }
 
                         phytomer_ptr->leaf_objIDs[petiole][leaf] = objID_leaf;
                         phytomer_ptr->leaf_bases[petiole][leaf] = leaf_base;
