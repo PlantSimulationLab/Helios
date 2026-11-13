@@ -20,6 +20,7 @@ SPDX-License-Identifier: LGPL-2.1-or-later
 #define PLANTHYDRAULICS_MODEL
 
 #include "Context.h"
+#include <set>
 
 struct HydraulicConductance {
     HydraulicConductance() {
@@ -611,6 +612,16 @@ public:
      * */
     void outputCapacitancePrimitiveData(bool toggle);
 
+    //! Toggle the writing out of optional primitive data - whole-plant hydraulic conductance and soil water potential
+    /**
+     * Writes "plant_hydraulic_conductance" (\f$K_{plant}\f$, the soil-to-leaf conductance of the root, stem, and leaf conductances in series, per unit leaf area, mol/m^2/s/MPa) and "soil_water_potential" (MPa, of the
+     * leaf's plant) to each leaf primitive. This differs from the optional output "hydraulic_conductance", which is the leaf conductance \f$K_{leaf}\f$ only. "soil_water_potential" is written only for plants whose
+     * soil water potential was set with setSoilWaterPotentialOfPlant(), so that a value set directly as primitive data is not replaced by the default placeholder.
+     * \param[in] toggle
+     * \note Both are also written automatically when the StomatalConductanceModel Buckley et al. (2026) model is in use (global data "buckley2026_stomatal_model_enabled" is 1), since that model uses them.
+     * */
+    void outputPlantConductancePrimitiveData(bool toggle);
+
     //! Group leaf primitives into a plant that share stem, root, and soil hydraulics
     /**
      * \param[in] UUIDs Leaf primitives
@@ -736,11 +747,20 @@ private:
     std::map<uint, float> stemWaterPotentialsByPlantID;
     std::map<uint, float> rootWaterPotentialsByPlantID;
     std::map<uint, float> soilWaterPotentialsByPlantID;
+    //! Plants whose soil water potential was set with setSoilWaterPotentialOfPlant() (others use a placeholder value, which is not written as "soil_water_potential" primitive data)
+    std::set<uint> soilWaterPotentialSetByUser;
     std::vector<int> plantIDs;
     bool message_flag = false;
 
     bool OutputConductance = false;
     bool OutputCapacitance = false;
+    bool OutputPlantConductance = false;
+
+    //! True if "plant_hydraulic_conductance" and "soil_water_potential" should be written: requested with outputPlantConductancePrimitiveData(), or the Buckley et al. (2026) stomatal model is in use
+    bool plantConductanceOutputRequested() const;
+
+    //! Whole-plant (soil-to-leaf) hydraulic conductance K_plant per unit leaf area: the root, stem, and leaf conductances in series (mol/m^2/s/MPa); 0 if any of them is not positive
+    static float computePlantConductance(float K_root, float K_stem, float K_leaf);
 
     void updateRootAndStemWaterPotentialsOfPlant(const std::vector<uint> &UUIDs, int timespan, int timestep);
 

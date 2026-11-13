@@ -48,6 +48,15 @@ namespace {
     constexpr const char *LABEL_BB_sigma = "gs_bb_sigma";
     constexpr const char *LABEL_BB_chi = "gs_bb_chi";
 
+    // Material data labels for Buckley et al. (2026) model
+    constexpr const char *LABEL_Buckley2026_s = "gs_buckley2026_s";
+    constexpr const char *LABEL_Buckley2026_K_plant_at_25C = "gs_buckley2026_K_plant_at_25C";
+    constexpr const char *LABEL_Buckley2026_b_o = "gs_buckley2026_b_o";
+    constexpr const char *LABEL_Buckley2026_psi_c = "gs_buckley2026_psi_c";
+
+    // Global data through which the Buckley et al. (2026) model asks the photosynthesis and plant hydraulics plug-ins for its inputs
+    constexpr const char *GLOBAL_Buckley2026_enabled = "buckley2026_stomatal_model_enabled";
+
     //! Boundary-layer conductance that, in series with the total stomatal conductance, carries the same flux as the stomata of each leaf face in series with the boundary layer of that face
     /**
      * The stomatal conductance is split between the front and back faces in the proportions \f$\zeta\f$ and \f$1-\zeta\f$, and each face exchanges gas only through its own boundary layer. The surface
@@ -143,6 +152,8 @@ StomatalConductanceModel::StomatalConductanceModel(helios::Context *m_context) {
     blconductance_default = 1.0; // mol/m^2/s, conductance to heat summed over both faces of a two-sided primitive
 
     beta_default = 1.f; // unitless
+
+    soil_water_potential_default = -0.1; // MPa
 
     model = "BMF"; // default model - Buckley, Mott, Farquhar
 }
@@ -414,6 +425,109 @@ void StomatalConductanceModel::setModelCoefficients(const BBcoefficients &coeffs
     model = "BB";
 }
 
+void StomatalConductanceModel::selectBuckley2026Model() {
+    model = "Buckley2026";
+    // The request is never withdrawn automatically: another StomatalConductanceModel instance may still use the Buckley et al. (2026) model, and an unneeded request only costs extra
+    // outputs from the other plug-ins, whereas a missing one would leave this model without its inputs.
+    context->setGlobalData(GLOBAL_Buckley2026_enabled, 1);
+}
+
+void StomatalConductanceModel::setModelCoefficients(const Buckley2026coefficients &coeffs) {
+    Buckley2026coeffs = coeffs;
+    Buckley2026model_coefficients.clear();
+    selectBuckley2026Model();
+}
+
+void StomatalConductanceModel::setModelCoefficients(const Buckley2026coefficients &coeffs, const std::vector<uint> &UUIDs) {
+    for (uint UUID: UUIDs) {
+        Buckley2026model_coefficients[UUID] = coeffs;
+    }
+    selectBuckley2026Model();
+}
+
+void StomatalConductanceModel::setModelCoefficients(const std::string &material_label, const Buckley2026coefficients &coeffs) {
+    context->setMaterialData(material_label, LABEL_Buckley2026_s, coeffs.s);
+    context->setMaterialData(material_label, LABEL_Buckley2026_K_plant_at_25C, coeffs.K_plant_at_25C);
+    context->setMaterialData(material_label, LABEL_Buckley2026_b_o, coeffs.b_o);
+    context->setMaterialData(material_label, LABEL_Buckley2026_psi_c, coeffs.psi_c);
+
+    // Clear cache for this material
+    uint matID = context->getMaterialIDFromLabel(material_label);
+    material_coefficient_cache_Buckley2026.erase(matID);
+
+    selectBuckley2026Model();
+}
+
+void StomatalConductanceModel::setBuckley2026CoefficientsFromLibrary(const std::string &species) {
+    setModelCoefficients(getBuckley2026CoefficientsFromLibrary(species));
+}
+
+void StomatalConductanceModel::setBuckley2026CoefficientsFromLibrary(const std::string &species, const std::vector<uint> &UUIDs) {
+    setModelCoefficients(getBuckley2026CoefficientsFromLibrary(species), UUIDs);
+}
+
+void StomatalConductanceModel::setBuckley2026CoefficientsFromLibrary(const std::string &species, const std::string &material_label) {
+    setModelCoefficients(material_label, getBuckley2026CoefficientsFromLibrary(species));
+}
+
+Buckley2026coefficients StomatalConductanceModel::getBuckley2026CoefficientsFromLibrary(const std::string &species) {
+    // Fitted to LI-600 porometer diurnals (gsw corrected per Rizzo & Bailey) with the measured predawn or first stem water potential of each day as psi_soil, and psi_c from the
+    // pressure-volume turgor loss point (Buckley et al. 2026, Section 2.2) where available (fitted for eastern redbud), with A, J, and Rd from the PhotosynthesisModel Farquhar library entry named
+    // in each comment. Use each entry with that Farquhar entry: s and b_o depend on the photosynthesis parameters.
+    Buckley2026coefficients coeffs;
+    const std::string &s = species;
+    if (s == "Almond" || s == "almond") {
+        // fitted with Farquhar library entry Almond; psi_c turgor loss point, literature; R2 of date x hour means 0.75 (leave-one-hour-out 0.56)
+        coeffs.s = 0.01595f;
+        coeffs.K_plant_at_25C = 0.03266f;
+        coeffs.b_o = 1.416f;
+        coeffs.psi_c = -2.329f;
+    } else if (s == "Elderberry" || s == "elderberry" || s == "blue_elderberry") {
+        // fitted with Farquhar library entry Elderberry; psi_c turgor loss point; R2 of date x hour means 0.83 (leave-one-hour-out 0.77)
+        coeffs.s = 0.0271f;
+        coeffs.K_plant_at_25C = 0.007491f;
+        coeffs.b_o = 1.27f;
+        coeffs.psi_c = -2.752f;
+    } else if (s == "Cowpea" || s == "cowpea") {
+        // fitted with Farquhar library entry Cowpea; psi_c turgor loss point; R2 of date x hour means 0.76 (leave-one-hour-out 0.65)
+        coeffs.s = 0.2626f;
+        coeffs.K_plant_at_25C = 0.05714f;
+        coeffs.b_o = 1.074f;
+        coeffs.psi_c = -0.846f;
+    } else if (s == "EasternRedbud" || s == "easternredbud") {
+        // fitted with Farquhar library entry EasternRedbudSunlit and EasternRedbudShaded; psi_c fitted; R2 of date x hour means 0.63 (leave-one-hour-out 0.57)
+        coeffs.s = 0.004195f;
+        coeffs.K_plant_at_25C = 0.001744f;
+        coeffs.b_o = 1.774f;
+        coeffs.psi_c = -3.667f;
+    } else if (s == "Grape" || s == "grape") {
+        // fitted with Farquhar library entry Grape; psi_c turgor loss point, literature; R2 of date x hour means 0.55 (leave-one-hour-out 0.16)
+        coeffs.s = 0.03341f;
+        coeffs.K_plant_at_25C = 0.007471f;
+        coeffs.b_o = 1.268f;
+        coeffs.psi_c = -1.718f;
+    } else if (s == "Olive" || s == "olive") {
+        // fitted with Farquhar library entry Olive; psi_c turgor loss point; R2 of date x hour means 0.88 (leave-one-hour-out 0.73)
+        coeffs.s = 0.02156f;
+        coeffs.K_plant_at_25C = 0.004562f;
+        coeffs.b_o = 5.033f;
+        coeffs.psi_c = -2.043f;
+    } else if (s == "Pistachio" || s == "pistachio" || s == "PistachioFemale" || s == "pistachiofemale" || s == "pistachio_female" || s == "Pistachio_Female" || s == "Pistachio_female") {
+        // fitted with Farquhar library entry PistachioFemale (or Pistachio); psi_c turgor loss point; R2 of date x hour means 0.76 (leave-one-hour-out 0.60)
+        coeffs.s = 0.08766f;
+        coeffs.K_plant_at_25C = 0.007411f;
+        coeffs.b_o = 1.11f;
+        coeffs.psi_c = -4.103f;
+    } else {
+        helios_runtime_error("ERROR (StomatalConductanceModel::getBuckley2026CoefficientsFromLibrary): Unknown species '" + s +
+                             "'. Valid species are: Almond, Elderberry (or blue_elderberry), Cowpea, EasternRedbud, Grape, Olive, Pistachio (or PistachioFemale). Names are also accepted in all lower case.");
+    }
+    if (message_flag) {
+        std::cout << "Returning Buckley et al. (2026) stomatal model coefficients for " << s << std::endl;
+    }
+    return coeffs;
+}
+
 void StomatalConductanceModel::validateDynamicTimeConstants(float tau_open, float tau_close) {
     // The time constants appear in the denominator of the forward Euler update gs = gs_old + (gs_ss-gs_old)*dt/tau. A zero value gives a non-finite conductance, and a negative value inverts the
     // direction of the relaxation so that stomata diverge away from the steady-state value.
@@ -616,6 +730,41 @@ BBcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BB(uint UUI
     return BBcoeffs;
 }
 
+Buckley2026coefficients StomatalConductanceModel::getCoefficientsForPrimitive_Buckley2026(uint UUID) const {
+    uint materialID = context->getPrimitiveMaterialID(UUID);
+
+    if (material_coefficient_cache_Buckley2026.find(materialID) != material_coefficient_cache_Buckley2026.end()) {
+        return material_coefficient_cache_Buckley2026.at(materialID);
+    }
+
+    Buckley2026coefficients coeffs;
+    bool found = true;
+
+    try {
+        const Material &mat = context->getMaterial(materialID);
+        if (mat.doesMaterialDataExist(LABEL_Buckley2026_s) && mat.doesMaterialDataExist(LABEL_Buckley2026_K_plant_at_25C) && mat.doesMaterialDataExist(LABEL_Buckley2026_b_o) && mat.doesMaterialDataExist(LABEL_Buckley2026_psi_c)) {
+
+            mat.getMaterialData(LABEL_Buckley2026_s, coeffs.s);
+            mat.getMaterialData(LABEL_Buckley2026_K_plant_at_25C, coeffs.K_plant_at_25C);
+            mat.getMaterialData(LABEL_Buckley2026_b_o, coeffs.b_o);
+            mat.getMaterialData(LABEL_Buckley2026_psi_c, coeffs.psi_c);
+
+            material_coefficient_cache_Buckley2026[materialID] = coeffs;
+            return coeffs;
+        } else {
+            found = false;
+        }
+    } catch (const std::exception &) {
+        found = false;
+    }
+
+    if (!found && Buckley2026model_coefficients.find(UUID) != Buckley2026model_coefficients.end()) {
+        return Buckley2026model_coefficients.at(UUID);
+    }
+
+    return Buckley2026coeffs;
+}
+
 void StomatalConductanceModel::run() {
     run(context->getAllUUIDs());
 }
@@ -635,6 +784,13 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
     size_t assumed_default_An = 0;
     size_t assumed_default_Gamma = 0;
+
+    size_t assumed_default_psi_soil = 0;
+
+    // Request the Buckley et al. (2026) inputs from the photosynthesis and plant hydraulics plug-ins (also done when the model is selected; repeated in case the global data was cleared)
+    if (model == "Buckley2026") {
+        context->setGlobalData(GLOBAL_Buckley2026_enabled, 1);
+    }
 
     bool warn_dt_too_large = false;
     bool warn_tau_unspecified = false;
@@ -819,6 +975,38 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
             }
         }
 
+        // Buckley et al. (2026) model inputs: net photosynthesis, electron transport rate, and day respiration from the photosynthesis model, and the soil water potential and whole-plant
+        // hydraulic conductance K_plant from the plant hydraulics model (the coefficient K_plant_at_25C, scaled to leaf temperature, is used when K_plant is not available)
+        float J = 0.f;
+        float Rd = 0.f;
+        float psi_soil = soil_water_potential_default;
+        float K_plant = -1.f; // < 0: not provided as primitive data
+        if (model == "Buckley2026") {
+            // A, J, and Rd have no meaningful defaults (b = J/4 - Rd - A + b_o drives the model), so they are required, as "electron_transport_ratio" is for SIF in the radiation model
+            for (const char *label: {"net_photosynthesis", "electron_transport_rate", "dark_respiration"}) {
+                if (!context->doesPrimitiveDataExist(UUID, label) || context->getPrimitiveDataType(label) != HELIOS_TYPE_FLOAT) {
+                    helios_runtime_error("ERROR (StomatalConductanceModel::run): The Buckley et al. (2026) model requires primitive data \"" + std::string(label) + "\", which does not exist for primitive " + std::to_string(UUID) +
+                                         ". Run the PhotosynthesisModel with the Farquhar (C3) model before the stomatal conductance model: once the Buckley et al. (2026) model is selected it writes "
+                                         "\"net_photosynthesis\", \"electron_transport_rate\", and \"dark_respiration\" automatically. The C4 and empirical photosynthesis models do not provide them.");
+                }
+            }
+            context->getPrimitiveData(UUID, "net_photosynthesis", An);
+            context->getPrimitiveData(UUID, "electron_transport_rate", J);
+            context->getPrimitiveData(UUID, "dark_respiration", Rd);
+            if (context->doesPrimitiveDataExist(UUID, "soil_water_potential") && context->getPrimitiveDataType("soil_water_potential") == HELIOS_TYPE_FLOAT) {
+                context->getPrimitiveData(UUID, "soil_water_potential", psi_soil);
+            } else {
+                assumed_default_psi_soil++;
+            }
+            if (context->doesPrimitiveDataExist(UUID, "plant_hydraulic_conductance") && context->getPrimitiveDataType("plant_hydraulic_conductance") == HELIOS_TYPE_FLOAT) {
+                context->getPrimitiveData(UUID, "plant_hydraulic_conductance", K_plant);
+                if (!std::isfinite(K_plant) || K_plant < 0.f) {
+                    helios_runtime_error("ERROR (StomatalConductanceModel::run): The whole-plant hydraulic conductance for primitive " + std::to_string(UUID) + " is " + std::to_string(K_plant) +
+                                         " mol/m^2/s/MPa, but it must be a finite non-negative value. Check the primitive data \"plant_hydraulic_conductance\", or remove it to use the model coefficient K_plant_at_25C.");
+                }
+            }
+        }
+
 
         // Solve for the steady-state conductance. The leaf-surface balance and the conductance model are evaluated for given effective boundary-layer conductances to water vapor and CO2 (see
         // effectiveBoundaryLayerConductance()). Returns false, without evaluating gs, if the resulting leaf-surface CO2 concentration is not physically meaningful for the model: Cs <= 0, which would flip
@@ -908,6 +1096,35 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
                     context->setPrimitiveData(UUID, "theta_BB", coeffs.theta);
                     context->setPrimitiveData(UUID, "sigma_BB", coeffs.sigma);
                     context->setPrimitiveData(UUID, "chi_BB", coeffs.chi);
+                }
+
+            } else if (model == "Buckley2026") {
+
+                // model coefficients
+                Buckley2026coefficients coeffs = getCoefficientsForPrimitive_Buckley2026(UUID);
+
+                // whole-plant hydraulic conductance at the leaf temperature (mol/m^2/s/MPa)
+                const float K_plant_leaf = (K_plant >= 0.f) ? K_plant : coeffs.K_plant_at_25C * waterFluidityRelativeTo25C(TL);
+
+                // b = J/4 - Rd - A + b_o, where J/4 - Rd is the CO2-saturated electron-transport-limited photosynthetic rate (umol/m^2/s)
+                const float b = max(0.f, 0.25f * J - Rd - An + coeffs.b_o);
+
+                std::vector<float> variables{b, es, ea, gbw_effective, press, beta, psi_soil, K_plant_leaf};
+
+                float esurf = solveSurfaceVaporPressure(evaluate_Buckley2026model, variables, &coeffs, ea, es, warnings);
+                float Ds = max(0.f, (es - esurf) / press); // mol/mol
+
+                gs_result = evaluate_Buckley2026conductance(Ds, b, psi_soil, K_plant_leaf, beta, coeffs);
+
+                if (write_outputs && std::find(output_prim_data.begin(), output_prim_data.end(), "model_parameters") != output_prim_data.end()) {
+                    context->setPrimitiveData(UUID, "s_Buckley2026", coeffs.s);
+                    context->setPrimitiveData(UUID, "K_plant_Buckley2026", K_plant_leaf);
+                    context->setPrimitiveData(UUID, "b_o_Buckley2026", coeffs.b_o);
+                    context->setPrimitiveData(UUID, "psi_c_Buckley2026", coeffs.psi_c);
+                }
+
+                if (write_outputs && std::find(output_prim_data.begin(), output_prim_data.end(), "vapor_pressure_deficit") != output_prim_data.end()) {
+                    context->setPrimitiveData(UUID, "vapor_pressure_deficit", Ds * 1000.f); // mmol/mol
                 }
 
             } else {
@@ -1089,6 +1306,11 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
             std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires net photosynthesis, but primitive data net_photosynthesis could not be found for " << assumed_default_An
                       << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
         }
+        if (model == "Buckley2026" && assumed_default_psi_soil > 0) {
+            std::cout << "WARNING (StomatalConductanceModel::run): The Buckley et al. (2026) stomatal conductance model requires the soil water potential, but primitive data soil_water_potential could not be found for " << assumed_default_psi_soil
+                      << " primitives, and the default value of " << soil_water_potential_default
+                      << " MPa was used. Set it directly, or run the PlantHydraulicsModel after setting the soil water potential of each plant with setSoilWaterPotentialOfPlant()." << std::endl;
+        }
         if (model == "BBL" && assumed_default_Gamma > 0) {
             std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires the CO2 compensation point Gamma, but primitive data Gamma_CO2 could not be found for " << assumed_default_Gamma
                       << " primitives. Did you forget to set optional output primitive data Gamma_CO2 in the photosynthesis model?" << std::endl;
@@ -1203,6 +1425,47 @@ float StomatalConductanceModel::evaluate_BMFmodel(float esurf, std::vector<float
     return gs * (es - esurf) - gbw * (esurf - ea);
 }
 
+float StomatalConductanceModel::waterFluidityRelativeTo25C(float T_in_Kelvin) {
+    // Fluidity (inverse viscosity) of liquid water relative to its value at about 25 C, the temperature scaling of hydraulic conductance used when fitting the library coefficients
+    const float T = T_in_Kelvin;
+    return 4.891e10f * std::exp(-4209.f / T - 0.04527f * T + 3.376e-5f * T * T);
+}
+
+float StomatalConductanceModel::evaluate_Buckley2026conductance(float Ds, float b, float psi_soil, float K_plant, float beta, const Buckley2026coefficients &coeffs) {
+
+    // gs = s b (psi_soil - psi_c) / (1 + s b Ds / K_plant). The denominator accounts for the fall in leaf water potential with transpiration through K_plant: psi_leaf = psi_soil - gs Ds / K_plant.
+    const float sb = coeffs.s * b; // mol/m^2/s/MPa
+    const float dpsi = psi_soil - coeffs.psi_c; // MPa
+    if (!(sb > 0.f) || !(dpsi > 0.f) || !(K_plant > 0.f)) {
+        return 0.f; // no guard-cell advantage, soil at or below the closure potential, or no water supply
+    }
+    const float gs = sb * dpsi / (1.f + sb * Ds / K_plant);
+
+    // The soil moisture factor scales the result in the same way as for the other models.
+    return max(0.f, beta * gs);
+}
+
+float StomatalConductanceModel::evaluate_Buckley2026model(float esurf, std::vector<float> &variables, const void *parameters) {
+
+    // We want to find the vapor pressure at the surface, esurf, that balances the equation gs(esurf)*(es-esurf) = gbw*(esurf-ea). This function returns the residual of this equation.
+
+    const auto *coeffs = reinterpret_cast<const Buckley2026coefficients *>(parameters);
+
+    float b = variables[0];
+    float es = variables[1];
+    float ea = variables[2];
+    float gbw = variables[3];
+    float press = variables[4];
+    float beta = variables[5];
+    float psi_soil = variables[6];
+    float K_plant = variables[7];
+
+    float Ds = max(0.f, (es - esurf) / press); // mol/mol
+    float gs = evaluate_Buckley2026conductance(Ds, b, psi_soil, K_plant, beta, *coeffs);
+
+    return gs * (es - esurf) - gbw * (esurf - ea);
+}
+
 float StomatalConductanceModel::evaluate_BBconductance(float Ds, float Psix, float i, float beta, const BBcoefficients &coeffs) {
 
     // Fraction of the epidermal water potential transmitted to the guard cells, and the xylem-to-epidermis hydraulic resistance (MPa m^2 s / mol). These are treated as fixed in this simplified form of
@@ -1296,6 +1559,10 @@ void StomatalConductanceModel::printDefaultValueReport(const std::vector<uint> &
     size_t assumed_default_CO2 = 0;
     size_t assumed_default_gbw = 0;
     size_t assumed_default_beta = 0;
+    size_t assumed_default_J = 0;
+    size_t assumed_default_Rd = 0;
+    size_t assumed_default_psi_soil = 0;
+    size_t assumed_coefficient_K_plant = 0;
 
     size_t Nprimitives = UUIDs.size();
 
@@ -1357,6 +1624,22 @@ void StomatalConductanceModel::printDefaultValueReport(const std::vector<uint> &
             // xylem moisture potential
             if (!context->doesPrimitiveDataExist(UUID, "xylem_water_potential") || context->getPrimitiveDataType("xylem_water_potential") != HELIOS_TYPE_FLOAT) {
                 assumed_default_Psix++;
+            }
+        } else if (model == "Buckley2026") {
+            if (!context->doesPrimitiveDataExist(UUID, "net_photosynthesis") || context->getPrimitiveDataType("net_photosynthesis") != HELIOS_TYPE_FLOAT) {
+                assumed_default_An++;
+            }
+            if (!context->doesPrimitiveDataExist(UUID, "electron_transport_rate") || context->getPrimitiveDataType("electron_transport_rate") != HELIOS_TYPE_FLOAT) {
+                assumed_default_J++;
+            }
+            if (!context->doesPrimitiveDataExist(UUID, "dark_respiration") || context->getPrimitiveDataType("dark_respiration") != HELIOS_TYPE_FLOAT) {
+                assumed_default_Rd++;
+            }
+            if (!context->doesPrimitiveDataExist(UUID, "soil_water_potential") || context->getPrimitiveDataType("soil_water_potential") != HELIOS_TYPE_FLOAT) {
+                assumed_default_psi_soil++;
+            }
+            if (!context->doesPrimitiveDataExist(UUID, "plant_hydraulic_conductance") || context->getPrimitiveDataType("plant_hydraulic_conductance") != HELIOS_TYPE_FLOAT) {
+                assumed_coefficient_K_plant++;
             }
         }
     }
@@ -1421,6 +1704,15 @@ void StomatalConductanceModel::printDefaultValueReport(const std::vector<uint> &
                      "xylem_water_potential"
                      " primitive data did not exist"
                   << std::endl;
+    }
+
+    if (model == "Buckley2026") {
+        std::cout << "net photosynthesis: " << assumed_default_An << " of " << Nprimitives << " used default value of " << An_default << " because net_photosynthesis primitive data did not exist" << std::endl;
+        std::cout << "electron transport rate: " << assumed_default_J << " of " << Nprimitives << " used default value of 0 because electron_transport_rate primitive data did not exist" << std::endl;
+        std::cout << "day respiration: " << assumed_default_Rd << " of " << Nprimitives << " used default value of 0 because dark_respiration primitive data did not exist" << std::endl;
+        std::cout << "soil water potential: " << assumed_default_psi_soil << " of " << Nprimitives << " used default value of " << soil_water_potential_default << " because soil_water_potential primitive data did not exist" << std::endl;
+        std::cout << "whole-plant hydraulic conductance: " << assumed_coefficient_K_plant << " of " << Nprimitives
+                  << " used the model coefficient K_plant_at_25C (scaled to leaf temperature) because plant_hydraulic_conductance primitive data did not exist" << std::endl;
     }
 
     std::cout << "------------------------------------------------------" << std::endl;

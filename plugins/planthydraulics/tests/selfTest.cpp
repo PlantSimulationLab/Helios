@@ -621,6 +621,85 @@ DOCTEST_TEST_CASE("PlantHydraulicsModel - Documentation Example 2") {
     }
 }
 
+DOCTEST_TEST_CASE("PlantHydraulicsModel - whole-plant hydraulic conductance K_plant and soil water potential outputs") {
+    // K_plant is the root, stem, and leaf conductances in series (per unit leaf area); it is written on request, or when the Buckley et al. (2026) stomatal model asks for it
+    const float K_root = 0.08f, K_stem = 0.05f, K_leaf = 0.02f; // mol/m^2/s/MPa, independent of water potential and temperature
+    const float K_plant_expected = 1.f / (1.f / K_root + 1.f / K_stem + 1.f / K_leaf);
+    const float psi_soil = -0.3f;
+
+    auto setup = [&](Context &context, PlantHydraulicsModel &hydraulics) {
+        uint objID = context.addTileObject(nullorigin, make_vec2(1, 1), nullrotation, make_int2(2, 2));
+        std::vector<uint> leaves = context.getObjectPrimitiveUUIDs(objID);
+        context.setObjectData(objID, "plantID", 1);
+        context.setPrimitiveData(leaves, "latent_flux", 100.f);
+        PlantHydraulicsModelCoefficients coeffs;
+        coeffs.setRootHydraulicConductance(K_root);
+        coeffs.setStemHydraulicConductance(K_stem);
+        coeffs.setLeafHydraulicConductance(K_leaf);
+        coeffs.setRootHydraulicCapacitance(1.f); // fixed capacitances, needed by the time-stepped solution
+        coeffs.setStemHydraulicCapacitance(1.f);
+        hydraulics.setModelCoefficients(coeffs);
+        hydraulics.setSoilWaterPotentialOfPlant(1, psi_soil);
+        return leaves;
+    };
+
+    SUBCASE("not written by default") {
+        Context context;
+        PlantHydraulicsModel hydraulics(&context);
+        std::vector<uint> leaves = setup(context, hydraulics);
+        hydraulics.run(leaves);
+        DOCTEST_CHECK(!context.doesPrimitiveDataExist(leaves.front(), "plant_hydraulic_conductance"));
+        DOCTEST_CHECK(!context.doesPrimitiveDataExist(leaves.front(), "soil_water_potential"));
+    }
+
+    SUBCASE("requested with outputPlantConductancePrimitiveData, steady state and time-stepped") {
+        for (int timespan: {0, 1000}) {
+            Context context;
+            PlantHydraulicsModel hydraulics(&context);
+            std::vector<uint> leaves = setup(context, hydraulics);
+            hydraulics.outputPlantConductancePrimitiveData(true);
+            hydraulics.run(leaves, timespan, 100);
+            for (uint UUID: leaves) {
+                float K_plant, psi;
+                DOCTEST_REQUIRE(context.doesPrimitiveDataExist(UUID, "plant_hydraulic_conductance"));
+                context.getPrimitiveData(UUID, "plant_hydraulic_conductance", K_plant);
+                context.getPrimitiveData(UUID, "soil_water_potential", psi);
+                DOCTEST_CHECK(K_plant == doctest::Approx(K_plant_expected).epsilon(1e-5));
+                DOCTEST_CHECK(psi == doctest::Approx(psi_soil).epsilon(1e-6));
+            }
+        }
+    }
+
+    SUBCASE("a soil water potential never set with setSoilWaterPotentialOfPlant() does not replace one set directly") {
+        Context context;
+        PlantHydraulicsModel hydraulics(&context);
+        uint objID = context.addTileObject(nullorigin, make_vec2(1, 1), nullrotation, make_int2(2, 2));
+        std::vector<uint> leaves = context.getObjectPrimitiveUUIDs(objID);
+        context.setObjectData(objID, "plantID", 2);
+        context.setPrimitiveData(leaves, "latent_flux", 100.f);
+        context.setPrimitiveData(leaves, "soil_water_potential", -1.5f); // set directly, e.g. from a soil model
+        hydraulics.outputPlantConductancePrimitiveData(true);
+        hydraulics.run(leaves);
+        float psi;
+        context.getPrimitiveData(leaves.front(), "soil_water_potential", psi);
+        DOCTEST_CHECK(psi == doctest::Approx(-1.5f).epsilon(1e-6));
+        DOCTEST_CHECK(context.doesPrimitiveDataExist(leaves.front(), "plant_hydraulic_conductance")); // K_plant is still written
+    }
+
+    SUBCASE("requested by the Buckley et al. (2026) stomatal model through global data") {
+        Context context;
+        PlantHydraulicsModel hydraulics(&context);
+        std::vector<uint> leaves = setup(context, hydraulics);
+        context.setGlobalData("buckley2026_stomatal_model_enabled", 1);
+        hydraulics.run(leaves);
+        float K_plant;
+        DOCTEST_REQUIRE(context.doesPrimitiveDataExist(leaves.front(), "plant_hydraulic_conductance"));
+        context.getPrimitiveData(leaves.front(), "plant_hydraulic_conductance", K_plant);
+        DOCTEST_CHECK(K_plant == doctest::Approx(K_plant_expected).epsilon(1e-5));
+        DOCTEST_CHECK(K_plant < K_leaf); // K_plant is not the leaf conductance
+    }
+}
+
 int PlantHydraulicsModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

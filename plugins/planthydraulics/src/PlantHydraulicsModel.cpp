@@ -348,6 +348,21 @@ void PlantHydraulicsModel::updateLeafWaterPotentialsOfPlant(const std::vector<ui
     float delta_psi_max = 0.01;
     float lambdaw = 44000.f;
 
+    // Root and stem conductances of the plant, at its current root and stem water potentials and the same temperatures as in updateRootAndStemWaterPotentialsOfPlant(), for the whole-plant
+    // (soil-to-leaf) conductance K_plant of each leaf
+    const bool write_plant_conductance = plantConductanceOutputRequested() && !UUIDs.empty();
+    float K_root_plant = 0.f, K_stem_plant = 0.f, soil_water_potential_plant = 0.f;
+    bool write_soil_water_potential = false; // only a soil water potential set with setSoilWaterPotentialOfPlant(), so that a value set directly as primitive data is not replaced by the placeholder
+    if (write_plant_conductance) {
+        const int plantID = getPlantID(UUIDs.front());
+        const float stem_temperature = getOrInitializePrimitiveData(UUIDs.front(), "air_temperature", 298.15f, false);
+        const float root_temperature = stem_temperature - 5.f;
+        K_root_plant = computeConductance(modelcoeffs.RootHydraulicConductance, rootWaterPotentialsByPlantID.at(plantID), root_temperature);
+        K_stem_plant = computeConductance(modelcoeffs.StemHydraulicConductance, stemWaterPotentialsByPlantID.at(plantID), stem_temperature);
+        soil_water_potential_plant = soilWaterPotentialsByPlantID.at(plantID);
+        write_soil_water_potential = soilWaterPotentialSetByUser.count(plantID) > 0;
+    }
+
     if (steadystate) {
         for (uint i = 0; i < UUIDs.size(); i++) {
             auto it = modelcoeffs_map.find(UUIDs.at(i));
@@ -370,6 +385,12 @@ void PlantHydraulicsModel::updateLeafWaterPotentialsOfPlant(const std::vector<ui
             context->setPrimitiveData(UUIDs.at(i), "turgor_pressure", leaf_turgor_pressure);
             context->setPrimitiveData(UUIDs.at(i), "osmotic_potential", leaf_osmotic_potential);
             context->setPrimitiveData(UUIDs.at(i), "relative_water_content", leaf_relative_water_content);
+            if (write_plant_conductance) {
+                context->setPrimitiveData(UUIDs.at(i), "plant_hydraulic_conductance", computePlantConductance(K_root_plant, K_stem_plant, K_leaf));
+                if (write_soil_water_potential) {
+                    context->setPrimitiveData(UUIDs.at(i), "soil_water_potential", soil_water_potential_plant);
+                }
+            }
         }
     } else {
         // Non-steady-state
@@ -420,12 +441,42 @@ void PlantHydraulicsModel::updateLeafWaterPotentialsOfPlant(const std::vector<ui
             if (OutputCapacitance) {
                 context->setPrimitiveData(UUIDs.at(i), "hydraulic_capacitance", C_leaf);
             }
+            if (write_plant_conductance) {
+                K_leaf = computeConductance(coeffs.LeafHydraulicConductance, leaf_water_potential, leaf_temperature); // at the updated leaf water potential
+                context->setPrimitiveData(UUIDs.at(i), "plant_hydraulic_conductance", computePlantConductance(K_root_plant, K_stem_plant, K_leaf));
+                if (write_soil_water_potential) {
+                    context->setPrimitiveData(UUIDs.at(i), "soil_water_potential", soil_water_potential_plant);
+                }
+            }
         }
     }
 }
 
 void PlantHydraulicsModel::outputConductancePrimitiveData(bool toggle) {
     OutputConductance = toggle;
+}
+
+void PlantHydraulicsModel::outputPlantConductancePrimitiveData(bool toggle) {
+    OutputPlantConductance = toggle;
+}
+
+bool PlantHydraulicsModel::plantConductanceOutputRequested() const {
+    if (OutputPlantConductance) {
+        return true;
+    }
+    if (context->doesGlobalDataExist("buckley2026_stomatal_model_enabled") && context->getGlobalDataType("buckley2026_stomatal_model_enabled") == helios::HELIOS_TYPE_INT) {
+        int buckley_enabled = 0;
+        context->getGlobalData("buckley2026_stomatal_model_enabled", buckley_enabled);
+        return buckley_enabled == 1;
+    }
+    return false;
+}
+
+float PlantHydraulicsModel::computePlantConductance(float K_root, float K_stem, float K_leaf) {
+    if (!(K_root > 0.f) || !(K_stem > 0.f) || !(K_leaf > 0.f)) {
+        return 0.f;
+    }
+    return 1.f / (1.f / K_root + 1.f / K_stem + 1.f / K_leaf);
 }
 
 void PlantHydraulicsModel::outputCapacitancePrimitiveData(bool toggle) {
@@ -638,6 +689,7 @@ float PlantHydraulicsModel::getSoilWaterPotentialOfPlant(uint plantID) {
 
 void PlantHydraulicsModel::setSoilWaterPotentialOfPlant(uint plantID, float soil_water_potential) {
     soilWaterPotentialsByPlantID[plantID] = soil_water_potential;
+    soilWaterPotentialSetByUser.insert(plantID);
 }
 
 std::vector<uint> PlantHydraulicsModel::getPrimitivesWithoutPlantID(std::vector<uint> UUIDs) {
