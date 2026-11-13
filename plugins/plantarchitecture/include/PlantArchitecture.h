@@ -781,7 +781,7 @@ public:
     //! Ratio of leaf width to leaf length
     RandomParameter_float leaf_aspect_ratio;
 
-    //! Fraction of folding along the leaf midrib. =0 means leaf is flat, =1 means leaf is completely folded in half along midrib.
+    //! Fraction of folding along the leaf midrib. =0 means leaf is flat, =1 means leaf is completely folded in half along midrib with its halves raised; a negative value folds the halves down by as much (=-1: folded shut downward).
     RandomParameter_float midrib_fold_fraction;
 
     // Parameters for leaf curvature
@@ -1397,15 +1397,30 @@ struct ShootParameters {
      * plugin documentation.
      */
     RandomParameter_float girth_area_factor;
-    //! Angle (deg) at which child shoots emerge from this parent shoot at the tip of the parent shoot
+    //! Insertion angle (deg) of a shoot of this type that emerges from a bud at the tip of its parent shoot
+    /**
+     * This is a property of the child shoot, not of the parent it emerges from: when a vegetative bud breaks, the insertion angle of the new shoot is read from the shoot type the bud will become, and the
+     * parent shoot contributes only the position of the bud along it (see insertion_angle_decay_rate).
+     */
     RandomParameter_float insertion_angle_tip;
-    //! Rate (deg/node) at which the child shoot insertion angle increases moving down this parent shoot
+    //! Rate (deg/node) at which the insertion angle of a shoot of this type increases with the distance of its bud below the tip of its parent shoot
+    /**
+     * Like insertion_angle_tip, this is read from the type of the child shoot. The insertion angle is insertion_angle_tip + insertion_angle_decay_rate times the number of nodes between the bud and the
+     * parent's tip, capped at 90 degrees.
+     */
     RandomParameter_float insertion_angle_decay_rate;
-    //! Maximum internode length (m) of a child shoot
+    //! Maximum internode length (m) of a shoot of this type
+    /**
+     * When a shoot of this type emerges from a bud and growth_requires_dormancy is true, its internode length is reduced from this value by internode_length_decay_rate for each node between the bud and the
+     * tip of the parent shoot, down to internode_length_min. All three values are read from the type of the child shoot, not the parent.
+     */
     RandomParameter_float internode_length_max;
-    //! Minimum internode length (m) of a child shoot
+    //! Minimum internode length (m) of a shoot of this type, the floor for the reduction set by internode_length_decay_rate
     RandomParameter_float internode_length_min;
-    //! Rate (m/node) at which internode length decreases moving down the parent shoot
+    //! Rate (m/node) at which the internode length of a shoot of this type decreases with the distance of its bud below the tip of its parent shoot
+    /**
+     * Applied only when growth_requires_dormancy is true. See internode_length_max.
+     */
     RandomParameter_float internode_length_decay_rate;
     //! Roll angle (deg) of the shoot specifying the orientation of the first petiole relative to the parent shoot
     RandomParameter_float base_roll;
@@ -1458,12 +1473,26 @@ struct ShootParameters {
      * unset. A rate is a non-negative quantity, so no negative value can be confused with one a user intended.
      */
     static constexpr float leaf_expansion_rate_unset = -1.f;
-    //! Minimum probability that a bud will break and form a new shoot
+    //! Minimum probability that a vegetative bud on a shoot of this type will break and form a new shoot
+    /**
+     * This is also the probability used everywhere along the shoot when vegetative_bud_break_probability_decay_rate is zero, and when it is negative and growth_requires_dormancy is false. With the
+     * defaults (0, with a decay rate of -0.5 and growth_requires_dormancy false) no vegetative bud ever breaks. See the vegetative bud break section of the plug-in documentation.
+     */
     RandomParameter_float vegetative_bud_break_probability_min;
-    //! Maximum probability that a bud will break and form a new shoot
+    //! Probability that a vegetative bud on a shoot of this type will break at the end of the shoot where the probability is highest
+    /**
+     * Used only when vegetative_bud_break_probability_decay_rate is non-zero: at the apex for a positive rate, at the base for a negative rate (and growth_requires_dormancy true).
+     */
     RandomParameter_float vegetative_bud_break_probability_max;
 
-    //! Decay rate (1/node) of the vegetative bud-break probability along the shoot; sign determines direction
+    //! Rate (1/node) at which the vegetative bud-break probability falls from vegetative_bud_break_probability_max to vegetative_bud_break_probability_min along the shoot
+    /**
+     * Positive: highest at the apex, falling moving down the shoot. Negative: highest at the base, falling moving up the shoot, but only when growth_requires_dormancy is true; otherwise every bud uses
+     * vegetative_bud_break_probability_min. Zero: every bud uses vegetative_bud_break_probability_min.
+     *
+     * These parameters are read from the shoot bearing the bud. Buds are sampled when a phytomer is created on a shoot whose type has growth_requires_dormancy false, and when dormancy is broken
+     * otherwise; a bud that does not break is set dead. Note that PlantArchitecture::makePlantDormant() also kills every bud that is not dormant at the time, including active buds that have not broken yet.
+     */
     RandomParameter_float vegetative_bud_break_probability_decay_rate;
 
     //! Maximum number of floral buds at the shoot apex (0 means the shoot forms no terminal floral buds)
@@ -1876,12 +1905,6 @@ public:
      */
     void scalePetioleMaxLength(float scale_factor);
 
-    //! Set the maximum radius of the internode
-    /**
-     * \param[in] internode_radius_max_new Maximum radius of the internode
-     */
-    void setInternodeMaxRadius(float internode_radius_max_new);
-
     //! Set the leaf scale as a fraction of its total fully-elongated scale factor, carrying the petiole to the same fraction. Value is uniformly applied for all leaves/leaflets in the petiole.
     /**
      * The petiole is moved to the same fraction of its own fully-elongated length, which is what makes this the call to use when a leaf and the petiole it sits on are being posed together -- restoring a
@@ -1936,10 +1959,18 @@ public:
      * \param[in] leaf_bases_new Base position of each leaf in world coordinates, one per leaf on the petiole and ordered as the petiole's existing leaves are.
      * \param[in] leaf_rotations_new Roll, pitch and yaw of each leaf in radians, as intrinsic rotations in the leaf's rest frame on the petiole (see PlantArchitecture::setPetioleLeafGeometry()).
      * \param[in] leaf_sizes_new Fully-elongated size of each leaf in meters. All sizes must be greater than zero.
+     * \param[in] leaf_stalk_lengths_new [optional] Length of each leaf's stalk (petiolule) in meters, for a leaf prototype that builds one: the distance from the leaf's base to where its blade begins.
+     * One per leaf, all greater than zero; with none given each stalk is the species' share of its blade's length (LeafPrototype::petiolule_length). Either way a stalk is as thick as the petiole is where
+     * the leaf's base lies along it.
      * \note Supplying a different number of leaves than the petiole carries raises an error rather than adding or removing leaves; change the count with setPetioleLeafCount() first.
      * \note Rebuilding each leaf object discards any primitive data a caller has attached to it. The object label and material are restored, but other primitive data is not.
+     * \param[in] leaf_stalk_bases_new [optional] Where each leaf's stalk leaves the petiole, in world coordinates, one per leaf. A stalk is otherwise built back along its blade's own line from the leaf's base, and a
+     * measured stalk seldom lies on that line: it rises from the petiole to a blade held a few millimetres off it. With these the stalk runs straight from the given point to where the blade begins and
+     * bends there into the join under the blade, which is unchanged; the blade stays where its base, angles and size put it. A stalk may be no longer than its blade and must reach the blade from behind
+     * its base, and it is as thick as the petiole where it leaves it; anything else raises an error. Needs a leaf prototype that builds a stalk.
      */
-    void setPetioleLeafGeometry(uint petiole_index, const std::vector<helios::vec3> &leaf_bases_new, const std::vector<AxisRotation> &leaf_rotations_new, const std::vector<float> &leaf_sizes_new);
+    void setPetioleLeafGeometry(uint petiole_index, const std::vector<helios::vec3> &leaf_bases_new, const std::vector<AxisRotation> &leaf_rotations_new, const std::vector<float> &leaf_sizes_new,
+                                const std::vector<float> &leaf_stalk_lengths_new = {}, const std::vector<helios::vec3> &leaf_stalk_bases_new = {});
 
     //! Change the number of leaves (leaflets) on a petiole, rebuilding them procedurally.
     /**
@@ -1999,7 +2030,7 @@ public:
      * \param[in] aspect_ratio Ratio of blade width to length; greater than zero.
      * \param[in] longitudinal_curvature Curvature along the blade's length (+ up, - down).
      * \param[in] lateral_curvature Curvature across the blade's width (+ up, - down).
-     * \param[in] midrib_fold_fraction Fold along the midrib, from 0 (flat) to 1 (folded shut).
+     * \param[in] midrib_fold_fraction Fold along the midrib, from -1 (halves folded down shut) through 0 (flat) to 1 (halves folded up shut).
      */
     void setPetioleLeafShape(uint petiole_index, float aspect_ratio, float longitudinal_curvature, float lateral_curvature, float midrib_fold_fraction);
 
@@ -2032,13 +2063,25 @@ public:
      */
     void reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeValues &shape);
 
+    //! Whether reshapeLeaf() would keep a leaf's primitives for a new shape, rather than re-mesh its blade
+    /**
+     * reshapeLeaf() moves the vertices of the existing blade lattice when it has as many cells across the blade as the new shape needs, and otherwise replaces the blade primitives with a finer lattice,
+     * which changes their UUIDs. A caller that must keep the UUIDs (for example one that tracks primitives in a renderer) asks first and decides what to do instead of discovering the re-mesh afterwards.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] shape New blade shape, with the same requirements as for reshapeLeaf(); an error is raised for a shape reshapeLeaf() would refuse.
+     * \return True if reshapeLeaf() would keep every primitive of the leaf; false if it would re-mesh the blade.
+     */
+    [[nodiscard]] bool canReshapeLeafInPlace(uint petiole_index, uint leaf_index, const LeafShapeValues &shape) const;
+
     //! Rebuild the leaflets of one petiole with each turned by its own offset from the leaf's angles.
     /**
      * Every leaflet on a petiole is otherwise turned by the same leaf.pitch, leaf.yaw and leaf.roll, mirrored from one side of the petiole to the other, so the two members of a pair are always mirror images.
      * Scanned compound leaves are not: their pairs' members differ by a median of about 13 degrees in yaw and 12 in pitch. This gives each leaflet its own offset, added to the leaf's angles, and rebuilds
      * the petiole's leaves with them. Yaw is taken in the leaf's mirrored sense, so a positive yaw offset swings a lateral further toward the tip whichever side it is on; on the terminal leaflet, which has
-     * no yaw of its own, it turns the leaflet in the petiole plane. The offsets are kept on the phytomer and reapplied by every later rebuild of the petiole with the same number of leaves, and cleared by one
-     * with a different number.
+     * no yaw of its own, it turns the leaflet to one side of its petiole's tip (counter-clockwise seen from above for a positive offset). A roll offset on the terminal turns it about its own midrib; the
+     * terminal takes no roll from leaf.roll, so the offset is the whole of its roll. The offsets are kept on the phytomer, reapplied by every later rebuild of the petiole with the same number of leaves,
+     * cleared by one with a different number, and written to and read from the plant structure XML.
      * \param[in] petiole_index Index of the petiole within the internode.
      * \param[in] pitch_offsets_degrees Pitch offset of each leaflet in degrees, in the petiole's leaf order; one per leaflet.
      * \param[in] yaw_offsets_degrees Yaw offset of each leaflet in degrees; one per leaflet.
@@ -2264,6 +2307,17 @@ public:
     void deletePhytomer();
 
 private:
+    //! Cells across the blade that reshapeLeaf() builds a leaf's new shape with
+    /**
+     * The larger of the leaf's own, the shape's, and what its roll needs, rounded up to even. reshapeLeaf() keeps the leaf's primitives exactly when this equals the leaf's own; shared with
+     * canReshapeLeafInPlace() so that the two cannot disagree. Raises an error for a leaf or shape that cannot be reshaped.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] shape_requested New blade shape.
+     * \param[in] caller Name of the public method, for error messages.
+     */
+    [[nodiscard]] uint reshapedLeafSubdivisionsY(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested, const char *caller) const;
+
     //! Remove the leaves and petioles of the phytomer, optionally handing their Context objects to the caller instead of deleting them
     /**
      * \param[out] detached_objIDs If not null, the Context objects of the leaves and petioles are appended here and left in the Context; if null, they are deleted, as by removeLeaf().
@@ -2466,9 +2520,11 @@ public:
      * \param[in] leaf_yaw_angle Leaf yaw angle (radians), as stored in \ref leaf_rotation rather than as applied.
      * \param[in] prescribed Whether the angles were prescribed from measurements. A prescribed leaf does not go through the procedural chain: its angles are intrinsic rotations in the leaf's rest frame on
      * the petiole, the same for every leaf position and node (see PlantArchitecture::setPetioleLeafGeometry()), and it receives no side signs, elevation offsets or blade-up correction.
+     * \param[in] terminal_roll_angle Roll (radians) of a compound leaf's terminal leaflet about its own midrib, from its offset in setPetioleLeafletAngleOffsets(). The terminal takes no roll from
+     * leaf_roll_angle, so this is the only roll it is given; ignored for every other leaf and for a prescribed one.
      */
     void orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, int leaves_per_petiole, float ind_from_tip, float compound_rotation, const helios::vec3 &petiole_tip_axis, float leaf_roll_angle, float leaf_pitch_angle, float leaf_yaw_angle,
-                    bool prescribed = false);
+                    bool prescribed = false, float terminal_roll_angle = 0.f);
 
     //! Re-aim one leaf so that its blade faces a given direction, keeping \ref leaf_rotation in step with the geometry
     /**
@@ -2497,9 +2553,21 @@ public:
      * \param[in] prototype_index Which of the unique prototypes is being built, which selects its variant in LeafPrototype::leaf_texture_series. A leaf that is not one of the unique prototypes uses the default, and so the first variant.
      * \param[in] leaflet_size The size this leaflet will be given, in meters, when it is not the shoot type's (a leaflet rebuilt on one phytomer); with petiole_radius, its petiolule is sized from these. Negative means the shoot type's.
      * \param[in] petiole_radius The radius of the petiole where this leaflet attaches, in meters, when it is not the shoot type's. Negative means the shoot type's.
+     * \param[in] petiolule_length The length of this leaflet's own stalk in meters, when it is not the species' share of the blade's length (a leaflet placed from a measurement); needs leaflet_size. Negative means the species'.
      * \return Object ID of the new leaflet.
      */
-    uint buildLeafPrototype(int leaves_per_petiole, float ind_from_tip, uint prototype_index = 0, float leaflet_size = -1.f, float petiole_radius = -1.f);
+    uint buildLeafPrototype(int leaves_per_petiole, float ind_from_tip, uint prototype_index = 0, float leaflet_size = -1.f, float petiole_radius = -1.f, float petiolule_length = -1.f);
+
+    //! Move the start of a placed leaf's stalk to where it leaves the petiole
+    /**
+     * See PlantArchitecture::setPetioleLeafGeometry(). The stalk's first ring is put at stalk_base, across the line from there to where the blade begins, and the ring where the blade begins is mitred
+     * between that line and the blade's own; the join under the blade is left as built.
+     * \param[in] objID_leaf Object ID of the leaf, already posed and translated.
+     * \param[in] petiole_index Index of the petiole the leaf hangs from, whose radius the stalk takes where it leaves it.
+     * \param[in] stalk_base Where the stalk leaves the petiole, in world coordinates.
+     * \param[in] leaf_size Size of the leaf in meters, which the stalk may not be longer than.
+     */
+    void placeLeafStalk(uint objID_leaf, uint petiole_index, const helios::vec3 &stalk_base, float leaf_size);
 
     //! Draw a leaf object's petiolule with the petiole's material
     /**
@@ -2546,6 +2614,10 @@ public:
     //! Whether each leaf's pose was prescribed by setPetioleLeafGeometry() rather than generated. Indexed as <code>leaf_objIDs</code>. Recorded by PlantArchitecture::writePlantStructureXML() so that the pose is restored.
     std::vector<std::vector<bool>> leaf_pose_prescribed;
 
+    //! Where the stalk of a leaf placed with its own stalk base leaves the petiole, by the leaf's object ID (see PlantArchitecture::setPetioleLeafGeometry()). Recorded by
+    //! PlantArchitecture::writePlantStructureXML() so that the stalk is put back when the plant is read.
+    std::map<uint, helios::vec3> leaf_stalk_base_placed;
+
     //! Each leaflet's own (pitch, yaw, roll) offset from the leaf's angles, in degrees, set by setPetioleLeafletAngleOffsets(). First index is petiole within internode, second leaf within petiole; empty for a
     //! petiole whose leaflets have none.
     std::vector<std::vector<helios::vec3>> leaflet_angle_offsets;
@@ -2586,6 +2658,8 @@ public:
         std::vector<helios::vec3> rest_vertices;
         //! Undeformed petiolule vertices that follow the lattice in the mesh, if any
         std::vector<helios::vec3> rest_appended_vertices;
+        //! Position, in the frame buildLeafBladeLattice() builds the blade in, of the origin of the leaf object's own frame (see PlantArchitecture::LeafRestGeometry::lattice_frame_offset)
+        helios::vec3 lattice_frame_offset;
     };
 
     //! Shapes of leaves that are not, or no longer, simply copies of a cached prototype: those built fresh by the prototype function, and those reshaped in place. Keyed by leaf object ID.
@@ -2596,7 +2670,13 @@ public:
     bool last_built_leaf_shape_valid = false;
 
     //! Record on the phytomer the shape of a leaf just built by buildLeafPrototype() rather than copied from the prototype cache
+    /**
+     * Must be called before the leaf is scaled, rotated or translated: the offset of the leaf's own frame from its blade lattice is read from its transformation matrix, which is then a translation alone.
+     */
     void recordBuiltLeafShape(uint objID_leaf);
+
+    //! Position, in the frame of buildLeafBladeLattice(), of the origin of a leaf object's own frame, looked up as getLeafShape() looks up the shape
+    [[nodiscard]] helios::vec3 leafLatticeFrameOffset(uint petiole_index, uint leaf_index) const;
 
     //! Bending flexibility this phytomer's leaves were built with
     /**
@@ -2657,7 +2737,6 @@ public:
     std::vector<std::vector<FloralBud>> floral_buds; // first index is petiole within internode, second index is bud within petiole
 
     float internode_radius_initial;
-    float internode_radius_max;
     //! Fully-elongated length of this phytomer's internode, which its current length is a fraction of.
     float internode_length_max;
 
@@ -4057,6 +4136,9 @@ public:
      * \param[in] petiole_index [optional] Index of the petiole within the internode to which the new shoot will be attached (when there are multiple petioles per internode)
      * \return ID of the newly generated shoot.
      * \note Like every other manually-added shoot, the new shoot is created dormant. Call breakPlantDormancy() before advanceTime() if it is to grow.
+     * \note The axillary vegetative buds are created exactly as by addChildShoot(), from the shoot type's ShootParameters::vegetative_bud_break_probability_min and companions. If the type has
+     * ShootParameters::growth_requires_dormancy false, they are sampled at once and those that do not break are set dead, and a later call to makePlantDormant() kills the rest; set them dormant first with
+     * \ref Phytomer::setVegetativeBudState(BudState) if they are to break after a dormancy period.
      * \note The prescribed geometry is protected from the growth model, but not from the caller. The phytomers are created fully elongated, which is what exempts them from the elongation performed by advanceTime();
      * calling Phytomer::setInternodeLengthScaleFraction() on one of them directly overrides that and rescales the internode away from its measured length.
      * \note This form builds the measured geometry and grows the shoot afterwards with the same shoot type, so any parameter set to make the measured section buildable -- a node cap raised to fit it, curvature zeroed
@@ -4094,6 +4176,43 @@ public:
      */
     uint addShootFromNodePositions(uint plantID, int parent_shoot_ID, uint parent_node_index, const std::vector<helios::vec3> &internode_node_positions, const std::vector<float> &internode_radii, const std::string &shoot_type_label,
                                    const std::string &growth_shoot_type_label, uint petiole_index = 0);
+
+    //! Manually append a shoot whose internode geometry is prescribed by measured node positions, continuing the axis of its parent shoot.
+    /**
+     * The counterpart of appendShoot() for measured geometry, as addShootFromNodePositions() is of addChildShoot(). The new shoot carries on from the tip of the parent shoot's last node along the same
+     * botanical axis: its base is seated on that tip, on the parent's axis, rather than on the parent's surface as a lateral branch is, and the parent stops producing phytomers at its apex. Use it where
+     * one axis is built as two shoots because its parts are of different shoot types - a hypocotyl and the stem above its cotyledons, for example. Built with addShootFromNodePositions() instead, the upper
+     * shoot is a lateral and stands nearly a parent radius beside the axis it continues.
+     *
+     * The whole path is translated so that its first position lies on the parent's tip, so all relative geometry is preserved exactly, and an error is raised if the first position is further from that
+     * tip than a shoot connected to it could be. Everything else is as for addShootFromNodePositions().
+     *
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] parent_shoot_ID ID of the shoot whose axis the new shoot continues.
+     * \param[in] internode_node_positions Positions of the internode nodes in world coordinates, ordered from the base of the shoot to its tip. Element 0 is the base of the shoot, at the parent's tip. At
+     * least two positions are required, and no two consecutive positions may be coincident.
+     * \param[in] internode_radii Radius of the shoot at each node, one per entry of internode_node_positions. All radii must be greater than zero.
+     * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
+     * \return ID of the newly generated shoot.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
+     */
+    uint appendShootFromNodePositions(uint plantID, int parent_shoot_ID, const std::vector<helios::vec3> &internode_node_positions, const std::vector<float> &internode_radii, const std::string &shoot_type_label);
+
+    //! Manually append a shoot whose internode geometry is prescribed by measured node positions, continuing the axis of its parent shoot and growing afterwards as a different shoot type.
+    /**
+     * As the overload above, with the shoot type that governs the shoot's future growth given separately from the one its measured geometry is built with. See the corresponding overload of
+     * addShootFromNodePositions() for what each of the two types supplies.
+     *
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] parent_shoot_ID ID of the shoot whose axis the new shoot continues.
+     * \param[in] internode_node_positions Positions of the internode nodes in world coordinates, ordered from the base of the shoot to its tip. Element 0 is the base of the shoot, at the parent's tip.
+     * \param[in] internode_radii Radius of the shoot at each node, one per entry of internode_node_positions. All radii must be greater than zero.
+     * \param[in] shoot_type_label Label of the shoot type whose parameters are used to build the measured geometry.
+     * \param[in] growth_shoot_type_label Label of the shoot type whose parameters govern the shoot's future growth.
+     * \return ID of the newly generated shoot.
+     */
+    uint appendShootFromNodePositions(uint plantID, int parent_shoot_ID, const std::vector<helios::vec3> &internode_node_positions, const std::vector<float> &internode_radii, const std::string &shoot_type_label,
+                                      const std::string &growth_shoot_type_label);
 
     //! Manually add a child epicormic shoot (water sprout) at an arbitrary position along the shoot
     /**
@@ -4439,11 +4558,17 @@ public:
      * \param[in] leaf_bases Base position of each leaf in world coordinates, one per leaf on the petiole.
      * \param[in] leaf_rotations Roll, pitch and yaw of each leaf in radians, one per leaf on the petiole.
      * \param[in] leaf_sizes Fully-elongated size of each leaf in meters, one per leaf on the petiole. All sizes must be greater than zero.
+     * \param[in] leaf_stalk_lengths [optional] Length of each leaf's stalk (petiolule) in meters, for a leaf prototype that builds one: the distance from the leaf's base to where its blade begins. One per
+     * leaf, all greater than zero; with none given each stalk is the species' share of its blade's length. A stalk is as thick as the petiole is where the leaf's base lies along it, whatever the leaf's size.
      * \note Supplying a different number of leaves than the petiole carries raises an error rather than adding or removing leaves; change the count with setPetioleLeafCount() first.
      * \note Rebuilding each leaf discards primitive data a caller has attached to it. The object label and material are restored; other primitive data is not.
+     * \param[in] leaf_stalk_bases [optional] Where each leaf's stalk leaves the petiole, in world coordinates, one per leaf. A stalk is otherwise built back along its blade's own line from the leaf's base, and a
+     * measured stalk seldom lies on that line: it rises from the petiole to a blade held a few millimetres off it. With these the stalk runs straight from the given point to where the blade begins and
+     * bends there into the join under the blade, which is unchanged; the blade stays where its base, angles and size put it. A stalk may be no longer than its blade and must reach the blade from behind
+     * its base, and it is as thick as the petiole where it leaves it; anything else raises an error. Needs a leaf prototype that builds a stalk.
      */
     void setPetioleLeafGeometry(uint plantID, uint shootID, uint node_index, uint petiole_index, const std::vector<helios::vec3> &leaf_bases, const std::vector<AxisRotation> &leaf_rotations,
-                                const std::vector<float> &leaf_sizes);
+                                const std::vector<float> &leaf_sizes, const std::vector<float> &leaf_stalk_lengths = {}, const std::vector<helios::vec3> &leaf_stalk_bases = {});
 
     //! Change the number of leaves (leaflets) on a petiole of an existing phytomer.
     /**
@@ -4516,7 +4641,7 @@ public:
      * \param[in] aspect_ratio Ratio of blade width to length; greater than zero.
      * \param[in] longitudinal_curvature Curvature along the blade's length (+ up, - down).
      * \param[in] lateral_curvature Curvature across the blade's width (+ up, - down).
-     * \param[in] midrib_fold_fraction Fold along the midrib, from 0 (flat) to 1 (folded shut).
+     * \param[in] midrib_fold_fraction Fold along the midrib, from -1 (halves folded down shut) through 0 (flat) to 1 (halves folded up shut).
      */
     void setPetioleLeafShape(uint plantID, uint shootID, uint node_index, uint petiole_index, float aspect_ratio, float longitudinal_curvature, float lateral_curvature, float midrib_fold_fraction);
 
@@ -4811,6 +4936,10 @@ public:
 
     /**
      * \brief Makes the specified plant enter a dormant state.
+     *
+     * Every shoot is made dormant as at the end of a season: every vegetative and floral bud that is not already dormant is set dead, leaves are removed unless the plant is evergreen, and the time since
+     * dormancy is reset to zero. Buds that are active but have not yet broken are killed too. These are the buds of any shoot whose type has ShootParameters::growth_requires_dormancy false, which are
+     * sampled as their phytomers are created, so a manually built shoot of such a type keeps no buds through this call unless they are set dormant first with \ref Phytomer::setVegetativeBudState(BudState).
      *
      * \param[in] plantID ID of the plant to be made dormant.
      */
@@ -5950,6 +6079,14 @@ private:
      */
     void rejectStructuralOperationInCallback(const std::string &operation) const;
 
+    //! Build a shoot along prescribed node positions: what addShootFromNodePositions() and appendShootFromNodePositions() both do
+    /**
+     * \param[in] continues_parent_axis True to seat the base on the tip of the parent's last node, on its axis, as an axis continuation; false to seat it on the parent's surface at parent_node_index, as a lateral.
+     * \param[in] caller Name of the public method, for error messages.
+     */
+    uint prescribedShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, const std::vector<helios::vec3> &internode_node_positions, const std::vector<float> &internode_radii, const std::string &shoot_type_label,
+                         const std::string &growth_shoot_type_label, uint petiole_index, bool continues_parent_axis, const std::string &caller);
+
     //! Apply a validated cut: the removal performed by pruneBranch()
     void applyPruneBranch(uint plantID, uint shootID, uint node_index, std::vector<uint> *detached_objIDs = nullptr);
 
@@ -6089,6 +6226,12 @@ protected:
         //! Shape the prototype blade was built with, recorded for every blade built by GenericLeafPrototype() whether or not it droops
         LeafShapeValues shape;
         bool has_shape = false;
+        //! Position, in the frame buildLeafBladeLattice() builds the blade in, of the origin of the prototype object's own frame
+        /**
+         * Context::addPolymeshObject() puts an object's origin at the first vertex of its first primitive, not at the origin the blade was built about, so a vertex of the object's own frame (which every
+         * copy of the prototype shares) is a lattice vertex minus this offset. Recorded for every blade, drooping or not.
+         */
+        helios::vec3 lattice_frame_offset;
     };
     std::map<LeafPrototypeCacheKey, std::vector<std::vector<LeafRestGeometry>>> unique_leaf_prototype_rest_geometry;
 
@@ -6142,6 +6285,10 @@ protected:
         helios::RGBAcolor color;
         std::string texture_file;
         bool texture_color_overridden = false;
+        std::string normal_map_file;
+        helios::NormalMapKind normal_map_kind = helios::NORMAL_MAP_NONE;
+        float normal_map_strength = 1.f;
+        bool normal_map_flip_green = false;
     };
     //! Material named for each automatic material label and organ material base name, given to the organs of that kind and appearance created later (see nameOrganMaterials())
     std::map<std::pair<std::string, std::string>, OrganMaterial> organ_material_labels;
@@ -6673,6 +6820,10 @@ eturn Candidate list with its refresh age and shoot count filled in
     void initializeWheatShoots();
 
     uint buildWheatPlant(const helios::vec3 &base_position);
+
+    void initializeCucumberShoots();
+
+    uint buildCucumberPlant(const helios::vec3 &base_position);
 };
 
 #include "Assets.h"

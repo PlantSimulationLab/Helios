@@ -262,6 +262,7 @@ void Visualizer::resetCachedGeometryIDs() {
 }
 
 void Visualizer::clearGeometry() {
+    rendered_frame_is_current = false; // changes what is drawn
     geometry_handler.clearAllGeometry();
     resetCachedGeometryIDs();
     context_modification_mark = 0; // every primitive is built again

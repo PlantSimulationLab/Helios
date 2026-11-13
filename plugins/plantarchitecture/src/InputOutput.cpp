@@ -946,6 +946,12 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                     output_xml << "\t\t\t\t\t\t\t<leaf_pitch>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).pitch) << "</leaf_pitch>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_yaw>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).yaw) << "</leaf_yaw>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_roll>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).roll) << "</leaf_roll>" << std::endl;
+                    // The leaflet's own offset from the leaf's angles (setPetioleLeafletAngleOffsets()), in degrees as pitch, yaw, roll. The angles above already hold it for every leaflet but the
+                    // terminal, whose roll is its offset alone and is not in <leaf_roll>; and a later rebuild of the petiole needs all of them to turn the leaflets the same way again.
+                    if (petiole < phytomer->leaflet_angle_offsets.size() && leaf < phytomer->leaflet_angle_offsets.at(petiole).size()) {
+                        const vec3 &own = phytomer->leaflet_angle_offsets.at(petiole).at(leaf);
+                        output_xml << "\t\t\t\t\t\t\t<leaflet_angle_offset>" << own.x << " " << own.y << " " << own.z << "</leaflet_angle_offset>" << std::endl;
+                    }
                     // Which of the species' interchangeable leaf prototypes this blade is a copy of. The
                     // prototypes differ in shape, so without this the reader had to pick one at random and a
                     // reloaded plant was built from a different set of blades than the one that was saved.
@@ -968,6 +974,11 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                         const vec3 &leaf_base = phytomer->leaf_bases.at(petiole).at(leaf);
                         output_xml << "\t\t\t\t\t\t\t<leaf_prescribed>1</leaf_prescribed>" << std::endl;
                         output_xml << "\t\t\t\t\t\t\t<leaf_base>" << leaf_base.x << " " << leaf_base.y << " " << leaf_base.z << "</leaf_base>" << std::endl;
+                        // Where its stalk leaves the petiole, when it was placed with one of its own rather than built back along its blade's line.
+                        const auto stalk_base = phytomer->leaf_stalk_base_placed.find(phytomer->leaf_objIDs.at(petiole).at(leaf));
+                        if (stalk_base != phytomer->leaf_stalk_base_placed.end()) {
+                            output_xml << "\t\t\t\t\t\t\t<leaf_stalk_base>" << stalk_base->second.x << " " << stalk_base->second.y << " " << stalk_base->second.z << "</leaf_stalk_base>" << std::endl;
+                        }
                     }
                     output_xml << "\t\t\t\t\t\t</leaf>" << std::endl;
                 }
@@ -1600,11 +1611,14 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 std::vector<std::vector<float>> leaf_pitch;
                 std::vector<std::vector<float>> leaf_yaw;
                 std::vector<std::vector<float>> leaf_roll;
+                std::vector<std::vector<vec3>> leaflet_angle_offset; // each leaflet's own (pitch, yaw, roll) offset in degrees; empty for a petiole whose file records none
                 std::vector<std::vector<int>> leaf_prototype; // index of the unique leaf prototype each blade was copied from; -1 for a blade built from the prototype function; -2 when the file does not record it
                 std::vector<std::vector<bool>> leaf_prescribed; // whether each leaf's pose was prescribed by setPetioleLeafGeometry()
                 std::vector<std::vector<bool>> leaf_reshaped; // whether each leaf carries a <leaf_shape> it was reshaped to
                 std::vector<std::vector<LeafShapeValues>> leaf_reshaped_shape; // the shape from <leaf_shape>; only the shape terms and subdivisions_y are meaningful
                 std::vector<std::vector<vec3>> leaf_prescribed_base; // base position of each prescribed leaf
+                std::vector<std::vector<bool>> leaf_stalk_placed; // whether each leaf's stalk was placed with a base of its own
+                std::vector<std::vector<vec3>> leaf_stalk_base; // where such a stalk leaves the petiole
                 std::vector<std::vector<vec3>> prescribed_petiole_nodes_all; // measured centerline of each petiole; empty for a generated petiole
                 std::vector<std::vector<float>> prescribed_petiole_radii_all; // radius at each node of a measured centerline
 
@@ -1916,9 +1930,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     leaf_pitch.resize(leaf_pitch.size() + 1);
                     leaf_yaw.resize(leaf_yaw.size() + 1);
                     leaf_roll.resize(leaf_roll.size() + 1);
+                    leaflet_angle_offset.resize(leaflet_angle_offset.size() + 1);
                     leaf_prototype.resize(leaf_prototype.size() + 1);
                     leaf_prescribed.resize(leaf_prescribed.size() + 1);
                     leaf_prescribed_base.resize(leaf_prescribed_base.size() + 1);
+                    leaf_stalk_placed.resize(leaf_stalk_placed.size() + 1);
+                    leaf_stalk_base.resize(leaf_stalk_base.size() + 1);
                     leaf_reshaped.resize(leaf_reshaped.size() + 1);
                     leaf_reshaped_shape.resize(leaf_reshaped_shape.size() + 1);
                     floral_bud_data.resize(floral_bud_data.size() + 1); // Always resize to stay in sync with leaf vectors
@@ -1954,6 +1971,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         node_string = "leaf_roll";
                         leaf_roll.back().push_back(parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
 
+                        // The leaflet's own angle offsets. Optional: absent for a leaf given none and in files written before they were recorded.
+                        node_string = "leaflet_angle_offset";
+                        if (leaf.child(node_string.c_str())) {
+                            leaflet_angle_offset.back().push_back(parse_xml_tag_vec3(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
+                        }
+
                         // Which unique leaf prototype this blade is a copy of. Optional: files written before
                         // this tag existed do not record it, and such a leaf is assigned a prototype at random
                         // as it always was.
@@ -1980,6 +2003,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         }
                         leaf_prescribed.back().push_back(prescribed_pose);
                         leaf_prescribed_base.back().push_back(prescribed_base);
+                        // Where a placed leaf's own stalk leaves the petiole. Optional: absent for a stalk built along its blade's line and in files written before stalks could be placed.
+                        node_string = "leaf_stalk_base";
+                        const bool stalk_placed = prescribed_pose && leaf.child(node_string.c_str());
+                        leaf_stalk_placed.back().push_back(stalk_placed);
+                        leaf_stalk_base.back().push_back(stalk_placed ? parse_xml_tag_vec3(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") : make_vec3(0, 0, 0));
 
                         // The shape of a leaf reshaped in place. Optional: absent for a leaf that kept its prototype's shape and in files written before reshaping was recorded.
                         LeafShapeValues reshaped_shape;
@@ -3079,7 +3107,18 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
 
                         // A prescribed leaf is oriented from its angles in its rest frame on the petiole and put back where it was placed, exactly as setPetioleLeafGeometry() posed it on the saved plant.
                         const bool prescribed_pose = leaf < int(leaf_prescribed[petiole].size()) && leaf_prescribed[petiole][leaf];
-                        phytomer_ptr->orientLeaf(objID_leaf, petiole, leaf, leaves_per_petiole, ind_from_tip, compound_rotation, petiole_tip_axis, saved_roll, saved_pitch, saved_yaw, prescribed_pose);
+                        // The leaflets' own offsets go back on the phytomer when every leaflet of the petiole has one, and the terminal's roll, which no saved angle holds, is applied from its.
+                        float terminal_roll = 0.f;
+                        if (int(leaflet_angle_offset[petiole].size()) == leaves_per_petiole) {
+                            if (phytomer_ptr->leaflet_angle_offsets.size() <= size_t(petiole)) {
+                                phytomer_ptr->leaflet_angle_offsets.resize(petiole + 1);
+                            }
+                            phytomer_ptr->leaflet_angle_offsets[petiole] = leaflet_angle_offset[petiole];
+                            if (leaves_per_petiole > 1 && ind_from_tip == 0) {
+                                terminal_roll = deg2rad(leaflet_angle_offset[petiole][leaf].z);
+                            }
+                        }
+                        phytomer_ptr->orientLeaf(objID_leaf, petiole, leaf, leaves_per_petiole, ind_from_tip, compound_rotation, petiole_tip_axis, saved_roll, saved_pitch, saved_yaw, prescribed_pose, terminal_roll);
 
                         // Auto-calculate leaf base from petiole geometry (handles compound leaves)
                         vec3 leaf_base = prescribed_pose ? leaf_prescribed_base[petiole][leaf] : phytomer_ptr->petiole_vertices[petiole].back(); // Default: petiole tip
@@ -3099,6 +3138,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             }
                         }
                         context_ptr->translateObject(objID_leaf, leaf_base);
+                        if (leaf < int(leaf_stalk_placed[petiole].size()) && leaf_stalk_placed[petiole][leaf]) {
+                            phytomer_ptr->placeLeafStalk(objID_leaf, uint(petiole), leaf_stalk_base[petiole][leaf], leaf_scale[petiole][leaf]);
+                        }
 
                         phytomer_ptr->leaf_objIDs[petiole][leaf] = objID_leaf;
                         phytomer_ptr->leaf_bases[petiole][leaf] = leaf_base;
@@ -3692,6 +3734,8 @@ struct USDMaterial {
     std::string name;          // Unique material name for USD prim
     std::string texture_file;  // Absolute path to texture image (empty if color-only)
     RGBcolor color;            // Diffuse color (used when no texture, or as fallback)
+    // Decoded normals of the Context material's normal or bump map (strength, green flip and bump conversion applied), written as a tangent-space normal map; null if none
+    std::shared_ptr<const NormalMapTexels> normal_map;
 };
 
 struct USDLink {
@@ -3846,8 +3890,11 @@ struct GrowthFrameSnapshot {
 namespace {
 
 // Look up or create a material entry for the given texture/color combination.
-int getOrCreateMaterial(ArticulationData &data, const std::string &texture_file, const RGBcolor &color) {
+int getOrCreateMaterial(ArticulationData &data, const std::string &texture_file, const RGBcolor &color, std::shared_ptr<const NormalMapTexels> normal_map = nullptr) {
     std::string key = texture_file + "|" + std::to_string(color.r) + "," + std::to_string(color.g) + "," + std::to_string(color.b);
+    if (normal_map) {
+        key += "|" + normal_map->file + "|" + std::to_string(int(normal_map->kind)) + "|" + std::to_string(normal_map->strength) + "|" + std::to_string(normal_map->flip_green);
+    }
     auto it = data.material_cache.find(key);
     if (it != data.material_cache.end()) {
         return it->second;
@@ -3857,6 +3904,7 @@ int getOrCreateMaterial(ArticulationData &data, const std::string &texture_file,
     mat.name = "Material_" + std::to_string(idx);
     mat.texture_file = texture_file;
     mat.color = color;
+    mat.normal_map = std::move(normal_map);
     data.materials.push_back(mat);
     data.material_cache[key] = idx;
     return idx;
@@ -3874,7 +3922,7 @@ int getMaterialFromContextObject(Context *context_ptr, uint objID, ArticulationD
     }
     std::string texture_file = context_ptr->getPrimitiveColorTextureFile(UUIDs[0]);
     RGBcolor color = context_ptr->getPrimitiveColor(UUIDs[0]);
-    return getOrCreateMaterial(data, texture_file, color);
+    return getOrCreateMaterial(data, texture_file, color, context_ptr->getMaterialNormalMapTexels(context_ptr->getPrimitiveMaterialID(UUIDs[0])));
 }
 
 // Apply inverse quaternion rotation to transform a world-space point into the Xform's local frame.
@@ -3934,10 +3982,15 @@ void buildTubeSegmentVisualMesh(Context *context_ptr, uint tube_objID, int segme
     std::vector<vec2> all_uvs;
     std::string texture_file;
     RGBcolor color = make_RGBcolor(0.5f, 0.5f, 0.5f);
+    std::shared_ptr<const NormalMapTexels> normal_map;
 
     for (uint UUID : seg_UUIDs) {
         std::vector<vec3> prim_verts = context_ptr->getPrimitiveVertices(UUID);
         std::vector<vec2> prim_uvs = context_ptr->getPrimitiveTextureUV(UUID);
+        if (prim_uvs.empty() && context_ptr->getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH) {
+            // A patch without its own (u,v) coordinates spans the whole texture (and normal map), corner by corner
+            prim_uvs = {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)};
+        }
         int base_idx = static_cast<int>(world_vertices.size());
         link.mesh_face_vertex_counts.push_back(static_cast<int>(prim_verts.size()));
         for (int i = 0; i < static_cast<int>(prim_verts.size()); i++) {
@@ -3953,6 +4006,7 @@ void buildTubeSegmentVisualMesh(Context *context_ptr, uint tube_objID, int segme
         if (texture_file.empty()) {
             texture_file = context_ptr->getPrimitiveColorTextureFile(UUID);
             color = context_ptr->getPrimitiveColor(UUID);
+            normal_map = context_ptr->getMaterialNormalMapTexels(context_ptr->getPrimitiveMaterialID(UUID));
         }
     }
 
@@ -3964,7 +4018,7 @@ void buildTubeSegmentVisualMesh(Context *context_ptr, uint tube_objID, int segme
     link.mesh_uvs = all_uvs;
 
     // Assign material
-    link.material_index = getOrCreateMaterial(data, texture_file, color);
+    link.material_index = getOrCreateMaterial(data, texture_file, color, normal_map);
 }
 
 // Build mesh data from a Helios context object. Vertices are stored in local space
@@ -3980,10 +4034,15 @@ vec3 buildMeshFromContextObject(Context *context_ptr, uint objID, ArticulationDa
     std::vector<vec2> all_uvs;
     std::string texture_file;
     RGBcolor color = make_RGBcolor(0.5f, 0.5f, 0.5f);
+    std::shared_ptr<const NormalMapTexels> normal_map;
 
     for (uint UUID : UUIDs) {
         std::vector<vec3> prim_verts = context_ptr->getPrimitiveVertices(UUID);
         std::vector<vec2> prim_uvs = context_ptr->getPrimitiveTextureUV(UUID);
+        if (prim_uvs.empty() && context_ptr->getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH) {
+            // A patch without its own (u,v) coordinates spans the whole texture (and normal map), corner by corner
+            prim_uvs = {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)};
+        }
         int base_idx = static_cast<int>(world_vertices.size());
         link.mesh_face_vertex_counts.push_back(static_cast<int>(prim_verts.size()));
         for (int i = 0; i < static_cast<int>(prim_verts.size()); i++) {
@@ -4000,6 +4059,7 @@ vec3 buildMeshFromContextObject(Context *context_ptr, uint objID, ArticulationDa
         if (texture_file.empty()) {
             texture_file = context_ptr->getPrimitiveColorTextureFile(UUID);
             color = context_ptr->getPrimitiveColor(UUID);
+            normal_map = context_ptr->getMaterialNormalMapTexels(context_ptr->getPrimitiveMaterialID(UUID));
         }
     }
 
@@ -4020,7 +4080,7 @@ vec3 buildMeshFromContextObject(Context *context_ptr, uint objID, ArticulationDa
     link.mesh_uvs = all_uvs;
 
     // Assign material
-    link.material_index = getOrCreateMaterial(data, texture_file, color);
+    link.material_index = getOrCreateMaterial(data, texture_file, color, normal_map);
 
     return centroid;
 }
@@ -4803,6 +4863,27 @@ void writeVisualMaterials(std::ofstream &out, const std::vector<USDMaterial> &ma
             tex_path = "./textures/" + src.filename().string();
         }
 
+        // The normal map is written from the Context's decoded normals, so that a bump map, a strength or a DirectX map comes out as the tangent-space (OpenGL) normal map UsdPreviewSurface expects
+        std::string normal_path;
+        if (mat.normal_map) {
+            if (!textures_copied) {
+                std::filesystem::create_directories(tex_dir);
+                textures_copied = true;
+            }
+            const std::string normal_name = mat.name + "_normal.png";
+            const int width = mat.normal_map->resolution.x;
+            const int height = mat.normal_map->resolution.y;
+            std::vector<RGBAcolor> pixels(size_t(width) * size_t(height));
+            for (int row = 0; row < height; row++) {
+                for (int column = 0; column < width; column++) {
+                    const vec3 n = mat.normal_map->getNormal(column, row);
+                    pixels[size_t(row) * size_t(width) + size_t(column)] = make_RGBAcolor(0.5f * n.x + 0.5f, 0.5f * n.y + 0.5f, 0.5f * n.z + 0.5f, 1.f);
+                }
+            }
+            writePNG((tex_dir / normal_name).string(), uint(width), uint(height), pixels);
+            normal_path = "./textures/" + normal_name;
+        }
+
         std::string mat_base = "/" + plant_prim + "/Materials/" + mat.name;
 
         out << inner << "def Material \"" << mat.name << "\"\n";
@@ -4822,6 +4903,9 @@ void writeVisualMaterials(std::ofstream &out, const std::vector<USDMaterial> &ma
             out << inner3 << "float inputs:opacityThreshold = 0.5\n";
         }
 
+        if (!normal_path.empty()) {
+            out << inner3 << "normal3f inputs:normal.connect = <" << mat_base << "/NormalTexture.outputs:rgb>\n";
+        }
         out << inner3 << "float inputs:roughness = 0.8\n";
         out << inner3 << "float inputs:metallic = 0.0\n";
         out << inner3 << "token outputs:surface\n";
@@ -4846,6 +4930,31 @@ void writeVisualMaterials(std::ofstream &out, const std::vector<USDMaterial> &ma
             out << inner3 << "string inputs:varname = \"st\"\n";
             out << inner3 << "float2 outputs:result\n";
             out << inner2 << "}\n";
+        }
+
+        if (!normal_path.empty()) {
+            out << "\n";
+            out << inner2 << "def Shader \"NormalTexture\"\n";
+            out << inner2 << "{\n";
+            out << inner3 << "uniform token info:id = \"UsdUVTexture\"\n";
+            out << inner3 << "asset inputs:file = @" << normal_path << "@\n";
+            out << inner3 << "token inputs:sourceColorSpace = \"raw\"\n";
+            out << inner3 << "float4 inputs:scale = (2, 2, 2, 1)\n";
+            out << inner3 << "float4 inputs:bias = (-1, -1, -1, 0)\n";
+            out << inner3 << "float2 inputs:st.connect = <" << mat_base << "/" << (tex_path.empty() ? "NormalTexCoordReader" : "TexCoordReader") << ".outputs:result>\n";
+            out << inner3 << "token inputs:wrapS = \"repeat\"\n";
+            out << inner3 << "token inputs:wrapT = \"repeat\"\n";
+            out << inner3 << "float3 outputs:rgb\n";
+            out << inner2 << "}\n";
+            if (tex_path.empty()) {
+                out << "\n";
+                out << inner2 << "def Shader \"NormalTexCoordReader\"\n";
+                out << inner2 << "{\n";
+                out << inner3 << "uniform token info:id = \"UsdPrimvarReader_float2\"\n";
+                out << inner3 << "string inputs:varname = \"st\"\n";
+                out << inner3 << "float2 outputs:result\n";
+                out << inner2 << "}\n";
+            }
         }
 
         out << inner << "}\n";

@@ -65,7 +65,7 @@ To use a class map with a PlantArchitecture leaf, set `LeafPrototype::leaf_class
 
 ## Surfaces that are not leaves: `fit_classes --surface`
 
-    ./fit_classes --surface [--scale-exponent G] [--max-reflectance R] [--reflectance-factor F] TEXTURE SOURCE REFLECTIVITY_LABEL[,TRANSMISSIVITY_LABEL] CLASS_COUNT OUTPUT.png
+    ./fit_classes --surface [--scale-exponent G] [--max-reflectance R] [--reflectance-factor F] [--layer N] TEXTURE SOURCE REFLECTIVITY_LABEL[,TRANSMISSIVITY_LABEL] CLASS_COUNT OUTPUT.png
 
 fits a class map for bark, a fruit skin, or any other textured surface, relative to the spectra of the radiation plugin's spectral
 library named by the labels (a texture without transparency gets a class on every texel). SOURCE is the image the classes are fitted
@@ -82,18 +82,26 @@ reflectance a diffuse surface can have, and a class scaled past this renders was
 cap, and the program says so. Expect this on any coloured fruit: the apple's two lightest classes were held before the exponent was
 added. `--reflectance-factor F` multiplies every class by F, for a surface darker overall than the spectrum it is fitted relative to.
 
+`--layer N` fits the classes of a surface with a specular surface layer of refractive index N, such as a waxy fruit skin. The layer
+reflects a(1) at normal incidence over every class, so each class's `reflectance_scale` s scales only the body under the layer, and
+the definitions are marked `scales="body"`: a class's total reflectance is a(1) + s (rho - a(1)), and s gives it the luminance the
+scale above would give. A dark part of the photograph is then dark pigment under a glossy layer rather than a surface darker than its
+own layer could be. A class darker than the layer alone is held at s = 0, and the program says so. The fit takes a(1) as the Fresnel
+reflectance ((N - 1)/(N + 1))^2, and the spectrum must reflect at least that everywhere; `RadiationModel::applySpectralClassMaps()`
+uses the layer the primitives actually have.
+
 ## The apple textures
 
     ./fit_classes T/AppleLeaf.png T/AppleLeaf.png default 16 T/AppleLeaf_classes.png
     python decompose.py albedo T/AppleBark.jpg
     ./fit_classes --surface T/AppleBark.jpg albedo/AppleBark_albedo.png bark_reflectivity_0000 8 T/AppleBark_classes.png
-    ./fit_classes --surface --scale-exponent 0.5 --reflectance-factor 0.6 T/AppleFruit.jpg T/AppleFruit.jpg strawberry_reflectivity_0000 8 T/AppleFruit_classes.png
+    ./fit_classes --surface --scale-exponent 0.5 --layer 1.45 T/AppleFruit.jpg T/AppleFruit.jpg apple_fruit_reflectivity_0000 8 T/AppleFruit_classes.png
 
 with `T` = `plugins/plantarchitecture/assets/textures`. The apple leaf is a flat scan under even light, and the fruit skin is
 photographed evenly lit, so both are fitted from the photograph itself; the leaf relative to the LeafOptics default leaf (the library
 has no apple entry). The bark photograph is shaded by its own relief, so it is decomposed first and fitted to its albedo. The library
-has no apple fruit spectrum, so the fruit is fitted relative to its strawberry, with the class range compressed (exponent 0.5) and
-every class scaled by 0.6: at the full range the lit side of an apple reflected more than twice the strawberry spectrum and rendered
-pink, and at the strawberry's own level a red apple's skin, darker than a strawberry's, still rendered pale. The "apple" and "apple_fruitingwall" models set
+fruit is fitted relative to the fruit spectrum its prototype is given, with the class range compressed (exponent 0.5: at the full range
+the lit side of an apple rendered pink), and as body scales under its waxy layer of refractive index 1.45, which the prototype also
+sets. The "apple" and "apple_fruitingwall" models set
 `LeafPrototype::leaf_class_map_file`, `InternodeParameters::image_class_map_file` and `InflorescenceParameters::fruit_class_map_file`
 to these maps.

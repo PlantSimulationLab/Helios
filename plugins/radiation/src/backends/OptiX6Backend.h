@@ -30,7 +30,12 @@
 namespace helios {
 
     // Ray type enumeration
-    enum RayType { RAYTYPE_DIRECT = 0, RAYTYPE_DIFFUSE = 1, RAYTYPE_CAMERA = 2, RAYTYPE_PIXEL_LABEL = 3 };
+    // The last two are the direct and diffuse rays of a scene with a background radiation field (RayTracingGeometry::periodicDualField()), which have their own closest-hit
+    // and miss programs, so that the programs of a scene without one are those of one field
+    enum RayType { RAYTYPE_DIRECT = 0, RAYTYPE_DIFFUSE = 1, RAYTYPE_CAMERA = 2, RAYTYPE_PIXEL_LABEL = 3, RAYTYPE_CAMERA_SHADOW = 4, RAYTYPE_DIRECT_DUAL = 5, RAYTYPE_DIFFUSE_DUAL = 6, RAYTYPE_COUNT = 7 };
+
+    // Entry points (ray generation programs). The last two launch the direct and diffuse rays of a scene with a background radiation field.
+    enum EntryPoint { ENTRY_DIRECT = 0, ENTRY_DIFFUSE = 1, ENTRY_CAMERA = 2, ENTRY_PIXEL_LABEL = 3, ENTRY_DIRECT_DUAL = 4, ENTRY_DIFFUSE_DUAL = 5, ENTRY_COUNT = 6 };
 
 // OptiX error checking macros
 #define RT_CHECK_ERROR(func)                                                                                                                                                                                                                             \
@@ -107,7 +112,7 @@ namespace helios {
         [[nodiscard]] size_t getAbandonedRayCount() override;
 
         // Buffer utilities
-        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) override;
+        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption, bool record_normal_map_moments) override;
         void zeroScatterBuffers() override;
         void zeroAbandonedRayCount() override;
         void zeroCameraPixelBuffers(const helios::int2 &resolution) override;
@@ -115,7 +120,8 @@ namespace helios {
         void uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) override;
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) override;
         void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
-        void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
+        void getNormalMapMoments(std::vector<float> &moments) override;
+        void uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) override;
         void uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) override;
         void getCameraPixelSpectralClasses(std::vector<uint> &pixel_classes, const helios::int2 &resolution) override;
         void uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) override;
@@ -136,6 +142,8 @@ namespace helios {
         RTprogram diffuse_raygen;
         RTprogram camera_raygen;
         RTprogram pixel_label_raygen;
+        RTprogram direct_raygen_dual; //!< with a background radiation field
+        RTprogram diffuse_raygen_dual;
 
         // Geometry and acceleration structures
         RTgeometrygroup base_geometry_group;
@@ -186,7 +194,13 @@ namespace helios {
         RTprogram miss_diffuse;
         RTprogram miss_camera;
         RTprogram miss_pixel_label;
+        RTprogram miss_camera_shadow;
         RTprogram any_hit_direct;
+        // Programs of the direct and diffuse ray types of a scene with a background radiation field (RAYTYPE_DIRECT_DUAL, RAYTYPE_DIFFUSE_DUAL)
+        RTprogram closest_hit_direct_dual;
+        RTprogram closest_hit_diffuse_dual;
+        RTprogram miss_direct_dual;
+        RTprogram miss_diffuse_dual;
 
         // Buffers: Geometry/Topology (17 buffers)
         RTbuffer patch_vertices_RTbuffer;
@@ -228,6 +242,8 @@ namespace helios {
         RTbuffer primitive_positions_RTbuffer;
         RTvariable primitive_positions_RTvariable;
         RTbuffer twosided_flag_RTbuffer;
+        RTbuffer periodic_excluded_RTbuffer;
+        RTvariable periodic_excluded_RTvariable;
         RTvariable twosided_flag_RTvariable;
 
         // Buffers: Material Properties (8 buffers)
@@ -259,13 +275,21 @@ namespace helios {
         RTvariable surface_layer_tables_RTvariable;
         RTbuffer spectral_class_maps_RTbuffer; //!< Spectral texture class maps, packed (see helios::packSpectralClassMaps())
         RTvariable spectral_class_maps_RTvariable;
+        RTbuffer normal_maps_RTbuffer; //!< Normal maps, packed (see helios::packNormalMaps() and include/NormalMapMath.h)
+        RTvariable normal_maps_RTvariable;
+        RTbuffer normal_map_slots_RTbuffer; //!< Slot of each normal-mapped primitive in normal_map_moments (RayTracingGeometry::normal_map_slots)
+        RTvariable normal_map_slots_RTvariable;
+        RTbuffer normal_map_moments_RTbuffer; //!< [slot][face][launch band][3] directions of the diffuse radiation reaching mapped primitives; with a background field, its moments follow in a second set of slots
+        RTvariable normal_map_moments_RTvariable;
+        size_t normal_map_slot_count = 0;
+        size_t normal_map_moment_count = 0; //!< Number of values recorded in normal_map_moments_RTbuffer, 0 when nothing is recorded
         RTbuffer spectral_palette_RTbuffer; //!< Spectral texture palettes, packed (see helios::packSpectralPalettes())
         RTvariable spectral_palette_RTvariable;
         RTbuffer spectral_incident_RTbuffer; //!< Radiation reaching primitives with a spectral texture (see RayTracingResults::spectral_incident)
         RTvariable spectral_incident_RTvariable;
         RTvariable spectral_incident_enabled_RTvariable; //!< 1 when spectral_incident is sized for the current launch and is to be booked
         size_t spectral_incident_count = 0;
-        size_t spectral_launch_band_count = 0; //!< Launch band count of the last zeroCameraScatterBuffers(), which the class flux is laid out by
+        size_t spectral_launch_band_count = 0; //!< Launch band count of the last zeroCameraScatterBuffers(), which the class flux and the vertex outgoing radiation are laid out by
         RTbuffer spectral_camera_flux_RTbuffer; //!< Camera-weighted outgoing radiation of each class, packed (see helios::packSpectralCameraFlux())
         RTvariable spectral_camera_flux_RTvariable;
         RTbuffer spectral_vertex_RTbuffer; //!< Smoothing-vertex radiation of primitives with a spectral texture, packed (see helios::packSpectralVertexIncident())
@@ -296,8 +320,8 @@ namespace helios {
         RTvariable vertex_radiation_out_bottom_RTvariable;
         RTbuffer vertex_normals_RTbuffer; //!< Shading normal per smoothing vertex; one element unless smoothing is enabled and some primitive has a surface layer
         RTvariable vertex_normals_RTvariable;
-        RTbuffer vertex_direct_irradiance_RTbuffer; //!< Unoccluded direct irradiance per [source][smoothing vertex][band]; one element unless smoothing is enabled and there is a source
-        RTvariable vertex_direct_irradiance_RTvariable;
+        RTbuffer vertex_normal_map_moments_RTbuffer; //!< normal_map_moments averaged onto the smoothing vertices [field][vertex][face][launch band][3]; one element unless smoothing is enabled and there are maps
+        RTvariable vertex_normal_map_moments_RTvariable;
         RTbuffer radiation_specular_RTbuffer;
         RTvariable radiation_specular_RTvariable;
         RTbuffer scatter_buff_top_RTbuffer;
@@ -381,16 +405,28 @@ namespace helios {
         RTvariable diffuse_ray_type_RTvariable;
         RTvariable camera_ray_type_RTvariable;
         RTvariable pixel_label_ray_type_RTvariable;
+        RTvariable camera_shadow_ray_type_RTvariable;
+        RTvariable direct_dual_ray_type_RTvariable;
+        RTvariable diffuse_dual_ray_type_RTvariable;
         RTvariable random_seed_RTvariable;
         RTvariable launch_offset_RTvariable;
         RTvariable launch_face_RTvariable;
         RTvariable Nprimitives_RTvariable;
+        RTvariable Nflux_slots_RTvariable; //!< RayTracingGeometry::fluxSlotCount()
+        RTvariable normal_map_slot_count_RTvariable;
+        RTvariable vertex_field_stride_RTvariable; //!< Number of smoothing vertices of the last uploadVertexRadiationOut()
         RTvariable bbox_UUID_base_RTvariable;
         RTvariable Nsources_RTvariable;
         RTvariable Nbands_global_RTvariable;
         RTvariable Nbands_launch_RTvariable;
         RTvariable Ncameras_RTvariable;
         RTvariable periodic_flag_RTvariable;
+        RTvariable periodic_tile_tracking_RTvariable;
+        RTvariable periodic_excluded_present_RTvariable;
+        RTvariable periodic_max_repeats_RTvariable;
+        RTvariable periodic_repeated_zbounds_RTvariable;
+        RTvariable periodic_escape_offset_RTvariable;
+        RTvariable camera_tile_RTvariable;
         RTvariable sun_direction_RTvariable;
         RTvariable solar_disk_cos_angle_RTvariable;
         RTvariable camera_position_RTvariable;
@@ -405,6 +441,9 @@ namespace helios {
         RTvariable camera_ID_RTvariable;
         RTvariable camera_resolution_full_RTvariable;
         RTvariable specular_reflection_enabled_RTvariable;
+        RTvariable camera_direct_per_pixel_RTvariable; //!< Camera launches: 1 if smoothed primitives' direct radiation is evaluated per pixel sample (RayTracingLaunchParams::camera_direct_per_pixel)
+        RTvariable camera_direct_all_RTvariable;
+        RTvariable normal_map_direct_RTvariable; //!< Camera launches: 1 if normal-mapped primitives' direct radiation is shaded per hit point (RayTracingLaunchParams::normal_map_direct)
         RTvariable below_horizon_diffuse_enabled_RTvariable;
         RTvariable scattering_iteration_RTvariable;
 
@@ -455,6 +494,9 @@ namespace helios {
         // Internal state tracking
         bool is_initialized = false;
         size_t current_primitive_count = 0;
+        //! Slots per primitive dimension of the outgoing, scattered, camera and direct-flux buffers: the primitive count, or twice it with a background field (RayTracingGeometry::fluxSlotCount())
+        size_t current_flux_slot_count = 0;
+        size_t current_flux_field_count = 1; //!< 2 with a background field (RayTracingGeometry::periodicDualField()), else 1
         size_t current_patch_count = 0;
         size_t current_triangle_count = 0;
         size_t current_disk_count = 0;

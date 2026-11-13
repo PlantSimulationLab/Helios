@@ -305,6 +305,53 @@ namespace helios {
         return packed;
     }
 
+    std::vector<uint32_t> packNormalMaps(const RayTracingGeometry &geometry) {
+        std::vector<uint32_t> packed = {0u, 0u, 0u, 1u};
+        if (geometry.normal_map_IDs.empty()) {
+            return packed;
+        }
+        if (geometry.normal_map_IDs.size() != geometry.primitive_count) {
+            helios_runtime_error("ERROR (packNormalMaps): There are " + std::to_string(geometry.normal_map_IDs.size()) + " normal map IDs for " + std::to_string(geometry.primitive_count) + " primitives.");
+        }
+        if (geometry.normal_map_sizes.size() >= 0xFFFFu) {
+            helios_runtime_error("ERROR (packNormalMaps): There are " + std::to_string(geometry.normal_map_sizes.size()) + " distinct normal maps, but at most 65534 are supported. Share maps between materials where possible.");
+        }
+        const size_t P = geometry.primitive_count;
+        packed.at(0) = uint32_t(P);
+        packed.at(1) = uint32_t(geometry.normal_map_sizes.size());
+        packed.resize(4 + (P + 1) / 2, 0u);
+        for (size_t p = 0; p < P; p++) {
+            const int map = geometry.normal_map_IDs[p];
+            const uint32_t index = map < 0 ? 0xFFFFu : uint32_t(map);
+            packed[4 + p / 2] |= (p & 1) ? (index << 16) : index;
+        }
+        uint32_t first_word = 0;
+        size_t texel_count = 0;
+        for (const helios::int2 &size: geometry.normal_map_sizes) {
+            packed.push_back(uint32_t(size.x));
+            packed.push_back(uint32_t(size.y));
+            packed.push_back(first_word);
+            // Each map starts on a word boundary
+            first_word += (uint32_t(size.x) * uint32_t(size.y) + 1u) / 2u;
+            texel_count += size_t(size.x) * size_t(size.y);
+        }
+        if (texel_count != geometry.normal_map_texels.size()) {
+            helios_runtime_error("ERROR (packNormalMaps): The normal maps hold " + std::to_string(geometry.normal_map_texels.size()) + " texels, but their sizes add up to " + std::to_string(texel_count) + ".");
+        }
+        packed.at(2) = uint32_t(packed.size());
+        size_t texel = 0;
+        for (const helios::int2 &size: geometry.normal_map_sizes) {
+            const size_t count = size_t(size.x) * size_t(size.y);
+            for (size_t t = 0; t < count; t += 2) {
+                const uint32_t low = geometry.normal_map_texels[texel + t];
+                const uint32_t high = t + 1 < count ? geometry.normal_map_texels[texel + t + 1] : 0u;
+                packed.push_back(low | (high << 16));
+            }
+            texel += count;
+        }
+        return packed;
+    }
+
     std::vector<uint32_t> packSpectralPalettes(const RayTracingMaterial &materials) {
         std::vector<uint32_t> packed(9, 0u);
         if (materials.num_palette_entries == 0) {

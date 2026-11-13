@@ -565,6 +565,18 @@ std::vector<uint> Context::getDeletedUUIDs() const {
     return dirty_deleted_primitives;
 }
 
+std::vector<uint> Context::getDeletedUUIDs(uint64_t mark) const {
+    // The log is ordered by clock value, so the deletions after the mark are a tail of it. A deletion stamped with the mark's own value
+    // happened before the call to getModifiedUUIDs() that set it, as for a modification.
+    const auto first_after_mark = std::upper_bound(primitive_deletion_log.begin(), primitive_deletion_log.end(), mark, [](uint64_t mark_value, const std::pair<uint64_t, uint> &deletion) { return mark_value < deletion.first; });
+    std::vector<uint> deleted_UUIDs;
+    deleted_UUIDs.reserve(size_t(primitive_deletion_log.end() - first_after_mark));
+    for (auto deletion = first_after_mark; deletion != primitive_deletion_log.end(); ++deletion) {
+        deleted_UUIDs.push_back(deletion->second);
+    }
+    return deleted_UUIDs;
+}
+
 void Context::hidePrimitive(uint UUID) const {
 #ifdef HELIOS_DEBUG
     if (!doesPrimitiveExist(UUID)) {
@@ -3447,6 +3459,100 @@ std::string Context::getPrimitiveColorTextureFile(uint UUID) const {
     return primitive->getTextureFile();
 }
 
+namespace {
+    //! Raise an error for a normal or bump map strength that is not finite and positive
+    void checkNormalMapStrength(float strength, const std::string &caller) {
+        if (!std::isfinite(strength) || strength <= 0.f) {
+            helios_runtime_error("ERROR (Context::" + caller + "): The strength must be a finite value greater than zero, but " + std::to_string(strength) + " was given. To remove a map, clear it instead.");
+        }
+    }
+} // namespace
+
+void Context::setPrimitiveNormalMap(uint UUID, const std::string &normal_map_file, float strength, bool flip_green) {
+    setPrimitiveNormalMap(std::vector<uint>{UUID}, normal_map_file, strength, flip_green);
+}
+
+void Context::setPrimitiveNormalMap(const std::vector<uint> &UUIDs, const std::string &normal_map_file, float strength, bool flip_green) {
+    checkNormalMapStrength(strength, "setPrimitiveNormalMap");
+    // Everything is checked before anything is changed, so that a rejected image or primitive leaves all of the primitives as they were
+    (void) getNormalMapTexels(normal_map_file, NORMAL_MAP_TANGENT_SPACE, strength, flip_green);
+    for (uint UUID: UUIDs) {
+        validateNormalMapFrame(getPrimitivePointer_private(UUID), "setPrimitiveNormalMap", normal_map_file);
+    }
+    for (uint UUID: UUIDs) {
+        Primitive *primitive = getPrimitivePointer_private(UUID);
+        MaterialAppearance appearance = getMaterialAppearance(materials.at(primitive->materialID));
+        appearance.normal_map_file = normal_map_file;
+        appearance.normal_map_kind = NORMAL_MAP_TANGENT_SPACE;
+        appearance.normal_map_strength = strength;
+        appearance.normal_map_flip_green = flip_green;
+        setPrimitiveAppearance(primitive, appearance);
+    }
+    pruneNormalMapCache();
+}
+
+void Context::setPrimitiveBumpMap(uint UUID, const std::string &bump_map_file, float strength) {
+    setPrimitiveBumpMap(std::vector<uint>{UUID}, bump_map_file, strength);
+}
+
+void Context::setPrimitiveBumpMap(const std::vector<uint> &UUIDs, const std::string &bump_map_file, float strength) {
+    checkNormalMapStrength(strength, "setPrimitiveBumpMap");
+    (void) getNormalMapTexels(bump_map_file, NORMAL_MAP_BUMP, strength, false);
+    for (uint UUID: UUIDs) {
+        validateNormalMapFrame(getPrimitivePointer_private(UUID), "setPrimitiveBumpMap", bump_map_file);
+    }
+    for (uint UUID: UUIDs) {
+        Primitive *primitive = getPrimitivePointer_private(UUID);
+        MaterialAppearance appearance = getMaterialAppearance(materials.at(primitive->materialID));
+        appearance.normal_map_file = bump_map_file;
+        appearance.normal_map_kind = NORMAL_MAP_BUMP;
+        appearance.normal_map_strength = strength;
+        appearance.normal_map_flip_green = false;
+        setPrimitiveAppearance(primitive, appearance);
+    }
+    pruneNormalMapCache();
+}
+
+void Context::clearPrimitiveNormalMap(uint UUID) {
+    clearPrimitiveNormalMap(std::vector<uint>{UUID});
+}
+
+void Context::clearPrimitiveNormalMap(const std::vector<uint> &UUIDs) {
+    for (uint UUID: UUIDs) {
+        Primitive *primitive = getPrimitivePointer_private(UUID);
+        MaterialAppearance appearance = getMaterialAppearance(materials.at(primitive->materialID));
+        if (appearance.normal_map_kind == NORMAL_MAP_NONE) {
+            continue;
+        }
+        appearance.normal_map_file.clear();
+        appearance.normal_map_kind = NORMAL_MAP_NONE;
+        appearance.normal_map_strength = 1.f;
+        appearance.normal_map_flip_green = false;
+        setPrimitiveAppearance(primitive, appearance);
+    }
+}
+
+std::string Context::getPrimitiveNormalMapFile(uint UUID) const {
+    return materials.at(getPrimitivePointer_private(UUID)->materialID).normal_map_file;
+}
+
+NormalMapKind Context::getPrimitiveNormalMapKind(uint UUID) const {
+    return materials.at(getPrimitivePointer_private(UUID)->materialID).normal_map_kind;
+}
+
+float Context::getPrimitiveNormalMapStrength(uint UUID) const {
+    return materials.at(getPrimitivePointer_private(UUID)->materialID).normal_map_strength;
+}
+
+std::vector<vec2> Context::getPrimitiveNormalMapUV(uint UUID) const {
+    const Primitive *primitive = getPrimitivePointer_private(UUID);
+    validateNormalMapFrame(primitive, "getPrimitiveNormalMapUV", materials.at(primitive->materialID).normal_map_file);
+    if (primitive->uv.empty()) {
+        return {make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), make_vec2(0, 1)};
+    }
+    return primitive->uv;
+}
+
 void Context::addSpectralPalette(const std::string &label, const std::vector<SpectralTextureClass> &classes) {
     const std::string prefix = "ERROR (Context::addSpectralPalette): ";
     if (label.empty()) {
@@ -4061,15 +4167,54 @@ uint Context::addMaterial_internal(const std::string &label, const RGBAcolor &co
 }
 
 std::string Context::generateMaterialLabel(const RGBAcolor &color, const std::string &texture, bool texture_override) const {
+    MaterialAppearance appearance;
+    appearance.color = color;
+    appearance.texture_file = texture;
+    appearance.texture_color_overridden = texture_override;
+    return generateMaterialLabel(appearance);
+}
+
+std::string Context::generateMaterialLabel(const MaterialAppearance &appearance) const {
     // Generate hash from all material properties for de-duplication
     size_t hash = 0;
-    hash ^= std::hash<float>{}(color.r) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-    hash ^= std::hash<float>{}(color.g) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-    hash ^= std::hash<float>{}(color.b) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-    hash ^= std::hash<float>{}(color.a) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-    hash ^= std::hash<std::string>{}(texture) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-    hash ^= std::hash<bool>{}(texture_override) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<float>{}(appearance.color.r) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<float>{}(appearance.color.g) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<float>{}(appearance.color.b) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<float>{}(appearance.color.a) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<std::string>{}(appearance.texture_file) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<bool>{}(appearance.texture_color_overridden) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    // Only a material with a normal map hashes it, so the labels of materials without one (which may be saved in XML files) are unchanged
+    if (appearance.normal_map_kind != NORMAL_MAP_NONE) {
+        hash ^= std::hash<std::string>{}(appearance.normal_map_file) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        hash ^= std::hash<int>{}(int(appearance.normal_map_kind)) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        hash ^= std::hash<float>{}(appearance.normal_map_strength) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        hash ^= std::hash<bool>{}(appearance.normal_map_flip_green) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    }
     return "__auto_" + std::to_string(hash);
+}
+
+Context::MaterialAppearance Context::getMaterialAppearance(const Material &material) {
+    MaterialAppearance appearance;
+    appearance.color = material.color;
+    appearance.texture_file = material.texture_file;
+    appearance.texture_color_overridden = material.texture_color_overridden;
+    appearance.normal_map_file = material.normal_map_file;
+    appearance.normal_map_kind = material.normal_map_kind;
+    appearance.normal_map_strength = material.normal_map_strength;
+    appearance.normal_map_flip_green = material.normal_map_flip_green;
+    return appearance;
+}
+
+void Context::validateNormalMapFrame(const Primitive *primitive, const std::string &caller, const std::string &map_file) const {
+    if (primitive->prim_type == PRIMITIVE_TYPE_PATCH) {
+        return;
+    }
+    if (primitive->prim_type == PRIMITIVE_TYPE_TRIANGLE && !primitive->uv.empty()) {
+        return;
+    }
+    const std::string kind = primitive->prim_type == PRIMITIVE_TYPE_VOXEL ? "a voxel" : "a triangle without texture (u,v) coordinates";
+    helios_runtime_error("ERROR (Context::" + caller + "): Primitive " + std::to_string(primitive->UUID) + " is " + kind + ", so it has no (u,v) frame on which to apply the normal or bump map '" + map_file +
+                         "'. Normal and bump maps need a patch, or a triangle with texture coordinates: give the primitive a texture (for example with Context::addTriangle(..., texture_file, uv0, uv1, uv2)).");
 }
 
 bool Context::isMaterialShared(uint materialID) const {
@@ -4105,6 +4250,9 @@ void Context::setPrimitiveMaterial(Primitive *primitive, uint materialID) {
     const uint oldMaterialID = primitive->materialID;
     if (oldMaterialID == materialID) {
         return;
+    }
+    if (materials.at(materialID).normal_map_kind != NORMAL_MAP_NONE) {
+        validateNormalMapFrame(primitive, "setPrimitiveMaterial", materials.at(materialID).normal_map_file);
     }
 
     materials[oldMaterialID].reference_count--;
@@ -4150,6 +4298,10 @@ uint Context::copyMaterialForPrimitive(uint primitiveUUID) {
     // Copy all material properties
     materials[newMaterialID].texture_color_overridden = oldMaterial.texture_color_overridden;
     materials[newMaterialID].twosided_flag = oldMaterial.twosided_flag;
+    materials[newMaterialID].normal_map_file = oldMaterial.normal_map_file;
+    materials[newMaterialID].normal_map_kind = oldMaterial.normal_map_kind;
+    materials[newMaterialID].normal_map_strength = oldMaterial.normal_map_strength;
+    materials[newMaterialID].normal_map_flip_green = oldMaterial.normal_map_flip_green;
 
     // Copy all material data (all types)
     materials[newMaterialID].material_data_types = oldMaterial.material_data_types;
@@ -4176,20 +4328,25 @@ uint Context::copyMaterialForPrimitive(uint primitiveUUID) {
     return newMaterialID;
 }
 
-void Context::setPrimitiveAppearance(Primitive *primitive, const RGBAcolor &color, const std::string &texture_file, bool texture_color_overridden) {
+void Context::setPrimitiveAppearance(Primitive *primitive, const MaterialAppearance &appearance) {
     const Material &current_material = materials.at(primitive->materialID);
     const bool is_automatic = current_material.label.rfind("__auto_", 0) == 0 || current_material.label == DEFAULT_MATERIAL_LABEL;
 
     // An automatic material is found again by the label that hashes its appearance, so it is never edited: the primitive moves to the automatic material of its new
     // appearance. One carrying material data is copied instead, so that the data stays with the primitive.
     if (is_automatic && current_material.material_data_types.empty()) {
-        const std::string label = generateMaterialLabel(color, texture_file, texture_color_overridden);
+        const std::string label = generateMaterialLabel(appearance);
         uint materialID;
         if (doesMaterialExist(label)) {
             materialID = getMaterialIDFromLabel(label);
         } else {
-            materialID = addMaterial_internal(label, color, texture_file);
-            materials.at(materialID).texture_color_overridden = texture_color_overridden;
+            materialID = addMaterial_internal(label, appearance.color, appearance.texture_file);
+            Material &material = materials.at(materialID);
+            material.texture_color_overridden = appearance.texture_color_overridden;
+            material.normal_map_file = appearance.normal_map_file;
+            material.normal_map_kind = appearance.normal_map_kind;
+            material.normal_map_strength = appearance.normal_map_strength;
+            material.normal_map_flip_green = appearance.normal_map_flip_green;
         }
         setPrimitiveMaterial(primitive, materialID);
         return;
@@ -4203,10 +4360,14 @@ void Context::setPrimitiveAppearance(Primitive *primitive, const RGBAcolor &colo
         copyMaterialForPrimitive(primitive->UUID);
     }
     Material &material = materials.at(primitive->materialID);
-    const bool texture_changed = material.texture_file != texture_file;
-    material.color = color;
-    material.texture_file = texture_file;
-    material.texture_color_overridden = texture_color_overridden;
+    const bool texture_changed = material.texture_file != appearance.texture_file;
+    material.color = appearance.color;
+    material.texture_file = appearance.texture_file;
+    material.texture_color_overridden = appearance.texture_color_overridden;
+    material.normal_map_file = appearance.normal_map_file;
+    material.normal_map_kind = appearance.normal_map_kind;
+    material.normal_map_strength = appearance.normal_map_strength;
+    material.normal_map_flip_green = appearance.normal_map_flip_green;
     material_revision.markModified();
     if (texture_changed) {
         updatePrimitiveSolidFraction(primitive);
@@ -4318,6 +4479,151 @@ void Context::setMaterialTwosidedFlag(const std::string &material_label, uint tw
     materials[matID].twosided_flag = twosided_flag;
 }
 
+namespace {
+    //! Raise an error for a material label that belongs to Helios (automatic, copied and default materials), whose normal map is set through the primitives that use it
+    void rejectReservedMaterialLabel(const std::string &material_label, const std::string &caller) {
+        if (material_label.rfind("__", 0) == 0) {
+            helios_runtime_error("ERROR (Context::" + caller + "): Material '" + material_label +
+                                 "' is created and shared by Helios for every primitive with the same appearance, so editing it would also change primitives created later. Use Context::setPrimitiveNormalMap() or "
+                                 "Context::setPrimitiveBumpMap() on the primitives, or give them a named material (Context::addMaterial()).");
+        }
+    }
+} // namespace
+
+void Context::setMaterialNormalMap(const std::string &material_label, const std::string &normal_map_file, float strength, bool flip_green) {
+    rejectReservedMaterialLabel(material_label, "setMaterialNormalMap");
+    setMaterialNormalMap_internal(material_label, NORMAL_MAP_TANGENT_SPACE, normal_map_file, strength, flip_green);
+}
+
+void Context::setMaterialBumpMap(const std::string &material_label, const std::string &bump_map_file, float strength) {
+    rejectReservedMaterialLabel(material_label, "setMaterialBumpMap");
+    setMaterialNormalMap_internal(material_label, NORMAL_MAP_BUMP, bump_map_file, strength, false);
+}
+
+void Context::setMaterialNormalMap_internal(const std::string &material_label, NormalMapKind kind, const std::string &map_file, float strength, bool flip_green) {
+    const std::string caller = kind == NORMAL_MAP_BUMP ? "setMaterialBumpMap" : "setMaterialNormalMap";
+    const uint materialID = getMaterialIDFromLabel(material_label);
+    Material &material = materials.at(materialID);
+    if (material.normal_map_kind != NORMAL_MAP_NONE && material.normal_map_kind != kind) {
+        helios_runtime_error("ERROR (Context::" + caller + "): Material '" + material_label + "' already has the " + (material.normal_map_kind == NORMAL_MAP_BUMP ? "bump" : "normal") + " map '" + material.normal_map_file +
+                             "'. A material can have a normal map or a bump map, not both; call Context::clearMaterialNormalMap() first.");
+    }
+    checkNormalMapStrength(strength, caller);
+    (void) getNormalMapTexels(map_file, kind, strength, flip_green);
+    if (material.reference_count > 0) {
+        for (const auto &[UUID, primitive]: primitives) {
+            if (primitive->materialID == materialID) {
+                validateNormalMapFrame(primitive, caller, map_file);
+            }
+        }
+    }
+    material.normal_map_file = map_file;
+    material.normal_map_kind = kind;
+    material.normal_map_strength = strength;
+    material.normal_map_flip_green = flip_green;
+    material_revision.markModified();
+    markMaterialPrimitivesModified(materialID, false);
+    pruneNormalMapCache();
+}
+
+void Context::setMaterialNormalMapStrength(const std::string &material_label, float strength) {
+    rejectReservedMaterialLabel(material_label, "setMaterialNormalMapStrength");
+    const uint materialID = getMaterialIDFromLabel(material_label);
+    Material &material = materials.at(materialID);
+    if (material.normal_map_kind == NORMAL_MAP_NONE) {
+        helios_runtime_error("ERROR (Context::setMaterialNormalMapStrength): Material '" + material_label +
+                             "' has no normal or bump map whose strength could be set. Give it one with Context::setMaterialNormalMap() or Context::setMaterialBumpMap().");
+    }
+    checkNormalMapStrength(strength, "setMaterialNormalMapStrength");
+    (void) getNormalMapTexels(material.normal_map_file, material.normal_map_kind, strength, material.normal_map_flip_green);
+    material.normal_map_strength = strength;
+    material_revision.markModified();
+    markMaterialPrimitivesModified(materialID, false);
+    pruneNormalMapCache();
+}
+
+void Context::clearMaterialNormalMap(const std::string &material_label) {
+    rejectReservedMaterialLabel(material_label, "clearMaterialNormalMap");
+    clearMaterialNormalMap_internal(material_label);
+}
+
+void Context::clearMaterialNormalMap_internal(const std::string &material_label) {
+    const uint materialID = getMaterialIDFromLabel(material_label);
+    Material &material = materials.at(materialID);
+    if (material.normal_map_kind == NORMAL_MAP_NONE) {
+        return;
+    }
+    material.normal_map_file.clear();
+    material.normal_map_kind = NORMAL_MAP_NONE;
+    material.normal_map_strength = 1.f;
+    material.normal_map_flip_green = false;
+    material_revision.markModified();
+    markMaterialPrimitivesModified(materialID, false);
+    pruneNormalMapCache();
+}
+
+std::string Context::getMaterialNormalMapFile(const std::string &material_label) const {
+    return materials.at(getMaterialIDFromLabel(material_label)).normal_map_file;
+}
+
+NormalMapKind Context::getMaterialNormalMapKind(const std::string &material_label) const {
+    return materials.at(getMaterialIDFromLabel(material_label)).normal_map_kind;
+}
+
+float Context::getMaterialNormalMapStrength(const std::string &material_label) const {
+    return materials.at(getMaterialIDFromLabel(material_label)).normal_map_strength;
+}
+
+bool Context::isMaterialNormalMapGreenFlipped(const std::string &material_label) const {
+    return materials.at(getMaterialIDFromLabel(material_label)).normal_map_flip_green;
+}
+
+std::shared_ptr<const NormalMapTexels> Context::getMaterialNormalMapTexels(uint materialID) const {
+    const auto material = materials.find(materialID);
+    if (material == materials.end()) {
+        helios_runtime_error("ERROR (Context::getMaterialNormalMapTexels): Material ID " + std::to_string(materialID) + " does not exist.");
+    }
+    if (material->second.normal_map_kind == NORMAL_MAP_NONE) {
+        return nullptr;
+    }
+    return getNormalMapTexels(material->second.normal_map_file, material->second.normal_map_kind, material->second.normal_map_strength, material->second.normal_map_flip_green);
+}
+
+std::shared_ptr<const NormalMapTexels> Context::getNormalMapTexels(const std::string &file, NormalMapKind kind, float strength, bool flip_green) const {
+    const auto key = std::make_tuple(file, uint8_t(kind), strength, flip_green);
+    std::lock_guard<std::mutex> lock(normal_map_cache_mutex);
+    const auto cached = normal_map_cache.find(key);
+    if (cached != normal_map_cache.end()) {
+        return cached->second;
+    }
+    auto texels = std::make_shared<const NormalMapTexels>(decodeNormalMapImage(file, kind, strength, flip_green));
+    normal_map_cache.emplace(key, texels);
+    return texels;
+}
+
+void Context::clearNormalMapCache() {
+    std::lock_guard<std::mutex> lock(normal_map_cache_mutex);
+    normal_map_cache.clear();
+}
+
+void Context::pruneNormalMapCache() {
+    // A map that no material names and that nobody else holds would otherwise stay decoded for the Context's lifetime, e.g. every strength tried while tuning one
+    std::set<std::tuple<std::string, uint8_t, float, bool>> in_use;
+    for (const auto &[ID, material]: materials) {
+        if (material.normal_map_kind != NORMAL_MAP_NONE) {
+            in_use.emplace(material.normal_map_file, uint8_t(material.normal_map_kind), material.normal_map_strength, material.normal_map_flip_green);
+        }
+    }
+    std::lock_guard<std::mutex> lock(normal_map_cache_mutex);
+    for (auto it = normal_map_cache.begin(); it != normal_map_cache.end();) {
+        if (it->second.use_count() == 1 && in_use.count(it->first) == 0) {
+            it = normal_map_cache.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
 uint Context::getPrimitiveTwosidedFlag(uint UUID, uint default_value) const {
     std::string mat_label = getPrimitiveMaterialLabel(UUID);
     bool has_user_material = (mat_label.substr(0, 7) != "__auto_" && mat_label != DEFAULT_MATERIAL_LABEL);
@@ -4341,8 +4647,19 @@ void Context::assignMaterialToPrimitive(uint UUID, const std::string &material_l
 
 void Context::assignMaterialToPrimitive(const std::vector<uint> &UUIDs, const std::string &material_label) {
     uint materialID = getMaterialIDFromLabel(material_label);
+    // Every primitive is checked before any is changed, so that an error leaves all of them as they were
+    std::vector<Primitive *> primitives_to_assign;
+    primitives_to_assign.reserve(UUIDs.size());
+    const Material &material = materials.at(materialID);
     for (uint UUID: UUIDs) {
-        setPrimitiveMaterial(getPrimitivePointer_private(UUID), materialID);
+        Primitive *primitive = getPrimitivePointer_private(UUID);
+        if (material.normal_map_kind != NORMAL_MAP_NONE) {
+            validateNormalMapFrame(primitive, "assignMaterialToPrimitive", material.normal_map_file);
+        }
+        primitives_to_assign.push_back(primitive);
+    }
+    for (Primitive *primitive: primitives_to_assign) {
+        setPrimitiveMaterial(primitive, materialID);
     }
 }
 

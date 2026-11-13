@@ -428,7 +428,6 @@ void PhotosynthesisModel::setFarquharCoefficientsFromLibrary(const std::string &
 FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrary(const std::string &species) {
     std::string s = std::move(species);
     FarquharModelCoefficients fmc;
-    bool defaultSpecies = false;
     if (s == "Almond" || s == "almond") {
         fmc.setVcmax(72.6, 27.3, 315.3 - 273.15, 478.4);
         fmc.setJmax(144.2, 64.1, 314.9 - 273.15, 508.4);
@@ -556,15 +555,12 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrar
         fmc.setQuantumEfficiency_alpha(0.321);
         fmc.setLightResponseCurvature_theta(0.460);
     } else {
-        defaultSpecies = true;
-        if (message_flag) {
-            std::cerr << "WARNING (PhotosynthesisModel::getModelCoefficients): unknown species " << s << ". Setting default (Almond)." << std::endl;
-        }
+        helios_runtime_error("ERROR (PhotosynthesisModel::getFarquharCoefficientsFromLibrary): Species '" + s +
+                             "' is not in the Farquhar-von Caemmerer-Berry library. Available species are: Almond, Apple, Cherry, Prune, Pear, PistachioFemale (or Pistachio), PistachioMale, Walnut, Grape, Elderberry, Toyon, Big_Leaf_Maple, "
+                             "Western_Redbud, Baylaurel, Olive, EasternRedbudSunlit, EasternRedbudShaded, Cowpea, CommonBean (or Bean). Set the coefficients of a FarquharModelCoefficients structure directly for other species.");
     }
-    if (!defaultSpecies) {
-        if (message_flag) {
-            std::cerr << "Setting Photosynthesis Model Coefficients to " << s << std::endl;
-        }
+    if (message_flag) {
+        std::cout << "Setting Photosynthesis Model Coefficients to " << s << std::endl;
     }
     return fmc;
 }

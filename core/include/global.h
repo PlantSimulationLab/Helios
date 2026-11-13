@@ -980,6 +980,126 @@ namespace helios {
      */
     [[nodiscard]] helios::int2 getImageResolutionJPEG(const std::string &filename);
 
+    //! Kind of image held in a material's normal-map slot (see Context::setMaterialNormalMap() and Context::setMaterialBumpMap())
+    enum NormalMapKind : uint8_t {
+        //! No normal or bump map
+        NORMAL_MAP_NONE = 0,
+        //! Tangent-space normal map: the red, green and blue channels hold the x, y and z components of the surface normal, mapped from [-1,1] to [0,1]
+        NORMAL_MAP_TANGENT_SPACE = 1,
+        //! Bump (height) map: a grayscale image whose values are surface heights, from which the normals are derived
+        NORMAL_MAP_BUMP = 2
+    };
+
+    //! Tangent-space surface normals decoded from a normal or bump map image (see decodeNormalMapImage())
+    /**
+     * The tangent space is that of OpenGL, glTF and Blender: +x points along increasing u (to the right in the image), +y along increasing v (up in the image), and +z along the surface normal of the
+     * primitive. Each texel stores the x and y components of a unit normal with non-negative z as signed 16-bit normalized integers; z is reconstructed. The strength and green-channel flip given when
+     * decoding are already applied, so consumers use the normals as they are.
+     */
+    struct NormalMapTexels {
+        //! Image file the normals were decoded from (resolved path)
+        std::string file;
+        //! Kind of image the normals were decoded from
+        NormalMapKind kind = NORMAL_MAP_NONE;
+        //! Strength applied when decoding
+        float strength = 1.f;
+        //! Whether the green channel was flipped when decoding (DirectX convention)
+        bool flip_green = false;
+        //! Width and height of the image in texels
+        helios::int2 resolution = make_int2(0, 0);
+        //! x and y components of the normal at each texel as signed 16-bit normalized integers (x at xy[2*(row*width+column)], y at the following index), row by row from the top of the image
+        std::vector<int16_t> xy;
+
+        //! Unit normal of one texel
+        /**
+         * \param[in] column Column of the texel, from the left of the image
+         * \param[in] row_from_top Row of the texel, from the top of the image
+         * \return Unit tangent-space normal, with z >= 0
+         */
+        [[nodiscard]] helios::vec3 getNormal(int column, int row_from_top) const;
+
+        //! Unit normal of the texel containing a (u,v) coordinate
+        /**
+         * Uses the texel convention of transparency masks and spectral class maps: column floor((W-1)u) and row floor((H-1)(1-v)) from the top, clamped to the image.
+         * \param[in] uv (u,v) texture coordinate
+         * \return Unit tangent-space normal
+         */
+        [[nodiscard]] helios::vec3 sampleNearest(const helios::vec2 &uv) const;
+
+        //! Unit normal bilinearly interpolated at a (u,v) coordinate
+        /**
+         * The texel containing (u,v) in sampleNearest() has its centre at ((column+0.5)/(W-1), 1-(row+0.5)/(H-1)); the four texels around (u,v) are blended by distance to their centres, coordinates
+         * beyond the outermost centres take the edge texels, and the result is renormalized.
+         * \param[in] uv (u,v) texture coordinate
+         * \return Unit tangent-space normal
+         */
+        [[nodiscard]] helios::vec3 sampleBilinear(const helios::vec2 &uv) const;
+
+        //! Memory held by the decoded normals
+        /**
+         * \return Size of the texel data in bytes
+         */
+        [[nodiscard]] size_t getMemoryBytes() const;
+    };
+
+    //! Decode a normal map or bump map image into unit tangent-space normals
+    /**
+     * A tangent-space normal map (\p kind = NORMAL_MAP_TANGENT_SPACE) is read from an RGB(A) PNG (16-bit images are reduced to 8 bits) or a JPEG. Each channel c in [0,1] is decoded as 2c-1 without
+     * sRGB decoding, z is clamped to be non-negative, the result is normalized, and its xy components are then scaled by \p strength before normalizing again (1 keeps the map as authored). With
+     * \p flip_green the y component is negated, for maps made in the DirectX convention (green pointing down the image). An image whose red, green and blue channels are equal (a grayscale image) is
+     * rejected, since it is almost certainly a height map.
+     *
+     * A bump map (\p kind = NORMAL_MAP_BUMP) is read from an 8- or 16-bit grayscale PNG at full precision, or from an RGB(A) PNG or a JPEG as the luminance 0.2126R + 0.7152G + 0.0722B of the stored
+     * values. Its values h in [0,1] are heights, and \p strength is the displacement, in texels, of the full range from 0 to 1. The gradient is taken with a normalized Scharr kernel (weights 3, 10, 3
+     * over 32) with the edge texels repeated beyond the border, so that a ramp rising by a per texel gives exactly a, and the normal is normalize(-strength*dh/dcolumn, -strength*dh/drow_up, 1), where
+     * dh/drow_up is the rise toward the top of the image. \p flip_green is not allowed for bump maps.
+     *
+     * \param[in] file Path to the image (PNG or JPEG), resolved with resolveFilePath()
+     * \param[in] kind NORMAL_MAP_TANGENT_SPACE or NORMAL_MAP_BUMP
+     * \param[in] strength Finite value greater than zero (see above)
+     * \param[in] flip_green Negate the y component of a tangent-space normal map
+     * \return The decoded normals
+     */
+    [[nodiscard]] NormalMapTexels decodeNormalMapImage(const std::string &file, NormalMapKind kind, float strength, bool flip_green);
+
+    //! Classify the image named in an OBJ material's bump line ("map_Bump" or "bump") as a bump map or a tangent-space normal map
+    /**
+     * Many exporters write tangent-space normal maps into "map_Bump". A grayscale image (a gray PNG, or red, green and blue equal in at least 99.5% of texels) is a bump map; otherwise the image is a
+     * normal map if its decoded normals point mostly along +z (mean z above 0.5 with mean x and y within 0.25 of zero). Any other image raises an error.
+     * \param[in] file Path to the image (PNG or JPEG)
+     * \return NORMAL_MAP_BUMP or NORMAL_MAP_TANGENT_SPACE
+     */
+    [[nodiscard]] NormalMapKind classifyBumpImage(const std::string &file);
+
+    //! Derivatives of position with respect to the texture coordinates over a triangle
+    /**
+     * For a triangle (or the first three corners of a patch) with corners p0, p1, p2 and texture coordinates uv0, uv1, uv2, computes dP/du and dP/dv, the directions in which the tangent-space +x
+     * and +y axes of a normal map point on the surface (see NormalMapTexels). Mirrored texture coordinates give a dP/dv on the other side of dP/du, as they should.
+     * \param[in] p0 First corner
+     * \param[in] p1 Second corner
+     * \param[in] p2 Third corner
+     * \param[in] uv0 Texture coordinate of the first corner
+     * \param[in] uv1 Texture coordinate of the second corner
+     * \param[in] uv2 Texture coordinate of the third corner
+     * \param[out] dPdu Derivative of position with respect to u
+     * \param[out] dPdv Derivative of position with respect to v
+     * \return False, with the outputs unchanged, if the texture coordinates are degenerate (collinear) so that no frame exists
+     */
+    [[nodiscard]] bool computeTangentFrame(const helios::vec3 &p0, const helios::vec3 &p1, const helios::vec3 &p2, const helios::vec2 &uv0, const helios::vec2 &uv1, const helios::vec2 &uv2, helios::vec3 &dPdu, helios::vec3 &dPdv);
+
+    //! Transform a tangent-space normal into a surface direction
+    /**
+     * Builds an orthonormal frame as MikkTSpace (glTF, Blender) does: T is \p dPdu made perpendicular to \p normal and normalized, and B = +/- cross(normal, T), on the side of \p dPdv (mirrored texture
+     * coordinates put it on the other side). Returns normalize(n.x*T + n.y*B + n.z*normal). The normal is the primitive's own unit normal (or a smoothed one), not one turned toward a viewer; the
+     * opposite face of a thin surface uses the negated result.
+     * \param[in] tangent_normal Tangent-space normal (e.g., from NormalMapTexels::sampleNearest())
+     * \param[in] dPdu Derivative of position with respect to u (see computeTangentFrame())
+     * \param[in] dPdv Derivative of position with respect to v
+     * \param[in] normal Unit surface normal
+     * \return Unit shading normal, or \p normal if dPdu is parallel to it or dPdv lies along T
+     */
+    [[nodiscard]] helios::vec3 applyTangentSpaceNormal(const helios::vec3 &tangent_normal, const helios::vec3 &dPdu, const helios::vec3 &dPdv, const helios::vec3 &normal);
+
     //! Function to write a JPEG image based on pixel data
     /**
      * \param[in] filename Name of the JPEG image file
@@ -1325,11 +1445,13 @@ namespace helios {
 
     //--------------------- ASSET PATH RESOLUTION -----------------------------------//
 
-    //! Resolve asset file path using cpplocate, allowing executables to run from any directory
+    //! Resolve an asset file path; equivalent to resolveFilePath()
     /**
      * \param[in] relativePath Relative path to the asset file (e.g., "plugins/visualizer/shaders/shader.vert")
      * \return Absolute path to the asset file
-     * \note This function searches for assets in multiple locations: build directory, system install locations, and custom paths
+     * \note The path is resolved relative to the current working directory, then the directory named by the HELIOS_BUILD environment variable (or, if it is not set, the
+     * working directory or its parent, whichever contains a plugins/ directory). An executable must therefore be run from its build directory, or one directory below it,
+     * unless HELIOS_BUILD is set. See resolveFilePath().
      * \ingroup functions
      */
     [[nodiscard]] std::filesystem::path resolveAssetPath(const std::string &relativePath);
@@ -1360,7 +1482,8 @@ namespace helios {
      * Resolves file paths using the following fallback sequence:
      * 1. If absolute path, validates existence and returns canonical path
      * 2. Checks relative to current working directory first
-     * 3. Falls back to checking relative to HELIOS_BUILD environment variable path
+     * 3. Falls back to checking relative to the HELIOS_BUILD environment variable path, or, if HELIOS_BUILD is not set, relative to the current working directory or its parent,
+     *    whichever contains a plugins/ directory
      * 4. Throws helios_runtime_error if file not found in either location
      *
      * \param[in] filename File name with or without path (e.g., "texture.jpg" or "models/texture.jpg")

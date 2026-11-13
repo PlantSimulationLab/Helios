@@ -6763,6 +6763,38 @@ DOCTEST_TEST_CASE("CollisionDetection Mathematical Accuracy - Ray-Voxel Edge Cas
     DOCTEST_CHECK(std::abs(corner_result.intersection_point.z + 1.0f) < 1e-6f);
 }
 
+DOCTEST_TEST_CASE("CollisionDetection Mathematical Accuracy - Axis-parallel ray just inside a face hits at long range") {
+    // A ray parallel to an axis is inside the slab of that axis along its whole length, however close to the slab's face it runs. The
+    // bounding-box test must not turn that closeness into a distance limit: one that replaced the zero direction component with a tiny
+    // number cut the slab off at (distance to the face) / (tiny number), and so culled the box for hits farther away than that.
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+
+    const float inset = 1e-6f; // ray runs this far inside the faces at x = 1 and x = -1
+    const float start_z = -500.f; // the box's near face is at z = -1, 499 m away
+
+    const uint voxel_uuid = context.addVoxel(make_vec3(0, 0, 0), make_vec3(2, 2, 2));
+    for (float x: {1.f - inset, -1.f + inset}) {
+        const CollisionDetection::HitResult result = collision.castRay(make_vec3(x, 0, start_z), make_vec3(0, 0, 1));
+        DOCTEST_INFO("voxel, ray at x = " << x);
+        DOCTEST_CHECK(result.hit);
+        DOCTEST_CHECK(result.primitive_UUID == voxel_uuid);
+        DOCTEST_CHECK(result.distance == doctest::Approx(499.f).epsilon(1e-6));
+    }
+
+    context.deletePrimitive(voxel_uuid);
+    const uint patch_uuid = context.addPatch(make_vec3(0, 0, 0), make_vec2(2, 2));
+    for (float y: {1.f - inset, -1.f + inset}) {
+        const CollisionDetection::HitResult result = collision.castRay(make_vec3(0, y, start_z), make_vec3(0, 0, 1));
+        DOCTEST_INFO("patch, ray at y = " << y);
+        DOCTEST_CHECK(result.hit);
+        DOCTEST_CHECK(result.primitive_UUID == patch_uuid);
+        DOCTEST_CHECK(result.distance == doctest::Approx(500.f).epsilon(1e-6));
+    }
+}
+
 DOCTEST_TEST_CASE("CollisionDetection Complex Geometry - Multi-Voxel Accuracy") {
     Context context;
     CollisionDetection collision(&context);
@@ -7444,6 +7476,34 @@ DOCTEST_TEST_CASE("CollisionDetection calculateVoxelPathLengths Enhanced Method"
             }
         }
     }
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - sliced primitives keep their material, normal map included") {
+    // Regression test. The pieces were rebuilt from the primitive's color or texture alone, so a named material (with its normal map, two-sided flag and other
+    // properties) was lost when a primitive was sliced. The pieces of a textured primitive now keep its material; an untextured one with a normal map cannot,
+    // since its triangle pieces have no (u,v) frame, so slicing it raises an error.
+    const std::string normal_map = (std::filesystem::temp_directory_path() / "helios_slice_normal_map.png").string();
+    writePNG(normal_map, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.7f, 0.5f, 0.9f, 1.f)));
+    Context context;
+    context.addMaterial("bark");
+    context.setMaterialTexture("bark", "lib/images/disk_texture.png");
+    context.setMaterialNormalMap("bark", normal_map);
+    context.setMaterialTwosidedFlag("bark", 0);
+    const uint textured = context.addPatch(make_vec3(0.5, 0, 0), make_vec2(2, 2), make_SphericalCoord(0, 0), "lib/images/disk_texture.png");
+    context.assignMaterialToPrimitive(textured, "bark");
+    CollisionDetection slicer(&context);
+    slicer.disableMessages();
+    const std::vector<uint> pieces = slicer.slicePrimitivesUsingGrid(std::vector<uint>{textured}, make_vec3(0, 0, 0), make_vec3(1, 10, 10), make_int3(2, 1, 1));
+    DOCTEST_REQUIRE(pieces.size() > 1);
+    for (uint UUID: pieces) {
+        DOCTEST_CHECK(context.getPrimitiveMaterialLabel(UUID) == "bark");
+        DOCTEST_CHECK(context.getPrimitiveNormalMapKind(UUID) == NORMAL_MAP_TANGENT_SPACE);
+    }
+
+    const uint untextured = context.addPatch(make_vec3(0.5, 0, 0), make_vec2(2, 2));
+    context.setPrimitiveNormalMap(untextured, normal_map);
+    DOCTEST_CHECK_THROWS(slicer.slicePrimitivesUsingGrid(std::vector<uint>{untextured}, make_vec3(0, 0, 0), make_vec3(1, 10, 10), make_int3(2, 1, 1)));
+    std::filesystem::remove(normal_map);
 }
 
 DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Patch with no slices") {

@@ -93,8 +93,51 @@ namespace helios {
         std::vector<helios::int2> class_map_sizes; //!< Size (width, height) of each class map
         std::vector<int> class_map_IDs; //!< Class map of each primitive (-1 if none)
 
+        // Normal maps (Context::setMaterialNormalMap() and setMaterialBumpMap()), laid over a primitive with the same (u,v) mapping and texel convention as its
+        // mask, already decoded to unit tangent-space normals with their strength applied (see include/NormalMapMath.h for how they are used).
+        std::vector<uint16_t> normal_map_texels; //!< Flattened normals [map][row from the top][column], each uint8(x) | uint8(y) << 8 with x and y signed 8-bit normalized
+        std::vector<helios::int2> normal_map_sizes; //!< Size (width, height) of each normal map
+        std::vector<int> normal_map_IDs; //!< Normal map of each primitive (-1 if none); empty when no primitive has one
+        //! Slot of each normal-mapped primitive in the record of the direction of the diffuse radiation it gathers (UINT32_MAX for none); empty when no primitive has a map.
+        //! The diffuse launches accumulate, per slot, face (top, then bottom) and launch band, the flux-weighted sum of the directions the radiation came from (3 values),
+        //! with which cameras shade a mapped primitive's scattered light per texel (see RayTracingBackend::zeroRadiationBuffers()).
+        std::vector<uint32_t> normal_map_slots;
+        size_t normal_map_slot_count = 0; //!< Number of slots in normal_map_slots
+
         // Periodic boundary condition
         helios::vec2 periodic_flag; //!< Periodic boundary flags (x, y directions)
+        //! Per-primitive flag (indexed by position): 1 if the primitive is excluded from the periodic boundary condition and exists only in the central copy of the domain; empty when none is
+        std::vector<uint8_t> periodic_excluded;
+        //! Number of periodic copies of the domain on each side of the central one in x and y; -1 for no limit. A ray that leaves the copies continues as one that leaves the scene.
+        helios::int2 periodic_max_repeats = helios::make_int2(-1, -1);
+        //! z-range (min, max) of the geometry that repeats. A ray outside the central copy that is above it and heading up, or below it and heading down, can hit nothing more.
+        helios::vec2 periodic_repeated_zbounds = helios::make_vec2(0.f, 0.f);
+        //! Distance beyond a periodic boundary face from which a ray that leaves the periodic copies continues, far enough that it cannot hit a boundary face again
+        float periodic_escape_offset = 0.f;
+
+        //! Whether rays must track which periodic copy of the domain they are in (some primitives are excluded from the periodic boundary, or the number of copies is limited)
+        [[nodiscard]] bool periodicTileTracking() const {
+            return (periodic_flag.x == 1 || periodic_flag.y == 1) && (!periodic_excluded.empty() || periodic_max_repeats.x >= 0 || periodic_max_repeats.y >= 0);
+        }
+
+        //! Whether the radiation is solved for two fields at once: the scene as it is, and the "background" scene without the primitives excluded from the periodic boundary
+        /**
+         * Periodic copies of a primitive are the same primitive, so they all show its one outgoing radiation, which near an excluded primitive carries that primitive's shade and
+         * scattered light. The background field is what the repeated geometry sends out where no excluded primitive stands; rays and cameras read it for every copy of the domain
+         * but the central one. See fluxSlotCount().
+         */
+        [[nodiscard]] bool periodicDualField() const {
+            return (periodic_flag.x == 1 || periodic_flag.y == 1) && !periodic_excluded.empty();
+        }
+
+        //! Number of per-primitive slots in the buffers of outgoing radiation and of what cameras read
+        /**
+         * The primitive count, or twice it with a background field (see periodicDualField()): slot p holds primitive p in the scene as it is, and slot primitive_count + p
+         * holds it in the background field (zero for an excluded primitive, which the background does not contain). Buffers of absorbed radiation have no background slots.
+         */
+        [[nodiscard]] size_t fluxSlotCount() const {
+            return periodicDualField() ? 2 * primitive_count : primitive_count;
+        }
 
         // Counts
         size_t primitive_count = 0; //!< Total number of primitives (all types)
@@ -276,6 +319,8 @@ namespace helios {
         helios::int2 camera_pixel_offset; //!< Pixel offset for tiled rendering
         float camera_viewplane_length = 0.0f; //!< Viewplane length computed from effective_HFOV/zoom
         helios::int2 camera_resolution_full; //!< Full resolution for tiled rendering (global coordinates)
+        //! Periodic copy of the domain the camera is in (x, y): the whole periods its position was moved by to bring it into the domain (see RayTracingGeometry::periodicTileTracking())
+        helios::int2 camera_tile = helios::make_int2(0, 0);
 
         // Diffuse radiation parameters (for diffuse ray launches)
         //! Diffuse sky flux per launched band, followed by the flux of each launched band's reference blackbody field (2 x Nbands_launch values)
@@ -301,6 +346,14 @@ namespace helios {
         uint specular_reflection_enabled =
                 0; //!< 1 = this launch evaluates the surface layers' reflection lobe of the direct radiation (the launch reading its first scattering, and camera launches); for a direct launch, that surface layers are present
         uint below_horizon_diffuse_enabled = 0; //!< 1 = diffuse sky radiation also reaches rays that leave the domain below the horizon (diffuse and camera rays)
+        //! Camera launches: 1 if the outgoing radiation uploaded for normal-mapped primitives leaves out what the direct launch deposited, which the camera then shades per hit point with the shading normal
+        uint normal_map_direct = 0;
+        //! Camera launches: 1 if the camera evaluates the sources' direct radiation on smoothed primitives per pixel sample, which the host left out of what their vertices carry (camera flux smoothing, a
+        //! radiation source, and a direct launch that deposited the direct radiation the host removed)
+        uint camera_direct_per_pixel = 0;
+        //! Camera launches: 1 if the camera evaluates the direct radiation of every primitive, not only smoothed ones, per pixel sample (primitives are excluded from the periodic boundary), the host having
+        //! left it out of the outgoing radiation of every primitive but a translucent cover
+        uint camera_direct_all = 0;
     };
 
     /**
@@ -348,6 +401,13 @@ namespace helios {
      * \param[in] geometry Geometry whose class_map_data, class_map_sizes and class_map_IDs are packed
      */
     std::vector<uint32_t> packSpectralClassMaps(const RayTracingGeometry &geometry);
+
+    //! The normal maps of a geometry packed into one array of words, the layout every backend reads (described in include/NormalMapMath.h)
+    /**
+     * Word 0 is 0 when no primitive has a normal map, and the array then holds only the four header words.
+     * \param[in] geometry Geometry whose normal_map_* fields are packed
+     */
+    std::vector<uint32_t> packNormalMaps(const RayTracingGeometry &geometry);
 
     //! The spectral texture palettes of a material packed into one array of words, for backends that read them from a single buffer
     /**

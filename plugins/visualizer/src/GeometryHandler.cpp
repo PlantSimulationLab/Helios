@@ -54,6 +54,18 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
     if (!doesGeometryExist(UUID)) {
         registerUUID(UUID, geometry_type);
         geometry_is_new = true;
+    } else if (getDeleteFlag(UUID)) {
+        // Deleted geometry keeps its slot until the buffers are defragmented, so this ID still has one. Updating the slot in place
+        // without clearing its flags left the re-added geometry deleted and invisible: a Context primitive deleted from the
+        // Visualizer and later added back (for example hidden, then shown) was never drawn again.
+        const PrimitiveIndexMap &index_map = UUID_map.at(UUID);
+        if (index_map.geometry_type != geometry_type) {
+            helios::helios_runtime_error("ERROR (GeometryHandler::addGeometry): Geometry " + std::to_string(UUID) + " was deleted as one geometry type and is being added back as another. This is an internal error in the Visualizer plug-in.");
+        }
+        delete_flag_data.at(geometry_type).at(index_map.delete_flag_index) = false;
+        visible_flag_data.at(geometry_type).at(index_map.visible_index) = static_cast<char>(visible_flag);
+        deleted_primitive_count--;
+        layout_revision++;
     }
 
     if (coordinate_system == 0) { // No vertex transformation (i.e., identity matrix)
@@ -73,6 +85,21 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
     size_t texture_flag_index = UUID_map.at(UUID).texture_flag_index;
     size_t texture_ID_index = UUID_map.at(UUID).texture_ID_index;
     size_t size_index = UUID_map.at(UUID).size_index;
+
+    // (u,v) coordinates given without a texture place a normal map on an untextured primitive: they are stored for the normal map, and the primitive is colored by its RGB color
+    const bool uv_only = textureID < 0 && !has_glyph_texture;
+    int textured_flag;
+    if (uv_only) {
+        textured_flag = 0; // 0 means use RGB color
+    } else if (has_glyph_texture) {
+        textured_flag = 3; // 3 means use RGB for color and red channel of texture for alpha
+    } else if (override_texture_color) { // if texture color is overridden, color primitive based on RGB color but use texture transparence for alpha mask
+        textured_flag = 2; // 2 means use RGB for color and texture transparency for alpha
+    } else if (blend_texture_alpha) {
+        textured_flag = 4; // 4 means use texture for color and blend its alpha rather than thresholding it
+    } else {
+        textured_flag = 1; // 1 means use texture for color and transparency for alpha
+    }
 
     for (char i = 0; i < vertex_count; i++) {
 
@@ -98,16 +125,8 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
                 uv_data[geometry_type].push_back(1.f - uvs.at(i).y);
 
                 if (i == 0) { // only need to do this one time
-                    if (has_glyph_texture) {
-                        texture_flag_data[geometry_type].push_back(3); // 3 means use RGB for color and red channel of texture for alpha
-                    } else if (override_texture_color) { // if texture color is overridden, color primitive based on RGB color but use texture transparence for alpha mask
-                        texture_flag_data[geometry_type].push_back(2); // 2 means use RGB for color and texture transparency for alpha
-                    } else if (blend_texture_alpha) {
-                        texture_flag_data[geometry_type].push_back(4); // 4 means use texture for color and blend its alpha rather than thresholding it
-                    } else {
-                        texture_flag_data[geometry_type].push_back(1); // 1 means use texture for color and transparency for alpha
-                    }
-                    texture_ID_data[geometry_type].push_back(textureID);
+                    texture_flag_data[geometry_type].push_back(textured_flag);
+                    texture_ID_data[geometry_type].push_back(uv_only ? 0 : textureID);
                 }
             } else {
                 uv_data[geometry_type].at(uv_index) = uvs.at(i).x;
@@ -115,17 +134,9 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
                 uv_index += 2;
 
                 if (i == 0) { // only need to do this one time
-                    if (has_glyph_texture) {
-                        texture_flag_data[geometry_type].at(texture_flag_index) = 3; // 3 means use RGB for color and red channel of texture for alpha
-                    } else if (override_texture_color) { // if texture color is overridden, color primitive based on RGB color but use texture transparence for alpha mask
-                        texture_flag_data[geometry_type].at(texture_flag_index) = 2; // 2 means use RGB for color and texture transparency for alpha
-                    } else if (blend_texture_alpha) {
-                        texture_flag_data[geometry_type].at(texture_flag_index) = 4; // 4 means use texture for color and blend its alpha rather than thresholding it
-                    } else {
-                        texture_flag_data[geometry_type].at(texture_flag_index) = 1; // 1 means use texture for color and transparency for alpha
-                    }
+                    texture_flag_data[geometry_type].at(texture_flag_index) = textured_flag;
                     texture_flag_index++;
-                    texture_ID_data[geometry_type].at(texture_ID_index) = textureID;
+                    texture_ID_data[geometry_type].at(texture_ID_index) = uv_only ? 0 : textureID;
                     texture_ID_index++;
                 }
             }
@@ -924,6 +935,13 @@ void GeometryHandler::getDomainBoundingBox(helios::vec2 &xbounds, helios::vec2 &
     for (const auto &[UUID, index_map]: UUID_map) {
         // Only primitives with Cartesian coordinates should be included in bounding box
         if (coordinate_flag_data.at(index_map.geometry_type).at(index_map.coordinate_flag_index) == 0) {
+            continue;
+        }
+        // Deleted geometry keeps its slot until the buffers are defragmented, and a hidden Context primitive keeps its geometry flagged
+        // invisible; neither is displayed, and counting them fitted the default camera to primitives that are not there. Invisible
+        // geometry that is not a Context primitive (e.g., a point culled for being outside the view) still counts.
+        if (delete_flag_data.at(index_map.geometry_type).at(index_map.delete_flag_index) ||
+            (context_geometry_flag_data.at(index_map.geometry_type).at(index_map.context_geometry_flag_index) && !visible_flag_data.at(index_map.geometry_type).at(index_map.visible_index))) {
             continue;
         }
 

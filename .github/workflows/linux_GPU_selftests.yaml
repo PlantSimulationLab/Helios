@@ -1,10 +1,10 @@
-name: Build and Run on Linux EC2 GPU Instance
+name: Build and Run on Linux GPU
 
 on:
   push:
     # Runs on the release branch only. The release flow validates a candidate on "release",
     # then fast-forwards master to that exact commit, so a run on master would re-test an
-    # identical SHA -- doubly wasteful here, where the runner is a billed EC2 GPU instance.
+    # identical SHA -- doubly wasteful here, where the runner is billed per minute.
     branches: [ "release" ]
   workflow_dispatch: {}
 
@@ -13,107 +13,112 @@ env:
   BUILD_TYPE: Release
 
 permissions:
-  id-token: write
   contents: read
+
+# Cancel a superseded run when "release" is re-pushed (e.g. a fix for a failure on another
+# runner). Safe now that each run gets its own ephemeral GitHub-hosted machine; the old
+# self-hosted setup had to serialize runs because they shared one EC2 instance.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
 
-  start-gpu:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
-          aws-region: us-west-2
-      - run: |
-          # Wait for instance to be in a state where it can be started (max 5 minutes)
-          echo "Waiting for instance to be in a startable state..."
-          timeout 300 bash -c '
-            while true; do
-              STATE=$(aws ec2 describe-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }} --query "Reservations[0].Instances[0].State.Name" --output text)
-              echo "Current instance state: $STATE"
-              if [[ "$STATE" == "stopped" || "$STATE" == "running" ]]; then
-                echo "Instance is in a startable state: $STATE"
-                break
-              fi
-              echo "Instance is in transitional state: $STATE. Waiting 10 seconds..."
-              sleep 10
-            done
-          ' || {
-            echo "Timeout waiting for instance to reach startable state"
-            exit 1
-          }
-          
-          # Only start if not already running
-          CURRENT_STATE=$(aws ec2 describe-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }} --query "Reservations[0].Instances[0].State.Name" --output text)
-          if [[ "$CURRENT_STATE" == "stopped" ]]; then
-            echo "Starting instance..."
-            aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }}
-            aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }}
-          elif [[ "$CURRENT_STATE" == "running" ]]; then
-            echo "Instance is already running"
-          else
-            echo "Unexpected instance state: $CURRENT_STATE"
-            exit 1
-          fi
-
   run_samples_linux:
-    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
-    # You can convert this to a matrix build if you need cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    # Pin the OS label so this job can ONLY land on the Linux runner. The `helios` label alone is
-    # also carried by a Windows self-hosted runner (windows-helios); without `Linux` here, if the
-    # Linux runner is offline GitHub will silently route this job to the Windows runner, where the
-    # bash script below fails to parse under PowerShell.
-    runs-on: [self-hosted, helios, Linux]
-    needs: start-gpu
+    # GitHub-hosted GPU larger runner (Tesla T4, 4 vCPU), defined in the PlantSimulationLab org
+    # settings with the "NVIDIA GPU-Optimized VMI" partner image. That image is an Azure
+    # Marketplace image GitHub does not manage, so nothing beyond the NVIDIA driver may be
+    # assumed to be installed -- every dependency is installed explicitly below.
+    runs-on: linux-x64-gpu-githubhosted
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 
-      # The entire purpose of this job is exercising GPU code paths. Every GPU test skips
-      # gracefully when no device is found, so without this check a runner whose driver has
-      # died reports a green build having tested nothing at all - which is exactly what
-      # happened between v1.3.78 and v1.3.79. Runs before the ~20 minute build so a dead
-      # driver is reported in seconds.
-      - name: Verify GPU is present and usable
-        shell: bash
+      # The driver is installed but its kernel modules are not loaded at boot, so nvidia-smi fails
+      # with "couldn't communicate with the NVIDIA driver" until they are.
+      # https://github.com/orgs/community/discussions/138813
+      - name: Load NVIDIA kernel modules
         run: |
-          if ! command -v nvidia-smi >/dev/null 2>&1; then
-            echo "ERROR: nvidia-smi not found on a runner dedicated to GPU testing."
-            echo "The NVIDIA driver is not installed, or is not on PATH."
-            exit 1
-          fi
+          set -euo pipefail
+          sudo modprobe nvidia
+          sudo modprobe nvidia_uvm
+
+      # The entire purpose of this job is exercising GPU code paths. Every GPU test skips
+      # gracefully when no device is found, so without this check a runner whose driver is
+      # unusable reports a green build having tested nothing at all - which is exactly what
+      # happened between v1.3.78 and v1.3.79. Runs before the build so it fails in seconds.
+      - name: Verify GPU is present and usable
+        run: |
+          set -euo pipefail
           if ! nvidia-smi; then
             echo "ERROR: nvidia-smi failed, so no usable NVIDIA device is present."
-            echo "The CUDA toolkit can still compile in this state, which is why the build"
-            echo "would otherwise succeed and every GPU test would silently skip."
-            echo "Most often the kernel module did not rebuild after an OS or kernel update."
             exit 1
           fi
+          nvidia-smi -L | grep -q "GPU 0" || { echo "ERROR: nvidia-smi reports no GPU devices."; exit 1; }
+
+      - name: Install dependent packages for visualizer and Vulkan
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cmake build-essential libx11-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev libxrandr-dev libvulkan-dev glslang-tools
+
+      # The image has no CUDA toolkit. Installed from NVIDIA's apt repository rather than
+      # Jimver/cuda-toolkit: on this image the Jimver runfile install exits part-way without an
+      # error and leaves no nvcc. The radiation CMake errors out if the toolkit is newer than the
+      # driver supports (590.48 -> CUDA 13.1 when this was written), so 12.6 leaves headroom.
+      - name: Install CUDA toolkit
+        run: |
+          set -euo pipefail
+          curl -fsSL -o "$RUNNER_TEMP/cuda-keyring.deb" https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i "$RUNNER_TEMP/cuda-keyring.deb"
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends cuda-toolkit-12-6
+          test -x /usr/local/cuda-12.6/bin/nvcc || { echo "ERROR: nvcc missing after install"; exit 1; }
+          echo "/usr/local/cuda-12.6/bin" >> "$GITHUB_PATH"
+          echo "CUDA_PATH=/usr/local/cuda-12.6" >> "$GITHUB_ENV"
+
+      # The radiation CMake uses find_package(CUDAToolkit QUIET) and builds Vulkan-only when it
+      # fails, which --requiregpu does not catch (Vulkan still finds the GPU). Check loudly here,
+      # in seconds, instead of discovering it from the OptiX assertion after the full build.
+      - name: Check CMake can find CUDA
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/cudacheck"
+          cd "$RUNNER_TEMP/cudacheck"
+          printf '%s\n' \
+            'cmake_minimum_required(VERSION 3.18)' \
+            'project(cudacheck LANGUAGES CXX)' \
+            'find_package(CUDAToolkit REQUIRED)' \
+            'message(STATUS "CUDAToolkit ${CUDAToolkit_VERSION}: nvcc=${CUDAToolkit_NVCC_EXECUTABLE}")' \
+            'include(CheckLanguage)' \
+            'check_language(CUDA)' \
+            'if(NOT CMAKE_CUDA_COMPILER)' \
+            '  message(FATAL_ERROR "CUDAToolkit found but the CUDA language cannot be enabled")' \
+            'endif()' > CMakeLists.txt
+          cmake -S . -B build
 
       - name: Bash script
-        shell: bash
         run: |
           cd utilities
           # --requiregpu turns a would-be GPU test skip into a failure. nvidia-smi above proves
-          # the driver is alive; this proves Helios can actually use it (OptiX/Vulkan can still
-          # fail to initialize against a healthy driver).
-          if ! ./run_tests.sh --visbuildonly --requiregpu --log-file linux_GPU_selftests.log; then
+          # the driver is alive; this proves Helios can actually use it. --verbose puts the CMake
+          # output in the log, which the OptiX assertion below reads.
+          if ! ./run_tests.sh --visbuildonly --requiregpu --verbose --log-file ../linux_GPU_selftests.log; then
             echo "==== run_tests.sh failed; dumping linux_GPU_selftests.log ===="
-            cat linux_GPU_selftests.log
+            cat ../linux_GPU_selftests.log
             exit 1
           fi
-  
 
-  stop-gpu:
-    needs: run_samples_linux
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      # --requiregpu passes on a Vulkan-only or legacy OptiX 6.5 build, neither of which tests the
+      # OptiX 8 backend that users with current drivers run.
+      - name: Assert the OptiX 8.1 backend was built
+        if: always()
+        run: |
+          grep -E "\[Radiation\] (OptiX|Detected NVIDIA|Driver supports)|CUDA not found|falling back to Vulkan-only" linux_GPU_selftests.log || true
+          grep -q "\[Radiation\] OptiX 8.1 backend enabled" linux_GPU_selftests.log \
+            || { echo "ERROR: OptiX 8.1 backend was not enabled (Vulkan-only or legacy OptiX 6.5 build)."; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
-          aws-region: us-west-2
-      - run: |
-          aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }}
-          aws ec2 wait instance-stopped --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }}
+          name: linux_GPU_selftests_log
+          path: linux_GPU_selftests.log

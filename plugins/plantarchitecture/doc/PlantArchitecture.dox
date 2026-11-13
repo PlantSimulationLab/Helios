@@ -115,13 +115,22 @@ A number of plant models are available in the plant architecture library, which 
 | Puncturevine (*Tribulus terrestris*)     | generic                            | "puncturevine"             | base, offshoots, children                          |
 | Rice (*Oryza sativa*)                    | semi-dwarf irrigated               | "rice"                     | mainstem, tiller                                           |
 | Sorghum (*Sorghum bicolor*)              | grain sorghum                      | "sorghum"                  | mainstem, tiller                                   |
-| Soybean (*Glycine max*)                  | upright growth habit (determinate) | "soybean"                  | unifoliate, trifoliate                             |
+| Soybean (*Glycine max*)                  | indeterminate field soybean        | "soybean"                  | unifoliate, trifoliate, branch                     |
 | Strawberry (*Fragaria × ananassa*)       | generic                            | "strawberry"               | mainstem                                           |
 | Sugar Beet (*Beta vulgaris*)             | generic                            | "sugarbeet"                | mainstem                                           |
 | Tomato (*Solanum lycopersicum*)          | determinate growth                 | "tomato"                   | mainstem                                           |
 | Cherry Tomato (*Solanum lycopersicum*)   | upright trained                    | "cherrytomato"             | mainstem                                           |
 | Walnut Tree (*Juglans regia*)            | generic                            | "walnut"                   | trunk, scaffold, proleptic                         |
 | Wheat (*Triticum aestivum*)              | generic                            | "wheat"                    | mainstem, tiller                                   |
+| Long greenhouse cucumber (high-wire) (*Cucumis sativus*) | trained on a string | "cucumber" | main |
+
+The "cucumber" model is a single unbranched stem trained up a vertical string in the high-wire system. Once its head reaches the wire, 3.8 m above the plant base, the stem is lowered and leaned as growers do: the older stem is laid along the row (the +y direction) 0.3 m above the floor, and the head stays at the wire while the stem as a whole keeps growing, to about 8 m by 120 days. The string moves along the row with the head. Fruit are picked as they reach full size, so a plant carries only the few still growing near its head, and the stem laid along the row is bare. The crop is grown for about 165 days, as high-wire crops are replanted about twice a year: the stem stops at 125 nodes, after which its remaining leaves age and fall. The plant structure XML stores neither the string, which is a set of attraction points, nor the lowered shape of the stem, so a plant read back with \ref PlantArchitecture::readPlantStructureXML() stands straight up, and advancing it raises an error until its string is re-attached. Re-attach it with \ref PlantArchitecture::enableAttractionPoints(uint, const std::vector<helios::vec3>&, float, float, float) "enableAttractionPoints()" before advancing; the plant is then lowered again on its first time steps:
+
+~~~~~~
+uint plantID = plantarchitecture.readPlantStructureXML("cucumber.xml").front();
+plantarchitecture.enableAttractionPoints(plantID, CucumberStringAttractionPoints(plantarchitecture.getPlantBasePosition(plantID)), 80.f, 0.15f, 0.8f);
+plantarchitecture.advanceTime(plantID, 1);
+~~~~~~
 
 \subsection PlantArchBuild_default Loading a Plant from the Library with Default Parameters
 
@@ -280,7 +289,7 @@ Tree species use a simplified height-based training system. The code automatical
 
 | Parameter | Default | Valid Range | Units | Description |
 |-----------|---------|-------------|-------|-------------|
-| trunk_height | 0.78-1.0* | 0.1-3.0 | m | Total desired trunk height |
+| trunk_height | 0.78-1.0* | 0.1-3.0 | m | Total desired trunk height. Each scaffold is attached to its own trunk node, so a short trunk must have at least num_scaffolds nodes (at 4 cm internodes, 0.1 m carries at most 3 scaffolds). |
 | num_scaffolds | 4 | 2-8 | - | Number of scaffold branches |
 | scaffold_angle | 40-57* | 20-70** | deg | Scaffold branch angle from vertical |
 
@@ -288,16 +297,22 @@ Tree species use a simplified height-based training system. The code automatical
 
 **25-60 for walnut
 
+The olive model ("olive") takes only trunk_height, with its own range, and always carries four scaffolds:
+
+| Parameter | Default | Valid Range | Units | Description |
+|-----------|---------|-------------|-------|-------------|
+| trunk_height | 0.6 | 0.2-1.5 | m | Trunk height, built from 3 cm internodes. 0.5-0.6 m is typical of super-high-density hedgerows and 0.8-1.2 m of traditional orchards. |
+
 The pistachio model also trains the young tree as California orchards do (UC ANR pistachio establishment guidelines): each scaffold is tipped at 0.45 m during its first growing season and regrows from the buds below the cut, and in the first winter the secondaries on each scaffold are thinned to three and headed to 0.30 m, regrowing from below those cuts the next season. After that the tree grows without further pruning. The training runs from the model's phytomer callback (see \ref PlantArchCallbackEdits) and is always applied.
 
 <b>Apple fruiting wall (apple_fruitingwall)</b>
 
-The apple fruiting wall is a tall spindle (Hoying, Robinson & Fargione, "The Tall Spindle Planting System", Cornell Cooperative Extension): a single leader tied to a trellis, with no permanent scaffolds, bearing pendant, spur-covered fruiting branches that are renewed as they age. The plant is built as a feathered nursery tree, a whip 1.5-1.8 m tall and 1.6 cm in caliper with its feathers tied below horizontal, and is trained year by year from the model's phytomer callback (see \ref PlantArchCallbackEdits): each winter the leader, once it reaches the wall's height, is headed back to the highest fruiting branch just below it (which becomes the top of the tree), shoots competing with it at the top of last year's extension are pinched, any fruiting branch thicker than half the leader at its insertion or older than six winters is cut to a stub (two or three a winter at most) that regrows a replacement the next season, each branch is kept columnar by removing its upright and oversized side shoots, and everything is hedged to the wall's width and to half the tree spacing along the row. The tree is a mature wall after about five seasons, so a mature tree is obtained by building it with an age of about 1830 days (five 366-day seasons). The wall runs along the y-axis.
+The apple fruiting wall is a tall spindle (Hoying, Robinson & Fargione, "The Tall Spindle Planting System", Cornell Cooperative Extension): a single leader tied to a trellis, with no permanent scaffolds, bearing pendant, spur-covered fruiting branches that are renewed as they age. The plant is built as a feathered nursery tree, a whip 1.5-1.8 m tall and 1.6 cm in caliper with its feathers tied below horizontal, and is trained year by year from the model's phytomer callback (see \ref PlantArchCallbackEdits): each winter the leader, once it reaches the wall's height, is headed back to the highest fruiting branch just below it (which becomes the top of the tree), shoots competing with it at the top of last year's extension are pinched, any fruiting branch thicker than half the leader at its insertion or older than six winters is cut to a stub (two or three a winter at most) that regrows a replacement the next season, each branch is kept columnar by removing its upright and oversized side shoots, and everything is hedged to the wall's width and to half the tree spacing along the row. The tree is a mature wall after about five seasons, so a mature tree is obtained by building it with an age of about 1825 days (five 365-day seasons). The wall runs along the y-axis.
 
 | Parameter | Default | Valid Range | Units | Description |
 |-----------|---------|-------------|-------|-------------|
 | tree_height | 3.1 | 2.0-4.5 | m | Height at which the leader is headed (the top wire) |
-| trunk_height | 0.7 | 0.1-3.0 | m | Height of the lowest fruiting branch; must be at least 0.5 m below tree_height |
+| trunk_height | 0.7 | 0.1-1.0 | m | Height of the lowest feather on the nursery leader. The upper limit keeps it below the dormant buds at the top of the shortest (1.5 m) nursery leader. |
 | num_feathers | 10 | 6-15 | - | Number of feathers on the nursery tree |
 | tree_spacing | 0.9 | 0.5-2.0 | m | In-row tree spacing, to which the branches are hedged along the row |
 | row_spacing | 3.3 | 2.0-5.0 | m | Between-row spacing, which scales the wall's width (1.5 m at the base and 0.75 m at the top for a 3.3 m row) |
@@ -491,6 +506,7 @@ Plant type string argument | time_to_dormancy_break | time_to_flower_initiation 
 "tomato" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "walnut" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1095 days (3 years) |
 "wheat" | 0 | -1 | -1 | 4 | 39 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"cucumber" | 0 | 12 | 6 | 2 | 14 | \f$\infty\f$ | 0 | 165 days |
 
 \subsection PlantArchCollision Collision Avoidance
 
@@ -762,7 +778,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | flower_prototype_function | function pointer | - | Pointer to a function that generates the flower prototype model. Function takes arguments ( helios::Context*, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters ) and returns an object ID (uint). The build parameters are those the plant was built with (see \ref PlantArchBuildParams), and are empty for a plant not built from the library. |
 | fruit_prototype_scale | RandomParameter_float | - | Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit. |
 | fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, const std::map<std::string, float> &build_parameters ) and returns an object ID (uint). The build parameters are those the plant was built with (see \ref PlantArchBuildParams), and are empty for a plant not built from the library. |
-| fruit_class_map_file | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | empty | Class map of the texture the fruit prototype is mapped with, from which RadiationModel::applySpectralClassMaps() gives the fruit's lighter and darker parts their own spectra. Recorded on each textured fruit triangle as the primitive data "spectral_class_map". Cannot be combined with a specular surface layer on the fruit. The apple library models ship AppleFruit_classes.png but do not set it, since their fruit carries a surface layer (see below). See the radiation plug-in documentation, "Spectral Textures". |
+| fruit_class_map_file | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | empty | Class map of the texture the fruit prototype is mapped with, from which RadiationModel::applySpectralClassMaps() gives the fruit's lighter and darker parts their own spectra. Recorded on each textured fruit triangle as the primitive data "spectral_class_map". The apple library models set AppleFruit_classes.png, whose classes scale the body under the fruit's specular surface layer. See the radiation plug-in documentation, "Spectral Textures". |
 | inflorescence_maturity_period | RandomParameter_float | days | Time for the inflorescence to expand from its initial quarter size to full size. Zero means it is already full size when it forms, and a negative value (the default) defers to the plant-level fruit-maturity threshold set by <code>setPlantPhenologicalThresholds()</code>. Set this where the inflorescence finishes elongating on a different schedule from the fruit, as in maize, where the tassel is fully expanded at VT roughly two months before the ear finishes grain fill. |
 | unique_prototypes | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of unique flower/fruit prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
 
@@ -1393,11 +1409,11 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 | --- **Geometric Parameters** --- |||||
 | max_nodes | RandomParameter_int | 10 | - | Maximum number of nodes/phytomers along a shoot. |
 | max_nodes_per_season | RandomParameter_int | 10 | - | Maximum number of nodes/phytomers that a shoot can produce in a single season (\f$\leq\f$ max_nodes). |
-| insertion_angle_tip | RandomParameter_float | 20 | degrees | Angle of the child shoot with respect to the parent shoot at the tip of the parent shoot. |
-| insertion_angle_decay_rate | RandomParameter_float | 0 | degrees/node | Rate of increase of the child insertion angle moving down the parent shoot. |
-| internode_length_max | RandomParameter_float | 0.02 | meters | Maximum length (with respect to position along the parent shoot) of the internode of a child shoot. |
-| internode_length_min | RandomParameter_float | 0.002 | meters | Minimum length (with respect to position along the parent shoot) of the internode of a child shoot. |
-| internode_length_decay_rate | RandomParameter_float | 0 | meters/node | Rate of decrease of the internode length moving down the parent shoot. |
+| insertion_angle_tip | RandomParameter_float | 20 | degrees | Angle that a shoot of this type makes with its parent shoot when it emerges from a bud at the parent's tip. Read from the child shoot's type, not the parent's. |
+| insertion_angle_decay_rate | RandomParameter_float | 0 | degrees/node | Rate of increase of the insertion angle of a shoot of this type with the distance of its bud below the parent's tip. Read from the child shoot's type. |
+| internode_length_max | RandomParameter_float | 0.02 | meters | Fully elongated internode length of a shoot of this type; for a proleptic shoot, the length when its bud is at the parent's tip. Read from the child shoot's type. |
+| internode_length_min | RandomParameter_float | 0.002 | meters | Floor on the internode length of a proleptic shoot of this type as its bud lies further below the parent's tip. Read from the child shoot's type. |
+| internode_length_decay_rate | RandomParameter_float | 0 | meters/node | Rate of decrease of the internode length of a proleptic shoot of this type with the distance of its bud below the parent's tip. Read from the child shoot's type. |
 | base_roll | RandomParameter_float | 0 | degrees | Roll angle of the shoot, which effectively specifies the angle of the first petiole relative to the parent shoot. |
 | base_yaw | RandomParameter_float | 0 | degrees | Yaw angle of the shoot relative to the parent shoot. |
 | gravitropic_curvature | RandomParameter_float | 0 | degrees/meter | Curvature angle of the shoot per unit length of shoot. If curvature is positive, shoot curves upward toward vertical. If negative, curvature is downward. |
@@ -1408,8 +1424,9 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 | leaf_expansion_rate_max | RandomParameter_float | -1 | meter/meter/day | Maximum relative rate of expansion of the leaf blades of the shoot. Units are meters of expansion per meter of fully-expanded leaf size per day. Petioles are not included: they are stem segments and elongate at \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate_max</span>\endhtmlonly. A negative value (the default) means the blades expand at the shoot's \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate_max</span>\endhtmlonly. |
 | girth_area_factor | RandomParameter_float | 0 | cm^2 branch area / m^2 downstream leaf area | Cross-sectional area of internode (girth), determined by the amount of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling. |
 | vegetative_bud_break_time | RandomParameter_float | 5 | days | Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break. |
-| vegetative_bud_break_probability_decay_rate | RandomParameter_float | 0 | 1/nodes | Rate at which the probability a bud produces a shoot changes along the shoot. If >0, probability is 1 at the shoot base and decreases to a value of \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly. If <0, the probability is 1 at the shoot tip and decreases backward. |
-| vegetative_bud_break_probability_min | RandomParameter_float | 0 | - | Probability of a bud breaking dormancy and emerging as a shoot. |
+| vegetative_bud_break_probability_decay_rate | RandomParameter_float | -0.5 | 1/nodes | Rate at which the probability that a vegetative bud produces a shoot falls from \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_max</span>\endhtmlonly to \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly along the shoot. If >0, highest at the apex; if <0, highest at the base (only when \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly is true). See \ref ShootParam_vegetative_prob. |
+| vegetative_bud_break_probability_max | RandomParameter_float | 1 | - | Bud-break probability at the end of the shoot where it is highest. Used only when the decay rate is non-zero. |
+| vegetative_bud_break_probability_min | RandomParameter_float | 0 | - | Lowest bud-break probability along the shoot, and the probability used for every bud when the decay rate is zero (or negative with \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly false). |
 | flower_bud_break_probability | RandomParameter_float | 0 | - | Probability of a flower bud emerging as a flower. |
 | fruit_set_probability | RandomParameter_float | 0 | - | Probability of a flower becoming a fruit. |
 | growth_requires_dormancy | \htmlonly<span style="font-family: Courier, monospace; color: green;">bool</span>\endhtmlonly | \htmlonly<span style="font-family: Courier, monospace; color: orange;">false</span>\endhtmlonly | - | Flag indicating whether or not the vegetative buds require a winter dormancy period to break into a shoot. If true, the shoot will emerge in the same growing season as the parent shoot. If false, the shoot will emerge from a bud that requires a winter dormancy period. |
@@ -1434,11 +1451,9 @@ Note that some species place organs relative to \htmlonly<span style="font-famil
 
 The insertion angle of child shoots is the angle that a child shoot makes with its parent shoot growth axis.
 
-The methodology for determining the insertion angle of a child shoot differs depending on whether the shoot emerges from a bud that requires a winter dormancy period (proleptic shoot), or whether the shoot emerges in the same growing season. This behavior is set based on the parameter \ref ShootParameters::growth_requires_dormancy (more information on this parameter below).
+Both parameters are properties of the <i>child</i> shoot: when a vegetative bud breaks, they are read from the shoot type the bud becomes (see \ref ShootParameters::defineChildShootTypes()), not from the parent shoot it emerges from. The parent contributes only the position of the bud along it. To give the laterals of a shoot a particular angle, set these parameters on the laterals' shoot type.
 
-<b>For buds NOT requiring dormancy</b> (\ref ShootParameters::growth_requires_dormancy = false), the insertion angle of the child shoot is simply given by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_tip</span>\endhtmlonly (degrees). (In this case, the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_decay_rate</span>\endhtmlonly is not used.)
-
-<b>For buds requiring dormancy</b> (proleptic; \ref ShootParameters::growth_requires_dormancy = true), the insertion angle of the child shoot is the smallest at the tip of the shoot (at the time dormancy is broken) and increases moving down the shoot toward and angle of 90 degrees.
+The insertion angle is smallest for a bud at the tip of the parent shoot and increases moving down the parent toward an angle of 90 degrees. This applies to every bud-grown shoot, whether or not its type requires dormancy (\ref ShootParameters::growth_requires_dormancy); for a shoot that grows in the same season the parent's tip is its tip at the time the bud breaks, so with \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_decay_rate</span>\endhtmlonly = 0 every lateral takes \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_tip</span>\endhtmlonly.
 
 As shown in the figure below, the insertion angle at the shoot tip is given by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_tip</span>\endhtmlonly (degrees). The angle increases linearly at a rate of \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_decay_rate</span>\endhtmlonly (units of degrees per node) until it reaches a maximum insertion angle of 90 degrees. For example, if \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_tip</span>\endhtmlonly = 20 degrees and \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_decay_rate</span>\endhtmlonly = 20 degrees/node, the insertion angle at the second node from the tip would be 40 degrees, 60 degrees at the third node, 80 degrees at the fourth node, and 90 degrees at all subsequent nodes, up until reaching the previous year's growth.
 
@@ -1456,11 +1471,18 @@ Similar to determination of the child insertion angle, the methodology for deter
 
  \image html internode_length_schematic.jpeg
 
-\subsubsection ShootParam_vegetative_prob vegetative_bud_break_probability_min and vegetative_bud_break_probability_decay_rate
+\subsubsection ShootParam_vegetative_prob vegetative_bud_break_probability_min, vegetative_bud_break_probability_max and vegetative_bud_break_probability_decay_rate
 
-The probability that a vegetative bud will break and produce a new shoot can vary along the shoot and is controlled by the parameters \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly and \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly. If \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly<0, the probability that the first bud on the shoot will break is 100%, and the probability decreases by \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly at each node until it reaches a value of \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly. If \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly>0 (and \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly is true), the probability that the last (apical) bud on the shoot at the time dormancy is broken will break is 100% and the probability decreases moving down the shoot.
+The probability that a vegetative bud will break and produce a new shoot can vary along the shoot and is controlled by the parameters \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly, \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_max</span>\endhtmlonly and \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly, read from the shoot that bears the bud. Writing \f$p_{min}\f$, \f$p_{max}\f$ and \f$r\f$ for the three, \f$i\f$ for the index of the node counting from 0 at the base of the shoot and \f$N\f$ for the number of nodes on the shoot:
 
-Special Cases: If \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly=0, the probability of bud break is always 100% along the shoot. If \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly>0 and \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly is false, the probability of bud break is always equal to \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly.
+- \f$r>0\f$: the probability is highest at the apex, \f$p = \max(p_{min},\, p_{max} - r\,(N-i-1))\f$.
+- \f$r<0\f$ and \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly true: the probability is highest at the base, \f$p = \max(p_{min},\, p_{max} - |r|\,i)\f$.
+- \f$r<0\f$ and \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly false: every bud has probability \f$p_{min}\f$.
+- \f$r=0\f$: every bud has probability \f$p_{min}\f$.
+
+With the default values (\f$p_{min}=0\f$, \f$r=-0.5\f$, \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly false) no vegetative bud breaks, so a shoot type must set these parameters to branch.
+
+When the buds are sampled depends on \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly. If it is false, each bud is sampled as its phytomer is created, and \f$N\f$ is the shoot's node count at that time (its final node count for a shoot built with all its nodes at once, such as by \ref PlantArchitecture::addChildShoot() or \ref PlantArchitecture::addShootFromNodePositions()). If it is true, the buds stay dormant and are sampled each time the shoot breaks dormancy. A bud that does not break is set dead. \ref PlantArchitecture::makePlantDormant() and the dormancy that ends each season both kill every bud that is not dormant at the time, including active buds that have not yet broken, so the active buds of a shoot whose type has \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly false do not survive into the next season. To keep buds on a manually built shoot through a call to makePlantDormant(), set them dormant first with \ref Phytomer::setVegetativeBudState(BudState).
 
 \image html vegetative_bud_break_schematic.jpeg width=900px
 

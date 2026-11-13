@@ -1,0 +1,9 @@
+{
+  "name": "helios",
+  "description": "Set up, build, and run Helios simulation projects using the documentation of the installed Helios version",
+  "author": {
+    "name": "Plant Simulation Lab, UC Davis"
+  },
+  "homepage": "https://github.com/PlantSimulationLab/Helios",
+  "license": "LGPL-2.1-or-later"
+}

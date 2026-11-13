@@ -211,6 +211,38 @@ TEST_CASE("Core Context State and Configuration") {
         DOCTEST_CHECK(ctx.getModifiedUUIDs(mark) == std::vector<uint>{copy});
     }
 
+    SUBCASE("Deleted UUIDs since a caller's mark") {
+        // Deletions are kept with the same clock as modifications, so a caller asks for those since its previous mark, and
+        // markGeometryClean() does not take them away
+        Context ctx;
+        uint p0 = ctx.addPatch();
+        uint p1 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        uint p2 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+
+        uint64_t mark = 0;
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(mark).empty()); // nothing deleted yet
+        static_cast<void>(ctx.getModifiedUUIDs(mark));
+
+        // A deletion since the mark is returned, even after the geometry was marked clean
+        ctx.deletePrimitive(p1);
+        ctx.markGeometryClean();
+        DOCTEST_CHECK(ctx.getDeletedUUIDs().empty()); // the clean-flag list is emptied
+        uint64_t previous_mark = mark;
+        static_cast<void>(ctx.getModifiedUUIDs(mark));
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(previous_mark) == std::vector<uint>{p1});
+
+        // Asking does not advance the mark: only getModifiedUUIDs() does, and after it the deletion is not returned again
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(previous_mark) == std::vector<uint>{p1});
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(mark).empty());
+
+        // A caller whose mark predates both deletions sees both, in the order they were deleted
+        uint64_t early_mark = mark;
+        ctx.deletePrimitive(p2);
+        ctx.deletePrimitive(p0);
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(early_mark) == std::vector<uint>{p2, p0});
+        DOCTEST_CHECK(ctx.getDeletedUUIDs(0) == std::vector<uint>{p1, p2, p0});
+    }
+
     SUBCASE("Material revision") {
         // Advances when a material changes, including material data, which marks no primitive dirty; not when one is read or assigned
         Context ctx;
@@ -8226,4 +8258,234 @@ DOCTEST_TEST_CASE("setObjectAverageNormal does not depend on where the object si
     DOCTEST_INFO("local +X at origin: (" << axis_at_origin.x << "," << axis_at_origin.y << "," << axis_at_origin.z << "), translated: (" << axis_far_away.x << "," << axis_far_away.y << "," << axis_far_away.z << "), disagreement=" << axis_disagreement
                                          << " deg");
     DOCTEST_CHECK(axis_disagreement < 1.f);
+}
+
+TEST_CASE("Normal and bump maps on materials and primitives") {
+    const std::string normal_map = (std::filesystem::temp_directory_path() / "helios_test_ctx_normal.png").string();
+    const std::string other_normal_map = (std::filesystem::temp_directory_path() / "helios_test_ctx_normal_other.png").string();
+    const std::string bump_map = (std::filesystem::temp_directory_path() / "helios_test_ctx_bump.png").string();
+    writePNG(normal_map, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.8f, 0.5f, 0.9f, 1.f)));
+    writePNG(other_normal_map, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.5f, 0.8f, 0.9f, 1.f)));
+    writePNGSingleChannel(bump_map, 4, 4, std::vector<uint16_t>(16, 1000), 16);
+    const char *solid_texture = "lib/images/solid.jpg";
+
+    SUBCASE("material setters, getters and clearing") {
+        Context ctx;
+        ctx.addMaterial("bark");
+        DOCTEST_CHECK(ctx.getMaterialNormalMapKind("bark") == NORMAL_MAP_NONE);
+        DOCTEST_CHECK(ctx.getMaterialNormalMapFile("bark").empty());
+        ctx.setMaterialNormalMap("bark", normal_map, 1.5f, true);
+        DOCTEST_CHECK(ctx.getMaterialNormalMapKind("bark") == NORMAL_MAP_TANGENT_SPACE);
+        DOCTEST_CHECK(ctx.getMaterialNormalMapFile("bark") == normal_map);
+        DOCTEST_CHECK(ctx.getMaterialNormalMapStrength("bark") == doctest::Approx(1.5f));
+        DOCTEST_CHECK(ctx.isMaterialNormalMapGreenFlipped("bark"));
+        // A material holds one map: a bump map is refused until the normal map is cleared
+        DOCTEST_CHECK_THROWS(ctx.setMaterialBumpMap("bark", bump_map, 5.f));
+        DOCTEST_CHECK(ctx.getMaterialNormalMapKind("bark") == NORMAL_MAP_TANGENT_SPACE);
+        ctx.setMaterialNormalMapStrength("bark", 0.5f);
+        DOCTEST_CHECK(ctx.getMaterialNormalMapStrength("bark") == doctest::Approx(0.5f));
+        ctx.clearMaterialNormalMap("bark");
+        DOCTEST_CHECK(ctx.getMaterialNormalMapKind("bark") == NORMAL_MAP_NONE);
+        DOCTEST_CHECK_THROWS(ctx.setMaterialNormalMapStrength("bark", 2.f));
+        ctx.setMaterialBumpMap("bark", bump_map, 5.f);
+        DOCTEST_CHECK(ctx.getMaterialNormalMapKind("bark") == NORMAL_MAP_BUMP);
+        DOCTEST_CHECK_FALSE(ctx.isMaterialNormalMapGreenFlipped("bark"));
+        DOCTEST_CHECK_THROWS(ctx.setMaterialNormalMap("bark", normal_map));
+        // Bad strengths and files are rejected without changing the material
+        DOCTEST_CHECK_THROWS(ctx.setMaterialNormalMapStrength("bark", -1.f));
+        ctx.clearMaterialNormalMap("bark");
+        DOCTEST_CHECK_THROWS(ctx.setMaterialNormalMap("bark", "lib/images/missing_normal.png"));
+        DOCTEST_CHECK_THROWS(ctx.setMaterialNormalMap("bark", bump_map)); // grayscale image given as a normal map
+        DOCTEST_CHECK(ctx.getMaterialNormalMapKind("bark") == NORMAL_MAP_NONE);
+    }
+
+    SUBCASE("decoded maps are cached and shared") {
+        Context ctx;
+        ctx.addMaterial("a");
+        ctx.addMaterial("b");
+        ctx.setMaterialNormalMap("a", normal_map);
+        ctx.setMaterialNormalMap("b", normal_map);
+        auto texels_a = ctx.getMaterialNormalMapTexels(ctx.getMaterialIDFromLabel("a"));
+        auto texels_b = ctx.getMaterialNormalMapTexels(ctx.getMaterialIDFromLabel("b"));
+        DOCTEST_CHECK(texels_a != nullptr);
+        DOCTEST_CHECK(texels_a.get() == texels_b.get());
+        auto flipped = ctx.getNormalMapTexels(normal_map, NORMAL_MAP_TANGENT_SPACE, 1.f, true);
+        DOCTEST_CHECK(flipped.get() != texels_a.get());
+        ctx.clearNormalMapCache();
+        auto again = ctx.getMaterialNormalMapTexels(ctx.getMaterialIDFromLabel("a"));
+        DOCTEST_CHECK(again.get() != texels_a.get()); // re-decoded
+        DOCTEST_CHECK(texels_a->resolution.x == 4); // earlier holders keep their copy
+        ctx.addMaterial("none");
+        DOCTEST_CHECK(ctx.getMaterialNormalMapTexels(ctx.getMaterialIDFromLabel("none")) == nullptr);
+    }
+
+    SUBCASE("primitive maps are copy-on-write and survive appearance changes") {
+        std::string label_first, label_second, label_after_both, label_after_color, label_after_clear, label_original;
+        NormalMapKind kind_after_color = NORMAL_MAP_NONE, kind_after_texture = NORMAL_MAP_NONE, kind_after_override = NORMAL_MAP_NONE, kind_other = NORMAL_MAP_NONE;
+        {
+            capture_cerr cerr_buffer; // setPrimitiveTextureFile API warning
+            Context ctx;
+            uint p0 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_RGBcolor(0.2f, 0.6f, 0.2f));
+            uint p1 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1), nullrotation, make_RGBcolor(0.2f, 0.6f, 0.2f));
+            label_original = ctx.getPrimitiveMaterialLabel(p0);
+            ctx.setPrimitiveNormalMap(p0, normal_map);
+            label_first = ctx.getPrimitiveMaterialLabel(p0);
+            kind_other = ctx.getPrimitiveNormalMapKind(p1);
+            ctx.setPrimitiveNormalMap(p1, normal_map);
+            label_second = ctx.getPrimitiveMaterialLabel(p1);
+            // Changing the color, texture or override keeps the map
+            ctx.setPrimitiveColor(p0, make_RGBcolor(0.9f, 0.1f, 0.1f));
+            kind_after_color = ctx.getPrimitiveNormalMapKind(p0);
+            label_after_color = ctx.getPrimitiveMaterialLabel(p0);
+            ctx.setPrimitiveTextureFile(p0, solid_texture);
+            kind_after_texture = ctx.getPrimitiveNormalMapKind(p0);
+            ctx.overridePrimitiveTextureColor(p0);
+            kind_after_override = ctx.getPrimitiveNormalMapKind(p0);
+            ctx.clearPrimitiveNormalMap(p1);
+            label_after_clear = ctx.getPrimitiveMaterialLabel(p1);
+        }
+        DOCTEST_CHECK(label_first != label_original);
+        DOCTEST_CHECK(label_first.rfind("__auto_", 0) == 0);
+        DOCTEST_CHECK(kind_other == NORMAL_MAP_NONE); // the other primitive was not touched
+        DOCTEST_CHECK(label_second == label_first); // the same appearance shares one automatic material
+        DOCTEST_CHECK(kind_after_color == NORMAL_MAP_TANGENT_SPACE);
+        DOCTEST_CHECK(label_after_color != label_first);
+        DOCTEST_CHECK(kind_after_texture == NORMAL_MAP_TANGENT_SPACE);
+        DOCTEST_CHECK(kind_after_override == NORMAL_MAP_TANGENT_SPACE);
+        DOCTEST_CHECK(label_after_clear == label_original); // back on the automatic material without a map, whose label is unchanged
+    }
+
+    SUBCASE("a map set on a named material copies it for a shared primitive") {
+        Context ctx;
+        ctx.addMaterial("leaf");
+        uint p0 = ctx.addPatch();
+        uint p1 = ctx.addPatch();
+        ctx.assignMaterialToPrimitive({p0, p1}, "leaf");
+        ctx.setPrimitiveBumpMap(p0, bump_map, 3.f);
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapKind(p0) == NORMAL_MAP_BUMP);
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapStrength(p0) == doctest::Approx(3.f));
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapKind(p1) == NORMAL_MAP_NONE);
+        DOCTEST_CHECK(ctx.getMaterialNormalMapKind("leaf") == NORMAL_MAP_NONE);
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapFile(p0) == bump_map);
+        // Setting the map on the material reaches every primitive using it
+        ctx.setMaterialNormalMap("leaf", other_normal_map);
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapFile(p1) == other_normal_map);
+    }
+
+    SUBCASE("primitives without a (u,v) frame are refused") {
+        Context ctx;
+        uint voxel = ctx.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
+        uint bare_triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
+        uint textured_triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), solid_texture, make_vec2(0, 0), make_vec2(1, 0), make_vec2(0, 1));
+        uint patch = ctx.addPatch();
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveNormalMap(voxel, normal_map));
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveNormalMap(bare_triangle, normal_map));
+        // Checked before anything changes: the patch in the same call is left without a map
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveNormalMap(std::vector<uint>{patch, bare_triangle}, normal_map));
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapKind(patch) == NORMAL_MAP_NONE);
+        DOCTEST_CHECK_NOTHROW(ctx.setPrimitiveNormalMap(textured_triangle, normal_map));
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveNormalMap(patch, normal_map, 0.f));
+
+        // A material with a map cannot be given to a primitive without a frame, nor a map given to a material such a primitive uses
+        ctx.addMaterial("mapped");
+        ctx.setMaterialNormalMap("mapped", normal_map);
+        DOCTEST_CHECK_THROWS(ctx.assignMaterialToPrimitive(bare_triangle, "mapped"));
+        ctx.addMaterial("plain");
+        ctx.assignMaterialToPrimitive(bare_triangle, "plain");
+        DOCTEST_CHECK_THROWS(ctx.setMaterialNormalMap("plain", normal_map));
+        DOCTEST_CHECK(ctx.getMaterialNormalMapKind("plain") == NORMAL_MAP_NONE);
+
+        // (u,v) used to sample the map
+        const std::vector<vec2> patch_uv = ctx.getPrimitiveNormalMapUV(patch);
+        DOCTEST_CHECK(patch_uv.size() == 4);
+        DOCTEST_CHECK(patch_uv.at(2).x == doctest::Approx(1.f));
+        DOCTEST_CHECK(patch_uv.at(2).y == doctest::Approx(1.f));
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapUV(textured_triangle).at(2).y == doctest::Approx(1.f));
+        DOCTEST_CHECK_THROWS((void) ctx.getPrimitiveNormalMapUV(bare_triangle));
+    }
+
+    SUBCASE("Helios's own automatic materials cannot be given a map directly") {
+        Context ctx;
+        uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_RGBcolor(0.1f, 0.7f, 0.1f));
+        const std::string automatic = ctx.getPrimitiveMaterialLabel(patch);
+        DOCTEST_REQUIRE(automatic.rfind("__", 0) == 0);
+        DOCTEST_CHECK_THROWS(ctx.setMaterialNormalMap(automatic, normal_map));
+        DOCTEST_CHECK_THROWS(ctx.setMaterialBumpMap(automatic, bump_map, 2.f));
+        DOCTEST_CHECK_THROWS(ctx.clearMaterialNormalMap(automatic));
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapKind(patch) == NORMAL_MAP_NONE);
+        // A later primitive of the same appearance still gets a material without a map
+        uint later = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1), nullrotation, make_RGBcolor(0.1f, 0.7f, 0.1f));
+        DOCTEST_CHECK(ctx.getPrimitiveNormalMapKind(later) == NORMAL_MAP_NONE);
+    }
+
+    SUBCASE("decoded maps that nothing uses any more are released") {
+        Context ctx;
+        ctx.addMaterial("tuned");
+        ctx.setMaterialNormalMap("tuned", normal_map, 1.f);
+        std::weak_ptr<const NormalMapTexels> first = ctx.getMaterialNormalMapTexels(ctx.getMaterialIDFromLabel("tuned"));
+        DOCTEST_CHECK(!first.expired());
+        ctx.setMaterialNormalMapStrength("tuned", 2.f);
+        DOCTEST_CHECK(first.expired()); // the strength-1 decode is no longer named by any material
+        std::shared_ptr<const NormalMapTexels> held = ctx.getMaterialNormalMapTexels(ctx.getMaterialIDFromLabel("tuned"));
+        ctx.setMaterialNormalMapStrength("tuned", 3.f);
+        DOCTEST_CHECK(held->strength == doctest::Approx(2.f)); // a holder keeps its copy
+    }
+
+    SUBCASE("assigning a mapped material to several primitives changes none of them if one has no (u,v) frame") {
+        // Regression test. The primitives before the one without a frame were already moved to the material when the error was raised.
+        Context ctx;
+        ctx.addMaterial("mapped");
+        ctx.setMaterialNormalMap("mapped", normal_map);
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        const uint bare_triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0));
+        const std::string patch_material = ctx.getPrimitiveMaterialLabel(patch);
+        DOCTEST_CHECK_THROWS(ctx.assignMaterialToPrimitive(std::vector<uint>{patch, bare_triangle}, "mapped"));
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(patch) == patch_material);
+    }
+
+    SUBCASE("a copy keeps the (u,v) frame of a mapped primitive whose texture was removed") {
+        // Regression test. A triangle or patch keeps its (u,v) coordinates when its texture is removed, and with them the frame of its map; the copy was built
+        // without them, so it had the map but no frame, and reading its (u,v) frame raised an error.
+        Context ctx;
+        const uint triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), solid_texture, make_vec2(0.1f, 0.2f), make_vec2(0.9f, 0.2f), make_vec2(0.9f, 0.7f));
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, solid_texture, make_vec2(0.25f, 0.5f), make_vec2(0.5f, 0.5f));
+        for (uint UUID: {triangle, patch}) {
+            ctx.setPrimitiveNormalMap(UUID, normal_map);
+            const std::vector<vec2> frame = ctx.getPrimitiveNormalMapUV(UUID);
+            ctx.setPrimitiveTextureFile(UUID, "");
+            DOCTEST_REQUIRE(ctx.getPrimitiveNormalMapUV(UUID) == frame);
+            const uint copy = ctx.copyPrimitive(UUID);
+            DOCTEST_CHECK(ctx.getPrimitiveNormalMapKind(copy) == NORMAL_MAP_TANGENT_SPACE);
+            std::vector<vec2> copy_frame;
+            DOCTEST_CHECK_NOTHROW(copy_frame = ctx.getPrimitiveNormalMapUV(copy));
+            DOCTEST_CHECK(copy_frame == frame);
+        }
+    }
+
+    SUBCASE("a tube grown in the Context keeps the named material of its segments") {
+        // Regression test. A segment appended with the texture of the tube's named material was given an automatic material, without the material's normal map.
+        Context ctx;
+        const std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1)};
+        const uint tube = ctx.addTubeObject(6, nodes, {0.1f, 0.1f}, solid_texture);
+        ctx.addMaterial("bark");
+        ctx.setMaterialTexture("bark", solid_texture);
+        ctx.setMaterialNormalMap("bark", normal_map);
+        ctx.assignMaterialToObject(tube, "bark");
+        ctx.appendTubeSegment(tube, make_vec3(0, 0, 2), 0.1f, solid_texture, make_vec2(0, 1));
+        for (uint UUID: ctx.getObjectPrimitiveUUIDs(tube)) {
+            DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == "bark");
+        }
+        // A segment of another texture asks for another appearance, so it keeps its own (automatic) material
+        ctx.appendTubeSegment(tube, make_vec3(0, 0, 3), 0.1f, "lib/images/disk_texture.png", make_vec2(0, 1));
+        const std::vector<uint> UUIDs = ctx.getObjectPrimitiveUUIDs(tube);
+        size_t bark_count = 0;
+        for (uint UUID: UUIDs) {
+            bark_count += ctx.getPrimitiveMaterialLabel(UUID) == "bark" ? 1 : 0;
+        }
+        DOCTEST_CHECK(bark_count == UUIDs.size() - 12);
+    }
+
+    for (const auto &file: {normal_map, other_normal_map, bump_map}) {
+        std::filesystem::remove(file);
+    }
 }

@@ -2345,6 +2345,315 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
     return make_int2(cinfo.output_width, cinfo.output_height);
 }
 
+// ---------------------------------------------------------------------------
+// Normal and bump maps
+// ---------------------------------------------------------------------------
+
+namespace {
+    //! Whether a PNG file stores a single gray channel (with or without alpha), read from its header only
+    bool pngIsGrayscale(const std::string &filename) {
+        std::unique_ptr<FILE, int (*)(FILE *)> fp(fopen(filename.c_str(), "rb"), fclose);
+        if (!fp) {
+            helios::helios_runtime_error("ERROR (decodeNormalMapImage): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
+        }
+        single_channel_png_error[0] = '\0';
+        png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, singleChannelPNGError, singleChannelPNGWarning);
+        png_infop info_ptr = png_ptr != nullptr ? png_create_info_struct(png_ptr) : nullptr;
+        if (png_ptr == nullptr || info_ptr == nullptr) {
+            png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+            helios::helios_runtime_error("ERROR (decodeNormalMapImage): Failed to create the PNG structures for " + filename + ".");
+        }
+        bool failed = false;
+        png_byte color_type = 0;
+        if (setjmp(png_jmpbuf(png_ptr))) {
+            failed = true;
+        } else {
+            png_init_io(png_ptr, fp.get());
+            png_read_info(png_ptr, info_ptr);
+            color_type = png_get_color_type(png_ptr, info_ptr);
+        }
+        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+        if (failed) {
+            helios::helios_runtime_error("ERROR (decodeNormalMapImage): File " + filename + " could not be read as a PNG image (" + std::string(single_channel_png_error) + ").");
+        }
+        return color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA;
+    }
+
+    //! Image of a normal or bump map read into floating point channels, rows from the top
+    struct NormalMapSourceImage {
+        uint width = 0;
+        uint height = 0;
+        //! Three channels per texel for an RGB source, or one for a full-precision grayscale bump map
+        std::vector<float> values;
+        uint channels = 0;
+    };
+
+    std::string lowercaseExtension(const std::string &file) {
+        std::string extension = helios::getFileExtension(file);
+        std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return std::tolower(c); });
+        return extension;
+    }
+
+    NormalMapSourceImage readNormalMapSource(const std::string &file, bool grayscale_at_full_precision) {
+        NormalMapSourceImage image;
+        const std::string extension = lowercaseExtension(file);
+        if (extension == ".png") {
+            if (grayscale_at_full_precision && pngIsGrayscale(file)) {
+                // A gray PNG with an alpha channel cannot be read by readPNGSingleChannel(), so it goes through readPNG() at 8 bits
+                std::vector<uint16_t> gray;
+                bool has_alpha = helios::PNGHasAlpha(file.c_str());
+                if (!has_alpha) {
+                    std::unique_ptr<FILE, int (*)(FILE *)> fp(fopen(file.c_str(), "rb"), fclose);
+                    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, singleChannelPNGError, singleChannelPNGWarning);
+                    png_infop info_ptr = png_ptr != nullptr ? png_create_info_struct(png_ptr) : nullptr;
+                    if (png_ptr == nullptr || info_ptr == nullptr || !fp) {
+                        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+                        helios::helios_runtime_error("ERROR (decodeNormalMapImage): File " + file + " could not be opened as a PNG image.");
+                    }
+                    volatile png_byte bit_depth = 8;
+                    bool failed = false;
+                    // libpng reports errors by longjmp, so setjmp stands alone as the condition, as the standard requires
+                    if (setjmp(png_jmpbuf(png_ptr))) {
+                        failed = true;
+                    } else {
+                        png_init_io(png_ptr, fp.get());
+                        png_read_info(png_ptr, info_ptr);
+                        bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+                    }
+                    png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+                    if (failed) {
+                        helios::helios_runtime_error("ERROR (decodeNormalMapImage): File " + file + " could not be read as a PNG image (" + std::string(single_channel_png_error) + ").");
+                    }
+                    if (bit_depth == 8 || bit_depth == 16) {
+                        helios::readPNGSingleChannel(file, image.width, image.height, gray);
+                        const float scale = bit_depth == 16 ? 1.f / 65535.f : 1.f / 255.f;
+                        image.channels = 1;
+                        image.values.resize(gray.size());
+                        for (size_t i = 0; i < gray.size(); i++) {
+                            image.values[i] = float(gray[i]) * scale;
+                        }
+                        return image;
+                    }
+                }
+            }
+            std::vector<helios::RGBAcolor> pixels;
+            helios::readPNG(file, image.width, image.height, pixels);
+            image.channels = 3;
+            image.values.resize(pixels.size() * 3);
+            for (size_t i = 0; i < pixels.size(); i++) {
+                image.values[3 * i + 0] = pixels[i].r;
+                image.values[3 * i + 1] = pixels[i].g;
+                image.values[3 * i + 2] = pixels[i].b;
+            }
+        } else if (extension == ".jpg" || extension == ".jpeg") {
+            std::vector<helios::RGBcolor> pixels;
+            helios::readJPEG(file, image.width, image.height, pixels);
+            image.channels = 3;
+            image.values.resize(pixels.size() * 3);
+            for (size_t i = 0; i < pixels.size(); i++) {
+                image.values[3 * i + 0] = pixels[i].r;
+                image.values[3 * i + 1] = pixels[i].g;
+                image.values[3 * i + 2] = pixels[i].b;
+            }
+        } else {
+            helios::helios_runtime_error("ERROR (decodeNormalMapImage): File " + file + " is not a PNG or JPEG image. Normal and bump maps must be PNG (.png) or JPEG (.jpg, .jpeg) files.");
+        }
+        if (image.width == 0 || image.height == 0) {
+            helios::helios_runtime_error("ERROR (decodeNormalMapImage): File " + file + " has no pixels.");
+        }
+        return image;
+    }
+
+    //! Fraction of texels of an RGB source whose three channels are equal to within one 8-bit step
+    float grayTexelFraction(const NormalMapSourceImage &image) {
+        if (image.channels == 1) {
+            return 1.f;
+        }
+        const size_t count = size_t(image.width) * image.height;
+        size_t gray = 0;
+        for (size_t i = 0; i < count; i++) {
+            const float r = image.values[3 * i], g = image.values[3 * i + 1], b = image.values[3 * i + 2];
+            // Within about one 8-bit step, since a grayscale image stored as an RGB JPEG decodes with channels a step apart
+            if (std::fabs(r - g) < 1.5f / 255.f && std::fabs(g - b) < 1.5f / 255.f) {
+                gray++;
+            }
+        }
+        return float(gray) / float(count);
+    }
+
+    int16_t toSnorm16(float value) {
+        return int16_t(std::lround(std::clamp(value, -1.f, 1.f) * 32767.f));
+    }
+} // namespace
+
+helios::vec3 helios::NormalMapTexels::getNormal(int column, int row_from_top) const {
+    const size_t index = 2 * (size_t(row_from_top) * size_t(resolution.x) + size_t(column));
+    const float x = float(xy[index]) / 32767.f;
+    const float y = float(xy[index + 1]) / 32767.f;
+    const float z = std::sqrt(std::max(0.f, 1.f - x * x - y * y));
+    return normalize(make_vec3(x, y, z));
+}
+
+helios::vec3 helios::NormalMapTexels::sampleNearest(const helios::vec2 &uv) const {
+    const int column = std::clamp(int(std::floor(float(resolution.x - 1) * uv.x)), 0, resolution.x - 1);
+    const int row = std::clamp(int(std::floor(float(resolution.y - 1) * (1.f - uv.y))), 0, resolution.y - 1);
+    return getNormal(column, row);
+}
+
+helios::vec3 helios::NormalMapTexels::sampleBilinear(const helios::vec2 &uv) const {
+    const float fx = float(resolution.x - 1) * uv.x - 0.5f;
+    const float fy = float(resolution.y - 1) * (1.f - uv.y) - 0.5f;
+    const int x0 = int(std::floor(fx));
+    const int y0 = int(std::floor(fy));
+    const float wx = fx - float(x0);
+    const float wy = fy - float(y0);
+    const int c0 = std::clamp(x0, 0, resolution.x - 1), c1 = std::clamp(x0 + 1, 0, resolution.x - 1);
+    const int r0 = std::clamp(y0, 0, resolution.y - 1), r1 = std::clamp(y0 + 1, 0, resolution.y - 1);
+    const vec3 blended = (1.f - wy) * ((1.f - wx) * getNormal(c0, r0) + wx * getNormal(c1, r0)) + wy * ((1.f - wx) * getNormal(c0, r1) + wx * getNormal(c1, r1));
+    return normalize(blended);
+}
+
+size_t helios::NormalMapTexels::getMemoryBytes() const {
+    return xy.size() * sizeof(int16_t);
+}
+
+helios::NormalMapTexels helios::decodeNormalMapImage(const std::string &file, NormalMapKind kind, float strength, bool flip_green) {
+    const std::string prefix = "ERROR (decodeNormalMapImage): ";
+    if (kind != NORMAL_MAP_TANGENT_SPACE && kind != NORMAL_MAP_BUMP) {
+        helios_runtime_error(prefix + "The kind of map must be NORMAL_MAP_TANGENT_SPACE or NORMAL_MAP_BUMP.");
+    }
+    if (!std::isfinite(strength) || strength <= 0.f) {
+        helios_runtime_error(prefix + "The strength of map " + file + " must be a finite value greater than zero, but " + std::to_string(strength) + " was given. To remove a map, clear it instead.");
+    }
+    if (kind == NORMAL_MAP_BUMP && flip_green) {
+        helios_runtime_error(prefix + "Flipping the green channel applies only to tangent-space normal maps, but " + file + " was given as a bump map.");
+    }
+    const std::string resolved = resolveFilePath(file).string();
+
+    NormalMapTexels texels;
+    texels.file = resolved;
+    texels.kind = kind;
+    texels.strength = strength;
+    texels.flip_green = flip_green;
+
+    const NormalMapSourceImage image = readNormalMapSource(resolved, kind == NORMAL_MAP_BUMP);
+    const int W = int(image.width), H = int(image.height);
+    texels.resolution = make_int2(W, H);
+    texels.xy.resize(2 * size_t(W) * size_t(H));
+
+    if (kind == NORMAL_MAP_TANGENT_SPACE) {
+        if (grayTexelFraction(image) >= 0.995f) {
+            helios_runtime_error(prefix + "File " + file + " was given as a tangent-space normal map, but it is a grayscale image, which is a height (bump) map. Use setMaterialBumpMap() or setPrimitiveBumpMap() for it.");
+        }
+        for (size_t i = 0; i < size_t(W) * size_t(H); i++) {
+            float x = 2.f * image.values[3 * i] - 1.f;
+            float y = 2.f * image.values[3 * i + 1] - 1.f;
+            float z = std::max(0.f, 2.f * image.values[3 * i + 2] - 1.f);
+            if (flip_green) {
+                y = -y;
+            }
+            vec3 n = make_vec3(x, y, z);
+            if (n.magnitude() < 1e-6f) {
+                n = make_vec3(0, 0, 1);
+            }
+            n.normalize();
+            if (strength != 1.f) {
+                n = make_vec3(strength * n.x, strength * n.y, n.z);
+                n.normalize();
+            }
+            texels.xy[2 * i] = toSnorm16(n.x);
+            texels.xy[2 * i + 1] = toSnorm16(n.y);
+        }
+    } else {
+        std::vector<float> height(size_t(W) * size_t(H));
+        for (size_t i = 0; i < height.size(); i++) {
+            height[i] = image.channels == 1 ? image.values[i] : 0.2126f * image.values[3 * i] + 0.7152f * image.values[3 * i + 1] + 0.0722f * image.values[3 * i + 2];
+        }
+        auto h = [&](int row, int column) { return height[size_t(std::clamp(row, 0, H - 1)) * size_t(W) + size_t(std::clamp(column, 0, W - 1))]; };
+        const float weights[3] = {3.f / 32.f, 10.f / 32.f, 3.f / 32.f};
+        for (int row = 0; row < H; row++) {
+            for (int column = 0; column < W; column++) {
+                float gradient_right = 0.f;
+                float gradient_up = 0.f;
+                for (int k = -1; k <= 1; k++) {
+                    gradient_right += weights[k + 1] * (h(row + k, column + 1) - h(row + k, column - 1));
+                    gradient_up += weights[k + 1] * (h(row - 1, column + k) - h(row + 1, column + k));
+                }
+                vec3 n = make_vec3(-strength * gradient_right, -strength * gradient_up, 1.f);
+                n.normalize();
+                const size_t i = size_t(row) * size_t(W) + size_t(column);
+                texels.xy[2 * i] = toSnorm16(n.x);
+                texels.xy[2 * i + 1] = toSnorm16(n.y);
+            }
+        }
+    }
+    return texels;
+}
+
+helios::NormalMapKind helios::classifyBumpImage(const std::string &file) {
+    const std::string resolved = resolveFilePath(file).string();
+    const std::string extension = lowercaseExtension(resolved);
+    if (extension == ".png" && pngIsGrayscale(resolved)) {
+        return NORMAL_MAP_BUMP;
+    }
+    const NormalMapSourceImage image = readNormalMapSource(resolved, false);
+    if (grayTexelFraction(image) >= 0.995f) {
+        return NORMAL_MAP_BUMP;
+    }
+    double mean_x = 0, mean_y = 0, mean_z = 0;
+    const size_t count = size_t(image.width) * image.height;
+    for (size_t i = 0; i < count; i++) {
+        mean_x += 2.0 * image.values[3 * i] - 1.0;
+        mean_y += 2.0 * image.values[3 * i + 1] - 1.0;
+        mean_z += 2.0 * image.values[3 * i + 2] - 1.0;
+    }
+    mean_x /= double(count);
+    mean_y /= double(count);
+    mean_z /= double(count);
+    if (mean_z > 0.5 && std::fabs(mean_x) < 0.25 && std::fabs(mean_y) < 0.25) {
+        return NORMAL_MAP_TANGENT_SPACE;
+    }
+    helios_runtime_error("ERROR (classifyBumpImage): File " + file + " is neither a grayscale height (bump) map nor a tangent-space normal map (whose colours average about (0.5, 0.5, 1)): its mean decoded normal is (" + std::to_string(mean_x) +
+                         ", " + std::to_string(mean_y) + ", " + std::to_string(mean_z) + "). Check that the material's bump line names the right image.");
+    return NORMAL_MAP_NONE;
+}
+
+bool helios::computeTangentFrame(const vec3 &p0, const vec3 &p1, const vec3 &p2, const vec2 &uv0, const vec2 &uv1, const vec2 &uv2, vec3 &dPdu, vec3 &dPdv) {
+    const vec3 e1 = p1 - p0;
+    const vec3 e2 = p2 - p0;
+    const float du1 = uv1.x - uv0.x, dv1 = uv1.y - uv0.y;
+    const float du2 = uv2.x - uv0.x, dv2 = uv2.y - uv0.y;
+    const float J = du1 * dv2 - du2 * dv1;
+    const float scale = (std::fabs(du1) + std::fabs(du2)) * (std::fabs(dv1) + std::fabs(dv2));
+    if (!(std::fabs(J) > 1e-6f * scale) || scale == 0.f) {
+        return false;
+    }
+    dPdu = (dv2 * e1 - dv1 * e2) / J;
+    dPdv = (du1 * e2 - du2 * e1) / J;
+    return true;
+}
+
+helios::vec3 helios::applyTangentSpaceNormal(const vec3 &tangent_normal, const vec3 &dPdu, const vec3 &dPdv, const vec3 &normal) {
+    // An orthonormal frame, as in MikkTSpace (glTF, Blender): the tangent is dP/du made perpendicular to the normal, and the bitangent is perpendicular to both, on the side of dP/dv
+    vec3 T = dPdu - normal * (normal * dPdu);
+    const float lt = T.magnitude();
+    if (lt < 1e-12f) {
+        return normal;
+    }
+    T = T / lt;
+    vec3 B = cross(normal, T);
+    const float side = B * dPdv;
+    if (side == 0.f) {
+        return normal;
+    }
+    if (side < 0.f) {
+        B = -1.f * B;
+    }
+    vec3 n = tangent_normal.x * T + tangent_normal.y * B + tangent_normal.z * normal;
+    n.normalize();
+    return n;
+}
+
 static void writeJPEGInternal(const std::string &a_filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data, const helios::ImageEXIFData *metadata) {
 
     std::string filename = a_filename;

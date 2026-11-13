@@ -1565,6 +1565,40 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
                 setMaterialTwosidedFlag(material_label, twosided);
             }
 
+            // Normal or bump map: a material holds one or the other
+            pugi::xml_node normal_map_node = mat.child("normal_map");
+            pugi::xml_node bump_map_node = mat.child("bump_map");
+            if (!normal_map_node.empty() && !bump_map_node.empty()) {
+                helios_runtime_error("ERROR (Context::loadXML): Material '" + material_label + "' has both a <normal_map> and a <bump_map>. A material can have one or the other, not both.");
+            }
+            clearMaterialNormalMap_internal(material_label);
+            if (!normal_map_node.empty()) {
+                const std::string normal_map_file = deblank(normal_map_node.child_value());
+                float strength = 1.f;
+                pugi::xml_node strength_node = mat.child("normal_map_strength");
+                if (!strength_node.empty() && !parse_float(strength_node.child_value(), strength)) {
+                    helios_runtime_error("ERROR (Context::loadXML): The <normal_map_strength> of material '" + material_label + "' must be a number.");
+                }
+                bool flip_green = false;
+                pugi::xml_node flip_node = mat.child("normal_map_flip_green");
+                if (!flip_node.empty()) {
+                    int flip_value;
+                    if (!parse_int(flip_node.child_value(), flip_value)) {
+                        helios_runtime_error("ERROR (Context::loadXML): The <normal_map_flip_green> of material '" + material_label + "' must be 0 or 1.");
+                    }
+                    flip_green = flip_value != 0;
+                }
+                setMaterialNormalMap_internal(material_label, NORMAL_MAP_TANGENT_SPACE, normal_map_file, strength, flip_green);
+            } else if (!bump_map_node.empty()) {
+                const std::string bump_map_file = deblank(bump_map_node.child_value());
+                pugi::xml_node strength_node = mat.child("bump_map_strength");
+                float strength;
+                if (strength_node.empty() || !parse_float(strength_node.child_value(), strength)) {
+                    helios_runtime_error("ERROR (Context::loadXML): The <bump_map> of material '" + material_label + "' needs a numeric <bump_map_strength>, the displacement in texels of the full height range.");
+                }
+                setMaterialNormalMap_internal(material_label, NORMAL_MAP_BUMP, bump_map_file, strength, false);
+            }
+
             // Load material data
             loadMaterialData(mat, material_label);
         }
@@ -3312,6 +3346,23 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                 if (mat.twosided_flag != 1) { // Only write if non-default
                     outfile << "\t\t<twosided_flag>" << mat.twosided_flag << "</twosided_flag>" << std::endl;
                 }
+                if (mat.normal_map_kind != NORMAL_MAP_NONE) {
+                    // Nine significant digits, so that the strength reads back as the same float
+                    std::ostringstream strength;
+                    strength << std::setprecision(9) << mat.normal_map_strength;
+                    if (mat.normal_map_kind == NORMAL_MAP_TANGENT_SPACE) {
+                        outfile << "\t\t<normal_map>" << mat.normal_map_file << "</normal_map>" << std::endl;
+                        if (mat.normal_map_strength != 1.f) {
+                            outfile << "\t\t<normal_map_strength>" << strength.str() << "</normal_map_strength>" << std::endl;
+                        }
+                        if (mat.normal_map_flip_green) {
+                            outfile << "\t\t<normal_map_flip_green>1</normal_map_flip_green>" << std::endl;
+                        }
+                    } else {
+                        outfile << "\t\t<bump_map>" << mat.normal_map_file << "</bump_map>" << std::endl;
+                        outfile << "\t\t<bump_map_strength>" << strength.str() << "</bump_map_strength>" << std::endl;
+                    }
+                }
                 // Write material data
                 std::vector<std::string> mdata = mat.listMaterialData();
                 if (!mdata.empty()) {
@@ -4992,6 +5043,17 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
             setMaterialTexture(context_matname, mat.texture);
         }
         setMaterialTextureColorOverride(context_matname, mat.textureColorIsOverridden);
+        if (mat.normal_map_kind != NORMAL_MAP_NONE) {
+            if (mat.texture.empty()) {
+                helios_runtime_error("ERROR (Context::loadOBJ): Material '" + matname + "' has the normal or bump map '" + mat.normal_map +
+                                     "' but no diffuse texture (map_Kd). Helios gives triangles (u,v) coordinates only from a texture, and a normal map needs them; add a map_Kd image to the material.");
+            }
+            if (mat.normal_map_kind == NORMAL_MAP_TANGENT_SPACE) {
+                setMaterialNormalMap(context_matname, mat.normal_map, mat.normal_map_strength);
+            } else {
+                setMaterialBumpMap(context_matname, mat.normal_map, mat.normal_map_strength);
+            }
+        }
         mtl_to_context_material[matname] = context_matname;
     }
 
@@ -5294,12 +5356,61 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
             materials.emplace(material_name, mat);
 
             std::string map_Kd, map_d;
+            std::string norm_file, bump_file;
+            float norm_strength = 1.f, bump_strength = 1.f;
 
             while (line != "newmtl" && inputMTL.good()) {
                 inputMTL >> line;
 
                 if (line == "newmtl") {
                     break;
+                } else if (line == "norm" || line == "map_Bump" || line == "map_bump" || line == "bump") {
+                    // "norm" names a tangent-space normal map; "map_Bump" and "bump" name a bump map, but many exporters write normal maps there too, so the image decides (see classifyBumpImage())
+                    const bool is_norm = line == "norm";
+                    getline(inputMTL, line);
+                    std::istringstream stream(trim_whitespace(line));
+                    std::vector<std::string> tokens;
+                    std::string token;
+                    while (stream >> token) {
+                        tokens.push_back(token);
+                    }
+                    std::string map_file;
+                    float strength = 1.f;
+                    for (size_t t = 0; t < tokens.size(); t++) {
+                        if (tokens[t] == "-bm" && t + 1 < tokens.size()) {
+                            if (!parse_float(tokens[t + 1], strength)) {
+                                helios_runtime_error("ERROR (Context::loadOBJ): The -bm option of the bump line of material '" + material_name + "' in " + resolved_file + " must be followed by a number.");
+                            }
+                            t++;
+                            continue;
+                        }
+                        std::string ext = getFileExtension(tokens[t]);
+                        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
+                        if (ext == ".png" || ext == ".jpg" || ext == ".jpeg") {
+                            map_file = tokens[t];
+                            if (!std::filesystem::exists(map_file)) {
+                                map_file = (std::filesystem::path(filebase) / tokens[t]).string();
+                                if (!std::filesystem::exists(map_file)) {
+                                    helios_runtime_error("ERROR (Context::loadOBJ): Normal or bump map '" + tokens[t] + "' referenced by material '" + material_name + "' in " + resolved_file +
+                                                         " cannot be found. Searched in current directory and OBJ file directory (" + filebase + ").");
+                                }
+                            }
+                        }
+                    }
+                    if (map_file.empty()) {
+                        // The image is the last item of the line, after any options
+                        const std::string named = tokens.empty() ? std::string() : tokens.back();
+                        helios_runtime_error("ERROR (Context::loadOBJ): The " + std::string(is_norm ? "norm" : "bump") + " line of material '" + material_name + "' in " + resolved_file +
+                                             (named.empty() ? std::string(" names no image.") : " names '" + named + "', which is not a PNG or JPEG image (the only kinds Helios reads).") +
+                                             " Convert the map to PNG, or remove the line to load the model without it.");
+                    }
+                    if (is_norm) {
+                        norm_file = map_file;
+                        norm_strength = strength;
+                    } else {
+                        bump_file = map_file;
+                        bump_strength = strength;
+                    }
                 } else if (line == "map_a" || line == "map_Ka" || line == "Ks" || line == "Ka" || line == "map_Ks") {
                     getline(inputMTL, line);
                 } else if (line == "map_Kd" || line == "map_d") {
@@ -5350,6 +5461,21 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
                 } else {
                     getline(inputMTL, line);
                 }
+            }
+
+            OBJmaterial &obj_material = materials.at(material_name);
+            if (!norm_file.empty()) {
+                if (!bump_file.empty() && bump_file != norm_file) {
+                    std::cerr << "WARNING (Context::loadOBJ): Material '" << material_name << "' in " << resolved_file << " names a normal map ('" << norm_file << "') and a bump map ('" << bump_file
+                              << "'). Helios materials hold one of them, so the normal map is used and the bump map is ignored." << std::endl;
+                }
+                obj_material.normal_map = norm_file;
+                obj_material.normal_map_kind = NORMAL_MAP_TANGENT_SPACE;
+                obj_material.normal_map_strength = norm_strength;
+            } else if (!bump_file.empty()) {
+                obj_material.normal_map = bump_file;
+                obj_material.normal_map_kind = classifyBumpImage(bump_file);
+                obj_material.normal_map_strength = bump_strength;
             }
 
             if (!map_Kd.empty()) {
@@ -5421,6 +5547,8 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
 
     std::vector<OBJmaterial> materials;
     std::unordered_map<std::string, uint> material_cache;
+    // The decoded normals of each written material that has a normal or bump map, which are written as an image of their own
+    std::map<uint, std::shared_ptr<const NormalMapTexels>> written_normal_maps;
     const size_t primitive_count = UUIDs.size();
     const size_t estimated_vertices = primitive_count * 4;
 
@@ -5501,7 +5629,14 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
             object_order.push_back(obj_label);
         }
 
+        const Material &primitive_material = this->materials.at(prim_ptr->materialID); // the local "materials" holds the .mtl entries
         std::string material_key = texturefile + "|" + std::to_string(C.r) + "," + std::to_string(C.g) + "," + std::to_string(C.b) + "|" + std::to_string(texture_color_overridden);
+        // Materials whose maps decode to the same normals share one decode (see getMaterialNormalMapTexels()), which identifies them exactly
+        std::shared_ptr<const NormalMapTexels> decoded_normal_map;
+        if (primitive_material.normal_map_kind != NORMAL_MAP_NONE) {
+            decoded_normal_map = getMaterialNormalMapTexels(prim_ptr->materialID);
+            material_key += "|normal map " + std::to_string(reinterpret_cast<std::uintptr_t>(decoded_normal_map.get()));
+        }
 
         uint material_ID;
         auto material_iter = material_cache.find(material_key);
@@ -5520,6 +5655,13 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
             }
             if (texture_color_overridden) {
                 materials.back().textureColorIsOverridden = true;
+            }
+            if (decoded_normal_map != nullptr) {
+                // Written as the tangent-space normals Helios applies (strength, green-channel convention and the conversion of a bump map included), at a strength of 1
+                materials.back().normal_map = primitive_material.normal_map_file;
+                materials.back().normal_map_kind = NORMAL_MAP_TANGENT_SPACE;
+                materials.back().normal_map_strength = 1.f;
+                written_normal_maps[material_ID] = decoded_normal_map;
             }
 
             material_cache[material_key] = material_ID;
@@ -5742,50 +5884,69 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
         texture_dir = ".";
     }
 
+    // Copies an image next to the output file and returns the name to write in the .mtl file, or the original path if it cannot be copied
+    auto copyImageToOutputDirectory = [&texture_dir](const std::string &image) -> std::string {
+        std::error_code ec;
+        std::filesystem::path source_path = std::filesystem::absolute(image, ec);
+
+        // If we can't resolve the absolute path, try the original path
+        if (ec) {
+            source_path = std::filesystem::path(image);
+        }
+
+        if (!std::filesystem::exists(source_path)) {
+            // Skip missing image files silently (maintain original behavior)
+            return image;
+        }
+
+        auto filename = source_path.filename();
+        std::filesystem::path dest_path = texture_dir / filename;
+
+        // Skip copying if source and destination are the same file
+        bool same_file = false;
+        try {
+            same_file = std::filesystem::equivalent(source_path, dest_path, ec);
+            if (ec)
+                same_file = false; // If we can't determine equivalence, assume different
+        } catch (...) {
+            same_file = false;
+        }
+
+        if (same_file) {
+            return filename.string();
+        }
+
+        // Attempt to copy file, but don't fail if it doesn't work
+        try {
+            std::filesystem::copy_file(source_path, dest_path, std::filesystem::copy_options::overwrite_existing, ec);
+            if (!ec) {
+                return filename.string();
+            } // else keep original path
+        } catch (...) {
+            // If copy fails for any reason, keep original path
+            // This maintains backward compatibility
+        }
+        return image;
+    };
+
     for (auto &material: materials) {
-        std::string texture = material.texture;
-        if (!texture.empty()) {
-            std::error_code ec;
-            std::filesystem::path source_path = std::filesystem::absolute(texture, ec);
-
-            // If we can't resolve the absolute path, try the original path
-            if (ec) {
-                source_path = std::filesystem::path(texture);
+        if (!material.texture.empty()) {
+            material.texture = copyImageToOutputDirectory(material.texture);
+        }
+        const auto decoded = written_normal_maps.find(material.materialID);
+        if (decoded != written_normal_maps.end() && !material.texture.empty()) {
+            // The decoded normals, under a name of the written model's own, so that no image of the same name (a texture, or another map) is overwritten
+            const NormalMapTexels &texels = *decoded->second;
+            std::vector<RGBAcolor> pixels(size_t(texels.resolution.x) * size_t(texels.resolution.y));
+            for (int row = 0; row < texels.resolution.y; row++) {
+                for (int column = 0; column < texels.resolution.x; column++) {
+                    const vec3 normal = texels.getNormal(column, row);
+                    pixels[size_t(row) * size_t(texels.resolution.x) + size_t(column)] = make_RGBAcolor(0.5f * normal.x + 0.5f, 0.5f * normal.y + 0.5f, 0.5f * normal.z + 0.5f, 1.f);
+                }
             }
-
-            if (!std::filesystem::exists(source_path)) {
-                // Skip missing texture files silently (maintain original behavior)
-                continue;
-            }
-
-            auto filename = source_path.filename();
-            std::filesystem::path dest_path = texture_dir / filename;
-
-            // Skip copying if source and destination are the same file
-            bool same_file = false;
-            try {
-                same_file = std::filesystem::equivalent(source_path, dest_path, ec);
-                if (ec)
-                    same_file = false; // If we can't determine equivalence, assume different
-            } catch (...) {
-                same_file = false;
-            }
-
-            if (same_file) {
-                material.texture = filename.string();
-                continue;
-            }
-
-            // Attempt to copy file, but don't fail if it doesn't work
-            try {
-                std::filesystem::copy_file(source_path, dest_path, std::filesystem::copy_options::overwrite_existing, ec);
-                if (!ec) {
-                    material.texture = filename.string();
-                } // else keep original texture path
-            } catch (...) {
-                // If copy fails for any reason, keep original texture path
-                // This maintains backward compatibility
-            }
+            const std::string normal_map_name = file_stem + "_normal_" + std::to_string(material.materialID) + ".png";
+            writePNG((texture_dir / normal_map_name).string(), uint(texels.resolution.x), uint(texels.resolution.y), pixels);
+            material.normal_map = normal_map_name;
         }
     }
 
@@ -6108,11 +6269,23 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
             } else {
                 mtlfstream << "map_Kd " << current_texture << std::endl;
             }
-            if (materials.at(mat).textureHasTransparency) {
+            // A normal map needs the texture's (u,v) coordinates when the file is read back, so an overridden texture is still named (as the transparency map, which loadOBJ() reads as an overridden texture)
+            if (materials.at(mat).textureHasTransparency || (materials.at(mat).textureColorIsOverridden && materials.at(mat).normal_map_kind != NORMAL_MAP_NONE)) {
                 mtlfstream << "map_d " << current_texture << std::endl;
             }
             mtlfstream << "Ks 0.0 0.0 0.0" << std::endl;
             mtlfstream << "illum 2 " << std::endl;
+        }
+        const OBJmaterial &written = materials.at(mat);
+        if (written.normal_map_kind != NORMAL_MAP_NONE && written.texture.empty()) {
+            // Without a texture the faces are written without (u,v) coordinates, on which the map could not be placed when the file is read back
+            std::cerr << "WARNING (Context::writeOBJ): Primitives with the normal or bump map '" << written.normal_map << "' have no texture, so their faces are written without (u,v) coordinates and the map is left out of the .mtl file."
+                      << std::endl;
+        } else if (written.normal_map_kind == NORMAL_MAP_TANGENT_SPACE) {
+            // "norm" for programs that follow the .mtl extension, and "map_Bump" for those (such as Blender) that read normal maps from it; loadOBJ() takes the "norm" line when both name the same file.
+            // Every map is written as its decoded normals at a strength of 1 (see above).
+            mtlfstream << "norm " << written.normal_map << std::endl;
+            mtlfstream << "map_Bump " << written.normal_map << std::endl;
         }
     }
 

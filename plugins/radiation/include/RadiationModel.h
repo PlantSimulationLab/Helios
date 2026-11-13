@@ -565,14 +565,14 @@ struct CameraMetadata {
     //! Geographic location properties
     struct LocationProperties {
         float latitude; //!< Latitude in degrees (+N/-S)
-        float longitude; //!< Longitude in degrees (+E/-W)
+        float longitude; //!< Longitude in degrees (+E/-W), the usual (ISO 6709) convention, opposite to the Context's (helios::Location counts longitude positive West)
     } location_properties;
 
     //! Image acquisition properties
     struct AcquisitionProperties {
         std::string date; //!< Acquisition date (YYYY-MM-DD format)
         std::string time; //!< Acquisition time (HH:MM:SS format)
-        float UTC_offset; //!< UTC offset in hours
+        float UTC_offset; //!< Offset of local time from UTC in hours, positive East as in ISO 8601 and the EXIF OffsetTime tags (UTC-8 is -8), opposite to the Context's (helios::Location counts it positive West)
         float camera_height_m; //!< Camera height above ground in meters
         float camera_angle_deg; //!< Camera tilt angle from horizontal (0=horizontal, 90=down)
         std::string light_source; //!< Lighting type: "sunlight", "artificial", "mixed", or "none"
@@ -873,7 +873,7 @@ public:
      * By default, the diffuse sky only fills the upper hemisphere: a ray that leaves all geometry heading downward (e.g., past the edge of a finite ground, or from the underside of an isolated object) receives no ambient radiation. Calling this
      * function makes the sky fill the full sphere, so that such rays receive the same ambient radiation as rays leaving upward. This applies to all bands. Camera rays leaving below the horizon always see sky; by default
      * they see the sky radiance at the horizon in the same azimuth, and with this function called they see the sky's full-sphere angular pattern.
-     * \note To avoid edge effects from a finite ground (where the domain edges are dark from below), use \ref RadiationModel::enforcePeriodicBoundary() "enforcePeriodicBoundary()" rather than this function.
+     * \note To avoid edge effects from a finite ground (where the domain edges are dark from below), use \ref RadiationModel::enforcePeriodicBoundary(const std::string &) "enforcePeriodicBoundary()" rather than this function.
      */
     void enableBelowHorizonDiffuseRadiation();
 
@@ -1347,10 +1347,38 @@ public:
 
     //! Use a periodic boundary condition in one or more lateral directions
     /**
-     * \param[in] boundary Lateral direction to enforce periodic boundary - choices are "x" (periodic only in x-direction), "y" (periodic only in y-direction), or "xy" (periodic in both x- and y-directions).
-     * \note This method should be called prior to calling RadiationModel::updateGeometry(), otherwise the boundary condition will not be enforced.
+     * The scene repeats without limit in the periodic direction(s): a ray leaving the domain through one side re-enters it through the opposite side.
+     * \param[in] boundary Lateral direction to enforce periodic boundary - choices are "x" (periodic only in x-direction), "y" (periodic only in y-direction), "xy" (periodic in both x- and y-directions),
+     * or "none" (or an empty string) for no periodic boundary.
+     * \note This method should be called prior to calling RadiationModel::updateGeometry(), otherwise the boundary condition will not be enforced. Each call replaces the boundary set by an earlier
+     * call, including its excluded primitives and repeat limit.
      */
     void enforcePeriodicBoundary(const std::string &boundary);
+
+    //! Use a periodic boundary condition in one or more lateral directions, with some primitives that do not repeat
+    /**
+     * The excluded primitives exist only in the central copy of the domain, for example a single object standing in an infinite canopy. The period is the width of the bounding box of the
+     * primitives that do repeat, and every excluded primitive must lie laterally within it.
+     * \param[in] boundary Lateral direction to enforce periodic boundary - choices are "x", "y", or "xy" (see \ref RadiationModel::enforcePeriodicBoundary(const std::string &) "enforcePeriodicBoundary()").
+     * \param[in] excluded_UUIDs UUIDs of the primitives that are not repeated. Primitives added to the Context later are not excluded; excluded primitives deleted later are dropped from the list.
+     * \note This method should be called prior to calling RadiationModel::updateGeometry(). The radiation fluxes of the repeated primitives are those of their copies in the central domain, which
+     * every other copy shares: in camera images, light scattered by an excluded object, and the sky it hides, are seen around every copy of the primitives near it. Direct (beam) radiation is
+     * evaluated per pixel, so cast shadows fall only where the object puts them.
+     */
+    void enforcePeriodicBoundary(const std::string &boundary, const std::vector<uint> &excluded_UUIDs);
+
+    //! Use a periodic boundary condition that repeats the scene a limited number of times, optionally with some primitives that do not repeat
+    /**
+     * The scene is repeated max_repeats.x times on each side of the central domain in x, and max_repeats.y times on each side in y, giving a finite field of (2 max_repeats.x + 1) by
+     * (2 max_repeats.y + 1) copies. A ray that leaves the field continues as one that leaves the scene (it reaches the sky or the radiation source). A limit of 0 gives the same result as no periodic
+     * boundary in that direction.
+     * \param[in] boundary Lateral direction to enforce periodic boundary - choices are "x", "y", or "xy" (see \ref RadiationModel::enforcePeriodicBoundary(const std::string &) "enforcePeriodicBoundary()").
+     * \param[in] excluded_UUIDs UUIDs of the primitives that are not repeated, or an empty list (see \ref RadiationModel::enforcePeriodicBoundary(const std::string &, const std::vector<uint> &)
+     * "enforcePeriodicBoundary()").
+     * \param[in] max_repeats Number of copies on each side of the central domain in x and y. The value for a direction that is not periodic must be 0.
+     * \note This method should be called prior to calling RadiationModel::updateGeometry(). Example: enforcePeriodicBoundary("xy", {}, make_int2(5, 5)) for an 11 by 11 field of copies.
+     */
+    void enforcePeriodicBoundary(const std::string &boundary, const std::vector<uint> &excluded_UUIDs, const helios::int2 &max_repeats);
 
     //! Add a radiation camera sensor
     /**
@@ -1489,6 +1517,10 @@ public:
      * transmissivity are kept from summing to more than 1), registers the palette "surface_[class map]", where [class map] is the class map's file name without its extension, and assigns the
      * spectral texture to the primitives (see \ref helios::Context::setPrimitiveSpectralTexture()). Primitives without the data are left alone, as are those carrying a class map defined
      * relative to a leaf (a <leaf_class_map>, as PlantArchitecture records on leaves), whose classes LeafOptics::run() derives from the leaf's properties; so a plant can be given whole.
+     *
+     * A class map marked scales="body" is for a surface with a specular surface layer: each class's reflectance_scale s scales only the body under the layer, so its reflectivity is
+     * a(1) + s (rho - a(1)) and its transmissivity s tau, where a(1) is what the layer of the primitives (their "specular_roughness" and "specular_n") reflects at normal incidence. The primitives'
+     * layers are read here, so they must be set first, and primitives with different layers get separate palettes, "surface_[class map]_n[refractive index]_r[roughness]".
      * \param[in] UUIDs Primitives to consider.
      * \note Call this before \ref updateGeometry(), as a spectral texture assigned after it is not seen until the geometry is updated again.
      */
@@ -1511,10 +1543,12 @@ public:
     //! Reconstruct camera images by interpolating the outgoing flux across each facet, instead of holding it constant
     /**
      * A camera builds each pixel from a single outgoing flux value per primitive, so every pixel landing on a facet reads the same value and a coarsely tessellated surface renders as flat panels separated
-     * by visible steps. With smoothing enabled, the direct radiation of the sources is evaluated per facet with a shading normal interpolated from the vertices the facets share, replacing the cosine of
-     * the facet's own normal with that of the shading normal, and the rest of the outgoing radiation is averaged onto those vertices, weighted by facet area, and interpolated across each facet from its
-     * corners. A tessellated curve then reads as a curve, without the darkening that averaging the direct radiation would cause, and a cast shadow stays where the facets put it; a face turned away from a
-     * source takes the irradiance of its sunlit neighbours, so the light fades across the terminator. See the Camera Flux Smoothing section of the radiation plug-in documentation.
+     * by visible steps. With smoothing enabled, the direct radiation of the sources is evaluated for every pixel sample at the point it sees: a shadow ray toward one point on each source, drawn as the
+     * radiation solve draws it, decides whether the source reaches the point, and what reaches it carries the cosine of a shading normal interpolated from the vertices the facets share. The rest of the
+     * outgoing radiation is averaged onto those vertices, weighted by facet area, and interpolated across each facet from its corners. A tessellated curve then reads as a curve, without the darkening that
+     * averaging the direct radiation would cause, a cast shadow falls where the geometry puts it within a facet, and the light fades across the terminator. The penumbra of the sun's disk and of a finite
+     * source is resolved by the camera's antialiasing samples. Each pixel sample on smoothed geometry traces one shadow ray per source, which adds to the time cameras take (see the Camera Flux Smoothing
+     * section of the radiation plug-in documentation).
      *
      * This applies to \a Tube, \a Sphere, \a Cone, \a Polymesh, \a Tile and \a AdaptiveTile objects. A \a Box or \a Disk object, and any primitive that belongs to no object, is left alone: its faces are
      * genuinely flat, so the per-facet value is already correct everywhere on them. A \a Polymesh must carry the face table that \ref helios::Context::loadOBJ() and \ref helios::Context::loadPLY() retain;
@@ -1524,8 +1558,9 @@ public:
      * dependence are evaluated with the shading normal. Vertices are shared across the rings of a \a Sphere and the segments of a \a Tube or \a Cone as well as around them. The transmittance of a
      * translucent cover (`glass_*`) a camera looks through still uses the cover's facet normal.
      *
-     * \note This changes what the camera reports. A pixel no longer carries the outgoing flux of the primitive behind it, but a blend of that primitive's value with those of its neighbours, so pixel values
-     * no longer correspond exactly to the `radiation_flux_*` primitive data. Nothing else is affected: the radiation solve, the `radiation_flux_*` values themselves, and the pixel-label and depth images are
+     * \note This changes what the camera reports. A pixel no longer carries the outgoing flux of the primitive behind it, but a blend of that primitive's value with those of its neighbours and the direct
+     * radiation at the point it sees, so pixel values no longer correspond exactly to the `radiation_flux_*` primitive data; averaged over a flat facet, the direct radiation in the image equals the
+     * facet's own up to sampling noise. Nothing else is affected: the radiation solve, the `radiation_flux_*` values themselves, and the pixel-label and depth images are
      * all unchanged. Smoothing is off by default for this reason, and should be enabled deliberately.
      *
      * \param[in] crease_angle_degrees Angle between adjacent facet normals above which a shared edge is treated as a hard crease, so that flux is not averaged across it. Applies to \a Polymesh objects only,
@@ -2570,6 +2605,16 @@ protected:
      */
     void updateSurfaceLayers(helios::WarningAggregator &warnings);
 
+    //! Read a surface-layer parameter of a primitive, such as "specular_roughness": the value in its material if the material has it (material data take precedence, as elsewhere in Helios), otherwise its primitive data
+    /**
+     * \param[in] UUID Primitive to read.
+     * \param[in] label Label of the parameter.
+     * \param[out] value The parameter's value, if it is set.
+     * \param[in,out] warnings [optional] Aggregator that records a primitive value shadowed by the material's.
+     * \return Whether the parameter is set.
+     */
+    bool readSurfaceLayerParameter(uint UUID, const std::string &label, float &value, helios::WarningAggregator *warnings) const;
+
     //! Albedo table of the surface layer of the primitive at position u in global band b, or nullptr if it has none there (see helios::computeSurfaceLayerAlbedoTable())
     [[nodiscard]] const float *surfaceLayerTable(size_t u, size_t b_global) const;
 
@@ -2780,6 +2825,26 @@ protected:
     //! File of each class map in geometry_data.class_map_sizes, to check that a primitive's class map is the one its geometry was built with
     std::vector<std::string> spectral_class_map_files;
 
+    //! Normal map of a material as it was when the geometry was last built
+    struct NormalMapBuildKey {
+        std::string file;
+        helios::NormalMapKind kind = helios::NORMAL_MAP_NONE;
+        float strength = 1.f;
+        bool flip_green = false;
+    };
+
+    //! The distinct normal maps (file, kind, strength, flip) primitives had in the last geometry build
+    std::vector<NormalMapBuildKey> normal_map_build_keys;
+
+    //! Index in normal_map_build_keys of each primitive's map (by position) in the last geometry build, or UINT_MAX; empty when no primitive had one
+    std::vector<uint> normal_map_build_key_index;
+
+    //! Raise an error if a primitive's normal map differs from the one it had when the geometry was last built
+    /**
+     * \param[in] UUIDs Primitives of the geometry, in position order
+     */
+    void checkNormalMapsCurrent(const std::vector<uint> &UUIDs) const;
+
     //! Outgoing radiation of each class of each primitive with a spectral texture, as one camera sees it
     /**
      * \param[in] spectral_incident Radiation reaching each face of each primitive, per [face][source slot][primitive][launch band], accumulated over the launches
@@ -2788,8 +2853,9 @@ protected:
      * \param[in] band_launch_flag Which global bands are launched
      * \param[out] class_flux_offset First class-flux slot of each primitive, or UINT32_MAX (see RayTracingBackend::uploadSpectralCameraFlux())
      * \param[out] class_flux Outgoing radiation per [face][class-flux slot][launch band]
+     * \param[in] omit_normal_map_direct Leave out the sources' direct radiation (source slots below the source count) of normal-mapped primitives, which the camera then shades per hit point
      */
-    void computeSpectralCameraFlux(const std::vector<float> &spectral_incident, const std::vector<float> &emitted_flux, uint camera, const std::vector<char> &band_launch_flag, std::vector<uint32_t> &class_flux_offset,
+    void computeSpectralCameraFlux(const std::vector<float> &spectral_incident, const std::vector<float> &emitted_flux, uint camera, const std::vector<char> &band_launch_flag, bool omit_normal_map_direct, std::vector<uint32_t> &class_flux_offset,
                                    std::vector<float> &class_flux) const;
 
     //! Per band label, the first reason the last updateRadiativeProperties() could not weight a primitive's reflectivity/transmissivity spectrum in that band
@@ -2844,6 +2910,34 @@ protected:
     //! y-extent (min, max) of the periodic boundary faces, i.e. the domain bounding box plus its padding; the period in y is its width
     helios::vec2 periodic_ybounds;
 
+    //! UUIDs of the primitives excluded from the periodic boundary condition, which exist only in the central copy of the domain
+    std::vector<uint> periodic_excluded_UUIDs;
+
+    //! Per primitive position: whether what the direct launch deposited in the cameras' outgoing radiation is removed exactly before they read it, because they shade that direct radiation per hit
+    //! point (normal-mapped primitives) or per pixel (every primitive but a translucent cover when primitives are excluded from the periodic boundary). Set by runBand().
+    std::vector<bool> camera_direct_removed_exactly;
+
+    //! Whether cameras evaluate the direct radiation of every primitive (but a translucent cover) per pixel sample, which they do when primitives are excluded from the periodic boundary
+    [[nodiscard]] bool cameraDirectPerPixelForAll() const;
+
+    //! Whether the primitive at a position in the ray-tracing geometry is excluded from the periodic boundary (see enforcePeriodicBoundary())
+    [[nodiscard]] bool excludedFromPeriodicBoundary(size_t position) const;
+
+    //! Whether the direct radiation the direct launch deposited in the cameras' outgoing radiation of the primitive at this position is removed exactly (see camera_direct_removed_exactly)
+    [[nodiscard]] bool cameraDirectRemovedExactly(size_t position) const;
+
+    //! Whether the primitive at this position is a translucent cover (glass) in every launched band, as the backends decide it
+    [[nodiscard]] bool coverInAllLaunchedBands(size_t position, const std::vector<char> &band_launch_flag) const;
+
+    //! Number of periodic copies of the domain on each side of the central one in x and y; -1 for no limit
+    helios::int2 periodic_max_repeats;
+
+    //! Periodic boundary flags (x, y) for the boundary string given to enforcePeriodicBoundary(); raises an error for an unknown string
+    [[nodiscard]] static helios::vec2 parsePeriodicBoundary(const std::string &boundary);
+
+    //! The UUIDs given to enforcePeriodicBoundary() to exclude from the periodic boundary, sorted and without duplicates; raises an error for a primitive that does not exist
+    [[nodiscard]] std::vector<uint> validatePeriodicExcludedUUIDs(const std::vector<uint> &excluded_UUIDs) const;
+
     bool radiativepropertiesneedupdate = true;
 
     //! Whether camera images interpolate the outgoing flux across each facet rather than holding it constant
@@ -2867,7 +2961,7 @@ protected:
     //! Area of each primitive, in GPU buffer order, cached so that it is not recomputed for every band
     std::vector<float> smoothing_primitive_area;
 
-    //! Unit shading normal at each shared vertex, three entries per vertex: the area-weighted mean of the normals of the facets that meet there
+    //! Unit shading normal at each shared vertex, three entries per vertex: the mean of the normals of the facets that meet there, each weighted by its angle at the vertex
     /**
      * Used by cameras for the angle-dependent terms of specular surface layers, which a scalar flux cannot carry. The normals of the facets meeting at a vertex are first oriented to agree with one of them, so
      * that oppositely wound facets do not cancel; the camera program orients each vertex normal to the facet it shades. Empty when smoothing is disabled.
@@ -2877,8 +2971,9 @@ protected:
     //! Whether the backend currently holds smoothing_vertex_normals, which it needs only while smoothing is enabled and there is a radiation source or some primitive has a specular surface layer
     bool smoothing_vertex_normals_uploaded = false;
 
-    //! Whether the backend currently holds the vertex direct irradiance (see accumulateDirectIrradianceAtVertices()), which it needs only while smoothing is enabled and there is a radiation source
-    bool vertex_direct_irradiance_uploaded = false;
+
+    //! Whether the backend currently holds the vertex moments of normal-mapped primitives (see accumulateNormalMapMomentsAtVertices()), which it needs only while smoothing is enabled and there are maps
+    bool vertex_normal_map_moments_uploaded = false;
 
     //! Unit normal of each primitive taking part in smoothing, in GPU buffer order, from its corner positions (zero for the others)
     std::vector<helios::vec3> smoothing_facet_normal;
@@ -2907,14 +3002,16 @@ protected:
      * \param[in] component_count Number of outgoing components: 2 when some primitive has a specular surface layer, whose reflection is the second, and 1 otherwise.
      * \param[out] vertex_flux_top Area-weighted mean top-face radiation at each shared vertex, indexed [component][vertex][band].
      * \param[out] vertex_flux_bottom Area-weighted mean bottom-face radiation at each shared vertex, indexed [component][vertex][band].
+     * \param[in] background_field [optional] True to average the background radiation field (see RayTracingGeometry::periodicDualField()), which leaves out the primitives excluded from the periodic boundary.
      */
-    void accumulateCameraFluxAtVertices(const std::vector<float> &flux_top, const std::vector<float> &flux_bottom, size_t band_count, size_t component_count, std::vector<float> &vertex_flux_top, std::vector<float> &vertex_flux_bottom) const;
+    void accumulateCameraFluxAtVertices(const std::vector<float> &flux_top, const std::vector<float> &flux_bottom, size_t band_count, size_t component_count, std::vector<float> &vertex_flux_top, std::vector<float> &vertex_flux_bottom,
+                                        bool background_field = false) const;
 
     //! Remove from a camera's outgoing radiation the part each smoothed primitive reflects and transmits of the sources' direct radiation, before the rest is averaged onto the shared vertices
     /**
-     * With camera flux smoothing, the camera evaluates the direct radiation per facet with the interpolated shading normal instead of interpolating it from the vertices: the direct radiation reaching a
-     * facet carries the cosine of the facet's own normal, which the camera replaces with that of the shading normal, so the brightness follows the curvature of the surface the tessellation stands for and a
-     * shadow edge stays where the facets put it. This removes that part from the values to be averaged, so that the camera does not count it twice. Each facet's direct radiation from source s, E_s, reached
+     * With camera flux smoothing, the camera evaluates the direct radiation per pixel sample, with the interpolated shading normal and a shadow ray toward each source, instead of interpolating it from the
+     * vertices, so the brightness follows the curvature of the surface the tessellation stands for and a shadow edge falls where the geometry puts it. This removes the direct radiation the facet received
+     * from the values to be averaged, so that the camera does not count it twice. Each facet's direct radiation from source s, E_s, reached
      * the face toward the source, which reflects rho_cam E_s and passes tau_cam E_s to the other face; a primitive with a surface layer keeps (1 - a(mu)) of it in its body. The face toward a finite source
      * is decided from the facet's centroid.
      * \param[inout] camera_scatter_top Camera-weighted outgoing radiation of the top faces, [component][primitive][band]; the direct part is removed from the first component.
@@ -2925,30 +3022,32 @@ protected:
      */
     void subtractCameraDirectFlux(std::vector<float> &camera_scatter_top, std::vector<float> &camera_scatter_bottom, const std::vector<float> &direct_flux, uint camera_index, const std::vector<char> &band_launch_flag) const;
 
-    //! Average the unoccluded direct irradiance of each source onto the shared vertices, for the faces that camera flux smoothing finds turned away from a source
+    //! Average the directions of the diffuse radiation reaching the faces of primitives with normal maps onto the shared vertices, for camera flux smoothing
     /**
-     * A facet's direct radiation from source s, E_s, carries the cosine mu of the facet's normal and the fraction of the facet the source reaches, so E_s / |mu| is the irradiance the source delivers
-     * there normal to its direction, reduced by what occludes it. A face turned away from the source records none of it, yet near the terminator its shading normal can still face the source; the camera
-     * then takes this value, interpolated from the vertices, times the cosine of the shading normal, so that the light fades across the terminator instead of stopping at a facet edge. Each vertex averages,
-     * by area, the facets meeting there that received some of the source's radiation; facets nearly edge-on to the source (|mu| < 0.01) are left out, since E_s / |mu| is ill-determined for them.
-     * \param[in] direct_flux Direct radiation reaching each primitive from each source, [source][primitive][launch band] (see RayTracingBackend::getDirectFluxResults()).
+     * The first moment of the radiation reaching each face of a mapped primitive (see RayTracingGeometry::normal_map_slots) shades its scattered light per texel in camera images. Recorded per primitive
+     * from a limited number of rays, it differs a little from one facet to the next, which shows as steps at the facet edges; each vertex therefore averages, by area, the mapped facets meeting there,
+     * and the camera interpolates the vertex values across the facet as it does the outgoing radiation. Each facet contributes only the part of its moment along the facet (the part along
+     * its normal does not shade the relief, and averaging it across a curved surface would turn it into relief). Facets without a map take no part.
+     * \param[in] moments Values per [normal-map slot][face][launch band][3] (see RayTracingBackend::getNormalMapMoments()).
      * \param[in] launch_band_count Number of launched bands.
-     * \param[out] vertex_irradiance Values per [source][vertex][launch band].
+     * \param[out] vertex_moments Values per [vertex][face][launch band][3].
+     * \param[in] background_field [optional] True to average the background radiation field (see RayTracingGeometry::periodicDualField()), which leaves out the primitives excluded from the periodic boundary.
      */
-    void accumulateDirectIrradianceAtVertices(const std::vector<float> &direct_flux, size_t launch_band_count, std::vector<float> &vertex_irradiance) const;
+    void accumulateNormalMapMomentsAtVertices(const std::vector<float> &moments, size_t launch_band_count, std::vector<float> &vertex_moments, bool background_field = false) const;
 
     //! Average the radiation reaching and leaving the faces of primitives with a spectral texture onto the shared vertices, for camera flux smoothing
     /**
      * Only what the camera interpolates is averaged: the radiation reaching each face from the sky and from other surfaces (the last source slot) and the radiation each face emits. The direct radiation
-     * of the sources, in the other slots, the camera takes from the facet itself (see subtractCameraDirectFlux()), so it is not carried by the vertices. Each vertex takes the area-weighted mean over the
+     * of the sources, in the other slots, the camera evaluates per pixel sample (see subtractCameraDirectFlux()), so it is not carried by the vertices. Each vertex takes the area-weighted mean over the
      * primitives with a spectral texture that meet there, so that the zeros recorded for the others do not dilute it.
      * \param[in] spectral_incident Radiation reaching each face, per [face][source slot][primitive][band] (see RayTracingResults::spectral_incident).
      * \param[in] spectral_emitted Radiation emitted by each face, per [face][primitive][band].
      * \param[in] slot_count Number of source slots: the sources and, last, the sky and other surfaces.
      * \param[in] band_count Number of bands in the current launch.
      * \param[out] vertex_values Values per [face][layer][vertex][band], where layer 0 is the last source slot and layer 1 the emitted radiation (see RayTracingBackend::uploadSpectralVertexIncident()).
+     * \param[in] background_field [optional] True to average the background radiation field (see RayTracingGeometry::periodicDualField()), which leaves out the primitives excluded from the periodic boundary.
      */
-    void accumulateSpectralIncidentAtVertices(const std::vector<float> &spectral_incident, const std::vector<float> &spectral_emitted, size_t slot_count, size_t band_count, std::vector<float> &vertex_values) const;
+    void accumulateSpectralIncidentAtVertices(const std::vector<float> &spectral_incident, const std::vector<float> &spectral_emitted, size_t slot_count, size_t band_count, std::vector<float> &vertex_values, bool background_field = false) const;
 
     //! Sum a camera's white reference over the surfaces its pixels see, for its "auto" white balance
     /**

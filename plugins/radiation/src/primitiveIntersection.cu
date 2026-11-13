@@ -38,13 +38,53 @@ rtDeclareVariable(float, surface_v, attribute surface_v, );
 rtDeclareVariable(float, periodic_face_t, attribute periodic_face_t, );
 // Note: Nprimitives is declared in RayTracing.cuh (for bbox position calculation)
 
-//! Whether the primitive with this UUID launched the current ray, which must not intersect it again
+//! Whether the primitive with this UUID launched the current ray, which must not intersect it again in the periodic copy of the domain it left from
 /**
- * Only direct and diffuse rays are launched from a primitive. Camera and pixel-label rays carry the pixel index in
+ * Only direct, diffuse and camera shadow rays are launched from a primitive. Camera and pixel-label rays carry the pixel index in
  * prd.origin_UUID, which is not a primitive UUID, so no primitive is excluded for them.
  */
 static __device__ __inline__ bool isRayOrigin(uint primitive_UUID) {
-    return (ray.ray_type == direct_ray_type || ray.ray_type == diffuse_ray_type) && prd.origin_UUID == primitive_UUID;
+    // The primitive's other periodic copies are hit like any other primitive
+    return ray.ray_type != camera_ray_type && ray.ray_type != pixel_label_ray_type && prd.origin_UUID == primitive_UUID && prd.tile_x == prd.origin_tile_x && prd.tile_y == prd.origin_tile_y;
+}
+
+//! Whether the current ray passes the primitive at hit_position, which it meets at distance t with hit attributes (hit_u, hit_v), instead of hitting it
+/**
+ * A dual ray (PerRayData::dual_ray) passes the primitives excluded from the periodic boundary, which the background radiation field does not contain, so that its closest hit
+ * is the background's. The hit is then not reported, and the nearest excluded primitive passed in the ray's current segment is kept in the payload for the scene as it is: a
+ * diffuse ray receives its radiation (see resolveRecordedHit() in rayHit.cu), and a direct ray is blocked by it (see miss_direct_dual). Excluded primitives are met in the
+ * central copy of the domain only (see periodicHidden()). Called once the hit is known to be on the solid part of the primitive. Must match passExcludedPrimitive() in
+ * OptiX8DeviceCode.cu, which does this in any-hit programs, and the Vulkan traversal (traversal_record_excluded in common/bvh_traversal.glsl).
+ */
+static __device__ __inline__ bool passExcludedPrimitive(uint hit_position, float t, float hit_u, float hit_v) {
+    if (ray.ray_type != direct_dual_ray_type && ray.ray_type != diffuse_dual_ray_type) {
+        return false; // only those rays carry the background-field members of the payload
+    }
+    if (!prd.dual_ray || periodic_excluded[hit_position] == 0) {
+        return false;
+    }
+    if (t > ray.tmin && t < ray.tmax && t < prd.recorded_t) {
+        prd.recorded_t = t;
+        prd.recorded_position = hit_position;
+        prd.recorded_u = hit_u;
+        prd.recorded_v = hit_v;
+    }
+    return true;
+}
+
+//! passExcludedPrimitive() for the sub-patch of a tile object that the current ray meets at distance t, at position uv within the tile whose first sub-patch has UUID tile_base_UUID and position tile_position
+static __device__ __inline__ bool passExcludedTileSubpatch(uint tile_base_UUID, uint tile_position, const float2 &uv, float t) {
+    if (ray.ray_type != direct_dual_ray_type && ray.ray_type != diffuse_dual_ray_type) {
+        return false;
+    }
+    const int2 subdivisions = object_subdivisions[tile_position];
+    const int subpatch_x = min((int) floorf(uv.x * subdivisions.x), subdivisions.x - 1);
+    const int subpatch_y = min((int) floorf(uv.y * subdivisions.y), subdivisions.y - 1);
+    const uint subpatch_position = primitive_positions[tile_base_UUID + subpatch_y * subdivisions.x + subpatch_x];
+    if (subpatch_position == UINT_MAX) {
+        return false;
+    }
+    return passExcludedPrimitive(subpatch_position, t, uv.x * subdivisions.x - float(subpatch_x), uv.y * subdivisions.y - float(subpatch_y));
 }
 
 //----------------- Rectangle Primitive ----------------------//
@@ -59,6 +99,9 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
     // FIX: Convert UUID to position for twosided_flag access
     uint position = primitive_positions[patch_UUID[objID]];
     if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
+        return;
+    }
+    if (periodicHidden(prd, position)) { // absent from the periodic copy of the domain the ray is in
         return;
     }
 
@@ -100,6 +143,9 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
                 }
 
                 if (maskID[ID] == -1) { // no texture transparency
+                    if (passExcludedPrimitive(ID, t, ddota / dot(a, a), ddotb / dot(b, b))) {
+                        return;
+                    }
                     if (rtPotentialIntersection(t)) {
                         UUID = patch_UUID[objID];
                         surface_u = ddota / dot(a, a);
@@ -129,6 +175,9 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
                         }
                     }
                     if (maskdata[ind]) {
+                        if (passExcludedPrimitive(ID, t, ddota / dot(a, a), ddotb / dot(b, b))) {
+                            return;
+                        }
                         if (rtPotentialIntersection(t)) {
                             UUID = patch_UUID[objID];
                             surface_u = ddota / dot(a, a);
@@ -168,6 +217,9 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
     // FIX: Convert UUID to position for twosided_flag access
     uint position = primitive_positions[triangle_UUID[objID]];
     if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
+        return;
+    }
+    if (periodicHidden(prd, position)) { // absent from the periodic copy of the domain the ray is in
         return;
     }
 
@@ -211,6 +263,9 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
                 }
 
                 if (maskID[ID] == -1) { // no texture transparency
+                    if (passExcludedPrimitive(ID, t, beta, gamma)) {
+                        return;
+                    }
                     if (rtPotentialIntersection(t)) {
                         UUID = triangle_UUID[objID];
                         surface_u = beta;
@@ -235,6 +290,9 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
                     int iy = max(0, min(int(floorf(float(sz.y - 1) * uv.y)), sz.y - 1));
                     uint3 ind = make_uint3(ix, iy, maskID[ID]);
                     if (maskdata[ind]) {
+                        if (passExcludedPrimitive(ID, t, beta, gamma)) {
+                            return;
+                        }
                         if (rtPotentialIntersection(t)) {
                             UUID = triangle_UUID[objID];
                             surface_u = beta;
@@ -275,6 +333,9 @@ RT_PROGRAM void disk_intersect(int objID /**< [in] index of primitive in geometr
     if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
         return;
     }
+    if (periodicHidden(prd, position)) { // absent from the periodic copy of the domain the ray is in
+        return;
+    }
 
     float3 center = make_float3(0, 0, 0);
     float3 normal = make_float3(0, 0, 1);
@@ -289,6 +350,9 @@ RT_PROGRAM void disk_intersect(int objID /**< [in] index of primitive in geometr
 
         if (r.x * r.x + r.y * r.y + r.z * r.z < 1.f) {
 
+            if (passExcludedPrimitive(position, t, 0.f, 0.f)) {
+                return;
+            }
             if (rtPotentialIntersection(t)) {
                 UUID = disk_UUID[objID];
                 surface_u = 0.f; // disks take no part in camera flux smoothing
@@ -347,6 +411,12 @@ RT_PROGRAM void bbox_intersect(int objID /**< [in] index of primitive in geometr
 
     float t = dot(anchor - ray.origin, normal) / dot(ray.direction, normal);
 
+    // A ray that left the periodic copies continues from beyond the face it left through (see d_handlePeriodicBoundaryHit() in
+    // rayHit.cu), and this program can be called for it although the ray misses the face's bounding box
+    if (periodic_tile_tracking != 0u && t < -0.5f * periodic_escape_offset) {
+        return;
+    }
+
     if (t == t && t < 1e8) {
 
         float3 p = ray.origin + ray.direction * t;
@@ -403,6 +473,9 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
     if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
         return;
     }
+    if (periodicHidden(prd, position)) { // absent from the periodic copy of the domain the ray is in
+        return;
+    }
 
     float3 v0 = tile_vertices[make_uint2(0, objID)];
     float3 v1 = tile_vertices[make_uint2(1, objID)];
@@ -446,6 +519,9 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
                 }
 
                 if (maskID[ID] == -1) { // no texture transparency
+                    if (passExcludedTileSubpatch(U, ID, uv, t)) {
+                        return;
+                    }
                     if (rtPotentialIntersection(t)) {
                         // Calculate subpatch indices and clamp to valid range [0, subdivisions-1]
                         int subpatch_x = min((int) floorf(uv.x * object_subdivisions[ID].x), object_subdivisions[ID].x - 1);
@@ -463,6 +539,9 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
                     uint3 ind = make_uint3(floorf(float(sz.x - 1) * uv.x), floorf(float(sz.y - 1) * (1.f - uv.y)), maskID[ID]);
 
                     if (maskdata[ind]) {
+                        if (passExcludedTileSubpatch(U, ID, uv, t)) {
+                            return;
+                        }
                         if (rtPotentialIntersection(t)) {
                             // Calculate subpatch indices and clamp to valid range [0, subdivisions-1]
                             int subpatch_x = min((int) floorf(uv.x * object_subdivisions[ID].x), object_subdivisions[ID].x - 1);

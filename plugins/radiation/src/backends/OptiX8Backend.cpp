@@ -150,6 +150,8 @@ void OptiX8Backend::initialize() {
     createRaygen("__raygen__diffuse",      pg_raygen_diffuse);
     createRaygen("__raygen__camera",       pg_raygen_camera);
     createRaygen("__raygen__pixel_label",  pg_raygen_pixel_label);
+    createRaygen("__raygen__direct_dual",  pg_raygen_direct_dual);  // with a background radiation field (see PerRayDataDual)
+    createRaygen("__raygen__diffuse_dual", pg_raygen_diffuse_dual);
 
     // Miss programs
     auto createMiss = [&](const char *entry, OptixProgramGroup &pg) {
@@ -166,8 +168,11 @@ void OptiX8Backend::initialize() {
     createMiss("__miss__diffuse",      pg_miss_diffuse);
     createMiss("__miss__camera",       pg_miss_camera);
     createMiss("__miss__pixel_label",  pg_miss_pixel_label);
+    createMiss("__miss__camera_shadow", pg_miss_camera_shadow); // a camera's shadow ray toward a source, traced with the direct hit group
+    createMiss("__miss__direct_dual",  pg_miss_direct_dual);    // with a background radiation field (see DUAL_FIELD_SBT_OFFSET)
+    createMiss("__miss__diffuse_dual", pg_miss_diffuse_dual);
 
-    // Hit groups: one per ray type (4 total). All geometry uses __intersection__patch,
+    // Hit groups: one per ray type, and one more for each of the direct and diffuse ray types in a scene with a background radiation field (6 total; see DUAL_FIELD_SBT_OFFSET). All geometry uses __intersection__patch,
     // which dispatches internally on primitive type. With a single GAS and numSbtRecords=1,
     // the SBT hit record index = sbt_offset from optixTrace (stride=0 for all ray types).
 
@@ -191,16 +196,20 @@ void OptiX8Backend::initialize() {
     createHitGroup("__closesthit__diffuse",      "__intersection__patch", "__anyhit__diffuse", pg_hit_diffuse);
     createHitGroup("__closesthit__camera",       "__intersection__patch", nullptr,             pg_hit_camera);
     createHitGroup("__closesthit__pixel_label",  "__intersection__patch", nullptr,             pg_hit_pixel_label);
+    // With a background radiation field (see DUAL_FIELD_SBT_OFFSET). A direct ray that hits anything but a periodic face is blocked in both fields.
+    createHitGroup("__closesthit__direct",       "__intersection__patch", "__anyhit__direct_dual",  pg_hit_direct_dual);
+    createHitGroup("__closesthit__diffuse_dual", "__intersection__patch", "__anyhit__diffuse_dual", pg_hit_diffuse_dual);
 
     // ---- Create pipeline ----
     OptixProgramGroup all_groups[] = {
         pg_raygen_direct, pg_raygen_diffuse, pg_raygen_camera, pg_raygen_pixel_label,
-        pg_miss_direct,   pg_miss_diffuse,   pg_miss_camera,   pg_miss_pixel_label,
-        pg_hit_direct,    pg_hit_diffuse,    pg_hit_camera,    pg_hit_pixel_label
+        pg_miss_direct,   pg_miss_diffuse,   pg_miss_camera,   pg_miss_pixel_label, pg_miss_camera_shadow,
+        pg_hit_direct,    pg_hit_diffuse,    pg_hit_camera,    pg_hit_pixel_label,
+        pg_raygen_direct_dual, pg_raygen_diffuse_dual, pg_miss_direct_dual, pg_miss_diffuse_dual, pg_hit_direct_dual, pg_hit_diffuse_dual
     };
 
     OptixPipelineLinkOptions link_options = {};
-    link_options.maxTraceDepth = 1;
+    link_options.maxTraceDepth = 2; // the camera's closest-hit traces shadow rays toward the sources
 
     log_size = sizeof(log);
     OPTIX_CHECK(optixPipelineCreate(
@@ -217,7 +226,7 @@ void OptiX8Backend::initialize() {
     for (auto &pg : all_groups) {
         OPTIX_CHECK(optixUtilAccumulateStackSizes(pg, &stack_sizes, optix_pipeline));
     }
-    uint32_t max_trace_depth = 1;
+    uint32_t max_trace_depth = 2;
     uint32_t direct_callable_stack_size_from_traversal = 0;
     uint32_t direct_callable_stack_size_from_state     = 0;
     uint32_t continuation_stack_size                   = 0;
@@ -269,7 +278,7 @@ void OptiX8Backend::shutdown() {
     freePtr(d_vertex_radiation_out_top);
     freePtr(d_vertex_radiation_out_bottom);
     freePtr(d_vertex_normals);
-    freePtr(d_vertex_direct_irradiance);
+    freePtr(d_vertex_normal_map_moments);
     freePtr(d_scatter_buff_top);
     freePtr(d_scatter_buff_bottom);
     freePtr(d_forward_scatter);
@@ -321,8 +330,12 @@ void OptiX8Backend::shutdown() {
     destroyPG(pg_raygen_camera); destroyPG(pg_raygen_pixel_label);
     destroyPG(pg_miss_direct);   destroyPG(pg_miss_diffuse);
     destroyPG(pg_miss_camera);   destroyPG(pg_miss_pixel_label);
+    destroyPG(pg_miss_camera_shadow);
     destroyPG(pg_hit_direct);    destroyPG(pg_hit_diffuse);
     destroyPG(pg_hit_camera);    destroyPG(pg_hit_pixel_label);
+    destroyPG(pg_raygen_direct_dual); destroyPG(pg_raygen_diffuse_dual);
+    destroyPG(pg_miss_direct_dual); destroyPG(pg_miss_diffuse_dual);
+    destroyPG(pg_hit_direct_dual);  destroyPG(pg_hit_diffuse_dual);
 
     if (optix_pipeline) { optixPipelineDestroy(optix_pipeline); optix_pipeline = nullptr; }
     if (optix_module)   { optixModuleDestroy(optix_module);     optix_module   = nullptr; }
@@ -398,6 +411,7 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
         upload(d_tile_UUIDs, geometry.tiles.UUIDs.data(),
                geometry.tiles.UUIDs.size() * sizeof(uint32_t));
     }
+    upload(d_periodic_excluded, geometry.periodic_excluded.data(), geometry.periodic_excluded.size() * sizeof(uint8_t));
     if (geometry.bbox_count > 0) {
         upload(d_bbox_vertices, geometry.bboxes.vertices.data(),
                geometry.bboxes.vertices.size() * sizeof(helios::vec3));
@@ -489,6 +503,21 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
         upload(d_class_map_IDs,     geometry.class_map_IDs.data(),   geometry.class_map_IDs.size()   * sizeof(int32_t));
     }
 
+    // ---- Normal maps: one packed buffer, absent (nullptr) when no primitive has a map so that the device programs skip them ----
+    {
+        freeCUdeviceptr(d_normal_maps);
+        const std::vector<uint32_t> packed_normal_maps = helios::packNormalMaps(geometry);
+        if (packed_normal_maps.at(0) != 0u) {
+            upload(d_normal_maps, packed_normal_maps.data(), packed_normal_maps.size() * sizeof(uint32_t));
+        }
+        freeCUdeviceptr(d_normal_map_slots);
+        freeCUdeviceptr(d_normal_map_moments);
+        normal_map_slot_count = geometry.normal_map_slot_count;
+        if (normal_map_slot_count > 0) {
+            upload(d_normal_map_slots, geometry.normal_map_slots.data(), geometry.normal_map_slots.size() * sizeof(uint32_t));
+        }
+    }
+
     // Update h_params device pointers
     const uint32_t Nprims = static_cast<uint32_t>(geometry.primitive_count);
     h_params.transform_matrix         = reinterpret_cast<float *>(d_transform_matrix);
@@ -512,8 +541,8 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     freeCUdeviceptr(d_vertex_normals);
     h_params.vertex_normals = nullptr;
     h_params.vertex_normal_count = 0;
-    freeCUdeviceptr(d_vertex_direct_irradiance);
-    h_params.vertex_direct_irradiance = nullptr;
+    freeCUdeviceptr(d_vertex_normal_map_moments);
+    h_params.vertex_normal_map_moments = nullptr;
     h_params.patch_vertices           = reinterpret_cast<float3 *>(d_patch_vertices);
     h_params.patch_UUIDs              = reinterpret_cast<uint32_t *>(d_patch_UUIDs);
     h_params.triangle_vertices        = reinterpret_cast<float3 *>(d_triangle_vertices);
@@ -527,8 +556,15 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     h_params.bbox_vertices            = reinterpret_cast<float3 *>(d_bbox_vertices);
     h_params.bbox_UUIDs               = reinterpret_cast<uint32_t *>(d_bbox_UUIDs);
     h_params.Nprimitives              = Nprims;
+    h_params.Nflux_slots              = static_cast<uint32_t>(geometry.fluxSlotCount());
+    h_params.normal_map_slot_count    = static_cast<uint32_t>(geometry.normal_map_slot_count);
     h_params.bbox_UUID_base           = geometry.bbox_UUID_base;
     h_params.periodic_flag            = make_float2(geometry.periodic_flag.x, geometry.periodic_flag.y);
+    h_params.periodic_tile_tracking   = geometry.periodicTileTracking() ? 1u : 0u;
+    h_params.periodic_excluded        = reinterpret_cast<uint8_t *>(d_periodic_excluded);
+    h_params.periodic_max_repeats     = ::make_int2(geometry.periodic_max_repeats.x, geometry.periodic_max_repeats.y);
+    h_params.periodic_repeated_zbounds = make_float2(geometry.periodic_repeated_zbounds.x, geometry.periodic_repeated_zbounds.y);
+    h_params.periodic_escape_offset   = geometry.periodic_escape_offset;
     h_params.mask_data                = reinterpret_cast<uint8_t *>(d_mask_data);
     h_params.mask_offsets             = reinterpret_cast<uint32_t *>(d_mask_offsets);
     h_params.mask_sizes               = reinterpret_cast<int32_t *>(d_mask_sizes);
@@ -539,9 +575,14 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     h_params.class_map_offsets        = reinterpret_cast<uint32_t *>(d_class_map_offsets);
     h_params.class_map_sizes          = reinterpret_cast<int32_t *>(d_class_map_sizes);
     h_params.class_map_IDs            = reinterpret_cast<int32_t *>(d_class_map_IDs);
+    h_params.normal_maps = reinterpret_cast<const uint32_t *>(d_normal_maps);
+    h_params.normal_map_slots = reinterpret_cast<const uint32_t *>(d_normal_map_slots);
+    h_params.normal_map_moments = nullptr; // sized by zeroRadiationBuffers()
 
     // Store counts
     current_primitive_count = geometry.primitive_count;
+    current_flux_slot_count = geometry.fluxSlotCount();
+    current_flux_field_count = geometry.periodicDualField() ? 2 : 1;
     current_patch_count     = geometry.patch_count;
     current_triangle_count  = geometry.triangle_count;
     current_disk_count      = geometry.disk_count;
@@ -657,7 +698,8 @@ void OptiX8Backend::updateMaterials(const RayTracingMaterial &materials) {
     const size_t Nprims = current_primitive_count;
     const size_t Nbands = materials.num_bands;
     const size_t rad_bytes = Nprims * Nbands * sizeof(float);
-    const size_t outgoing_bytes = outgoing_components * rad_bytes;
+    // The outgoing and scattered buffers also hold the background field's slots, if there is one
+    const size_t outgoing_bytes = outgoing_components * current_flux_slot_count * Nbands * sizeof(float);
 
     reallocDevice(d_radiation_in,         rad_bytes);
     reallocDevice(d_radiation_out_top,    outgoing_bytes);
@@ -892,9 +934,9 @@ void OptiX8Backend::launchDirectRays(const RayTracingLaunchParams &launch_params
     // prd_pool is unused (PRD allocated on thread stack in raygen)
     h_params.prd_pool = nullptr;
 
-    // Direct launch uses raygen record 0 (d_raygen_records + 0)
+    // The direct raygen record, or that of a scene with a background radiation field
     OptixShaderBindingTable direct_sbt = sbt;
-    direct_sbt.raygenRecord = d_raygen_records;
+    direct_sbt.raygenRecord = current_flux_field_count == 2 ? d_raygen_record_direct_dual : d_raygen_record_direct;
 
     // OptiX depth dimension is limited to 65535; batch if needed
     const uint32_t MAX_DEPTH = 65535u;
@@ -931,6 +973,8 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
     requireCameraScatterBuffersSized("launchDiffuseRays", launch_params.num_bands_launch);
     requireWhiteReferenceBuffersSized("launchDiffuseRays", launch_params.num_bands_launch);
     requireSpecularBufferSized("launchDiffuseRays", launch_params);
+
+    requireOutgoingUploadFits("launchDiffuseRays", launch_params.radiation_out_top.size(), launch_params.radiation_out_bottom.size());
 
     // Upload radiation_out buffers (emission + scattered energy from previous iteration).
     // This must happen here because RadiationModel adds emission to flux_top/bottom AFTER
@@ -1030,9 +1074,9 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
     h_params.launch_dim_y = dim_y;
     h_params.prd_pool     = nullptr;
 
-    // Use diffuse raygen record (index 1 in the raygen records array)
+    // The diffuse raygen record, or that of a scene with a background radiation field
     OptixShaderBindingTable diffuse_sbt = sbt;
-    diffuse_sbt.raygenRecord = d_raygen_record_diffuse;
+    diffuse_sbt.raygenRecord = current_flux_field_count == 2 ? d_raygen_record_diffuse_dual : d_raygen_record_diffuse;
 
     // OptiX depth dimension is limited to 65535; batch if needed
     const uint32_t MAX_DEPTH    = 65535u;
@@ -1189,7 +1233,7 @@ void OptiX8Backend::getRadiationResults(RayTracingResults &results) {
 
     if (total > 0) {
         if (d_radiation_in)         results.radiation_in         = downloadFloat(d_radiation_in,         total);
-        const size_t outgoing_total = outgoing_components * total;
+        const size_t outgoing_total = outgoing_components * current_flux_slot_count * Nbands;
         if (d_radiation_out_top)    results.radiation_out_top    = downloadFloat(d_radiation_out_top,    outgoing_total);
         if (d_radiation_out_bottom) results.radiation_out_bottom = downloadFloat(d_radiation_out_bottom, outgoing_total);
         if (d_scatter_buff_top)     results.scatter_buff_top     = downloadFloat(d_scatter_buff_top,     outgoing_total);
@@ -1201,7 +1245,7 @@ void OptiX8Backend::getRadiationResults(RayTracingResults &results) {
     // size, since a buffer allocated for an earlier camera set would be read past its end. Otherwise the vectors stay
     // empty, so a caller consuming camera scatter detects the mismatch rather than integrating garbage.
     if (Nprims > 0 && current_launch_band_count > 0 && current_camera_count > 0) {
-        const size_t cam_total = outgoing_components * current_camera_count * Nprims * current_launch_band_count;
+        const size_t cam_total = outgoing_components * current_camera_count * current_flux_slot_count * current_launch_band_count;
         if (d_scatter_buff_top_cam && d_scatter_buff_bottom_cam && camera_scatter_buffer_bytes == cam_total * sizeof(float)) {
             results.scatter_buff_top_cam    = downloadFloat(d_scatter_buff_top_cam,    cam_total);
             results.scatter_buff_bottom_cam = downloadFloat(d_scatter_buff_bottom_cam, cam_total);
@@ -1221,8 +1265,8 @@ void OptiX8Backend::uploadSpectralCameraFlux(const std::vector<uint32_t> &class_
     if (class_flux_offset.empty()) {
         return;
     }
-    if (class_flux_offset.size() != current_primitive_count) {
-        helios_runtime_error("ERROR (OptiX8Backend::uploadSpectralCameraFlux): There are " + std::to_string(class_flux_offset.size()) + " class-flux offsets for " + std::to_string(current_primitive_count) + " primitives.");
+    if (class_flux_offset.size() != current_flux_slot_count) {
+        helios_runtime_error("ERROR (OptiX8Backend::uploadSpectralCameraFlux): There are " + std::to_string(class_flux_offset.size()) + " class-flux offsets for " + std::to_string(current_flux_slot_count) + " flux slots.");
     }
     const size_t bytes_offset = class_flux_offset.size() * sizeof(uint32_t);
     reallocDevice(d_class_flux_offset, bytes_offset);
@@ -1333,7 +1377,7 @@ void OptiX8Backend::getCameraResults(std::vector<float> &pixel_data, std::vector
 // Buffer management utilities
 // ---------------------------------------------------------------------------
 
-void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) {
+void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption, bool record_normal_map_moments) {
     const size_t Nprims = current_primitive_count;
 
     // Absorbed radiation that arrived on the top face: allocated only while tracking is enabled, and null otherwise so the kernels skip the write
@@ -1356,14 +1400,24 @@ void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_fa
     current_camera_launch_id = 0xFFFFFFFFu;
 
     const size_t bytes = Nprims * launch_band_count * sizeof(float);
-    // The outgoing components are [component][prim][launch band] blocks, so zeroing all of them clears the second one too
-    const size_t outgoing_bytes = outgoing_components * bytes;
+    // The outgoing components are [component][flux slot][launch band] blocks, so zeroing all of them clears the second one too
+    const size_t outgoing_bytes = outgoing_components * current_flux_slot_count * launch_band_count * sizeof(float);
 
     if (d_radiation_in)         CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_in),         0, bytes));
     if (d_radiation_out_top)    CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_out_top),    0, outgoing_bytes));
     if (d_radiation_out_bottom) CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_out_bottom), 0, outgoing_bytes));
     if (d_scatter_buff_top)     CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_top),     0, outgoing_bytes));
     if (d_scatter_buff_bottom)  CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_bottom),  0, outgoing_bytes));
+
+    // The directions of the diffuse radiation reaching normal-mapped primitives, accumulated by every diffuse launch of a runBand() for the cameras
+    // With a background field, its moments follow in a second set of slots
+    const size_t moment_bytes = record_normal_map_moments ? current_flux_field_count * normal_map_slot_count * 2 * launch_band_count * 3 * sizeof(float) : 0;
+    normal_map_moment_count = moment_bytes / sizeof(float);
+    reallocDevice(d_normal_map_moments, moment_bytes);
+    if (moment_bytes > 0) {
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_normal_map_moments), 0, moment_bytes));
+    }
+    h_params.normal_map_moments = moment_bytes > 0 ? reinterpret_cast<float *>(d_normal_map_moments) : nullptr;
 
     // Each camera's white reference: one [prim][band] block per camera, zeroed only here so that it accumulates over all the
     // direct and diffuse launches of a runBand()
@@ -1380,7 +1434,7 @@ void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count, bool track_fa
 
     // Zero the direct flux reaching primitives with a surface layer: [source × primitive × launch_band_count]. Without surface
     // layers nothing reads or writes it, so it is freed.
-    const size_t specular_bytes = specular_reflection_enabled ? current_source_count * Nprims * launch_band_count * sizeof(float) : 0;
+    const size_t specular_bytes = specular_reflection_enabled ? current_source_count * current_flux_slot_count * launch_band_count * sizeof(float) : 0;
     reallocDevice(d_radiation_specular, specular_bytes);
     if (specular_bytes > 0) {
         CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_specular), 0, specular_bytes));
@@ -1398,12 +1452,12 @@ void OptiX8Backend::zeroAbandonedRayCount() {
 }
 
 void OptiX8Backend::zeroScatterBuffers() {
-    const size_t total_bytes = outgoing_components * current_primitive_count * current_band_count * sizeof(float);
+    const size_t total_bytes = outgoing_components * current_flux_slot_count * current_band_count * sizeof(float);
     if (total_bytes == 0) return;
 
     if (d_scatter_buff_top)    CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_top),    0, total_bytes));
     if (d_scatter_buff_bottom) CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_bottom), 0, total_bytes));
-    if (d_forward_scatter)     CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_forward_scatter),     0, total_bytes / outgoing_components));
+    if (d_forward_scatter)     CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_forward_scatter),     0, current_primitive_count * current_band_count * sizeof(float)));
 }
 
 void OptiX8Backend::zeroCameraPixelBuffers(const helios::int2 &resolution) {
@@ -1441,7 +1495,7 @@ void OptiX8Backend::getCameraPixelSpectralClasses(std::vector<uint> &pixel_class
 }
 
 void OptiX8Backend::copyScatterToRadiation() {
-    const size_t total = outgoing_components * current_primitive_count * current_band_count * sizeof(float);
+    const size_t total = outgoing_components * current_flux_slot_count * current_band_count * sizeof(float);
     if (total == 0) return;
     if (d_scatter_buff_top && d_radiation_out_top) {
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_radiation_out_top),
@@ -1455,8 +1509,19 @@ void OptiX8Backend::copyScatterToRadiation() {
     }
 }
 
+void OptiX8Backend::requireOutgoingUploadFits(const char *caller, size_t top_count, size_t bottom_count) const {
+    // The device buffers hold one value per outgoing component, flux slot and band (see updateMaterials()); a larger upload would be written past their end
+    const size_t capacity = outgoing_components * current_flux_slot_count * current_band_count;
+    if (top_count > capacity || bottom_count > capacity) {
+        helios_runtime_error(std::string("ERROR (OptiX8Backend::") + caller + "): The outgoing radiation to upload holds " + std::to_string(top_count) + " and " + std::to_string(bottom_count) + " values, but the device buffers hold " +
+                             std::to_string(capacity) + " (" + std::to_string(outgoing_components) + " component(s), " + std::to_string(current_flux_slot_count) + " flux slots, " + std::to_string(current_band_count) +
+                             " bands). updateGeometry() and updateMaterials() must be called for the current geometry before the outgoing radiation is uploaded.");
+    }
+}
+
 void OptiX8Backend::uploadRadiationOut(const std::vector<float> &radiation_out_top,
                                         const std::vector<float> &radiation_out_bottom) {
+    requireOutgoingUploadFits("uploadRadiationOut", radiation_out_top.size(), radiation_out_bottom.size());
     if (!radiation_out_top.empty() && d_radiation_out_top) {
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_radiation_out_top),
                               radiation_out_top.data(),
@@ -1480,6 +1545,14 @@ void OptiX8Backend::uploadVertexRadiationOut(const std::vector<float> &vertex_ra
     const size_t top_bytes    = vertex_radiation_out_top.size() * sizeof(float);
     const size_t bottom_bytes = vertex_radiation_out_bottom.size() * sizeof(float);
 
+    // The buffers are [component][field][vertex][launch band]
+    const size_t values_per_vertex = outgoing_components * current_flux_field_count * current_launch_band_count;
+    if (values_per_vertex == 0 || vertex_radiation_out_top.size() % values_per_vertex != 0 || bottom_bytes != top_bytes) {
+        helios_runtime_error("ERROR (OptiX8Backend::uploadVertexRadiationOut): The vertex outgoing radiation holds " + std::to_string(vertex_radiation_out_top.size()) + " and " + std::to_string(vertex_radiation_out_bottom.size()) +
+                             " values, which is not a whole number of vertices for " + std::to_string(outgoing_components) + " component(s), " + std::to_string(current_flux_field_count) + " field(s) and " +
+                             std::to_string(current_launch_band_count) + " launched band(s).");
+    }
+
     reallocDevice(d_vertex_radiation_out_top, top_bytes);
     reallocDevice(d_vertex_radiation_out_bottom, bottom_bytes);
 
@@ -1488,18 +1561,7 @@ void OptiX8Backend::uploadVertexRadiationOut(const std::vector<float> &vertex_ra
 
     h_params.vertex_radiation_out_top    = reinterpret_cast<float *>(d_vertex_radiation_out_top);
     h_params.vertex_radiation_out_bottom = reinterpret_cast<float *>(d_vertex_radiation_out_bottom);
-}
-
-void OptiX8Backend::uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) {
-    if (vertex_irradiance.empty()) {
-        freeCUdeviceptr(d_vertex_direct_irradiance);
-        h_params.vertex_direct_irradiance = nullptr;
-        return;
-    }
-    const size_t bytes = vertex_irradiance.size() * sizeof(float);
-    reallocDevice(d_vertex_direct_irradiance, bytes);
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_vertex_direct_irradiance), vertex_irradiance.data(), bytes, cudaMemcpyHostToDevice));
-    h_params.vertex_direct_irradiance = reinterpret_cast<float *>(d_vertex_direct_irradiance);
+    h_params.vertex_field_stride = static_cast<uint32_t>(vertex_radiation_out_top.size() / values_per_vertex);
 }
 
 void OptiX8Backend::uploadVertexNormals(const std::vector<float> &vertex_normals) {
@@ -1520,13 +1582,35 @@ void OptiX8Backend::uploadVertexNormals(const std::vector<float> &vertex_normals
     h_params.vertex_normal_count = static_cast<uint32_t>(vertex_normals.size() / 3);
 }
 
+void OptiX8Backend::getNormalMapMoments(std::vector<float> &moments) {
+    moments.assign(normal_map_moment_count, 0.f);
+    if (normal_map_moment_count > 0) {
+        CUDA_CHECK(cudaMemcpy(moments.data(), reinterpret_cast<void *>(d_normal_map_moments), normal_map_moment_count * sizeof(float), cudaMemcpyDeviceToHost));
+    }
+}
+
+void OptiX8Backend::uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) {
+    if (vertex_moments.size() % 6 != 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::uploadVertexNormalMapMoments): The vertex moments hold " + std::to_string(vertex_moments.size()) + " values, which is not three per face of each vertex and band.");
+    }
+    if (vertex_moments.empty()) {
+        freeCUdeviceptr(d_vertex_normal_map_moments);
+        h_params.vertex_normal_map_moments = nullptr;
+        return;
+    }
+    const size_t bytes = vertex_moments.size() * sizeof(float);
+    reallocDevice(d_vertex_normal_map_moments, bytes);
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_vertex_normal_map_moments), vertex_moments.data(), bytes, cudaMemcpyHostToDevice));
+    h_params.vertex_normal_map_moments = reinterpret_cast<const float *>(d_vertex_normal_map_moments);
+}
+
 void OptiX8Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
     const size_t Nprims = current_primitive_count;
     if (Nprims == 0 || launch_band_count == 0 || current_camera_count == 0) return;
 
     // One [prim][band] block per camera, so each camera accumulates scatter weighted by its own response, and one set of
     // them per outgoing component
-    const size_t bytes = outgoing_components * current_camera_count * Nprims * launch_band_count * sizeof(float);
+    const size_t bytes = outgoing_components * current_camera_count * current_flux_slot_count * launch_band_count * sizeof(float);
     reallocDevice(d_scatter_buff_top_cam,    bytes);
     reallocDevice(d_scatter_buff_bottom_cam, bytes);
     CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_top_cam),    0, bytes));
@@ -1539,7 +1623,7 @@ void OptiX8Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
 
     // The radiation reaching primitives with a spectral texture, which cameras need to see their classes: [face][source slot][prim][band]
     if (h_params.Npalette_entries > 0) {
-        spectral_incident_count = 2 * (current_source_count + 1) * Nprims * launch_band_count;
+        spectral_incident_count = 2 * (current_source_count + 1) * current_flux_slot_count * launch_band_count;
         reallocDevice(d_spectral_incident, spectral_incident_count * sizeof(float));
         CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_spectral_incident), 0, spectral_incident_count * sizeof(float)));
     } else {
@@ -1553,10 +1637,10 @@ void OptiX8Backend::requireCameraScatterBuffersSized(const char *caller, size_t 
     if (current_camera_count == 0) {
         return; // The kernels loop over zero cameras and never touch the camera-scatter buffers
     }
-    const size_t required_bytes = outgoing_components * current_camera_count * current_primitive_count * launch_band_count * sizeof(float);
+    const size_t required_bytes = outgoing_components * current_camera_count * current_flux_slot_count * launch_band_count * sizeof(float);
     if (!d_scatter_buff_top_cam || !d_scatter_buff_bottom_cam || camera_scatter_buffer_bytes != required_bytes) {
         helios_runtime_error(std::string("ERROR (OptiX8Backend::") + caller + "): The camera-weighted scatter buffers hold " + std::to_string(camera_scatter_buffer_bytes) + " bytes, but " +
-                             std::to_string(current_camera_count) + " camera(s) x " + std::to_string(current_primitive_count) + " primitives x " + std::to_string(launch_band_count) +
+                             std::to_string(current_camera_count) + " camera(s) x " + std::to_string(current_flux_slot_count) + " flux slots x " + std::to_string(launch_band_count) +
                              " launched band(s) require " + std::to_string(required_bytes) + ". zeroCameraScatterBuffers() must be called for the current camera set before rays are launched.");
     }
 }
@@ -1574,7 +1658,7 @@ void OptiX8Backend::requireWhiteReferenceBuffersSized(const char *caller, size_t
 }
 
 void OptiX8Backend::getDirectFluxResults(std::vector<float> &direct_flux, size_t launch_band_count) {
-    const size_t count = current_source_count * current_primitive_count * launch_band_count;
+    const size_t count = current_source_count * current_flux_slot_count * launch_band_count;
     if (!d_radiation_specular || radiation_specular_buffer_bytes != count * sizeof(float)) {
         helios_runtime_error("ERROR (OptiX8Backend::getDirectFluxResults): The direct radiation reaching the primitives holds " + std::to_string(radiation_specular_buffer_bytes) + " bytes, but " + std::to_string(current_source_count) +
                              " source(s), " + std::to_string(current_primitive_count) + " primitives and " + std::to_string(launch_band_count) + " launched band(s) require " + std::to_string(count * sizeof(float)) +
@@ -1587,7 +1671,7 @@ void OptiX8Backend::requireSpecularBufferSized(const char *caller, const RayTrac
     if (launch_params.specular_reflection_enabled == 0 || current_source_count == 0) {
         return; // The kernels do not read radiation_specular
     }
-    const size_t required_bytes = current_source_count * current_primitive_count * launch_params.num_bands_launch * sizeof(float);
+    const size_t required_bytes = current_source_count * current_flux_slot_count * launch_params.num_bands_launch * sizeof(float);
     if (!d_radiation_specular || radiation_specular_buffer_bytes != required_bytes) {
         helios_runtime_error(std::string("ERROR (OptiX8Backend::") + caller + "): The surface layers' reflection of direct radiation is read in this launch, but radiation_specular holds " + std::to_string(radiation_specular_buffer_bytes) +
                              " bytes instead of the " + std::to_string(required_bytes) +
@@ -1647,13 +1731,14 @@ void OptiX8Backend::freeGeometryBuffers() {
     freeCUdeviceptr(d_objectID);
     freeCUdeviceptr(d_object_subdivisions);
     freeCUdeviceptr(d_twosided_flag);
+    freeCUdeviceptr(d_periodic_excluded);
     freeCUdeviceptr(d_primitive_solid_fraction);
     freeCUdeviceptr(d_smoothing_vertex_indices);
     freeCUdeviceptr(d_vertex_normals);
     h_params.vertex_normals = nullptr;
     h_params.vertex_normal_count = 0;
-    freeCUdeviceptr(d_vertex_direct_irradiance);
-    h_params.vertex_direct_irradiance = nullptr;
+    freeCUdeviceptr(d_vertex_normal_map_moments);
+    h_params.vertex_normal_map_moments = nullptr;
     freeCUdeviceptr(d_patch_vertices);
     freeCUdeviceptr(d_patch_UUIDs);
     freeCUdeviceptr(d_triangle_vertices);
@@ -1676,6 +1761,9 @@ void OptiX8Backend::freeGeometryBuffers() {
     freeCUdeviceptr(d_class_map_offsets);
     freeCUdeviceptr(d_class_map_sizes);
     freeCUdeviceptr(d_class_map_IDs);
+    freeCUdeviceptr(d_normal_maps);
+    freeCUdeviceptr(d_normal_map_slots);
+    freeCUdeviceptr(d_normal_map_moments);
     freeCUdeviceptr(d_aabbs);
     freeCUdeviceptr(d_gas_output);
     gas_handle = 0;
@@ -1875,12 +1963,14 @@ void OptiX8Backend::buildSBT() {
     struct alignas(OPTIX_SBT_RECORD_ALIGNMENT) RaygenRecord {
         char header[OPTIX_SBT_RECORD_HEADER_SIZE];
     };
-    constexpr int N_rg = 4;
+    constexpr int N_rg = 6;
     std::vector<RaygenRecord> rg_recs(N_rg);
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_raygen_direct,      &rg_recs[0]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_raygen_diffuse,     &rg_recs[1]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_raygen_camera,      &rg_recs[2]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_raygen_pixel_label, &rg_recs[3]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_raygen_direct_dual,  &rg_recs[4]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_raygen_diffuse_dual, &rg_recs[5]));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_raygen_records), N_rg * sizeof(RaygenRecord)));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_raygen_records), rg_recs.data(),
                           N_rg * sizeof(RaygenRecord), cudaMemcpyHostToDevice));
@@ -1890,17 +1980,22 @@ void OptiX8Backend::buildSBT() {
     d_raygen_record_diffuse     = d_raygen_records + 1 * sizeof(RaygenRecord);
     d_raygen_record_camera      = d_raygen_records + 2 * sizeof(RaygenRecord);
     d_raygen_record_pixel_label = d_raygen_records + 3 * sizeof(RaygenRecord);
+    d_raygen_record_direct_dual  = d_raygen_records + 4 * sizeof(RaygenRecord);
+    d_raygen_record_diffuse_dual = d_raygen_records + 5 * sizeof(RaygenRecord);
 
-    // Miss records: header only, 4 records
+    // Miss records: header only, one per miss program (see DUAL_FIELD_SBT_OFFSET for their order)
     struct alignas(OPTIX_SBT_RECORD_ALIGNMENT) MissRecord {
         char header[OPTIX_SBT_RECORD_HEADER_SIZE];
     };
-    constexpr int N_ms = 4;
+    constexpr int N_ms = 7;
     std::vector<MissRecord> ms_recs(N_ms);
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_direct,      &ms_recs[0]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_diffuse,     &ms_recs[1]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_camera,      &ms_recs[2]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_pixel_label, &ms_recs[3]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_camera_shadow, &ms_recs[4]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_direct_dual,  &ms_recs[DUAL_FIELD_SBT_OFFSET + 1]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_diffuse_dual, &ms_recs[DUAL_FIELD_SBT_OFFSET + 2]));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_miss_records), N_ms * sizeof(MissRecord)));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_miss_records), ms_recs.data(),
                           N_ms * sizeof(MissRecord), cudaMemcpyHostToDevice));
@@ -1910,7 +2005,7 @@ void OptiX8Backend::buildSBT() {
         char header[OPTIX_SBT_RECORD_HEADER_SIZE];
         HitGroupData data;
     };
-    constexpr int N_hg = 4;
+    constexpr int N_hg = 6;
     std::vector<HitRecord> hg_recs(N_hg);
     for (auto &r : hg_recs) {
         r.data.vertices  = reinterpret_cast<float3 *>(d_patch_vertices);
@@ -1921,6 +2016,8 @@ void OptiX8Backend::buildSBT() {
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_diffuse,     &hg_recs[1]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_camera,      &hg_recs[2]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_pixel_label, &hg_recs[3]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_direct_dual,  &hg_recs[DUAL_FIELD_SBT_OFFSET]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_diffuse_dual, &hg_recs[DUAL_FIELD_SBT_OFFSET + 1]));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_hitgroup_records), N_hg * sizeof(HitRecord)));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_hitgroup_records), hg_recs.data(),
                           N_hg * sizeof(HitRecord), cudaMemcpyHostToDevice));
@@ -1950,9 +2047,13 @@ void OptiX8Backend::applyLaunchParams(const RayTracingLaunchParams &params) {
     h_params.launch_face            = params.launch_face;
     h_params.scattering_iteration   = params.scattering_iteration;
     h_params.specular_reflection_enabled = params.specular_reflection_enabled;
+    h_params.normal_map_direct = params.normal_map_direct;
+    h_params.camera_direct_per_pixel = params.camera_direct_per_pixel;
+    h_params.camera_direct_all = params.camera_direct_all;
     h_params.below_horizon_diffuse_enabled = params.below_horizon_diffuse_enabled;
     h_params.camera_ID              = params.camera_id;
     h_params.camera_position        = make_float3(params.camera_position.x, params.camera_position.y, params.camera_position.z);
+    h_params.camera_tile            = ::make_int2(params.camera_tile.x, params.camera_tile.y);
     h_params.camera_direction       = make_float2(params.camera_direction.x, params.camera_direction.y);
     h_params.camera_focal_length    = params.camera_focal_length;
     h_params.camera_lens_diameter   = params.camera_lens_diameter;

@@ -110,7 +110,7 @@ namespace helios {
         [[nodiscard]] size_t getAbandonedRayCount() override;
 
         // ========== Buffer Management Utilities ==========
-        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) override;
+        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption, bool record_normal_map_moments) override;
         void zeroScatterBuffers() override;
         void zeroAbandonedRayCount() override;
         void zeroCameraPixelBuffers(const helios::int2 &resolution) override;
@@ -118,7 +118,8 @@ namespace helios {
         void uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) override;
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top, const std::vector<float> &vertex_radiation_out_bottom) override;
         void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
-        void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
+        void getNormalMapMoments(std::vector<float> &moments) override;
+        void uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) override;
         void uploadSpectralCameraFlux(const std::vector<uint32_t> &class_flux_offset, const std::vector<float> &class_flux) override;
         void getCameraPixelSpectralClasses(std::vector<uint> &pixel_classes, const helios::int2 &resolution) override;
         void uploadSpectralVertexIncident(const std::vector<float> &vertex_values, uint32_t layer_count, uint32_t camera) override;
@@ -254,10 +255,23 @@ namespace helios {
         //! primitive, the albedo table of each model in each band, and the tables (float bits)
         Buffer surface_layer_buffer;
         Buffer camera_info_buffer; //!< The camera being traced and the number of cameras, two uint words written before each camera launch, so the camera shader can index the camera-weighted materials
+        //! The periodic copies of the domain rays track (set 0 binding 22): tile-tracking flag, repeat limits (x, y), z-range of the repeated geometry, escape offset, the camera's periodic copy (x, y),
+        //! and the layout of the background radiation field (flux field count, flux slot count, normal-map slot count, smoothing vertex count), as twelve 32-bit words laid out as periodic_info below and
+        //! PeriodicInfoBuffer in the shaders
+        Buffer periodic_info_buffer;
+        //! Host copy of periodic_info_buffer; words 6 and 7 (the camera's periodic copy) are written before each camera and pixel-label launch, and word 11 (the smoothing vertex count) with the vertex
+        //! outgoing radiation
+        uint32_t periodic_info[12] = {0u, 0xFFFFFFFFu, 0xFFFFFFFFu, 0u, 0u, 0u, 0u, 0u, 1u, 0u, 0u, 0u};
+        //! Whether each primitive is excluded from the periodic boundary (RayTracingGeometry::periodic_excluded), one uint per primitive, set 0 binding 23; a one-element placeholder of 0 when none is
+        Buffer periodic_excluded_buffer;
         //! Spectral texture palettes, packed into one buffer (layout in shaders/common/spectral_texture.glsl): material set, binding 18
         Buffer spectral_palette_buffer;
         //! Spectral texture class maps, packed into one buffer (layout in shaders/common/spectral_texture.glsl): geometry set, binding 19
         Buffer spectral_class_map_buffer;
+        Buffer normal_map_slot_buffer; //!< Slot of each normal-mapped primitive in normal_map_moment_buffer, set 0 binding 21 (RayTracingGeometry::normal_map_slots)
+        Buffer normal_map_moment_buffer; //!< [slot][face][launch band][3] directions of the diffuse radiation reaching mapped primitives, set 2 binding 23; with a background field, its slots follow those of the scene as it is
+        size_t normal_map_slot_count = 0;
+        Buffer normal_map_buffer; //!< Packed normal maps (include/NormalMapMath.h), set 0 binding 20; word 0 is 0 when no primitive has one
         //! Radiation reaching primitives with a spectral texture (see RayTracingResults::spectral_incident): results set, binding 16
         Buffer spectral_incident_buffer;
         //! Number of values in spectral_incident_buffer when it is in use, or 0 when it is a placeholder
@@ -287,12 +301,12 @@ namespace helios {
         //! Bind a one-element placeholder in place of the vertex normals, which the camera shader takes to mean that there are none
         void bindVertexNormalsPlaceholder();
 
-        //! Bind a one-element placeholder in place of the vertex direct irradiance, which the camera shader takes to mean that there is none
-        void bindVertexDirectIrradiancePlaceholder();
+        void bindVertexNormalMapMomentsPlaceholder();
         Buffer vertex_radiation_out_top_buffer;
         Buffer vertex_radiation_out_bottom_buffer;
         Buffer vertex_normals_buffer; //!< Shading normal per smoothing vertex [vertex × 3]; a one-element placeholder unless smoothing is enabled and there is a source or a surface layer
-        Buffer vertex_direct_irradiance_buffer; //!< Unoccluded direct irradiance per [source × smoothing vertex × band]; a one-element placeholder unless smoothing is enabled and there is a source
+        Buffer vertex_normal_map_moment_buffer; //!< normal_map_moment_buffer averaged onto the smoothing vertices [field][vertex][face][launch band][3], set 2 binding 24; a one-element placeholder unless smoothing and maps
+        size_t normal_map_moment_count = 0; //!< Number of values recorded in normal_map_moment_buffer, 0 when nothing is recorded
         Buffer scatter_top_buffer;
         Buffer scatter_bottom_buffer;
         Buffer camera_radiation_buffer; //!< Camera pixel radiation values
@@ -355,6 +369,9 @@ namespace helios {
 
         // Geometry cache
         size_t primitive_count = 0;
+        //! Slots per primitive dimension of the outgoing, scattered, camera and direct-flux buffers: the primitive count, or twice it with a background field (RayTracingGeometry::fluxSlotCount())
+        size_t flux_slot_count = 0;
+        size_t flux_field_count = 1; //!< 2 with a background field (RayTracingGeometry::periodicDualField()), else 1
         size_t band_count = 0; // Global band count (material buffer stride)
         size_t camera_count = 0; // Number of cameras (rho_cam/tau_cam trailing stride)
         size_t source_count = 0;
@@ -385,6 +402,8 @@ namespace helios {
          * \param[in] params Parameters of the launch about to be made; band_launch_flag must flag exactly the bands of the current runBand() launch
          * \param[in] caller Name of the calling method, for the error message
          */
+        //! Write the camera's periodic copy of the domain into periodic_info and upload it to periodic_info_buffer
+        void uploadPeriodicInfo(const helios::int2 &camera_tile);
         void uploadCameraBandMap(const RayTracingLaunchParams &params, const char *caller);
 
         //! Raise an error unless the white reference buffers are sized for the current camera set
@@ -428,6 +447,19 @@ namespace helios {
          * @brief Download data from buffer
          */
         void downloadBufferData(const Buffer &buffer, void *data, size_t size);
+
+        //! Add the scene's flux slots of a buffer to its background field's, which after a direct launch hold only what the excluded primitives kept from the scene as it is
+        /**
+         * The buffer must hold only what that one direct launch booked. The background slots of the excluded primitives, which the background field does not contain, are left at zero.
+         * \param[in,out] buffer A buffer of blocks of [flux slot][launch band] (see RayTracingGeometry::fluxSlotCount()).
+         * \param[in] buffer_name Name of the buffer, for the error raised if it is not such a buffer.
+         */
+        void completeBackgroundField(Buffer &buffer, const char *buffer_name);
+
+        //! Whether each primitive is excluded from the periodic boundary (see RayTracingGeometry::periodic_excluded); empty when none is
+        std::vector<uint8_t> periodic_excluded_flags;
+        //! Whether a direct launch has completed the background field since the radiation buffers were last zeroed (see completeBackgroundField())
+        bool background_field_completed = false;
 
         /**
          * @brief Zero buffer contents

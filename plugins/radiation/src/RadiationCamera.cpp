@@ -3198,7 +3198,8 @@ void RadiationModel::populateCameraMetadata(const std::string &camera_label, Cam
     // --- Location Properties --- //
     helios::Location loc = context->getLocation();
     metadata.location_properties.latitude = loc.latitude_deg;
-    metadata.location_properties.longitude = loc.longitude_deg;
+    // The metadata uses the usual east-positive convention (as the EXIF GPS tags do), whereas the Context counts longitude positive West
+    metadata.location_properties.longitude = -loc.longitude_deg;
 
     // --- Acquisition Properties --- //
     helios::Date date = context->getDate();
@@ -3214,7 +3215,8 @@ void RadiationModel::populateCameraMetadata(const std::string &camera_label, Cam
     time_str << std::setw(2) << std::setfill('0') << time.hour << ":" << std::setw(2) << std::setfill('0') << time.minute << ":" << std::setw(2) << std::setfill('0') << time.second;
     metadata.acquisition_properties.time = time_str.str();
 
-    metadata.acquisition_properties.UTC_offset = loc.UTC_offset;
+    // East-positive, as the EXIF OffsetTime tags (UTC-8 is -8), whereas the Context counts the offset positive West
+    metadata.acquisition_properties.UTC_offset = -loc.UTC_offset;
     metadata.acquisition_properties.camera_height_m = cam.position.z;
     metadata.acquisition_properties.camera_angle_deg = calculateCameraTiltAngle(cam.position, cam.lookat);
     metadata.acquisition_properties.light_source = detectLightingType();
@@ -3335,7 +3337,7 @@ std::string RadiationModel::writeCameraMetadataFile(const std::string &camera_la
 
     j["acquisition_properties"]["date"] = metadata.acquisition_properties.date;
     j["acquisition_properties"]["time"] = metadata.acquisition_properties.time;
-    j["acquisition_properties"]["UTC_offset"] = format_float(metadata.acquisition_properties.UTC_offset, 1);
+    j["acquisition_properties"]["UTC_offset"] = format_float(metadata.acquisition_properties.UTC_offset, 2); // two decimals, for zones such as UTC+5:45
     j["acquisition_properties"]["camera_height_m"] = format_float(metadata.acquisition_properties.camera_height_m, 2);
     j["acquisition_properties"]["camera_angle_deg"] = format_float(metadata.acquisition_properties.camera_angle_deg, 2);
     j["acquisition_properties"]["light_source"] = metadata.acquisition_properties.light_source;

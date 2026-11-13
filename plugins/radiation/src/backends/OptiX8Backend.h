@@ -129,7 +129,7 @@ namespace helios {
         [[nodiscard]] size_t getAbandonedRayCount() override;
 
         // Buffer utilities
-        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption) override;
+        void zeroRadiationBuffers(size_t launch_band_count, bool track_face_absorption, bool record_normal_map_moments) override;
         void zeroScatterBuffers() override;
         void zeroAbandonedRayCount() override;
         void zeroCameraPixelBuffers(const helios::int2 &resolution) override;
@@ -142,7 +142,8 @@ namespace helios {
         void uploadVertexRadiationOut(const std::vector<float> &vertex_radiation_out_top,
                                       const std::vector<float> &vertex_radiation_out_bottom) override;
         void uploadVertexNormals(const std::vector<float> &vertex_normals) override;
-        void uploadVertexDirectIrradiance(const std::vector<float> &vertex_irradiance) override;
+        void getNormalMapMoments(std::vector<float> &moments) override;
+        void uploadVertexNormalMapMoments(const std::vector<float> &vertex_moments) override;
         void zeroCameraScatterBuffers(size_t launch_band_count) override;
         void uploadSourceFluxes(const std::vector<float> &fluxes) override;
         void uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) override;
@@ -168,11 +169,19 @@ namespace helios {
         OptixProgramGroup pg_miss_diffuse        = nullptr;
         OptixProgramGroup pg_miss_camera         = nullptr;
         OptixProgramGroup pg_miss_pixel_label    = nullptr;
+        OptixProgramGroup pg_miss_camera_shadow  = nullptr;
 
         OptixProgramGroup pg_hit_direct          = nullptr;
         OptixProgramGroup pg_hit_diffuse         = nullptr;
         OptixProgramGroup pg_hit_camera          = nullptr;
         OptixProgramGroup pg_hit_pixel_label     = nullptr;
+        // Programs of the direct and diffuse ray types in a scene with a background radiation field (see DUAL_FIELD_SBT_OFFSET)
+        OptixProgramGroup pg_raygen_direct_dual  = nullptr;
+        OptixProgramGroup pg_raygen_diffuse_dual = nullptr;
+        OptixProgramGroup pg_miss_direct_dual    = nullptr;
+        OptixProgramGroup pg_miss_diffuse_dual   = nullptr;
+        OptixProgramGroup pg_hit_direct_dual     = nullptr;
+        OptixProgramGroup pg_hit_diffuse_dual    = nullptr;
 
         // ---- GAS / acceleration structure ----
         OptixTraversableHandle    gas_handle       = 0;
@@ -189,6 +198,8 @@ namespace helios {
         CUdeviceptr               d_raygen_record_diffuse     = 0;
         CUdeviceptr               d_raygen_record_camera      = 0;
         CUdeviceptr               d_raygen_record_pixel_label = 0;
+        CUdeviceptr               d_raygen_record_direct_dual  = 0; //!< with a background radiation field
+        CUdeviceptr               d_raygen_record_diffuse_dual = 0;
 
         // ---- Launch params (device copy) ----
         OptiX8LaunchParams        h_params         = {};
@@ -216,6 +227,7 @@ namespace helios {
         CUdeviceptr d_tile_vertices          = 0;
         CUdeviceptr d_tile_UUIDs             = 0;
         CUdeviceptr d_bbox_vertices          = 0;
+        CUdeviceptr d_periodic_excluded      = 0;
         CUdeviceptr d_bbox_UUIDs             = 0;
 
         // Global UUID array: d_primitive_uuid[global_pos] = UUID
@@ -246,7 +258,6 @@ namespace helios {
         CUdeviceptr d_vertex_radiation_out_top = 0;
         CUdeviceptr d_vertex_radiation_out_bottom = 0;
         CUdeviceptr d_vertex_normals = 0; //!< Shading normal per smoothing vertex; allocated only while smoothing is enabled and there is a source or a surface layer
-        CUdeviceptr d_vertex_direct_irradiance = 0; //!< Unoccluded direct irradiance per [source][smoothing vertex][band]; allocated only while smoothing is enabled and there is a source
         CUdeviceptr d_scatter_buff_top       = 0;
         CUdeviceptr d_scatter_buff_bottom    = 0;
         CUdeviceptr d_forward_scatter        = 0; //!< Forward scattering estimate [prim][launch band] (see getForwardScatterResults())
@@ -299,6 +310,12 @@ namespace helios {
         CUdeviceptr d_class_map_offsets      = 0; //!< start index of each class map in class_map_data
         CUdeviceptr d_class_map_sizes        = 0; //!< 2 ints per class map: width, height
         CUdeviceptr d_class_map_IDs          = 0; //!< per-primitive class map (-1 = none)
+        CUdeviceptr d_normal_maps = 0; //!< packed normal maps (include/NormalMapMath.h), 0 when no primitive has one
+        CUdeviceptr d_normal_map_slots = 0; //!< slot of each normal-mapped primitive in d_normal_map_moments
+        CUdeviceptr d_normal_map_moments = 0; //!< [slot][face][launch band][3] directions of the diffuse radiation reaching mapped primitives
+        size_t normal_map_moment_count = 0; //!< Number of values in d_normal_map_moments, 0 when nothing is recorded
+        CUdeviceptr d_vertex_normal_map_moments = 0; //!< [smoothing vertex][face][launch band][3] the same averaged onto the smoothing vertices, while smoothing is enabled and there are maps
+        size_t normal_map_slot_count = 0; //!< number of slots
         CUdeviceptr d_palette_offset         = 0; //!< per-primitive first palette entry (UINT32_MAX = none)
         CUdeviceptr d_palette_rho            = 0;
         CUdeviceptr d_palette_tau            = 0;
@@ -316,6 +333,9 @@ namespace helios {
         // ---- State ----
         bool     is_initialized          = false;
         size_t   current_primitive_count = 0;
+        //! Slots per primitive dimension of the outgoing, scattered, camera and direct-flux buffers: the primitive count, or twice it with a background field (RayTracingGeometry::fluxSlotCount())
+        size_t   current_flux_slot_count = 0;
+        size_t   current_flux_field_count = 1; //!< 2 with a background field (RayTracingGeometry::periodicDualField()), else 1
         size_t   current_patch_count     = 0;
         size_t   current_triangle_count  = 0;
         size_t   current_disk_count      = 0;
@@ -344,7 +364,11 @@ namespace helios {
         /// Raise an error unless the white reference device buffers hold one [prim][band] block per current camera, as the direct and diffuse kernels index them
         void requireWhiteReferenceBuffersSized(const char *caller, size_t launch_band_count) const;
 
+        //! Raise an error if outgoing radiation to upload holds more values than the device buffers do
+        void requireOutgoingUploadFits(const char *caller, size_t top_count, size_t bottom_count) const;
+
         /// Raise an error if a launch with specular reflection enabled would read or write a d_radiation_specular that zeroRadiationBuffers() did not allocate for it
+
         void requireSpecularBufferSized(const char *caller, const RayTracingLaunchParams &launch_params) const;
 
         /// Free all geometry-related device buffers

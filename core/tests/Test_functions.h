@@ -2603,3 +2603,207 @@ DOCTEST_TEST_CASE("classMapAreaFractions follows the texel convention of the rad
     // A triangle touching a class only along its edge covers none of it
     DOCTEST_CHECK(classMapAreaFractions(classes, resolution, {make_vec2(0.5f, 0.1f), make_vec2(0.9f, 0.1f), make_vec2(0.9f, 0.5f)}).empty());
 }
+
+namespace {
+    //! Write a uniform RGB normal-map image of the given size with every texel set to (r, g, b) in 0-255
+    std::string writeUniformNormalMapImage(const std::string &name, uint width, uint height, int r, int g, int b) {
+        const std::string file = (std::filesystem::temp_directory_path() / name).string();
+        std::vector<RGBAcolor> pixels(size_t(width) * height, make_RGBAcolor(float(r) / 255.f, float(g) / 255.f, float(b) / 255.f, 1.f));
+        writePNG(file, width, height, pixels);
+        return file;
+    }
+} // namespace
+
+TEST_CASE("decodeNormalMapImage decodes tangent-space normal maps") {
+    SUBCASE("channels decode as 2c-1 and are renormalized") {
+        const std::string file = writeUniformNormalMapImage("helios_test_nm_tilt_x.png", 4, 3, 218, 128, 218);
+        const NormalMapTexels texels = decodeNormalMapImage(file, NORMAL_MAP_TANGENT_SPACE, 1.f, false);
+        DOCTEST_CHECK(texels.resolution.x == 4);
+        DOCTEST_CHECK(texels.resolution.y == 3);
+        DOCTEST_CHECK(texels.getMemoryBytes() == 4 * 3 * 2 * sizeof(int16_t));
+        const vec3 expected = normalize(make_vec3(2.f * 218.f / 255.f - 1.f, 2.f * 128.f / 255.f - 1.f, 2.f * 218.f / 255.f - 1.f));
+        const vec3 n = texels.getNormal(2, 1);
+        DOCTEST_CHECK(n.x == doctest::Approx(expected.x).epsilon(1e-4));
+        DOCTEST_CHECK(n.y == doctest::Approx(expected.y).epsilon(1e-3));
+        DOCTEST_CHECK(n.z == doctest::Approx(expected.z).epsilon(1e-4));
+        DOCTEST_CHECK(n.magnitude() == doctest::Approx(1.f).epsilon(1e-5));
+        std::filesystem::remove(file);
+    }
+
+    SUBCASE("flip_green negates y and strength scales the tilt") {
+        const std::string file = writeUniformNormalMapImage("helios_test_nm_tilt_y.png", 2, 2, 128, 218, 218);
+        const vec3 plain = decodeNormalMapImage(file, NORMAL_MAP_TANGENT_SPACE, 1.f, false).getNormal(0, 0);
+        const vec3 flipped = decodeNormalMapImage(file, NORMAL_MAP_TANGENT_SPACE, 1.f, true).getNormal(0, 0);
+        const vec3 strong = decodeNormalMapImage(file, NORMAL_MAP_TANGENT_SPACE, 2.f, false).getNormal(0, 0);
+        DOCTEST_CHECK(plain.y > 0.5f);
+        DOCTEST_CHECK(flipped.y == doctest::Approx(-plain.y).epsilon(1e-4));
+        const vec3 expected_strong = normalize(make_vec3(2.f * plain.x, 2.f * plain.y, plain.z));
+        DOCTEST_CHECK(strong.y == doctest::Approx(expected_strong.y).epsilon(1e-4));
+        DOCTEST_CHECK(strong.z == doctest::Approx(expected_strong.z).epsilon(1e-4));
+        std::filesystem::remove(file);
+    }
+
+    SUBCASE("a grayscale image is rejected as a normal map") {
+        const std::string file = writeUniformNormalMapImage("helios_test_nm_gray.png", 3, 3, 100, 100, 100);
+        DOCTEST_CHECK_THROWS((void) decodeNormalMapImage(file, NORMAL_MAP_TANGENT_SPACE, 1.f, false));
+        std::filesystem::remove(file);
+    }
+
+    SUBCASE("invalid arguments are rejected") {
+        const std::string file = writeUniformNormalMapImage("helios_test_nm_args.png", 2, 2, 128, 128, 255);
+        DOCTEST_CHECK_THROWS((void) decodeNormalMapImage(file, NORMAL_MAP_TANGENT_SPACE, 0.f, false));
+        DOCTEST_CHECK_THROWS((void) decodeNormalMapImage(file, NORMAL_MAP_TANGENT_SPACE, std::nanf(""), false));
+        DOCTEST_CHECK_THROWS((void) decodeNormalMapImage(file, NORMAL_MAP_BUMP, 1.f, true));
+        DOCTEST_CHECK_THROWS((void) decodeNormalMapImage(file, NORMAL_MAP_NONE, 1.f, false));
+        DOCTEST_CHECK_THROWS((void) decodeNormalMapImage("lib/images/missing_normal_map.png", NORMAL_MAP_TANGENT_SPACE, 1.f, false));
+        std::filesystem::remove(file);
+    }
+
+    SUBCASE("a JPEG normal map decodes") {
+        const std::string file = (std::filesystem::temp_directory_path() / "helios_test_nm.jpg").string();
+        std::vector<RGBcolor> pixels(16 * 16, make_RGBcolor(128.f / 255.f, 128.f / 255.f, 1.f));
+        writeJPEG(file, 16, 16, pixels);
+        const vec3 n = decodeNormalMapImage(file, NORMAL_MAP_TANGENT_SPACE, 1.f, false).getNormal(8, 8);
+        DOCTEST_CHECK(n.z > 0.999f);
+        std::filesystem::remove(file);
+    }
+}
+
+TEST_CASE("decodeNormalMapImage derives normals from bump maps") {
+    // A 16-bit ramp rising by a per column to the right, and one rising toward the top of the image
+    const uint W = 8, H = 6;
+    const float a = 1000.f / 65535.f;
+    std::vector<uint16_t> ramp_right(W * H), ramp_up(W * H);
+    for (uint row = 0; row < H; row++) {
+        for (uint column = 0; column < W; column++) {
+            ramp_right[row * W + column] = uint16_t(1000 * column);
+            ramp_up[row * W + column] = uint16_t(1000 * (H - 1 - row));
+        }
+    }
+    const std::string right_file = (std::filesystem::temp_directory_path() / "helios_test_bump_right.png").string();
+    const std::string up_file = (std::filesystem::temp_directory_path() / "helios_test_bump_up.png").string();
+    writePNGSingleChannel(right_file, W, H, ramp_right, 16);
+    writePNGSingleChannel(up_file, W, H, ramp_up, 16);
+
+    const float strength = 50.f;
+    const NormalMapTexels right = decodeNormalMapImage(right_file, NORMAL_MAP_BUMP, strength, false);
+    const NormalMapTexels up = decodeNormalMapImage(up_file, NORMAL_MAP_BUMP, strength, false);
+    const vec3 expected = normalize(make_vec3(-strength * a, 0.f, 1.f));
+    // Interior texels see the full ramp; a surface rising to the right faces left (-x), one rising toward the top faces down the image (-y)
+    const vec3 n_right = right.getNormal(3, 2);
+    const vec3 n_up = up.getNormal(3, 2);
+    DOCTEST_CHECK(n_right.x == doctest::Approx(expected.x).epsilon(1e-3));
+    DOCTEST_CHECK(std::fabs(n_right.y) < 1e-4f);
+    DOCTEST_CHECK(n_up.y == doctest::Approx(expected.x).epsilon(1e-3));
+    DOCTEST_CHECK(std::fabs(n_up.x) < 1e-4f);
+    // At the border the edge texel is repeated, which halves the central difference
+    const vec3 n_edge = right.getNormal(0, 2);
+    DOCTEST_CHECK(n_edge.x == doctest::Approx(normalize(make_vec3(-0.5f * strength * a, 0.f, 1.f)).x).epsilon(1e-3));
+
+    // An RGB image is read as luminance of the stored values
+    std::vector<RGBAcolor> rgb(W * H);
+    for (uint row = 0; row < H; row++) {
+        for (uint column = 0; column < W; column++) {
+            const float value = float(column * 30) / 255.f;
+            rgb[row * W + column] = make_RGBAcolor(value, value, value, 1.f);
+        }
+    }
+    const std::string rgb_file = (std::filesystem::temp_directory_path() / "helios_test_bump_rgb.png").string();
+    writePNG(rgb_file, W, H, rgb);
+    const vec3 n_rgb = decodeNormalMapImage(rgb_file, NORMAL_MAP_BUMP, 2.f, false).getNormal(3, 2);
+    DOCTEST_CHECK(n_rgb.x == doctest::Approx(normalize(make_vec3(-2.f * 30.f / 255.f, 0.f, 1.f)).x).epsilon(1e-3));
+
+    std::filesystem::remove(right_file);
+    std::filesystem::remove(up_file);
+    std::filesystem::remove(rgb_file);
+}
+
+TEST_CASE("NormalMapTexels sampling follows the mask texel convention") {
+    // Two columns: left texels tilt toward -x, right texels toward +x; top row tilts toward +y, bottom row toward -y
+    const uint W = 2, H = 2;
+    std::vector<RGBAcolor> pixels(W * H);
+    pixels[0] = make_RGBAcolor(37.f / 255.f, 218.f / 255.f, 200.f / 255.f, 1.f); // top-left
+    pixels[1] = make_RGBAcolor(218.f / 255.f, 218.f / 255.f, 200.f / 255.f, 1.f); // top-right
+    pixels[2] = make_RGBAcolor(37.f / 255.f, 37.f / 255.f, 200.f / 255.f, 1.f); // bottom-left
+    pixels[3] = make_RGBAcolor(218.f / 255.f, 37.f / 255.f, 200.f / 255.f, 1.f); // bottom-right
+    const std::string file = (std::filesystem::temp_directory_path() / "helios_test_nm_quadrants.png").string();
+    writePNG(file, W, H, pixels);
+    const NormalMapTexels texels = decodeNormalMapImage(file, NORMAL_MAP_TANGENT_SPACE, 1.f, false);
+
+    // v = 1 is the top row; column floor((W-1)u), so u < 1 is the left column
+    DOCTEST_CHECK(texels.sampleNearest(make_vec2(0.2f, 0.9f)).x < 0.f);
+    DOCTEST_CHECK(texels.sampleNearest(make_vec2(0.2f, 0.9f)).y > 0.f); // row floor((H-1)(1-v)) = floor(0.1) = 0, the top row
+    DOCTEST_CHECK(texels.sampleNearest(make_vec2(1.f, 1.f)).x > 0.f); // column floor(1) = 1, the right column
+    DOCTEST_CHECK(texels.sampleNearest(make_vec2(1.f, 1.f)).y > 0.f);
+    DOCTEST_CHECK(texels.sampleNearest(make_vec2(0.f, 0.f)).y < 0.f); // row floor(1) = 1, the bottom row
+
+    // Bilinear sampling at a texel centre returns that texel, and halfway between centres blends them
+    const vec3 centre = texels.sampleBilinear(make_vec2(0.5f, 0.5f)); // fx = fy = 0: centre of the top-left texel
+    const vec3 top_left = texels.getNormal(0, 0);
+    DOCTEST_CHECK(centre.x == doctest::Approx(top_left.x).epsilon(1e-4));
+    DOCTEST_CHECK(centre.y == doctest::Approx(top_left.y).epsilon(1e-4));
+    const vec3 between = texels.sampleBilinear(make_vec2(1.f, 0.5f)); // fx = 0.5, fy = 0: halfway between the two top texels
+    DOCTEST_CHECK(std::fabs(between.x) < 1e-3f);
+    std::filesystem::remove(file);
+}
+
+TEST_CASE("computeTangentFrame and applyTangentSpaceNormal") {
+    vec3 dPdu, dPdv;
+    // A unit square in the xy plane with u along +x and v along +y
+    DOCTEST_CHECK(computeTangentFrame(make_vec3(0, 0, 0), make_vec3(2, 0, 0), make_vec3(2, 3, 0), make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1), dPdu, dPdv));
+    DOCTEST_CHECK(dPdu.x == doctest::Approx(2.f));
+    DOCTEST_CHECK(std::fabs(dPdu.y) < 1e-6f);
+    DOCTEST_CHECK(dPdv.y == doctest::Approx(3.f));
+    DOCTEST_CHECK(std::fabs(dPdv.x) < 1e-6f);
+
+    const vec3 tilt_u = normalize(make_vec3(0.5f, 0.f, 1.f));
+    const vec3 shading = applyTangentSpaceNormal(tilt_u, dPdu, dPdv, make_vec3(0, 0, 1));
+    DOCTEST_CHECK(shading.x == doctest::Approx(tilt_u.x).epsilon(1e-5));
+    DOCTEST_CHECK(shading.z == doctest::Approx(tilt_u.z).epsilon(1e-5));
+
+    // Mirrored u: dP/du points along -x
+    DOCTEST_CHECK(computeTangentFrame(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec2(1, 0), make_vec2(0, 0), make_vec2(0, 1), dPdu, dPdv));
+    DOCTEST_CHECK(dPdu.x == doctest::Approx(-1.f));
+    DOCTEST_CHECK(dPdv.y == doctest::Approx(1.f));
+    DOCTEST_CHECK(applyTangentSpaceNormal(tilt_u, dPdu, dPdv, make_vec3(0, 0, 1)).x < 0.f);
+
+    // Texture coordinates rotated by 90 degrees: u runs along +y
+    DOCTEST_CHECK(computeTangentFrame(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec2(0, 1), make_vec2(0, 0), make_vec2(1, 0), dPdu, dPdv));
+    DOCTEST_CHECK(dPdu.y == doctest::Approx(1.f));
+    DOCTEST_CHECK(dPdv.x == doctest::Approx(-1.f));
+
+    // Collinear texture coordinates have no frame and leave the outputs unchanged
+    const vec3 before = dPdu;
+    DOCTEST_CHECK_FALSE(computeTangentFrame(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(1, 1, 0), make_vec2(0, 0), make_vec2(0.5f, 0.5f), make_vec2(1, 1), dPdu, dPdv));
+    DOCTEST_CHECK(dPdu.y == doctest::Approx(before.y));
+
+    // A tangent parallel to the normal leaves the normal unchanged
+    const vec3 unchanged = applyTangentSpaceNormal(tilt_u, make_vec3(0, 0, 1), make_vec3(0, 1, 0), make_vec3(0, 0, 1));
+    DOCTEST_CHECK(unchanged.z == doctest::Approx(1.f));
+}
+
+TEST_CASE("classifyBumpImage tells bump maps from normal maps") {
+    const std::string normal_file = writeUniformNormalMapImage("helios_test_classify_normal.png", 4, 4, 140, 120, 250);
+    const std::string gray_rgb_file = writeUniformNormalMapImage("helios_test_classify_gray.png", 4, 4, 90, 90, 90);
+    const std::string colour_file = writeUniformNormalMapImage("helios_test_classify_colour.png", 4, 4, 250, 20, 20);
+    const std::string gray_png = (std::filesystem::temp_directory_path() / "helios_test_classify_gray1.png").string();
+    writePNGSingleChannel(gray_png, 4, 4, std::vector<uint16_t>(16, 30000), 16);
+    DOCTEST_CHECK(classifyBumpImage(normal_file) == NORMAL_MAP_TANGENT_SPACE);
+    DOCTEST_CHECK(classifyBumpImage(gray_rgb_file) == NORMAL_MAP_BUMP);
+    DOCTEST_CHECK(classifyBumpImage(gray_png) == NORMAL_MAP_BUMP);
+    DOCTEST_CHECK_THROWS((void) classifyBumpImage(colour_file));
+    // A grayscale height map saved as an RGB JPEG, whose channels decode a step or so apart, is still a height map
+    const std::string gray_jpeg = (std::filesystem::temp_directory_path() / "helios_test_classify_gray.jpg").string();
+    std::vector<RGBcolor> ramp(32 * 32);
+    for (size_t i = 0; i < ramp.size(); i++) {
+        const float value = float(i % 32) / 31.f;
+        ramp[i] = make_RGBcolor(value, value, value);
+    }
+    writeJPEG(gray_jpeg, 32, 32, ramp);
+    DOCTEST_CHECK(classifyBumpImage(gray_jpeg) == NORMAL_MAP_BUMP);
+    DOCTEST_CHECK_THROWS((void) decodeNormalMapImage(gray_jpeg, NORMAL_MAP_TANGENT_SPACE, 1.f, false));
+    std::filesystem::remove(gray_jpeg);
+    for (const auto &file: {normal_file, gray_rgb_file, colour_file, gray_png}) {
+        std::filesystem::remove(file);
+    }
+}

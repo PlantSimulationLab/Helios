@@ -25,6 +25,10 @@ using namespace helios;
 static constexpr int petiolule_radial_subdivisions = 8;
 static constexpr int petiolule_join_rings = 6;
 
+uint petioluleRadialSubdivisions() {
+    return uint(petiolule_radial_subdivisions);
+}
+
 uint petioluleVertexCount() {
     // Two rings bound the cylinder, the join adds one ring per step short of its tip, and the tip is a single vertex.
     return uint((2 + petiolule_join_rings - 1) * petiolule_radial_subdivisions + 1);
@@ -1019,7 +1023,6 @@ static constexpr float almond_spur_fraction = 0.2f;
 void AlmondPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
     if (phytomer->internode_length_max < 0.01) { // spurs
-        phytomer->setInternodeMaxRadius(0.005);
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->scaleLeafPrototypeScale(0.8);
         phytomer->setFloralBudState(BUD_DEAD);
@@ -1048,11 +1051,12 @@ uint AppleFruitPrototype(helios::Context *context_ptr, uint subdivisions, const 
     uint objID = context_ptr->addPolymeshObject(UUIDs);
 
     // Optical defaults for the radiation model, as the primitive data it reads: a red-apple skin spectrum (the radiation plugin's fruit spectral library; a stand-in for a measured one) under a waxy
-    // specular surface layer, which is what makes the fruit read as an apple to a radiation camera. Every fruit copied from the prototype carries them, and a user overrides them by setting the same
-    // primitive data (or the fruit material's data, which takes precedence) after the plant is built. Without the radiation model they are inert.
+    // specular surface layer, which is what makes the fruit read as an apple to a radiation camera. The layer's refractive index of 1.45 (within the range of plant waxes) reflects 0.034 at normal
+    // incidence, below the spectrum's minimum of 0.038, which a reflectivity under the layer cannot go below. Every fruit copied from the prototype carries them, and a user overrides them by setting
+    // the same primitive data (or the fruit material's data, which takes precedence) after the plant is built. Without the radiation model they are inert.
     context_ptr->setPrimitiveData(UUIDs, "reflectivity_spectrum", "apple_fruit_reflectivity_0000");
     context_ptr->setPrimitiveData(UUIDs, "specular_roughness", 0.15f);
-    context_ptr->setPrimitiveData(UUIDs, "specular_n", 1.5f);
+    context_ptr->setPrimitiveData(UUIDs, "specular_n", 1.45f);
     return objID;
 }
 
@@ -1122,7 +1126,6 @@ void ApplePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
 
     // An apple spur flowers only from its terminal mixed bud, which is added when the spur goes dormant and is not touched here.
     if (shoot.shoot_type_label == "spur") {
-        phytomer->setInternodeMaxRadius(0.005);
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->scaleLeafPrototypeScale(0.8);
         phytomer->setFloralBudState(BUD_DEAD);
@@ -1134,7 +1137,6 @@ void ApplePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
     // the terminal flower cluster of a long shoot, and never branching. Its unbroken buds are marked as already considered for a spur, so
     // that growSpursFromUnbrokenBuds() does not grow spurs out of a short shoot.
     if (phytomer->internode_length_max < 0.011f) {
-        phytomer->setInternodeMaxRadius(0.005);
         phytomer->setVegetativeBudState(BUD_DEAD);
         for (auto &petiole: phytomer->axillary_vegetative_buds) {
             for (auto &vbud: petiole) {
@@ -1613,9 +1615,12 @@ uint BeanFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool f
 
 void BeanPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
-    if (shoot_node_index > 5 || phytomer->rank > 1) {
+    // A determinate bush bean branches from its unifoliate node and its two lowest trifoliate nodes, and bears racemes in the axils above
+    // them; the branches flower at every node and do not branch again.
+    if (phytomer->rank > 0 || shoot_node_index >= 2) {
         phytomer->setVegetativeBudState(BUD_DEAD);
-    } else {
+    }
+    if (phytomer->rank == 0 && shoot_node_index < 2) {
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
@@ -2165,7 +2170,6 @@ void PistachioPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint 
 
     // A lateral that breaks well below its parent's tip gets short internodes and is a spur: a few leaves a season, and no branching.
     if (phytomer->internode_length_max < 0.01) {
-        phytomer->setInternodeMaxRadius(0.005);
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->parent_shoot_ptr->growth_state.max_nodes_per_season_growth_cap = 6;
     }
@@ -4043,9 +4047,12 @@ uint SoybeanFlowerPrototype(helios::Context *context_ptr, uint subdivisions, boo
 
 void SoybeanPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
-    if (shoot_node_index > 5 || phytomer->rank > 1) {
+    // A field soybean branches only from its five lowest main-stem nodes and flowers in the axils above them; its branches flower at every
+    // node and do not branch again.
+    if (phytomer->rank > 0 || shoot_node_index >= 5) {
         phytomer->setVegetativeBudState(BUD_DEAD);
-    } else {
+    }
+    if (phytomer->rank == 0 && shoot_node_index < 5) {
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
@@ -4249,5 +4256,203 @@ void WheatPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
         // which is the whole peduncle, rather than from this phytomer's own copy, so that it is only shortened once.
         const float peduncle_length = shoot->shoot_parameters.phytomer_parameters.peduncle.length.val();
         phytomer->phytomer_parameters.peduncle.length = std::max(0.01f, peduncle_length - sheath_length);
+    }
+}
+
+// Baked by Heliades from the species' procedural fruit: each file is one
+// prototype, its parameters sampled about their means by their coefficients of
+// variation.
+uint CucumberFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters) {
+    const std::vector<std::string> variants = {"fruit_00.obj", "fruit_01.obj", "fruit_02.obj", "fruit_03.obj", "fruit_04.obj", "fruit_05.obj"};
+    const int pick = context_ptr->randu(0, int(variants.size()) - 1);
+    const std::string &file = variants.at(pick);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/Cucumber/" + file).string().c_str(), make_vec3(0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    return context_ptr->addPolymeshObject(UUIDs);
+}
+
+// Baked by Heliades from the species' procedural flower: each file is one
+// prototype, its parameters sampled about their means by their coefficients of
+// variation.
+uint CucumberFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters) {
+    const std::vector<std::string> open = {"flower_open_00.obj", "flower_open_01.obj", "flower_open_02.obj", "flower_open_03.obj", "flower_open_04.obj", "flower_open_05.obj"};
+    const std::vector<std::string> closed = {"flower_closed_00.obj", "flower_closed_01.obj", "flower_closed_02.obj", "flower_closed_03.obj", "flower_closed_04.obj", "flower_closed_05.obj"};
+    const std::vector<std::string> &variants = flower_is_open ? open : closed;
+    const int pick = context_ptr->randu(0, int(variants.size()) - 1);
+    const std::string &file = variants.at(pick);
+    std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/Cucumber/" + file).string().c_str(), make_vec3(0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    return context_ptr->addPolymeshObject(UUIDs);
+}
+
+void CucumberMainPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
+    TomatoPhytomerCreationFunction(phytomer, shoot_node_index, parent_shoot_node_index, shoot_max_nodes, plant_age);  // tomato's own, kept
+    // the drawn blade's relief - veins, blisters - as its bump map on every leaf of
+    // the phytomer, at the strength Heliades applies
+    helios::Context *context = phytomer->parent_shoot_ptr->context_ptr;
+    std::vector<uint> leaf_UUIDs;
+    for (const auto &petiole: phytomer->leaf_objIDs) {
+        for (uint objID: petiole) {
+            const std::vector<uint> UUIDs = context->getObjectPrimitiveUUIDs(objID);
+            leaf_UUIDs.insert(leaf_UUIDs.end(), UUIDs.begin(), UUIDs.end());
+        }
+    }
+    if (!leaf_UUIDs.empty()) {
+        context->setPrimitiveBumpMap(leaf_UUIDs, helios::resolvePluginAsset("plantarchitecture", "assets/textures/CucumberLeaf_0_bump.png").string(), 12.58861f);
+    }
+}
+
+namespace {
+    // High-wire training of the cucumber: the stem is tied to a string hung from a wire, and once its head reaches the wire the
+    // grower lowers it and slides its hook along the wire ("lowering and leaning"), so the head stays at the wire while the older,
+    // leafless stem lies along the row just above the floor. Heights are relative to the plant base; the row runs along +y.
+    constexpr float cucumber_wire_height = 3.8f; //!< Height the head is held at, in m.
+    // The string's attraction points run on above the wire, so that the head, which the lowering holds just below the wire, always has
+    // string ahead of it to grow along; with none ahead, the tip loses the string, and once it turns aside nothing turns it back up.
+    constexpr float cucumber_string_top = cucumber_wire_height + 0.6f; //!< Height of the top of the string's attraction points, in m.
+    constexpr float cucumber_string_point_spacing = 0.05f; //!< Spacing of the attraction points along the string, in m.
+    constexpr float cucumber_laid_stem_height = 0.3f; //!< Height of the stem lying along the row, in m.
+    constexpr float cucumber_bend_radius = 0.2f; //!< Radius of the bends from the upright stem into the laid stem and back, in m.
+
+    //! Point at arclength t along the path a lowered cucumber stem of laid length laid_length takes from its base, in the row's (y,z) plane relative to the base.
+    /**
+     * The stem rises from its base, bends over into the row, runs along it at cucumber_laid_stem_height, and bends back up into the upright stem, which leaves the
+     * path heading straight up. A laid length too short to complete both bends turns through two equal, shallower bends instead, so the upright stem keeps
+     * leaving vertically and the path grows continuously from a straight stem as the laid length increases. Beyond the laid length the path continues straight up.
+     */
+    helios::vec2 cucumberLoweredStemPath(float laid_length, float t) {
+        const float radius = cucumber_bend_radius;
+        const float rise = cucumber_laid_stem_height - radius; // straight rise before the first bend
+        if (t <= rise || laid_length <= rise) {
+            return helios::make_vec2(0.f, t);
+        }
+        const float bend_angle = std::min(0.5f * float(M_PI), (laid_length - rise) / (2.f * radius));
+        const float bend_length = radius * bend_angle;
+        const float run_length = std::max(0.f, laid_length - rise - 2.f * bend_length);
+
+        // first bend: from straight up toward +y; the heading angle is measured from +z toward +y
+        float s = t - rise;
+        if (s <= bend_length) {
+            const float heading = s / radius;
+            return helios::make_vec2(radius * (1.f - std::cos(heading)), rise + radius * std::sin(heading));
+        }
+        const helios::vec2 first_bend_end = helios::make_vec2(radius * (1.f - std::cos(bend_angle)), rise + radius * std::sin(bend_angle));
+        const helios::vec2 first_bend_heading = helios::make_vec2(std::sin(bend_angle), std::cos(bend_angle));
+        s -= bend_length;
+
+        // the run along the row
+        if (s <= run_length) {
+            return first_bend_end + first_bend_heading * s;
+        }
+        const helios::vec2 run_end = first_bend_end + first_bend_heading * run_length;
+        s -= run_length;
+
+        // second bend: back from the run's heading to straight up
+        const helios::vec2 second_bend_center = run_end + helios::make_vec2(-std::cos(bend_angle), std::sin(bend_angle)) * radius;
+        if (s <= bend_length) {
+            const float heading = bend_angle - s / radius;
+            return second_bend_center + helios::make_vec2(std::cos(heading), -std::sin(heading)) * radius;
+        }
+        const helios::vec2 second_bend_end = second_bend_center + helios::make_vec2(radius, 0.f);
+        return second_bend_end + helios::make_vec2(0.f, s - bend_length);
+    }
+} // namespace
+
+std::vector<helios::vec3> CucumberStringAttractionPoints(const helios::vec3 &string_base) {
+    std::vector<helios::vec3> string_points;
+    const int point_count = int(std::round(cucumber_string_top / cucumber_string_point_spacing));
+    string_points.reserve(point_count);
+    for (int i = 1; i <= point_count; i++) {
+        string_points.push_back(string_base + make_vec3(0, 0, float(i) * cucumber_string_point_spacing));
+    }
+    return string_points;
+}
+
+void CucumberMainPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer) {
+    // Fruit are picked once they reach full size, about 10-14 days after the flower opens; setting the bud dead removes the fruit.
+    for (auto &petiole: phytomer->floral_buds) {
+        for (FloralBud &fbud: petiole) {
+            if (fbud.state == BUD_FRUITING && fbud.current_fruit_scale_factor >= 1.f) {
+                phytomer->setFloralBudState(BUD_DEAD, fbud);
+            }
+        }
+    }
+
+    // Lowering and leaning acts on the whole stem once per time step, from its tip phytomer, and only on the main stem.
+    Shoot &stem = *phytomer->parent_shoot_ptr;
+    if (stem.parent_shoot_ID >= 0 || stem.phytomers.empty() || phytomer != stem.phytomers.back()) {
+        return;
+    }
+
+    // The stem's nodes as one polyline from its base to its tip, remembering which phytomer and segment each node belongs to.
+    std::vector<helios::int2> node_index;
+    for (int p = 0; p < int(stem.shoot_internode_vertices.size()); p++) {
+        for (int s = 0; s < int(stem.shoot_internode_vertices.at(p).size()); s++) {
+            node_index.push_back(helios::make_int2(p, s));
+        }
+    }
+    auto node = [&](size_t i) -> helios::vec3 & { return stem.shoot_internode_vertices.at(node_index.at(i).x).at(node_index.at(i).y); };
+    if (node_index.size() < 2) {
+        return;
+    }
+    const size_t tip = node_index.size() - 1;
+    const helios::vec3 base = node(0);
+
+    // The upright stem is the part below the head that reaches down to where the second bend leaves the laid stem. Its shape is left as grown;
+    // everything below it is laid along the row.
+    const float upright_base_height = cucumber_laid_stem_height + cucumber_bend_radius;
+    const float upright_rise = cucumber_wire_height - upright_base_height;
+    size_t upright_base = tip;
+    while (upright_base > 0 && node(tip).z - node(upright_base).z < upright_rise) {
+        upright_base--;
+    }
+    if (upright_base == 0) {
+        return; // the head has not yet risen far enough above the base for any of the stem to be lowered
+    }
+
+    // Lay the stem below the upright stem on the path, node by node, keeping every internode segment its own length so that repeated lowering
+    // neither stretches nor shrinks the stem.
+    std::vector<float> segment_length(upright_base + 1, 0.f);
+    float laid_length = 0.f;
+    for (size_t i = 1; i <= upright_base; i++) {
+        segment_length.at(i) = (node(i) - node(i - 1)).magnitude();
+        laid_length += segment_length.at(i);
+    }
+    auto path_point = [&](float t) {
+        const helios::vec2 yz = cucumberLoweredStemPath(laid_length, t);
+        return base + make_vec3(0.f, yz.x, yz.y);
+    };
+
+    std::vector<helios::vec3> laid_nodes(upright_base + 1);
+    laid_nodes.front() = base;
+    float t_previous = 0.f;
+    for (size_t i = 1; i <= upright_base; i++) {
+        // The path never doubles back, so the distance from the previous node grows with t; a chord is never longer than the path it spans, and
+        // never shorter than half of it on these bends, so the node lies between one and two segment lengths further along.
+        float t_low = t_previous + segment_length.at(i);
+        float t_high = t_previous + 2.f * segment_length.at(i);
+        for (int iteration = 0; iteration < 40; iteration++) {
+            const float t_mid = 0.5f * (t_low + t_high);
+            if ((path_point(t_mid) - laid_nodes.at(i - 1)).magnitude() < segment_length.at(i)) {
+                t_low = t_mid;
+            } else {
+                t_high = t_mid;
+            }
+        }
+        t_previous = 0.5f * (t_low + t_high);
+        laid_nodes.at(i) = path_point(t_previous);
+    }
+
+    // The upright stem moves with its base, down and along the row.
+    const helios::vec3 upright_shift = laid_nodes.back() - node(upright_base);
+    for (size_t i = 1; i <= upright_base; i++) {
+        node(i) = laid_nodes.at(i);
+    }
+    for (size_t i = upright_base + 1; i <= tip; i++) {
+        node(i) += upright_shift;
+    }
+    stem.updateShootNodes(true);
+
+    // The hook has slid along the wire with the head, and the string with it.
+    if (laid_nodes.back().y - base.y > 1e-4f) {
+        stem.plantarchitecture_ptr->updateAttractionPoints(stem.plantID, CucumberStringAttractionPoints(make_vec3(base.x, laid_nodes.back().y, base.z)));
     }
 }

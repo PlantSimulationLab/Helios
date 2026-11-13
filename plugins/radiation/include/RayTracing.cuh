@@ -20,6 +20,7 @@
 #define RAYTRACING_CUH
 
 #include <stdint.h>
+#include "NormalMapMath.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -52,6 +53,11 @@ rtDeclareVariable(unsigned int, direct_ray_type, , );
 rtDeclareVariable(unsigned int, diffuse_ray_type, , );
 rtDeclareVariable(unsigned int, camera_ray_type, , );
 rtDeclareVariable(unsigned int, pixel_label_ray_type, , );
+rtDeclareVariable(unsigned int, camera_shadow_ray_type, , ); // A camera's shadow ray toward a source (see closest_hit_camera)
+// The direct and diffuse rays of a scene with a background radiation field (see d_dualField()), which have their own closest-hit and miss programs (*_dual in rayHit.cu), so
+// that the programs of a scene without one are those of one field and nothing more. Their payload alone carries the background-field members of PerRayData.
+rtDeclareVariable(unsigned int, direct_dual_ray_type, , );
+rtDeclareVariable(unsigned int, diffuse_dual_ray_type, , );
 
 rtDeclareVariable(uint3, launch_index, rtLaunchIndex, );
 rtDeclareVariable(uint3, launch_dim, rtLaunchDim, );
@@ -119,8 +125,20 @@ rtBuffer<unsigned int, 1> bbox_UUID;
 
 // Primitive data
 rtDeclareVariable(unsigned int, Nprimitives, , );
+// Slots per primitive dimension of the outgoing, scattered, camera, direct-flux and spectral buffers: Nprimitives, or 2 Nprimitives with a background radiation field
+// (slot Nprimitives + p holds primitive p in that field; see RayTracingGeometry::fluxSlotCount()). Nprimitives itself also locates the periodic boundary faces.
+rtDeclareVariable(unsigned int, Nflux_slots, , );
+rtDeclareVariable(unsigned int, normal_map_slot_count, , ); // Number of normal-map slots; the background field's moments are in slots normal_map_slot_count + slot
+rtDeclareVariable(unsigned int, vertex_field_stride, , ); // Number of smoothing vertices; the background field's vertex values are at vertex_field_stride + vertex (set with the vertex outgoing radiation)
 rtDeclareVariable(unsigned int, bbox_UUID_base, , ); // Starting UUID for bboxes (max_real_UUID + 1)
 rtDeclareVariable(float2, periodic_flag, , );
+rtDeclareVariable(unsigned int, periodic_tile_tracking, , ); // 1 if rays track the periodic copy of the domain they are in (excluded primitives or a limited number of copies)
+rtDeclareVariable(unsigned int, periodic_excluded_present, , ); // 1 if periodic_excluded holds a flag for every primitive position
+rtDeclareVariable(int2, periodic_max_repeats, , ); // Periodic copies on each side of the central domain (x, y); -1 for no limit
+rtDeclareVariable(float2, periodic_repeated_zbounds, , ); // z-range of the geometry that repeats
+rtDeclareVariable(float, periodic_escape_offset, , ); // Distance beyond a face from which a ray leaving the periodic copies continues
+rtDeclareVariable(int2, camera_tile, , ); // Periodic copy of the domain the camera is in
+rtBuffer<char, 1> periodic_excluded; // [position]: 1 if the primitive exists only in the central periodic copy of the domain
 rtBuffer<char, 1> twosided_flag;
 rtBuffer<float, 2> transform_matrix;
 rtBuffer<unsigned int, 1> primitive_type;
@@ -152,7 +170,18 @@ rtDeclareVariable(unsigned int, surface_layer_table_size, , );
 // layout described in shaders/common/spectral_texture.glsl (see helios::packSpectralClassMaps() and helios::packSpectralPalettes())
 rtBuffer<unsigned int, 1> spectral_class_maps;
 rtBuffer<unsigned int, 1> spectral_palette;
-// The radiation reaching primitives with a spectral texture [face][source slot][primitive][launch band], booked when spectral_incident_enabled is 1, and the
+// Normal maps (Context::setMaterialNormalMap()), packed as described in include/NormalMapMath.h; word 0 is 0 when no primitive has one
+rtBuffer<unsigned int, 1> normal_maps;
+// Camera launches: 1 if the host removed the direct launch's deposit from normal-mapped primitives' outgoing radiation, so the camera shades it per hit point
+rtDeclareVariable(unsigned int, normal_map_direct, , );
+rtDeclareVariable(unsigned int, camera_direct_per_pixel, , ); // Camera launches: 1 if smoothed primitives' direct radiation is evaluated per pixel sample
+rtDeclareVariable(unsigned int, camera_direct_all, , ); // Camera launches: 1 if every primitive's (but a translucent cover's) direct radiation is evaluated per pixel sample
+// Slot of each normal-mapped primitive in normal_map_moments (0xFFFFFFFF for none), and [slot][face][launch band][3] the flux-weighted directions of the diffuse radiation
+// reaching each face (see RayTracingGeometry::normal_map_slots); one-element placeholders when no primitive has a map. With a background radiation field, its moments
+// follow in a second set of slots.
+rtBuffer<unsigned int, 1> normal_map_slots;
+rtBuffer<float, 1> normal_map_moments;
+// The radiation reaching primitives with a spectral texture [face][source slot][flux slot][launch band], booked when spectral_incident_enabled is 1, and the
 // packed camera-weighted outgoing radiation of each class for the camera being traced (see helios::packSpectralCameraFlux())
 rtBuffer<float, 1> spectral_incident;
 rtDeclareVariable(unsigned int, spectral_incident_enabled, , );
@@ -162,8 +191,32 @@ rtBuffer<unsigned int, 1> spectral_vertex;
 // Class of the spectral texture seen in each pixel by the pixel-label launch (0 = none), sized when some primitive has a spectral texture
 rtBuffer<unsigned int, 1> camera_pixel_class;
 rtBuffer<float, 1> vertex_normals; // Unit shading normal per smoothing vertex [vertex * 3], for camera flux smoothing; a one-element placeholder when there are none
-rtBuffer<float, 1> vertex_direct_irradiance; // Unoccluded direct irradiance of each source at the smoothing vertices [source][vertex][band_launch]; a one-element placeholder when there is none
-rtBuffer<float, 1> radiation_specular; // Direct flux reaching primitives with a surface layer, and with camera flux smoothing every smoothed primitive [source * Nprimitives * Nbands_launch + primitive * Nbands_launch + band]
+rtBuffer<float, 1> vertex_normal_map_moments; // normal_map_moments averaged onto the smoothing vertices [field][vertex][face][band_launch][3]; a one-element placeholder when there is none
+rtBuffer<float, 1> radiation_specular; // Direct flux reaching primitives with a surface layer, and with camera flux smoothing every smoothed primitive [source][flux slot][band_launch]
+
+// ---------------------------------------------------------------------------
+// Background radiation field (see RayTracingGeometry::periodicDualField()). With primitives excluded from the periodic
+// boundary, the buffers of outgoing and scattered radiation, of what cameras read, and of the direct flux hold two fields:
+// field 0, the scene as it is, in flux slots [0, Nprimitives), and field 1, the background scene without the excluded
+// primitives, in flux slots [Nprimitives, 2 Nprimitives). A ray or camera reads field 0 where it hits the central copy
+// of the domain and field 1 in every other copy. Material and geometry buffers are indexed by the primitive's position
+// alone. Must match OptiX8DeviceCode.cu (fluxSlot()) and the Vulkan shaders (flux_slot() in common/buffer_indexing.glsl).
+// ---------------------------------------------------------------------------
+
+//! Whether a background field is solved alongside the scene as it is
+__device__ __forceinline__ bool d_dualField() {
+    return Nflux_slots != Nprimitives;
+}
+
+//! Flux slot of the primitive at position pos in a field
+__device__ __forceinline__ uint d_fluxSlot(uint pos, uint field) {
+    return pos + field * Nprimitives;
+}
+
+//! Index of the direct flux of source s reaching the primitive at position pos, in a field: radiation_specular is [source][flux slot][launch band]
+__device__ __forceinline__ size_t d_directFluxIndex(uint s, uint pos, uint field, uint b_launch) {
+    return (size_t(s) * Nflux_slots + d_fluxSlot(pos, field)) * Nbands_launch + b_launch;
+}
 
 //! Texture (u,v) of a launch point sp in a primitive's canonical space, as d_sampleTexture_patch() and d_sampleTexture_triangle() compute it
 __device__ optix::float2 d_originTextureUV(uint ptype, const optix::float3 &sp, int uv_ID) {
@@ -187,6 +240,72 @@ __device__ optix::float2 d_originTextureUV(uint ptype, const optix::float3 &sp, 
     const float du = uvdata[optix::make_uint2(1, uv_ID)].x - uvmin.x;
     const float dv = uvdata[optix::make_uint2(2, uv_ID)].y - uvdata[optix::make_uint2(1, uv_ID)].y;
     return optix::make_float2(uvmin.x + uv.x * du, uvmin.y + uv.y * dv);
+}
+
+// ---------------------------------------------------------------------------
+// Normal maps (the conventions are specified in include/NormalMapMath.h)
+// ---------------------------------------------------------------------------
+
+//! Reads the packed normal-map words for the shared helios_nm functions
+struct NormalMapWords {
+    __device__ __forceinline__ unsigned int operator[](unsigned int i) const {
+        return normal_maps[i];
+    }
+};
+
+__device__ __forceinline__ helios_nm::Vec3 d_toNM(const optix::float3 &v) {
+    return helios_nm::make(v.x, v.y, v.z);
+}
+__device__ __forceinline__ optix::float3 d_fromNM(const helios_nm::Vec3 &v) {
+    return optix::make_float3(v.x, v.y, v.z);
+}
+
+//! Normal map of the primitive at position pos, or helios_nm::NO_MAP
+__device__ __forceinline__ uint d_normalMapOf(uint position) {
+    return helios_nm::mapIndex(NormalMapWords(), position);
+}
+
+//! Whether the primitive at position pos has a specular surface layer
+__device__ __forceinline__ bool d_hasSurfaceLayer(uint position) {
+    return surface_layer_enabled != 0u && surface_model[position] != 0u;
+}
+
+//! Shading normal on the top face of a primitive at canonical point sp (see d_originTextureUV()), about the unit base normal base_top on the side of the facet's top normal: the nearest texel for ray launches, bilinear for cameras
+__device__ optix::float3 d_normalMapShadingNormalAt(uint ptype, uint map, const float *T, int uv_ID, const optix::float3 &base_top, const optix::float3 &sp, bool bilinear) {
+    helios_nm::Vec3 E1, E2;
+    helios_nm::primitiveEdges(T, ptype, E1, E2);
+    optix::float2 uv0 = optix::make_float2(0.f, 0.f), uv1 = uv0, uv2 = uv0;
+    if (uv_ID != -1) {
+        uv0 = uvdata[optix::make_uint2(0, uv_ID)];
+        uv1 = uvdata[optix::make_uint2(1, uv_ID)];
+        uv2 = uvdata[optix::make_uint2(2, uv_ID)];
+    }
+    float ax, ay, bx, by;
+    helios_nm::uvJacobian(ptype, uv_ID != -1, uv0.x, uv0.y, uv1.x, uv1.y, uv2.x, uv2.y, ax, ay, bx, by);
+    const helios_nm::Frame frame = helios_nm::buildFrame(E1, E2, ax, ay, bx, by, d_toNM(base_top));
+    float u, v;
+    helios_nm::texcoord(ptype, uv0.x, uv0.y, ax, ay, bx, by, sp.x, sp.y, u, v);
+    const NormalMapWords words;
+    const helios_nm::Vec3 n_ts = bilinear ? helios_nm::fetchBilinear(words, map, u, v) : helios_nm::fetchNearest(words, map, u, v);
+    return d_fromNM(helios_nm::perturb(frame, n_ts));
+}
+
+//! The canonical point of a hit from the hit attributes (patch-local coordinates in [0,1]^2, or the barycentric weights of a triangle's second and third corners)
+__device__ __forceinline__ optix::float3 d_canonicalPointFromHit(uint ptype, float surface_u, float surface_v) {
+    return ptype == 1 ? optix::make_float3(surface_v, surface_u + surface_v, 0.f) : optix::make_float3(surface_u - 0.5f, surface_v - 0.5f, 0.f);
+}
+
+//! Shading normal on the top face of the primitive at position pos at a hit with attributes (surface_u, surface_v), with the facet's top normal returned in normal_top
+__device__ optix::float3 d_hitShadingNormalTop(uint position, uint map, float surface_u, float surface_v, bool bilinear, optix::float3 &normal_top) {
+    float T[16];
+    for (uint i = 0; i < 16; i++) {
+        T[i] = transform_matrix[optix::make_uint2(i, position)];
+    }
+    const uint ptype = primitive_type[position];
+    helios_nm::Vec3 E1, E2;
+    helios_nm::primitiveEdges(T, ptype, E1, E2);
+    normal_top = d_fromNM(helios_nm::normalize(helios_nm::cross(E1, E2)));
+    return d_normalMapShadingNormalAt(ptype, map, T, uvID[position], normal_top, d_canonicalPointFromHit(ptype, surface_u, surface_v), bilinear);
 }
 
 //! Palette entry of the class of a primitive's spectral texture at texture coordinate (u,v), with the texel convention of the masks, or 0xFFFFFFFF if the primitive has none or the texel is transparent (class 0)
@@ -213,12 +332,13 @@ __device__ uint d_spectralPaletteEntry(uint position, optix::float2 uv) {
     return texel_class == 0u ? 0xFFFFFFFFu : first_entry + texel_class - 1u;
 }
 
-//! Class-flux slot of the class a camera ray hits on the primitive at `position`, from the hit attributes (patch-local coordinates in [0,1], or the barycentric weights of a triangle's second and third corners), or 0xFFFFFFFF
-__device__ uint d_spectralCameraClassSlot(uint position, uint ptype, float surface_u, float surface_v, int uv_ID) {
+//! Class-flux slot, in a radiation field (see d_dualField()), of the class a camera ray hits on the primitive at `position`, from the hit attributes (patch-local coordinates in [0,1], or the barycentric
+//! weights of a triangle's second and third corners), or 0xFFFFFFFF. The packed buffer holds one first slot per flux slot.
+__device__ uint d_spectralCameraClassSlot(uint position, uint ptype, float surface_u, float surface_v, int uv_ID, uint field) {
     if (spectral_camera_flux[0] == 0u || spectral_palette[0] == 0u) {
         return 0xFFFFFFFFu;
     }
-    const uint first_slot = spectral_camera_flux[3 + position];
+    const uint first_slot = spectral_camera_flux[3 + d_fluxSlot(position, field)];
     const uint first_entry = spectral_palette[spectral_palette[3] + position];
     if (first_slot == 0xFFFFFFFFu || first_entry == 0xFFFFFFFFu) {
         return 0xFFFFFFFFu;
@@ -247,42 +367,29 @@ __device__ optix::float3 d_directionToSource(uint s, const optix::float3 &point)
     return optix::normalize(source_positions[s] - point);
 }
 
-//! With camera flux smoothing: unoccluded direct irradiance of source s at the hit point, interpolated from the facet's vertices v with weights w (see RadiationModel::accumulateDirectIrradianceAtVertices())
-__device__ float d_vertexDirectIrradiance(uint s, uint b_launch, const int v[4], const float w[4]) {
-    const size_t vertex_count = vertex_normals.size() / 3;
-    if (vertex_count == 0 || vertex_direct_irradiance.size() < size_t(Nsources) * vertex_count * Nbands_launch) {
-        return 0.f;
-    }
-    float value = 0.f;
-    for (int c = 0; c < 4; c++) {
-        if (v[c] >= 0) {
-            value += w[c] * vertex_direct_irradiance[(size_t(s) * vertex_count + size_t(v[c])) * Nbands_launch + b_launch];
-        }
-    }
-    return value;
-}
-
-//! With camera flux smoothing: direct radiation of source s reaching one face of a facet, evaluated with the shading normal. face_normal and face_shading_normal are the facet's normal and the shading
-//! normal of that face, and facet_value what the face itself received. That carries the cosine of the facet's normal, which is replaced by that of the shading normal. A face turned away from the source
-//! received nothing of its own, yet near the terminator its shading normal can still face the source; it takes the irradiance its vertices carry from the neighbouring facets that the source reached.
-__device__ float d_faceDirect(float facet_value, const optix::float3 &to_source, const optix::float3 &face_normal, const optix::float3 &face_shading_normal, uint s, uint b_launch, const int v[4], const float w[4]) {
+//! Direct radiation of a source reaching one face of a normal-mapped facet that is not smoothed, evaluated with the map's shading normal
+/**
+ * face_normal and face_shading_normal are the facet's normal and the shading normal of that face, and facet_value what the face itself received. That carries the cosine of the facet's normal, which is
+ * replaced by that of the shading normal. A face turned away from the source received nothing. With soften, the rescaled value is multiplied by the shadow-terminator softening of Chiang et al. (see
+ * helios_nm::terminatorSoftening()). (A smoothed primitive's direct radiation is evaluated per pixel sample instead; see d_pixelDirectRadiation() in rayHit.cu.)
+ */
+__device__ float d_faceDirect(float facet_value, const optix::float3 &to_source, const optix::float3 &face_normal, const optix::float3 &face_shading_normal, bool soften) {
     const float mu_facet = optix::dot(face_normal, to_source);
     const float mu_shading = fmaxf(0.f, optix::dot(face_shading_normal, to_source));
-    if (mu_shading <= 0.f) {
+    if (mu_shading <= 0.f || mu_facet <= 0.f) {
         return 0.f;
     }
-    if (mu_facet > 0.f) {
-        return facet_value * mu_shading / mu_facet;
-    }
-    return d_vertexDirectIrradiance(s, b_launch, v, w) * mu_shading;
+    const float softening = soften ? helios_nm::terminatorSoftening(d_toNM(face_normal), d_toNM(face_shading_normal), d_toNM(to_source)) : 1.f;
+    return facet_value * mu_shading / mu_facet * softening;
 }
 
-//! Value of layer `layer` of spectral_vertex on face `face` (0 top, 1 bottom) in a launch band, interpolated from the facet's vertices v with weights w
-__device__ float d_spectralVertexValue(uint face, uint layer, uint launch_band, const int v[4], const float w[4]) {
+//! Value of layer `layer` of spectral_vertex on face `face` (0 top, 1 bottom) in a launch band, interpolated from the facet's vertices v with weights w, in a radiation field (see d_dualField()).
+//! The values are packed [face][layer][field][vertex][band]: the background field's vertices follow those of the scene as it is.
+__device__ float d_spectralVertexValue(uint face, uint layer, uint launch_band, const int v[4], const float w[4], uint field) {
     const uint layers = spectral_vertex[0];
     const uint num_bands = spectral_vertex[1];
-    const uint num_vertices = spectral_vertex[2];
-    const size_t base = 4 + (size_t(face * layers + layer) * num_vertices) * num_bands + launch_band;
+    const uint num_vertices = spectral_vertex[2]; // of every field
+    const size_t base = 4 + (size_t(face * layers + layer) * num_vertices + size_t(field) * vertex_field_stride) * num_bands + launch_band;
     float sum = 0.f;
     for (int c = 0; c < 4; c++) {
         if (v[c] >= 0) {
@@ -292,32 +399,19 @@ __device__ float d_spectralVertexValue(uint face, uint layer, uint launch_band, 
     return sum;
 }
 
-//! With camera flux smoothing: the camera-weighted outgoing radiation of the class of class-flux slot `slot` on the primitive at `position`, from one face in a
-//! launch band. The radiation from the sky and other surfaces (the last source slot, layer 0 of spectral_vertex) and the emitted radiation (layer 1) are
-//! interpolated from the facet's vertices v (v[3] < 0 for a triangle) with weights w. The direct radiation of the sources is taken from the facet itself and
-//! carried over to the shading normal (see d_faceDirect()); a primitive with a spectral texture has no surface layer, so what its face toward a source received
-//! is the direct flux the facet records. viewed_normal and shading_normal are on the side of `top_face`, and point is where the camera ray hit.
-__device__ float d_spectralSmoothedClassFlux(uint position, uint slot, bool top_face, uint launch_band, uint b_global, const int v[4], const float w[4], const optix::float3 &viewed_normal, const optix::float3 &shading_normal,
-                                             const optix::float3 &point) {
+//! With camera flux smoothing: the camera-weighted outgoing radiation of the class of class-flux slot `slot` on the primitive at `position`, from one face in a launch band, of all but the sources'
+//! direct radiation: the radiation from the sky and other surfaces (the last source slot, layer 0 of spectral_vertex) and the emitted radiation (layer 1), interpolated from the facet's vertices v
+//! (v[3] < 0 for a triangle) with weights w. The direct radiation of the sources is evaluated per pixel sample (see d_pixelDirectRadiation() in rayHit.cu). The slot and the vertex values are those
+//! of radiation field `field` (see d_dualField()).
+__device__ float d_spectralSmoothedClassFlux(uint position, uint slot, bool top_face, uint launch_band, uint b_global, const int v[4], const float w[4], uint field) {
     const uint camera = spectral_vertex[3];
-    const uint entry = spectral_palette[spectral_palette[3] + position] + (slot - spectral_camera_flux[3 + position]);
+    const uint entry = spectral_palette[spectral_palette[3] + position] + (slot - spectral_camera_flux[3 + d_fluxSlot(position, field)]);
     const uint same_face = top_face ? 0u : 1u;
-    float flux = d_spectralVertexValue(same_face, 1, launch_band, v, w); // emitted
-    for (uint source_slot = 0; source_slot <= Nsources; source_slot++) {
-        float value[2];
-        if (source_slot < Nsources) {
-            const optix::float3 to_source = d_directionToSource(source_slot, point);
-            const float incident = radiation_specular[(size_t(source_slot) * Nprimitives + position) * Nbands_launch + launch_band];
-            const bool viewed_face_toward_source = optix::dot(viewed_normal, to_source) > 0.f;
-            value[same_face] = d_faceDirect(viewed_face_toward_source ? incident : 0.f, to_source, viewed_normal, shading_normal, source_slot, launch_band, v, w);
-            value[1 - same_face] = d_faceDirect(viewed_face_toward_source ? 0.f : incident, to_source, -viewed_normal, -shading_normal, source_slot, launch_band, v, w);
-        } else {
-            value[same_face] = d_spectralVertexValue(same_face, 0, launch_band, v, w);
-            value[1 - same_face] = d_spectralVertexValue(1 - same_face, 0, launch_band, v, w);
-        }
-        flux += d_spectralPaletteValueCam(7, source_slot, entry, b_global, camera) * value[same_face] + d_spectralPaletteValueCam(8, source_slot, entry, b_global, camera) * value[1 - same_face];
-    }
-    return flux;
+    float flux = d_spectralVertexValue(same_face, 1, launch_band, v, w, field); // emitted
+    // The radiation from the sky and other surfaces (the last source slot)
+    const float sky_same = d_spectralVertexValue(same_face, 0, launch_band, v, w, field);
+    const float sky_other = d_spectralVertexValue(1 - same_face, 0, launch_band, v, w, field);
+    return flux + d_spectralPaletteValueCam(7, Nsources, entry, b_global, camera) * sky_same + d_spectralPaletteValueCam(8, Nsources, entry, b_global, camera) * sky_other;
 }
 
 //! Whether a ray with palette entry `entry` uses the palette in global band `b_global`
@@ -351,7 +445,7 @@ rtBuffer<float, 1> radiation_in_camera;
 rtBuffer<float, 1> radiation_out_top;
 rtBuffer<float, 1> radiation_out_bottom;
 rtBuffer<int, 1> smoothing_vertex_indices; // Shared vertex index per facet corner, 4 per primitive; entry 4*prim is negative when the primitive is not smoothed, entry 4*prim+3 is negative for a triangle
-rtBuffer<float, 1> vertex_radiation_out_top; // Outgoing radiation resampled onto the shared mesh vertices [vertex * Nbands_launch + band]
+rtBuffer<float, 1> vertex_radiation_out_top; // Outgoing radiation resampled onto the shared mesh vertices [component][field][vertex][band_launch]
 rtBuffer<float, 1> vertex_radiation_out_bottom;
 rtBuffer<float, 1> scatter_buff_top;
 rtBuffer<float, 1> scatter_buff_bottom;
@@ -400,6 +494,12 @@ struct PerRayData {
     unsigned char source_ID;
     //! Flag to determine if ray hit a periodic boundary
     bool hit_periodic_boundary;
+    //! Periodic copy of the domain the ray is in (0 = central; counted whenever a boundary is periodic)
+    int tile_x;
+    int tile_y;
+    //! Periodic copy of the domain of the primitive the ray was launched from (origin_UUID), which the ray does not hit in that copy
+    int origin_tile_x;
+    int origin_tile_y;
     optix::float3 periodic_hit;
     //! Distance from the segment origin to the periodic boundary it hit
     float periodic_hit_t;
@@ -416,7 +516,44 @@ struct PerRayData {
     bool hit_cover;
     //! World-space point just beyond the cover where the ray continues
     optix::float3 cover_exit;
+    //! Set when a camera's shadow ray reaches the source it was traced toward (miss_camera_shadow)
+    bool source_reached;
+
+    // The members below are set and read only for rays of the direct_dual_ray_type and diffuse_dual_ray_type, the direct and diffuse rays of a scene with a background
+    // radiation field (see d_dualField()); rays of every other type leave them unset.
+
+    //! The ray books what it delivers in both fields (its primitive is not excluded from the periodic boundary). Such a ray passes the excluded primitives, which the
+    //! background field does not contain, and records the nearest one it would have hit in each segment (see passExcludedPrimitive() in primitiveIntersection.cu).
+    bool dual_ray;
+    //! A dual ray's delivery to the scene as it is (field 0) is settled by an excluded primitive: a direct ray is blocked by it, and a diffuse ray has received its radiation
+    bool excluded_resolved;
+    //! Distance to the nearest excluded primitive passed in the current segment (infinite if none)
+    float recorded_t;
+    //! Its position
+    uint recorded_position;
+    //! Its hit attributes surface_u and surface_v (see primitiveIntersection.cu)
+    float recorded_u;
+    float recorded_v;
 };
+
+//! Distance of the recorded excluded primitive of a dual ray that has passed none in its current segment
+#define NO_RECORDED_HIT 3.0e38f
+
+//! Sets the background-field members of the payload of a direct or diffuse ray of a scene with a background field, launched from the primitive at position pos: it books what
+//! it delivers in both fields if the primitive is in the background field. Must match startDualRay() in OptiX8DeviceCode.cu.
+static __device__ __inline__ void d_startDualRay(PerRayData &p, uint pos) {
+    p.dual_ray = d_dualField() && periodic_excluded[pos] == 0;
+    p.excluded_resolved = false;
+    p.recorded_t = NO_RECORDED_HIT;
+    p.recorded_position = 0u;
+    p.recorded_u = 0.f;
+    p.recorded_v = 0.f;
+}
+
+//! The field a ray reads where it is: the scene as it is in the central copy of the domain, and the background in every other copy. Must match fieldSeenBy() in OptiX8DeviceCode.cu.
+static __device__ __inline__ uint d_fieldSeenBy(const PerRayData &p) {
+    return (d_dualField() && (p.tile_x != 0 || p.tile_y != 0)) ? 1u : 0u;
+}
 
 //! Diffuse, camera and pixel-label rays continue past a translucent cover from this distance (m) beyond it.
 #define COVER_EXIT_OFFSET 1e-4f
@@ -857,6 +994,81 @@ static __host__ __device__ __inline__ float asin_safe(float x) {
     return asin(x);
 }
 
+//! One sample of radiation source s seen from the point `origin`, drawn as the direct launch draws it
+/**
+ * Gives the direction toward the point sampled on the source (the source's direction for a collimated source), the distance to that point (RT_DEFAULT_MAX for a collimated source), and the factor that,
+ * times the source's flux and |n . direction| for a surface of normal n, gives the irradiance the sample stands for: the strength of a direct ray before its division by the number of rays. Cameras draw
+ * their shadow rays with it too, so that the shadows they evaluate per pixel come from the same distribution of points on the source as the radiation solve, including the penumbra of the sun's disk and
+ * of a finite source. Returns false for a sample on the back of a rectangle or disk source, which delivers nothing, and for an unknown source type.
+ */
+__device__ bool d_sampleSourceDirection(uint s, const optix::float3 &origin, uint &seed, optix::float3 &direction, float &tmax, double &factor) {
+    const uint source_type = source_types[s];
+    if (source_type == 0) { // collimated source
+        direction = optix::normalize(source_positions[s]);
+        tmax = RT_DEFAULT_MAX;
+        factor = 1.0;
+        return true;
+    }
+    if (source_type == 1 || source_type == 2) { // sphere source
+        // sample point on surface of sphere
+        const float theta_s = acos_safe(1.f - 2.f * rnd(seed));
+        const float phi_s = rnd(seed) * 2.f * M_PI;
+        const optix::float3 sphere_point = 0.5 * source_widths[s].x * optix::make_float3(sin(theta_s) * cos(phi_s), sin(theta_s) * sin(phi_s), cos(theta_s));
+        direction = sphere_point + source_positions[s] - origin;
+        tmax = d_magnitude(direction);
+        direction = optix::normalize(direction);
+        factor = 0.0;
+        const uint N = 10;
+        for (uint j = 0; j < N; j++) {
+            for (uint i = 0; i < N; i++) {
+                const float theta = acos_safe(1.f - 2.f * (float(i) + 0.5f) / float(N));
+                const float phi = (float(j) + 0.5f) * 2.f * M_PI / float(N);
+                const optix::float3 light_direction = optix::make_float3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
+                if (optix::dot(light_direction, direction) < 0) {
+                    factor += fabs(optix::dot(light_direction, direction)) / (double(tmax) * double(tmax)) / double(N * N) * source_widths[s].x * source_widths[s].x;
+                }
+            }
+        }
+        return true;
+    }
+    if (source_type == 3) { // rectangle source
+        float light_transform[16];
+        d_makeTransformMatrix(source_rotations[s], light_transform);
+        optix::float3 square_point;
+        d_sampleSquare(seed, square_point);
+        square_point = optix::make_float3(source_widths[s].x * square_point.x, source_widths[s].y * square_point.y, square_point.z);
+        d_transformPoint(light_transform, square_point);
+        optix::float3 light_direction = optix::make_float3(0, 0, 1);
+        d_transformPoint(light_transform, light_direction);
+        direction = square_point + source_positions[s] - origin;
+        if (optix::dot(direction, light_direction) > 0.f) { // the ray goes toward the source, so the dot product is negative when the source faces the point
+            return false;
+        }
+        tmax = d_magnitude(direction);
+        direction = optix::normalize(direction);
+        factor = fabs(optix::dot(light_direction, direction)) / (double(tmax) * double(tmax)) * source_widths[s].x * source_widths[s].y / M_PI;
+        return true;
+    }
+    if (source_type == 4) { // disk source
+        float light_transform[16];
+        d_makeTransformMatrix(source_rotations[s], light_transform);
+        optix::float3 disk_point;
+        d_sampleDisk(seed, disk_point);
+        d_transformPoint(light_transform, disk_point);
+        optix::float3 light_direction = optix::make_float3(0, 0, 1);
+        d_transformPoint(light_transform, light_direction);
+        direction = source_widths[s].x * disk_point + source_positions[s] - origin;
+        if (optix::dot(direction, light_direction) > 0.f) {
+            return false;
+        }
+        tmax = d_magnitude(direction);
+        direction = optix::normalize(direction);
+        factor = fabs(optix::dot(light_direction, direction)) / (double(tmax) * double(tmax)) * source_widths[s].x * source_widths[s].x;
+        return true;
+    }
+    return false; // unknown source type
+}
+
 // ----- auxiliary helpers --------------------------------------
 static __forceinline__ __device__ uint32_t reverseBits32(uint32_t v) {
     // bitwise reverse (Van-der-Corput direction numbers for dim0)
@@ -1043,5 +1255,129 @@ __device__ __forceinline__ bool d_rayDiskIntersect(const optix::float3 &ray_orig
     return true;
 }
 
+
+// ----- Periodic boundary -----
+
+// Move a coordinate into [lower, upper) by a whole number of periods. A point on the lower face of a ray travelling out through
+// that face is moved to the upper face instead, so the ray starts inside the domain. Must match wrap_into_period() in the Vulkan
+// shaders.
+static __device__ __inline__ float wrapIntoPeriod(float coordinate, float direction, float lower, float upper) {
+    const float period = upper - lower;
+    float wrapped = coordinate - period * floorf((coordinate - lower) / period);
+    if (wrapped < lower || wrapped >= upper) {
+        wrapped = lower; // rounding at a whole number of periods
+    }
+    if (wrapped == lower && direction < 0.f) {
+        wrapped = upper;
+    }
+    return wrapped;
+}
+
+// Low and high corners of the periodic domain in x and y. bbox_vertices is indexed (vertex, face): vertex 0 of face 0 and vertex 1
+// of face 1 are at the low and high corners.
+static __device__ __inline__ optix::float2 periodicXBounds() {
+    return optix::make_float2(bbox_vertices[optix::make_uint2(0, 0)].x, bbox_vertices[optix::make_uint2(1, 1)].x);
+}
+static __device__ __inline__ optix::float2 periodicYBounds() {
+    return optix::make_float2(bbox_vertices[optix::make_uint2(0, 0)].y, bbox_vertices[optix::make_uint2(1, 1)].y);
+}
+
+// Whether a primitive is absent from the periodic copy of the domain a ray is in: a primitive excluded from the periodic boundary
+// exists only in the central copy, and nothing exists beyond a limited number of copies. Must match periodicHidden() in the OptiX 8
+// device code and periodic_hidden() in the Vulkan shaders.
+static __device__ __inline__ bool periodicHidden(const PerRayData &ray_data, uint position) {
+    if (periodic_tile_tracking == 0u) {
+        return false;
+    }
+    if ((periodic_max_repeats.x >= 0 && abs(ray_data.tile_x) > periodic_max_repeats.x) || (periodic_max_repeats.y >= 0 && abs(ray_data.tile_y) > periodic_max_repeats.y)) {
+        return true; // outside the field of copies
+    }
+    return periodic_excluded_present != 0u && periodic_excluded[position] != 0 && (ray_data.tile_x != 0 || ray_data.tile_y != 0);
+}
+
+// A ray hit a periodic boundary face at distance face_t along it: set where it continues (periodic_hit, at periodic_hit_t from its
+// origin), wrapped to the opposite face. When rays track the periodic copy they are in, this also updates the copy, moves a ray that
+// is above (below) all repeated geometry and heading down (up), and can no longer return to the central copy, down (up) to it in one
+// step, and lets a ray that can hit nothing more continue from just beyond the face it left through, where it hits no face again and
+// leaves the scene as a ray that missed everything. Must match handlePeriodicBoundaryHit() in the OptiX 8 device code and
+// check_periodic_boundary() in the Vulkan shaders.
+static __device__ __inline__ void d_handlePeriodicBoundaryHit(PerRayData &ray_data, const optix::float3 &ray_origin, const optix::float3 &ray_direction, float face_t) {
+    ray_data.hit_periodic_boundary = true;
+    ray_data.periodic_hit_t = face_t;
+    const optix::float3 hit_pos = ray_origin + face_t * ray_direction;
+
+    // Tolerance for identifying the face that was hit. The ray continues from exactly one period away, the same point on the
+    // opposite face: moving it any further would shift it off its straight path by that much at every wrap.
+    const float eps = 1e-5f;
+    const optix::float2 xbounds = periodicXBounds();
+    const optix::float2 ybounds = periodicYBounds();
+    const float width_x = xbounds.y - xbounds.x;
+    const float width_y = ybounds.y - ybounds.x;
+
+    // Leaving through a low face moves the ray into the next periodic copy toward -x (or -y), and through a high face toward +x (or +y)
+    int step_x = 0;
+    int step_y = 0;
+    ray_data.periodic_hit = hit_pos;
+    if (periodic_flag.x == 1 && fabs(hit_pos.x - xbounds.x) <= eps) { //-x facing boundary
+        ray_data.periodic_hit.x += width_x;
+        step_x = -1;
+    } else if (periodic_flag.x == 1 && fabs(hit_pos.x - xbounds.y) <= eps) { //+x facing boundary
+        ray_data.periodic_hit.x -= width_x;
+        step_x = 1;
+    } else if (periodic_flag.y == 1 && fabs(hit_pos.y - ybounds.x) <= eps) { //-y facing boundary
+        ray_data.periodic_hit.y += width_y;
+        step_y = -1;
+    } else if (periodic_flag.y == 1 && fabs(hit_pos.y - ybounds.y) <= eps) { //+y facing boundary
+        ray_data.periodic_hit.y -= width_y;
+        step_y = 1;
+    }
+
+    int tile_x = ray_data.tile_x + step_x;
+    int tile_y = ray_data.tile_y + step_y;
+    if (periodic_tile_tracking == 0u) {
+        // Only the copy counts, for the ray to hit the periodic copies of the primitive it was launched from
+        ray_data.tile_x = tile_x;
+        ray_data.tile_y = tile_y;
+        return;
+    }
+
+    // Whether the ray leaves the field of copies; it can then hit nothing more
+    bool leaves_field = (periodic_max_repeats.x >= 0 && abs(tile_x) > periodic_max_repeats.x && float(tile_x) * ray_direction.x > 0.f) || (periodic_max_repeats.y >= 0 && abs(tile_y) > periodic_max_repeats.y && float(tile_y) * ray_direction.y > 0.f);
+    // Outside the central copy, which it can no longer return to, only repeated geometry can be hit
+    const bool leaves_central_copy = (tile_x != 0 && float(tile_x) * ray_direction.x >= 0.f) || (tile_y != 0 && float(tile_y) * ray_direction.y >= 0.f);
+    const optix::float3 wrapped = ray_data.periodic_hit;
+    bool escapes = leaves_field || (leaves_central_copy && ((wrapped.z > periodic_repeated_zbounds.y && ray_direction.z >= 0.f) || (wrapped.z < periodic_repeated_zbounds.x && ray_direction.z <= 0.f)));
+    if (!escapes && leaves_central_copy && (wrapped.z > periodic_repeated_zbounds.y || wrapped.z < periodic_repeated_zbounds.x)) {
+        // Above (below) the repeated geometry and heading down (up): nothing can be hit before the ray reaches it, so the ray is moved
+        // there in one step, into the domain by a whole number of periods, rather than wrapped through every copy on the way
+        const float target_z = wrapped.z > periodic_repeated_zbounds.y ? periodic_repeated_zbounds.y : periodic_repeated_zbounds.x;
+        const float advance = (target_z - wrapped.z) / ray_direction.z;
+        optix::float3 moved = optix::make_float3(wrapped.x + advance * ray_direction.x, wrapped.y + advance * ray_direction.y, target_z);
+        if (periodic_flag.x == 1) {
+            const float unwrapped = moved.x;
+            moved.x = wrapIntoPeriod(moved.x, ray_direction.x, xbounds.x, xbounds.y);
+            tile_x += __float2int_rn((unwrapped - moved.x) / width_x);
+        }
+        if (periodic_flag.y == 1) {
+            const float unwrapped = moved.y;
+            moved.y = wrapIntoPeriod(moved.y, ray_direction.y, ybounds.x, ybounds.y);
+            tile_y += __float2int_rn((unwrapped - moved.y) / width_y);
+        }
+        escapes = (periodic_max_repeats.x >= 0 && abs(tile_x) > periodic_max_repeats.x && float(tile_x) * ray_direction.x > 0.f) || (periodic_max_repeats.y >= 0 && abs(tile_y) > periodic_max_repeats.y && float(tile_y) * ray_direction.y > 0.f);
+        if (!escapes) {
+            ray_data.periodic_hit = moved;
+            ray_data.periodic_hit_t = face_t + advance; // the distance to the point the ray continues from
+        }
+    }
+    if (escapes) {
+        ray_data.periodic_hit = hit_pos;
+        ray_data.periodic_hit_t = face_t;
+        ray_data.periodic_hit.x += float(step_x) * periodic_escape_offset;
+        ray_data.periodic_hit.y += float(step_y) * periodic_escape_offset;
+        return;
+    }
+    ray_data.tile_x = tile_x;
+    ray_data.tile_y = tile_y;
+}
 
 #endif

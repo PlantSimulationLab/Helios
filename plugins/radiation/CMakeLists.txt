@@ -367,7 +367,7 @@ endif()
 add_custom_command(
 	OUTPUT ${OPTIX8_IR_OUTPUT}
 	COMMAND ${CMAKE_CUDA_COMPILER} ${OPTIX8_NVCC_FLAGS} -o ${OPTIX8_IR_OUTPUT} ${OPTIX8_DEVICE_SOURCE}
-	DEPENDS ${OPTIX8_DEVICE_SOURCE} "${CMAKE_CURRENT_SOURCE_DIR}/src/optix8/OptiX8LaunchParams.h"
+	DEPENDS ${OPTIX8_DEVICE_SOURCE} "${CMAKE_CURRENT_SOURCE_DIR}/src/optix8/OptiX8LaunchParams.h" "${CMAKE_CURRENT_SOURCE_DIR}/src/optix8/OptiX8Math.h" "${CMAKE_CURRENT_SOURCE_DIR}/include/NormalMapMath.h"
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	COMMENT "Compiling OptiX 8.1 device code to OptiXIR"
 	VERBATIM
@@ -546,7 +546,8 @@ foreach(CUDA_SOURCE ${CUDA_SOURCES})
 	add_custom_command(
 		OUTPUT ${PTX_FILE}
 		COMMAND ${CMAKE_CUDA_COMPILER} ${OPTIX_NVCC_FLAGS} -o ${PTX_FILE} ${CUDA_SOURCE_PATH}
-		DEPENDS ${CUDA_SOURCE_PATH}
+		# The device programs include these headers, so a change to any of them must rebuild every PTX file
+		DEPENDS ${CUDA_SOURCE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/include/RayTracing.cuh" "${CMAKE_CURRENT_SOURCE_DIR}/include/BufferIndexing.h" "${CMAKE_CURRENT_SOURCE_DIR}/include/NormalMapMath.h"
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		COMMENT "Compiling OptiX PTX file ${CUDA_SOURCE_NAME}.ptx"
 		VERBATIM
@@ -637,6 +638,8 @@ set(SHADER_COMMON_INCLUDES
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/glass_cover.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/surface_layer.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/spectral_texture.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/normal_map.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/source_sampling.glsl
 )
 
 # Shader source files

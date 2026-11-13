@@ -627,6 +627,7 @@ void Context::deletePrimitive(uint UUID) {
     delete prim;
     primitives.erase(UUID);
     dirty_deleted_primitives.push_back(UUID);
+    primitive_deletion_log.emplace_back(Primitive::modification_clock.load(std::memory_order_relaxed), UUID);
     geometry_revision.markModified();
     shape_revision.markModified();
     invalidateAllUUIDsCache();
@@ -663,6 +664,10 @@ uint Context::copyPrimitive(uint UUID) {
         Patch *patch_new;
         if (!p->hasTexture()) {
             patch_new = (new Patch(p->getColorRGBA(), parentID, currentUUID));
+            // A patch keeps its (u,v) coordinates when its texture is removed, and a normal map is placed on them
+            if (uv.size() == 4) {
+                patch_new->setTextureUV(uv);
+            }
         } else {
             const std::string &texture_file = p->getTextureFile();
             if (uv.size() == 4) {
@@ -695,6 +700,10 @@ uint Context::copyPrimitive(uint UUID) {
         Triangle *tri_new;
         if (!p->hasTexture()) {
             tri_new = (new Triangle(placeholder_vertex0, placeholder_vertex1, placeholder_vertex2, p->getColorRGBA(), parentID, currentUUID));
+            // A triangle keeps its (u,v) coordinates when its texture is removed, and a normal map is placed on them
+            if (uv.size() == 3) {
+                tri_new->setTextureUV(uv);
+            }
         } else {
             const std::string &texture_file = p->getTextureFile();
             float solid_fraction = p->getSolidFraction();
@@ -1052,8 +1061,9 @@ void Primitive::setColor(const helios::RGBcolor &newcolor) {
         helios_runtime_error("ERROR (Primitive::setColor): Primitive not associated with a Context. Use Context::setPrimitiveColor() instead.");
     }
     // Other primitives may obtain this primitive's material by its label, so it is not edited in place
-    const Material &material = context_ptr->materials.at(materialID);
-    context_ptr->setPrimitiveAppearance(this, make_RGBAcolor(newcolor, 1.f), material.texture_file, material.texture_color_overridden);
+    Context::MaterialAppearance appearance = Context::getMaterialAppearance(context_ptr->materials.at(materialID));
+    appearance.color = make_RGBAcolor(newcolor, 1.f);
+    context_ptr->setPrimitiveAppearance(this, appearance);
 }
 
 void Primitive::setColor(const helios::RGBAcolor &newcolor) {
@@ -1061,8 +1071,9 @@ void Primitive::setColor(const helios::RGBAcolor &newcolor) {
         helios_runtime_error("ERROR (Primitive::setColor): Primitive not associated with a Context. Use Context::setPrimitiveColor() instead.");
     }
     // Other primitives may obtain this primitive's material by its label, so it is not edited in place
-    const Material &material = context_ptr->materials.at(materialID);
-    context_ptr->setPrimitiveAppearance(this, newcolor, material.texture_file, material.texture_color_overridden);
+    Context::MaterialAppearance appearance = Context::getMaterialAppearance(context_ptr->materials.at(materialID));
+    appearance.color = newcolor;
+    context_ptr->setPrimitiveAppearance(this, appearance);
 }
 
 bool Primitive::hasTexture() const {
@@ -1086,8 +1097,9 @@ void Primitive::setTextureFile(const char *texture) {
         helios_runtime_error("ERROR (Primitive::setTextureFile): Primitive not associated with a Context. Use Context::setPrimitiveTextureFile() instead.");
     }
     // Other primitives may obtain this primitive's material by its label, so it is not edited in place
-    const Material &material = context_ptr->materials.at(materialID);
-    context_ptr->setPrimitiveAppearance(this, material.color, texture, material.texture_color_overridden);
+    Context::MaterialAppearance appearance = Context::getMaterialAppearance(context_ptr->materials.at(materialID));
+    appearance.texture_file = texture;
+    context_ptr->setPrimitiveAppearance(this, appearance);
 }
 
 std::vector<vec2> Primitive::getTextureUV() {
@@ -1104,8 +1116,9 @@ void Primitive::overrideTextureColor() {
         helios_runtime_error("ERROR (Primitive::overrideTextureColor): Primitive not associated with a Context. Use Context::overridePrimitiveTextureColor() instead.");
     }
     // Other primitives may obtain this primitive's material by its label, so it is not edited in place
-    const Material &material = context_ptr->materials.at(materialID);
-    context_ptr->setPrimitiveAppearance(this, material.color, material.texture_file, true);
+    Context::MaterialAppearance appearance = Context::getMaterialAppearance(context_ptr->materials.at(materialID));
+    appearance.texture_color_overridden = true;
+    context_ptr->setPrimitiveAppearance(this, appearance);
 }
 
 void Primitive::useTextureColor() {
@@ -1113,8 +1126,9 @@ void Primitive::useTextureColor() {
         helios_runtime_error("ERROR (Primitive::useTextureColor): Primitive not associated with a Context. Use Context::usePrimitiveTextureColor() instead.");
     }
     // Other primitives may obtain this primitive's material by its label, so it is not edited in place
-    const Material &material = context_ptr->materials.at(materialID);
-    context_ptr->setPrimitiveAppearance(this, material.color, material.texture_file, false);
+    Context::MaterialAppearance appearance = Context::getMaterialAppearance(context_ptr->materials.at(materialID));
+    appearance.texture_color_overridden = false;
+    context_ptr->setPrimitiveAppearance(this, appearance);
 }
 
 bool Primitive::isTextureColorOverridden() const {

@@ -534,7 +534,7 @@
 
   \subsection DirScript New Project Script
 
-  There is a script in the main Helios directory that can quickly set up a new project called "create\_project.sh". First, create a new directory where the project will exist, for example:
+  There is a script in the utilities/ directory that can quickly set up a new project called "create\_project.sh". First, create a new directory where the project will exist, for example:
 
  ~~~~~~
  $ mkdir projects/myProject
@@ -552,6 +552,40 @@
 
  ~~~~~~
  $ utilities/create_project.sh projects/myProjects radiation visualizer
+ ~~~~~~
+
+ The script also writes the AGENTS.md and CLAUDE.md files described in the next section.
+
+ \subsection AIAgents Working with AI Coding Agents
+
+ Each Helios project directory contains two files written for AI coding agents such as Claude Code, Codex, Cursor and GitHub Copilot, so that an agent started in the project directory, with no prior knowledge of Helios, knows how to set up and build a simulation correctly:
+
+ <ul>
+   <li><b>AGENTS.md</b> gives the location and version of the Helios install, the plug-ins enabled in the project, how to build and run it, Helios conventions (coordinate system, angle units, primitive data) and common pitfalls, and an index of the documentation, headers and sample projects of every plug-in. Most coding agents read this file automatically.</li>
+   <li><b>CLAUDE.md</b> contains only the line `@AGENTS.md`, which makes Claude Code read AGENTS.md even when another CLAUDE.md exists in a directory above the project.</li>
+ </ul>
+
+ The files are written by create\_project.sh, and are regenerated every time the project is configured with CMake, so that they always match the installed version of Helios. For an existing project that has not been configured yet, they can be written with:
+
+ ~~~~~~
+ $ utilities/generate_agent_files.sh path/to/myProject
+ ~~~~~~
+
+ The first line of each file is a marker comment. Helios only overwrites a file that still starts with this marker; to keep your own edits, delete the marker line and the file will never be touched again. If you write your own CLAUDE.md, add the line `@AGENTS.md` to it so that Claude Code still reads the Helios instructions. The general guidance in AGENTS.md comes from utilities/agents/helios_agent_guide.md in the Helios install.
+
+ To turn generation off for a project, configure it with:
+
+ ~~~~~~
+ $ cmake -DHELIOS_GENERATE_AGENT_FILES=OFF ..
+ ~~~~~~
+
+ or add `set( HELIOS_GENERATE_AGENT_FILES OFF )` to its CMakeLists.txt before the line that includes CMake_project.cmake. To turn it off for all projects, set the environment variable `HELIOS_GENERATE_AGENT_FILES=OFF`. Projects located inside the Helios directory are skipped, except those under projects/.
+
+ <b>Claude Code skill:</b> the Helios repository is also a Claude Code plugin marketplace. Its `helios` plugin provides a skill that finds a project's Helios install and makes sure the project has its AGENTS.md, which is useful when Claude Code is started outside a Helios project. To install it from a local copy of Helios (which keeps the skill matched to that copy):
+
+ ~~~~~~
+ $ claude plugin marketplace add /path/to/Helios
+ $ claude plugin install helios@plantsimulationlab-helios
  ~~~~~~
 
  \subsection GlobalInclude C++ Standard Library Include Files
@@ -983,7 +1017,7 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   }
  ~~~~~~
 
- <b>Ground area basis.</b> The overloads that do not take a ground area use the horizontal (x-y) footprint of the bounding box of <i>all</i> primitives in the Context. This is the same extent the radiation model derives when a periodic boundary is enforced via <code>RadiationModel::enforcePeriodicBoundary()</code>, so for a periodic scene whose ground is set exactly to the periodic domain edge, the automatically-determined basis is the correct one.
+ <b>Ground area basis.</b> The overloads that do not take a ground area use the horizontal (x-y) footprint of the bounding box of <i>all</i> primitives in the Context. This is the same extent the radiation model derives when a periodic boundary is enforced via <code>RadiationModel::enforcePeriodicBoundary()</code> with no excluded primitives, so for a periodic scene whose ground is set exactly to the periodic domain edge, the automatically-determined basis is the correct one.
 
  In other situations it may not be. Because every primitive contributes to the bounding box, a ground primitive that extends beyond the canopy will enlarge the area basis and correspondingly reduce the reported area index, even though the ground itself is not counted in the numerator. The same applies to any other geometry placed away from the canopy. Whenever the domain is not cropped tightly to the canopy, pass the ground area explicitly.
 
@@ -1134,6 +1168,52 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   <tr><td>Texture Color Override</td><td>\ref helios::Context::isPrimitiveTextureColorOverridden( uint ) const</td></tr>
   <tr><td>Solid Fraction</td><td>\ref helios::Context::getPrimitiveSolidFraction( uint ) const</td></tr>
   </table>
+
+ \subsection NormalMaps Normal and Bump Maps
+
+ A normal map tilts the shading normal across a primitive without changing its geometry, so that fine relief, such as the veins of a leaf, the furrows of bark or the grain of a board, is lit as it would be on the real surface. Normal and bump maps belong to a primitive's material, like its texture, and are sampled with the same (u,v) coordinates, so a primitive needs a frame of (u,v) coordinates: a patch (with or without a texture), or a triangle added with a texture and (u,v) coordinates. They are used by the visualizer, and by the radiation model in all of its modes (see the radiation model documentation).
+
+ - A <b>tangent-space normal map</b> (\ref helios::Context::setMaterialNormalMap() "Context::setMaterialNormalMap()") is an RGB image whose red, green and blue channels hold the x, y and z components of the surface normal, mapped from [-1,1] to [0,1] (so a flat surface is (128,128,255)). The tangent space is that of OpenGL, glTF and Blender: +x points along increasing u (right in the image), +y along increasing v (up in the image) and +z along the primitive's normal. A map made in the DirectX convention, whose green channel points down the image, needs `flip_green = true`. The optional strength scales the tilt of the normals (1 keeps the map as authored).
+ - A <b>bump map</b> (\ref helios::Context::setMaterialBumpMap() "Context::setMaterialBumpMap()") is a grayscale height image (8- or 16-bit PNG, read at full precision, or an RGB image read as luminance), whose black is low and white high. The strength is the displacement, in texels of the image, of the full height range, so the same strength gives the same relief to an image of any resolution relative to its texels. Bump maps are converted to normal maps once, when they are set.
+
+ The tangent frame of each primitive is orthonormal, as in MikkTSpace: the tangent is dP/du made perpendicular to the normal, and the bitangent is perpendicular to both, on the side of dP/dv, so mirrored (u,v) coordinates are handled. The opposite face of a primitive uses the negated shading normal, as the other side of a thin sheet does (a ridge on the top face is a groove on the bottom). The helpers \ref helios::decodeNormalMapImage(), \ref helios::computeTangentFrame() and \ref helios::applyTangentSpaceNormal() implement these conventions for plug-ins.
+
+ ~~~~~~{.cpp}
+  Context context;
+
+  // A material shared by every leaf, with a texture and a normal map
+  context.addMaterial("leaf");
+  context.setMaterialTexture("leaf", "plugins/plantarchitecture/assets/textures/GrapeLeaf.png");
+  context.setMaterialNormalMap("leaf", "GrapeLeaf_normal.png");
+  context.assignMaterialToPrimitive(leaf_UUIDs, "leaf");
+
+  // A bump map on one board: the full height range raises the surface by 8 texels
+  uint board = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 0.2f), nullrotation, "wood_board.jpg");
+  context.setPrimitiveBumpMap(board, "wood_board_height.png", 8.f);
+ ~~~~~~
+
+ Setting a map on one primitive (\ref helios::Context::setPrimitiveNormalMap(uint, const std::string &, float, bool) "Context::setPrimitiveNormalMap()", \ref helios::Context::setPrimitiveBumpMap(uint, const std::string &, float) "Context::setPrimitiveBumpMap()") does not change other primitives that share its material: like a color change, it moves the primitive to (or gives it a copy of) a material with the map. As with a color change, a material you named whose only user is that primitive is edited instead, so primitives given that material later also get the map. A material holds either a normal map or a bump map; clear one with \ref helios::Context::clearMaterialNormalMap() "Context::clearMaterialNormalMap()" before setting the other. The image is decoded when the map is set, so an unreadable image, a grayscale image given as a normal map, or a primitive without a (u,v) frame raises an error at that call. Decoded maps are cached by the Context and shared by every material and plug-in that uses them.
+
+ Maps are saved to and loaded from XML files as children of a material:
+
+ ~~~~~~{.xml}
+  <material label="bark">
+    <texture>AlmondBark.jpg</texture>
+    <normal_map>AlmondBark_normal.png</normal_map>
+    <normal_map_strength>1.5</normal_map_strength>
+  </material>
+  <material label="board">
+    <texture>wood_board.jpg</texture>
+    <bump_map>wood_board_height.png</bump_map>
+    <bump_map_strength>8</bump_map_strength>
+  </material>
+ ~~~~~~
+
+ OBJ files read the normal map of a material from its "norm" line and a bump map from its "map_Bump" or "bump" line, with the "-bm" option as the strength. Since many programs write normal maps into "map_Bump", the image there is used as a bump map if it is grayscale and as a normal map otherwise. Helios gives OBJ triangles (u,v) coordinates only from a texture, so a material with a normal or bump map must also have a "map_Kd" texture. \ref helios::Context::writeOBJ(const std::string &, bool, bool) const "Context::writeOBJ()" writes each material's map as the normals Helios applies to it (with its strength, green-channel convention and, for a bump map, the conversion to normals), in an image named after the written model (`<name>_normal_<n>.png`) under "norm" and "map_Bump" lines, so that the model reads back with the same relief at a strength of 1; an untextured patch's map is left out with a warning, since its faces are written without (u,v) coordinates.
+
+ Normal and bump maps are used by the visualizer and the radiation model. The LiDAR plug-ins compute the intensity of a return from the facet's own normal, so maps do not change synthetic scans. Slicing a primitive (CollisionDetection and VoxelIntersection) keeps its material, map included, in the pieces; an untextured primitive with a map cannot be sliced, since its triangle pieces have no (u,v) coordinates.
+
+ <b>Making maps from a photograph.</b> The Python script `utilities/pbr_maps/pbr_maps.py` makes a normal map and a 16-bit bump map from an RGB(A) texture by treating brightness at each feature's scale as relief, after removing large-scale lighting and filling the transparent edge of cut-outs. Its normal map uses the same kernel as Helios's bump-map conversion, so the two maps give the same normals; see `utilities/pbr_maps/README.md` for its options and limitations.
 
  \subsection SpectralTexture Spectral Textures
 

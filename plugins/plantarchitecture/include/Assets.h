@@ -70,6 +70,12 @@ std::vector<helios::vec3> buildLeafBladeLattice(const LeafShapeValues &shape);
  */
 uint petioluleVertexCount();
 
+//! Number of vertices in each ring of a leaf's petiolule
+/**
+ * The petiolule's vertices are appended ring by ring from the leaflet's base: the ring at its base, the ring where the blade begins, the rings of the join under the blade, and the join's tip.
+ */
+uint petioluleRadialSubdivisions();
+
 //! Bend a petiole centerline as a tapered cantilever loaded by the leaflets attached along it
 /**
  * The centerline is clamped at its first node. Each load acts at its arclength along the centerline, and the rotation of segment j is
@@ -221,4 +227,13 @@ uint WheatSpikePrototype(helios::Context *context_ptr, uint subdivisions, const 
 void WheatPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
 
 
+uint CucumberFruitPrototype(helios::Context *context_ptr, uint subdivisions, const std::map<std::string, float> &build_parameters);
+uint CucumberFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open, const std::map<std::string, float> &build_parameters);
+void CucumberMainPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
+
+//! Attraction points along the vertical string a high-wire cucumber is trained up, from just above string_base to the top of the string.
+std::vector<helios::vec3> CucumberStringAttractionPoints(const helios::vec3 &string_base);
+
+//! Trains and harvests a high-wire cucumber: picks each fruit once it is full size, and once the head reaches the wire, lowers and leans the stem, laying the older stem along the row (+y) just above the floor so that the head stays at the wire.
+void CucumberMainPhytomerCallbackFunction(std::shared_ptr<Phytomer> phytomer);
 #endif // HELIOS_ASSETS_H
