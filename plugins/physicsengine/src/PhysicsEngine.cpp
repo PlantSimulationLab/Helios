@@ -935,6 +935,13 @@ void PhysicsEngine::bindObjectPrimitives(uint objID, size_t rest_pose_index) {
         context->getPrimitiveTransformationMatrix(UUID, binding.rest_transform);
         primitive_bindings.push_back(binding);
     }
+    // The object's own transform moves with its primitives, so that what it derives from it, such as the nodes of a cone or a sphere's center, stays where
+    // the primitives are. A cone whose nodes stayed at rest no longer matched its facets, and lost its shared-vertex topology.
+    ObjectBinding object_binding;
+    object_binding.objID = objID;
+    object_binding.rest_pose_index = rest_pose_index;
+    context->getObjectTransformationMatrix(objID, object_binding.rest_transform);
+    object_bindings.push_back(object_binding);
 }
 
 int PhysicsEngine::detachEqualityID(uint articulationID, uint link_index, const std::string &method) const {
@@ -1207,18 +1214,30 @@ void PhysicsEngine::updateContextGeometry(uint instance) {
         }
     }
 
+    // A bound primitive or object is shown at its rest transform carried by its body's motion from rest
+    auto carried = [&](size_t rest_pose_index, const float (&rest_transform)[16], float (&transform)[16]) {
+        const std::array<float, 16> &T = rest_to_current[rest_pose_index];
+        for (int r = 0; r < 4; r++) {
+            for (int c = 0; c < 4; c++) {
+                transform[4 * r + c] = T[4 * r] * rest_transform[c] + T[4 * r + 1] * rest_transform[4 + c] + T[4 * r + 2] * rest_transform[8 + c] + T[4 * r + 3] * rest_transform[12 + c];
+            }
+        }
+    };
     for (const PrimitiveBinding &binding: primitive_bindings) {
         if (!moved[binding.rest_pose_index]) {
             continue;
         }
         float transform[16];
-        const std::array<float, 16> &T = rest_to_current[binding.rest_pose_index];
-        for (int r = 0; r < 4; r++) {
-            for (int c = 0; c < 4; c++) {
-                transform[4 * r + c] = T[4 * r] * binding.rest_transform[c] + T[4 * r + 1] * binding.rest_transform[4 + c] + T[4 * r + 2] * binding.rest_transform[8 + c] + T[4 * r + 3] * binding.rest_transform[12 + c];
-            }
-        }
+        carried(binding.rest_pose_index, binding.rest_transform, transform);
         context->setPrimitiveTransformationMatrix(binding.UUID, transform);
+    }
+    for (const ObjectBinding &binding: object_bindings) {
+        if (!moved[binding.rest_pose_index]) {
+            continue;
+        }
+        float transform[16];
+        carried(binding.rest_pose_index, binding.rest_transform, transform);
+        context->setObjectTransformationMatrix(binding.objID, transform);
     }
 
     for (const TubeBinding &tube: tube_bindings) {

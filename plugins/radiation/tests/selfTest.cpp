@@ -21343,6 +21343,51 @@ GPU_TEST_CASE("RadiationModel - a spectral texture follows the texture coordinat
     std::filesystem::remove(class_map);
 }
 
+GPU_TEST_CASE("RadiationModel - a rebuild keeps the class fractions of moved spectral textures and computes those of new texture coordinates") {
+    // The triangles of the test above, moved with their occluder after a first build: the class fractions the second build carries
+    // over still give 0.25 x 950 and 0.75 x 950 W/m^2. A third triangle given the same class map in the second build, with texture
+    // coordinates only in columns 0-1 (class 1, 5% reflective) and unshaded, must not take another primitive's fractions: 950 W/m^2.
+    using namespace spectral_texture_test;
+    Context context;
+    addFlatSpectrum(context, "rho_low", 0.05f);
+    addFlatSpectrum(context, "rho_high", 0.8f);
+    context.addSpectralPalette("halves", {{"rho_low", "", ""}, {"rho_high", "", ""}});
+    std::vector<uint16_t> classes(25);
+    for (uint i = 0; i < 25; i++) {
+        classes.at(i) = (i % 5) < 2 ? 1 : 2;
+    }
+    const std::string class_map = writeClassMap("helios_radiation_rebuild_halves.png", 5, 5, classes);
+
+    const vec3 v0 = make_vec3(-0.5, -0.5, 0), v1 = make_vec3(0.5, -0.5, 0), v2 = make_vec3(0.5, 0.5, 0), v3 = make_vec3(-0.5, 0.5, 0);
+    const uint lower_right = context.addTriangle(v0, v1, v2, "lib/images/solid.jpg", make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+    const uint upper_left = context.addTriangle(v0, v2, v3, "lib/images/solid.jpg", make_vec2(0, 0), make_vec2(1, 1), make_vec2(0, 1));
+    context.setPrimitiveSpectralTexture(std::vector<uint>{lower_right, upper_left}, class_map, "halves");
+    const uint occluder = addOccluderOverRightHalf(context);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    addOverheadBeam(model);
+    model.updateGeometry();
+    model.runBand("VIS");
+    DOCTEST_CHECK(std::fabs(flux(context, lower_right) - 237.5f) < 5.f);
+    DOCTEST_CHECK(std::fabs(flux(context, upper_left) - 712.5f) < 5.f);
+
+    const vec3 shift = make_vec3(3, 0, 0);
+    context.translatePrimitive(std::vector<uint>{lower_right, upper_left, occluder}, shift);
+    const uint class_one = context.addTriangle(make_vec3(-0.5, 3, 0), make_vec3(0.5, 3, 0), make_vec3(0.5, 4, 0), "lib/images/solid.jpg", make_vec2(0, 0), make_vec2(0.3f, 0), make_vec2(0.3f, 1));
+    context.setPrimitiveSpectralTexture(class_one, class_map, "halves");
+    model.updateGeometry();
+    model.runBand("VIS");
+
+    DOCTEST_CAPTURE(flux(context, lower_right));
+    DOCTEST_CAPTURE(flux(context, upper_left));
+    DOCTEST_CAPTURE(flux(context, class_one));
+    DOCTEST_CHECK(std::fabs(flux(context, lower_right) - 237.5f) < 5.f);
+    DOCTEST_CHECK(std::fabs(flux(context, upper_left) - 712.5f) < 5.f);
+    DOCTEST_CHECK(std::fabs(flux(context, class_one) - 950.f) < 5.f);
+
+    std::filesystem::remove(class_map);
+}
+
 GPU_TEST_CASE("RadiationModel - changing the palette of a spectral texture takes effect without rebuilding the geometry") {
     using namespace spectral_texture_test;
     Context context;

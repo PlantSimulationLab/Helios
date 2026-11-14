@@ -1,5 +1,10 @@
 # Changelog
 
+# [1.3.98] 2026-XX-XX
+
+## Radiation
+- `RadiationModel::updateGeometry()` keeps the class fractions of spectral textures (the share of each class of a class map under a primitive) from one build to the next, as they depend only on the class map and the primitive's (u,v) coordinates. Computing them dominated rebuilding a scene with many primitives with spectral textures, such as the bark and fruit of plants: a rebuild of 1.18 million primitives after a robot arm moved took 150 s, and now takes 7 s.
+
 # [1.3.97] 2026-11-13
 
 ## Core
@@ -19,6 +24,7 @@
 - Added the physics engine plug-in (`physicsengine`), which simulates rigid-body dynamics with MuJoCo 3.16.0. `PhysicsEngine` simulates articulations and kinematic boxes, makes Context geometry follow them, runs many instances of one compiled model in parallel, and gives direct access to the MuJoCo model and state.
 - `PhysicsEngine` can load MJCF and URDF models with `addModelFile()`, drive their joints with `addPositionServo()`, and attach Context geometry to their bodies with `bindObjectToBody()`.
 - Links with the joint type `PHYSICS_JOINT_DETACHABLE` can be released mid-simulation with `PhysicsEngine::detachLink()` for cutting a branch or picking a fruit, separately in each simulation instance. `splitTubesAtLink()` keeps the Context geometry from stretching across the break.
+- `PhysicsEngine::updateContextGeometry()` moves the transformation matrix of each bound object with its primitives, so that a moved `Cone`, `Sphere` or `Tube` keeps the nodes and shared-vertex topology of where it is (e.g., for camera flux smoothing in the radiation model) rather than of its rest pose.
 - Added `PhysicsEngine::getDetachableLinkLoad()`, which gives the force holding a detachable link, for modeling connections that fail under load.
 - Added `PhysicsEngine::setContextUpdateTolerance()`, which leaves motion too small to see out of `updateContextGeometry()`.
 - Added `PlantPhysicsParameters::rigid_leaves`, which welds petioles and leaves to what they grow from, so that a plant in leaf can be simulated faster when leaves matter only to what a camera sees.

@@ -1015,6 +1015,44 @@ DOCTEST_TEST_CASE("PhysicsEngine - a URDF model loads, is placed, is driven by a
     std::filesystem::remove(arm_file);
 }
 
+DOCTEST_TEST_CASE("PhysicsEngine - a bound object's own transform moves with its primitives, so a cone keeps its shared-vertex topology") {
+    std::string arm_file = writeHingedArmFile();
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    const vec3 base = make_vec3(1, 1, 1);
+    engine.addModelFile(arm_file, "a/", base, 90.f);
+    engine.addPositionServo("a/hinge", 500.f, 50.f);
+    // A cone along the arm, which lies along world +y
+    const uint cone = context.addConeObject(12, base + make_vec3(0, 0.1f, 0), base + make_vec3(0, 0.45f, 0), 0.04f, 0.02f);
+    engine.bindObjectToBody(cone, "a/arm");
+    engine.initialize();
+
+    const std::vector<uint> facets = context.getObjectPrimitiveUUIDs(cone);
+    DOCTEST_REQUIRE(context.doesObjectHaveSharedVertexTopology(cone));
+    std::vector<std::vector<int>> indices = context.getObjectPrimitiveSharedVertexIndices(cone, facets, helios::WELD_FULL);
+    DOCTEST_REQUIRE(std::all_of(indices.begin(), indices.end(), [](const std::vector<int> &corners) { return !corners.empty(); }));
+
+    mjData *data = engine.getMuJoCoData();
+    data->ctrl[mj_name2id(engine.getMuJoCoModel(), mjOBJ_ACTUATOR, "a/hinge_servo")] = 0.8;
+    engine.step(2000);
+    engine.updateContextGeometry();
+
+    // The cone's nodes have risen with its facets: the tip node is where the tip of the facets is
+    const std::vector<vec3> nodes = context.getConeObjectNodes(cone);
+    DOCTEST_CHECK(nodes.at(1).z - base.z == doctest::Approx(0.45f * std::sin(0.8f)).epsilon(0.05));
+    float highest_vertex = -1e6f;
+    for (const vec3 &vertex: getAllVertices(context, {cone})) {
+        highest_vertex = std::max(highest_vertex, vertex.z);
+    }
+    DOCTEST_CHECK(highest_vertex == doctest::Approx(nodes.at(1).z + 0.02f * std::cos(0.8f)).epsilon(0.02));
+
+    // Every facet still finds its corners on the cone's rings, as the radiation model's camera flux smoothing needs
+    indices = context.getObjectPrimitiveSharedVertexIndices(cone, facets, helios::WELD_FULL);
+    DOCTEST_CHECK(std::all_of(indices.begin(), indices.end(), [](const std::vector<int> &corners) { return !corners.empty(); }));
+    std::filesystem::remove(arm_file);
+}
+
 DOCTEST_TEST_CASE("PhysicsEngine - a model with thousands of colliding shapes has the memory to step") {
     // MuJoCo's collision search needs memory that grows with the square of the number of shapes, and it ends the program when it runs out
     std::string arm_file = writeHingedArmFile();

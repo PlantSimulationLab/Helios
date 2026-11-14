@@ -323,8 +323,10 @@ DOCTEST_TEST_CASE("Robot - arm deflects a plant stem, senses the force, and the 
     context.seedRandomGenerator(3);
     PlantArchitecture plantarchitecture(&context);
     plantarchitecture.disableMessages();
-    plantarchitecture.loadPlantModelFromLibrary("bean");
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+    // A soybean, whose slender main stem stands clear of the rest of the plant (the "bean" model is now a compact bush bean, 15 cm tall, with no stem segment the
+    // tool can reach without passing another shoot)
+    plantarchitecture.loadPlantModelFromLibrary("soybean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 35);
 
     // The internode segment nearest two thirds of the way up the main stem, which is where the arm pushes and cuts
     const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);

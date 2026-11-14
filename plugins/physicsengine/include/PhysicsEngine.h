@@ -617,6 +617,13 @@ private:
         float rest_transform[16];
     };
 
+    //! A Context object whose primitives are all bound to one body, whose own transform is moved with them
+    struct ObjectBinding {
+        uint objID;
+        size_t rest_pose_index;
+        float rest_transform[16];
+    };
+
     struct TubeBinding {
         uint objID;
         std::vector<size_t> node_rest_pose_index;
@@ -662,6 +669,7 @@ private:
     std::vector<std::array<float, 16>> synced_transforms; // rigid motion of each rest pose that the Context geometry shows, empty before the first updateContextGeometry()
     float context_update_tolerance = 0.f;
     std::vector<PrimitiveBinding> primitive_bindings;
+    std::vector<ObjectBinding> object_bindings;
     std::vector<TubeBinding> tube_bindings;
     std::vector<char> body_is_external; // indexed by MuJoCo body ID: true for kinematic boxes and bodies of loaded models
     std::vector<int> geom_link_articulation; // indexed by MuJoCo geom ID: the articulation of the link the geom belongs to, otherwise -1

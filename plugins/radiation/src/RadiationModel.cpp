@@ -9021,9 +9021,10 @@ void RadiationModel::buildTextureData() {
 
     // Cache to avoid duplicate mask data for primitives using the same texture file
     std::map<std::string, int> texture_to_mask_idx;
-    // The same for class maps, and for the class fractions of primitives that share a class map and (u,v) coordinates (such as the leaves of one plant)
+    // The same for class maps. The class fractions of primitives that share a class map and (u,v) coordinates (such as the leaves of one plant) are computed
+    // once, and taken from the previous build where it had them (see class_fraction_cache); this build's are collected to replace that cache.
     std::map<std::string, int> class_map_to_idx;
-    std::map<std::pair<int, std::vector<float>>, std::vector<std::pair<uint16_t, float>>> class_fraction_cache;
+    std::map<std::string, std::map<std::vector<float>, std::vector<std::pair<uint16_t, float>>>> used_class_fractions;
     // Index of each decoded normal map (by the Context's shared copy), or -1 for a map whose normals all quantize to the facet normal, which is no map at all
     std::map<const helios::NormalMapTexels *, int> normal_map_to_idx;
     std::map<const helios::NormalMapTexels *, uint> normal_map_key_index;
@@ -9182,9 +9183,23 @@ void RadiationModel::buildTextureData() {
                 uv_key.push_back(uv.x);
                 uv_key.push_back(uv.y);
             }
-            auto fraction_it = class_fraction_cache.find({class_map_idx, uv_key});
-            if (fraction_it == class_fraction_cache.end()) {
-                fraction_it = class_fraction_cache.emplace(std::make_pair(class_map_idx, uv_key), helios::classMapAreaFractions(classes, class_map_size, uvs)).first;
+            std::map<std::vector<float>, std::vector<std::pair<uint16_t, float>>> &used_for_map = used_class_fractions[class_map_file];
+            auto fraction_it = used_for_map.find(uv_key);
+            if (fraction_it == used_for_map.end()) {
+                std::vector<std::pair<uint16_t, float>> fractions;
+                bool computed_before = false;
+                const auto cached_map = class_fraction_cache.find(class_map_file);
+                if (cached_map != class_fraction_cache.end()) {
+                    const auto cached = cached_map->second.find(uv_key);
+                    if (cached != cached_map->second.end()) {
+                        fractions = cached->second;
+                        computed_before = true;
+                    }
+                }
+                if (!computed_before) {
+                    fractions = helios::classMapAreaFractions(classes, class_map_size, uvs);
+                }
+                fraction_it = used_for_map.emplace(uv_key, std::move(fractions)).first;
             }
             if (fraction_it->second.empty()) {
                 helios_runtime_error(
@@ -9194,6 +9209,8 @@ void RadiationModel::buildTextureData() {
             spectral_class_fractions[prim_idx] = fraction_it->second;
         }
     }
+
+    class_fraction_cache = std::move(used_class_fractions);
 
     // Reported whether or not messages are enabled, since the radiation model then treats these primitives differently from what the user asked for
     // A slot in the record of incident directions for each primitive whose map reaches the devices

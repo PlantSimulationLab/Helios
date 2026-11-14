@@ -2822,6 +2822,15 @@ protected:
     //! depends only on the class map and the (u,v) coordinates.
     std::vector<std::vector<std::pair<uint16_t, float>>> spectral_class_fractions;
 
+    //! The class fractions of the last geometry build, by class map file and then by a primitive's (u,v) coordinates (u0, v0, u1, v1, ...)
+    /**
+     * Computing them clips each primitive against every texel under it, which dominates a rebuild of a scene with many textured
+     * primitives, while it depends only on the class map, which the Context reads once per file and never changes, and the (u,v)
+     * coordinates. Kept from one build to the next, so that a rebuild after only some primitives moved does not repeat it. Each
+     * build keeps only the entries it used, so the cache holds no more than the current geometry needs.
+     */
+    std::map<std::string, std::map<std::vector<float>, std::vector<std::pair<uint16_t, float>>>> class_fraction_cache;
+
     //! File of each class map in geometry_data.class_map_sizes, to check that a primitive's class map is the one its geometry was built with
     std::vector<std::string> spectral_class_map_files;
 
