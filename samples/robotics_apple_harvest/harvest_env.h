@@ -101,6 +101,27 @@ void harvest_env_target_fruit(const void *env, int index, float *position);
 //! that will render. Returns 0 and prints the reason on failure.
 int harvest_env_enable_movie_camera(void *env, int width, int height);
 
+//! Draw the rest of the row around each simulated tree, for showing it from outside: neighbors_each_side trees on each side along the row, grown like it
+//! but from later random draws, and with trellis nonzero a tall-spindle trellis (wires, a stake at each tree, and a line post every ten trees). None of it
+//! is simulated: nothing collides with it. Call it before harvest_env_enable_movie_camera(). Returns 0 and prints the reason on failure.
+int harvest_env_add_movie_scenery(void *env, int neighbors_each_side, int trellis);
+
+//! Draw movies with radiation cameras rather than the visualizer: a camera from outside of width by height pixels, and one on the wrist of wrist_width by
+//! wrist_height, each tracing antialiasing_samples rays per pixel, in the sun and sky of the ASTM G173 spectra, with camera flux smoothing so that curved
+//! surfaces shade smoothly. Leaves get LeafOptics' default spectra, bark and fruit the spectra of their texture's classes, and the robot, ground and trellis
+//! color references close to the colors the visualizer draws them in. Call it after harvest_env_add_movie_scenery(), and instead of
+//! harvest_env_enable_movie_camera(). The ground becomes an adaptive tile, finest in the alley beside the row. With periodic_repeats above 0, the drawn row
+//! (trees, trellis and ground) repeats periodic_repeats times each way along it through a periodic boundary, and the robot does not repeat: the ground then
+//! spans the row's length exactly, end-tree canopy hanging past an end of the row moves to the other end, and anything still crossing an end is cut off.
+//! With row_repeats above 0, the row repeats row_repeats times on each side across the rows, 3.5 m apart, in the same way (the ground then spans one
+//! row spacing, centred 0.25 m into the robot's alley so that the robot lies within it). Returns 0 and prints the reason on failure.
+int harvest_env_enable_radiation_movie_cameras(void *env, int width, int height, int wrist_width, int wrist_height, int antialiasing_samples, int periodic_repeats, int row_repeats);
+
+//! As harvest_env_render_movie_frame(), with the radiation cameras: renders the view from eye looking at look_at and the wrist camera's view of the same
+//! pose, and writes them as JPEG images in directory, giving their file names in movie_image_file and wrist_image_file (each with room for
+//! file_name_capacity characters). Returns 0 and prints the reason on failure.
+int harvest_env_render_radiation_movie_frame(void *env, int index, const float *link_poses, const float *robot_joints, const float *eye, const float *look_at, const char *directory, char *movie_image_file, char *wrist_image_file, int file_name_capacity);
+
 //! Render one simulation from eye looking at look_at, with its plant in the given link poses (NaN: carried by the parent link as at rest) and the robot at
 //! the given joint positions, as harvest_env_display_state() gives them. image has room for height * width * 3 bytes, RGB with the first row at the top.
 //! This leaves the simulation in the pose shown, so an environment used for this should only be used for showing. Returns 0 and prints the reason on failure.

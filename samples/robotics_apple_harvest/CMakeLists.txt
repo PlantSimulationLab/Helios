@@ -14,7 +14,7 @@ set( EXECUTABLE_NAME "robotics_apple_harvest" )
 set( SOURCE_FILES "main.cpp;harvest_env.cpp" )
 
 #specify which plug-ins to use (separate plug-in names with semicolon)
-set( PLUGINS "plantarchitecture;physicsengine;robotics;visualizer" )
+set( PLUGINS "plantarchitecture;physicsengine;robotics;visualizer;radiation;leafoptics" )
 
 # PyTorch brings its own OpenMP runtime, and two in one process can give wrong results. The environment has its own threads, so it does not need OpenMP.
 set( ENABLE_OPENMP OFF CACHE BOOL "" FORCE )
@@ -27,6 +27,6 @@ include( "${BASE_DIRECTORY}/core/CMake_project.cmake" )
 
 # The environment as a shared library, for harvest_env.py
 add_library( apple_harvest_env SHARED harvest_env.cpp )
-target_link_libraries( apple_harvest_env PRIVATE helios plantarchitecture physicsengine robotics visualizer )
+target_link_libraries( apple_harvest_env PRIVATE helios plantarchitecture physicsengine robotics visualizer radiation leafoptics )
 # MSVC exports nothing from a DLL unless told to, so harvest_env.py could not find the functions
 set_target_properties( apple_harvest_env PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON )

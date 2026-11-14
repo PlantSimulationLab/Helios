@@ -15,6 +15,8 @@ import ctypes
 import json
 import os
 import sys
+import tempfile
+import time
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -177,14 +179,32 @@ def main():
     parser.add_argument("--pairs", type=int, default=6, help="episodes shown from each simulator")
     parser.add_argument("--grip-line", default="The cup must touch the apple to grip it; after a detachment it backs away with the apple for 1 s, whatever the policy would do", help="the title card's line describing the grip")
     parser.add_argument("--closing", action="append", default=[], help="a line of the closing card (heading, results, footnote); repeat for each line, none for no card")
+    parser.add_argument("--closing-file", default="", help="text file with the closing card's lines, one per line, instead of --closing; needed for lines with %% signs when running through IsaacSim's python.bat, which runs under cmd")
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)
     parser.add_argument("--hold", type=float, default=1.2, help="seconds the end of each episode is held")
     parser.add_argument("--no-leaves", action="store_true")
+    parser.add_argument("--neighbors", type=int, default=0, help="trees drawn on each side of the simulated one along the row; drawn only, not simulated")
+    parser.add_argument("--trellis", action="store_true", help="draw a tall-spindle trellis (wires, stakes, line posts); drawn only, not simulated")
+    parser.add_argument("--radiation", action="store_true", help="draw with radiation cameras (sunlight, spectra, smooth shading) instead of the visualizer")
+    parser.add_argument("--antialiasing", type=int, default=16, help="rays per pixel of the radiation cameras")
+    parser.add_argument("--periodic", type=int, default=0, help="with --radiation, repeat the drawn row (--neighbors, --trellis) this many times each way along the row with a periodic boundary; the robot is not repeated")
+    parser.add_argument("--rows", type=int, default=0, help="with --radiation, repeat the row this many times on each side across the rows (3.5 m apart) with a periodic boundary")
     parser.add_argument("--output", default="harvester.mp4")
     parser.add_argument("--still", default="", help="PNG of a representative frame")
     parser.add_argument("--stills-only", action="store_true", help="write only the still, for choosing the camera")
+    parser.add_argument("--eye-offset", default=",".join(str(v) for v in EYE_OFFSET), help="camera position relative to the fruit being picked, x,y,z in meters")
+    parser.add_argument("--look-offset", default=",".join(str(v) for v in LOOK_OFFSET), help="point the camera looks at, relative to the fruit being picked, x,y,z in meters")
     args, _ = parser.parse_known_args()
+    eye_offset = np.array([float(v) for v in args.eye_offset.split(",")])
+    look_offset = np.array([float(v) for v in args.look_offset.split(",")])
+    if eye_offset.shape != (3,) or look_offset.shape != (3,):
+        raise ValueError("--eye-offset and --look-offset each take three numbers, x,y,z")
+    if args.closing_file:
+        if args.closing:
+            raise ValueError("give the closing card's lines with --closing or --closing-file, not both")
+        with open(args.closing_file, encoding="utf-8") as file:
+            args.closing = [line.rstrip("\n") for line in file if line.strip()]
 
     helios_meta, helios_episodes = load(args.helios)
     side_by_side = bool(args.isaac)
@@ -200,7 +220,16 @@ def main():
     panel = (args.width // 2, args.height) if side_by_side else (args.width, args.height)
     seeds = (ctypes.c_int * 1)(tree)
     env = lib.harvest_env_create_for_movie(seeds, 1, 1, 1, 0, 0 if args.no_leaves else 1, 1)
-    if not env or not lib.harvest_env_enable_movie_camera(env, panel[0], panel[1]):
+    if not env:
+        raise RuntimeError("The Helios environment for drawing could not be created")
+    if (args.neighbors or args.trellis) and not lib.harvest_env_add_movie_scenery(env, args.neighbors, 1 if args.trellis else 0):
+        raise RuntimeError("The rest of the row could not be added")
+    if args.radiation:
+        wrist_size = (int(panel[0] * INSET_SCALE), int(panel[1] * INSET_SCALE))
+        if not lib.harvest_env_enable_radiation_movie_cameras(env, panel[0], panel[1], wrist_size[0], wrist_size[1], args.antialiasing, args.periodic, args.rows):
+            raise RuntimeError("The radiation cameras could not be set up")
+        frame_directory = tempfile.mkdtemp(prefix="harvest_frames_")
+    elif not lib.harvest_env_enable_movie_camera(env, panel[0], panel[1]):
         raise RuntimeError("The Helios environment for drawing could not be created")
     names = helios_link_names(lib, env)
     rest = np.zeros((len(names), 7), np.float32)
@@ -216,10 +245,21 @@ def main():
 
     def render(poses, joints, target):
         """The view from outside, and the wrist camera's view of the same pose."""
-        eye = (target + EYE_OFFSET).astype(np.float32)
-        look = (target + LOOK_OFFSET).astype(np.float32)
+        eye = (target + eye_offset).astype(np.float32)
+        look = (target + look_offset).astype(np.float32)
         joints = np.ascontiguousarray(joints, np.float32)
         poses = np.ascontiguousarray(poses)
+        if args.radiation:
+            movie_file = ctypes.create_string_buffer(4096)
+            wrist_file = ctypes.create_string_buffer(4096)
+            if not lib.harvest_env_render_radiation_movie_frame(env, 0, as_floats(poses), as_floats(joints), as_floats(eye), as_floats(look), frame_directory.encode(), movie_file, wrist_file, 4096):
+                raise RuntimeError("harvest_env_render_radiation_movie_frame failed")
+            images = []
+            for name in (movie_file.value.decode(), wrist_file.value.decode()):
+                with Image.open(name) as picture:
+                    images.append(picture.convert("RGB"))
+                os.remove(name)
+            return images[0], images[1]
         pixels = image.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
         if not lib.harvest_env_render_movie_frame(env, 0, as_floats(poses), as_floats(joints), as_floats(eye), as_floats(look), pixels):
             raise RuntimeError("harvest_env_render_movie_frame failed")
@@ -234,11 +274,19 @@ def main():
     controller = "the scripted controller" if scripted else f"a policy trained in {trained_in}"
     subtitle = f"Tree {tree}, " + ("scripted controller" if scripted else f"policy trained in {trained_in}") + "  ·  drawn by Helios"
 
+    # The last view rendered for each side, by (episode, step): the frames that hold the end of an episode show the same pose, and rendering it again
+    # costs as much as any frame with the radiation cameras
+    last_rendered = {}
+
     def side(episodes, convert, title, k, frame):
         episode = episodes[k]
         last = len(episode["poses"]) - 1
         f = min(frame, last)
-        picture, wrist = render(convert(episode["poses"][f]), episode["joints"][f], episode["target"].astype(np.float64))
+        cached = last_rendered.get(title)
+        if cached is None or cached[0] != (k, f):
+            cached = ((k, f),) + render(convert(episode["poses"][f]), episode["joints"][f], episode["target"].astype(np.float64))
+            last_rendered[title] = cached
+        picture, wrist = cached[1].copy(), cached[2]
         add_inset(picture, wrist)
         return label_panel(picture, title, subtitle, k + 1, frame, episode, frame >= last)
 
@@ -256,7 +304,14 @@ def main():
         # A frame with the cup on the fruit: the step before the end of the first episode
         k = 0
         frame = min(len(helios_episodes[k]["poses"]), len(isaac_episodes[k]["poses"])) - 6
-        compose(k, frame).save(args.still or "movie_still.png")
+        started = time.perf_counter()
+        still = compose(k, frame)
+        print(f"rendered the still in {time.perf_counter() - started:.1f} s (the first frame also builds the scene for the renderer)", flush=True)
+        if args.radiation:
+            started = time.perf_counter()
+            compose(k, frame - 1)
+            print(f"rendered the next frame in {time.perf_counter() - started:.1f} s", flush=True)
+        still.save(args.still or "movie_still.png")
         print(f"wrote {args.still or 'movie_still.png'}", flush=True)
         if args.stills_only:
             return
@@ -275,10 +330,15 @@ def main():
             frames += 1
 
     size = (args.width, args.height)
+    drawn_only = ([] if args.no_leaves else ["leaves"]) + (["the rest of the row"] if args.periodic else ["the neighboring trees"] if args.neighbors else []) + (["the trellis"] if args.trellis else [])
+    drawn_only_line = []
+    if drawn_only:
+        listed = drawn_only[0] if len(drawn_only) == 1 else ", ".join(drawn_only[:-1]) + " and " + drawn_only[-1]
+        drawn_only_line = [(listed[0].upper() + listed[1:] + " are drawn for context; " + ("neither simulator simulates them" if side_by_side else "they are not simulated"), 20, False)]
     if side_by_side:
-        title_lines = [("Apple harvesting robot, two physics engines", 46, True), (("The same tree and the same scripted controller" if scripted else f"The same tree and the same policy (trained in {trained_in})") + ", simulated in Helios (MuJoCo) and Isaac Sim (PhysX)", 24, False), ("Episodes are not paired: each simulator draws its own fruit, force to detach and start position", 22, False), ("Both sides drawn by the Helios visualizer from each simulator's recorded poses  ·  real time", 20, False), ("Leaves are drawn for context; neither simulator simulates them", 20, False)]
+        title_lines = [("Apple harvesting robot, two physics engines", 46, True), (("The same tree and the same scripted controller" if scripted else f"The same tree and the same policy (trained in {trained_in})") + ", simulated in Helios (MuJoCo) and Isaac Sim (PhysX)", 24, False), ("Episodes are not paired: each simulator draws its own fruit, force to detach and start position", 22, False), ("Both sides " + ("rendered by Helios radiation cameras" if args.radiation else "drawn by the Helios visualizer") + " from each simulator's recorded poses  ·  real time", 20, False)] + drawn_only_line
     else:
-        title_lines = [("Apple harvesting robot in Helios", 46, True), (f"Tree {tree}, never used in training, and {controller}, simulated in Helios (MuJoCo)", 24, False), ("Drawn by the Helios visualizer  ·  real time", 20, False), ("Leaves are drawn for context; they are not simulated", 20, False)]
+        title_lines = [("Apple harvesting robot in Helios", 46, True), (f"Tree {tree}, never used in training, and {controller}, simulated in Helios (MuJoCo)", 24, False), ((("Rendered by Helios radiation cameras: sunlight, measured spectra, smooth shading") if args.radiation else "Drawn by the Helios visualizer") + "  ·  real time", 20, False)] + drawn_only_line
     title_lines += [(("The controller" if scripted else "The policy") + " is given exact positions of the fruit and wood, not images; the inset shows what a wrist camera would see", 20, False), (args.grip_line, 20, False)]
     emit(card(size, title_lines), int(4.0 * FPS))
     for k in range(pairs):

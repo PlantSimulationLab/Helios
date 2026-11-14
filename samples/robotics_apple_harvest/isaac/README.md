@@ -47,6 +47,32 @@ C:/isaacsim/python.bat ../isaac/movie_record.py --simulator isaac --policy apple
 C:/isaacsim/python.bat ../isaac/movie_render.py --helios helios_301.npz --isaac isaac_301.npz --output harvester.mp4 --still harvester.png
 ```
 
+Without `--isaac`, Helios's episodes fill the frame. `--neighbors N` draws N more trees on each side along the row, and `--trellis` a
+tall-spindle trellis: wires along the row, a stake at each tree and a line post every ten trees (`harvest_env_add_movie_scenery()`). Like
+the leaves, they are drawn only: the simulated tree is alone, and nothing collides with them. The fruit the arm picks are those nearest
+the alley, well in front of the wires. Along the row they lie within the tree's hedge, 0.45 m from it, where its neighbors' hedges begin,
+so a fruit at the edge of its tree could have the cup brush a neighbor's drawn leaves (on tree 301 the fruit shown are within 0.28 m).
+Neighbors hide the fruit from the default camera, which looks down the row, so give a camera in the alley with `--eye-offset` and
+`--look-offset`:
+
+```bash
+C:/isaacsim/python.bat ../isaac/movie_render.py --helios helios_301.npz --neighbors 4 --trellis --eye-offset=-2.3,-2.6,0.5 --look-offset=-0.5,0.3,-0.3 --output harvester_row.mp4
+```
+
+`--radiation` draws the frames with Helios radiation cameras instead of the visualizer (`harvest_env_enable_radiation_movie_cameras()`):
+sun and sky with the ASTM G173 spectra, leaves from LeafOptics, bark and fruit from their texture's classes, color references for the
+robot and trellis, soil for the ground, and camera flux smoothing, with `--antialiasing` rays per pixel. `--periodic N` then repeats the
+drawn row N times each way along it through a periodic boundary, without repeating the robot; the ground spans the row's length
+exactly, and end-tree canopy hanging past an end of the row is moved to the other end (what still crosses an end is cut off). `--rows N`
+adds N rows on each side, 3.5 m apart, in the same way; the ground then spans one row spacing, set 0.25 m into the robot's alley so that
+the robot lies within it. With 2
+neighbors each side the period is 5 trees, too short for a line post. On an RTX-class GPU a 1280 x 720 frame of 5 leafy trees (1.2 million
+primitives) takes about 40 s, and the first about 3 minutes more while the class maps of the bark and fruit are sampled:
+
+```
+C:/isaacsim/python.bat ../isaac/movie_render.py --helios helios_301.npz --neighbors 2 --trellis --radiation --periodic 12 --rows 3 --antialiasing 32 --eye-offset=-2.3,-2.6,0.5 --look-offset=-0.5,0.3,-0.3 --output harvester_radiation.mp4
+```
+
 ## How the tree is simulated
 
 In MuJoCo the tree is one articulation in which most links are welded: every internode except 8 behind each candidate fruit, and the

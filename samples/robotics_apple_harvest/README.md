@@ -96,7 +96,7 @@ Success over 240 episodes (2 simulations of each of trees 301-312, never used in
 | Must touch, holds the fruit on the face, seal limits on pull, sliding and peeling | 45.0% | 52.1% | slipped 23%, collision 15% |
 | Seals only with the whole lip on the fruit, which sits in the cup's mouth | 50.0% | 17.1% (31.7% after 1,500,000 steps) | timeout 48%, collision 23% (after 1.5M: collision 37%, timeout 17%) |
 | Same grip, and the tree's parts collide with each other | 65.4% | 31.7% | collision 29%, knocked off 21%, timeout 16% |
-| Same task on the mature tall-spindle wall (this version) | 75.4% | 0.0% from scratch; 55.4% starting from a copy of the scripted controller | from scratch: timeout 90%; from the copy: knocked off 21%, collision 18% |
+| Same task on the mature tall-spindle wall (this version) | 75.4% | 0.0% from scratch; 55.4% starting from a copy of the scripted controller; 76.7% from the copy on 16 training trees | from scratch: timeout 90%; from the copy: knocked off 21%, collision 18%; on 16 trees: collision 15%, timeout 7% |
 
 The trees of the rows above were the earlier `apple_fruitingwall`, a smaller wall that Helios 1.3.96 replaced, so only the last row is
 for the current trees.
@@ -112,7 +112,12 @@ episodes. Starting instead from a policy that copies the scripted controller (`t
 --initial-log-std -1`, so 600,000 steps in all) gives 55.4% (49.1-61.6%). The copy alone picked 4 of 16 held-out fruit, so PPO
 improves on it, but not to the scripted controller: it has as many protective stops (17.5%) but knocks off six times as many fruit
 (21.2%), pushing the fruit off its stem before the seal holds. It succeeded in 66% of episodes on its training trees and 37.5% on the
-held-out trees, so it fits the 8 training trees more than it learns what carries over. The results are in `results/mature_in_helios_*`.
+held-out trees, so it fits the 8 training trees more than it learns what carries over.
+
+Trained the same way on 16 trees instead (`--train-trees 16`), the policy succeeds as often on held-out trees as on its training trees
+(57.5% and 57.8% in its final checks) and gets 76.7% (70.9-81.6%) on trees 301-312, as good as the scripted controller. It knocks off
+1.2% of fruit, against 21% on 8 trees, with protective stops at 15.4% and timeouts at 6.7%. The 16 training trees take about 14 GB of
+memory in all, with the 4 held-out trees. The results are in `results/mature_in_helios_*`.
 
 With the face grip the policy pulls mostly downward (mean direction -0.34, -0.09, -0.75), where the earlier ones pulled toward the robot,
 and detaches fruit with a pull out of the face of only half the force to detach: the rest of the load goes along the face or into the

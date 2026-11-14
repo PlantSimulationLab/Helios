@@ -5,9 +5,11 @@
 
 #include "harvest_env.h"
 
+#include "LeafOptics.h"
 #include "ParallelRobotSimulations.h"
 #include "PlantPhysics.h"
 #include "ProtectiveStop.h"
+#include "RadiationModel.h"
 #include "RobotCamera.h"
 #include "ToolVelocityAction.h"
 #include "VacuumCup.h"
@@ -179,8 +181,28 @@ namespace {
         std::vector<int> link_bodies;
         std::vector<std::array<mjtNum, 7>> link_rest_poses;
         std::unique_ptr<RobotCamera> movie_camera;
+        bool leaves_kept;
+        // For movies drawn by radiation cameras instead: the reflectivity spectrum of each object of the robot and the scenery, which the visualizer draws in
+        // its color, and the ground
+        std::vector<std::pair<uint, std::string>> painted_objects;
+        uint ground_UUID = 0;
+        // The objects of the robot, which a periodic row of trees leaves out of its repeats, and the half-length of the row of drawn trees and trellis
+        // along y (negative before harvest_env_add_movie_scenery())
+        std::vector<uint> robot_objects;
+        float movie_row_half_length = -1.f;
+        std::unique_ptr<RadiationModel> radiation;
 
-        Tree(int seed, int instance_count, bool leaves, bool show_arm = false) : plantarchitecture(&context), engine(&context) {
+        uint paint(uint objID, const std::string &reflectivity_spectrum) {
+            painted_objects.emplace_back(objID, reflectivity_spectrum);
+            return objID;
+        }
+
+        uint paintRobot(uint objID, const std::string &reflectivity_spectrum) {
+            robot_objects.push_back(objID);
+            return paint(objID, reflectivity_spectrum);
+        }
+
+        Tree(int seed, int instance_count, bool leaves, bool show_arm = false) : plantarchitecture(&context), engine(&context), leaves_kept(leaves) {
             context.seedRandomGenerator(seed);
             plantarchitecture.disableMessages();
             engine.disableMessages();
@@ -227,15 +249,15 @@ namespace {
             // The neck, and the cup: its bottom and its lip as in harvest_arm.urdf, and its wall between them, which does not collide
             const RGBcolor rubber = make_RGBcolor(0.15f, 0.15f, 0.15f);
             const vec3 mouth = wrist + cup_face;
-            engine.bindObjectToBody(context.addConeObject(16, wrist, wrist + make_vec3(0.28f, 0, 0), 0.03f, 0.018f, make_RGBcolor(0.9f, 0.4f, 0.08f)), "robot/tool");
-            engine.bindObjectToBody(context.addSphereObject(16, wrist + make_vec3(0.29f, 0, 0), 0.012f, rubber), "robot/tool");
-            engine.bindObjectToBody(context.addConeObject(24, wrist + make_vec3(0.28f, 0, 0), mouth, 0.016f, cup_lip_radius, rubber), "robot/tool");
+            engine.bindObjectToBody(paintRobot(context.addConeObject(16, wrist, wrist + make_vec3(0.28f, 0, 0), 0.03f, 0.018f, make_RGBcolor(0.9f, 0.4f, 0.08f)), "ColorReference_Calibrite_07"), "robot/tool");
+            engine.bindObjectToBody(paintRobot(context.addSphereObject(16, wrist + make_vec3(0.29f, 0, 0), 0.012f, rubber), "ColorReference_Calibrite_24"), "robot/tool");
+            engine.bindObjectToBody(paintRobot(context.addConeObject(24, wrist + make_vec3(0.28f, 0, 0), mouth, 0.016f, cup_lip_radius, rubber), "ColorReference_Calibrite_24"), "robot/tool");
             std::vector<vec3> lip_nodes;
             for (int k = 0; k <= 32; k++) {
                 const float angle = 2.f * float(M_PI) * float(k) / 32.f;
                 lip_nodes.push_back(mouth + cup_lip_radius * make_vec3(0, std::cos(angle), std::sin(angle)));
             }
-            engine.bindObjectToBody(context.addTubeObject(8, lip_nodes, std::vector<float>(lip_nodes.size(), cup_lip_thickness), std::vector<RGBcolor>(lip_nodes.size(), rubber)), "robot/tool");
+            engine.bindObjectToBody(paintRobot(context.addTubeObject(8, lip_nodes, std::vector<float>(lip_nodes.size(), cup_lip_thickness), std::vector<RGBcolor>(lip_nodes.size(), rubber)), "ColorReference_Calibrite_24"), "robot/tool");
             if (show_arm) {
                 // The rest of the arm, as the collision shapes of harvest_arm.urdf in its zero pose, for showing the robot from outside. The wrist camera
                 // does not need it, and the observations do not depend on it.
@@ -243,15 +265,15 @@ namespace {
                 const RGBcolor joint_color = make_RGBcolor(0.25f, 0.25f, 0.28f);
                 const vec3 shoulder = robot_base + make_vec3(0.15f, 0, 0.75f);
                 const vec3 elbow = shoulder + make_vec3(0.65f, 0, 0);
-                engine.bindObjectToBody(context.addBoxObject(robot_base + make_vec3(0, 0, 0.22f), make_vec3(0.55f, 0.8f, 0.2f), make_int3(1, 1, 1), joint_color), "robot/platform");
-                engine.bindObjectToBody(context.addConeObject(24, robot_base + make_vec3(0.15f, 0, 0.25f), shoulder, 0.075f, 0.075f, arm_color), "robot/turret");
-                engine.bindObjectToBody(context.addSphereObject(16, shoulder, 0.07f, joint_color), "robot/upper_arm");
-                engine.bindObjectToBody(context.addConeObject(24, shoulder, elbow, 0.05f, 0.05f, arm_color), "robot/upper_arm");
-                engine.bindObjectToBody(context.addSphereObject(16, elbow, 0.055f, joint_color), "robot/forearm");
-                engine.bindObjectToBody(context.addConeObject(24, elbow, wrist, 0.038f, 0.038f, arm_color), "robot/forearm");
-                engine.bindObjectToBody(context.addSphereObject(16, wrist, 0.042f, joint_color), "robot/wrist_link");
+                engine.bindObjectToBody(paintRobot(context.addBoxObject(robot_base + make_vec3(0, 0, 0.22f), make_vec3(0.55f, 0.8f, 0.2f), make_int3(1, 1, 1), joint_color), "ColorReference_Calibrite_23"), "robot/platform");
+                engine.bindObjectToBody(paintRobot(context.addConeObject(24, robot_base + make_vec3(0.15f, 0, 0.25f), shoulder, 0.075f, 0.075f, arm_color), "ColorReference_Calibrite_12"), "robot/turret");
+                engine.bindObjectToBody(paintRobot(context.addSphereObject(16, shoulder, 0.07f, joint_color), "ColorReference_Calibrite_23"), "robot/upper_arm");
+                engine.bindObjectToBody(paintRobot(context.addConeObject(24, shoulder, elbow, 0.05f, 0.05f, arm_color), "ColorReference_Calibrite_12"), "robot/upper_arm");
+                engine.bindObjectToBody(paintRobot(context.addSphereObject(16, elbow, 0.055f, joint_color), "ColorReference_Calibrite_23"), "robot/forearm");
+                engine.bindObjectToBody(paintRobot(context.addConeObject(24, elbow, wrist, 0.038f, 0.038f, arm_color), "ColorReference_Calibrite_12"), "robot/forearm");
+                engine.bindObjectToBody(paintRobot(context.addSphereObject(16, wrist, 0.042f, joint_color), "ColorReference_Calibrite_23"), "robot/wrist_link");
             }
-            context.addPatch(make_vec3(0, 0, 0), make_vec2(20.f, 20.f), make_SphericalCoord(0, 0), make_RGBcolor(0.42f, 0.33f, 0.24f));
+            ground_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(20.f, 20.f), make_SphericalCoord(0, 0), make_RGBcolor(0.42f, 0.33f, 0.24f));
 
             PhysicsEngineParameters parameters;
             parameters.ground_collisions = true;
@@ -353,6 +375,36 @@ namespace {
 
     const float wrist_camera_field_of_view = 70.f;
     const float movie_camera_field_of_view = 40.f;
+    // Toward the sun, for both the visualizer's light and the radiation cameras' sun
+    const vec3 movie_light_direction = make_vec3(-0.35f, -0.45f, 0.82f);
+
+    // Radiation cameras for movies: rays per primitive for the radiation reaching each primitive, which smoothing interpolates across it (the sun's is traced
+    // again for each pixel sample), and bounces of scattered light
+    const size_t movie_direct_rays = 10;
+    const size_t movie_diffuse_rays = 100;
+    const uint movie_scattering_depth = 2;
+    const char *const movie_ground_spectrum = "soil_reflectivity_0000";
+    // The ground for radiation cameras: an adaptive tile of the visualizer's ground size, finest in the alley between the robot and the row
+    const float movie_ground_size = 20.f;
+    const float movie_ground_refinement_target_x = -0.8f;
+    const float movie_ground_subpatch_size_min = 0.1f;
+    const float movie_ground_subpatch_size_max = 2.f;
+    // Rows repeated beside the drawn one by a periodic boundary are this far apart, a usual spacing for tall spindle; the periodic cell across the rows is
+    // centred off the row, into the alley the robot stands in, so that the robot (whose platform reaches 1.83 m from the row) lies in one cell
+    const float movie_row_spacing = 3.5f;
+    const float movie_row_cell_center_x = -0.25f;
+
+    // The rest of the row, for movies: the wall's default tree spacing, and a tall-spindle trellis (Hoying, Robinson & Fargione, "The Tall Spindle
+    // Planting System"): high-tensile wires along the row, a conduit stake tied to each leader, and a wooden line post every ten trees.
+    const float row_tree_spacing = 0.9f;
+    const std::vector<float> trellis_wire_heights = {0.75f, 1.5f, 2.25f, 3.f};
+    const float trellis_wire_radius = 0.002f; // 4 mm across, a little thicker than the 2.5 mm (12.5 gauge) wire, so that it shows at movie resolution
+    const float stake_height = 3.f;
+    const float stake_radius = 0.01f;
+    const vec3 stake_offset = make_vec3(0.03f, 0, 0); // behind the leader, as the robot sees it
+    const float post_height = 3.3f;
+    const float post_radius = 0.06f;
+    const int trees_per_post = 10;
 
     // The part of rendering that needs no OpenGL, so that trees can do it in parallel
     void prepareSlotFrame(Slot &slot) {
@@ -391,11 +443,9 @@ namespace {
     // the given world pose, or, where that is NaN, follows its parent as it does at rest. The robot takes the given joint positions. This leaves the
     // simulation in the pose shown, with no velocity, so an environment used for this should only be used for showing. With wrist_view, eye and look_at
     // are ignored and the camera is where the wrist camera would be (pointCamera()), with its field of view.
-    void renderMovieFrame(Slot &slot, const float *link_poses, const float *robot_joints, const vec3 &eye, const vec3 &look_at, bool wrist_view, unsigned char *image) {
+    // Puts a simulation in a pose to be shown: the plant's links in the given poses (NaN: carried by the parent as at rest), and the robot at the given joint positions
+    void showPose(Slot &slot, const float *link_poses, const float *robot_joints) {
         Tree &tree = *slot.tree;
-        if (!tree.movie_camera) {
-            helios_runtime_error("ERROR (harvest_env_render_movie_frame): Call harvest_env_enable_movie_camera() first.");
-        }
         mjData *data = tree.engine.getMuJoCoData(slot.instance);
         tree.robot->setJointPositions(std::vector<float>(robot_joints, robot_joints + tree.robot->getJointPositions(slot.instance).size()), slot.instance);
 
@@ -434,7 +484,14 @@ namespace {
                 mju_quat2Mat(data->xmat + 9 * body, world[i].data() + 3);
             }
         }
+    }
 
+    void renderMovieFrame(Slot &slot, const float *link_poses, const float *robot_joints, const vec3 &eye, const vec3 &look_at, bool wrist_view, unsigned char *image) {
+        Tree &tree = *slot.tree;
+        if (!tree.movie_camera) {
+            helios_runtime_error("ERROR (harvest_env_render_movie_frame): Call harvest_env_enable_movie_camera() first.");
+        }
+        showPose(slot, link_poses, robot_joints);
         if (wrist_view) {
             vec3 wrist_eye, wrist_look_at;
             wristCameraPose(*tree.robot, slot.instance, wrist_eye, wrist_look_at);
@@ -997,10 +1054,234 @@ int harvest_env_enable_movie_camera(void *env, int width, int height) {
             movie.field_of_view = movie_camera_field_of_view;
             movie.antialiasing_samples = 8;
             movie.background = make_RGBcolor(0.72f, 0.83f, 0.95f);
-            movie.light_direction = make_vec3(-0.35f, -0.45f, 0.82f);
+            movie.light_direction = movie_light_direction;
             movie.shadows = true;
             tree->movie_camera = std::make_unique<RobotCamera>(&tree->engine, &tree->context, static_cast<uint>(width), static_cast<uint>(height), movie);
             tree->engine.setContextUpdateTolerance(1e-5f);
+        }
+        return 1;
+    } catch (const std::exception &error) {
+        std::cerr << error.what() << std::endl;
+        return 0;
+    }
+}
+
+int harvest_env_add_movie_scenery(void *env, int neighbors_each_side, int trellis) {
+    Environment &environment = *static_cast<Environment *>(env);
+    try {
+        if (neighbors_each_side < 0) {
+            helios_runtime_error("ERROR (harvest_env_add_movie_scenery): The number of neighboring trees on each side must not be negative.");
+        }
+        for (const std::unique_ptr<Tree> &tree: environment.trees) {
+            if (tree->movie_camera || tree->camera) {
+                helios_runtime_error("ERROR (harvest_env_add_movie_scenery): Add the scenery before enabling a camera, which takes its geometry from the Context when it is created.");
+            }
+            // None of this is bound to a body, so the physics engine leaves it out: it is drawn, and nothing collides with it
+            for (int k = 1; k <= neighbors_each_side; k++) {
+                for (const float side: {-1.f, 1.f}) {
+                    const uint neighborID = tree->plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, side * float(k) * row_tree_spacing, 0), plant_age);
+                    if (!tree->leaves_kept) {
+                        tree->plantarchitecture.removePlantLeaves(neighborID);
+                    }
+                }
+            }
+            const float row_end = (float(neighbors_each_side) + 0.5f) * row_tree_spacing;
+            tree->movie_row_half_length = row_end;
+            if (trellis == 0) {
+                continue;
+            }
+            const RGBcolor steel = make_RGBcolor(0.62f, 0.63f, 0.65f);
+            const RGBcolor wood = make_RGBcolor(0.42f, 0.33f, 0.24f);
+            for (const float height: trellis_wire_heights) {
+                tree->paint(tree->context.addConeObject(6, make_vec3(0, -row_end, height), make_vec3(0, row_end, height), trellis_wire_radius, trellis_wire_radius, steel), "ColorReference_Calibrite_21");
+            }
+            for (int k = -neighbors_each_side; k <= neighbors_each_side; k++) {
+                const vec3 base = make_vec3(0, float(k) * row_tree_spacing, 0) + stake_offset;
+                tree->paint(tree->context.addConeObject(12, base, base + make_vec3(0, 0, stake_height), stake_radius, stake_radius, steel), "ColorReference_Calibrite_21");
+            }
+            // Line posts stand between two trees; one between the second and third trees up the row (+y) from the simulated one, where the movie camera sees it
+            for (int k = -neighbors_each_side; k < neighbors_each_side; k++) {
+                if ((k - 2) % trees_per_post == 0) {
+                    const vec3 base = make_vec3(0, (float(k) + 0.5f) * row_tree_spacing, 0);
+                    tree->paint(tree->context.addConeObject(16, base, base + make_vec3(0, 0, post_height), post_radius, post_radius, wood), "ColorReference_Calibrite_01");
+                }
+            }
+        }
+        return 1;
+    } catch (const std::exception &error) {
+        std::cerr << error.what() << std::endl;
+        return 0;
+    }
+}
+
+int harvest_env_enable_radiation_movie_cameras(void *env, int width, int height, int wrist_width, int wrist_height, int antialiasing_samples, int periodic_repeats, int row_repeats) {
+    Environment &environment = *static_cast<Environment *>(env);
+    try {
+        if (width <= 0 || height <= 0 || wrist_width <= 0 || wrist_height <= 0 || antialiasing_samples <= 0) {
+            helios_runtime_error("ERROR (harvest_env_enable_radiation_movie_cameras): The image sizes and the number of antialiasing samples must be positive.");
+        }
+        if (periodic_repeats < 0 || row_repeats < 0) {
+            helios_runtime_error("ERROR (harvest_env_enable_radiation_movie_cameras): The numbers of periodic repeats along the row and of rows must not be negative.");
+        }
+        for (const std::unique_ptr<Tree> &tree: environment.trees) {
+            if (tree->movie_camera || tree->camera || tree->radiation) {
+                helios_runtime_error("ERROR (harvest_env_enable_radiation_movie_cameras): A camera is already enabled.");
+            }
+            if ((periodic_repeats > 0 || row_repeats > 0) && tree->movie_row_half_length <= 0.f) {
+                helios_runtime_error("ERROR (harvest_env_enable_radiation_movie_cameras): A periodic row repeats the drawn row of trees; call harvest_env_add_movie_scenery() first.");
+            }
+            Context &context = tree->context;
+            // The robot and the scenery: color references and soil, chosen to look like the colors the visualizer draws them in
+            context.loadXML("plugins/radiation/spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml", true);
+            for (const auto &[objID, spectrum]: tree->painted_objects) {
+                context.setPrimitiveData(context.getObjectPrimitiveUUIDs(objID), "reflectivity_spectrum", spectrum);
+            }
+            // The leaves, with LeafOptics' default properties; the bark and fruit take the spectra of the classes of their textures (applySpectralClassMaps() below)
+            const std::vector<uint> leaves = tree->plantarchitecture.getAllLeafUUIDs();
+            if (!leaves.empty()) {
+                LeafOptics leafoptics(&context);
+                leafoptics.disableMessages();
+                leafoptics.run(leaves, LeafOpticsProperties(), "apple");
+            }
+
+            // The ground as an adaptive tile, so that it is smoothed and takes the sun's shadows per pixel like the rest (a lone patch is not smoothed, and shows
+            // one value for the whole ground), with sub-patches finest in the alley beside the row, to resolve the sky the canopy hides there
+            // With a periodic boundary along the row, the ground spans the row's length along y exactly, as the trellis wires do, so that the repeats of the row
+            // meet without a gap; with repeated rows, it spans one row spacing across the rows
+            context.deletePrimitive(tree->ground_UUID);
+            const bool periodic_along = periodic_repeats > 0;
+            const bool periodic_across = row_repeats > 0;
+            const float row_half_length = tree->movie_row_half_length;
+            const vec2 cell_x = periodic_across ? make_vec2(movie_row_cell_center_x - 0.5f * movie_row_spacing, movie_row_cell_center_x + 0.5f * movie_row_spacing) : make_vec2(-0.5f * movie_ground_size, 0.5f * movie_ground_size);
+            const vec2 cell_y = periodic_along ? make_vec2(-row_half_length, row_half_length) : make_vec2(-0.5f * movie_ground_size, 0.5f * movie_ground_size);
+            AdaptiveTileRefinement ground_refinement;
+            ground_refinement.target = make_vec2(movie_ground_refinement_target_x, 0);
+            ground_refinement.subpatch_size_min = movie_ground_subpatch_size_min;
+            // The largest sub-patch of an adaptive tile may be at most half its smaller side, which a periodic cell can be narrow enough to limit
+            ground_refinement.subpatch_size_max = std::min(movie_ground_subpatch_size_max, 0.5f * std::min(cell_x.y - cell_x.x, cell_y.y - cell_y.x));
+            const uint ground = context.addAdaptiveTileObject(make_vec3(0.5f * (cell_x.x + cell_x.y), 0.5f * (cell_y.x + cell_y.y), 0), make_vec2(cell_x.y - cell_x.x, cell_y.y - cell_y.x), make_SphericalCoord(0, 0), ground_refinement,
+                                                              make_RGBcolor(0.42f, 0.33f, 0.24f));
+            tree->ground_UUID = 0;
+            context.setPrimitiveData(context.getObjectPrimitiveUUIDs(ground), "reflectivity_spectrum", movie_ground_spectrum);
+
+            std::vector<uint> robot_UUIDs;
+            if (periodic_along || periodic_across) {
+                // The period in each periodic direction is the extent of the geometry that repeats, so it must be the ground's: canopy that hangs past an edge of
+                // the cell (the end trees' along the row) is moved by one period to the opposite edge, where it is the overhang of the next repeat, and whatever
+                // still crosses an edge (an object moved or not that straddles it) is cut off there. The simulated tree and the robot lie well inside the cell.
+                const vec2 period = make_vec2(cell_x.y - cell_x.x, cell_y.y - cell_y.x);
+                const std::set<uint> robot_object_set(tree->robot_objects.begin(), tree->robot_objects.end());
+                size_t wrapped_objects = 0;
+                for (uint objID: context.getAllObjectIDs()) {
+                    if (objID == ground || robot_object_set.count(objID) != 0) {
+                        continue;
+                    }
+                    vec3 min_corner, max_corner;
+                    context.getObjectBoundingBox(objID, min_corner, max_corner);
+                    const vec3 center = 0.5f * (min_corner + max_corner);
+                    vec3 shift = make_vec3(0, 0, 0);
+                    if (periodic_across && (center.x < cell_x.x || center.x > cell_x.y)) {
+                        shift.x = center.x > cell_x.y ? -period.x : period.x;
+                    }
+                    if (periodic_along && (center.y < cell_y.x || center.y > cell_y.y)) {
+                        shift.y = center.y > cell_y.y ? -period.y : period.y;
+                    }
+                    if (shift.x != 0.f || shift.y != 0.f) {
+                        context.translateObject(objID, shift);
+                        wrapped_objects++;
+                    }
+                }
+                for (uint objID: tree->robot_objects) {
+                    const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(objID);
+                    robot_UUIDs.insert(robot_UUIDs.end(), UUIDs.begin(), UUIDs.end());
+                }
+                const std::set<uint> robot_UUID_set(robot_UUIDs.begin(), robot_UUIDs.end());
+                const float tolerance = 1e-4f;
+                std::vector<uint> straddling;
+                for (uint UUID: context.getAllUUIDs()) {
+                    if (robot_UUID_set.count(UUID) != 0) {
+                        continue;
+                    }
+                    for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+                        if ((periodic_across && (vertex.x < cell_x.x - tolerance || vertex.x > cell_x.y + tolerance)) || (periodic_along && (vertex.y < cell_y.x - tolerance || vertex.y > cell_y.y + tolerance))) {
+                            straddling.push_back(UUID);
+                            break;
+                        }
+                    }
+                }
+                context.deletePrimitive(straddling);
+                std::cout << "periodic cell " << period.x << " m across by " << period.y << " m along the row, repeated " << row_repeats << " times across and " << periodic_repeats
+                          << " times along each way: moved " << wrapped_objects << " overhanging objects to the opposite edge, cut " << straddling.size() << " primitives crossing an edge" << std::endl;
+            }
+
+            tree->radiation = std::make_unique<RadiationModel>(&context);
+            RadiationModel &radiation = *tree->radiation;
+            radiation.disableMessages();
+            if (periodic_along || periodic_across) {
+                const std::string boundary = std::string(periodic_across ? "x" : "") + (periodic_along ? "y" : "");
+                radiation.enforcePeriodicBoundary(boundary, robot_UUIDs, make_int2(row_repeats, periodic_repeats));
+            }
+            const std::vector<std::string> bands = {"red", "green", "blue"};
+            for (const std::string &band: bands) {
+                radiation.addRadiationBand(band);
+                radiation.disableEmission(band);
+                radiation.setScatteringDepth(band, movie_scattering_depth);
+                radiation.setDirectRayCount(band, movie_direct_rays);
+                radiation.setDiffuseRayCount(band, movie_diffuse_rays);
+            }
+            // The sun from the same direction as the visualizer's light, and the sky
+            const uint sun = radiation.addSunSphereRadiationSource(movie_light_direction);
+            radiation.setSourceSpectrum(sun, "solar_spectrum_direct_ASTMG173");
+            radiation.setDiffuseSpectrum("solar_spectrum_diffuse_ASTMG173");
+            radiation.applySpectralClassMaps();
+            radiation.enableCameraFluxSmoothing();
+
+            for (const auto &[label, image_width, image_height, vertical_field_of_view]: {std::tuple<const char *, int, int, float>{"movie", width, height, movie_camera_field_of_view}, {"wrist", wrist_width, wrist_height, wrist_camera_field_of_view}}) {
+                CameraProperties camera;
+                camera.camera_resolution = make_int2(image_width, image_height);
+                // The visualizer's field of view is vertical; a radiation camera's is horizontal
+                camera.HFOV = 2.f * std::atan(std::tan(0.5f * deg2rad(vertical_field_of_view)) * float(image_width) / float(image_height)) * 180.f / float(M_PI);
+                camera.lens_diameter = 0.f;
+                camera.model = "Nikon D700";
+                radiation.addRadiationCamera(label, bands, make_vec3(-3, 0, 1), make_vec3(0, 0, 1), camera, static_cast<uint>(antialiasing_samples));
+                radiation.setCameraSpectralResponseFromLibrary(label, "Nikon_D700");
+            }
+        }
+        return 1;
+    } catch (const std::exception &error) {
+        std::cerr << error.what() << std::endl;
+        return 0;
+    }
+}
+
+int harvest_env_render_radiation_movie_frame(void *env, int index, const float *link_poses, const float *robot_joints, const float *eye, const float *look_at, const char *directory, char *movie_image_file, char *wrist_image_file, int file_name_capacity) {
+    try {
+        Slot &slot = static_cast<Environment *>(env)->slots.at(index);
+        Tree &tree = *slot.tree;
+        if (!tree.radiation) {
+            helios_runtime_error("ERROR (harvest_env_render_radiation_movie_frame): Call harvest_env_enable_radiation_movie_cameras() first.");
+        }
+        showPose(slot, link_poses, robot_joints);
+        tree.engine.updateContextGeometry(slot.instance);
+        RadiationModel &radiation = *tree.radiation;
+        radiation.setCameraPosition("movie", make_vec3(eye[0], eye[1], eye[2]));
+        radiation.setCameraLookat("movie", make_vec3(look_at[0], look_at[1], look_at[2]));
+        vec3 wrist_eye, wrist_look_at;
+        wristCameraPose(*tree.robot, slot.instance, wrist_eye, wrist_look_at);
+        radiation.setCameraPosition("wrist", wrist_eye);
+        radiation.setCameraLookat("wrist", wrist_look_at);
+        const std::vector<std::string> bands = {"red", "green", "blue"};
+        radiation.updateGeometry();
+        radiation.runBand(bands);
+        for (const auto &[label, file_name]: {std::pair<const char *, char *>{"movie", movie_image_file}, {"wrist", wrist_image_file}}) {
+            const std::string written = radiation.writeCameraImage(label, bands, "RGB", std::string(directory) + "/");
+            if (written.empty()) {
+                helios_runtime_error("ERROR (harvest_env_render_radiation_movie_frame): The " + std::string(label) + " camera's image could not be written to " + directory + ".");
+            }
+            if (written.size() + 1 > size_t(file_name_capacity)) {
+                helios_runtime_error("ERROR (harvest_env_render_radiation_movie_frame): The name of the image written, " + written + ", is longer than the room given for it.");
+            }
+            std::snprintf(file_name, size_t(file_name_capacity), "%s", written.c_str());
         }
         return 1;
     } catch (const std::exception &error) {

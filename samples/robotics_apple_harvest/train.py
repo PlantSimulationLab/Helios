@@ -1,6 +1,6 @@
 """Train a state-based policy to pick apples, and report how it does on trees it never saw in training.
 
-Usage, from the build directory: python ../train.py [--steps 400000] [--threads 6] [--output apple_policy] [--seed 0] [--near-start 0] [--start-from apple_policy]
+Usage, from the build directory: python ../train.py [--steps 400000] [--threads 6] [--train-trees 8] [--output apple_policy] [--seed 0] [--near-start 0] [--start-from apple_policy]
        [--imitate-scripted 200000] [--value-warmup 100000] [--initial-log-std -1]
 """
 
@@ -15,7 +15,7 @@ from stable_baselines3.common.vec_env import VecNormalize
 
 from harvest_env import AppleHarvestVecEnv, evaluate, scripted_actions
 
-TRAIN_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8]
+TRAIN_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8]  # the default; --train-trees uses seeds 1 to that number instead
 HELD_OUT_SEEDS = [101, 102, 103, 104]
 
 
@@ -92,6 +92,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--steps", type=int, default=400000)
     parser.add_argument("--threads", type=int, default=6)
+    parser.add_argument("--train-trees", type=int, default=len(TRAIN_SEEDS), help="train on tree seeds 1 to this; each mature tree takes about 0.7 GB of memory")
     parser.add_argument("--report-every", type=int, default=50000)
     parser.add_argument("--output", default="apple_policy")
     parser.add_argument("--seed", type=int, default=0)
@@ -101,11 +102,16 @@ def main():
     parser.add_argument("--initial-log-std", type=float, default=None, help="log standard deviation of a new policy's actions, if not 0")
     parser.add_argument("--start-from", help="policy to continue training (saved with its _normalization.pkl), rather than starting a new one")
     args = parser.parse_args()
+    if args.train_trees < 1:
+        raise ValueError("--train-trees must be at least 1")
+    train_seeds = list(range(1, args.train_trees + 1))
+    if set(train_seeds) & set(HELD_OUT_SEEDS):
+        raise ValueError(f"--train-trees {args.train_trees} would train on the held-out trees {HELD_OUT_SEEDS}")
 
     # The simulation has the threads; the small network needs few
     torch.set_num_threads(2)
 
-    training_env = AppleHarvestVecEnv(TRAIN_SEEDS, instances_per_tree=2, threads=args.threads, seed=args.seed)
+    training_env = AppleHarvestVecEnv(train_seeds, instances_per_tree=2, threads=args.threads, seed=args.seed)
     training_env.set_near_start_fraction(args.near_start)
     if args.start_from:
         env = VecNormalize.load(args.start_from + "_normalization.pkl", training_env)
@@ -143,7 +149,7 @@ def main():
     rates, total = evaluate(held_out_env, lambda o: model.predict(normalize.normalize_obs(o), deterministic=True)[0], 5)
     print(f"Final, {total} episodes on {len(HELD_OUT_SEEDS)} held-out trees: {rates}", flush=True)
     rates, total = evaluate(env.venv, lambda o: model.predict(normalize.normalize_obs(o), deterministic=True)[0], 2)
-    print(f"Final, {total} episodes on the {len(TRAIN_SEEDS)} training trees: {rates}", flush=True)
+    print(f"Final, {total} episodes on the {len(train_seeds)} training trees: {rates}", flush=True)
 
 
 if __name__ == "__main__":
