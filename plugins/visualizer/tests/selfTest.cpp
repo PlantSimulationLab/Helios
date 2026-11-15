@@ -2526,6 +2526,47 @@ DOCTEST_TEST_CASE("Visualizer binds a real texture to every sampler the primary 
     DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getNormalMapMaterialTableTexture(visualizer) != 0, "no normal-map material table texture exists, so the normalMapMaterialTable sampler is bound to texture 0 for any scene built without a Context");
 }
 
+DOCTEST_TEST_CASE("Visualizer headless JPEG capture at a width that is not a multiple of 4") {
+    // readOffscreenPixels() read the offscreen framebuffer as GL_RGB into a tightly packed buffer without setting
+    // GL_PACK_ALIGNMENT, so at the default alignment of 4 each row came back padded to a multiple of 4 bytes. For a
+    // width of 381 (1143 bytes per row) that wrote one byte per row past the end of the buffer, corrupting the heap,
+    // and shifted every row by one more byte than the last, so a uniform background came back as rotating color bands.
+    const uint width = 381;
+    const uint height = 64;
+    const std::string filename = "test_headless_odd_width.jpeg";
+
+    {
+        Visualizer visualizer(width, height, 0, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.disableColorbar();
+        visualizer.setBackgroundColor(make_RGBcolor(0.f, 0.f, 1.f));
+        visualizer.plotUpdate(true);
+        DOCTEST_REQUIRE_NOTHROW(visualizer.printWindow(filename.c_str(), "jpeg"));
+    }
+
+    uint read_width = 0;
+    uint read_height = 0;
+    std::vector<RGBcolor> pixels;
+    helios::readJPEG(filename, read_width, read_height, pixels);
+    DOCTEST_REQUIRE(read_width == width);
+    DOCTEST_REQUIRE(read_height == height);
+
+    // JPEG compression leaves a flat field within a few levels of its color.
+    int off_color = 0;
+    for (const RGBcolor &pixel: pixels) {
+        if (pixel.r > 0.1f || pixel.g > 0.1f || pixel.b < 0.9f) {
+            off_color++;
+        }
+    }
+    DOCTEST_CHECK_MESSAGE(off_color == 0, off_color << " of " << pixels.size() << " pixels of a uniform blue background were read back as another color");
+
+    if (std::filesystem::exists(filename)) {
+        std::filesystem::remove(filename);
+    }
+}
+
 DOCTEST_TEST_CASE("Visualizer shadows render in headless mode") {
     // REGRESSION TEST: Visualizer::initialize() created the shadow-map framebuffer and
     // depth texture only under `if (!headless)`, so in headless mode framebufferID and
@@ -7737,4 +7778,41 @@ TEST_CASE("Visualizer reports normal maps on primitives with collinear texture c
     DOCTEST_CHECK(output.find("collinear texture (u,v) coordinates") != std::string::npos);
     std::filesystem::remove(tilt_u);
     std::filesystem::remove(texture);
+}
+
+DOCTEST_TEST_CASE("Visualizer draws a window-normalized texture in its own sRGB values") {
+    // The fragment shader decoded every textured or colored fragment from sRGB to linear light when the linear
+    // pipeline was on (the default), but re-encoded only 3D geometry (coordinateFlag==1). A textured rectangle in
+    // window-normalized coordinates therefore came out in linear values: a uniform sRGB 128 texture was drawn as 55.
+    const std::string texture_file = "test_window_texture_gray128.jpeg";
+    const std::string capture_file = "test_window_texture_capture.jpeg";
+    const uint width = 200;
+    const uint height = 160;
+
+    helios::writeJPEG(texture_file, 64, 64, std::vector<RGBcolor>(64 * 64, make_RGBcolor(128.f / 255.f, 128.f / 255.f, 128.f / 255.f)));
+
+    {
+        Visualizer visualizer(width, height, 0, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.disableColorbar();
+        visualizer.setBackgroundColor(make_RGBcolor(1.f, 0.f, 0.f));
+        visualizer.addRectangleByCenter(make_vec3(0.5f, 0.5f, 0.f), make_vec2(0.8f, 0.8f), make_SphericalCoord(0, 0), texture_file.c_str(), Visualizer::COORDINATES_WINDOW_NORMALIZED);
+        visualizer.plotUpdate(true);
+        DOCTEST_REQUIRE_NOTHROW(visualizer.printWindow(capture_file.c_str(), "jpeg"));
+    }
+
+    uint read_width = 0;
+    uint read_height = 0;
+    std::vector<RGBcolor> pixels;
+    helios::readJPEG(capture_file, read_width, read_height, pixels);
+    DOCTEST_REQUIRE(read_width == width);
+    DOCTEST_REQUIRE(read_height == height);
+
+    const RGBcolor center = pixels.at((height / 2) * width + width / 2);
+    DOCTEST_CHECK_MESSAGE(std::fabs(center.g * 255.f - 128.f) <= 3.f, "a uniform sRGB 128 texture in window coordinates was drawn as " << center.g * 255.f);
+
+    std::filesystem::remove(texture_file);
+    std::filesystem::remove(capture_file);
 }
