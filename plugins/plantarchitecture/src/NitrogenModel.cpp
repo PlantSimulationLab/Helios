@@ -202,8 +202,9 @@ float PlantArchitecture::getPlantRootNitrogen(uint plantID) const {
 
 // ==================== Leaf Senescence ==================== //
 
-void PlantArchitecture::senesceLeafNitrogen(float dt) {
-    for (auto &[plantID, plant]: plant_instances) {
+void PlantArchitecture::senesceLeafNitrogen(const std::vector<uint> &plantIDs, float dt) {
+    for (uint plantID: plantIDs) {
+        PlantInstance &plant = plant_instances.at(plantID);
         const NitrogenParameters &N_params = plant.nitrogen_parameters;
         if (N_params.leaf_senescence_duration_fraction < 0 || N_params.stress_senescence_advance_fraction < 0 || N_params.leaf_senescence_duration_fraction + N_params.stress_senescence_advance_fraction > 1.f) {
             helios_runtime_error("ERROR (PlantArchitecture::senesceLeafNitrogen): NitrogenParameters::leaf_senescence_duration_fraction (" + std::to_string(N_params.leaf_senescence_duration_fraction) +
@@ -248,8 +249,9 @@ void PlantArchitecture::senesceLeafNitrogen(float dt) {
 
 // ==================== Leaf Nitrogen Accumulation (Rate-Limited, Area Basis) ==================== //
 
-void PlantArchitecture::accumulateLeafNitrogen(float dt) {
-    for (auto &[plantID, plant]: plant_instances) {
+void PlantArchitecture::accumulateLeafNitrogen(const std::vector<uint> &plantIDs, float dt) {
+    for (uint plantID: plantIDs) {
+        PlantInstance &plant = plant_instances.at(plantID);
         const NitrogenParameters &N_params = plant.nitrogen_parameters;
         const float max_N_area_this_step = N_params.max_N_accumulation_rate * dt;
 
@@ -333,8 +335,9 @@ void PlantArchitecture::accumulateLeafNitrogen(float dt) {
 
 // ==================== Nitrogen Remobilization (Area Basis) ==================== //
 
-void PlantArchitecture::remobilizeNitrogen(float dt) {
-    for (auto &[plantID, plant]: plant_instances) {
+void PlantArchitecture::remobilizeNitrogen(const std::vector<uint> &plantIDs, float dt) {
+    for (uint plantID: plantIDs) {
+        PlantInstance &plant = plant_instances.at(plantID);
         const NitrogenParameters &N_params = plant.nitrogen_parameters;
 
         // Remobilization answers a shortfall: what uptake could not give the leaves this step, and fruit growth the
@@ -464,8 +467,9 @@ void PlantArchitecture::remobilizeNitrogen(float dt) {
 
 // ==================== Nitrogen Stress Factor Calculation (Area Basis) ==================== //
 
-void PlantArchitecture::updateNitrogenStressFactor() {
-    for (auto &[plantID, plant]: plant_instances) {
+void PlantArchitecture::updateNitrogenStressFactor(const std::vector<uint> &plantIDs) {
+    for (uint plantID: plantIDs) {
+        PlantInstance &plant = plant_instances.at(plantID);
         const NitrogenParameters &N_params = plant.nitrogen_parameters;
 
         // Calculate area-weighted average leaf N content per area across all leaves
@@ -526,8 +530,9 @@ void PlantArchitecture::updateNitrogenStressFactor() {
 
 // ==================== Fruit Nitrogen Removal (Area Basis) ==================== //
 
-void PlantArchitecture::removeFruitNitrogen() {
-    for (auto &[plantID, plant]: plant_instances) {
+void PlantArchitecture::removeFruitNitrogen(const std::vector<uint> &plantIDs) {
+    for (uint plantID: plantIDs) {
+        PlantInstance &plant = plant_instances.at(plantID);
         const NitrogenParameters &N_params = plant.nitrogen_parameters;
         plant.unmet_fruit_N_demand_gN = 0;
 

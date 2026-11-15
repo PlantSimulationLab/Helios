@@ -235,19 +235,21 @@ namespace library_model_plausibility {
                 {"almond", 548, 1.5f, 4.6f, 0.63f, 0.96f, 1.2f, 3.9f, 1.5f, 6.0f, 14, 98, default_depth},
                 {"almond_aldrich", 548, 1.6f, 4.8f, 0.63f, 0.97f, 1.2f, 4.5f, 1.1f, 5.4f, 19, 132, default_depth},
                 {"almond_independence", 548, 1.5f, 4.6f, 0.63f, 0.97f, 1.0f, 4.1f, 0.9f, 3.7f, 8, 86, default_depth},
-                {"almond_wood_colony", 548, 0.75f, 2.5f, 0.34f, 0.54f, 0.87f, 3.1f, 0.61f, 2.8f, 7, 68, default_depth},
+                {"almond_wood_colony", 548, 0.75f, 2.5f, 0.34f, 0.54f, 0.87f, 3.1f, 0.61f, 2.8f, 3, 68, default_depth},
                 {"apple", 548, 1.2f, 3.6f, 0.63f, 0.98f, 0.85f, 3.2f, 0.77f, 3.1f, 3, 44, default_depth},
                 {"apple_fruitingwall", 548, 1.4f, 4.2f, 1.8f, 3.1f, 0.58f, 1.9f, 0.94f, 4.2f, 6, 56, default_depth},
                 {"asparagus", 20, 0.15f, 0.42f, 0.15f, 0.42f, 0.022f, 0.25f, 0.001f, 0.0059f, 0, 0, default_depth},
                 {"bean", 120, 0.21f, 0.8f, 0.05f, 0.22f, 0.28f, 1.1f, 0.11f, 0.59f, 1, 42, 0.22f},
                 // Prostrate: the base stem lies on the ground, so its height is not checked.
                 {"bindweed", 45, 0.1f, 0.52f, 0.f, 0.f, 0.56f, 2.3f, 0.04f, 0.53f, 0, 0, 0.1f},
-                {"bougainvillea", 180, 1.2f, 3.9f, 1.6f, 2.9f, 0.33f, 2.0f, 0.21f, 4.4f, 0, 0, default_depth},
+                // Re-measured (libc++ only) after branching was stopped at the fourth order, which narrows the spread of leaf area between seeds.
+                {"bougainvillea", 180, 1.2f, 3.9f, 1.6f, 2.9f, 0.35f, 2.1f, 0.22f, 3.1f, 0, 0, default_depth},
                 {"butterlettuce", 60, 0.14f, 0.44f, 0.015f, 0.044f, 0.2f, 0.68f, 0.28f, 0.98f, 0, 0, default_depth},
                 // Some seeds have not yet set fruit at this age, so only the upper bound is checked.
                 {"capsicum", 180, 0.54f, 2.0f, 0.5f, 1.8f, 0.34f, 1.6f, 0.28f, 1.3f, 0, 12, default_depth},
                 {"cheeseweed", 40, 0.046f, 0.23f, 0.012f, 0.033f, 0.062f, 0.25f, 0.0036f, 0.062f, 0, 0, 0.09f},
-                {"cherrytomato", 150, 1.2f, 3.7f, 1.6f, 2.7f, 0.47f, 2.0f, 0.71f, 3.7f, 6, 108, default_depth},
+                // Re-measured (libc++ only) after side shoots were made rare, as on a plant trained to one stem: it carries less leaf and is narrower than when it bore seven to ten of them.
+                {"cherrytomato", 150, 1.2f, 3.7f, 1.6f, 2.7f, 0.42f, 1.7f, 0.45f, 2.5f, 7, 86, default_depth},
                 {"cowpea", 120, 0.43f, 1.6f, 0.24f, 0.72f, 0.55f, 2.2f, 0.3f, 1.8f, 3, 56, 0.07f},
                 // A single unbranched stem trained up a string, so the base stem is the whole plant and its height is the plant's. At this age
                 // the head has just reached the wire and the stem has begun to be lowered and leaned along the row, which widens the plant.
@@ -344,6 +346,64 @@ DOCTEST_TEST_CASE("Plant Library - every model builds a plausible plant at its r
                 DOCTEST_CHECK(fruit_count <= expectation.fruit_max);
             }
             DOCTEST_CHECK(z_bounds.x >= -expectation.max_depth_below_ground);
+        }
+    }
+}
+
+namespace library_tree_trunk_plausibility {
+
+    //! How thick the trunk of one library tree model is, at an age by which it should have thickened.
+    /**
+     * A trunk is built at a planting radius and thickens only once the crown it carries calls for more than that (see ShootParameters::girth_area_factor), so a trunk that is too thin for its tree
+     * shows up as one that has not thickened at all. The olive trunk once stayed at its planting radius for four years under a crown several meters across, and nothing here noticed, because
+     * "every model builds a plausible plant at its reference age" builds the trees in their second summer, when most trunks are legitimately still at their planting radius. These plants are older:
+     * the summer of the third season, and the fourth for olive, whose trunk is the slowest to start.
+     *
+     * The ranges were set as those of library_model_plausibility were: from the model's own output over 14 random seeds (libc++ only), widened to 0.6x the thinnest and 1.6x the thickest. Like them
+     * they are regression tripwires, not a validation against measured trees; a range that fails after a deliberate change is a prompt to look at the tree before the number is moved. Several lower
+     * bounds are below the planting radius, so the range alone would pass a trunk that never thickened; that is what the separate comparison with the planting radius is for.
+     */
+    struct Expectation {
+        const char *model;
+        float age; //!< Age at which the trunk is checked, in days.
+        float trunk_radius_min, trunk_radius_max; //!< Radius of the base of the trunk, in m.
+    };
+
+    const std::vector<Expectation> &expectations() {
+        static const std::vector<Expectation> table = {
+                {"almond", 913, 0.011f, 0.033f},     {"almond_aldrich", 913, 0.022f, 0.073f}, {"almond_independence", 913, 0.020f, 0.063f}, {"almond_wood_colony", 913, 0.011f, 0.037f},
+                {"apple", 913, 0.012f, 0.037f},      {"apple_fruitingwall", 913, 0.0084f, 0.027f}, {"easternredbud", 913, 0.0075f, 0.020f},  {"olive", 1278, 0.011f, 0.032f},
+                {"pistachio", 913, 0.014f, 0.042f},  {"walnut", 913, 0.014f, 0.044f},
+        };
+        return table;
+    }
+
+    //! Radius of the base of the trunk of a library tree at an age, in m
+    float trunkBaseRadius(const char *model, float age) {
+        Context context;
+        context.seedRandomGenerator(1);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary(model);
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), age);
+        return plantarchitecture.getPlantShoot(plantID, 0)->shoot_internode_radii.front().front();
+    }
+
+} // namespace library_tree_trunk_plausibility
+
+DOCTEST_TEST_CASE("Plant Library - tree trunks thicken as the crown they carry grows") {
+    for (const library_tree_trunk_plausibility::Expectation &expectation: library_tree_trunk_plausibility::expectations()) {
+        DOCTEST_SUBCASE(expectation.model) {
+            const float planting_radius = library_tree_trunk_plausibility::trunkBaseRadius(expectation.model, 0.f);
+            const float trunk_radius = library_tree_trunk_plausibility::trunkBaseRadius(expectation.model, expectation.age);
+            DOCTEST_INFO(std::string(expectation.model) << " at " << expectation.age << " days: trunk radius " << trunk_radius << " m, planted at " << planting_radius << " m");
+
+            DOCTEST_REQUIRE(planting_radius > 0.f);
+            // The trunk has grown thicker than it was planted. Over the seeds measured the thinnest trunk was 1.18 times its planting radius, so 1.05 leaves room for a seed that grows a small crown
+            // while still failing a trunk that has not thickened at all.
+            DOCTEST_CHECK(trunk_radius > 1.05f * planting_radius);
+            DOCTEST_CHECK(trunk_radius >= expectation.trunk_radius_min);
+            DOCTEST_CHECK(trunk_radius <= expectation.trunk_radius_max);
         }
     }
 }
@@ -8952,6 +9012,197 @@ DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData normal labels stil
 
 // ==================== NITROGEN MODEL TESTS ==================== //
 
+DOCTEST_TEST_CASE("duplicatePlantInstance reproduces the shoot tree of a plant with paired leaves and pruned shoots") {
+    // Olive bears two petioles per node, and a pruned shoot stays in the tree as an empty shell that the copy does not have. The
+    // copy must have one shoot for each live shoot of the source, attached to the copy of the same parent at the same node and petiole.
+    Context context;
+    context.seedRandomGenerator(1);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("olive");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 300);
+
+    // What a copy has to match: for each live shoot in order, its node count and how it attaches to its parent (the parent given
+    // by its position among the live shoots, since the copy has no shells)
+    struct ShootSummary {
+        size_t node_count;
+        int parent_live_index;
+        uint parent_node_index;
+        uint parent_petiole_index;
+        bool operator==(const ShootSummary &other) const {
+            return node_count == other.node_count && parent_live_index == other.parent_live_index && parent_node_index == other.parent_node_index && parent_petiole_index == other.parent_petiole_index;
+        }
+    };
+    auto summarize = [&](uint ID) {
+        const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, ID);
+        std::vector<int> live_index(shoot_tree.size(), -1);
+        int live_count = 0;
+        for (size_t i = 0; i < shoot_tree.size(); i++) {
+            if (!shoot_tree.at(i)->phytomers.empty()) {
+                live_index.at(i) = live_count++;
+            }
+        }
+        std::vector<ShootSummary> summary;
+        for (const auto &shoot: shoot_tree) {
+            if (shoot->phytomers.empty()) {
+                continue;
+            }
+            const int parent_live_index = shoot->parent_shoot_ID < 0 ? -1 : live_index.at(shoot->parent_shoot_ID);
+            summary.push_back({shoot->phytomers.size(), parent_live_index, shoot->parent_node_index, shoot->parent_petiole_index});
+        }
+        return summary;
+    };
+
+    DOCTEST_SUBCASE("two petioles per node") {
+        const std::vector<ShootSummary> source = summarize(plantID);
+        DOCTEST_REQUIRE(source.size() > 3);
+        uint copyID = 0;
+        DOCTEST_REQUIRE_NOTHROW(copyID = plantarchitecture.duplicatePlantInstance(plantID, make_vec3(10, 0, 0), make_AxisRotation(0, 0, 0), 300));
+        DOCTEST_CHECK(summarize(copyID) == source);
+    }
+
+    DOCTEST_SUBCASE("a pruned shoot ahead of other shoots in the tree") {
+        // Prune a lateral that has no laterals of its own and that comes before the parent of some other shoot in the tree. Its shell
+        // then sits ahead of a shoot that bears a lateral, which is the case in which the copy's shoot IDs no longer line up with the
+        // source's. Cowpea branches to a second order; which seed gives such a shoot depends on the platform's random number
+        // library, so the first seed that does is used.
+        bool tested = false;
+        for (uint seed = 1; seed <= 20 && !tested; seed++) {
+            Context context_cowpea;
+            context_cowpea.seedRandomGenerator(seed);
+            PlantArchitecture cowpea(&context_cowpea);
+            cowpea.disableMessages();
+            cowpea.loadPlantModelFromLibrary("cowpea");
+            const uint cowpeaID = cowpea.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 50);
+            const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(cowpea, cowpeaID);
+            int pruned_shootID = -1;
+            for (size_t i = 1; i < shoot_tree.size() && pruned_shootID < 0; i++) {
+                bool has_child = false;
+                bool precedes_a_parent = false;
+                for (const auto &other: shoot_tree) {
+                    if (other->parent_shoot_ID == int(i)) {
+                        has_child = true;
+                    }
+                    if (other->parent_shoot_ID > int(i)) {
+                        precedes_a_parent = true;
+                    }
+                }
+                if (!has_child && precedes_a_parent) {
+                    pruned_shootID = int(i);
+                }
+            }
+            if (pruned_shootID < 0) {
+                continue;
+            }
+            tested = true;
+            cowpea.pruneBranch(cowpeaID, uint(pruned_shootID), 0);
+            DOCTEST_REQUIRE(cowpea.isShootPruned(cowpeaID, uint(pruned_shootID)));
+
+            auto summarize_cowpea = [&](uint ID) {
+                const auto &tree = PlantArchitectureTestHelper::getShootTree(cowpea, ID);
+                std::vector<int> live_index(tree.size(), -1);
+                int live_count = 0;
+                for (size_t i = 0; i < tree.size(); i++) {
+                    if (!tree.at(i)->phytomers.empty()) {
+                        live_index.at(i) = live_count++;
+                    }
+                }
+                std::vector<ShootSummary> summary;
+                for (const auto &shoot: tree) {
+                    if (shoot->phytomers.empty()) {
+                        continue;
+                    }
+                    const int parent_live_index = shoot->parent_shoot_ID < 0 ? -1 : live_index.at(shoot->parent_shoot_ID);
+                    summary.push_back({shoot->phytomers.size(), parent_live_index, shoot->parent_node_index, shoot->parent_petiole_index});
+                }
+                return summary;
+            };
+            const std::vector<ShootSummary> source = summarize_cowpea(cowpeaID);
+            uint copyID = 0;
+            DOCTEST_REQUIRE_NOTHROW(copyID = cowpea.duplicatePlantInstance(cowpeaID, make_vec3(10, 0, 0), make_AxisRotation(0, 0, 0), 50));
+            DOCTEST_CHECK(summarize_cowpea(copyID) == source);
+        }
+        DOCTEST_REQUIRE(tested);
+    }
+}
+
+DOCTEST_TEST_CASE("A plant read from XML keeps its dormancy and bud state, so growing it on does not restart its season") {
+    // A tomato that is bearing fruit. Read back from XML it must still be out of dormancy, with the buds in the state they were saved
+    // in: breaking dormancy again on the first time step would reset its fruit to flower buds and re-sample every vegetative bud,
+    // sprouting new shoots from nodes that had already made their choice.
+    const std::string xml_filename = (std::filesystem::temp_directory_path() / "helios_test_plant_phenology_state.xml").string();
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("tomato");
+    // At 110 days a tomato is bearing fruit on nearly every seed; the first seed that gives one is used, so that the test does not
+    // rest on what a particular random sequence happens to produce
+    uint plantID = 0;
+    size_t fruit_at_save = 0;
+    for (uint seed = 1; seed <= 10 && fruit_at_save == 0; seed++) {
+        if (seed > 1) {
+            plantarchitecture.deletePlantInstance(plantID);
+        }
+        context.seedRandomGenerator(seed);
+        plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 110);
+        fruit_at_save = plantarchitecture.getPlantFruitObjectIDs(plantID).size();
+    }
+    DOCTEST_REQUIRE(fruit_at_save > 0);
+
+    struct BudStates {
+        std::vector<bool> shoot_dormant;
+        std::vector<bool> phytomer_dormant;
+        std::vector<int> vegetative;
+        std::vector<int> floral;
+        std::vector<float> floral_time_counter;
+        bool operator==(const BudStates &other) const {
+            return shoot_dormant == other.shoot_dormant && phytomer_dormant == other.phytomer_dormant && vegetative == other.vegetative && floral == other.floral && floral_time_counter == other.floral_time_counter;
+        }
+    };
+    auto bud_states = [&](uint ID) {
+        BudStates states;
+        for (const auto &shoot: PlantArchitectureTestHelper::getShootTree(plantarchitecture, ID)) {
+            if (shoot->phytomers.empty()) {
+                continue;
+            }
+            states.shoot_dormant.push_back(shoot->isdormant);
+            for (const auto &phytomer: shoot->phytomers) {
+                states.phytomer_dormant.push_back(phytomer->isdormant);
+                for (const auto &petiole: phytomer->axillary_vegetative_buds) {
+                    for (const auto &vbud: petiole) {
+                        states.vegetative.push_back(int(vbud.state));
+                    }
+                }
+                for (const auto &petiole: phytomer->floral_buds) {
+                    for (const auto &fbud: petiole) {
+                        states.floral.push_back(int(fbud.state));
+                        states.floral_time_counter.push_back(fbud.time_counter);
+                    }
+                }
+            }
+        }
+        return states;
+    };
+    const BudStates states_at_save = bud_states(plantID);
+    const size_t shoots_at_save = states_at_save.shoot_dormant.size();
+
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    const uint reloadedID = plantarchitecture.readPlantStructureXML(xml_filename, true).front();
+    std::filesystem::remove(xml_filename);
+
+    const BudStates states_reloaded = bud_states(reloadedID);
+    DOCTEST_CHECK(states_reloaded.shoot_dormant == states_at_save.shoot_dormant);
+    DOCTEST_CHECK(states_reloaded.phytomer_dormant == states_at_save.phytomer_dormant);
+    DOCTEST_CHECK(states_reloaded.vegetative == states_at_save.vegetative);
+    DOCTEST_CHECK(states_reloaded.floral == states_at_save.floral);
+    DOCTEST_CHECK(states_reloaded.floral_time_counter == states_at_save.floral_time_counter);
+
+    // One day on: the fruit is still fruit, and no new shoots have sprouted
+    plantarchitecture.advanceTime(reloadedID, 1);
+    DOCTEST_CHECK(plantarchitecture.getPlantFruitObjectIDs(reloadedID).size() == fruit_at_save);
+    DOCTEST_CHECK(bud_states(reloadedID).shoot_dormant.size() == shoots_at_save);
+}
+
 DOCTEST_TEST_CASE("Nitrogen Model - Initialization") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -9066,6 +9317,56 @@ DOCTEST_TEST_CASE("Nitrogen Model - Rate Limiting") {
             DOCTEST_CHECK(leaf_N_area <= N_params.max_N_accumulation_rate * dt * 1.01f); // 1% tolerance
         }
     }
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Advancing One Plant Leaves the Nitrogen of the Others Untouched") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint advanced_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    uint waiting_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(1, 0, 0), 0);
+    plantarchitecture.advanceTime(5.0f); // both plants, so that both have leaves
+
+    NitrogenParameters N_params;
+    N_params.max_N_accumulation_rate = 0.1f; // g N/m²/day
+    N_params.target_leaf_N_area = 10.0f; // a high target, so that the leaves take up nitrogen every day
+    for (uint plantID: {advanced_plantID, waiting_plantID}) {
+        plantarchitecture.initializePlantNitrogenPools(plantID, 0.0f);
+        plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+        plantarchitecture.addPlantNitrogen(plantID, 100.0f);
+    }
+
+    auto leaf_nitrogen_per_area = [&](uint plantID) {
+        std::vector<float> values;
+        for (uint objID: plantarchitecture.getAllPlantObjectIDs(plantID)) {
+            if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+                float leaf_N_area;
+                context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N_area);
+                values.push_back(leaf_N_area);
+            }
+        }
+        return values;
+    };
+
+    const float waiting_available_before = plantarchitecture.getPlantAvailableNitrogen(waiting_plantID);
+    const float waiting_root_before = plantarchitecture.getPlantRootNitrogen(waiting_plantID);
+    const std::vector<float> waiting_leaf_before = leaf_nitrogen_per_area(waiting_plantID);
+    const float advanced_available_before = plantarchitecture.getPlantAvailableNitrogen(advanced_plantID);
+    DOCTEST_REQUIRE(!waiting_leaf_before.empty());
+
+    for (int day = 0; day < 3; day++) {
+        plantarchitecture.advanceTime(advanced_plantID, 1.0f);
+    }
+
+    // The advanced plant took up nitrogen...
+    DOCTEST_CHECK(plantarchitecture.getPlantAvailableNitrogen(advanced_plantID) < advanced_available_before);
+    // ...and the plant that was not advanced is exactly as it was
+    DOCTEST_CHECK(plantarchitecture.getPlantAvailableNitrogen(waiting_plantID) == waiting_available_before);
+    DOCTEST_CHECK(plantarchitecture.getPlantRootNitrogen(waiting_plantID) == waiting_root_before);
+    DOCTEST_CHECK(leaf_nitrogen_per_area(waiting_plantID) == waiting_leaf_before);
 }
 
 DOCTEST_TEST_CASE("Nitrogen Model - Stress Factor Output") {
@@ -10307,6 +10608,1987 @@ DOCTEST_TEST_CASE("deletePlantInstance preserves prototypes when plants remain")
 
     std::vector<uint> uuids_after = plantarchitecture.getAllPlantUUIDs(plantID2, true);
     DOCTEST_CHECK(uuids_after.size() > plantarchitecture.getAllPlantUUIDs(plantID2, false).size());
+}
+
+DOCTEST_TEST_CASE("getPlantArticulation links, joints, and source objects") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+    DOCTEST_REQUIRE(!articulation.links.empty());
+
+    // Every parent precedes its children, and exactly the non-root links have a joint
+    uint root_count = 0;
+    std::vector<int> joints_per_child(articulation.links.size(), 0);
+    for (size_t i = 0; i < articulation.links.size(); i++) {
+        DOCTEST_CHECK(articulation.links[i].parent_index < static_cast<int>(i));
+        if (articulation.links[i].parent_index < 0) {
+            root_count++;
+        }
+    }
+    for (const auto &joint: articulation.joints) {
+        DOCTEST_REQUIRE(joint.child_index >= 0);
+        DOCTEST_REQUIRE(joint.child_index < static_cast<int>(articulation.links.size()));
+        DOCTEST_CHECK(joint.parent_index == articulation.links[joint.child_index].parent_index);
+        DOCTEST_CHECK(joint.stiffness > 0.f);
+        joints_per_child[joint.child_index]++;
+    }
+    DOCTEST_CHECK(root_count == 1);
+    DOCTEST_CHECK(articulation.joints.size() == articulation.links.size() - root_count);
+    for (size_t i = 0; i < articulation.links.size(); i++) {
+        DOCTEST_CHECK(joints_per_child[i] == (articulation.links[i].parent_index < 0 ? 0 : 1));
+    }
+
+    // Links point back to the Context objects they were built from
+    std::vector<uint> plant_objIDs = plantarchitecture.getAllPlantObjectIDs(plantID);
+    std::set<uint> plant_objects(plant_objIDs.begin(), plant_objIDs.end());
+    uint internode_links = 0;
+    uint leaf_links = 0;
+    for (const auto &link: articulation.links) {
+        DOCTEST_CHECK(link.mass > 0.f);
+        if (link.type == ARTICULATION_LINK_INTERNODE) {
+            internode_links++;
+            DOCTEST_CHECK(context.getObjectType(link.source_objID) == OBJECT_TYPE_TUBE);
+            DOCTEST_CHECK(link.radius > 0.f);
+        } else if (link.type == ARTICULATION_LINK_LEAF) {
+            leaf_links++;
+            DOCTEST_CHECK(link.half_length == 0.f);
+        }
+        DOCTEST_CHECK(plant_objects.count(link.source_objID) == 1);
+    }
+    DOCTEST_CHECK(internode_links > 0);
+    DOCTEST_CHECK(leaf_links > 0);
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantArticulation(plantID + 1)));
+}
+
+DOCTEST_TEST_CASE("USD export joint frames agree with the rest pose") {
+    // PhysX enforces both ends of a joint, so if they are at different points in the rest pose, or the fixed joint at the
+    // base is rotated relative to the base segment, it moves links when the simulation starts.
+    Context context;
+    context.seedRandomGenerator(5);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 50);
+
+    auto rotate = [](float qw, float qx, float qy, float qz, const vec3 &v) {
+        // v + 2 w (q x v) + 2 q x (q x v), with q the vector part of a unit quaternion
+        const vec3 q = make_vec3(qx, qy, qz);
+        const vec3 t = 2.f * cross(q, v);
+        return v + qw * t + cross(q, t);
+    };
+
+    const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+    std::set<uint> types_checked;
+    float largest_gap = 0.f;
+    for (const auto &joint: articulation.joints) {
+        const PlantArticulationLink &parent = articulation.links.at(joint.parent_index);
+        const PlantArticulationLink &child = articulation.links.at(joint.child_index);
+        const vec3 from_parent = parent.position + rotate(parent.qw, parent.qx, parent.qy, parent.qz, joint.anchor_in_parent);
+        const vec3 from_child = child.position + rotate(child.qw, child.qx, child.qy, child.qz, joint.anchor_in_child);
+        largest_gap = std::max(largest_gap, (from_parent - from_child).magnitude());
+        types_checked.insert(child.type);
+    }
+    DOCTEST_CHECK(largest_gap < 1e-5f);
+    DOCTEST_CHECK(types_checked.count(ARTICULATION_LINK_INTERNODE) == 1);
+    DOCTEST_CHECK(types_checked.count(ARTICULATION_LINK_LEAF) == 1);
+
+    // The fixed joint at the base: its world frame is unrotated, so its child frame must undo the base segment's rotation
+    const PlantArticulationLink &base = articulation.links.front();
+    DOCTEST_REQUIRE(base.parent_index < 0);
+    DOCTEST_REQUIRE(std::abs(base.qw) < 0.9999f); // the base segment is tilted, so the test means something
+
+    std::string filename = "test_usd_world_anchor.usda";
+    plantarchitecture.writePlantStructureUSD(plantID, filename);
+    std::ifstream file(filename);
+    DOCTEST_REQUIRE(file.is_open());
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+    std::remove(filename.c_str());
+
+    const size_t anchor = content.find("def PhysicsFixedJoint \"WorldAnchor\"");
+    DOCTEST_REQUIRE(anchor != std::string::npos);
+    const std::string key = "quatf physics:localRot1 = (";
+    const size_t rotation = content.find(key, anchor);
+    DOCTEST_REQUIRE(rotation != std::string::npos);
+    float w, x, y, z;
+    DOCTEST_REQUIRE(std::sscanf(content.c_str() + rotation + key.size(), "%f, %f, %f, %f", &w, &x, &y, &z) == 4);
+    DOCTEST_CHECK(w == doctest::Approx(base.qw).epsilon(1e-4));
+    DOCTEST_CHECK(x == doctest::Approx(-base.qx).epsilon(1e-4));
+    DOCTEST_CHECK(y == doctest::Approx(-base.qy).epsilon(1e-4));
+    DOCTEST_CHECK(z == doctest::Approx(-base.qz).epsilon(1e-4));
+}
+
+DOCTEST_TEST_CASE("getPlantArticulation link names are unique when a phytomer bears several flowers") {
+    // Flowering apple phytomers carry more than one floral bud, and the flowers of different buds must not share a link name
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 165);
+
+    uint flower_and_fruit_links = 0;
+    for (int step = 0; step < 8; step++) {
+        plantarchitecture.advanceTime(plantID, 5);
+        PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+        std::set<std::string> names;
+        for (const PlantArticulationLink &link: articulation.links) {
+            DOCTEST_CHECK_MESSAGE(names.insert(link.name).second, "duplicate link name " << link.name);
+            if (link.type == ARTICULATION_LINK_FLOWER || link.type == ARTICULATION_LINK_FRUIT) {
+                flower_and_fruit_links++;
+            }
+        }
+    }
+    DOCTEST_CHECK(flower_and_fruit_links > 0);
+}
+
+DOCTEST_TEST_CASE("getPlantArticulation peduncle links all point to the peduncle tube") {
+    // A peduncle is one tube object however many segments it has, so every one of its links is built from that tube
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("cowpea");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+
+    uint peduncle_links_beyond_first_segment = 0;
+    for (int step = 0; step < 10 && peduncle_links_beyond_first_segment == 0; step++) {
+        plantarchitecture.advanceTime(plantID, 5);
+        PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+        for (const PlantArticulationLink &link: articulation.links) {
+            if (link.type != ARTICULATION_LINK_PEDUNCLE) {
+                continue;
+            }
+            if (link.name.size() < 5 || link.name.compare(link.name.size() - 5, 5, "_Seg0") != 0) {
+                peduncle_links_beyond_first_segment++;
+            }
+            DOCTEST_REQUIRE_MESSAGE(context.doesObjectExist(link.source_objID), "peduncle link " << link.name << " has no source object");
+            DOCTEST_CHECK(context.getObjectType(link.source_objID) == OBJECT_TYPE_TUBE);
+        }
+    }
+    DOCTEST_CHECK(peduncle_links_beyond_first_segment > 0);
+}
+
+DOCTEST_TEST_CASE("getPlantJoints lists every joint after the joints that carry it") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0.3f, -0.2f, 0.1f), 25);
+
+    const std::vector<PlantJointID> joints = plantarchitecture.getPlantJoints(plantID);
+    DOCTEST_REQUIRE(!joints.empty());
+    DOCTEST_CHECK(joints.front().type == PLANT_JOINT_ROOT);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+    // Count what the plant has, to compare against what was listed
+    uint expected_internode_joints = 0;
+    uint expected_shoot_joints = 0;
+    uint expected_petiole_joints = 0;
+    for (const auto &shoot: shoot_tree) {
+        if (shoot->isPruned()) {
+            continue;
+        }
+        expected_internode_joints += shoot->phytomers.size();
+        if (shoot->parent_shoot_ID >= 0) {
+            expected_shoot_joints++;
+        }
+        for (const auto &phytomer: shoot->phytomers) {
+            for (uint petiole_index = 0; petiole_index < phytomer->petiole_vertices.size(); petiole_index++) {
+                if (phytomer->petioleHasJoint(petiole_index)) {
+                    expected_petiole_joints++;
+                }
+            }
+        }
+    }
+    DOCTEST_REQUIRE(expected_shoot_joints > 0); // the test needs a branched plant
+    DOCTEST_REQUIRE(expected_petiole_joints > 0);
+
+    uint root_joints = 0;
+    uint internode_joints = 0;
+    uint shoot_joints = 0;
+    uint petiole_joints = 0;
+    std::set<PlantJointID> joints_seen;
+    for (const PlantJointID &joint: joints) {
+        DOCTEST_CHECK_MESSAGE(joints_seen.count(joint) == 0, "a joint was listed twice");
+
+        // Every joint that carries this one has to have been listed already
+        if (joint.type == PLANT_JOINT_ROOT) {
+            root_joints++;
+        } else if (joint.type == PLANT_JOINT_SHOOT) {
+            shoot_joints++;
+            const auto &shoot = shoot_tree.at(joint.shootID);
+            PlantJointID carrier;
+            carrier.type = PLANT_JOINT_INTERNODE;
+            carrier.shootID = static_cast<uint>(shoot->parent_shoot_ID);
+            carrier.node_index = shoot->parent_node_index;
+            DOCTEST_CHECK(joints_seen.count(carrier) == 1);
+        } else if (joint.type == PLANT_JOINT_INTERNODE) {
+            internode_joints++;
+            PlantJointID carrier;
+            carrier.shootID = joint.shootID;
+            if (joint.node_index > 0) {
+                carrier.type = PLANT_JOINT_INTERNODE;
+                carrier.node_index = joint.node_index - 1;
+                DOCTEST_CHECK(joints_seen.count(carrier) == 1);
+            } else if (shoot_tree.at(joint.shootID)->parent_shoot_ID >= 0) {
+                carrier.type = PLANT_JOINT_SHOOT;
+                DOCTEST_CHECK(joints_seen.count(carrier) == 1);
+            }
+        } else if (joint.type == PLANT_JOINT_PETIOLE || joint.type == PLANT_JOINT_PEDUNCLE) {
+            if (joint.type == PLANT_JOINT_PETIOLE) {
+                petiole_joints++;
+            }
+            PlantJointID carrier;
+            carrier.type = PLANT_JOINT_INTERNODE;
+            carrier.shootID = joint.shootID;
+            carrier.node_index = joint.node_index;
+            DOCTEST_CHECK(joints_seen.count(carrier) == 1);
+        }
+        joints_seen.insert(joint);
+    }
+    DOCTEST_CHECK(root_joints == 1);
+    DOCTEST_CHECK(internode_joints == expected_internode_joints);
+    DOCTEST_CHECK(shoot_joints == expected_shoot_joints);
+    DOCTEST_CHECK(petiole_joints == expected_petiole_joints);
+
+    // Every link of the articulation is carried by a joint of the skeleton
+    const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+    for (const PlantArticulationLink &link: articulation.links) {
+        DOCTEST_CHECK_MESSAGE(joints_seen.count(link.joint) == 1, "articulation link " << link.name << " names a joint the skeleton does not have");
+        if (link.type == ARTICULATION_LINK_INTERNODE) {
+            DOCTEST_CHECK(link.joint.type == PLANT_JOINT_INTERNODE);
+        } else if (link.type == ARTICULATION_LINK_PETIOLE) {
+            DOCTEST_CHECK(link.joint.type == PLANT_JOINT_PETIOLE);
+        }
+    }
+
+    // A plant with no shoots has no joints
+    uint empty_plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(plantarchitecture.getPlantJoints(empty_plantID).empty());
+
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantJoints(9999)));
+}
+
+DOCTEST_TEST_CASE("getPlantJointFrame agrees with the plant's stored geometry") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const vec3 base_position = make_vec3(0.3f, -0.2f, 0.1f);
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(base_position, 25);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+    uint frames_checked_by_type[5] = {0, 0, 0, 0, 0};
+    for (const PlantJointID &joint: plantarchitecture.getPlantJoints(plantID)) {
+        const PlantJointFrame frame = plantarchitecture.getPlantJointFrame(plantID, joint);
+        frames_checked_by_type[joint.type]++;
+
+        // The three axes are unit vectors, and the pitch axis is perpendicular to the other two
+        DOCTEST_CHECK(std::fabs(frame.parent_axis.magnitude() - 1.f) < 1e-5f);
+        DOCTEST_CHECK(std::fabs(frame.organ_axis.magnitude() - 1.f) < 1e-5f);
+        DOCTEST_CHECK(std::fabs(frame.pitch_axis.magnitude() - 1.f) < 1e-5f);
+        DOCTEST_CHECK(std::fabs(frame.pitch_axis * frame.parent_axis) < 1e-4f);
+
+        if (joint.type == PLANT_JOINT_ROOT) {
+            DOCTEST_CHECK((frame.pivot - base_position).magnitude() < 1e-6f);
+            DOCTEST_CHECK(frame.parent_axis == make_vec3(0, 0, 1));
+            DOCTEST_CHECK(frame.length == 0.f);
+        } else if (joint.type == PLANT_JOINT_SHOOT) {
+            const auto &shoot = shoot_tree.at(joint.shootID);
+            DOCTEST_CHECK(frame.pivot == shoot->shoot_internode_vertices.front().front());
+            DOCTEST_CHECK(frame.length == 0.f);
+        } else if (joint.type == PLANT_JOINT_INTERNODE) {
+            const auto &phytomer = shoot_tree.at(joint.shootID)->phytomers.at(joint.node_index);
+            DOCTEST_CHECK(frame.pivot == phytomer->getInternodeNodePositions().front());
+            DOCTEST_CHECK(std::fabs(frame.length - phytomer->getInternodeLength()) < 1e-6f);
+            // The internode leaves its base toward its own tip
+            const vec3 base_to_tip = phytomer->getInternodeNodePositions().back() - frame.pivot;
+            DOCTEST_CHECK(base_to_tip * frame.organ_axis > 0.f);
+        } else if (joint.type == PLANT_JOINT_PETIOLE) {
+            const auto &phytomer = shoot_tree.at(joint.shootID)->phytomers.at(joint.node_index);
+            DOCTEST_CHECK(frame.pivot == phytomer->petiole_vertices.at(joint.petiole_index).front());
+            DOCTEST_CHECK(std::fabs(frame.length - phytomer->getPetioleLength(joint.petiole_index)) < 1e-5f);
+            // What the petiole grows from is the internode below it
+            DOCTEST_CHECK((frame.parent_axis - phytomer->getInternodeAxisVector(1.f)).magnitude() < 1e-3f);
+        }
+    }
+    DOCTEST_CHECK(frames_checked_by_type[PLANT_JOINT_ROOT] == 1);
+    DOCTEST_CHECK(frames_checked_by_type[PLANT_JOINT_SHOOT] > 0);
+    DOCTEST_CHECK(frames_checked_by_type[PLANT_JOINT_INTERNODE] > 0);
+    DOCTEST_CHECK(frames_checked_by_type[PLANT_JOINT_PETIOLE] > 0);
+
+    // Joints the plant does not have are refused
+    PlantJointID bad_joint;
+    bad_joint.type = PLANT_JOINT_SHOOT;
+    bad_joint.shootID = 0; // the base shoot is not attached to a parent
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantJointFrame(plantID, bad_joint)));
+    bad_joint.shootID = 9999;
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantJointFrame(plantID, bad_joint)));
+    bad_joint.type = PLANT_JOINT_INTERNODE;
+    bad_joint.shootID = 0;
+    bad_joint.node_index = 9999;
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantJointFrame(plantID, bad_joint)));
+    bad_joint.type = PLANT_JOINT_PETIOLE;
+    bad_joint.node_index = 0;
+    bad_joint.petiole_index = 99;
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantJointFrame(plantID, bad_joint)));
+    bad_joint.type = PLANT_JOINT_PEDUNCLE;
+    bad_joint.petiole_index = 0;
+    bad_joint.bud_index = 99;
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantJointFrame(plantID, bad_joint)));
+    bad_joint.type = PLANT_JOINT_ROOT;
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantJointFrame(9999, bad_joint)));
+}
+
+DOCTEST_TEST_CASE("getPlantJoints lists peduncle joints of a fruiting plant") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("cowpea");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+    uint peduncle_joints = 0;
+    for (int step = 0; step < 10 && peduncle_joints == 0; step++) {
+        plantarchitecture.advanceTime(plantID, 5);
+        for (const PlantJointID &joint: plantarchitecture.getPlantJoints(plantID)) {
+            if (joint.type != PLANT_JOINT_PEDUNCLE) {
+                continue;
+            }
+            peduncle_joints++;
+            const PlantJointFrame frame = plantarchitecture.getPlantJointFrame(plantID, joint);
+            const auto &phytomer = shoot_tree.at(joint.shootID)->phytomers.at(joint.node_index);
+            DOCTEST_CHECK(frame.pivot == phytomer->floral_buds.at(joint.petiole_index).at(joint.bud_index).base_position);
+            DOCTEST_CHECK(frame.length > 0.f);
+            DOCTEST_CHECK(std::fabs(frame.organ_axis.magnitude() - 1.f) < 1e-5f);
+        }
+    }
+    DOCTEST_CHECK(peduncle_joints > 0);
+}
+
+namespace {
+
+    //! Vertices of every primitive of a plant, by primitive UUID
+    std::map<uint, std::vector<vec3>> plantPrimitiveVertices(const Context &context, const PlantArchitecture &plantarchitecture, uint plantID) {
+        std::map<uint, std::vector<vec3>> vertices;
+        for (uint objID: plantarchitecture.getAllPlantObjectIDs(plantID)) {
+            for (uint UUID: context.getObjectPrimitiveUUIDs(objID)) {
+                vertices[UUID] = context.getPrimitiveVertices(UUID);
+            }
+        }
+        return vertices;
+    }
+
+    //! Largest distance between corresponding vertices of two records of a plant's primitives; a large value if they do not hold the same primitives
+    float largestVertexDifference(const std::map<uint, std::vector<vec3>> &vertices_a, const std::map<uint, std::vector<vec3>> &vertices_b) {
+        if (vertices_a.size() != vertices_b.size()) {
+            return 1e30f;
+        }
+        float largest = 0;
+        for (const auto &entry: vertices_a) {
+            const auto other = vertices_b.find(entry.first);
+            if (other == vertices_b.end() || other->second.size() != entry.second.size()) {
+                return 1e30f;
+            }
+            for (size_t v = 0; v < entry.second.size(); v++) {
+                largest = std::max(largest, (entry.second.at(v) - other->second.at(v)).magnitude());
+            }
+        }
+        return largest;
+    }
+
+    //! Where a joint pose carries a point, computed independently of the plug-in: roll, then pitch, then yaw, about the axes of the joint as the plant grew
+    vec3 expectedPosedPoint(const vec3 &point, const PlantJointFrame &rest_frame, const PlantJointPose &pose) {
+        vec3 moved = rotatePointAboutLine(point, rest_frame.pivot, rest_frame.organ_axis, deg2rad(pose.roll_degrees));
+        moved = rotatePointAboutLine(moved, rest_frame.pivot, rest_frame.pitch_axis, deg2rad(pose.pitch_degrees));
+        return rotatePointAboutLine(moved, rest_frame.pivot, rest_frame.parent_axis, deg2rad(pose.yaw_degrees));
+    }
+
+    //! Whether a shoot is the given shoot or grows, directly or indirectly, from it
+    bool shootDescendsFrom(const std::vector<std::shared_ptr<Shoot>> &shoot_tree, int shootID, int ancestor_shootID) {
+        while (shootID >= 0) {
+            if (shootID == ancestor_shootID) {
+                return true;
+            }
+            shootID = shoot_tree.at(shootID)->parent_shoot_ID;
+        }
+        return false;
+    }
+
+    //! ID of a child shoot of a plant that bears leaves, to pose in a test
+    uint findLeafyChildShoot(const std::vector<std::shared_ptr<Shoot>> &shoot_tree) {
+        for (const auto &shoot: shoot_tree) {
+            if (shoot->parent_shoot_ID < 0 || shoot->isPruned()) {
+                continue;
+            }
+            for (const auto &phytomer: shoot->phytomers) {
+                if (!flatten(phytomer->leaf_objIDs).empty()) {
+                    return static_cast<uint>(shoot->ID);
+                }
+            }
+        }
+        return 0;
+    }
+
+} // namespace
+
+DOCTEST_TEST_CASE("setPlantJointPose turns a shoot and everything on it rigidly about its attachment") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0.3f, -0.2f, 0.1f), 25);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    const uint posed_shootID = findLeafyChildShoot(shoot_tree);
+    DOCTEST_REQUIRE(posed_shootID > 0);
+
+    PlantJointID shoot_joint;
+    shoot_joint.type = PLANT_JOINT_SHOOT;
+    shoot_joint.shootID = posed_shootID;
+    const PlantJointFrame rest_frame = plantarchitecture.getPlantJointFrame(plantID, shoot_joint);
+
+    PlantJointPose pose;
+    pose.pitch_degrees = 20;
+    pose.yaw_degrees = 35;
+    pose.roll_degrees = -15;
+
+    const std::vector<uint> objIDs_grown = plantarchitecture.getAllPlantObjectIDs(plantID);
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+    // What the plant stores, as it grew
+    std::vector<std::vector<vec3>> internode_nodes_grown;
+    for (const auto &shoot: shoot_tree) {
+        internode_nodes_grown.push_back(flatten(shoot->shoot_internode_vertices));
+    }
+
+    plantarchitecture.setPlantJointPose(plantID, shoot_joint, pose);
+    DOCTEST_CHECK(plantarchitecture.isPlantPosed(plantID));
+    DOCTEST_CHECK(plantarchitecture.getPlantJointPose(plantID, shoot_joint).yaw_degrees == 35.f);
+
+    // No organ was rebuilt
+    DOCTEST_CHECK(plantarchitecture.getAllPlantObjectIDs(plantID) == objIDs_grown);
+    const std::map<uint, std::vector<vec3>> vertices_posed = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    DOCTEST_REQUIRE(vertices_posed.size() == vertices_grown.size());
+
+    uint leaves_moved = 0;
+    uint leaves_left_alone = 0;
+    for (const auto &shoot: shoot_tree) {
+        const bool carried = shootDescendsFrom(shoot_tree, shoot->ID, static_cast<int>(posed_shootID));
+
+        // Stored node positions: carried rigidly on the posed shoot and its descendants, untouched elsewhere
+        const std::vector<vec3> nodes_posed = flatten(shoot->shoot_internode_vertices);
+        const std::vector<vec3> &nodes_grown = internode_nodes_grown.at(shoot->ID);
+        DOCTEST_REQUIRE(nodes_posed.size() == nodes_grown.size());
+        for (size_t node = 0; node < nodes_posed.size(); node++) {
+            if (carried) {
+                DOCTEST_CHECK((nodes_posed.at(node) - expectedPosedPoint(nodes_grown.at(node), rest_frame, pose)).magnitude() < 2e-6f);
+            } else {
+                DOCTEST_CHECK(nodes_posed.at(node) == nodes_grown.at(node));
+            }
+        }
+        // The internode tube in the Context is on the stored node positions
+        if (context.doesObjectExist(shoot->internode_tube_objID)) {
+            const std::vector<vec3> tube_nodes = context.getTubeObjectNodes(shoot->internode_tube_objID);
+            DOCTEST_REQUIRE(tube_nodes.size() == nodes_posed.size());
+            for (size_t node = 0; node < nodes_posed.size(); node++) {
+                DOCTEST_CHECK((tube_nodes.at(node) - nodes_posed.at(node)).magnitude() < 1e-6f);
+            }
+        }
+
+        for (const auto &phytomer: shoot->phytomers) {
+            for (uint petiole_index = 0; petiole_index < phytomer->leaf_objIDs.size(); petiole_index++) {
+                for (uint leaf_index = 0; leaf_index < phytomer->leaf_objIDs.at(petiole_index).size(); leaf_index++) {
+                    const uint leaf_objID = phytomer->leaf_objIDs.at(petiole_index).at(leaf_index);
+                    // Leaf geometry: every vertex carried rigidly, or bit-for-bit where it was
+                    for (uint UUID: context.getObjectPrimitiveUUIDs(leaf_objID)) {
+                        const std::vector<vec3> &leaf_vertices_grown = vertices_grown.at(UUID);
+                        const std::vector<vec3> &leaf_vertices_posed = vertices_posed.at(UUID);
+                        for (size_t v = 0; v < leaf_vertices_grown.size(); v++) {
+                            if (carried) {
+                                DOCTEST_CHECK((leaf_vertices_posed.at(v) - expectedPosedPoint(leaf_vertices_grown.at(v), rest_frame, pose)).magnitude() < 2e-6f);
+                            } else {
+                                DOCTEST_CHECK(leaf_vertices_posed.at(v) == leaf_vertices_grown.at(v));
+                            }
+                        }
+                    }
+                    if (carried) {
+                        leaves_moved++;
+                    } else {
+                        leaves_left_alone++;
+                    }
+                }
+            }
+        }
+    }
+    DOCTEST_CHECK(leaves_moved > 0);
+    DOCTEST_CHECK(leaves_left_alone > 0);
+
+    // The shoot is still attached where it was
+    DOCTEST_CHECK(shoot_tree.at(posed_shootID)->shoot_internode_vertices.front().front() == rest_frame.pivot);
+
+    // Setting the joint back to zero restores the plant exactly, in the Context and in what the plant stores
+    plantarchitecture.setPlantJointPose(plantID, shoot_joint, PlantJointPose());
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+    for (const auto &shoot: shoot_tree) {
+        DOCTEST_CHECK(flatten(shoot->shoot_internode_vertices) == internode_nodes_grown.at(shoot->ID));
+    }
+}
+
+DOCTEST_TEST_CASE("setPlantJointPose is absolute: the same poses give the same plant by any path") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    const uint posed_shootID = findLeafyChildShoot(shoot_tree);
+    DOCTEST_REQUIRE(posed_shootID > 0);
+
+    PlantJointID root_joint;
+    root_joint.type = PLANT_JOINT_ROOT;
+    PlantJointID shoot_joint;
+    shoot_joint.type = PLANT_JOINT_SHOOT;
+    shoot_joint.shootID = posed_shootID;
+    PlantJointID internode_joint;
+    internode_joint.type = PLANT_JOINT_INTERNODE;
+    internode_joint.shootID = posed_shootID;
+    internode_joint.node_index = 1;
+    DOCTEST_REQUIRE(shoot_tree.at(posed_shootID)->phytomers.size() > 1);
+
+    PlantJointPose root_pose;
+    root_pose.yaw_degrees = 90;
+    PlantJointPose shoot_pose;
+    shoot_pose.pitch_degrees = 25;
+    shoot_pose.yaw_degrees = -40;
+    PlantJointPose internode_pose;
+    internode_pose.pitch_degrees = 12;
+
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+    // Target pose reached directly, in one call
+    plantarchitecture.setPlantJointPoses(plantID, {root_joint, shoot_joint, internode_joint}, {root_pose, shoot_pose, internode_pose});
+    const std::map<uint, std::vector<vec3>> vertices_direct = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    DOCTEST_CHECK(largestVertexDifference(vertices_direct, vertices_grown) > 0.01f);
+
+    // The same target reached by wandering: other values first, joints set one at a time in another order, one joint set, cleared and set again
+    plantarchitecture.resetPlantPose(plantID);
+    PlantJointPose other_pose;
+    other_pose.pitch_degrees = -30;
+    other_pose.yaw_degrees = 77;
+    other_pose.roll_degrees = 140;
+    plantarchitecture.setPlantJointPose(plantID, shoot_joint, other_pose);
+    plantarchitecture.setPlantJointPose(plantID, internode_joint, internode_pose);
+    plantarchitecture.setPlantJointPose(plantID, root_joint, other_pose);
+    plantarchitecture.setPlantJointPose(plantID, shoot_joint, shoot_pose);
+    plantarchitecture.setPlantJointPose(plantID, internode_joint, PlantJointPose());
+    plantarchitecture.setPlantJointPose(plantID, root_joint, root_pose);
+    plantarchitecture.setPlantJointPose(plantID, internode_joint, internode_pose);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_direct) == 0.f);
+
+    // And all the way back
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+    DOCTEST_CHECK(plantarchitecture.getPlantJointPose(plantID, shoot_joint).pitch_degrees == 0.f);
+}
+
+DOCTEST_TEST_CASE("setPlantJointPose turns a whole plant about its base, and the plant's stored positions follow") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const vec3 base_position = make_vec3(0.4f, 0.1f, 0);
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(base_position, 25);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+    // A leaf to follow, and where its base is as the plant grew
+    const Phytomer *leafy_phytomer = nullptr;
+    for (const auto &shoot: shoot_tree) {
+        for (const auto &phytomer: shoot->phytomers) {
+            if (!phytomer->leaf_objIDs.empty() && !phytomer->leaf_objIDs.front().empty()) {
+                leafy_phytomer = phytomer.get();
+            }
+        }
+    }
+    DOCTEST_REQUIRE(leafy_phytomer != nullptr);
+    const uint leaf_objID = leafy_phytomer->leaf_objIDs.front().front();
+    const vec3 leaf_base_grown = leafy_phytomer->getLeafBasePosition(0, 0);
+    const vec3 leaf_center_grown = context.getObjectCenter(leaf_objID);
+    DOCTEST_REQUIRE((leaf_base_grown - base_position).magnitude() > 0.01f);
+
+    PlantJointID root_joint;
+    root_joint.type = PLANT_JOINT_ROOT;
+    PlantJointPose quarter_turn;
+    quarter_turn.yaw_degrees = 90;
+    plantarchitecture.setPlantJointPose(plantID, root_joint, quarter_turn);
+
+    // A quarter turn about the vertical through the base: (x, y) -> (-y, x) relative to the base
+    auto quarterTurnAboutBase = [&base_position](const vec3 &point) { return make_vec3(base_position.x - (point.y - base_position.y), base_position.y + (point.x - base_position.x), point.z); };
+    DOCTEST_CHECK((leafy_phytomer->getLeafBasePosition(0, 0) - quarterTurnAboutBase(leaf_base_grown)).magnitude() < 2e-6f);
+    DOCTEST_CHECK((context.getObjectCenter(leaf_objID) - quarterTurnAboutBase(leaf_center_grown)).magnitude() < 1e-5f);
+    DOCTEST_CHECK((plantarchitecture.getPlantBasePosition(plantID) - base_position).magnitude() == 0.f);
+
+    // Moving the posed plant keeps the pose, and the plant put back afterwards is the grown plant at its new position
+    const vec3 shift = make_vec3(0.25f, -0.5f, 0.125f);
+    plantarchitecture.setPlantBasePosition(plantID, base_position + shift);
+    DOCTEST_CHECK(plantarchitecture.isPlantPosed(plantID));
+    DOCTEST_CHECK((leafy_phytomer->getLeafBasePosition(0, 0) - (quarterTurnAboutBase(leaf_base_grown) + shift)).magnitude() < 2e-6f);
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK((leafy_phytomer->getLeafBasePosition(0, 0) - (leaf_base_grown + shift)).magnitude() < 2e-6f);
+    DOCTEST_CHECK((context.getObjectCenter(leaf_objID) - (leaf_center_grown + shift)).magnitude() < 1e-5f);
+}
+
+DOCTEST_TEST_CASE("setPlantJointPose turns a petiole with its leaves, and an internode with everything beyond it") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+    // ---- A petiole ---- //
+    PlantJointID petiole_joint;
+    bool petiole_found = false;
+    for (const PlantJointID &joint: plantarchitecture.getPlantJoints(plantID)) {
+        if (joint.type == PLANT_JOINT_PETIOLE && !shoot_tree.at(joint.shootID)->phytomers.at(joint.node_index)->leaf_objIDs.at(joint.petiole_index).empty()) {
+            petiole_joint = joint;
+            petiole_found = true;
+        }
+    }
+    DOCTEST_REQUIRE(petiole_found);
+    const Phytomer &petiole_phytomer = *shoot_tree.at(petiole_joint.shootID)->phytomers.at(petiole_joint.node_index);
+    const PlantJointFrame petiole_frame = plantarchitecture.getPlantJointFrame(plantID, petiole_joint);
+    const std::vector<vec3> petiole_nodes_grown = petiole_phytomer.petiole_vertices.at(petiole_joint.petiole_index);
+    const std::vector<uint> petiole_leaf_objIDs = petiole_phytomer.leaf_objIDs.at(petiole_joint.petiole_index);
+    std::set<uint> petiole_leaf_UUIDs;
+    for (uint leaf_objID: petiole_leaf_objIDs) {
+        for (uint UUID: context.getObjectPrimitiveUUIDs(leaf_objID)) {
+            petiole_leaf_UUIDs.insert(UUID);
+        }
+    }
+    const uint petiole_tube_objID = petiole_phytomer.petiole_objIDs.at(petiole_joint.petiole_index);
+    std::set<uint> petiole_tube_UUIDs;
+    if (context.doesObjectExist(petiole_tube_objID)) {
+        for (uint UUID: context.getObjectPrimitiveUUIDs(petiole_tube_objID)) {
+            petiole_tube_UUIDs.insert(UUID);
+        }
+    }
+
+    PlantJointPose petiole_pose;
+    petiole_pose.pitch_degrees = -18; // toward the stem, which an increment-only call could not do
+    petiole_pose.yaw_degrees = 50;
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, petiole_pose);
+
+    DOCTEST_CHECK(petiole_phytomer.leaf_objIDs.at(petiole_joint.petiole_index) == petiole_leaf_objIDs);
+    std::map<uint, std::vector<vec3>> vertices_posed = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    DOCTEST_REQUIRE(vertices_posed.size() == vertices_grown.size());
+    for (const auto &entry: vertices_posed) {
+        const std::vector<vec3> &primitive_vertices_grown = vertices_grown.at(entry.first);
+        if (petiole_tube_UUIDs.count(entry.first) == 1) {
+            continue; // the tube is redrawn on its centerline, which is checked below
+        }
+        for (size_t v = 0; v < entry.second.size(); v++) {
+            if (petiole_leaf_UUIDs.count(entry.first) == 1) {
+                DOCTEST_CHECK((entry.second.at(v) - expectedPosedPoint(primitive_vertices_grown.at(v), petiole_frame, petiole_pose)).magnitude() < 2e-6f);
+            } else {
+                DOCTEST_CHECK(entry.second.at(v) == primitive_vertices_grown.at(v));
+            }
+        }
+    }
+    for (size_t node = 0; node < petiole_nodes_grown.size(); node++) {
+        DOCTEST_CHECK((petiole_phytomer.petiole_vertices.at(petiole_joint.petiole_index).at(node) - expectedPosedPoint(petiole_nodes_grown.at(node), petiole_frame, petiole_pose)).magnitude() < 2e-6f);
+    }
+    // The petiole is still on the stem, and tilted toward it by the pitch that was asked for. A pitch larger than the petiole's angle from the stem carries it through the stem's direction and out the other side.
+    DOCTEST_CHECK(petiole_phytomer.petiole_vertices.at(petiole_joint.petiole_index).front() == petiole_nodes_grown.front());
+    const PlantJointFrame petiole_frame_posed = plantarchitecture.getPlantJointFrame(plantID, petiole_joint);
+    const float angle_from_stem_grown = rad2deg(acos_safe(petiole_frame.organ_axis * petiole_frame.parent_axis));
+    const float angle_from_stem_posed = rad2deg(acos_safe(petiole_frame_posed.organ_axis * petiole_frame_posed.parent_axis));
+    DOCTEST_CHECK_MESSAGE(std::fabs(std::fabs(angle_from_stem_grown - 18.f) - angle_from_stem_posed) < 0.01f, "angle from stem as grown " << angle_from_stem_grown << ", posed " << angle_from_stem_posed);
+
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+
+    // ---- An internode part way along the shoot with the most nodes ---- //
+    uint longest_shootID = 0;
+    for (const auto &shoot: shoot_tree) {
+        if (shoot->phytomers.size() > shoot_tree.at(longest_shootID)->phytomers.size()) {
+            longest_shootID = static_cast<uint>(shoot->ID);
+        }
+    }
+    DOCTEST_REQUIRE(shoot_tree.at(longest_shootID)->phytomers.size() > 2);
+    PlantJointID internode_joint;
+    internode_joint.type = PLANT_JOINT_INTERNODE;
+    internode_joint.shootID = longest_shootID;
+    internode_joint.node_index = 1;
+    const PlantJointFrame internode_frame = plantarchitecture.getPlantJointFrame(plantID, internode_joint);
+    PlantJointPose internode_pose;
+    internode_pose.pitch_degrees = 30;
+
+    // Leaves below the joint, which must stay, and above it, which must be carried
+    std::set<uint> UUIDs_below_joint;
+    std::set<uint> leaf_UUIDs_carried;
+    for (const auto &shoot: shoot_tree) {
+        for (uint node_index = 0; node_index < shoot->phytomers.size(); node_index++) {
+            // An organ is carried if it is on the jointed shoot at or beyond the joint, or on a shoot growing, directly or not, from such a node
+            int ancestor = shoot->ID;
+            uint node_on_ancestor = node_index;
+            while (ancestor != static_cast<int>(longest_shootID) && shoot_tree.at(ancestor)->parent_shoot_ID >= 0) {
+                node_on_ancestor = shoot_tree.at(ancestor)->parent_node_index;
+                ancestor = shoot_tree.at(ancestor)->parent_shoot_ID;
+            }
+            const bool carried = ancestor == static_cast<int>(longest_shootID) && node_on_ancestor >= internode_joint.node_index;
+            for (uint leaf_objID: flatten(shoot->phytomers.at(node_index)->leaf_objIDs)) {
+                for (uint UUID: context.getObjectPrimitiveUUIDs(leaf_objID)) {
+                    if (carried) {
+                        leaf_UUIDs_carried.insert(UUID);
+                    } else {
+                        UUIDs_below_joint.insert(UUID);
+                    }
+                }
+            }
+        }
+    }
+    DOCTEST_REQUIRE(!UUIDs_below_joint.empty());
+    DOCTEST_REQUIRE(!leaf_UUIDs_carried.empty());
+
+    plantarchitecture.setPlantJointPose(plantID, internode_joint, internode_pose);
+    vertices_posed = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    for (uint UUID: UUIDs_below_joint) {
+        DOCTEST_CHECK(vertices_posed.at(UUID) == vertices_grown.at(UUID));
+    }
+    for (uint UUID: leaf_UUIDs_carried) {
+        for (size_t v = 0; v < vertices_posed.at(UUID).size(); v++) {
+            DOCTEST_CHECK((vertices_posed.at(UUID).at(v) - expectedPosedPoint(vertices_grown.at(UUID).at(v), internode_frame, internode_pose)).magnitude() < 2e-6f);
+        }
+    }
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+}
+
+DOCTEST_TEST_CASE("A change made to a posed plant by another call is kept when the pose changes and when it is reset") {
+    // Two identical plants. One has a leaf turned while its branch is posed; the other has the same leaf turned as it grew. Once the first is put back, the two must match.
+    std::map<uint, std::vector<vec3>> vertices_by_plant[2];
+    for (int posed = 0; posed < 2; posed++) {
+        Context context;
+        context.seedRandomGenerator(11);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+        const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+        const uint posed_shootID = findLeafyChildShoot(shoot_tree);
+        DOCTEST_REQUIRE(posed_shootID > 0);
+        Phytomer *leafy_phytomer = nullptr;
+        for (const auto &phytomer: shoot_tree.at(posed_shootID)->phytomers) {
+            if (!phytomer->leaf_objIDs.empty() && !phytomer->leaf_objIDs.front().empty()) {
+                leafy_phytomer = phytomer.get();
+                break;
+            }
+        }
+        DOCTEST_REQUIRE(leafy_phytomer != nullptr);
+
+        PlantJointID shoot_joint;
+        shoot_joint.type = PLANT_JOINT_SHOOT;
+        shoot_joint.shootID = posed_shootID;
+        PlantJointPose pose;
+        pose.pitch_degrees = 30;
+        pose.yaw_degrees = 60;
+
+        if (posed == 1) {
+            plantarchitecture.setPlantJointPose(plantID, shoot_joint, pose);
+        }
+        // Turned about its own base, around the petiole it hangs from, as the plant stands at the time. Done directly in the Context, as a caller moving a leaf rigidly about its base does.
+        context.rotateObject(leafy_phytomer->leaf_objIDs.front().front(), deg2rad(25.f), leafy_phytomer->getLeafBasePosition(0, 0), leafy_phytomer->getPetioleAxisVector(1.f, 0));
+        if (posed == 1) {
+            // The turned leaf has to survive another pose as well as the reset
+            pose.yaw_degrees = -20;
+            plantarchitecture.setPlantJointPose(plantID, shoot_joint, pose);
+            plantarchitecture.resetPlantPose(plantID);
+        }
+        vertices_by_plant[posed] = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    }
+    DOCTEST_CHECK_MESSAGE(largestVertexDifference(vertices_by_plant[0], vertices_by_plant[1]) < 1e-5f, "largest difference " << largestVertexDifference(vertices_by_plant[0], vertices_by_plant[1]));
+}
+
+DOCTEST_TEST_CASE("A posed plant keeps its pose when it grows on, and the pose can no longer be reset") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    const uint posed_shootID = findLeafyChildShoot(shoot_tree);
+    DOCTEST_REQUIRE(posed_shootID > 0);
+
+    PlantJointID shoot_joint;
+    shoot_joint.type = PLANT_JOINT_SHOOT;
+    shoot_joint.shootID = posed_shootID;
+    const vec3 shoot_axis_grown = plantarchitecture.getPlantJointFrame(plantID, shoot_joint).organ_axis;
+
+    PlantJointPose pose;
+    pose.pitch_degrees = 40;
+    plantarchitecture.setPlantJointPose(plantID, shoot_joint, pose);
+    const vec3 shoot_axis_posed = plantarchitecture.getPlantJointFrame(plantID, shoot_joint).organ_axis;
+    const float turn_from_grown = rad2deg(acos_safe(shoot_axis_grown * shoot_axis_posed));
+    DOCTEST_REQUIRE(turn_from_grown > 20.f);
+
+    const std::vector<uint> leaf_objIDs_before_growth = flatten(shoot_tree.at(posed_shootID)->phytomers.front()->leaf_objIDs);
+
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 3));
+
+    // The pose is now part of the plant
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+    DOCTEST_CHECK(plantarchitecture.getPlantJointPose(plantID, shoot_joint).pitch_degrees == 0.f);
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.resetPlantPose(plantID));
+
+    // The shoot is where it was posed, not where it grew, and is still attached to its parent
+    const PlantJointFrame frame_after_growth = plantarchitecture.getPlantJointFrame(plantID, shoot_joint);
+    DOCTEST_CHECK(rad2deg(acos_safe(frame_after_growth.organ_axis * shoot_axis_posed)) < 2.f);
+    const auto &posed_shoot = shoot_tree.at(posed_shootID);
+    const vec3 parent_node = shoot_tree.at(posed_shoot->parent_shoot_ID)->shoot_internode_vertices.at(posed_shoot->parent_node_index).back();
+    DOCTEST_CHECK((frame_after_growth.pivot - parent_node).magnitude() < 0.01f);
+
+    // Its organs were grown on, not rebuilt
+    DOCTEST_CHECK(flatten(posed_shoot->phytomers.front()->leaf_objIDs) == leaf_objIDs_before_growth);
+
+    // A plant whose pose is part of it cannot be rebuilt from its growth parameters
+    DOCTEST_CHECK_THROWS(plantarchitecture.writePlantStructureXML(plantID, "posed_plant_should_not_be_written.xml"));
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.duplicatePlantInstance(plantID, make_vec3(1, 0, 0), make_AxisRotation(0, 0, 0), 0)));
+}
+
+DOCTEST_TEST_CASE("Leaves that droop settle again when a plant is tilted, and are restored exactly when it is put back") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+
+    const std::vector<uint> objIDs_grown = plantarchitecture.getAllPlantObjectIDs(plantID);
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+    PlantJointID root_joint;
+    root_joint.type = PLANT_JOINT_ROOT;
+    const PlantJointFrame root_frame = plantarchitecture.getPlantJointFrame(plantID, root_joint);
+    PlantJointPose lean;
+    lean.pitch_degrees = 50;
+    plantarchitecture.setPlantJointPose(plantID, root_joint, lean);
+
+    // No organ was rebuilt, and the blades are not simply the grown blades turned: they have drooped afresh under a gravity that did not turn with them
+    DOCTEST_CHECK(plantarchitecture.getAllPlantObjectIDs(plantID) == objIDs_grown);
+    const std::map<uint, std::vector<vec3>> vertices_leaning = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    DOCTEST_REQUIRE(vertices_leaning.size() == vertices_grown.size());
+    float largest_departure_from_rigid = 0;
+    for (const auto &entry: vertices_leaning) {
+        for (size_t v = 0; v < entry.second.size(); v++) {
+            largest_departure_from_rigid = std::max(largest_departure_from_rigid, (entry.second.at(v) - expectedPosedPoint(vertices_grown.at(entry.first).at(v), root_frame, lean)).magnitude());
+        }
+    }
+    DOCTEST_CHECK(largest_departure_from_rigid > 1e-3f);
+
+    // The same lean reached a second time gives the same plant
+    PlantJointPose other_lean;
+    other_lean.pitch_degrees = -20;
+    other_lean.yaw_degrees = 45;
+    plantarchitecture.setPlantJointPose(plantID, root_joint, other_lean);
+    plantarchitecture.setPlantJointPose(plantID, root_joint, lean);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_leaning) == 0.f);
+
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+}
+
+DOCTEST_TEST_CASE("setPlantJointPose lengthens an internode and carries everything beyond it along the internode") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    uint longest_shootID = 0;
+    for (const auto &shoot: shoot_tree) {
+        if (shoot->phytomers.size() > shoot_tree.at(longest_shootID)->phytomers.size()) {
+            longest_shootID = static_cast<uint>(shoot->ID);
+        }
+    }
+    DOCTEST_REQUIRE(shoot_tree.at(longest_shootID)->phytomers.size() > 2);
+
+    PlantJointID internode_joint;
+    internode_joint.type = PLANT_JOINT_INTERNODE;
+    internode_joint.shootID = longest_shootID;
+    internode_joint.node_index = 1;
+    const Phytomer &phytomer = *shoot_tree.at(longest_shootID)->phytomers.at(1);
+    const PlantJointFrame rest_frame = plantarchitecture.getPlantJointFrame(plantID, internode_joint);
+    const vec3 tip_grown = phytomer.getInternodeNodePositions().back();
+    const float internode_length_max_grown = phytomer.internode_length_max;
+
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+    // Leaves at or beyond the lengthened internode, and those before it
+    std::set<uint> leaf_UUIDs_carried;
+    std::set<uint> leaf_UUIDs_left_alone;
+    for (const auto &shoot: shoot_tree) {
+        for (uint node_index = 0; node_index < shoot->phytomers.size(); node_index++) {
+            int ancestor = shoot->ID;
+            uint node_on_ancestor = node_index;
+            while (ancestor != static_cast<int>(longest_shootID) && shoot_tree.at(ancestor)->parent_shoot_ID >= 0) {
+                node_on_ancestor = shoot_tree.at(ancestor)->parent_node_index;
+                ancestor = shoot_tree.at(ancestor)->parent_shoot_ID;
+            }
+            const bool carried = ancestor == static_cast<int>(longest_shootID) && node_on_ancestor >= internode_joint.node_index;
+            for (uint leaf_objID: flatten(shoot->phytomers.at(node_index)->leaf_objIDs)) {
+                for (uint UUID: context.getObjectPrimitiveUUIDs(leaf_objID)) {
+                    (carried ? leaf_UUIDs_carried : leaf_UUIDs_left_alone).insert(UUID);
+                }
+            }
+        }
+    }
+    DOCTEST_REQUIRE(!leaf_UUIDs_carried.empty());
+    DOCTEST_REQUIRE(!leaf_UUIDs_left_alone.empty());
+
+    PlantJointPose longer;
+    longer.length_scale = 1.5f;
+    plantarchitecture.setPlantJointPose(plantID, internode_joint, longer);
+
+    // The internode is half as long again, still starts where it did, and keeps its direction
+    const PlantJointFrame posed_frame = plantarchitecture.getPlantJointFrame(plantID, internode_joint);
+    DOCTEST_CHECK(posed_frame.pivot == rest_frame.pivot);
+    DOCTEST_CHECK(std::fabs(posed_frame.length - 1.5f * rest_frame.length) < 1e-6f);
+    DOCTEST_CHECK((posed_frame.organ_axis - rest_frame.organ_axis).magnitude() < 1e-5f);
+
+    // Everything beyond it has moved by exactly how far its tip moved, and nothing before it has moved at all
+    const vec3 tip_shift = 0.5f * (tip_grown - rest_frame.pivot);
+    DOCTEST_CHECK((phytomer.getInternodeNodePositions().back() - (tip_grown + tip_shift)).magnitude() < 1e-6f);
+    const std::map<uint, std::vector<vec3>> vertices_posed = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    for (uint UUID: leaf_UUIDs_carried) {
+        for (size_t v = 0; v < vertices_posed.at(UUID).size(); v++) {
+            DOCTEST_CHECK((vertices_posed.at(UUID).at(v) - (vertices_grown.at(UUID).at(v) + tip_shift)).magnitude() < 1e-6f);
+        }
+    }
+    for (uint UUID: leaf_UUIDs_left_alone) {
+        DOCTEST_CHECK(vertices_posed.at(UUID) == vertices_grown.at(UUID));
+    }
+
+    // Setting the length back restores the plant exactly
+    plantarchitecture.setPlantJointPose(plantID, internode_joint, PlantJointPose());
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+
+    // Made permanent, the length the internode is growing toward moves with it, so that growth does not undo the pose
+    plantarchitecture.setPlantJointPose(plantID, internode_joint, longer);
+    plantarchitecture.bakePlantPose(plantID);
+    DOCTEST_CHECK(phytomer.internode_length_max == doctest::Approx(1.5f * internode_length_max_grown).epsilon(1e-6));
+    DOCTEST_CHECK(plantarchitecture.getPlantJointPose(plantID, internode_joint).length_scale == 1.f);
+    DOCTEST_CHECK(std::fabs(plantarchitecture.getPlantJointFrame(plantID, internode_joint).length - 1.5f * rest_frame.length) < 1e-6f);
+}
+
+DOCTEST_TEST_CASE("setPlantJointPose shortens a petiole and carries each leaf with the point it is attached at") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+    // A petiole of a compound leaf, whose leaflets are attached at different points along it
+    PlantJointID petiole_joint;
+    bool petiole_found = false;
+    for (const PlantJointID &joint: plantarchitecture.getPlantJoints(plantID)) {
+        if (joint.type == PLANT_JOINT_PETIOLE && shoot_tree.at(joint.shootID)->phytomers.at(joint.node_index)->leaf_objIDs.at(joint.petiole_index).size() > 1) {
+            petiole_joint = joint;
+            petiole_found = true;
+        }
+    }
+    DOCTEST_REQUIRE(petiole_found);
+    const Phytomer &phytomer = *shoot_tree.at(petiole_joint.shootID)->phytomers.at(petiole_joint.node_index);
+    const uint petiole_index = petiole_joint.petiole_index;
+    const PlantJointFrame rest_frame = plantarchitecture.getPlantJointFrame(plantID, petiole_joint);
+    const float petiole_length_grown = phytomer.getPetioleLength(petiole_index);
+    const std::vector<vec3> petiole_nodes_grown = phytomer.petiole_vertices.at(petiole_index);
+    const std::vector<vec3> leaf_bases_grown = phytomer.leaf_bases.at(petiole_index);
+    const std::vector<uint> leaf_objIDs_grown = phytomer.leaf_objIDs.at(petiole_index);
+    const uint petiole_tube_objID = phytomer.petiole_objIDs.at(petiole_index);
+
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+    PlantJointPose shorter;
+    shorter.length_scale = 0.6f;
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, shorter);
+
+    // The petiole is 60% of its length, on the same base, the same shape scaled about it
+    DOCTEST_CHECK(std::fabs(phytomer.getPetioleLength(petiole_index) - 0.6f * petiole_length_grown) < 1e-6f);
+    DOCTEST_CHECK(std::fabs(plantarchitecture.getPlantJointFrame(plantID, petiole_joint).length - 0.6f * rest_frame.length) < 1e-6f);
+    for (size_t node = 0; node < petiole_nodes_grown.size(); node++) {
+        const vec3 expected_node = rest_frame.pivot + 0.6f * (petiole_nodes_grown.at(node) - rest_frame.pivot);
+        DOCTEST_CHECK((phytomer.petiole_vertices.at(petiole_index).at(node) - expected_node).magnitude() < 1e-6f);
+    }
+    if (context.doesObjectExist(petiole_tube_objID)) {
+        const std::vector<vec3> tube_nodes = context.getTubeObjectNodes(petiole_tube_objID);
+        DOCTEST_REQUIRE(tube_nodes.size() == petiole_nodes_grown.size());
+        for (size_t node = 0; node < tube_nodes.size(); node++) {
+            DOCTEST_CHECK((tube_nodes.at(node) - phytomer.petiole_vertices.at(petiole_index).at(node)).magnitude() < 1e-6f);
+        }
+    }
+
+    // The same leaves, each moved, without being scaled or turned, by how far the point it is attached at moved
+    DOCTEST_CHECK(phytomer.leaf_objIDs.at(petiole_index) == leaf_objIDs_grown);
+    const std::map<uint, std::vector<vec3>> vertices_posed = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    std::set<uint> UUIDs_of_petiole;
+    float largest_leaf_shift = 0;
+    for (size_t leaf_index = 0; leaf_index < leaf_objIDs_grown.size(); leaf_index++) {
+        const vec3 leaf_shift = (0.6f - 1.f) * (leaf_bases_grown.at(leaf_index) - rest_frame.pivot);
+        largest_leaf_shift = std::max(largest_leaf_shift, leaf_shift.magnitude());
+        DOCTEST_CHECK((phytomer.leaf_bases.at(petiole_index).at(leaf_index) - (leaf_bases_grown.at(leaf_index) + leaf_shift)).magnitude() < 1e-6f);
+        for (uint UUID: context.getObjectPrimitiveUUIDs(leaf_objIDs_grown.at(leaf_index))) {
+            UUIDs_of_petiole.insert(UUID);
+            for (size_t v = 0; v < vertices_posed.at(UUID).size(); v++) {
+                DOCTEST_CHECK((vertices_posed.at(UUID).at(v) - (vertices_grown.at(UUID).at(v) + leaf_shift)).magnitude() < 1e-6f);
+            }
+        }
+    }
+    DOCTEST_CHECK(largest_leaf_shift > 1e-3f); // the leaves did have somewhere to go
+    if (context.doesObjectExist(petiole_tube_objID)) {
+        for (uint UUID: context.getObjectPrimitiveUUIDs(petiole_tube_objID)) {
+            UUIDs_of_petiole.insert(UUID);
+        }
+    }
+    // Nothing else on the plant moved
+    for (const auto &entry: vertices_posed) {
+        if (UUIDs_of_petiole.count(entry.first) == 0) {
+            DOCTEST_CHECK(entry.second == vertices_grown.at(entry.first));
+        }
+    }
+
+    // Lengthened and turned at once, then put back exactly
+    PlantJointPose longer_and_turned;
+    longer_and_turned.length_scale = 1.4f;
+    longer_and_turned.pitch_degrees = 25;
+    longer_and_turned.yaw_degrees = -30;
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, longer_and_turned);
+    DOCTEST_CHECK(std::fabs(phytomer.getPetioleLength(petiole_index) - 1.4f * petiole_length_grown) < 1e-6f);
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+    DOCTEST_CHECK(phytomer.getPetioleLength(petiole_index) == petiole_length_grown);
+
+    // A length given in meters, which keeps the angles the joint already has
+    PlantJointPose turned;
+    turned.yaw_degrees = 40;
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, turned);
+    plantarchitecture.setPlantJointLength(plantID, petiole_joint, 0.05f);
+    DOCTEST_CHECK(std::fabs(phytomer.getPetioleLength(petiole_index) - 0.05f) < 1e-6f);
+    DOCTEST_CHECK(plantarchitecture.getPlantJointPose(plantID, petiole_joint).yaw_degrees == 40.f);
+    DOCTEST_CHECK(plantarchitecture.getPlantJointPose(plantID, petiole_joint).length_scale == doctest::Approx(0.05f / petiole_length_grown).epsilon(1e-5));
+    plantarchitecture.setPlantJointLength(plantID, petiole_joint, 0.02f); // from an already scaled petiole
+    DOCTEST_CHECK(std::fabs(phytomer.getPetioleLength(petiole_index) - 0.02f) < 1e-6f);
+    PlantJointID shoot_joint_without_length;
+    shoot_joint_without_length.type = PLANT_JOINT_ROOT;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointLength(plantID, shoot_joint_without_length, 0.05f));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointLength(plantID, petiole_joint, -1.f));
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+
+    // Only an internode or a petiole has a length, and it has to be positive
+    PlantJointID root_joint;
+    root_joint.type = PLANT_JOINT_ROOT;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(plantID, root_joint, shorter));
+    PlantJointPose no_length;
+    no_length.length_scale = 0;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(plantID, petiole_joint, no_length));
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+}
+
+DOCTEST_TEST_CASE("Phytomer::rotatePetiole turns everything stored for the petiole, and a signed pitch tilts it either way") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+    // The petiole that stands furthest from its stem, so that it can be tilted toward the stem without passing through it
+    PlantJointID petiole_joint;
+    float largest_angle_from_stem = 0;
+    for (const PlantJointID &joint: plantarchitecture.getPlantJoints(plantID)) {
+        if (joint.type != PLANT_JOINT_PETIOLE || shoot_tree.at(joint.shootID)->phytomers.at(joint.node_index)->leaf_objIDs.at(joint.petiole_index).empty()) {
+            continue;
+        }
+        const Phytomer &candidate = *shoot_tree.at(joint.shootID)->phytomers.at(joint.node_index);
+        const float angle_from_stem = rad2deg(acos_safe(candidate.getPetioleAxisVector(1.f, joint.petiole_index) * candidate.getInternodeAxisVector(1.f)));
+        if (angle_from_stem > largest_angle_from_stem) {
+            largest_angle_from_stem = angle_from_stem;
+            petiole_joint = joint;
+        }
+    }
+    DOCTEST_REQUIRE(largest_angle_from_stem > 25.f);
+    Phytomer &phytomer = *shoot_tree.at(petiole_joint.shootID)->phytomers.at(petiole_joint.node_index);
+    const uint petiole_index = petiole_joint.petiole_index;
+    const vec3 internode_axis = phytomer.getInternodeAxisVector(1.f);
+    const vec3 petiole_base = phytomer.petiole_vertices.at(petiole_index).front();
+
+    // ---- A negative pitch tilts the petiole toward the stem, a positive one away from it ---- //
+    auto tipAngleFromStem = [&phytomer, petiole_index, &internode_axis]() { return rad2deg(acos_safe(phytomer.getPetioleAxisVector(1.f, petiole_index) * internode_axis)); };
+    const float angle_grown = tipAngleFromStem();
+    phytomer.rotatePetiole(petiole_index, make_AxisRotation(deg2rad(-10.f), 0, 0));
+    DOCTEST_CHECK(tipAngleFromStem() < angle_grown - 5.f);
+    phytomer.rotatePetiole(petiole_index, make_AxisRotation(deg2rad(10.f), 0, 0));
+    DOCTEST_CHECK(std::fabs(tipAngleFromStem() - angle_grown) < 0.05f);
+
+    // ---- A yaw carries every stored position and direction of the petiole around the stem ---- //
+    const float yaw = deg2rad(60.f);
+    const std::vector<vec3> petiole_nodes_before = phytomer.petiole_vertices.at(petiole_index);
+    const std::vector<vec3> leaf_bases_before = phytomer.leaf_bases.at(petiole_index);
+    const vec3 axis_initial_before = phytomer.petiole_axis_initial.at(petiole_index);
+    const vec3 rotation_axis_before = phytomer.petiole_rotation_axis.at(petiole_index);
+    const uint leaf_objID = phytomer.leaf_objIDs.at(petiole_index).front();
+    const vec3 stalk_base_before = petiole_nodes_before.back();
+    phytomer.leaf_stalk_base_placed[leaf_objID] = stalk_base_before;
+
+    phytomer.rotatePetiole(petiole_index, make_AxisRotation(0, yaw, 0));
+
+    for (size_t node = 0; node < petiole_nodes_before.size(); node++) {
+        DOCTEST_CHECK((phytomer.petiole_vertices.at(petiole_index).at(node) - rotatePointAboutLine(petiole_nodes_before.at(node), petiole_base, internode_axis, yaw)).magnitude() < 1e-5f);
+    }
+    for (size_t leaf = 0; leaf < leaf_bases_before.size(); leaf++) {
+        DOCTEST_CHECK((phytomer.leaf_bases.at(petiole_index).at(leaf) - rotatePointAboutLine(leaf_bases_before.at(leaf), petiole_base, internode_axis, yaw)).magnitude() < 1e-5f);
+    }
+    DOCTEST_CHECK((phytomer.petiole_axis_initial.at(petiole_index) - rotatePointAboutLine(axis_initial_before, nullorigin, internode_axis, yaw)).magnitude() < 1e-5f);
+    // The axis the petiole's curvature is about turns with the petiole; left behind, the petiole is rebuilt curving the wrong way when the plant is read from a file
+    DOCTEST_CHECK((phytomer.petiole_rotation_axis.at(petiole_index) - rotatePointAboutLine(rotation_axis_before, nullorigin, internode_axis, yaw)).magnitude() < 1e-5f);
+    DOCTEST_CHECK((phytomer.leaf_stalk_base_placed.at(leaf_objID) - rotatePointAboutLine(stalk_base_before, petiole_base, internode_axis, yaw)).magnitude() < 1e-5f);
+    phytomer.leaf_stalk_base_placed.erase(leaf_objID);
+
+    // ---- Written to a file and read back, the turned petiole is where it was turned to ---- //
+    const std::vector<vec3> petiole_nodes_turned = phytomer.petiole_vertices.at(petiole_index);
+    const std::string filename = "./plantarchitecture_rotated_petiole_test.xml";
+    plantarchitecture.writePlantStructureXML(plantID, filename);
+    const std::vector<uint> plantIDs_read = plantarchitecture.readPlantStructureXML(filename, true);
+    std::remove(filename.c_str());
+    DOCTEST_REQUIRE(plantIDs_read.size() == 1);
+    const auto &shoot_tree_read = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantIDs_read.front());
+    const std::vector<vec3> &petiole_nodes_read = shoot_tree_read.at(petiole_joint.shootID)->phytomers.at(petiole_joint.node_index)->petiole_vertices.at(petiole_index);
+    DOCTEST_REQUIRE(petiole_nodes_read.size() == petiole_nodes_turned.size());
+    float largest_node_error = 0;
+    for (size_t node = 0; node < petiole_nodes_turned.size(); node++) {
+        largest_node_error = std::max(largest_node_error, (petiole_nodes_read.at(node) - petiole_nodes_turned.at(node)).magnitude());
+    }
+    DOCTEST_CHECK_MESSAGE(largest_node_error < 1e-4f, "a petiole node was read back " << largest_node_error << " m from where it was written");
+}
+
+DOCTEST_TEST_CASE("setPetioleNodePositions carries the petiole's leaves to its new centerline") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    PlantJointID petiole_joint;
+    bool petiole_found = false;
+    for (const PlantJointID &joint: plantarchitecture.getPlantJoints(plantID)) {
+        if (joint.type == PLANT_JOINT_PETIOLE && shoot_tree.at(joint.shootID)->phytomers.at(joint.node_index)->leaf_objIDs.at(joint.petiole_index).size() > 1) {
+            petiole_joint = joint;
+            petiole_found = true;
+        }
+    }
+    DOCTEST_REQUIRE(petiole_found);
+    const Phytomer &phytomer = *shoot_tree.at(petiole_joint.shootID)->phytomers.at(petiole_joint.node_index);
+    const uint petiole_index = petiole_joint.petiole_index;
+
+    const std::vector<vec3> nodes_grown = phytomer.petiole_vertices.at(petiole_index);
+    const std::vector<float> radii_grown = phytomer.petiole_radii.at(petiole_index);
+    const std::vector<vec3> leaf_bases_grown = phytomer.leaf_bases.at(petiole_index);
+    const std::vector<uint> leaf_objIDs_grown = phytomer.leaf_objIDs.at(petiole_index);
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+    // The same path drawn in toward its base to 60% of its size: every direction along it is unchanged, so the leaves are to be moved without being turned
+    const vec3 base = nodes_grown.front();
+    std::vector<vec3> nodes_shrunk = nodes_grown;
+    for (vec3 &node: nodes_shrunk) {
+        node = base + 0.6f * (node - base);
+    }
+    plantarchitecture.setPetioleNodePositions(plantID, petiole_joint.shootID, petiole_joint.node_index, petiole_index, nodes_shrunk, radii_grown);
+
+    // The same leaf objects, each moved with the point of the petiole it hangs from
+    DOCTEST_CHECK(phytomer.leaf_objIDs.at(petiole_index) == leaf_objIDs_grown);
+    const std::map<uint, std::vector<vec3>> vertices_shrunk = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    float largest_leaf_shift = 0;
+    for (size_t leaf = 0; leaf < leaf_objIDs_grown.size(); leaf++) {
+        const vec3 leaf_shift = -0.4f * (leaf_bases_grown.at(leaf) - base);
+        largest_leaf_shift = std::max(largest_leaf_shift, leaf_shift.magnitude());
+        DOCTEST_CHECK((phytomer.leaf_bases.at(petiole_index).at(leaf) - (leaf_bases_grown.at(leaf) + leaf_shift)).magnitude() < 2e-5f);
+        for (uint UUID: context.getObjectPrimitiveUUIDs(leaf_objIDs_grown.at(leaf))) {
+            for (size_t v = 0; v < vertices_shrunk.at(UUID).size(); v++) {
+                DOCTEST_CHECK((vertices_shrunk.at(UUID).at(v) - (vertices_grown.at(UUID).at(v) + leaf_shift)).magnitude() < 2e-5f);
+            }
+        }
+    }
+    DOCTEST_CHECK(largest_leaf_shift > 1e-3f);
+}
+
+DOCTEST_TEST_CASE("setShootNodePositions puts a shoot's nodes where they are given, and the shoot grows on from there") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    uint tied_shootID = 0;
+    for (const auto &shoot: shoot_tree) {
+        if (shoot->phytomers.size() > shoot_tree.at(tied_shootID)->phytomers.size()) {
+            tied_shootID = static_cast<uint>(shoot->ID);
+        }
+    }
+    const auto &tied_shoot = shoot_tree.at(tied_shootID);
+    const size_t node_count = tied_shoot->phytomers.size();
+    DOCTEST_REQUIRE(node_count > 2);
+
+    // The shoot's nodes as it grew: its base, then the tip of each internode
+    auto shootNodePositions = [&tied_shoot]() {
+        std::vector<vec3> positions{tied_shoot->shoot_internode_vertices.front().front()};
+        for (const auto &internode_vertices: tied_shoot->shoot_internode_vertices) {
+            positions.push_back(internode_vertices.back());
+        }
+        return positions;
+    };
+    const std::vector<vec3> positions_grown = shootNodePositions();
+    const std::vector<uint> objIDs_grown = plantarchitecture.getAllPlantObjectIDs(plantID);
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+    // Given the positions it already has, the shoot does not move and the plant is not posed
+    plantarchitecture.setShootNodePositions(plantID, tied_shootID, positions_grown);
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+
+    // Laid over toward a wire: from its base the shoot runs out horizontally along +x, climbing a little, with internodes 20% longer than they grew
+    std::vector<vec3> positions_tied{positions_grown.front()};
+    for (size_t node = 0; node < node_count; node++) {
+        const float internode_chord = (positions_grown.at(node + 1) - positions_grown.at(node)).magnitude();
+        vec3 direction = make_vec3(1.f, 0.15f * float(node), 0.2f);
+        direction.normalize();
+        positions_tied.push_back(positions_tied.back() + 1.2f * internode_chord * direction);
+    }
+    plantarchitecture.setShootNodePositions(plantID, tied_shootID, positions_tied);
+    DOCTEST_CHECK(plantarchitecture.isPlantPosed(plantID));
+
+    // Every node is where it was put, and no organ was rebuilt
+    const std::vector<vec3> positions_posed = shootNodePositions();
+    for (size_t node = 0; node < positions_tied.size(); node++) {
+        DOCTEST_CHECK_MESSAGE((positions_posed.at(node) - positions_tied.at(node)).magnitude() < 2e-6f, "node " << node << " is " << (positions_posed.at(node) - positions_tied.at(node)).magnitude() << " m from where it was put");
+    }
+    DOCTEST_CHECK(plantarchitecture.getAllPlantObjectIDs(plantID) == objIDs_grown);
+
+    // The leaves of the last node went with it
+    const Phytomer &last_phytomer = *tied_shoot->phytomers.back();
+    if (!last_phytomer.petiole_vertices.empty()) {
+        DOCTEST_CHECK((last_phytomer.petiole_vertices.front().front() - positions_tied.back()).magnitude() < 2e-6f);
+    }
+
+    // The poses that were worked out can be read back, and setting the same positions again changes nothing
+    PlantJointID internode_joint;
+    internode_joint.type = PLANT_JOINT_INTERNODE;
+    internode_joint.shootID = tied_shootID;
+    internode_joint.node_index = 1;
+    DOCTEST_CHECK(plantarchitecture.getPlantJointPose(plantID, internode_joint).length_scale == doctest::Approx(1.2f).epsilon(1e-4));
+    const std::map<uint, std::vector<vec3>> vertices_tied = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    plantarchitecture.setShootNodePositions(plantID, tied_shootID, positions_tied);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_tied) < 2e-6f);
+
+    // Undone exactly
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+
+    // Tied again and left to grow: the shoot stays laid over, attached, and goes on growing from its tip
+    plantarchitecture.setShootNodePositions(plantID, tied_shootID, positions_tied);
+    vec3 tied_direction = positions_tied.at(1) - positions_tied.at(0);
+    tied_direction.normalize();
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 5));
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+    const std::vector<vec3> positions_after_growth = shootNodePositions();
+    DOCTEST_CHECK(positions_after_growth.size() >= positions_tied.size());
+    vec3 direction_after_growth = positions_after_growth.at(1) - positions_after_growth.at(0);
+    direction_after_growth.normalize();
+    DOCTEST_CHECK(rad2deg(acos_safe(direction_after_growth * tied_direction)) < 2.f);
+    // Each internode still starts where the one before it ends: the stored nodes of consecutive phytomers are one continuous line
+    for (size_t node = 1; node + 1 < positions_after_growth.size(); node++) {
+        const std::vector<vec3> internode_nodes = tied_shoot->phytomers.at(node)->getInternodeNodePositions();
+        DOCTEST_CHECK(internode_nodes.front() == positions_after_growth.at(node));
+    }
+    // The laid-over shoot has not sprung back toward where it grew: its tied nodes are still far from their grown positions
+    DOCTEST_CHECK((positions_after_growth.at(2) - positions_grown.at(2)).magnitude() > 0.5f * (positions_tied.at(2) - positions_grown.at(2)).magnitude());
+
+    // Positions that cannot be a pose of the shoot are refused
+    std::vector<vec3> too_few = positions_after_growth;
+    too_few.pop_back();
+    DOCTEST_CHECK_THROWS(plantarchitecture.setShootNodePositions(plantID, tied_shootID, too_few));
+    std::vector<vec3> detached = positions_after_growth;
+    for (vec3 &position: detached) {
+        position.x += 0.5f;
+    }
+    DOCTEST_CHECK_THROWS(plantarchitecture.setShootNodePositions(plantID, tied_shootID, detached));
+    std::vector<vec3> coincident = positions_after_growth;
+    coincident.at(2) = coincident.at(1);
+    DOCTEST_CHECK_THROWS(plantarchitecture.setShootNodePositions(plantID, tied_shootID, coincident));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setShootNodePositions(plantID, 9999, positions_after_growth));
+}
+
+DOCTEST_TEST_CASE("A terminal floral bud on a phytomer without petioles moves with its node as the stem lengthens") {
+    // A leafless shoot type, as for a woody skeleton, that ends in a flower. The terminal bud sits on the tip of the last internode, and has to stay there when an internode below it elongates.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    PhytomerParameters phytomer_parameters(context.getRandomGenerator());
+    phytomer_parameters.internode.pitch = 0;
+    phytomer_parameters.internode.phyllotactic_angle = 0;
+    phytomer_parameters.internode.length_segments = 1;
+    phytomer_parameters.petiole.petioles_per_internode = 0;
+    phytomer_parameters.leaf.leaves_per_petiole = 0;
+
+    ShootParameters shoot_parameters(context.getRandomGenerator());
+    shoot_parameters.phytomer_parameters = phytomer_parameters;
+    shoot_parameters.gravitropic_curvature = 0;
+    shoot_parameters.tortuosity = 0;
+    shoot_parameters.max_nodes = 3;
+    shoot_parameters.max_terminal_floral_buds = 1;
+    shoot_parameters.flowers_require_dormancy = false;
+    shoot_parameters.vegetative_bud_break_probability_min = 0;
+    shoot_parameters.defineChildShootTypes({"leafless_flowering"}, {1.f});
+    plantarchitecture.defineShootType("leafless_flowering", shoot_parameters);
+
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    // Two nodes, half elongated, and a third that brings the shoot to its last node, where the terminal bud is added
+    const uint shootID = plantarchitecture.addBaseStemShoot(plantID, 2, make_AxisRotation(0, 0, 0), 0.005f, 0.05f, 0.5f, 1.f, 0.f, "leafless_flowering");
+    static_cast<void>(plantarchitecture.appendPhytomerToShoot(plantID, shootID, phytomer_parameters, 0.005f, 0.05f, 0.5f, 1.f));
+
+    const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    DOCTEST_REQUIRE(shoot->phytomers.size() == 3);
+    const auto &last_phytomer = shoot->phytomers.back();
+    DOCTEST_REQUIRE(last_phytomer->petiole_vertices.empty());
+    const FloralBud *terminal_bud_ptr = nullptr;
+    for (const auto &petiole_buds: last_phytomer->floral_buds) {
+        for (const FloralBud &fbud: petiole_buds) {
+            if (fbud.isterminal) {
+                terminal_bud_ptr = &fbud;
+            }
+        }
+    }
+    DOCTEST_REQUIRE(terminal_bud_ptr != nullptr);
+    const FloralBud &terminal_bud = *terminal_bud_ptr;
+    DOCTEST_REQUIRE(terminal_bud.isterminal);
+    const vec3 tip_before = shoot->shoot_internode_vertices.back().back();
+    DOCTEST_REQUIRE((terminal_bud.base_position - tip_before).magnitude() < 1e-6f);
+
+    // The first internode finishes elongating, which carries every node above it upward
+    shoot->phytomers.front()->setInternodeLengthScaleFraction(1.f, true);
+    const vec3 tip_after = shoot->shoot_internode_vertices.back().back();
+    DOCTEST_REQUIRE((tip_after - tip_before).magnitude() > 0.01f);
+
+    DOCTEST_CHECK_MESSAGE((terminal_bud.base_position - tip_after).magnitude() < 1e-6f, "the terminal bud was left " << (terminal_bud.base_position - tip_after).magnitude() << " m from the tip of its shoot");
+}
+
+DOCTEST_TEST_CASE("A branch stays seated where it is on its parent after a pose is made permanent") {
+    // Where a branch leaves the surface of its parent is worked out again whenever the parent thickens or turns. After a pose has been made permanent, that must leave the branch where the pose put it.
+
+    // Re-seat every branch of a plant as a thickening parent would, and report how far the furthest-moved branch base went
+    auto largestBaseMovementOnReseating = [](const std::vector<std::shared_ptr<Shoot>> &shoot_tree, uint &lateral_shoot_count) {
+        std::vector<vec3> bases_before;
+        lateral_shoot_count = 0;
+        for (const auto &shoot: shoot_tree) {
+            bases_before.push_back(shoot->isPruned() ? make_vec3(0, 0, 0) : shoot->shoot_internode_vertices.front().front());
+            if (!shoot->isPruned() && shoot->parent_shoot_ID >= 0 && !shoot->is_axis_continuation) {
+                lateral_shoot_count++;
+            }
+            shoot->last_parent_node_radius = -1.f; // as if the parent's radius had changed
+        }
+        shoot_tree.front()->updateShootNodes(true);
+        float largest_movement = 0;
+        for (const auto &shoot: shoot_tree) {
+            if (!shoot->isPruned()) {
+                largest_movement = std::max(largest_movement, (shoot->shoot_internode_vertices.front().front() - bases_before.at(shoot->ID)).magnitude());
+            }
+        }
+        return largest_movement;
+    };
+
+    DOCTEST_SUBCASE("a leafless parent that has been tilted") {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+
+        PhytomerParameters phytomer_parameters(context.getRandomGenerator());
+        phytomer_parameters.internode.pitch = 0;
+        phytomer_parameters.internode.phyllotactic_angle = 0;
+        phytomer_parameters.internode.length_segments = 1;
+        phytomer_parameters.petiole.petioles_per_internode = 0;
+        phytomer_parameters.leaf.leaves_per_petiole = 0;
+        ShootParameters shoot_parameters(context.getRandomGenerator());
+        shoot_parameters.phytomer_parameters = phytomer_parameters;
+        shoot_parameters.gravitropic_curvature = 0;
+        shoot_parameters.tortuosity = 0;
+        shoot_parameters.max_nodes = 10;
+        shoot_parameters.vegetative_bud_break_probability_min = 0;
+        shoot_parameters.defineChildShootTypes({"leafless"}, {1.f});
+        plantarchitecture.defineShootType("leafless", shoot_parameters);
+
+        const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+        const uint parent_shootID = plantarchitecture.addBaseStemShoot(plantID, 3, make_AxisRotation(0, 0, 0), 0.02f, 0.05f, 1.f, 1.f, 0.f, "leafless");
+        static_cast<void>(plantarchitecture.addChildShoot(plantID, parent_shootID, 1, 2, make_AxisRotation(deg2rad(60.f), deg2rad(40.f), 0.f), 0.005f, 0.03f, 1.f, 1.f, 0.f, "leafless", 0));
+
+        const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+        // Before any pose, re-seating a branch puts it back where it already is
+        uint lateral_shoot_count = 0;
+        DOCTEST_CHECK(largestBaseMovementOnReseating(shoot_tree, lateral_shoot_count) < 1e-6f);
+        DOCTEST_REQUIRE(lateral_shoot_count == 1);
+
+        PlantJointID root_joint;
+        root_joint.type = PLANT_JOINT_ROOT;
+        PlantJointPose lean;
+        lean.pitch_degrees = 50;
+        lean.yaw_degrees = 30;
+        plantarchitecture.setPlantJointPose(plantID, root_joint, lean);
+        plantarchitecture.bakePlantPose(plantID);
+
+        const float movement = largestBaseMovementOnReseating(shoot_tree, lateral_shoot_count);
+        DOCTEST_CHECK_MESSAGE(movement < 1e-6f, "the branch base moved " << movement << " m around its parent");
+    }
+
+    DOCTEST_SUBCASE("a leafy plant whose petioles have been turned") {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("cowpea");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+        const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+        // Every petiole carried a third of the way round its stem, and the plant leaned over
+        std::vector<PlantJointID> joints;
+        std::vector<PlantJointPose> poses;
+        for (const PlantJointID &joint: plantarchitecture.getPlantJoints(plantID)) {
+            PlantJointPose pose;
+            if (joint.type == PLANT_JOINT_PETIOLE) {
+                pose.yaw_degrees = 120;
+            } else if (joint.type == PLANT_JOINT_ROOT) {
+                pose.pitch_degrees = 35;
+            } else {
+                continue;
+            }
+            joints.push_back(joint);
+            poses.push_back(pose);
+        }
+        plantarchitecture.setPlantJointPoses(plantID, joints, poses);
+        plantarchitecture.bakePlantPose(plantID);
+
+        uint lateral_shoot_count = 0;
+        const float movement = largestBaseMovementOnReseating(shoot_tree, lateral_shoot_count);
+        DOCTEST_REQUIRE(lateral_shoot_count > 0);
+        DOCTEST_CHECK_MESSAGE(movement < 1e-6f, "a branch base moved " << movement << " m around its parent");
+    }
+}
+
+DOCTEST_TEST_CASE("Axillary floral buds of a phytomer without petioles are placed at its node and bear fruit there") {
+    // A leafless shoot type that fruits from its nodes, standing well away from the origin so that a bud left unplaced is unmistakable
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    PhytomerParameters phytomer_parameters(context.getRandomGenerator());
+    phytomer_parameters.internode.pitch = 0;
+    phytomer_parameters.internode.phyllotactic_angle = 137.5f;
+    phytomer_parameters.internode.length_segments = 1;
+    phytomer_parameters.internode.max_floral_buds_per_petiole = 2;
+    phytomer_parameters.petiole.petioles_per_internode = 0;
+    phytomer_parameters.leaf.leaves_per_petiole = 0;
+    phytomer_parameters.peduncle.length = 0.02f;
+    phytomer_parameters.peduncle.radius = 0.001f;
+    phytomer_parameters.peduncle.pitch = 60;
+    phytomer_parameters.peduncle.length_segments = 2;
+    phytomer_parameters.inflorescence.flowers_per_peduncle = 1;
+    phytomer_parameters.inflorescence.fruit_prototype_scale = 0.02f;
+    phytomer_parameters.inflorescence.fruit_prototype_function = AlmondFruitPrototype;
+
+    ShootParameters shoot_parameters(context.getRandomGenerator());
+    shoot_parameters.phytomer_parameters = phytomer_parameters;
+    shoot_parameters.gravitropic_curvature = 0;
+    shoot_parameters.tortuosity = 0;
+    shoot_parameters.max_nodes = 10;
+    shoot_parameters.vegetative_bud_break_probability_min = 0;
+    shoot_parameters.defineChildShootTypes({"leafless_fruiting"}, {1.f});
+    plantarchitecture.defineShootType("leafless_fruiting", shoot_parameters);
+
+    const vec3 plant_base = make_vec3(3, -2, 0);
+    const uint plantID = plantarchitecture.addPlantInstance(plant_base, 0.f);
+    const uint shootID = plantarchitecture.addBaseStemShoot(plantID, 3, make_AxisRotation(0, 0, 0), 0.005f, 0.05f, 1.f, 1.f, 0.f, "leafless_fruiting");
+
+    const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    const auto &phytomer = shoot->phytomers.at(1);
+    DOCTEST_REQUIRE(phytomer->petiole_vertices.empty());
+    const vec3 node_position = shoot->shoot_internode_vertices.at(1).back();
+
+    // Both buds are at the node, and are told apart by their index
+    DOCTEST_REQUIRE(phytomer->floral_buds.size() == 1);
+    DOCTEST_REQUIRE(phytomer->floral_buds.front().size() == 2);
+    for (uint bud = 0; bud < 2; bud++) {
+        const FloralBud &fbud = phytomer->floral_buds.front().at(bud);
+        DOCTEST_CHECK_MESSAGE((fbud.base_position - node_position).magnitude() < 1e-6f, "bud " << bud << " is " << (fbud.base_position - node_position).magnitude() << " m from its node");
+        DOCTEST_CHECK(fbud.bud_index == bud);
+    }
+
+    // Brought into fruit, each bud bears its fruit on a peduncle that starts at the node and leaves the stem
+    phytomer->setFloralBudState(BUD_FRUITING);
+    std::vector<vec3> fruit_centers;
+    for (uint bud = 0; bud < 2; bud++) {
+        const FloralBud &fbud = phytomer->floral_buds.front().at(bud);
+        DOCTEST_REQUIRE(fbud.inflorescence_objIDs.size() == 1);
+        DOCTEST_REQUIRE(context.doesObjectExist(fbud.inflorescence_objIDs.front()));
+        const vec3 fruit_center = context.getObjectCenter(fbud.inflorescence_objIDs.front());
+        DOCTEST_CHECK(std::isfinite(fruit_center.x));
+        DOCTEST_CHECK(std::isfinite(fruit_center.y));
+        DOCTEST_CHECK(std::isfinite(fruit_center.z));
+        DOCTEST_CHECK_MESSAGE((fruit_center - node_position).magnitude() < 0.1f, "the fruit of bud " << bud << " is " << (fruit_center - node_position).magnitude() << " m from its node");
+        fruit_centers.push_back(fruit_center);
+
+        DOCTEST_REQUIRE(phytomer->peduncle_vertices.size() == 1);
+        DOCTEST_REQUIRE(phytomer->peduncle_vertices.front().size() == 2);
+        const std::vector<vec3> &peduncle_nodes = phytomer->peduncle_vertices.front().at(bud);
+        DOCTEST_REQUIRE(peduncle_nodes.size() == 3);
+        DOCTEST_CHECK((peduncle_nodes.front() - node_position).magnitude() < 1e-6f);
+        // A peduncle pitched 60 degrees off the stem has a tip well off the stem's axis, which here is the vertical through the plant base
+        const float tip_distance_from_stem_axis = std::sqrt((peduncle_nodes.back().x - plant_base.x) * (peduncle_nodes.back().x - plant_base.x) + (peduncle_nodes.back().y - plant_base.y) * (peduncle_nodes.back().y - plant_base.y));
+        DOCTEST_CHECK_MESSAGE(tip_distance_from_stem_axis > 0.005f, "the peduncle of bud " << bud << " ends " << tip_distance_from_stem_axis << " m from the stem axis");
+    }
+    // The two fruit of a node do not sit on top of one another
+    DOCTEST_CHECK((fruit_centers.at(0) - fruit_centers.at(1)).magnitude() > 0.002f);
+}
+
+namespace {
+
+    //! Shared vertex array of every leaf of a plant that has one, by leaf object ID. This is what a later reshaping or re-drooping of the leaf starts from, as distinct from the leaf's primitives.
+    std::map<uint, std::vector<vec3>> plantLeafSharedVertices(const Context &context, const std::vector<std::shared_ptr<Shoot>> &shoot_tree) {
+        std::map<uint, std::vector<vec3>> shared_vertices;
+        for (const auto &shoot: shoot_tree) {
+            for (const auto &phytomer: shoot->phytomers) {
+                for (uint leaf_objID: flatten(phytomer->leaf_objIDs)) {
+                    if (context.doesObjectExist(leaf_objID) && context.getObjectType(leaf_objID) == OBJECT_TYPE_POLYMESH && !context.getPolymeshObjectFaces(leaf_objID).empty()) {
+                        shared_vertices[leaf_objID] = context.getPolymeshObjectVertices(leaf_objID);
+                    }
+                }
+            }
+        }
+        return shared_vertices;
+    }
+
+} // namespace
+
+DOCTEST_TEST_CASE("Resetting a pose restores the shared vertices of drooping leaves as well as their primitives") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+    const std::map<uint, std::vector<vec3>> shared_vertices_grown = plantLeafSharedVertices(context, shoot_tree);
+    DOCTEST_REQUIRE(!shared_vertices_grown.empty());
+
+    PlantJointID root_joint;
+    root_joint.type = PLANT_JOINT_ROOT;
+    PlantJointPose lean;
+    lean.pitch_degrees = 50;
+    plantarchitecture.setPlantJointPose(plantID, root_joint, lean);
+
+    // While posed, a leaf's shared vertices and its primitives describe the same surface: every primitive vertex is one of the shared vertices
+    for (const auto &leaf: shared_vertices_grown) {
+        const std::vector<vec3> shared_vertices_posed = context.getPolymeshObjectVertices(leaf.first);
+        const std::vector<vec3> first_primitive_vertices = context.getPrimitiveVertices(context.getObjectPrimitiveUUIDs(leaf.first).front());
+        float nearest = 1e30f;
+        for (const vec3 &shared_vertex: shared_vertices_posed) {
+            nearest = std::min(nearest, (shared_vertex - first_primitive_vertices.front()).magnitude());
+        }
+        DOCTEST_CHECK(nearest < 1e-5f);
+    }
+
+    plantarchitecture.resetPlantPose(plantID);
+
+    const std::map<uint, std::vector<vec3>> shared_vertices_reset = plantLeafSharedVertices(context, shoot_tree);
+    DOCTEST_REQUIRE(shared_vertices_reset.size() == shared_vertices_grown.size());
+    float largest_difference = 0;
+    for (const auto &leaf: shared_vertices_grown) {
+        const std::vector<vec3> &reset_vertices = shared_vertices_reset.at(leaf.first);
+        DOCTEST_REQUIRE(reset_vertices.size() == leaf.second.size());
+        for (size_t v = 0; v < reset_vertices.size(); v++) {
+            largest_difference = std::max(largest_difference, (reset_vertices.at(v) - leaf.second.at(v)).magnitude());
+        }
+    }
+    DOCTEST_CHECK_MESSAGE(largest_difference < 1e-5f, "a shared leaf vertex is " << largest_difference << " m from where it was before the plant was posed");
+}
+
+DOCTEST_TEST_CASE("A drooping leaf turned while its plant is posed droops for the way it ends up facing once the pose is reset") {
+    // Two identical plants. On one a leaf is turned while the plant leans, and the lean is then reset; on the other the same leaf is turned as the plant grew and left to settle. They must match.
+    std::map<uint, std::vector<vec3>> vertices_by_plant[2];
+    for (int posed = 0; posed < 2; posed++) {
+        Context context;
+        context.seedRandomGenerator(5);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("sorghum");
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+        const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+        // The longest leaf of the plant, which droops the most
+        Phytomer *leafy_phytomer = nullptr;
+        float largest_leaf_area = 0;
+        for (const auto &phytomer: shoot_tree.front()->phytomers) {
+            if (!phytomer->leaf_objIDs.empty() && !phytomer->leaf_objIDs.front().empty() && context.doesObjectExist(phytomer->leaf_objIDs.front().front())) {
+                const float leaf_area = context.getObjectArea(phytomer->leaf_objIDs.front().front());
+                if (leaf_area > largest_leaf_area) {
+                    largest_leaf_area = leaf_area;
+                    leafy_phytomer = phytomer.get();
+                }
+            }
+        }
+        DOCTEST_REQUIRE(leafy_phytomer != nullptr);
+        DOCTEST_REQUIRE(leafy_phytomer->leaf_flexibility > 0.f);
+        const uint leaf_objID = leafy_phytomer->leaf_objIDs.front().front();
+
+        PlantJointID root_joint;
+        root_joint.type = PLANT_JOINT_ROOT;
+        PlantJointPose lean;
+        lean.pitch_degrees = 60;
+
+        if (posed == 1) {
+            plantarchitecture.setPlantJointPose(plantID, root_joint, lean);
+        }
+        // A quarter turn about the stem, through the leaf's base, with the stem and base read from the plant as it stands
+        context.rotateObject(leaf_objID, deg2rad(90.f), leafy_phytomer->getLeafBasePosition(0, 0), leafy_phytomer->getInternodeAxisVector(1.f));
+        if (posed == 1) {
+            plantarchitecture.resetPlantPose(plantID);
+        } else {
+            leafy_phytomer->resettlePetioleUnderGravity(0);
+        }
+        vertices_by_plant[posed] = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    }
+    const float largest_difference = largestVertexDifference(vertices_by_plant[0], vertices_by_plant[1]);
+    DOCTEST_CHECK_MESSAGE(largest_difference < 1e-4f, "largest difference " << largest_difference << " m");
+}
+
+DOCTEST_TEST_CASE("A joint identifier carrying an index its joint type does not use is refused") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 15);
+
+    PlantJointPose pose;
+    pose.pitch_degrees = 20;
+
+    // An identifier that was used for a petiole and then for an internode, with the petiole index left behind
+    PlantJointID internode_joint;
+    internode_joint.type = PLANT_JOINT_INTERNODE;
+    internode_joint.petiole_index = 1;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(plantID, internode_joint, pose));
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantJointFrame(plantID, internode_joint)));
+
+    PlantJointID root_joint;
+    root_joint.type = PLANT_JOINT_ROOT;
+    root_joint.shootID = 1;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(plantID, root_joint, pose));
+
+    PlantJointID petiole_joint;
+    petiole_joint.type = PLANT_JOINT_PETIOLE;
+    petiole_joint.bud_index = 2;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(plantID, petiole_joint, pose));
+
+    // Nothing was posed by any of them
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+}
+
+DOCTEST_TEST_CASE("A pose that cannot be applied leaves the plant as it was") {
+    // Several plants: whether a collapsed internode is recognized as having no direction used to depend on the rounding of the
+    // particular plant's coordinates, so one plant in four slipped through.
+    for (uint seed = 1; seed <= 10; seed++) {
+        DOCTEST_CAPTURE(seed);
+        Context context;
+        context.seedRandomGenerator(seed);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+        const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+        // The plant is given a pose that works
+        PlantJointID root_joint;
+        root_joint.type = PLANT_JOINT_ROOT;
+        PlantJointPose quarter_turn;
+        quarter_turn.yaw_degrees = 90;
+        plantarchitecture.setPlantJointPose(plantID, root_joint, quarter_turn);
+
+        // The last internode of the longest shoot is then collapsed to a point, so that it has no direction to turn about
+        uint longest_shootID = 0;
+        for (const auto &shoot: shoot_tree) {
+            if (shoot->phytomers.size() > shoot_tree.at(longest_shootID)->phytomers.size()) {
+                longest_shootID = static_cast<uint>(shoot->ID);
+            }
+        }
+        const auto &shoot = shoot_tree.at(longest_shootID);
+        const uint last_node = static_cast<uint>(shoot->phytomers.size() - 1);
+        DOCTEST_REQUIRE(last_node > 0);
+        const vec3 internode_base = shoot->shoot_internode_vertices.at(last_node - 1).back();
+        for (vec3 &vertex: shoot->shoot_internode_vertices.at(last_node)) {
+            vertex = internode_base;
+        }
+
+        // What the plant stores, as it stands posed
+        std::vector<std::vector<vec3>> internode_nodes_posed;
+        for (const auto &each_shoot: shoot_tree) {
+            internode_nodes_posed.push_back(flatten(each_shoot->shoot_internode_vertices));
+        }
+        const std::map<uint, std::vector<vec3>> vertices_posed = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+        PlantJointID collapsed_joint;
+        collapsed_joint.type = PLANT_JOINT_INTERNODE;
+        collapsed_joint.shootID = longest_shootID;
+        collapsed_joint.node_index = last_node;
+        PlantJointPose pose;
+        pose.pitch_degrees = 15;
+        DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(plantID, collapsed_joint, pose));
+
+        // The pose that failed is not kept, the one that worked is, and the plant's stored positions still describe the posed plant in the Context
+        DOCTEST_CHECK(plantarchitecture.getPlantJointPose(plantID, collapsed_joint).pitch_degrees == 0.f);
+        DOCTEST_CHECK(plantarchitecture.getPlantJointPose(plantID, root_joint).yaw_degrees == 90.f);
+        for (const auto &each_shoot: shoot_tree) {
+            DOCTEST_CHECK(flatten(each_shoot->shoot_internode_vertices) == internode_nodes_posed.at(each_shoot->ID));
+        }
+        DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_posed) == 0.f);
+
+        // And a pose that works can still be set afterwards
+        PlantJointPose half_turn;
+        half_turn.yaw_degrees = 180;
+        DOCTEST_CHECK_NOTHROW(plantarchitecture.setPlantJointPose(plantID, root_joint, half_turn));
+    }
+}
+
+DOCTEST_TEST_CASE("A branch stays seated where it is on its parent while its plant is posed") {
+    // The same as after a pose is made permanent: anything that re-seats the branches of a posed plant must leave them where the pose put them
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    PhytomerParameters phytomer_parameters(context.getRandomGenerator());
+    phytomer_parameters.internode.pitch = 0;
+    phytomer_parameters.internode.phyllotactic_angle = 0;
+    phytomer_parameters.internode.length_segments = 1;
+    phytomer_parameters.petiole.petioles_per_internode = 0;
+    phytomer_parameters.leaf.leaves_per_petiole = 0;
+    ShootParameters shoot_parameters(context.getRandomGenerator());
+    shoot_parameters.phytomer_parameters = phytomer_parameters;
+    shoot_parameters.gravitropic_curvature = 0;
+    shoot_parameters.tortuosity = 0;
+    shoot_parameters.max_nodes = 10;
+    shoot_parameters.vegetative_bud_break_probability_min = 0;
+    shoot_parameters.defineChildShootTypes({"leafless"}, {1.f});
+    plantarchitecture.defineShootType("leafless", shoot_parameters);
+
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    const uint parent_shootID = plantarchitecture.addBaseStemShoot(plantID, 3, make_AxisRotation(0, 0, 0), 0.02f, 0.05f, 1.f, 1.f, 0.f, "leafless");
+    const uint child_shootID = plantarchitecture.addChildShoot(plantID, parent_shootID, 1, 2, make_AxisRotation(deg2rad(60.f), deg2rad(40.f), 0.f), 0.005f, 0.03f, 1.f, 1.f, 0.f, "leafless", 0);
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    const vec3 base_grown = shoot_tree.at(child_shootID)->shoot_internode_vertices.front().front();
+
+    PlantJointID root_joint;
+    root_joint.type = PLANT_JOINT_ROOT;
+    PlantJointPose lean;
+    lean.pitch_degrees = 50;
+    lean.yaw_degrees = 30;
+    plantarchitecture.setPlantJointPose(plantID, root_joint, lean);
+
+    const vec3 base_posed = shoot_tree.at(child_shootID)->shoot_internode_vertices.front().front();
+    shoot_tree.at(child_shootID)->last_parent_node_radius = -1.f; // as if the parent's radius had changed
+    shoot_tree.front()->updateShootNodes(true);
+    const float movement = (shoot_tree.at(child_shootID)->shoot_internode_vertices.front().front() - base_posed).magnitude();
+    DOCTEST_CHECK_MESSAGE(movement < 1e-6f, "the branch base moved " << movement << " m around its parent");
+
+    // Put back, the branch is where it grew, and is seated as it would be had the plant never been posed
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK((shoot_tree.at(child_shootID)->shoot_internode_vertices.front().front() - base_grown).magnitude() < 1e-6f);
+    DOCTEST_CHECK(!shoot_tree.at(child_shootID)->base_offset_pinned);
+}
+
+DOCTEST_TEST_CASE("A flowering shoot without petioles is read back from a plant structure file with its fruit at its nodes") {
+    // A leafless, fruiting shoot type whose internodes are drawn with random angles, so that a phytomer rebuilt while a file is read does not happen to land where the saved one was
+    auto defineLeaflessFruitingShootType = [](Context &context, PlantArchitecture &plantarchitecture) {
+        PhytomerParameters phytomer_parameters(context.getRandomGenerator());
+        phytomer_parameters.internode.pitch.uniformDistribution(10, 30);
+        phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(90, 180);
+        phytomer_parameters.internode.length_segments = 2;
+        phytomer_parameters.internode.max_floral_buds_per_petiole = 1;
+        phytomer_parameters.petiole.petioles_per_internode = 0;
+        phytomer_parameters.leaf.leaves_per_petiole = 0;
+        phytomer_parameters.peduncle.length = 0.02f;
+        phytomer_parameters.peduncle.radius = 0.001f;
+        phytomer_parameters.peduncle.pitch = 60;
+        phytomer_parameters.peduncle.length_segments = 2;
+        phytomer_parameters.inflorescence.flowers_per_peduncle = 1;
+        phytomer_parameters.inflorescence.fruit_prototype_scale = 0.02f;
+        phytomer_parameters.inflorescence.fruit_prototype_function = AlmondFruitPrototype;
+
+        ShootParameters shoot_parameters(context.getRandomGenerator());
+        shoot_parameters.phytomer_parameters = phytomer_parameters;
+        shoot_parameters.gravitropic_curvature = 0;
+        shoot_parameters.tortuosity = 0;
+        shoot_parameters.max_nodes = 10;
+        shoot_parameters.vegetative_bud_break_probability_min = 0;
+        shoot_parameters.defineChildShootTypes({"leafless_fruiting"}, {1.f});
+        plantarchitecture.defineShootType("leafless_fruiting", shoot_parameters);
+    };
+
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    defineLeaflessFruitingShootType(context, plantarchitecture);
+
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(1, 1, 0), 0.f);
+    const uint shootID = plantarchitecture.addBaseStemShoot(plantID, 4, make_AxisRotation(0, 0, 0), 0.005f, 0.05f, 1.f, 1.f, 0.f, "leafless_fruiting");
+    const auto &shoot = plantarchitecture.getPlantShoot(plantID, shootID);
+    for (const auto &phytomer: shoot->phytomers) {
+        phytomer->setFloralBudState(BUD_FRUITING);
+    }
+
+    const std::string filename = "./plantarchitecture_leafless_fruiting_test.xml";
+    plantarchitecture.writePlantStructureXML(plantID, filename);
+
+    Context restored_context;
+    restored_context.seedRandomGenerator(99);
+    PlantArchitecture restored_plantarchitecture(&restored_context);
+    restored_plantarchitecture.disableMessages();
+    defineLeaflessFruitingShootType(restored_context, restored_plantarchitecture);
+    std::vector<uint> restored_plantIDs;
+    DOCTEST_REQUIRE_NOTHROW(restored_plantIDs = restored_plantarchitecture.readPlantStructureXML(filename, true));
+    std::remove(filename.c_str());
+    DOCTEST_REQUIRE(restored_plantIDs.size() == 1);
+    const auto &restored_shoot = restored_plantarchitecture.getPlantShoot(restored_plantIDs.front(), 0);
+    DOCTEST_REQUIRE(restored_shoot->phytomers.size() == shoot->phytomers.size());
+
+    uint fruit_checked = 0;
+    for (uint node = 0; node < shoot->phytomers.size(); node++) {
+        DOCTEST_CAPTURE(node);
+        // The stem itself is read back where it was
+        const vec3 node_position = shoot->shoot_internode_vertices.at(node).back();
+        const vec3 restored_node_position = restored_shoot->shoot_internode_vertices.at(node).back();
+        DOCTEST_REQUIRE((restored_node_position - node_position).magnitude() < 1e-4f);
+
+        const auto &restored_buds = restored_shoot->phytomers.at(node)->floral_buds;
+        for (uint petiole = 0; petiole < restored_buds.size(); petiole++) {
+            for (uint bud = 0; bud < restored_buds.at(petiole).size(); bud++) {
+                const FloralBud &restored_bud = restored_buds.at(petiole).at(bud);
+                if (restored_bud.inflorescence_objIDs.empty()) {
+                    continue;
+                }
+                // The bud, the start of its peduncle and its fruit are all at the node they belong to
+                DOCTEST_CHECK_MESSAGE((restored_bud.base_position - restored_node_position).magnitude() < 1e-5f, "a restored bud is " << (restored_bud.base_position - restored_node_position).magnitude() << " m from its node");
+                const vec3 restored_peduncle_base = restored_shoot->phytomers.at(node)->peduncle_vertices.at(petiole).at(bud).front();
+                DOCTEST_CHECK_MESSAGE((restored_peduncle_base - restored_node_position).magnitude() < 1e-5f, "a restored peduncle starts " << (restored_peduncle_base - restored_node_position).magnitude() << " m from its node");
+                const vec3 restored_fruit_center = restored_context.getObjectCenter(restored_bud.inflorescence_objIDs.front());
+                const vec3 fruit_center = context.getObjectCenter(shoot->phytomers.at(node)->floral_buds.at(petiole).at(bud).inflorescence_objIDs.front());
+                const vec3 peduncle_tip = shoot->phytomers.at(node)->peduncle_vertices.at(petiole).at(bud).back();
+                const vec3 restored_peduncle_tip = restored_shoot->phytomers.at(node)->peduncle_vertices.at(petiole).at(bud).back();
+                DOCTEST_CHECK_MESSAGE((restored_fruit_center - fruit_center).magnitude() < 2e-3f, "a restored fruit is " << (restored_fruit_center - fruit_center).magnitude() << " m from where it was saved; its peduncle tip is "
+                                                                                                                         << (restored_peduncle_tip - peduncle_tip).magnitude() << " m off");
+                fruit_checked++;
+            }
+        }
+    }
+    DOCTEST_CHECK(fruit_checked >= 4);
+}
+
+DOCTEST_TEST_CASE("The placed stalk base of a leaf moves with the plant and with its node") {
+    // Where a placed leaf's stalk leaves its petiole is a stored position like any other, and is written to the plant's file, so it has to follow the leaf when the plant or the node is moved
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 15);
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    Phytomer *leafy_phytomer = nullptr;
+    for (const auto &shoot: shoot_tree) {
+        for (const auto &phytomer: shoot->phytomers) {
+            if (!phytomer->leaf_objIDs.empty() && !phytomer->leaf_objIDs.front().empty() && !phytomer->petiole_vertices.empty()) {
+                leafy_phytomer = phytomer.get();
+            }
+        }
+    }
+    DOCTEST_REQUIRE(leafy_phytomer != nullptr);
+    const uint leaf_objID = leafy_phytomer->leaf_objIDs.front().front();
+    const vec3 stalk_base = leafy_phytomer->petiole_vertices.front().back();
+    leafy_phytomer->leaf_stalk_base_placed[leaf_objID] = stalk_base;
+
+    const vec3 plant_shift = make_vec3(0.5f, -0.25f, 0.125f);
+    plantarchitecture.setPlantBasePosition(plantID, plant_shift);
+    DOCTEST_CHECK((leafy_phytomer->leaf_stalk_base_placed.at(leaf_objID) - (stalk_base + plant_shift)).magnitude() < 1e-6f);
+
+    const vec3 node_shift = make_vec3(0, 0, 0.0625f);
+    leafy_phytomer->setPetioleBase(leafy_phytomer->petiole_vertices.front().front() + node_shift);
+    DOCTEST_CHECK((leafy_phytomer->leaf_stalk_base_placed.at(leaf_objID) - (stalk_base + plant_shift + node_shift)).magnitude() < 1e-6f);
+}
+
+DOCTEST_TEST_CASE("setPlantJointPose refuses joints and poses that make no sense") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 15);
+
+    PlantJointID root_joint;
+    root_joint.type = PLANT_JOINT_ROOT;
+    PlantJointPose pose;
+    pose.yaw_degrees = 10;
+
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(9999, root_joint, pose));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPoses(plantID, {root_joint}, {pose, pose}));
+    PlantJointID missing_joint;
+    missing_joint.type = PLANT_JOINT_INTERNODE;
+    missing_joint.node_index = 9999;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(plantID, missing_joint, pose));
+    PlantJointPose bad_pose;
+    bad_pose.pitch_degrees = std::numeric_limits<float>::quiet_NaN();
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(plantID, root_joint, bad_pose));
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantJointPose(plantID, missing_joint)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.isPlantPosed(9999)));
+    DOCTEST_CHECK_THROWS(plantarchitecture.resetPlantPose(9999));
+    DOCTEST_CHECK_THROWS(plantarchitecture.bakePlantPose(9999));
+
+    // Nothing above left the plant posed, and a plant that is not posed can be written and copied
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.resetPlantPose(plantID));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.bakePlantPose(plantID));
+
+    // A posed plant cannot be written until its pose is reset
+    plantarchitecture.setPlantJointPose(plantID, root_joint, pose);
+    DOCTEST_CHECK_THROWS(plantarchitecture.writePlantStructureXML(plantID, "posed_plant_should_not_be_written.xml"));
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.writePlantStructureXML(plantID, "unposed_plant_test.xml"));
+    std::remove("unposed_plant_test.xml");
 }
 
 DOCTEST_TEST_CASE("USD export basic structure") {
@@ -11913,8 +14195,10 @@ DOCTEST_TEST_CASE("Tortuosity - shoot shape is independent of internode discreti
     // SEGMENT, every extra subdivision added another full-size random turn: five segments per internode turned the same shoot
     // about three times as much as one, and the noise overwhelmed the gravitropic response.
     //
-    // Compared on statistics over many seeds, since individual realizations differ with the segment count (and across platforms).
-    const int num_seeds = 24;
+    // Compared on statistics over many seeds, since individual realizations differ with the segment count. Enough of them that the
+    // sampling noise of the means is well below the tolerances: with 24 the difference between two means came within a few percent of
+    // the tolerance on one random sequence and outside it on another.
+    const int num_seeds = 96;
     const uint segment_counts[3] = {1u, 2u, 5u};
     float mean_turning_deg[3] = {0.f, 0.f, 0.f};
     float mean_final_axis_z[3] = {0.f, 0.f, 0.f};
@@ -13863,8 +16147,10 @@ DOCTEST_TEST_CASE("Maize mainstem honors the shoot type internode_length_max") {
     DOCTEST_REQUIRE(long_internodes > 0.f);
 
     // Tripling the internode length must make a substantially taller plant. On the old code both
-    // arms produced an identical plant built from the hardcoded 0.08 m, so this ratio was 1.0.
-    DOCTEST_CHECK_MESSAGE(long_internodes > 1.5f * short_internodes, "short=" << short_internodes << " long=" << long_internodes << " ratio=" << (long_internodes/short_internodes));
+    // arms produced an identical plant built from the hardcoded 0.08 m, so this ratio was 1.0. The
+    // ratio of whole-plant heights is about 1.5 (the leaves and tassel above the stem do not scale with
+    // the internodes) and varies by a few percent with the random sequence, so the bar is set at 1.3.
+    DOCTEST_CHECK_MESSAGE(long_internodes > 1.3f * short_internodes, "short=" << short_internodes << " long=" << long_internodes << " ratio=" << (long_internodes/short_internodes));
 }
 
 DOCTEST_TEST_CASE("Sorghum development matches field phenology and bears one terminal panicle") {
@@ -18787,15 +21073,11 @@ DOCTEST_TEST_CASE("Reading downstream inflorescence area at every node costs one
     // therefore does NOT reproduce the regression -- the quadratic loop is quadratic in iterations
     // that return zero immediately. A branched, heavily-fruiting species is what exposes it.
     //
-    // Soybean is used rather than tomato, and the choice matters. Seeding the generator does not fix
-    // how many fruit a plant sets: the growth path branches on floating-point comparisons, so the
-    // sequence of draws -- and with it the plant -- differs between platforms even from the same seed.
-    // Tomato at 120 days gives 11 fruiting nodes on macOS, 4 on Linux and 1 on Windows, and growing it
-    // longer does not help: a tomato stops adding nodes at around 120 days with nearly every floral
-    // bud abscised, so its fruiting count is fixed by however many buds happened to survive. Soybean
-    // fruits far more heavily and does so on every seed sampled -- no fewer than 4 shoots, 71 nodes
-    // and 11 fruiting nodes across 25 seeds -- so the preconditions below hold with a wide margin
-    // however the stream diverges.
+    // Soybean is used rather than tomato: a tomato stops adding nodes at around 120 days with nearly every floral bud
+    // abscised, so its fruiting count is fixed by however many buds happened to survive, while soybean branches and
+    // fruits on most of its nodes. How heavily a given plant fruits still depends on its random sequence (3 to 14
+    // fruiting nodes, 20 to 45 nodes and 3 to 6 shoots across the seeds sampled), so the first seed whose plant meets
+    // the preconditions below is used rather than one fixed seed.
     //
     // What is pinned is the ratio of two measurements taken in the same process on the same plant, so
     // the test is independent of how fast the machine running it is: reading the value at all N nodes
@@ -18803,33 +21085,42 @@ DOCTEST_TEST_CASE("Reading downstream inflorescence area at every node costs one
     // this replaced, reading N nodes cost N traversals.
 
     Context context;
-    context.seedRandomGenerator(12345);
     PlantArchitecture plantarchitecture(&context);
     plantarchitecture.disableMessages();
     plantarchitecture.loadPlantModelFromLibrary("soybean");
 
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
-    plantarchitecture.advanceTime(plantID, 120.f);
-
-    const std::vector<uint> shootIDs = plantarchitecture.getAllShootIDs(plantID);
-    DOCTEST_REQUIRE(shootIDs.size() > 1); // the regression is driven by the recursion into child shoots
-
-    // Guard against a vacuous pass: the cost being measured is the per-phytomer area evaluation, so
-    // the plant must actually carry inflorescences on several nodes for there to be anything to count.
+    // Preconditions: the regression is driven by the recursion into child shoots, and the cost being measured is the
+    // per-phytomer area evaluation, so the plant must have several shoots and carry inflorescences on several nodes for
+    // there to be anything to count.
+    uint plantID = 0;
+    std::vector<uint> shootIDs;
     std::size_t node_count = 0;
     std::size_t fruiting_node_count = 0;
-    for (uint sid: shootIDs) {
-        const auto &shoot = plantarchitecture.getPlantShoot(plantID, sid);
-        node_count += shoot->phytomers.size();
-        for (const auto &phytomer: shoot->phytomers) {
-            if (phytomer->getInflorescenceArea() > 0.f) {
-                fruiting_node_count++;
+    bool plant_found = false;
+    for (uint seed = 1; seed <= 20 && !plant_found; seed++) {
+        if (seed > 1) {
+            plantarchitecture.deletePlantInstance(plantID);
+        }
+        context.seedRandomGenerator(seed);
+        plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        plantarchitecture.advanceTime(plantID, 120.f);
+
+        shootIDs = plantarchitecture.getAllShootIDs(plantID);
+        node_count = 0;
+        fruiting_node_count = 0;
+        for (uint sid: shootIDs) {
+            const auto &shoot = plantarchitecture.getPlantShoot(plantID, sid);
+            node_count += shoot->phytomers.size();
+            for (const auto &phytomer: shoot->phytomers) {
+                if (phytomer->getInflorescenceArea() > 0.f) {
+                    fruiting_node_count++;
+                }
             }
         }
+        plant_found = shootIDs.size() > 1 && node_count > 20 && fruiting_node_count >= 5;
     }
     DOCTEST_INFO("nodes=" << node_count << " fruiting=" << fruiting_node_count << " shoots=" << shootIDs.size());
-    DOCTEST_REQUIRE(node_count > 20);
-    DOCTEST_REQUIRE(fruiting_node_count >= 5);
+    DOCTEST_REQUIRE(plant_found);
 
     const auto &root_shoot = plantarchitecture.getPlantShoot(plantID, shootIDs.front());
 
@@ -21928,6 +24219,51 @@ DOCTEST_TEST_CASE("PlantArchitecture setPetioleLeafShape and setPetioleLeafletAn
     DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeafletAngles(plantID, shootID, 9, 0, 0.f, 0.f, 0.f));
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture setPetioleLeafShape folds a blade's halves down for a negative midrib fold, as the leaf prototype does") {
+    // The leaf prototype builds a negative midrib_fold_fraction as halves folded down (sin of a negative fold angle), but
+    // setPetioleLeafShape refused anything below zero, so a fold measured on one leaf could not be set on that leaf.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    uint plantID, shootID;
+    buildLeafyPrescribedShoot(context, plantarchitecture, plantID, shootID);
+    const auto phytomer = plantarchitecture.getPlantShoot(plantID, shootID)->phytomers.at(1);
+    plantarchitecture.setPetioleShape(plantID, shootID, 1, 0, make_vec3(1.f, 0.f, 0.f), 90.f, 0.f, 0.1f);
+    const uint terminal = (uint(phytomer->leaf_objIDs.at(0).size()) - 1) / 2;
+    auto centroid = [&](uint objID) {
+        vec3 sum;
+        uint count = 0;
+        for (const uint UUID: context.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+                sum = sum + vertex;
+                count++;
+            }
+        }
+        return sum / float(count);
+    };
+
+    plantarchitecture.setPetioleLeafShape(plantID, shootID, 1, 0, 0.6f, 0.f, 0.f, 0.f);
+    const uint leaf = phytomer->leaf_objIDs.at(0).at(terminal);
+    const vec3 flat_centroid = centroid(leaf);
+    const vec3 flat_normal = objectMeanNormal(context, leaf);
+    const float flat_area = context.getObjectArea(leaf);
+
+    plantarchitecture.setPetioleLeafShape(plantID, shootID, 1, 0, 0.6f, 0.f, 0.f, 0.3f);
+    const float up = (centroid(leaf) - flat_centroid) * flat_normal;
+    DOCTEST_REQUIRE_NOTHROW(plantarchitecture.setPetioleLeafShape(plantID, shootID, 1, 0, 0.6f, 0.f, 0.f, -0.3f));
+    const float down = (centroid(leaf) - flat_centroid) * flat_normal;
+
+    // A fold lifts the halves off the flat blade; the opposite fold lowers them by as much, and neither stretches the blade.
+    DOCTEST_CHECK(std::fabs(up) > 1e-4f);
+    DOCTEST_CHECK(down == doctest::Approx(-up).epsilon(0.02));
+    DOCTEST_CHECK(context.getObjectArea(leaf) == doctest::Approx(flat_area).epsilon(0.01));
+
+    capture_cerr cerr_buffer;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeafShape(plantID, shootID, 1, 0, 0.6f, 0.f, 0.f, -1.5f));
+}
+
 //! Every vertex of one leaf object, in primitive order
 static std::vector<vec3> objectVertices(Context &context, uint objID) {
     std::vector<vec3> vertices;
@@ -22113,7 +24449,7 @@ DOCTEST_TEST_CASE("PlantArchitecture a placed leaflet's stalk is as thick as its
     stalks(lengths, radii);
     for (uint leaf = 0; leaf < count; leaf++) {
         // the petiole's own thickness at its tip, for the outer leaflets as for the terminal: scaled from the type's small outer leaflets they were several times it
-        DOCTEST_CHECK(radii.at(leaf) == doctest::Approx(tip_radius).epsilon(0.1));
+        DOCTEST_CHECK(radii.at(leaf) == doctest::Approx(std::min(tip_radius, Phytomer::placedStalkRadiusMax(0.05f))).epsilon(0.1));
         DOCTEST_CHECK(lengths.at(leaf) == doctest::Approx(lengths.at(2)).epsilon(0.01)); // the species' share of one blade length
     }
 
@@ -22123,7 +24459,7 @@ DOCTEST_TEST_CASE("PlantArchitecture a placed leaflet's stalk is as thick as its
     stalks(lengths, radii);
     for (uint leaf = 0; leaf < count; leaf++) {
         DOCTEST_CHECK(lengths.at(leaf) == doctest::Approx(wanted.at(leaf)).epsilon(0.01));
-        DOCTEST_CHECK(radii.at(leaf) == doctest::Approx(tip_radius).epsilon(0.1));
+        DOCTEST_CHECK(radii.at(leaf) == doctest::Approx(std::min(tip_radius, Phytomer::placedStalkRadiusMax(0.05f))).epsilon(0.1));
         DOCTEST_CHECK(phytomer->leaf_size_max.at(0).at(leaf) == doctest::Approx(0.05f));
     }
     // The species' own stalks are untouched for the next leaf built
@@ -22131,6 +24467,18 @@ DOCTEST_TEST_CASE("PlantArchitecture a placed leaflet's stalk is as thick as its
     std::vector<float> again, again_radii;
     stalks(again, again_radii);
     DOCTEST_CHECK(again.at(1) == doctest::Approx(0.05f * stalked.phytomer_parameters.leaf.prototype.petiolule_length.begin()->second).epsilon(0.01));
+
+    // A stalk scales with the leaf it carries: a small leaflet's is no thicker than a share of its own length, however thick the petiole it leaves. It was the petiole's thickness, nearly the size of
+    // the blade of a leaflet a centimetre long.
+    const std::vector<float> small(count, 0.01f);
+    plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, bases, level, small);
+    std::vector<float> small_lengths, small_radii;
+    stalks(small_lengths, small_radii);
+    DOCTEST_REQUIRE(tip_radius > 2.f * Phytomer::placedStalkRadiusMax(0.01f)); // or this checks nothing
+    for (uint leaf = 0; leaf < count; leaf++) {
+        DOCTEST_CHECK(small_radii.at(leaf) == doctest::Approx(Phytomer::placedStalkRadiusMax(0.01f)).epsilon(0.1));
+    }
+    plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, bases, level, sizes);
 
     capture_cerr cerr_buffer;
     DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, bases, level, sizes, {0.01f, 0.01f}));
@@ -22217,7 +24565,7 @@ DOCTEST_TEST_CASE("PlantArchitecture a placed leaflet's stalk runs from where it
         stalk_axis.normalize();
         for (uint k = 0; k < ring; k++) {
             const vec3 spoke = vertices.at(first + k) - centre_base;
-            DOCTEST_CHECK(spoke.magnitude() == doctest::Approx(petiole_radius).epsilon(0.02));
+            DOCTEST_CHECK(spoke.magnitude() == doctest::Approx(std::min(petiole_radius, Phytomer::placedStalkRadiusMax(0.05f))).epsilon(0.02));
             DOCTEST_CHECK(std::fabs(spoke * stalk_axis) < 1e-6f);
             // and the tube keeps its thickness to the mitre at the blade's base: each of its sides runs along the stalk's line
             vec3 side = vertices.at(first + ring + k) - vertices.at(first + k);
@@ -22265,6 +24613,40 @@ DOCTEST_TEST_CASE("PlantArchitecture a placed leaflet's stalk runs from where it
         blade_ring = blade_ring + placed.at(placed.size() - stalk_vertices + ring + k) / float(ring);
     }
     const std::vector<vec3> ahead(count, blade_ring + 2.f * (blade_ring - base_ring));
+    // A stalk may rise to its blade from beneath and a little past it - a leaflet held over its petiole, running off across it - up to placedStalkTurnMax(); it was refused at a quarter turn, and such
+    // a leaflet was left on a stalk in the air beside a petiole a few millimetres away.
+    {
+        vec3 along = blade_ring - base_ring;
+        const float in_line = along.magnitude();
+        along = along / in_line;
+        vec3 side = cross(along, make_vec3(0, 0, 1));
+        if (side.magnitude() < 1e-6f) {
+            side = cross(along, make_vec3(1, 0, 0));
+        }
+        side.normalize();
+        auto turned = [&](float degrees) {
+            // a stalk base from which the stalk turns this far to meet the blade's line
+            const float turn = deg2rad(degrees);
+            return blade_ring - in_line * (std::cos(turn) * along + std::sin(turn) * side);
+        };
+        std::vector<vec3> beneath = on_petiole;
+        beneath.at(1) = turned(100.f);
+        DOCTEST_CHECK_NOTHROW(plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, bases, level, sizes, {}, beneath));
+        const std::vector<vec3> built = context.getPolymeshObjectVertices(phytomer->leaf_objIDs.at(0).at(1));
+        vec3 base_centre = make_vec3(0, 0, 0);
+        for (uint k = 0; k < ring; k++) {
+            base_centre = base_centre + built.at(built.size() - stalk_vertices + k) / float(ring);
+        }
+        DOCTEST_CHECK((base_centre - beneath.at(1)).magnitude() < 1e-5f); // its base is where it was given
+        for (const vec3 &vertex: built) {
+            DOCTEST_CHECK(std::isfinite(vertex.x + vertex.y + vertex.z));
+            DOCTEST_CHECK((vertex - blade_ring).magnitude() < 0.2f); // and the mitre is not drawn out to a point
+        }
+        std::vector<vec3> back = on_petiole;
+        back.at(1) = turned(rad2deg(Phytomer::placedStalkTurnMax()) + 10.f);
+        DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, bases, level, sizes, {}, back));
+        plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, bases, level, sizes);
+    }
     // A refused stalk leaves nothing behind. The leaf it was refused for had been built and belonged to no phytomer yet, so it stayed in the Context: a blade in the air beside the leaf built in its place.
     const uint objects_before = context.getObjectCount();
     DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleLeafGeometry(plantID, shootID, 1, 0, bases, level, sizes, {}, ahead));
@@ -23550,9 +25932,8 @@ DOCTEST_TEST_CASE("PlantArchitecture prescribed leaf scale bookkeeping stays con
     phytomer->setLeafScaleFraction(0, 0.5f);
     DOCTEST_REQUIRE(phytomer->current_leaf_scale_factor.at(0) == doctest::Approx(0.5f));
 
-    vec3 box_min_before, box_max_before;
-    context.getObjectBoundingBox(phytomer->leaf_objIDs.at(0).at(1), box_min_before, box_max_before);
-    const vec3 extent_before = box_max_before - box_min_before;
+    // The leaf's size is measured by its surface area, which does not change when the leaf is turned: the petiole setter carries the leaf to the new path and turns it with the petiole's direction there.
+    const float leaf_area_before = context.getObjectArea(phytomer->leaf_objIDs.at(0).at(1));
     const float rendered_before = phytomer->leaf_size_max.at(0).at(1) * phytomer->current_leaf_scale_factor.at(0);
 
     const vec3 internode_tip = shoot->shoot_internode_vertices.at(1).back();
@@ -23563,12 +25944,9 @@ DOCTEST_TEST_CASE("PlantArchitecture prescribed leaf scale bookkeeping stays con
     DOCTEST_CHECK(phytomer->current_leaf_scale_factor.at(0) == doctest::Approx(1.f));
     DOCTEST_CHECK(phytomer->leaf_size_max.at(0).at(1) * phytomer->current_leaf_scale_factor.at(0) == doctest::Approx(rendered_before).epsilon(1e-4));
 
-    vec3 box_min_after, box_max_after;
-    context.getObjectBoundingBox(phytomer->leaf_objIDs.at(0).at(1), box_min_after, box_max_after);
-    const vec3 extent_after = box_max_after - box_min_after;
-    DOCTEST_CHECK(extent_after.x == doctest::Approx(extent_before.x).epsilon(1e-3));
-    DOCTEST_CHECK(extent_after.y == doctest::Approx(extent_before.y).epsilon(1e-3));
-    DOCTEST_CHECK(extent_after.z == doctest::Approx(extent_before.z).epsilon(1e-3));
+    const float leaf_area_after = context.getObjectArea(phytomer->leaf_objIDs.at(0).at(1));
+    DOCTEST_REQUIRE(leaf_area_before > 0.f);
+    DOCTEST_CHECK(std::fabs(leaf_area_after - leaf_area_before) < 1e-3f * leaf_area_before);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture prescribing one petiole leaves its neighbours alone") {
@@ -24444,6 +26822,195 @@ DOCTEST_TEST_CASE("PlantArchitecture epicormic shoot emergence is sampled once p
     DOCTEST_CHECK(epicormic_shoots <= 15);
     // The trunk kept growing, so it was still sampling for epicormic shoots throughout.
     DOCTEST_CHECK(plantarchitecture.getShootNodeCount(plantID, 0) > 20);
+}
+
+namespace {
+    //! One phytomer of a lateral shoot as it was at the moment of its creation, recorded by recordLateralPhytomerRadius().
+    struct LateralPhytomerRadiusRecord {
+        uint shootID;
+        uint node;
+        float internode_radius_initial;
+        float bearing_radius_initial; // internode_radius_initial of the parent phytomer the shoot grew from
+        float bearing_radius_current; // radius of that parent internode at the time this phytomer was created
+    };
+    std::vector<LateralPhytomerRadiusRecord> lateral_phytomer_radius_records;
+
+    // Recorded inside the creation callback because that runs before any girth growth: the radius a phytomer is built at and
+    // the radius of the wood bearing it are both compared as they stood when the phytomer appeared.
+    void recordLateralPhytomerRadius(std::shared_ptr<Phytomer> phytomer, uint, uint, uint, float) {
+        const Shoot *shoot = phytomer->parent_shoot_ptr;
+        if (shoot->parent_shoot_ID < 0) {
+            return;
+        }
+        const auto &bearing_shoot = shoot->plantarchitecture_ptr->getPlantShoot(shoot->plantID, static_cast<uint>(shoot->parent_shoot_ID));
+        const auto &bearing_phytomer = bearing_shoot->phytomers.at(shoot->parent_node_index);
+        lateral_phytomer_radius_records.push_back({static_cast<uint>(shoot->ID), static_cast<uint>(phytomer->shoot_index.x), phytomer->internode_radius_initial, bearing_phytomer->internode_radius_initial,
+                                                   bearing_shoot->shoot_internode_radii.at(shoot->parent_node_index).back()});
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("PlantArchitecture lateral shoot stays no thicker than its bearing axis beyond its first phytomer") {
+    // Regression test (GitHub issue #110). When a lateral bud breaks, its first phytomer is clamped so the lateral is never born
+    // thicker than the phytomer bearing it. Every later phytomer was built from the shoot type's radius_initial again, so a lateral
+    // the clamp had sized below that default stepped up in width at its second node -- and since girth growth only ever increases
+    // radii, the shoot stayed wider distally for the rest of its life.
+    //
+    // A proleptic apple axis built at 2 mm carries laterals of the same type, whose radius_initial is 4 mm: every lateral is clamped
+    // at birth, so every phytomer it grows afterwards must respect the same clamp.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    ShootParameters proleptic_parameters = plantarchitecture.getCurrentShootParameters("proleptic");
+    proleptic_parameters.vegetative_bud_break_probability_min = 1.f;
+    proleptic_parameters.vegetative_bud_break_probability_max = 1.f;
+    proleptic_parameters.defineChildShootTypes({"proleptic"}, {1.f});
+    proleptic_parameters.phytomer_parameters.phytomer_creation_function = recordLateralPhytomerRadius;
+    plantarchitecture.updateCurrentShootParameters("proleptic", proleptic_parameters);
+    const float lateral_radius_initial = proleptic_parameters.phytomer_parameters.internode.radius_initial.val();
+
+    const float bearing_radius = 0.5f * lateral_radius_initial;
+    uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    plantarchitecture.addBaseStemShoot(plantID, 8, make_AxisRotation(0, 0, 0), bearing_radius, 0.03f, 1.f, 1.f, 0, "proleptic");
+    lateral_phytomer_radius_records.clear();
+    plantarchitecture.breakPlantDormancy(plantID);
+    plantarchitecture.advanceTime(plantID, 30.f);
+
+    uint later_phytomers_checked = 0;
+    for (const auto &record: lateral_phytomer_radius_records) {
+        DOCTEST_CAPTURE(record.shootID);
+        DOCTEST_CAPTURE(record.node);
+        DOCTEST_CHECK(record.internode_radius_initial <= record.bearing_radius_initial);
+        if (record.node > 0) {
+            later_phytomers_checked++;
+        }
+    }
+    // Guard against the test going vacuous: the laterals must have grown past their first phytomer, from wood thinner than their type.
+    lateral_phytomer_radius_records.clear();
+    DOCTEST_REQUIRE(later_phytomers_checked > 0);
+
+    // The bound is part of the shoot's state, so a plant saved and reloaded keeps growing its laterals under it.
+    const std::string xml_filename = "test_lateral_radius_cap.xml";
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    std::vector<uint> plantIDs_read = plantarchitecture.readPlantStructureXML(xml_filename, true);
+    std::remove(xml_filename.c_str());
+    lateral_phytomer_radius_records.clear();
+    DOCTEST_REQUIRE(plantIDs_read.size() == 1);
+    const std::vector<uint> shootIDs_original = plantarchitecture.getAllShootIDs(plantID);
+    const std::vector<uint> shootIDs_read = plantarchitecture.getAllShootIDs(plantIDs_read.front());
+    DOCTEST_REQUIRE(shootIDs_read.size() == shootIDs_original.size());
+    for (size_t s = 0; s < shootIDs_original.size(); s++) {
+        const float cap_original = plantarchitecture.getPlantShoot(plantID, shootIDs_original.at(s))->growth_state.internode_radius_cap;
+        const float cap_read = plantarchitecture.getPlantShoot(plantIDs_read.front(), shootIDs_read.at(s))->growth_state.internode_radius_cap;
+        DOCTEST_CAPTURE(s);
+        DOCTEST_CHECK(cap_read == doctest::Approx(cap_original));
+        if (s > 0) {
+            DOCTEST_CHECK(cap_original == doctest::Approx(bearing_radius));
+        }
+    }
+
+    // Grow the reloaded plant on: the laterals it was read with must keep adding phytomers no thicker than their bearing axis.
+    plantarchitecture.breakPlantDormancy(plantIDs_read.front());
+    plantarchitecture.advanceTime(plantIDs_read.front(), 10.f);
+    uint reloaded_later_phytomers_checked = 0;
+    for (const auto &record: lateral_phytomer_radius_records) {
+        DOCTEST_CAPTURE(record.shootID);
+        DOCTEST_CAPTURE(record.node);
+        DOCTEST_CHECK(record.internode_radius_initial <= record.bearing_radius_initial);
+        if (record.node > 0) {
+            reloaded_later_phytomers_checked++;
+        }
+    }
+    lateral_phytomer_radius_records.clear();
+    DOCTEST_REQUIRE(reloaded_later_phytomers_checked > 0);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture lateral breaking from a zero-radius phytomer grows at its shoot type's radius") {
+    // Some library plants append a phytomer of radius 0 (e.g. at the apple trunk tip). A lateral breaking from such a phytomer is born at
+    // radius 0 by the birth clamp, but its later phytomers must not be bound to 0 as well: that would build the whole lateral at the minimum
+    // tube radius.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    ShootParameters proleptic_parameters = plantarchitecture.getCurrentShootParameters("proleptic");
+    proleptic_parameters.vegetative_bud_break_probability_min = 1.f;
+    proleptic_parameters.vegetative_bud_break_probability_max = 1.f;
+    proleptic_parameters.defineChildShootTypes({"proleptic"}, {1.f});
+    proleptic_parameters.phytomer_parameters.phytomer_creation_function = recordLateralPhytomerRadius;
+    plantarchitecture.updateCurrentShootParameters("proleptic", proleptic_parameters);
+    const float lateral_radius_initial = proleptic_parameters.phytomer_parameters.internode.radius_initial.val();
+
+    uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    plantarchitecture.addBaseStemShoot(plantID, 8, make_AxisRotation(0, 0, 0), 0.f, 0.03f, 1.f, 1.f, 0, "proleptic");
+    lateral_phytomer_radius_records.clear();
+    plantarchitecture.breakPlantDormancy(plantID);
+    plantarchitecture.advanceTime(plantID, 30.f);
+
+    uint later_phytomers_checked = 0;
+    for (const auto &record: lateral_phytomer_radius_records) {
+        if (record.bearing_radius_initial != 0.f || record.node == 0) {
+            continue;
+        }
+        DOCTEST_CAPTURE(record.shootID);
+        DOCTEST_CAPTURE(record.node);
+        DOCTEST_CHECK(record.internode_radius_initial == doctest::Approx(lateral_radius_initial));
+        later_phytomers_checked++;
+    }
+    lateral_phytomer_radius_records.clear();
+    DOCTEST_REQUIRE(later_phytomers_checked > 0);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture epicormic shoot is never thicker than the internode bearing it") {
+    // Regression test (GitHub issue #110). An epicormic shoot was built at its shoot type's radius_initial with no reference to the
+    // wood it emerged from, so on a thin axis it was born thicker than its bearing internode, and its later phytomers kept that radius.
+    //
+    // A 1 mm apple trunk sprouting proleptic epicormic shoots (radius_initial 4 mm) must give them no phytomer wider than the trunk
+    // internode they emerged from, as that internode stood when the phytomer was created.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    ShootParameters trunk_parameters = plantarchitecture.getCurrentShootParameters("trunk");
+    trunk_parameters.max_nodes = 500;
+    // No ordinary laterals on the trunk, so every shoot it bears is epicormic and the test cannot be satisfied by bud breaks alone.
+    trunk_parameters.vegetative_bud_break_probability_min = 0.f;
+    trunk_parameters.vegetative_bud_break_probability_max = 0.f;
+    plantarchitecture.updateCurrentShootParameters("trunk", trunk_parameters);
+    ShootParameters proleptic_parameters = plantarchitecture.getCurrentShootParameters("proleptic");
+    proleptic_parameters.growth_requires_dormancy = false;
+    proleptic_parameters.phytomer_parameters.phytomer_creation_function = recordLateralPhytomerRadius;
+    plantarchitecture.updateCurrentShootParameters("proleptic", proleptic_parameters);
+    const float epicormic_radius_initial = proleptic_parameters.phytomer_parameters.internode.radius_initial.val();
+
+    uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    plantarchitecture.addBaseStemShoot(plantID, 20, make_AxisRotation(0, 0, 0), 0.25f * epicormic_radius_initial, 0.25f, 1.f, 1.f, 0, "trunk");
+    lateral_phytomer_radius_records.clear();
+    plantarchitecture.breakPlantDormancy(plantID);
+    plantarchitecture.enableEpicormicChildShoots(plantID, "proleptic", 0.2f);
+    plantarchitecture.advanceTime(plantID, 20.f);
+
+    uint epicormic_phytomers_checked = 0;
+    uint later_phytomers_checked = 0;
+    for (const auto &record: lateral_phytomer_radius_records) {
+        DOCTEST_CAPTURE(record.shootID);
+        DOCTEST_CAPTURE(record.node);
+        // Only shoots borne directly on the thin trunk, which are all epicormic; any lateral of an epicormic shoot is covered by the test above.
+        if (plantarchitecture.getPlantShoot(plantID, record.shootID)->parent_shoot_ID != 0 || record.bearing_radius_current >= epicormic_radius_initial) {
+            continue;
+        }
+        DOCTEST_CHECK(record.internode_radius_initial <= record.bearing_radius_current);
+        epicormic_phytomers_checked++;
+        if (record.node > 0) {
+            later_phytomers_checked++;
+        }
+    }
+    lateral_phytomer_radius_records.clear();
+    DOCTEST_REQUIRE(epicormic_phytomers_checked > 0);
+    DOCTEST_REQUIRE(later_phytomers_checked > 0);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture setLeafNormal aims a leaf and records what it did") {

@@ -1741,13 +1741,13 @@ namespace {
     // Latin Hypercube Sampling for initial points
     std::vector<std::vector<float>> latinHypercubeSampling(size_t n_samples, size_t n_dims, std::mt19937 &rng) {
         std::vector<std::vector<float>> samples(n_samples, std::vector<float>(n_dims));
-        std::uniform_real_distribution<float> uni01(0.0f, 1.0f);
+        helios::uniform_real_distribution<float> uni01(0.0f, 1.0f);
 
         for (size_t d = 0; d < n_dims; ++d) {
             std::vector<size_t> indices(n_samples);
             for (size_t i = 0; i < n_samples; ++i)
                 indices[i] = i;
-            std::shuffle(indices.begin(), indices.end(), rng);
+            helios::shuffle(indices.begin(), indices.end(), rng);
 
             for (size_t i = 0; i < n_samples; ++i) {
                 float segment = 1.0f / n_samples;
@@ -1762,9 +1762,9 @@ namespace {
     std::vector<float> optimizeGPHyperparameters(const std::vector<std::vector<float>> &X, const std::vector<float> &y, size_t n_dims, std::mt19937 &rng, size_t n_trials = 50, const std::vector<float> &warm_start = {}) {
 
         // Search ranges (log-scale for better coverage)
-        std::uniform_real_distribution<float> log_length_scale(std::log(0.01f), std::log(3.0f));
-        std::uniform_real_distribution<float> log_signal_var(std::log(0.1f), std::log(10.0f));
-        std::uniform_real_distribution<float> log_noise_var(std::log(1e-6f), std::log(0.1f));
+        helios::uniform_real_distribution<float> log_length_scale(std::log(0.01f), std::log(3.0f));
+        helios::uniform_real_distribution<float> log_signal_var(std::log(0.1f), std::log(10.0f));
+        helios::uniform_real_distribution<float> log_noise_var(std::log(1e-6f), std::log(0.1f));
 
         float best_nlml = std::numeric_limits<float>::max();
         std::vector<float> best_params = {
@@ -1950,7 +1950,7 @@ static ParameterOptimization::Result runBayesianOptimization(std::function<float
         gp.fit(X, y_normalized);
 
         // Optimize acquisition function (UCB)
-        std::uniform_real_distribution<float> uni01(0.0f, 1.0f);
+        helios::uniform_real_distribution<float> uni01(0.0f, 1.0f);
         std::vector<float> best_candidate;
         float best_acquisition = -std::numeric_limits<float>::max();
 
@@ -2032,7 +2032,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
     timer.tic();
 
     std::mt19937 rng = makeRNG(ga.random_seed);
-    std::uniform_real_distribution<float> uni01(0.f, 1.f);
+    helios::uniform_real_distribution<float> uni01(0.f, 1.f);
 
     validateParameters(parameters);
 
@@ -2078,7 +2078,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
         ind = parameters;
         for (auto &[name, param]: ind) {
             if (param.type == ParameterType::CATEGORICAL) {
-                std::uniform_int_distribution<size_t> cat_dist(0, param.categories.size() - 1);
+                helios::uniform_int_distribution<size_t> cat_dist(0, param.categories.size() - 1);
                 param.value = param.categories[cat_dist(rng)];
             } else {
                 param.value = param.min + (param.max - param.min) * uni01(rng);
@@ -2129,7 +2129,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
             new_pop[e] = population[elite_indices[e]];
         }
 
-        std::uniform_int_distribution<size_t> dist(0, popsize - 1);
+        helios::uniform_int_distribution<size_t> dist(0, popsize - 1);
 
         // Compute PCA periodically if needed
         if (needs_pca && g % pca_interval == 0) {
@@ -2163,7 +2163,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
                         param.value = (uni01(rng) < 0.5f) ? p1.value : parent2.at(name).value;
                     }
                     if (uni01(rng) < mutation_rate) {
-                        std::uniform_int_distribution<size_t> cat_dist(0, param.categories.size() - 1);
+                        helios::uniform_int_distribution<size_t> cat_dist(0, param.categories.size() - 1);
                         param.value = param.categories[cat_dist(rng)];
                     }
                 }
@@ -2253,7 +2253,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
                                 if (param.type == ParameterType::CATEGORICAL)
                                     continue;
                                 if (uni01(rng) < mutation_op.rate) {
-                                    std::normal_distribution<float> gauss(0.f, 0.1f * (param.max - param.min));
+                                    helios::normal_distribution<float> gauss(0.f, 0.1f * (param.max - param.min));
                                     param.value += gauss(rng);
                                 }
                             }
@@ -2264,7 +2264,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
                                 for (auto &[name, param]: child) {
                                     if (param.type == ParameterType::CATEGORICAL)
                                         continue;
-                                    std::normal_distribution<float> gauss(0.f, 0.1f * (param.max - param.min));
+                                    helios::normal_distribution<float> gauss(0.f, 0.1f * (param.max - param.min));
                                     param.value += gauss(rng);
                                 }
                             }
@@ -2279,7 +2279,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
                                     // PCA-Gaussian
                                     auto z_child = pca.transform(child);
                                     for (size_t d = 0; d < n_pca; ++d) {
-                                        std::normal_distribution<float> gauss(0.f, mutation_op.sigma_pca);
+                                        helios::normal_distribution<float> gauss(0.f, mutation_op.sigma_pca);
                                         z_child[d] += gauss(rng);
                                     }
                                     auto vals = pca.inverseTransform(z_child);
@@ -2289,7 +2289,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
                                 } else if (strategy_roll < mutation_op.pca_gaussian_prob + mutation_op.pca_cauchy_prob) {
                                     // PCA-Cauchy (heavy-tailed)
                                     auto z_child = pca.transform(child);
-                                    std::cauchy_distribution<float> cauchy(0.f, mutation_op.gamma_cauchy);
+                                    helios::cauchy_distribution<float> cauchy(0.f, mutation_op.gamma_cauchy);
                                     for (size_t d = 0; d < n_pca; ++d) {
                                         z_child[d] += cauchy(rng);
                                     }
@@ -2302,7 +2302,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
                                     std::vector<float> direction(n_pca);
                                     float norm = 0.0f;
                                     for (size_t d = 0; d < n_pca; ++d) {
-                                        std::normal_distribution<float> gauss(0.f, 1.f);
+                                        helios::normal_distribution<float> gauss(0.f, 1.f);
                                         direction[d] = gauss(rng);
                                         norm += direction[d] * direction[d];
                                     }
@@ -2318,7 +2318,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
                                     }
                                     avg_range /= pca.param_names.size();
 
-                                    std::normal_distribution<float> half_normal(0.f, 1.f);
+                                    helios::normal_distribution<float> half_normal(0.f, 1.f);
                                     float step_size = std::abs(half_normal(rng)) * mutation_op.sigma_random * avg_range;
 
                                     // Apply
@@ -2334,7 +2334,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
                                 for (auto &[name, param]: child) {
                                     if (param.type == ParameterType::CATEGORICAL)
                                         continue;
-                                    std::normal_distribution<float> gauss(0.f, 0.1f * (param.max - param.min));
+                                    helios::normal_distribution<float> gauss(0.f, 0.1f * (param.max - param.min));
                                     param.value += gauss(rng);
                                 }
                             }
@@ -2528,7 +2528,7 @@ static ParameterOptimization::Result runCMAES(std::function<float(const Paramete
     ParameterOptimization::Result best;
     best.fitness = std::numeric_limits<float>::max();
     std::vector<float> fitness_history;
-    std::normal_distribution<float> norm(0.0f, 1.0f);
+    helios::normal_distribution<float> norm(0.0f, 1.0f);
 
     size_t gen = 0;
     size_t total_evals = 0;

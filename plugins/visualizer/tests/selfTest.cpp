@@ -309,6 +309,11 @@ public:
         return *visualizer.geometry_handler.getVisibilityFlagData_ptr(GeometryHandler::GEOMETRY_TYPE_POINT);
     }
 
+    //! Rendered size of every point, in point storage order
+    static std::vector<float> getPointSizes(const Visualizer &visualizer) {
+        return *visualizer.geometry_handler.getSizeData_ptr(GeometryHandler::GEOMETRY_TYPE_POINT);
+    }
+
     //! Switch the rendering target to the offscreen buffer
     /**
      * The offscreen framebuffer is internal lifecycle machinery driven by headless mode; this
@@ -544,6 +549,28 @@ DOCTEST_TEST_CASE("Visualizer::setColorbarRange - an explicit zero range survive
 
     DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getColorbarMin(visualizer) == doctest::Approx(0.f), "an explicit setColorbarRange(0,0) was overwritten by auto-ranging");
     DOCTEST_CHECK_MESSAGE(VisualizerTestHelper::getColorbarMax(visualizer) == doctest::Approx(0.f), "an explicit setColorbarRange(0,0) was overwritten by auto-ranging");
+}
+
+DOCTEST_TEST_CASE("Visualizer textures resolve through HELIOS_BUILD when the working directory is not the build directory") {
+    // Regression test. The Context stores a texture file name as given by the caller, here relative to the build directory, and the
+    // Visualizer reopened that name relative to the working directory, so Context textures failed to load unless the process ran from
+    // the build directory
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    ScopedForeignWorkingDirectory foreign_working_directory;
+
+    DOCTEST_CHECK(validateTextureFile("lib/images/disk_texture.png"));
+
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), "lib/images/disk_texture.png");
+
+    Visualizer visualizer(64, 64, 0, true, true);
+    visualizer.disableMessages();
+    DOCTEST_CHECK_NOTHROW(visualizer.buildContextGeometry(&context));
+    DOCTEST_CHECK_NOTHROW(visualizer.plotUpdate(true));
 }
 
 DOCTEST_TEST_CASE("Visualizer colorbar auto-range - no data values found") {
@@ -3305,6 +3332,13 @@ TEST_CASE("Visualizer::readBoundingBoxFile rejects malformed annotation files") 
     }
 
     std::filesystem::remove_all(directory);
+}
+
+TEST_CASE("Visualizer annotation readers reject an empty file path") {
+    // An empty path must not be read as the working directory, which opens without error and holds no annotations
+    DOCTEST_CHECK_THROWS_WITH(std::ignore = Visualizer::readBoundingBoxFile(""), doctest::Contains("path is empty"));
+    DOCTEST_CHECK_THROWS_WITH(std::ignore = Visualizer::readBoundingBoxClassNames(""), doctest::Contains("path is empty"));
+    DOCTEST_CHECK_THROWS_WITH(std::ignore = Visualizer::readSegmentationMaskFile(""), doctest::Contains("path is empty"));
 }
 
 TEST_CASE("Visualizer::readBoundingBoxClassNames accepts both class file formats") {
@@ -6241,6 +6275,8 @@ DOCTEST_TEST_CASE("Visualizer pixel read-back refuses a frame that is missing or
             {"setAmbientColors", [&] { visualizer.setAmbientColors(RGB::blue, RGB::green); }},
             {"enableSmoothShading", [&] { visualizer.enableSmoothShading(); }},
             {"disableSmoothShading", [&] { visualizer.disableSmoothShading(); }},
+            {"disableNormalMaps", [&] { visualizer.disableNormalMaps(); }},
+            {"enableNormalMaps", [&] { visualizer.enableNormalMaps(); }},
             {"colorContextPrimitivesByData", [&] { visualizer.colorContextPrimitivesByData("temperature"); }},
             {"enableColorbar", [&] { visualizer.enableColorbar(); }},
             {"setColorbarPosition", [&] { visualizer.setColorbarPosition(make_vec3(0.5f, 0.2f, 0.1f)); }},
@@ -7737,4 +7773,90 @@ TEST_CASE("Visualizer reports normal maps on primitives with collinear texture c
     DOCTEST_CHECK(output.find("collinear texture (u,v) coordinates") != std::string::npos);
     std::filesystem::remove(tilt_u);
     std::filesystem::remove(texture);
+}
+
+DOCTEST_TEST_CASE("Visualizer - distant points keep the same enlarged size from one update to the next") {
+    // Points far from the camera are drawn larger to keep their coverage. The enlargement is of the size the point was added
+    // with, so updating the plot again must not enlarge it again.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Visualizer visualizer(400, 300, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.setPointCullingEnabled(true);
+    visualizer.setPointCullingThreshold(1);
+    visualizer.setPointMaxRenderDistance(100.f);
+    visualizer.setPointLODFactor(1.f); // keep every point, so that only the sizes change
+    visualizer.setCameraPosition(make_vec3(0, -5, 0), make_vec3(0, 0, 0)); // looking along +y
+
+    const float added_size = 2.f;
+    const size_t point_count = 200;
+    for (size_t i = 0; i < point_count; i++) {
+        // Even points sit at the look-at point; odd points sit 60 m from the camera, far enough to be enlarged
+        const vec3 position = (i % 2 == 0) ? make_vec3(0.001f * float(i), 0.f, 0.f) : make_vec3(0.001f * float(i), 55.f, 0.f);
+        visualizer.addPoint(position, RGB::red, added_size, Visualizer::COORDINATES_CARTESIAN);
+    }
+
+    visualizer.plotUpdate(true);
+    const std::vector<float> sizes_first = VisualizerTestHelper::getPointSizes(visualizer);
+    DOCTEST_REQUIRE(sizes_first.size() == point_count);
+    const std::vector<char> visible_first = VisualizerTestHelper::getPointVisibilityFlags(visualizer);
+    DOCTEST_REQUIRE(std::count(visible_first.begin(), visible_first.end(), char(1)) == long(point_count)); // every point is in view
+    const float largest_first = *std::max_element(sizes_first.begin(), sizes_first.end());
+    const float smallest_first = *std::min_element(sizes_first.begin(), sizes_first.end());
+    DOCTEST_CHECK(smallest_first == doctest::Approx(added_size)); // the near points are not enlarged
+    DOCTEST_REQUIRE(largest_first > 1.5f * added_size); // the far points are
+
+    visualizer.plotUpdate(true);
+    visualizer.plotUpdate(true);
+    DOCTEST_CHECK(VisualizerTestHelper::getPointSizes(visualizer) == sizes_first);
+
+    // Moving the camera next to the far points returns them to the size they were added with
+    visualizer.setCameraPosition(make_vec3(0, 50, 0), make_vec3(0, 55, 0));
+    visualizer.plotUpdate(true);
+    const std::vector<float> sizes_near = VisualizerTestHelper::getPointSizes(visualizer);
+    size_t far_points_at_added_size = 0;
+    for (float size: sizes_near) {
+        if (size == doctest::Approx(added_size)) {
+            far_points_at_added_size++;
+        }
+    }
+    DOCTEST_CHECK(far_points_at_added_size >= point_count / 2);
+}
+
+DOCTEST_TEST_CASE("Visualizer - point culling uses the camera of the frame being drawn") {
+    // Points in front of a camera that was just positioned are in view on the very first update. Culling them against the camera
+    // matrices left over from before the camera was set hid them for one frame.
+    if (!headlessContextAvailable()) {
+        // Skip test silently when no OpenGL context can be created, not even an offscreen one
+        return;
+    }
+
+    Visualizer visualizer(400, 300, 0, true, true);
+    visualizer.disableMessages();
+    visualizer.setPointCullingEnabled(true);
+    visualizer.setPointCullingThreshold(1);
+    visualizer.setPointMaxRenderDistance(100.f);
+    visualizer.setPointLODFactor(1.f);
+    visualizer.setCameraPosition(make_vec3(0, -5, 0), make_vec3(0, 0, 0)); // looking along +y
+
+    const size_t point_count = 200;
+    for (size_t i = 0; i < point_count; i++) {
+        // Half at the look-at point, half 60 m from the camera straight ahead
+        const vec3 position = (i % 2 == 0) ? make_vec3(0.001f * float(i), 0.f, 0.f) : make_vec3(0.001f * float(i), 55.f, 0.f);
+        visualizer.addPoint(position, RGB::red, 2.f, Visualizer::COORDINATES_CARTESIAN);
+    }
+
+    visualizer.plotUpdate(true);
+    const std::vector<char> visible = VisualizerTestHelper::getPointVisibilityFlags(visualizer);
+    DOCTEST_REQUIRE(visible.size() == point_count);
+    DOCTEST_CHECK(std::count(visible.begin(), visible.end(), char(1)) == long(point_count));
+
+    // Turning the camera around hides them on the next update, not the one after
+    visualizer.setCameraPosition(make_vec3(0, -5, 0), make_vec3(0, -10, 0));
+    visualizer.plotUpdate(true);
+    const std::vector<char> visible_behind = VisualizerTestHelper::getPointVisibilityFlags(visualizer);
+    DOCTEST_CHECK(std::count(visible_behind.begin(), visible_behind.end(), char(1)) == 0);
 }

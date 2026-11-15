@@ -2091,7 +2091,9 @@ DOCTEST_TEST_CASE("CollisionDetection findOptimalConePath Edge Cases") {
 
         CollisionDetection::OptimalPathResult result = collision.findOptimalConePath(apex, central_axis, M_PI / 4.0f, 0.0f, 1);
         DOCTEST_CHECK(result.direction.magnitude() > 0.9f); // Should be normalized
-        DOCTEST_CHECK(result.confidence == 1.0f); // Perfect confidence with single sample
+        // The single sample is the central axis, which the triangle blocks, so the path is not a confident one
+        DOCTEST_CHECK(result.confidence >= 0.0f);
+        DOCTEST_CHECK(result.confidence < 1.0f);
     }
 }
 
@@ -2213,9 +2215,13 @@ DOCTEST_TEST_CASE("CollisionDetection findOptimalConePath Accuracy - Symmetric T
         CollisionDetection collision_reset(&context_reset);
         collision_reset.disableMessages();
 
-        // Create small left gap and large right gap
-        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(-1.0f, 0, 0), 0.5f, 2.0f, 3.0f);
-        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(1.0f, 0, 0), 1.5f, 2.0f, 3.0f);
+        // Create a small left gap (0.5 wide, centered at x = -1) and a large right gap (1.5 wide, centered at x = +1) in one wall at
+        // z = 3. The wall is built from three segments, since two walls that each span the full width would cover each other's gap,
+        // and it is tall enough that there is no path over or under it within the cone.
+        const float wall_height = 40.f;
+        context_reset.addPatch(make_vec3(-3.125f, 0, 3.0f), make_vec2(3.75f, wall_height)); // x from -5 to -1.25
+        context_reset.addPatch(make_vec3(-0.25f, 0, 3.0f), make_vec2(1.0f, wall_height)); // x from -0.75 to 0.25
+        context_reset.addPatch(make_vec3(3.375f, 0, 3.0f), make_vec2(3.25f, wall_height)); // x from 1.75 to 5
 
         CollisionDetection::OptimalPathResult result = collision_reset.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 256);
 
@@ -2390,7 +2396,8 @@ DOCTEST_TEST_CASE("CollisionDetection findOptimalConePath Accuracy - Edge Case G
         float edge_angle = half_angle * 0.8f; // 80% toward cone edge
         float gap_x = 2.0f * tan(edge_angle); // Distance * tan(angle) gives x position
 
-        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(gap_x, 0, 0), 0.6f, 2.0f, 2.0f);
+        // A wall tall enough that the only path within the cone is through the gap, not over or under the wall
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(gap_x, 0, 0), 0.6f, 40.0f, 2.0f);
 
         CollisionDetection::OptimalPathResult result = collision_reset.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 256);
 
@@ -8016,8 +8023,7 @@ DOCTEST_TEST_CASE("CollisionDetection GPU/CPU Ray Casting Parity") {
         }
     }
 
-    uint triangle_count = context.getPrimitiveCount();
-    std::cout << "Test geometry: " << triangle_count << " triangles" << std::endl;
+    DOCTEST_REQUIRE(context.getPrimitiveCount() == 2 * grid_size * grid_size);
 
     // Build BVH (this will call transferBVHToGPU when HELIOS_CUDA_AVAILABLE is defined)
     cd.buildBVH();
@@ -8036,7 +8042,6 @@ DOCTEST_TEST_CASE("CollisionDetection GPU/CPU Ray Casting Parity") {
         }
     }
 
-    std::cout << "Casting " << ray_queries.size() << " rays through wall (testing GPU path)..." << std::endl;
 
     // Test with GPU disabled first (to get baseline)
     cd.disableGPUAcceleration();
@@ -8056,8 +8061,6 @@ DOCTEST_TEST_CASE("CollisionDetection GPU/CPU Ray Casting Parity") {
         if (result.hit) gpu_hits++;
     }
 
-    std::cout << "CPU hits: " << cpu_hits << " (" << (100.0*cpu_hits/ray_queries.size()) << "%)" << std::endl;
-    std::cout << "GPU hits: " << gpu_hits << " (" << (100.0*gpu_hits/ray_queries.size()) << "%)" << std::endl;
 
     // CPU should find most rays hit the wall (>90%)
     float cpu_hit_rate = static_cast<float>(cpu_hits) / ray_queries.size();
@@ -8302,4 +8305,25 @@ DOCTEST_TEST_CASE("CollisionDetection capsule distance queries agree with brute 
     DOCTEST_REQUIRE(early.found);
     DOCTEST_CHECK(early.distance <= early_exit_distance);
     DOCTEST_CHECK(early.distance >= minimum.distance);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection findOptimalConePath sees geometry on the first query") {
+    // A wall squarely across the axis, queried without an explicit buildBVH(), as the first query on a new object. The acceleration
+    // structure is built on demand as for every other query, so the answer is the same as after an explicit build.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 1), make_vec2(10, 10));
+    const vec3 apex = make_vec3(0, 0, 0);
+    const vec3 axis = make_vec3(0, 0, 1);
+
+    CollisionDetection built(&context);
+    built.disableMessages();
+    built.buildBVH();
+    const CollisionDetection::OptimalPathResult expected = built.findOptimalConePath(apex, axis, 0.3f, 5.f, 64);
+    DOCTEST_REQUIRE(expected.confidence < 1.f); // the cone is blocked
+
+    CollisionDetection first_query(&context);
+    first_query.disableMessages();
+    const CollisionDetection::OptimalPathResult result = first_query.findOptimalConePath(apex, axis, 0.3f, 5.f, 64);
+    DOCTEST_CHECK(result.confidence == doctest::Approx(expected.confidence));
+    DOCTEST_CHECK(result.collisionCount == expected.collisionCount);
 }

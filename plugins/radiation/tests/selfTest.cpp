@@ -57,6 +57,11 @@ namespace helios {
             return helios::probeAnyGPUBackend();
         }
 
+        //! Number of times the model has rebuilt its radiative properties from the Context
+        static size_t radiativePropertyBuildCount(const RadiationModel &model) {
+            return model.radiative_property_build_count;
+        }
+
         static RadiationModel createWithSharedDevice(Context *context) {
 #if defined(HELIOS_HAVE_OPTIX8) || (defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND))
             // OptiX available and not forced to Vulkan - use default constructor
@@ -133,6 +138,29 @@ namespace helios {
         }
     };
 } // namespace helios
+
+GPU_TEST_CASE("RadiationModel backend files resolve through HELIOS_BUILD when the working directory is not the build directory") {
+    // Regression test. The Vulkan backend opened its SPIR-V shaders by a path relative to the working directory, so constructing the
+    // model failed unless the process ran from the build directory
+    ScopedForeignWorkingDirectory foreign_working_directory;
+
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiationmodel.disableMessages();
+    radiationmodel.addRadiationBand("SW");
+    radiationmodel.disableEmission("SW");
+    radiationmodel.setScatteringDepth("SW", 0);
+    uint source = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiationmodel.setSourceFlux(source, "SW", 1000.f);
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("SW");
+
+    float absorbed_flux = 0;
+    context.getPrimitiveData(patch, "radiation_flux_SW", absorbed_flux);
+    DOCTEST_CHECK(absorbed_flux > 0.f);
+}
 
 GPU_TEST_CASE("RadiationModel::writeImageSegmentationMasks refuses a pixel-to-primitive map that no longer resolves") {
     // The per-camera "camera_<label>_pixel_UUID" map holds Context UUIDs (offset by one, zero meaning the pixel hit
@@ -10850,7 +10878,10 @@ GPU_TEST_CASE("RadiationModel - Camera images emission in a band with a scatteri
     model.updateGeometry();
 
     auto mean_pixel = [&]() {
-        model.runBand("TIR");
+        {
+            capture_cerr capture; // the tile's emissivity is unused at a scattering depth of 0, which warns
+            model.runBand("TIR");
+        }
         const std::vector<float> pixels = model.getCameraPixelData("thermal", "TIR");
         double sum = 0.0;
         for (float pixel: pixels) {
@@ -13900,6 +13931,7 @@ namespace {
                 radiation.setSourceSpectrum(sun, setup.sun_spectrum_label);
             }
         } else {
+            capture_cerr capture; // lighting both faces adds a second collimated source, which warns about multiple suns
             for (const auto &source: setup.flat_sources) {
                 uint ID = radiation.addCollimatedRadiationSource(source.direction);
                 radiation.setSourceSpectrum(ID, std::vector<vec2>{make_vec2(300, source.flux_per_nm), make_vec2(900, source.flux_per_nm)});
@@ -14177,6 +14209,236 @@ GPU_TEST_CASE("SIF follows a leaf that is given a different biochemistry label")
     DOCTEST_INFO("far-red SIF after switching to the Cab 60 label " << emission_after_switch << ", fresh Cab 60 " << emission_high_Cab);
     DOCTEST_REQUIRE(emission_high_Cab > 0.f);
     DOCTEST_CHECK(emission_after_switch == doctest::Approx(emission_high_Cab).epsilon(1e-3));
+}
+
+GPU_TEST_CASE("SIF follows the sun, the source strength and the leaf orientation between dispatches") {
+    // In a time loop the sun moves, its strength changes and leaves move between SIF dispatches. The per-leaf emission computed when the
+    // excitation bands were last run must not be reused once the light reaching the leaf has changed.
+    const float sixty_degrees = float(M_PI) / 3.f; // a horizontal leaf lit 60 degrees off its normal receives half the flux
+
+    auto build = [](Context &ctx, RadiationModel &radiation, uint &leaf, uint &sun) {
+        leaf = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        sif_stamp_biochem(ctx, {leaf}, "leaf", 40.f, 10.f);
+        ctx.setPrimitiveData(leaf, "electron_transport_ratio", 1.f);
+        ctx.setPrimitiveData(leaf, "temperature", 298.15f);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SIF_farred", 740.f, 760.f);
+        sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceSpectrum(sun, std::vector<vec2>{make_vec2(300, 1.f), make_vec2(900, 1.f)});
+        SIFCameraProperties cam_props;
+        cam_props.camera_resolution = make_int2(4, 4);
+        radiation.addSIFCamera("cam", {"SIF_farred"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), cam_props, 1);
+        radiation.updateGeometry();
+        radiation.runBand("SIF_farred");
+        return RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, true);
+    };
+
+    SUBCASE("the sun moves") {
+        Context ctx;
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+        uint leaf, sun;
+        const float emission_overhead = build(ctx, radiation, leaf, sun);
+        DOCTEST_REQUIRE(emission_overhead > 0.f);
+        radiation.setSourcePosition(sun, make_vec3(std::sin(sixty_degrees), 0, std::cos(sixty_degrees)));
+        radiation.runBand("SIF_farred");
+        const float emission_oblique = RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, true);
+        DOCTEST_CHECK(emission_oblique == doctest::Approx(0.5f * emission_overhead).epsilon(0.02));
+    }
+
+    SUBCASE("the leaf is tilted") {
+        Context ctx;
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+        uint leaf, sun;
+        const float emission_horizontal = build(ctx, radiation, leaf, sun);
+        DOCTEST_REQUIRE(emission_horizontal > 0.f);
+        ctx.rotatePrimitive(leaf, sixty_degrees, "x");
+        radiation.runBand("SIF_farred");
+        const float emission_tilted = RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, true);
+        DOCTEST_CHECK(emission_tilted == doctest::Approx(0.5f * emission_horizontal).epsilon(0.02));
+    }
+
+    SUBCASE("the source spectrum is rescaled") {
+        Context ctx;
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+        uint leaf, sun;
+        const float emission_full = build(ctx, radiation, leaf, sun);
+        DOCTEST_REQUIRE(emission_full > 0.f);
+        radiation.setSourceSpectrumIntegral(sun, 300.f); // half of the 600 W/m^2 of the flat 300-900 nm spectrum
+        radiation.runBand("SIF_farred");
+        const float emission_half = RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, true);
+        DOCTEST_CHECK(emission_half == doctest::Approx(0.5f * emission_full).epsilon(0.02));
+    }
+}
+
+GPU_TEST_CASE("SIF follows source and sky spectra rewritten in global data between dispatches") {
+    // A spectrum given by a global data label is read again when that global data changes. The per-leaf emission computed when the excitation
+    // bands were last run must follow it, on the next dispatch and on every one after it.
+    auto build = [](Context &ctx, RadiationModel &radiation, uint &leaf, float sun_level, float sky_level) {
+        leaf = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        sif_stamp_biochem(ctx, {leaf}, "leaf", 40.f, 10.f);
+        ctx.setPrimitiveData(leaf, "electron_transport_ratio", 1.f);
+        ctx.setPrimitiveData(leaf, "temperature", 298.15f);
+        ctx.setGlobalData("test_sun", std::vector<vec2>{make_vec2(300, sun_level), make_vec2(900, sun_level)});
+        ctx.setGlobalData("test_sky", std::vector<vec2>{make_vec2(300, sky_level), make_vec2(900, sky_level)});
+        radiation.disableMessages();
+        radiation.addRadiationBand("SIF_farred", 740.f, 760.f);
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceSpectrum(sun, "test_sun");
+        radiation.setDiffuseSpectrum("test_sky");
+        SIFCameraProperties cam_props;
+        cam_props.camera_resolution = make_int2(4, 4);
+        radiation.addSIFCamera("cam", {"SIF_farred"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), cam_props, 1);
+        radiation.updateGeometry();
+        radiation.runBand("SIF_farred");
+        return RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, true);
+    };
+    // Emission of a model that has only ever seen the given spectra
+    auto fresh_emission = [&build](float sun_level, float sky_level) {
+        Context ctx;
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+        uint leaf;
+        return build(ctx, radiation, leaf, sun_level, sky_level);
+    };
+
+    struct SpectrumChange {
+        const char *name;
+        const char *label;
+        float sun_level_after;
+        float sky_level_after;
+    };
+    for (const SpectrumChange &change: {SpectrumChange{"source spectrum halved", "test_sun", 0.5f, 1.f}, SpectrumChange{"sky spectrum removed", "test_sky", 1.f, 0.f}}) {
+        const std::string change_name = change.name;
+        DOCTEST_CAPTURE(change_name);
+        Context ctx;
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+        uint leaf;
+        const float emission_before = build(ctx, radiation, leaf, 1.f, 1.f);
+        const float level_after = std::string(change.label) == "test_sun" ? change.sun_level_after : change.sky_level_after;
+        ctx.setGlobalData(change.label, std::vector<vec2>{make_vec2(300, level_after), make_vec2(900, level_after)});
+
+        const float emission_expected = fresh_emission(change.sun_level_after, change.sky_level_after);
+        DOCTEST_REQUIRE(emission_expected > 0.f);
+        DOCTEST_REQUIRE(std::fabs(emission_before - emission_expected) > 0.2f * emission_expected); // the change must matter here
+        for (int dispatch = 1; dispatch <= 3; dispatch++) {
+            DOCTEST_CAPTURE(dispatch);
+            radiation.runBand("SIF_farred");
+            const float emission_after = RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, true);
+            DOCTEST_CHECK(emission_after == doctest::Approx(emission_expected).epsilon(0.02));
+        }
+    }
+}
+
+GPU_TEST_CASE("SIF follows the reflectivity of surrounding surfaces changed between dispatches") {
+    // With excitation scattering, the light reaching a leaf includes what the surfaces around it reflect. A change to their radiative
+    // properties that the model detects on its own (primitive data or the global data of a spectrum) must reach the excitation as well.
+    // A small leaf above a large ground: its bottom face is lit only by the light the ground reflects.
+    auto build = [](Context &ctx, RadiationModel &radiation, uint &leaf, uint &ground, const std::string &ground_spectrum) {
+        if (!ctx.doesGlobalDataExist("ground_dark")) {
+            ctx.setGlobalData("ground_dark", std::vector<vec2>{make_vec2(300, 0.f), make_vec2(900, 0.f)});
+        }
+        if (!ctx.doesGlobalDataExist("ground_bright")) {
+            ctx.setGlobalData("ground_bright", std::vector<vec2>{make_vec2(300, 0.8f), make_vec2(900, 0.8f)});
+        }
+        leaf = ctx.addPatch(make_vec3(0, 0, 0.5f), make_vec2(0.2f, 0.2f));
+        ground = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(50, 50));
+        sif_stamp_biochem(ctx, {leaf}, "leaf", 40.f, 10.f);
+        ctx.setPrimitiveData(leaf, "electron_transport_ratio", 1.f);
+        ctx.setPrimitiveData(leaf, "temperature", 298.15f);
+        ctx.setPrimitiveData(ground, "reflectivity_spectrum", ground_spectrum);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SIF_farred", 740.f, 760.f);
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiation.setSourceSpectrum(sun, std::vector<vec2>{make_vec2(300, 1.f), make_vec2(900, 1.f)});
+        SIFCameraProperties cam_props;
+        cam_props.camera_resolution = make_int2(4, 4);
+        cam_props.excitation_scattering_depth = 2;
+        radiation.addSIFCamera("cam", {"SIF_farred"}, make_vec3(0, 0, 3), make_vec3(0, 0, 0), cam_props, 1);
+        radiation.updateGeometry();
+        radiation.runBand("SIF_farred");
+        return RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, false);
+    };
+
+    float emission_bright_ground;
+    {
+        Context ctx;
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+        uint leaf, ground;
+        emission_bright_ground = build(ctx, radiation, leaf, ground, "ground_bright");
+    }
+
+    for (bool rewrite_global_data: {false, true}) {
+        DOCTEST_CAPTURE(rewrite_global_data);
+        Context ctx;
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&ctx);
+        uint leaf, ground;
+        const float emission_dark_ground = build(ctx, radiation, leaf, ground, "ground_dark");
+        DOCTEST_REQUIRE(emission_bright_ground > 1.2f * emission_dark_ground); // the ground must matter here
+        if (rewrite_global_data) {
+            ctx.setGlobalData("ground_dark", std::vector<vec2>{make_vec2(300, 0.8f), make_vec2(900, 0.8f)}); // the label the ground already uses
+        } else {
+            ctx.setPrimitiveData(ground, "reflectivity_spectrum", std::string("ground_bright"));
+        }
+        for (int dispatch = 1; dispatch <= 3; dispatch++) {
+            DOCTEST_CAPTURE(dispatch);
+            radiation.runBand("SIF_farred");
+            const float emission_after = RadiationModelTestHelper::getSIFEmission(radiation, "SIF_farred", leaf, false);
+            DOCTEST_CHECK(emission_after == doctest::Approx(emission_bright_ground).epsilon(0.02));
+        }
+    }
+}
+
+GPU_TEST_CASE("RadiationModel two-sided and invisibility flags changed after the geometry was built") {
+    // The flags are part of the geometry, as normal maps are: a change made after it was built is an error until updateGeometry() is called
+    // again, however it is made, and is then traced. Without the check the old flags were silently traced (and emission used the new ones).
+    enum class Change { twosided_primitive_data, material_twosided_flag, material_reassigned, invisibility_flag };
+    for (Change change: {Change::twosided_primitive_data, Change::material_twosided_flag, Change::material_reassigned, Change::invisibility_flag}) {
+        DOCTEST_CAPTURE(int(change));
+        const bool invisibility = change == Change::invisibility_flag;
+        Context context;
+        // Lit from below, a one-sided patch absorbs nothing; lit from above, an invisible patch no longer shades the one under it
+        uint upper = context.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1));
+        uint lower = context.addPatch(make_vec3(invisibility ? 0.f : 5.f, 0, 0), make_vec2(1, 1));
+        context.addMaterial("two_sided");
+        context.addMaterial("one_sided");
+        context.setMaterialTwosidedFlag("one_sided", 0);
+        if (change == Change::material_twosided_flag || change == Change::material_reassigned) {
+            context.assignMaterialToPrimitive(upper, "two_sided");
+        }
+        RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+        radiation.disableMessages();
+        radiation.addRadiationBand("SW");
+        radiation.disableEmission("SW");
+        radiation.setScatteringDepth("SW", 0);
+        uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, invisibility ? 1.f : -1.f));
+        radiation.setSourceFlux(sun, "SW", 1000.f);
+        radiation.updateGeometry();
+        radiation.runBand("SW");
+        const uint observed = invisibility ? lower : upper;
+        float flux_before;
+        context.getPrimitiveData(observed, "radiation_flux_SW", flux_before);
+        DOCTEST_REQUIRE(flux_before == doctest::Approx(invisibility ? 0.f : 1000.f).epsilon(0.01));
+
+        switch (change) {
+            case Change::twosided_primitive_data:
+                context.setPrimitiveData(upper, "twosided_flag", uint(0));
+                break;
+            case Change::material_twosided_flag:
+                context.setMaterialTwosidedFlag("two_sided", 0);
+                break;
+            case Change::material_reassigned:
+                context.assignMaterialToPrimitive(upper, "one_sided");
+                break;
+            case Change::invisibility_flag:
+                context.setPrimitiveData(upper, "invisibility_flag", uint(1));
+                break;
+        }
+        DOCTEST_CHECK_THROWS_WITH(radiation.runBand("SW"), doctest::Contains("updateGeometry"));
+        radiation.updateGeometry();
+        DOCTEST_REQUIRE_NOTHROW(radiation.runBand("SW"));
+        float flux_after;
+        context.getPrimitiveData(observed, "radiation_flux_SW", flux_after);
+        DOCTEST_CHECK(flux_after == doctest::Approx(invisibility ? 1000.f : 0.f).epsilon(0.01));
+    }
 }
 
 GPU_TEST_CASE("SIF: the top-face absorption buffer is allocated only for launches that include SIF excitation bands") {
@@ -15973,6 +16235,36 @@ GPU_TEST_CASE("Launch batching covers every primitive") {
     DOCTEST_CHECK(max_flux == doctest::Approx(1000.0f).epsilon(0.02));
 }
 
+GPU_TEST_CASE("Launch batching keeps a launch of many rays per primitive within what one launch can hold") {
+    // 16,900 primitives at 65,536 diffuse rays each are 1.1 billion rays per face, more than the 2^30 that one OptiX launch can hold, although
+    // the primitives are fewer than a batch of primitives was ever limited to. A black, one-sided ground under a uniform sky absorbs the sky's flux
+    // everywhere, so a launch that was refused, cut short or repeated shows as an error or as patches that absorbed something else.
+    Context context;
+    std::vector<uint> UUIDs = context.addTile(make_vec3(0, 0, 0), make_vec2(10, 10), nullrotation, make_int2(130, 130));
+    context.setPrimitiveData(UUIDs, "twosided_flag", uint(0));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    radiation.setScatteringDepth("SW", 0);
+    radiation.setDiffuseRadiationFlux("SW", 1000.f);
+    radiation.setDiffuseRayCount("SW", 65536);
+    radiation.updateGeometry();
+    DOCTEST_REQUIRE_NOTHROW(radiation.runBand("SW"));
+
+    float min_flux = std::numeric_limits<float>::max();
+    float max_flux = std::numeric_limits<float>::lowest();
+    for (uint UUID: UUIDs) {
+        float flux = 0.f;
+        context.getPrimitiveData(UUID, "radiation_flux_SW", flux);
+        min_flux = std::min(min_flux, flux);
+        max_flux = std::max(max_flux, flux);
+    }
+    DOCTEST_CHECK(min_flux == doctest::Approx(1000.0f).epsilon(0.01));
+    DOCTEST_CHECK(max_flux == doctest::Approx(1000.0f).epsilon(0.01));
+}
+
 // ---- Segmentation mask connected components ----------------------------------------------------
 //
 // generateAnnotationsFromMasks() is private and needs no rendered scene, so these build label masks
@@ -16591,7 +16883,10 @@ GPU_TEST_CASE("Spectral weighting - a reflectivity spectrum is zero outside its 
         model.setSourceFlux(source, "VIS", 1000.f);
         model.setDiffuseRadiationFlux("VIS", 0.f);
         model.updateGeometry();
-        model.runBand("VIS");
+        {
+            capture_cerr capture; // the reflectivity is only reported here, so its being unused at a scattering depth of 0 is expected
+            model.runBand("VIS");
+        }
 
         float rho = 0.f;
         context.getPrimitiveData(patch, "reflectivity_0_VIS", rho);
@@ -18760,9 +19055,12 @@ static LayeredSmoothingRender renderDirectSmoothingScene(const std::function<std
     model.setDirectRayCount("SW", 200);
     model.setDiffuseRayCount("SW", 1000);
     model.setDiffuseRadiationFlux("SW", scene.diffuse_flux);
-    for (const auto &[direction, flux]: scene.collimated) {
-        const uint source = model.addCollimatedRadiationSource(direction);
-        model.setSourceFlux(source, "SW", flux);
+    {
+        capture_cerr capture; // a scene with several suns warns about multiple sun sources
+        for (const auto &[direction, flux]: scene.collimated) {
+            const uint source = model.addCollimatedRadiationSource(direction);
+            model.setSourceFlux(source, "SW", flux);
+        }
     }
     for (const auto &[position, flux]: scene.lamps) {
         const uint source = model.addSphereRadiationSource(position, 0.05f);
@@ -20857,7 +21155,7 @@ GPU_TEST_CASE("RadiationModel - direct rays are stratified on a square grid") {
 }
 
 GPU_TEST_CASE("RadiationModel - primitives in different ray launch batches are sampled independently") {
-    // Regression test. The OptiX 8 backend launches rays for at most 65535 primitives at a time, and seeded each primitive's random
+    // Regression test. The OptiX 8 backend launches rays for at most 65535 primitives at a time (fewer at high ray counts), and seeded each primitive's random
     // numbers with its index within the batch, so primitives k and k + 65535 drew identical samples. Every primitive must draw its
     // own samples.
     //
@@ -21339,6 +21637,51 @@ GPU_TEST_CASE("RadiationModel - a spectral texture follows the texture coordinat
     DOCTEST_CAPTURE(flux(context, upper_left));
     DOCTEST_CHECK(std::fabs(flux(context, lower_right) - 237.5f) < 5.f);
     DOCTEST_CHECK(std::fabs(flux(context, upper_left) - 712.5f) < 5.f);
+
+    std::filesystem::remove(class_map);
+}
+
+GPU_TEST_CASE("RadiationModel - a rebuild keeps the class fractions of moved spectral textures and computes those of new texture coordinates") {
+    // The triangles of the test above, moved with their occluder after a first build: the class fractions the second build carries
+    // over still give 0.25 x 950 and 0.75 x 950 W/m^2. A third triangle given the same class map in the second build, with texture
+    // coordinates only in columns 0-1 (class 1, 5% reflective) and unshaded, must not take another primitive's fractions: 950 W/m^2.
+    using namespace spectral_texture_test;
+    Context context;
+    addFlatSpectrum(context, "rho_low", 0.05f);
+    addFlatSpectrum(context, "rho_high", 0.8f);
+    context.addSpectralPalette("halves", {{"rho_low", "", ""}, {"rho_high", "", ""}});
+    std::vector<uint16_t> classes(25);
+    for (uint i = 0; i < 25; i++) {
+        classes.at(i) = (i % 5) < 2 ? 1 : 2;
+    }
+    const std::string class_map = writeClassMap("helios_radiation_rebuild_halves.png", 5, 5, classes);
+
+    const vec3 v0 = make_vec3(-0.5, -0.5, 0), v1 = make_vec3(0.5, -0.5, 0), v2 = make_vec3(0.5, 0.5, 0), v3 = make_vec3(-0.5, 0.5, 0);
+    const uint lower_right = context.addTriangle(v0, v1, v2, "lib/images/solid.jpg", make_vec2(0, 0), make_vec2(1, 0), make_vec2(1, 1));
+    const uint upper_left = context.addTriangle(v0, v2, v3, "lib/images/solid.jpg", make_vec2(0, 0), make_vec2(1, 1), make_vec2(0, 1));
+    context.setPrimitiveSpectralTexture(std::vector<uint>{lower_right, upper_left}, class_map, "halves");
+    const uint occluder = addOccluderOverRightHalf(context);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    addOverheadBeam(model);
+    model.updateGeometry();
+    model.runBand("VIS");
+    DOCTEST_CHECK(std::fabs(flux(context, lower_right) - 237.5f) < 5.f);
+    DOCTEST_CHECK(std::fabs(flux(context, upper_left) - 712.5f) < 5.f);
+
+    const vec3 shift = make_vec3(3, 0, 0);
+    context.translatePrimitive(std::vector<uint>{lower_right, upper_left, occluder}, shift);
+    const uint class_one = context.addTriangle(make_vec3(-0.5, 3, 0), make_vec3(0.5, 3, 0), make_vec3(0.5, 4, 0), "lib/images/solid.jpg", make_vec2(0, 0), make_vec2(0.3f, 0), make_vec2(0.3f, 1));
+    context.setPrimitiveSpectralTexture(class_one, class_map, "halves");
+    model.updateGeometry();
+    model.runBand("VIS");
+
+    DOCTEST_CAPTURE(flux(context, lower_right));
+    DOCTEST_CAPTURE(flux(context, upper_left));
+    DOCTEST_CAPTURE(flux(context, class_one));
+    DOCTEST_CHECK(std::fabs(flux(context, lower_right) - 237.5f) < 5.f);
+    DOCTEST_CHECK(std::fabs(flux(context, upper_left) - 712.5f) < 5.f);
+    DOCTEST_CHECK(std::fabs(flux(context, class_one) - 950.f) < 5.f);
 
     std::filesystem::remove(class_map);
 }
@@ -23670,7 +24013,7 @@ GPU_TEST_CASE("RadiationModel normal map leaves the direct radiation a Lambertia
     using namespace normal_map_test;
     std::vector<RGBAcolor> noise(16 * 16);
     std::minstd_rand generator(3);
-    std::uniform_real_distribution<float> unit(0.f, 1.f);
+    helios::uniform_real_distribution<float> unit(0.f, 1.f);
     for (RGBAcolor &texel: noise) {
         const float theta = 0.9f * unit(generator), phi = 6.283f * unit(generator);
         texel = make_RGBAcolor(0.5f + 0.5f * sinf(theta) * cosf(phi), 0.5f + 0.5f * sinf(theta) * sinf(phi), 0.5f + 0.5f * cosf(theta), 1.f);
@@ -23703,7 +24046,10 @@ GPU_TEST_CASE("RadiationModel normal map leaves the direct radiation a Lambertia
             radiation.setSourceFlux(sun, "SW", 1000.f);
             radiation.setDirectRayCount("SW", 400);
             radiation.updateGeometry();
-            radiation.runBand("SW");
+            {
+                capture_cerr capture; // the leaves' reflectivity and transmissivity are unused at a scattering depth of 0, which warns
+                radiation.runBand("SW");
+            }
             for (int i = 0; i < 3; i++) {
                 context.getPrimitiveData(UUIDs.at(i), "radiation_flux_SW", flux[mapped][i]);
             }
@@ -24109,7 +24455,10 @@ GPU_TEST_CASE("RadiationModel normal map on a masked primitive and a bump map eq
         radiation.setSourceFlux(sun, "SW", 1000.f);
         radiation.setDirectRayCount("SW", 400);
         radiation.updateGeometry();
-        radiation.runBand("SW");
+        {
+            capture_cerr capture; // the patch's reflectivity is unused at a scattering depth of 0, which warns
+            radiation.runBand("SW");
+        }
         context.getPrimitiveData(patch, "radiation_flux_SW", masked_flux[mapped]);
     }
     DOCTEST_CHECK(masked_flux[1] == doctest::Approx(masked_flux[0]).epsilon(1e-6));
@@ -24245,6 +24594,7 @@ GPU_TEST_CASE("RadiationModel normal map adds no reflected direct radiation at a
         if (mapped == 1) {
             context.setPrimitiveNormalMap(patch, map);
         }
+        capture_cerr capture; // the patch's reflectivity is unused at a scattering depth of 0, which warns
         pixel[mapped] = meanCameraPixel(context, make_vec3(0.4f, 0, 1), make_vec3(0, 0, 10), make_vec3(0, 0, 0), 0);
     }
     DOCTEST_CHECK(pixel[1] == doctest::Approx(pixel[0]).epsilon(1e-6));
@@ -24695,6 +25045,7 @@ GPU_TEST_CASE("RadiationModel normal map camera shading with several sources and
             radiation.setSourceFlux(first, band, 1000.f);
         }
         if (setup.two_sources) {
+            capture_cerr capture; // a second sun warns about multiple sun sources
             const uint second = radiation.addCollimatedRadiationSource(sun_b);
             for (const std::string &band: bands) {
                 radiation.setSourceFlux(second, band, 600.f);
@@ -25842,5 +26193,183 @@ GPU_TEST_CASE("Camera Flux Smoothing - shades a straight tube evenly along its l
     }
     DOCTEST_INFO(columns << " columns; largest change along a column " << largest_drift << " of the brightest pixel");
     DOCTEST_REQUIRE(columns >= 8);
-    DOCTEST_CHECK(largest_drift < 0.03f);
+    // The render is a Monte Carlo estimate, so this is the largest of many noisy differences: it came out between 0.023 and 0.033
+    // over repeated runs of the correct code, against about 0.33 with the area-weighted normals.
+    DOCTEST_CHECK(largest_drift < 0.06f);
+}
+
+namespace radiative_property_rebuild_test {
+    //! A horizontal unit patch under an overhead collimated beam of 1000 W/m^2 in band "VIS" (400-700 nm), with one scattering iteration so that its reflectivity is not ignored
+    struct LitPatch {
+        Context context;
+        uint patch;
+        RadiationModel model;
+        uint source;
+
+        LitPatch() : patch(context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1))), model(RadiationModelTestHelper::createWithSharedDevice(&context)) {
+            model.disableMessages();
+            model.addRadiationBand("VIS", 400.f, 700.f);
+            model.disableEmission("VIS");
+            model.setScatteringDepth("VIS", 1);
+            model.setDirectRayCount("VIS", 100);
+            model.setDiffuseRayCount("VIS", 100);
+            source = model.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+            model.setSourceFlux(source, "VIS", 1000.f);
+            model.updateGeometry();
+        }
+
+        //! Runs the band and returns the flux the patch absorbs
+        float absorbed() {
+            model.runBand("VIS");
+            float flux;
+            context.getPrimitiveData(patch, "radiation_flux_VIS", flux);
+            return flux;
+        }
+
+        [[nodiscard]] size_t builds() const {
+            return RadiationModelTestHelper::radiativePropertyBuildCount(model);
+        }
+    };
+} // namespace radiative_property_rebuild_test
+
+GPU_TEST_CASE("RadiationModel - runBand rebuilds the radiative properties only when something they depend on has changed") {
+    radiative_property_rebuild_test::LitPatch scene;
+    scene.context.setPrimitiveData(scene.patch, "reflectivity_VIS", 0.3f);
+
+    DOCTEST_CHECK(scene.absorbed() == doctest::Approx(700.f).epsilon(0.001));
+    const size_t builds = scene.builds();
+    DOCTEST_CHECK(builds == 1);
+
+    // Nothing changed: the properties of the first run stand
+    DOCTEST_CHECK(scene.absorbed() == doctest::Approx(700.f).epsilon(0.001));
+    DOCTEST_CHECK(scene.builds() == builds);
+
+    // Primitive data that no radiative property is read from, which other plug-ins and the model's own output write every time step, and
+    // fluxes that change in step, do not make them out of date either
+    scene.context.setPrimitiveData(scene.patch, "temperature", 310.f);
+    scene.context.setPrimitiveData(scene.patch, "radiation_flux_VIS", 0.f);
+    scene.model.setSourceFlux(scene.source, "VIS", 500.f);
+    DOCTEST_CHECK(scene.absorbed() == doctest::Approx(350.f).epsilon(0.001));
+    DOCTEST_CHECK(scene.builds() == builds);
+}
+
+GPU_TEST_CASE("RadiationModel - a change to what the radiative properties are computed from takes effect in the next runBand") {
+    using radiative_property_rebuild_test::LitPatch;
+    const auto approx = [](float value) { return doctest::Approx(value).epsilon(0.001); };
+
+    SUBCASE("primitive data set, set for a list of primitives, scaled and removed") {
+        LitPatch scene;
+        DOCTEST_CHECK(scene.absorbed() == approx(1000.f)); // black by default
+        scene.context.setPrimitiveData(scene.patch, "reflectivity_VIS", 0.3f);
+        DOCTEST_CHECK(scene.absorbed() == approx(700.f));
+        scene.context.setPrimitiveData(std::vector<uint>{scene.patch}, "reflectivity_VIS", 0.6f);
+        DOCTEST_CHECK(scene.absorbed() == approx(400.f));
+        scene.context.scalePrimitiveData(std::vector<uint>{scene.patch}, "reflectivity_VIS", 0.5f);
+        DOCTEST_CHECK(scene.absorbed() == approx(700.f));
+        scene.context.setPrimitiveData(scene.patch, "transmissivity_VIS", 0.2f);
+        DOCTEST_CHECK(scene.absorbed() == approx(500.f));
+        scene.context.clearPrimitiveData(scene.patch, "reflectivity_VIS");
+        DOCTEST_CHECK(scene.absorbed() == approx(800.f));
+        DOCTEST_CHECK(scene.builds() == 6);
+    }
+
+    SUBCASE("the spectrum a primitive names, and the global data of that spectrum") {
+        LitPatch scene;
+        scene.context.setGlobalData("rho_low", std::vector<vec2>{make_vec2(300, 0.2f), make_vec2(800, 0.2f)});
+        scene.context.setGlobalData("rho_high", std::vector<vec2>{make_vec2(300, 0.5f), make_vec2(800, 0.5f)});
+        scene.context.setPrimitiveData(scene.patch, "reflectivity_spectrum", "rho_low");
+        DOCTEST_CHECK(scene.absorbed() == approx(800.f));
+        scene.context.setPrimitiveData(scene.patch, "reflectivity_spectrum", "rho_high");
+        DOCTEST_CHECK(scene.absorbed() == approx(500.f));
+        scene.context.setGlobalData("rho_high", std::vector<vec2>{make_vec2(300, 0.1f), make_vec2(800, 0.1f)});
+        DOCTEST_CHECK(scene.absorbed() == approx(900.f));
+        // Global data the properties were not computed from leaves them as they are
+        scene.context.setGlobalData("rho_low", std::vector<vec2>{make_vec2(300, 0.9f), make_vec2(800, 0.9f)});
+        scene.context.setGlobalData("air_temperature", 300.f);
+        DOCTEST_CHECK(scene.absorbed() == approx(900.f));
+        DOCTEST_CHECK(scene.builds() == 3);
+    }
+
+    SUBCASE("a material assigned to a primitive, and its data") {
+        LitPatch scene;
+        scene.context.setPrimitiveData(scene.patch, "reflectivity_VIS", 0.3f);
+        DOCTEST_CHECK(scene.absorbed() == approx(700.f));
+        scene.context.addMaterial("waxy");
+        scene.context.assignMaterialToPrimitive(scene.patch, "waxy");
+        DOCTEST_CHECK(scene.absorbed() == approx(700.f));
+        DOCTEST_CHECK(scene.builds() == 2);
+        // A specular surface layer leaves the total reflectivity at normal incidence, which this beam is at, as it is. The roughness is out of range the second time.
+        scene.context.setMaterialData("waxy", "specular_roughness", 0.3f);
+        DOCTEST_CHECK(scene.absorbed() == doctest::Approx(700.f).epsilon(0.01));
+        DOCTEST_CHECK(scene.builds() == 3);
+        scene.context.setMaterialData("waxy", "specular_roughness", 2.f);
+        DOCTEST_CHECK_THROWS(scene.model.runBand("VIS"));
+    }
+
+    SUBCASE("settings of the model that no setter reports as a change") {
+        LitPatch scene;
+        scene.context.setPrimitiveData(scene.patch, "reflectivity_VIS", 0.3f);
+        DOCTEST_CHECK(scene.absorbed() == approx(700.f));
+
+        // Without scattering every surface is black
+        scene.model.setScatteringDepth("VIS", 0);
+        float absorbed_without_scattering;
+        {
+            capture_cerr warning_that_properties_are_ignored;
+            absorbed_without_scattering = scene.absorbed();
+        }
+        DOCTEST_CHECK(absorbed_without_scattering == approx(1000.f));
+        scene.model.setScatteringDepth("VIS", 1);
+        DOCTEST_CHECK(scene.absorbed() == approx(700.f));
+
+        // The reflectivity is written as primitive data when it is asked for
+        DOCTEST_CHECK(!scene.context.doesPrimitiveDataExist(scene.patch, "reflectivity_0_VIS"));
+        scene.model.optionalOutputPrimitiveData("reflectivity");
+        scene.model.runBand("VIS");
+        DOCTEST_REQUIRE(scene.context.doesPrimitiveDataExist(scene.patch, "reflectivity_0_VIS"));
+        float reflectivity_written;
+        scene.context.getPrimitiveData(scene.patch, "reflectivity_0_VIS", reflectivity_written);
+        DOCTEST_CHECK(reflectivity_written == doctest::Approx(0.3f));
+    }
+
+    SUBCASE("the shares of the flux of a source and a sky whose spectra differ") {
+        // The beam has energy only where the surface reflects 20%, and the sky only where it reflects 60%, so the reflectivity of the sky's diffuse
+        // radiation depends on how the band's flux is divided between them. After the beam is dimmed, the model must give what a model set up with
+        // the dimmed beam from the start gives.
+        const auto setUp = [](LitPatch &scene, float beam_flux) {
+            scene.context.setGlobalData("rho_step", std::vector<vec2>{make_vec2(400, 0.2f), make_vec2(549, 0.2f), make_vec2(551, 0.6f), make_vec2(700, 0.6f)});
+            scene.context.setGlobalData("sky_red", std::vector<vec2>{make_vec2(400, 0.f), make_vec2(549, 0.f), make_vec2(551, 1.f), make_vec2(700, 1.f)});
+            scene.context.setPrimitiveData(scene.patch, "reflectivity_spectrum", "rho_step");
+            scene.model.setSourceSpectrum(scene.source, std::vector<vec2>{make_vec2(400, 1.f), make_vec2(549, 1.f), make_vec2(551, 0.f), make_vec2(700, 0.f)});
+            scene.model.setDiffuseSpectrum("sky_red");
+            scene.model.setSourceFlux(scene.source, "VIS", beam_flux);
+            scene.model.setDiffuseRadiationFlux("VIS", 100.f);
+        };
+        LitPatch scene;
+        setUp(scene, 1000.f);
+        const float absorbed_bright = scene.absorbed();
+        const size_t builds = scene.builds();
+        scene.model.setSourceFlux(scene.source, "VIS", 200.f);
+        const float absorbed_dimmed = scene.absorbed();
+        DOCTEST_CHECK(scene.builds() == builds + 1);
+
+        LitPatch reference;
+        setUp(reference, 200.f);
+        const float absorbed_reference = reference.absorbed();
+        DOCTEST_CAPTURE(absorbed_bright);
+        DOCTEST_CHECK(absorbed_dimmed == approx(absorbed_reference));
+
+        // The test would not notice properties kept from the bright beam if dimming it changed nothing but the 80% of the beam that is absorbed
+        DOCTEST_CHECK(std::fabs((absorbed_bright - absorbed_dimmed) - 800.f * 0.8f) > 2.f);
+    }
+}
+
+GPU_TEST_CASE("RadiationModel - an error in the radiative properties is raised by every runBand until it is corrected") {
+    radiative_property_rebuild_test::LitPatch scene;
+    scene.context.setPrimitiveData(scene.patch, "reflectivity_VIS", 0.8f);
+    scene.context.setPrimitiveData(scene.patch, "transmissivity_VIS", 0.8f);
+    DOCTEST_CHECK_THROWS(scene.model.runBand("VIS"));
+    DOCTEST_CHECK_THROWS(scene.model.runBand("VIS"));
+    scene.context.setPrimitiveData(scene.patch, "transmissivity_VIS", 0.1f);
+    DOCTEST_CHECK(scene.absorbed() == doctest::Approx(100.f).epsilon(0.001));
 }

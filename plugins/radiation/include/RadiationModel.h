@@ -2500,6 +2500,19 @@ protected:
     //! have not yet been populated this dispatch, filling each set's base_emission.
     void runExcitationBands();
 
+    //! Discard the per-leaf emission of every excitation set, so that the excitation bands are traced again by the next dispatch that needs them.
+    /**
+     * Called whenever the light reaching the leaves may have changed: a source moved or changed strength, or the geometry was rebuilt.
+     */
+    void invalidateExcitationSets();
+
+    //! Set the flux of every source in every excitation band from the source's current spectrum.
+    /**
+     * The excitation bands are given an explicit source flux when they are created. This refreshes it at each dispatch, so that a source
+     * spectrum rescaled or replaced afterwards reaches the excitation bands. Sources without a spectrum are left as they are.
+     */
+    void updateExcitationBandSourceFluxes();
+
     //! Whether an excitation set holds emission for an emission band and every leaf that currently has 'fluspect_spectrum' data, computed from the leaf's current biochemistry label and values.
     [[nodiscard]] bool isExcitationEmissionCurrent(const ExcitationSet &exc, const std::string &emission_band) const;
 
@@ -2595,6 +2608,47 @@ protected:
         \note This is a private method called automatically - users should not call this directly.
     */
     void updateRadiativeProperties();
+
+    //! Whether the radiative properties that updateRadiativeProperties() last built still hold
+    /**
+     * runBand() rebuilds the radiative properties only when this is false, since rebuilding reads the data of every primitive.
+     * They hold as long as nothing they were computed from has changed: the primitive data they are read from (by
+     * Context::getPrimitiveDataRevision(), so that primitive data written by this and other plug-ins as output does not
+     * count), materials and their data, spectral textures, the global data of every spectrum used, the geometry, and the
+     * bands, sources and cameras of the model (see radiativePropertyModelState()). With spectrum interpolation set up
+     * (interpolateSpectrumFromPrimitiveData() or interpolateSpectrumFromObjectData()), which reads object data that has
+     * no revision, they are rebuilt on every call.
+     * \return True if the radiative properties need not be rebuilt
+     */
+    [[nodiscard]] bool radiativePropertiesAreCurrent() const;
+
+    //! Everything in the model itself that the radiative properties are computed from, as a string of bytes
+    /**
+     * Two states are equal exactly when updateRadiativeProperties() would compute the same properties from the same Context.
+     * The fluxes of the sources and the sky enter only as far as the properties depend on them: which of them are zero in each
+     * band, and, in a band where those with flux differ in spectrum, their shares of the band's flux, which weight the
+     * reflectivity and transmissivity of diffuse and scattered radiation. Fluxes that change from one time step to the next
+     * therefore leave the state as it is in a band where the sources and the sky have the same spectrum or none.
+     */
+    [[nodiscard]] std::string radiativePropertyModelState() const;
+
+    //! Record the model state and the Context revisions that the radiative properties were just built from (see radiativePropertiesAreCurrent())
+    void recordRadiativePropertyInputs();
+
+    //! Labels of all primitive data that updateRadiativeProperties() reads for the current bands
+    [[nodiscard]] std::vector<std::string> radiativePropertyDataLabels() const;
+
+    //! Spectrum that weights reflectivity and transmissivity spectra for one weighting contributor in a band
+    /**
+     * The contributors are each radiation source, then the sky diffuse radiation, then a spectrally flat weighting. A
+     * contributor without a spectrum is spectrally flat, which an empty spectrum stands for.
+     * \param[in] contributor Index of the contributor: a source ID, the number of sources for the sky, or one more for the flat weighting
+     * \param[in] band Band the spectrum weights
+     */
+    [[nodiscard]] const std::vector<helios::vec2> &weightingSpectrum(uint contributor, const RadiationBand &band) const;
+
+    //! Flux in a band of each weighting contributor that carries radiation: each source, then the sky diffuse radiation
+    [[nodiscard]] std::vector<float> weightingContributorFluxes(const std::string &band_label) const;
 
     //! Sets up the specular surface layers ("specular_roughness", "specular_n" and "specular_n_<band>" material or primitive data)
     /**
@@ -2822,6 +2876,15 @@ protected:
     //! depends only on the class map and the (u,v) coordinates.
     std::vector<std::vector<std::pair<uint16_t, float>>> spectral_class_fractions;
 
+    //! The class fractions of the last geometry build, by class map file and then by a primitive's (u,v) coordinates (u0, v0, u1, v1, ...)
+    /**
+     * Computing them clips each primitive against every texel under it, which dominates a rebuild of a scene with many textured
+     * primitives, while it depends only on the class map, which the Context reads once per file and never changes, and the (u,v)
+     * coordinates. Kept from one build to the next, so that a rebuild after only some primitives moved does not repeat it. Each
+     * build keeps only the entries it used, so the cache holds no more than the current geometry needs.
+     */
+    std::map<std::string, std::map<std::vector<float>, std::vector<std::pair<uint16_t, float>>>> class_fraction_cache;
+
     //! File of each class map in geometry_data.class_map_sizes, to check that a primitive's class map is the one its geometry was built with
     std::vector<std::string> spectral_class_map_files;
 
@@ -2844,6 +2907,21 @@ protected:
      * \param[in] UUIDs Primitives of the geometry, in position order
      */
     void checkNormalMapsCurrent(const std::vector<uint> &UUIDs) const;
+
+    //! Two-sided flag a primitive is given in the geometry
+    /**
+     * Its material's or its "twosided_flag" primitive data (0 one-sided, 1 two-sided, 2 transparent), or 3 (invisible) when its
+     * "invisibility_flag" primitive data is 1; raises an error for any other value of "invisibility_flag".
+     * \param[in] UUID Primitive
+     * \return Two-sided flag as stored in the geometry
+     */
+    [[nodiscard]] char geometryTwosidedFlag(uint UUID) const;
+
+    //! Raise an error if a primitive's two-sided or invisibility flag differs from the one it had when the geometry was last built
+    /**
+     * \param[in] UUIDs Primitives of the geometry, in position order
+     */
+    void checkTwosidedFlagsCurrent(const std::vector<uint> &UUIDs) const;
 
     //! Outgoing radiation of each class of each primitive with a spectral texture, as one camera sees it
     /**
@@ -2938,7 +3016,26 @@ protected:
     //! The UUIDs given to enforcePeriodicBoundary() to exclude from the periodic boundary, sorted and without duplicates; raises an error for a primitive that does not exist
     [[nodiscard]] std::vector<uint> validatePeriodicExcludedUUIDs(const std::vector<uint> &excluded_UUIDs) const;
 
+    //! Set by changes to the model that make the radiative properties out of date whatever else has changed (see radiativePropertiesAreCurrent())
     bool radiativepropertiesneedupdate = true;
+
+    //! State of the model that the radiative properties were last built from (see radiativePropertyModelState())
+    std::string radiative_property_model_state;
+
+    //! Revision of each primitive data label the radiative properties were last built from (see helios::Context::getPrimitiveDataRevision())
+    std::map<std::string, uint64_t> radiative_property_data_revisions;
+
+    //! Version of the global data of each spectrum and palette albedo the radiative properties were last built from (see helios::Context::getGlobalDataVersion())
+    std::map<std::string, uint64_t> radiative_property_global_data_versions;
+
+    //! Material revision of the Context when the radiative properties were last built
+    uint64_t radiative_property_material_revision = 0;
+
+    //! Spectral texture revision of the Context when the radiative properties were last built
+    uint64_t radiative_property_spectral_texture_revision = 0;
+
+    //! Number of times updateRadiativeProperties() has rebuilt the radiative properties from the Context, which the self-tests read to check that runBand() rebuilds them only when needed
+    size_t radiative_property_build_count = 0;
 
     //! Whether camera images interpolate the outgoing flux across each facet rather than holding it constant
     bool cameraflux_smoothing_enabled = false;

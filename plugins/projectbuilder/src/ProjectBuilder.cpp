@@ -732,7 +732,7 @@ void ProjectBuilder::updateCameras() {
             cameraproperties->camera_resolution = camera_resolutions[camera_index];
             cameraproperties->focal_plane_distance = focal_plane_distances[camera_index];
             cameraproperties->lens_diameter = lens_diameters[camera_index];
-            cameraproperties->FOV_aspect_ratio = FOV_aspect_ratios[camera_index];
+            // FOV_aspect_ratio is left at its default so the radiation model derives it from camera_resolution (square pixels); it no longer accepts a value
             cameraproperties->HFOV = HFOVs[camera_index];
 
             /* Create new camera */
@@ -1164,7 +1164,7 @@ void ProjectBuilder::buildFromXML() {
         // RIG BLOCK
         // *** Loading any XML files needed for cameras *** //
         for (auto &xml_file: camera_xml_library_files) {
-            if (xml_file.empty() || !std::filesystem::exists(xml_file)) {
+            if (xml_file.empty() || helios::tryResolveFilePath(xml_file).empty()) {
                 std::cout << "WARNING: Could not find camera XML library file: " + xml_file << ". Skipping..." << std::endl;
                 continue;
             }
@@ -1172,7 +1172,7 @@ void ProjectBuilder::buildFromXML() {
         }
         // *** Loading any XML files needed for lights *** //
         for (auto &xml_file: light_xml_library_files) {
-            if (xml_file.empty() || !std::filesystem::exists(xml_file)) {
+            if (xml_file.empty() || helios::tryResolveFilePath(xml_file).empty()) {
                 std::cout << "WARNING: Could not find light XML library file: " + xml_file << ". Skipping..." << std::endl;
                 continue;
             }
@@ -1465,20 +1465,20 @@ bool parse_distribution(const std::string &input_string, distribution &converted
     }
     distUnion dist{};
     if (dist_type == "normal") {
-        dist.normal = new std::normal_distribution<float>;
-        *dist.normal = std::normal_distribution<float>(dist_params[0], dist_params[1]);
+        dist.normal = new helios::normal_distribution<float>;
+        *dist.normal = helios::normal_distribution<float>(dist_params[0], dist_params[1]);
         converted_distribution.dist = dist;
         converted_distribution.flag = 0;
         converted_distribution.repeat = (bool) repeat;
     } else if (dist_type == "uniform") {
-        dist.uniform = new std::uniform_real_distribution<float>;
-        *dist.uniform = std::uniform_real_distribution<float>(dist_params[0], dist_params[1]);
+        dist.uniform = new helios::uniform_real_distribution<float>;
+        *dist.uniform = helios::uniform_real_distribution<float>(dist_params[0], dist_params[1]);
         converted_distribution.dist = dist;
         converted_distribution.flag = 1;
         converted_distribution.repeat = (bool) repeat;
     } else if (dist_type == "weibull") {
-        dist.weibull = new std::weibull_distribution<float>;
-        *dist.weibull = std::weibull_distribution<float>(dist_params[0], dist_params[1]);
+        dist.weibull = new helios::weibull_distribution<float>;
+        *dist.weibull = helios::weibull_distribution<float>(dist_params[0], dist_params[1]);
         converted_distribution.dist = dist;
         converted_distribution.flag = 2;
         converted_distribution.repeat = (bool) repeat;
@@ -2040,7 +2040,8 @@ void ProjectBuilder::visualize() {
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
     // ImFont* font_awesome = io.Fonts->AddFontFromFileTTF("plugins/visualizer/fonts/FontAwesome.ttf", 16.0f);
-    ImFont *arial = io.Fonts->AddFontFromFileTTF("plugins/visualizer/fonts/Arial.ttf", 16.0f);
+    const std::string arial_font_file = helios::resolvePluginAsset("visualizer", "fonts/Arial.ttf").string();
+    ImFont *arial = io.Fonts->AddFontFromFileTTF(arial_font_file.c_str(), 16.0f);
     io.Fonts->Build();
     // ImGui::PushFont(arial);
     io.FontDefault = arial;
@@ -2295,7 +2296,7 @@ void ProjectBuilder::visualize() {
                         if (file_extension == "xml") {
                             if (!std::filesystem::exists(new_xml_file)) {
                                 // Create file
-                                std::filesystem::copy(xml_input_file, new_xml_file, std::filesystem::copy_options::overwrite_existing);
+                                std::filesystem::copy(helios::resolveFilePath(xml_input_file), new_xml_file, std::filesystem::copy_options::overwrite_existing);
                             }
                             // Change XML input file
                             std::string xml_input_file_ = xml_input_file;
@@ -2574,7 +2575,13 @@ void ProjectBuilder::xmlSetValues() {
         obj_colors.push_back(curr_obj.color);
         obj_data_groups.push_back(curr_obj.data_group);
     }
-    //
+    // The lists above are in the order of the label set, so the position of each label in them is its position in the set. (The
+    // map was otherwise only set when a project file was read, and went stale as soon as an object was added, removed or renamed.)
+    obj_names_dict.clear();
+    for (const std::string &obj_name: obj_names_set) {
+        const int position = int(obj_names_dict.size());
+        obj_names_dict[obj_name] = position;
+    }
     setNodeLabels("label", "object", obj_names_set);
     xmlSetValues("file", "object", obj_files, obj_names_dict);
     xmlSetValues("position", "object", obj_positions, obj_names_dict);
@@ -2616,7 +2623,12 @@ void ProjectBuilder::xmlSetValues() {
         canopy_origins.push_back(curr_canopy.origin);
         canopy_data_groups.push_back(curr_canopy.data_group);
     }
-    //
+    // As for objects above: each label's position in the lists is its position in the label set
+    canopy_labels_dict.clear();
+    for (const std::string &canopy_name: canopy_labels_set) {
+        const int position = int(canopy_labels_dict.size());
+        canopy_labels_dict[canopy_name] = position;
+    }
     setNodeLabels("label", "canopy_block", canopy_labels_set);
     xmlSetValue("canopy_origin", "canopy_block", canopy_origin);
     xmlSetValue("plant_count", "canopy_block", plant_count);
@@ -2796,7 +2808,7 @@ void ProjectBuilder::xmlGetValues() {
     xmlGetValues("camera_xml_library_file", "helios", camera_xml_library_files);
     possible_camera_calibrations.clear();
     for (auto &xml_library_file: camera_xml_library_files) {
-        if (xml_library_file.empty() || !std::filesystem::exists(xml_library_file)) {
+        if (xml_library_file.empty() || helios::tryResolveFilePath(xml_library_file).empty()) {
             continue;
         }
         std::vector<std::string> current_camera_file = get_xml_node_values(xml_library_file, "label", "globaldata_vec2");
@@ -2806,7 +2818,7 @@ void ProjectBuilder::xmlGetValues() {
     xmlGetValues("light_xml_library_file", "helios", light_xml_library_files);
     possible_light_spectra.clear();
     for (auto &xml_library_file: light_xml_library_files) {
-        if (xml_library_file.empty() || !std::filesystem::exists(xml_library_file)) {
+        if (xml_library_file.empty() || helios::tryResolveFilePath(xml_library_file).empty()) {
             continue;
         }
         std::vector<std::string> current_light_file = get_xml_node_values(xml_library_file, "label", "globaldata_vec2");
@@ -2845,10 +2857,11 @@ void ProjectBuilder::xmlGetValues() {
         } else {
             std::cout << "Failed to load object file " << new_obj_file << "." << std::endl;
         }
-        // check for MTL file
-        std::filesystem::path mtl_path(new_obj_file);
+        // check for MTL file beside the object file (located relative to the working directory or the HELIOS_BUILD directory)
+        const std::filesystem::path resolved_obj_file = helios::tryResolveFilePath(new_obj_file);
+        std::filesystem::path mtl_path = resolved_obj_file;
         mtl_path.replace_extension("mtl");
-        if (std::filesystem::exists(mtl_path)) {
+        if (!resolved_obj_file.empty() && std::filesystem::exists(mtl_path)) {
             new_object.use_texture_file = true;
         } else {
             new_object.use_texture_file = false;
@@ -3072,7 +3085,7 @@ void ProjectBuilder::xmlGetValues() {
     xmlGetValues("load_xml_library_file", "radiation", xml_library_files);
     possible_spectra.clear();
     for (auto &xml_library_file: xml_library_files) {
-        if (xml_library_file.empty() || !std::filesystem::exists(xml_library_file)) {
+        if (xml_library_file.empty() || helios::tryResolveFilePath(xml_library_file).empty()) {
             continue;
         }
         std::vector<std::string> current_spectra_file = get_xml_node_values(xml_library_file, "label", "globaldata_vec2");
@@ -5857,22 +5870,22 @@ void ProjectBuilder::noisePopup(std::string popup_name, std::vector<distribution
         if (ImGui::Button("Apply")) {
             distUnion dist_union{};
             if (current_distribution == "Normal (Gaussian)") {
-                dist_union.normal = new std::normal_distribution<float>;
-                *dist_union.normal = std::normal_distribution<float>(curr_distribution_params[0], curr_distribution_params[1]);
+                dist_union.normal = new helios::normal_distribution<float>;
+                *dist_union.normal = helios::normal_distribution<float>(curr_distribution_params[0], curr_distribution_params[1]);
                 dist_vec[idx].dist = dist_union;
                 dist_vec[idx].flag = 0;
                 dist_vec[idx].repeat = 0;
             }
             if (current_distribution == "Uniform") {
-                dist_union.uniform = new std::uniform_real_distribution<float>;
-                *dist_union.uniform = std::uniform_real_distribution<float>(curr_distribution_params[0], curr_distribution_params[1]);
+                dist_union.uniform = new helios::uniform_real_distribution<float>;
+                *dist_union.uniform = helios::uniform_real_distribution<float>(curr_distribution_params[0], curr_distribution_params[1]);
                 dist_vec[idx].dist = dist_union;
                 dist_vec[idx].flag = 1;
                 dist_vec[idx].repeat = 0;
             }
             if (current_distribution == "Weibull") {
-                dist_union.weibull = new std::weibull_distribution<float>;
-                *dist_union.weibull = std::weibull_distribution<float>(curr_distribution_params[0], curr_distribution_params[1]);
+                dist_union.weibull = new helios::weibull_distribution<float>;
+                *dist_union.weibull = helios::weibull_distribution<float>(curr_distribution_params[0], curr_distribution_params[1]);
                 dist_vec[idx].dist = dist_union;
                 dist_vec[idx].flag = 2;
                 dist_vec[idx].repeat = 0;
@@ -5899,19 +5912,19 @@ void ProjectBuilder::applyDistribution(std::string var_name, taggedPtr ptr) {
         distribution_types[var_name] = "N/A";
     }
     if (current_distribution == "Normal (Gaussian)") {
-        std::normal_distribution<float> curr_dist_normal(curr_distribution_params[0], curr_distribution_params[1]);
+        helios::normal_distribution<float> curr_dist_normal(curr_distribution_params[0], curr_distribution_params[1]);
         distribution_dict[var_name] = distributions.size();
         distributions.push_back(createDistribution(curr_dist_normal, randomize_repeatedly));
         distribution_types[var_name] = "Normal (Gaussian)";
     }
     if (current_distribution == "Uniform") {
-        std::uniform_real_distribution<float> curr_dist_uniform(curr_distribution_params[0], curr_distribution_params[1]);
+        helios::uniform_real_distribution<float> curr_dist_uniform(curr_distribution_params[0], curr_distribution_params[1]);
         distribution_dict[var_name] = distributions.size();
         distributions.push_back(createDistribution(curr_dist_uniform, randomize_repeatedly));
         distribution_types[var_name] = "Uniform";
     }
     if (current_distribution == "Weibull") {
-        std::weibull_distribution<float> curr_dist_weibull(curr_distribution_params[0], curr_distribution_params[1]);
+        helios::weibull_distribution<float> curr_dist_weibull(curr_distribution_params[0], curr_distribution_params[1]);
         distribution_dict[var_name] = distributions.size();
         distributions.push_back(createDistribution(curr_dist_weibull, randomize_repeatedly));
         distribution_types[var_name] = "Weibull";
@@ -5995,25 +6008,25 @@ taggedPtr createTaggedPtr(int *ptr, bool *dirty) {
 }
 
 
-distribution createDistribution(const std::normal_distribution<float> &dist, bool randomize_repeat) {
+distribution createDistribution(const helios::normal_distribution<float> &dist, bool randomize_repeat) {
     distUnion u;
-    u.normal = new std::normal_distribution<float>;
+    u.normal = new helios::normal_distribution<float>;
     *u.normal = dist;
     distribution d{u, 0, randomize_repeat};
     return d;
 }
 
-distribution createDistribution(const std::uniform_real_distribution<float> &dist, bool randomize_repeat) {
+distribution createDistribution(const helios::uniform_real_distribution<float> &dist, bool randomize_repeat) {
     distUnion u;
-    u.uniform = new std::uniform_real_distribution<float>;
+    u.uniform = new helios::uniform_real_distribution<float>;
     *u.uniform = dist;
     distribution d{u, 1, randomize_repeat};
     return d;
 }
 
-distribution createDistribution(const std::weibull_distribution<float> &dist, bool randomize_repeat) {
+distribution createDistribution(const helios::weibull_distribution<float> &dist, bool randomize_repeat) {
     distUnion u;
-    u.weibull = new std::weibull_distribution<float>;
+    u.weibull = new helios::weibull_distribution<float>;
     *u.weibull = dist;
     distribution d{u, 2, randomize_repeat};
     return d;
@@ -6051,7 +6064,7 @@ void ProjectBuilder::sample(std::string var_name) {
     taggedPtr t = randomized_variable_lookup[var_name];
     float sampled_value;
     if (d.flag == 0) {
-        std::normal_distribution<float> normal = *d.dist.normal;
+        helios::normal_distribution<float> normal = *d.dist.normal;
         sampled_value = normal(generator);
         if (t.isInt) {
             *t.ptr.i = (int) sampled_value;
@@ -6059,7 +6072,7 @@ void ProjectBuilder::sample(std::string var_name) {
             *t.ptr.f = sampled_value;
         }
     } else if (d.flag == 1) {
-        std::uniform_real_distribution<float> uniform = *d.dist.uniform;
+        helios::uniform_real_distribution<float> uniform = *d.dist.uniform;
         sampled_value = uniform(generator);
         if (t.isInt) {
             *t.ptr.i = (int) sampled_value;
@@ -6067,7 +6080,7 @@ void ProjectBuilder::sample(std::string var_name) {
             *t.ptr.f = sampled_value;
         }
     } else if (d.flag == 2) {
-        std::weibull_distribution<float> weibull = *d.dist.weibull;
+        helios::weibull_distribution<float> weibull = *d.dist.weibull;
         sampled_value = weibull(generator);
         if (t.isInt) {
             *t.ptr.i = (int) sampled_value;
@@ -6818,38 +6831,47 @@ void ProjectBuilder::globalCalculation() {
         }
     }
     std::vector<std::string> globalVars = context->listGlobalData();
-    // Perform calculation
-    if (std::find(globalVars.begin(), globalVars.end(), calculation_variables_global[0]) != globalVars.end()) {
-        context->getGlobalData(calculation_variables_global[0].c_str(), calculation_result_global);
-    } else if (curr_aggregation == "Mean") {
-        context->calculatePrimitiveDataMean(relevant_UUIDs, calculation_variables_global[0], calculation_result_global);
-    } else if (calculation_aggregations[0] == "Sum") {
-        context->calculatePrimitiveDataSum(relevant_UUIDs, calculation_variables_global[0], calculation_result_global);
-    } else if (calculation_aggregations[0] == "Area Weighted Mean") {
-        context->calculatePrimitiveDataAreaWeightedMean(relevant_UUIDs, calculation_variables_global[0], calculation_result_global);
-    } else if (calculation_aggregations[0] == "Area Weighted Sum") {
-        context->calculatePrimitiveDataAreaWeightedSum(relevant_UUIDs, calculation_variables_global[0], calculation_result_global);
-    }
-    for (int i = 0; i < calculation_operators_global.size(); i++) {
-        float prev_res = calculation_result_global;
-        if (calculation_aggregations[i] == "Mean") {
-            context->calculatePrimitiveDataMean(relevant_UUIDs, calculation_variables_global[0], calculation_result_global);
-        } else if (calculation_aggregations[i] == "Sum") {
-            context->calculatePrimitiveDataSum(relevant_UUIDs, calculation_variables_global[0], calculation_result_global);
-        } else if (calculation_aggregations[i] == "Area Weighted Mean") {
-            context->calculatePrimitiveDataAreaWeightedMean(relevant_UUIDs, calculation_variables_global[0], calculation_result_global);
-        } else if (calculation_aggregations[i] == "Area Weighted Sum") {
-            context->calculatePrimitiveDataAreaWeightedSum(relevant_UUIDs, calculation_variables_global[0], calculation_result_global);
+
+    // Value of one term of the expression: global data of that name if there is any, otherwise the term's own aggregation of its
+    // own primitive data variable over the selected primitives
+    auto evaluateTerm = [&](size_t term) {
+        const std::string &variable = calculation_variables_global.at(term);
+        const std::string &aggregation = calculation_aggregations.at(term);
+        float value = 0.f;
+        if (std::find(globalVars.begin(), globalVars.end(), variable) != globalVars.end()) {
+            context->getGlobalData(variable.c_str(), value);
+        } else if (aggregation == "Mean") {
+            context->calculatePrimitiveDataMean(relevant_UUIDs, variable, value);
+        } else if (aggregation == "Sum") {
+            context->calculatePrimitiveDataSum(relevant_UUIDs, variable, value);
+        } else if (aggregation == "Area Weighted Mean") {
+            context->calculatePrimitiveDataAreaWeightedMean(relevant_UUIDs, variable, value);
+        } else if (aggregation == "Area Weighted Sum") {
+            context->calculatePrimitiveDataAreaWeightedSum(relevant_UUIDs, variable, value);
+        } else {
+            helios_runtime_error("ERROR (ProjectBuilder::globalCalculation): Unknown aggregation '" + aggregation + "'. It must be one of Mean, Sum, Area Weighted Mean or Area Weighted Sum.");
         }
-        std::string curr_op = calculation_operators_global[i];
+        return value;
+    };
+
+    if (calculation_aggregations.size() != calculation_variables_global.size() || calculation_operators_global.size() + 1 != calculation_variables_global.size()) {
+        helios_runtime_error("ERROR (ProjectBuilder::globalCalculation): The calculation has " + std::to_string(calculation_variables_global.size()) + " variables, " + std::to_string(calculation_aggregations.size()) +
+                             " aggregations and " + std::to_string(calculation_operators_global.size()) + " operators. Each variable needs an aggregation, with one operator between each pair of variables.");
+    }
+
+    // Perform calculation, left to right: operator i joins the running result and term i + 1
+    calculation_result_global = evaluateTerm(0);
+    for (size_t i = 0; i < calculation_operators_global.size(); i++) {
+        const float next_term = evaluateTerm(i + 1);
+        const std::string &curr_op = calculation_operators_global[i];
         if (curr_op == "+") {
-            calculation_result_global = prev_res + calculation_result_global;
+            calculation_result_global = calculation_result_global + next_term;
         } else if (curr_op == "-") {
-            calculation_result_global = prev_res - calculation_result_global;
+            calculation_result_global = calculation_result_global - next_term;
         } else if (curr_op == "/") {
-            calculation_result_global = prev_res / calculation_result_global;
+            calculation_result_global = calculation_result_global / next_term;
         } else if (curr_op == "x") {
-            calculation_result_global = prev_res * calculation_result_global;
+            calculation_result_global = calculation_result_global * next_term;
         }
     }
 }

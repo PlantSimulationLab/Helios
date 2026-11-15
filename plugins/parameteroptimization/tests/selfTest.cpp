@@ -161,9 +161,9 @@ DOCTEST_TEST_CASE("ParameterOptimization fitness caching") {
     // Elite individuals carried forward are also cache hits.
     // Real evaluations: initial pop (20) + ~19 new offspring per generation * 10 gens ≈ 210
     // Without caching, evaluatePopulation + pre-compute would double-count everything.
-    // ga.random_seed makes the mt19937 stream deterministic, but std::uniform_real_distribution
-    // and std::shuffle differ between libstdc++ and libc++, so the exact count still varies by
-    // platform. The window below brackets that cross-STL variation (libc++/macOS observed at 156).
+    // ga.random_seed fixes the random stream, and the distributions drawn from it are the same on every platform
+    // (helios::uniform_real_distribution, helios::shuffle), but the count still depends on that stream. The window
+    // below is kept wide so that a change to the stream does not fail a test that is about caching.
     size_t max_expected = 250;
     size_t min_expected = 100;
 
@@ -1625,7 +1625,7 @@ DOCTEST_TEST_CASE("ParameterOptimization Adam quadratic with exact gradient") {
 // Verify that Adam's momentum smooths noise and still converges.
 DOCTEST_TEST_CASE("ParameterOptimization Adam with noisy gradient") {
     std::mt19937 rng(42);
-    std::normal_distribution<float> noise(0.f, 0.5f);
+    helios::normal_distribution<float> noise(0.f, 0.5f);
 
     ObjectiveFunction objective = [](const ParametersToOptimize &p) {
         float x = p.at("x").value, y = p.at("y").value;

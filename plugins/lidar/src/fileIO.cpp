@@ -137,17 +137,10 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
         cout << "Reading XML file: " << filename << "..." << flush;
     }
 
-    // Check if file exists
-    ifstream f(filename);
-    if (!f.good()) {
-        cerr << "failed.\n";
-        helios_runtime_error("ERROR (LiDARcloud::loadXML): XML file does not exist.");
-    }
-
     // Using "pugixml" parser.  See pugixml.org
     pugi::xml_document xmldoc;
 
-    // Resolve file path using project-based resolution
+    // Resolve the file path (working directory, project directory, then the HELIOS_BUILD directory); an error is raised if the file does not exist
     std::filesystem::path resolved_path = resolveProjectFile(filename);
     std::string resolved_filename = resolved_path.string();
     std::filesystem::path xml_parent_dir = resolved_path.parent_path();
@@ -636,7 +629,7 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 parseTrajectoryStream(traj_stream, "scan #" + std::to_string(scan_count), traj_t, traj_pos, traj_quat);
                 has_trajectory = true;
             } else if (strlen(trajFile_str) > 0) {
-                // Referenced trajectory file: resolve relative to the XML file, then cwd.
+                // Referenced trajectory file: as given (absolute or relative to the working directory), relative to the XML file, in input/, then relative to the HELIOS_BUILD directory.
                 std::string resolved_traj;
                 std::vector<std::string> candidates;
                 candidates.emplace_back(trajFile_str);
@@ -644,6 +637,10 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                     candidates.push_back((xml_parent_dir / trajFile_str).string());
                 }
                 candidates.push_back("input/" + std::string(trajFile_str));
+                const std::filesystem::path build_resolved_traj = tryResolveFilePath(trajFile_str);
+                if (!build_resolved_traj.empty()) {
+                    candidates.push_back(build_resolved_traj.string());
+                }
                 for (const std::string &candidate: candidates) {
                     ifstream tf(candidate);
                     if (tf.good()) {
@@ -757,12 +754,17 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
                 //   1. input/<data_filename>     (legacy convention)
                 //   2. <data_filename>            (cwd-relative or absolute)
                 //   3. <xml_parent_dir>/<data_filename>  (sibling of the XML file)
+                //   4. relative to the HELIOS_BUILD directory (see helios::tryResolveFilePath())
                 std::string resolved_data_file;
                 std::vector<std::string> candidates;
                 candidates.push_back("input/" + data_filename);
                 candidates.push_back(data_filename);
                 if (!xml_parent_dir.empty()) {
                     candidates.push_back((xml_parent_dir / data_filename).string());
+                }
+                const std::filesystem::path build_resolved_data_file = tryResolveFilePath(data_filename);
+                if (!build_resolved_data_file.empty()) {
+                    candidates.push_back(build_resolved_data_file.string());
                 }
                 for (const std::string &candidate: candidates) {
                     ifstream f(candidate);
@@ -1901,6 +1903,11 @@ std::vector<uint> LiDARcloud::loadTreeQSMColormap(helios::Context *context, cons
 
 std::vector<uint> LiDARcloud::loadTreeQSM_impl(helios::Context *context, const std::string &filename, uint radial_subdivisions, bool use_colormap, const std::string &colormap_or_texture) {
 
+    // resolveFilePath() resolves an empty path to the working directory, which opens as an empty file
+    if (filename.empty()) {
+        helios_runtime_error("ERROR (LiDARcloud::loadTreeQSM): The TreeQSM file path is empty.");
+    }
+
     if (printmessages) {
         if (use_colormap) {
             std::cout << "Loading TreeQSM cylinder file with colormap: " << filename << " (colormap: " << colormap_or_texture << ")" << std::endl;
@@ -1912,9 +1919,10 @@ std::vector<uint> LiDARcloud::loadTreeQSM_impl(helios::Context *context, const s
     std::vector<uint> tube_UUIDs;
 
     // Open the file
-    std::ifstream file(filename);
+    const std::string resolved_filename = resolveFilePath(filename).string();
+    std::ifstream file(resolved_filename);
     if (!file.is_open()) {
-        helios_runtime_error("ERROR (LiDARcloud::loadTreeQSM): Could not open TreeQSM file: " + filename);
+        helios_runtime_error("ERROR (LiDARcloud::loadTreeQSM): Could not open TreeQSM file: " + resolved_filename);
     }
 
     // Structure to hold cylinder data

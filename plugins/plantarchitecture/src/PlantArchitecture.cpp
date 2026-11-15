@@ -2469,7 +2469,26 @@ void Shoot::updateShootNodes(bool update_context_geometry) {
         if (this->is_axis_continuation) {
             cached_base_offset = make_vec3(0, 0, 0);
         } else if ((parent_internode_axis - last_parent_internode_axis).magnitude() > 1e-7f || std::fabs(parent_radius - last_parent_node_radius) > 1e-9f) {
-            const vec3 outward_axis = childShootOutwardAxis(parent_shoot, this->parent_node_index, this->parent_petiole_index, parent_internode_axis, this->base_rotation);
+            vec3 outward_axis;
+            bool outward_axis_carried = false;
+            if (base_offset_pinned && cached_base_offset.magnitude() > 0.f && last_parent_internode_axis.magnitude() < 2.f) {
+                // The shoot keeps the side of the parent it is on (see base_offset_pinned). The offset is turned with the parent, by the rotation that carries the parent's old direction onto its new
+                // one, and what is left of it along the parent is taken out so that it still points straight out of the parent's surface.
+                outward_axis = cached_base_offset;
+                const vec3 turn_axis = cross(last_parent_internode_axis, parent_internode_axis);
+                const float turn_angle = std::atan2(turn_axis.magnitude(), last_parent_internode_axis * parent_internode_axis);
+                if (turn_angle > 1e-7f && turn_axis.magnitude() > 0.f) {
+                    outward_axis = rotatePointAboutLine(outward_axis, make_vec3(0, 0, 0), normalize(turn_axis), turn_angle);
+                }
+                outward_axis = outward_axis - (outward_axis * parent_internode_axis) * parent_internode_axis;
+                if (outward_axis.magnitude() > 1e-9f) {
+                    outward_axis.normalize();
+                    outward_axis_carried = true;
+                }
+            }
+            if (!outward_axis_carried) {
+                outward_axis = childShootOutwardAxis(parent_shoot, this->parent_node_index, this->parent_petiole_index, parent_internode_axis, this->base_rotation);
+            }
             cached_base_offset = 0.9f * outward_axis * parent_radius;
             last_parent_internode_axis = parent_internode_axis;
             last_parent_node_radius = parent_radius;
@@ -2642,6 +2661,35 @@ float Shoot::sumChildVolume(uint start_node_index) const {
 
     return volume;
 }
+
+namespace {
+    //! Create the floral buds of one petiole of a phytomer, or of the node of a phytomer without petioles, all sitting at the tip of its internode
+    /**
+     * \param[in,out] max_floral_buds_per_petiole Number of buds to create; it is resampled for the next petiole.
+     * \param[in] parent_index Index of the petiole the buds are filed under.
+     * \param[in] petiole_count Number of petioles whose vegetative buds have been created so far, this one included.
+     * \param[in] base_position Position of the buds (the tip of the internode).
+     * \param[in] bending_axis Axis about which the shoot bends.
+     * \return The new floral buds.
+     */
+    std::vector<FloralBud> createPetioleFloralBuds(RandomParameter_int &max_floral_buds_per_petiole, uint parent_index, size_t petiole_count, const vec3 &base_position, const vec3 &bending_axis) {
+        std::vector<FloralBud> floral_buds;
+        floral_buds.resize(max_floral_buds_per_petiole.val());
+        max_floral_buds_per_petiole.resample();
+
+        for (uint bud_index = 0; bud_index < floral_buds.size(); bud_index++) {
+            FloralBud &fbud = floral_buds.at(bud_index);
+            fbud.bud_index = bud_index;
+            fbud.parent_index = parent_index;
+            const float pitch_adjustment = float(bud_index) * 0.1f * PI_F / float(petiole_count);
+            const float yaw_adjustment = -0.25f * PI_F + float(bud_index) * 0.5f * PI_F / float(petiole_count);
+            fbud.base_rotation = make_AxisRotation(pitch_adjustment, yaw_adjustment, 0);
+            fbud.base_position = base_position;
+            fbud.bending_axis = bending_axis;
+        }
+        return floral_buds;
+    }
+} // namespace
 
 Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
                    const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, PlantArchitecture *plantarchitecture_ptr,
@@ -3392,23 +3440,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
         axillary_vegetative_buds.push_back(vegetative_buds_new);
 
-        std::vector<FloralBud> floral_buds_new;
-        floral_buds_new.resize(phytomer_parameters.internode.max_floral_buds_per_petiole.val());
-        phytomer_parameters.internode.max_floral_buds_per_petiole.resample();
-
-        uint index = 0;
-        for (auto &fbud: floral_buds_new) {
-            fbud.bud_index = index;
-            fbud.parent_index = petiole;
-            float pitch_adjustment = fbud.bud_index * 0.1f * PI_F / float(axillary_vegetative_buds.size());
-            float yaw_adjustment = -0.25f * PI_F + fbud.bud_index * 0.5f * PI_F / float(axillary_vegetative_buds.size());
-            fbud.base_rotation = make_AxisRotation(pitch_adjustment, yaw_adjustment, 0);
-            fbud.base_position = phytomer_internode_vertices.back();
-            fbud.bending_axis = shoot_bending_axis;
-            index++;
-        }
-
-        floral_buds.push_back(floral_buds_new);
+        floral_buds.push_back(createPetioleFloralBuds(phytomer_parameters.internode.max_floral_buds_per_petiole, petiole, axillary_vegetative_buds.size(), phytomer_internode_vertices.back(), shoot_bending_axis));
 
         //--- create leaves ---//
 
@@ -3545,16 +3577,27 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         }
     }
 
-    // Special case: if there are no petioles, still create vegetative buds directly on the internode
+    // Special case: if there are no petioles, still create the buds directly on the internode
     if (phytomer_parameters.petiole.petioles_per_internode == 0) {
         std::vector<VegetativeBud> vegetative_buds_new;
         vegetative_buds_new.resize(phytomer_parameters.internode.max_vegetative_buds_per_petiole.val());
+        phytomer_parameters.internode.max_vegetative_buds_per_petiole.resample();
         axillary_vegetative_buds.push_back(vegetative_buds_new);
 
-        std::vector<FloralBud> floral_buds_new;
-        floral_buds_new.resize(phytomer_parameters.internode.max_floral_buds_per_petiole.val());
-        floral_buds.push_back(floral_buds_new);
+        // The axis a peduncle is pitched away from the stem about. With a petiole it is perpendicular to the internode and the petiole; without one, the petiole the phytomer would have had stands in,
+        // which also spaces the flowers of successive leafless nodes around the stem by the phyllotactic angle. Left unset, a peduncle could not be pitched at all and ran straight up the stem.
+        inflorescence_bending_axis = cross(parent_internode_axis, getPetioleAxisVectorOrGhost(0, internode_axis, phytomer_index));
+        if (inflorescence_bending_axis.magnitude() < 1e-6f) {
+            inflorescence_bending_axis = make_vec3(1, 0, 0);
+        }
+
+        // The floral buds sit on the node, as those in the axil of a petiole do, and are set up the same way. Left as default-constructed, they sat at the origin of the scene, where their flowers and
+        // fruit were then built, all on top of one another.
+        floral_buds.push_back(createPetioleFloralBuds(phytomer_parameters.internode.max_floral_buds_per_petiole, 0, axillary_vegetative_buds.size(), phytomer_internode_vertices.back(), shoot_bending_axis));
     }
+
+    // The organs just built sit on the tip of the internode
+    seated_node_position = phytomer_internode_vertices.back();
 }
 
 float Phytomer::calculatePhytomerVolume(uint node_number) const {
@@ -4154,13 +4197,11 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
 }
 
 void Phytomer::setPetioleBase(const helios::vec3 &base_position) {
-    // If there are no petioles, nothing to update
-    if (petiole_vertices.empty()) {
-        return;
-    }
-
-    vec3 old_base = petiole_vertices.front().front();
-    vec3 shift = base_position - old_base;
+    // Where the organs were last seated. A phytomer with petioles has that in the base of its first petiole. One without petioles still has floral buds to move -- a leafless shoot can end in a
+    // terminal flower -- and keeps the position for that purpose.
+    const vec3 old_base = petiole_vertices.empty() ? seated_node_position : petiole_vertices.front().front();
+    const vec3 shift = base_position - old_base;
+    seated_node_position = base_position;
 
     for (auto &petiole_vertice: petiole_vertices) {
         for (auto &vertex: petiole_vertice) {
@@ -4177,6 +4218,10 @@ void Phytomer::setPetioleBase(const helios::vec3 &base_position) {
         for (auto &leaf_base: petiole) {
             leaf_base += shift;
         }
+    }
+    // Where the stalk of a placed leaf leaves its petiole is a stored position too, and is written to the plant's file
+    for (auto &placed_stalk_base: leaf_stalk_base_placed) {
+        placed_stalk_base.second += shift;
     }
     // Update peduncle vertices when the phytomer is translated
     for (auto &petiole_peduncles: peduncle_vertices) {
@@ -4257,86 +4302,6 @@ void Phytomer::rotateLeaf(uint petiole_index, uint leaf_index, const AxisRotatio
     if (yaw != 0.f) {
         context_ptr->rotateObject(leaf_objIDs.at(petiole_index).at(leaf_index), yaw, leaf_bases.at(petiole_index).at(leaf_index), {0, 0, 1});
         leaf_rotation.at(petiole_index).at(leaf_index).yaw += yaw;
-    }
-}
-
-void Phytomer::rotatePetiole(uint petiole_index, const AxisRotation &rotation) {
-    if (petiole_index >= petiole_vertices.size()) {
-        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::rotatePetiole): Invalid petiole index.");
-    }
-    if (petiole_vertices.at(petiole_index).empty()) {
-        return;
-    }
-    if (rotation.pitch == 0.f && rotation.yaw == 0.f && rotation.roll == 0.f) {
-        return;
-    }
-
-    const vec3 base = petiole_vertices.at(petiole_index).at(0);
-    const vec3 internode_axis = getInternodeAxisVector(1.f);
-
-    auto applyRotation = [this, petiole_index, &base](float angle, const vec3 &axis) {
-        if (angle == 0.f) {
-            return;
-        }
-        if (context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index))) {
-            context_ptr->rotateObject(petiole_objIDs.at(petiole_index), angle, base, axis);
-        }
-        if (petiole_index < leaf_objIDs.size() && !leaf_objIDs.at(petiole_index).empty()) {
-            context_ptr->rotateObject(leaf_objIDs.at(petiole_index), angle, base, axis);
-        }
-        for (auto &vertex: petiole_vertices.at(petiole_index)) {
-            vertex = rotatePointAboutLine(vertex, base, axis, angle);
-        }
-        // The rest shape turns with the petiole, and the bent shape has to be recomputed from it: gravity does not turn with the petiole, so the rigidly rotated bent shape is no longer in balance.
-        if (petiole_index < petiole_rest_offsets.size()) {
-            for (auto &offset: petiole_rest_offsets.at(petiole_index)) {
-                offset = rotatePointAboutLine(offset, nullorigin, axis, angle);
-            }
-        }
-        if (petiole_index < petiole_bend_state.size()) {
-            petiole_bend_state.at(petiole_index) = make_vec3(-1, 0, 0);
-        }
-        if (petiole_index < leaf_bases.size()) {
-            for (auto &leaf_base: leaf_bases.at(petiole_index)) {
-                leaf_base = rotatePointAboutLine(leaf_base, base, axis, angle);
-            }
-        }
-        if (petiole_index < petiole_axis_initial.size()) {
-            petiole_axis_initial.at(petiole_index) = rotatePointAboutLine(petiole_axis_initial.at(petiole_index), nullorigin, axis, angle);
-        }
-    };
-
-    // pitch — tilt away from the internode using the same convention as construction:
-    // rotate about the stored petiole_rotation_axis by abs(pitch). This matches
-    // PlantArchitecture.cpp:~1876 (`rotatePointAboutLine(..., petiole_rotation_axis,
-    // std::abs(petiole_pitch))`), so a positive input pitch always tilts the petiole
-    // further from the internode regardless of which side petiole_rotation_axis fell
-    // on during phyllotactic accumulation.
-    if (rotation.pitch != 0.f && petiole_index < petiole_rotation_axis.size()) {
-        vec3 pitch_axis = petiole_rotation_axis.at(petiole_index);
-        if (pitch_axis.magnitude() > 1e-6f) {
-            pitch_axis.normalize();
-            applyRotation(std::abs(rotation.pitch), pitch_axis);
-            petiole_pitch.at(petiole_index) += std::abs(rotation.pitch);
-        }
-    }
-
-    // yaw — rotate around the internode axis (azimuth around the stem)
-    if (rotation.yaw != 0.f) {
-        vec3 yaw_axis = internode_axis;
-        if (yaw_axis.magnitude() > 1e-6f) {
-            yaw_axis.normalize();
-            applyRotation(rotation.yaw, yaw_axis);
-        }
-    }
-
-    // roll — rotate around the petiole's current length axis
-    if (rotation.roll != 0.f) {
-        vec3 roll_axis = getPetioleAxisVector(1.f, petiole_index);
-        if (roll_axis.magnitude() > 1e-6f) {
-            roll_axis.normalize();
-            applyRotation(rotation.roll, roll_axis);
-        }
     }
 }
 
@@ -5468,6 +5433,44 @@ void Phytomer::recordPetioleRestShape(uint petiole_index) {
     petiole_bend_state.at(petiole_index) = make_vec3(-1, 0, 0);
 }
 
+void Phytomer::carryLeavesAlongPetiole(uint petiole_index, const std::vector<helios::vec3> &previous_nodes, const std::vector<float> &previous_arclength, const std::vector<helios::vec3> &new_nodes,
+                                       const std::vector<float> &new_arclength, const std::vector<float> &leaf_arclength_fraction) {
+    // Every leaf stays attached at its arclength along the centerline and turns with the centerline there: the rotation carrying the old tangent at that point onto the new one is applied about the leaf's base,
+    // and the leaf is then moved to the new position of that point. Leaflets near the tip, where the centerline has turned furthest, tilt more than those near the base. Rotating and translating the object,
+    // rather than rebuilding it, carries the change into its transformation matrix, which is what deformLeafUnderSelfWeight() deflects the blade through.
+    const float previous_length = previous_arclength.back();
+    for (size_t leaf = 0; leaf < leaf_arclength_fraction.size(); leaf++) {
+        const float previous_leaf_arclength = leaf_arclength_fraction.at(leaf) * previous_length;
+        const float new_leaf_arclength = leaf_arclength_fraction.at(leaf) * new_arclength.back();
+        const vec3 previous_tangent = polylineTangentAtArclength(previous_nodes, previous_arclength, previous_leaf_arclength);
+        const vec3 new_tangent = polylineTangentAtArclength(new_nodes, new_arclength, new_leaf_arclength);
+        const vec3 previous_base = leaf_bases.at(petiole_index).at(leaf);
+        const vec3 new_base = polylinePointAtArclength(new_nodes, new_arclength, new_leaf_arclength);
+
+        const vec3 turn_axis = cross(previous_tangent, new_tangent);
+        const float turn_angle = std::atan2(turn_axis.magnitude(), previous_tangent * new_tangent);
+        const bool leaf_turns = turn_angle > 1e-7f && turn_axis.magnitude() > 0.f;
+
+        const uint objID_leaf = leaf < leaf_objIDs.at(petiole_index).size() ? leaf_objIDs.at(petiole_index).at(leaf) : 0;
+        if (leaf < leaf_objIDs.at(petiole_index).size() && context_ptr->doesObjectExist(objID_leaf)) {
+            if (leaf_turns) {
+                context_ptr->rotateObject(objID_leaf, turn_angle, previous_base, normalize(turn_axis));
+            }
+            context_ptr->translateObject(objID_leaf, new_base - previous_base);
+
+            // Where the stalk of a placed leaf leaves the petiole goes with the leaf
+            const auto placed_stalk_base = leaf_stalk_base_placed.find(objID_leaf);
+            if (placed_stalk_base != leaf_stalk_base_placed.end()) {
+                if (leaf_turns) {
+                    placed_stalk_base->second = rotatePointAboutLine(placed_stalk_base->second, previous_base, normalize(turn_axis), turn_angle);
+                }
+                placed_stalk_base->second += new_base - previous_base;
+            }
+        }
+        leaf_bases.at(petiole_index).at(leaf) = new_base;
+    }
+}
+
 void Phytomer::bendPetioleUnderLeafWeight(uint petiole_index) {
 
     if (petiole_flexibility <= 0.f) {
@@ -5566,28 +5569,7 @@ void Phytomer::bendPetioleUnderLeafWeight(uint petiole_index) {
 
     const std::vector<float> bent_arclength = polylineNodeArclengths(bent_nodes);
 
-    // Every leaf stays attached at its arclength along the centerline and turns with the centerline there: the rotation carrying the old tangent at that point onto the new one is applied about the leaf's base,
-    // and the leaf is then moved to the new position of that point. Leaflets near the tip, where the centerline has turned furthest, tilt more than those near the base. Rotating and translating the object,
-    // rather than rebuilding it, carries the change into its transformation matrix, which is what deformLeafUnderSelfWeight() deflects the blade through.
-    for (size_t leaf = 0; leaf < leaf_count; leaf++) {
-        const float previous_leaf_arclength = leaf_arclength_fraction.at(leaf) * previous_length;
-        const float bent_leaf_arclength = leaf_arclength_fraction.at(leaf) * bent_arclength.back();
-        const vec3 previous_tangent = polylineTangentAtArclength(nodes, previous_arclength, previous_leaf_arclength);
-        const vec3 bent_tangent = polylineTangentAtArclength(bent_nodes, bent_arclength, bent_leaf_arclength);
-        const vec3 previous_base = leaf_base_positions.at(leaf);
-        const vec3 bent_base = polylinePointAtArclength(bent_nodes, bent_arclength, bent_leaf_arclength);
-
-        const uint objID_leaf = leaf < leaf_objIDs.at(petiole_index).size() ? leaf_objIDs.at(petiole_index).at(leaf) : 0;
-        if (leaf < leaf_objIDs.at(petiole_index).size() && context_ptr->doesObjectExist(objID_leaf)) {
-            const vec3 turn_axis = cross(previous_tangent, bent_tangent);
-            const float turn_angle = std::atan2(turn_axis.magnitude(), previous_tangent * bent_tangent);
-            if (turn_angle > 1e-7f && turn_axis.magnitude() > 0.f) {
-                context_ptr->rotateObject(objID_leaf, turn_angle, previous_base, normalize(turn_axis));
-            }
-            context_ptr->translateObject(objID_leaf, bent_base - previous_base);
-        }
-        leaf_bases.at(petiole_index).at(leaf) = bent_base;
-    }
+    carryLeavesAlongPetiole(petiole_index, nodes, previous_arclength, bent_nodes, bent_arclength, leaf_arclength_fraction);
 
     nodes = bent_nodes;
     if (petiole_index < petiole_objIDs.size() && context_ptr->doesObjectExist(petiole_objIDs.at(petiole_index))) {
@@ -5698,7 +5680,8 @@ void Phytomer::setPetioleLeafGeometry(uint petiole_index, const std::vector<heli
                 }
                 total += length;
             }
-            const float radius_here = PlantArchitecture::interpolateTube(petiole_radii.at(petiole_index), total > 0.f ? along / total : 1.f);
+            // ... and no thicker than a stalk of a leaf this size is: a small leaflet placed on a thick rachis was given a stalk the rachis's thickness, nearly the size of its own blade.
+            const float radius_here = std::min(PlantArchitecture::interpolateTube(petiole_radii.at(petiole_index), total > 0.f ? along / total : 1.f), placedStalkRadiusMax(leaf_sizes_new.at(leaf)));
             const float stalk_length = leaf_stalk_lengths_new.empty() ? -1.f : leaf_stalk_lengths_new.at(leaf);
             objID_leaf_new = buildLeafPrototype(int(leaves_per_petiole), ind_from_tip, 0, leaf_sizes_new.at(leaf), radius_here, stalk_length);
             recordBuiltLeafShape(objID_leaf_new);
@@ -5787,8 +5770,13 @@ void Phytomer::placeLeafStalk(uint objID_leaf, uint petiole_index, const helios:
         helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafGeometry): A leaf's stalk would be " + std::to_string(stalk_length) + " m long, longer than its blade (" + std::to_string(leaf_size) +
                              " m). Give a stalk base nearer where the blade begins.");
     }
-    if (stalk_axis * leaf_axis <= 0.f) {
-        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafGeometry): A leaf's stalk base lies ahead of where its blade begins, so the stalk would run back along the blade. A stalk reaches its blade from behind the blade's base.");
+    // A stalk may rise to its blade from beneath as well as run up to it from behind: a leaflet held just over its petiole, its blade running off across it, sits on a short stalk that meets the
+    // blade square on or a little past it. Past placedStalkTurnMax() the stalk would run back along the blade, and the mitre where the two meet, which is cut halfway between their lines, would be
+    // drawn out to a point.
+    if (stalk_axis * leaf_axis <= std::cos(placedStalkTurnMax())) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleLeafGeometry): A leaf's stalk base lies ahead of where its blade begins, so the stalk would run back along the blade: it would turn " +
+                             std::to_string(rad2deg(acos_safe(stalk_axis * leaf_axis))) + " degrees to meet it, and a stalk turns at most " + std::to_string(rad2deg(placedStalkTurnMax())) +
+                             ". A stalk reaches its blade from behind or beneath the blade's base.");
     }
 
     const std::vector<vec3> &path = petiole_vertices.at(petiole_index);
@@ -5804,7 +5792,7 @@ void Phytomer::placeLeafStalk(uint objID_leaf, uint petiole_index, const helios:
         }
         total += length;
     }
-    const float radius_base = PlantArchitecture::interpolateTube(petiole_radii.at(petiole_index), total > 0.f ? along / total : 1.f);
+    const float radius_base = std::min(PlantArchitecture::interpolateTube(petiole_radii.at(petiole_index), total > 0.f ? along / total : 1.f), placedStalkRadiusMax(leaf_size));
     const float radius_blade = (vertices.at(first + ring_size) - centre_blade).magnitude();
 
     // Each ring keeps the vertex it was built with nearest the blade's own side-to-side direction, so the tube does not twist between the petiole and the blade.
@@ -6700,6 +6688,20 @@ void Phytomer::setPetioleNodePositions(uint petiole_index, const std::vector<hel
     }
     seated_positions.front() = internode_tip;
 
+    // The leaves hang from the petiole, so they go with it: each stays at the fraction of the petiole's length it was attached at, and turns as the petiole's direction there has turned. A petiole that had no
+    // length (that of a sessile leaf, or one not yet elongated) gives its leaves no position along it to keep, so they are left where they are, to be placed with setPetioleLeafGeometry().
+    const std::vector<vec3> previous_positions = petiole_vertices.at(petiole_index);
+    if (previous_positions.size() >= 2 && petiole_index < leaf_bases.size() && petiole_index < leaf_objIDs.size() && !leaf_bases.at(petiole_index).empty()) {
+        const std::vector<float> previous_arclength = polylineNodeArclengths(previous_positions);
+        if (previous_arclength.back() > 0.f) {
+            std::vector<float> leaf_arclength_fraction(leaf_bases.at(petiole_index).size());
+            for (size_t leaf = 0; leaf < leaf_arclength_fraction.size(); leaf++) {
+                leaf_arclength_fraction.at(leaf) = std::clamp(polylineArclengthOfClosestPoint(previous_positions, previous_arclength, leaf_bases.at(petiole_index).at(leaf)) / previous_arclength.back(), 0.f, 1.f);
+            }
+            carryLeavesAlongPetiole(petiole_index, previous_positions, previous_arclength, seated_positions, polylineNodeArclengths(seated_positions), leaf_arclength_fraction);
+        }
+    }
+
     petiole_vertices.at(petiole_index) = seated_positions;
     petiole_radii.at(petiole_index) = petiole_node_radii;
     // The measured path replaces any bend the generated petiole had accrued, and is exempt from bending from here on.
@@ -7223,6 +7225,9 @@ uint PlantArchitecture::appendShoot(uint plantID, int parent_shoot_ID, uint curr
     // This shoot continues the parent's axis rather than branching off its side, so Shoot::updateShootNodes()
     // must seat its base on the axis rather than displacing it outward the way it does a lateral branch.
     shoot_new->is_axis_continuation = true;
+    // A continuation is the same axis carried on, so a bound on how thick the parent may grow at its apex carries on with it. Without this the shoot's later phytomers
+    // returned to the shoot type's radius_initial, and the axis stepped up in width at the join.
+    shoot_new->growth_state.internode_radius_cap = shoot_tree_ptr->at(parent_shoot_ID)->growth_state.internode_radius_cap;
     shoot_tree_ptr->emplace_back(shoot_new);
 
     // Build phytomer geometry
@@ -7416,6 +7421,10 @@ uint PlantArchitecture::prescribedShoot(uint plantID, int parent_shoot_ID, uint 
 
     auto *shoot_new = (new Shoot(plantID, shootID, parent_shoot_ID, parent_node_index, petiole_index, rank, shoot_base_position, make_AxisRotation(0, 0, 0), node_count, mean_internode_length, shoot_parameters, shoot_type_label, this));
     shoot_new->is_axis_continuation = continues_parent_axis;
+    if (continues_parent_axis) {
+        // As in appendShoot(): the bound on the parent's apical growth carries on along the continued axis.
+        shoot_new->growth_state.internode_radius_cap = shoot_tree_ptr->at(parent_shoot_ID)->growth_state.internode_radius_cap;
+    }
     shoot_tree_ptr->emplace_back(shoot_new);
 
     // Record what governs this shoot's future BEFORE the phytomers are appended below. That loop creates
@@ -7483,7 +7492,21 @@ uint PlantArchitecture::addEpicormicShoot(uint plantID, int parent_shoot_ID, flo
     //\todo Figuring out how to set this correctly to make the shoot vertical, which avoids having to write a child shoot function.
     AxisRotation base_rotation = make_AxisRotation(0, acos_safe(axis_vector.z), 0);
 
-    return addChildShoot(plantID, parent_shoot_ID, parent_node_index, current_node_number, base_rotation, internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, radius_taper, shoot_type_label, 0);
+    // An epicormic shoot is never thicker than the internode it emerges from, neither at birth nor at any phytomer it grows later. The bearing internode's current radius is
+    // used rather than the radius it was created at, since epicormic shoots break from old wood that has thickened since. Read before addChildShoot(), which can grow the
+    // shoot tree and invalidate the parent_shoot reference.
+    const float bearing_internode_radius = parent_shoot->shoot_internode_radii.at(parent_node_index).back();
+    const bool bearing_radius_is_bound = bearing_internode_radius > 0.f;
+    if (bearing_radius_is_bound) {
+        internode_radius = std::fmin(internode_radius, bearing_internode_radius);
+    }
+
+    const uint childID = addChildShoot(plantID, parent_shoot_ID, parent_node_index, current_node_number, base_rotation, internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, radius_taper,
+                                       shoot_type_label, 0);
+    if (bearing_radius_is_bound) {
+        plant_instances.at(plantID).shoot_tree.at(childID)->growth_state.internode_radius_cap = bearing_internode_radius;
+    }
+    return childID;
 }
 
 void PlantArchitecture::validateShootTypes(ShootParameters &shoot_parameters, const std::map<std::string, ShootParameters> &shoot_types_ref) const {
@@ -7903,6 +7926,13 @@ void PlantArchitecture::setPlantBasePosition(uint plantID, const helios::vec3 &b
     }
 
     PlantInstance &plant_instance = plant_instances.at(plantID);
+
+    // A posed plant is measured from the plant as it grew, which has to move with it. Whatever else was done to the plant since it was posed is folded in first, so that the only change left to account for
+    // afterward is this translation; if the plant's structure has changed, its pose is made permanent instead.
+    if (plant_instance.pose_state != nullptr && !rebindPlantRestPose(plant_instance)) {
+        bakePlantPose(plantID);
+    }
+
     const vec3 shift = base_position - plant_instance.base_position;
     plant_instance.base_position = base_position;
 
@@ -7940,6 +7970,10 @@ void PlantArchitecture::setPlantBasePosition(uint plantID, const helios::vec3 &b
                     leaf_base += shift;
                 }
             }
+            for (auto &placed_stalk_base: phytomer->leaf_stalk_base_placed) {
+                placed_stalk_base.second += shift;
+            }
+            phytomer->seated_node_position += shift;
             for (auto &petiole_peduncles: phytomer->peduncle_vertices) {
                 for (auto &peduncle: petiole_peduncles) {
                     for (vec3 &vertex: peduncle) {
@@ -7968,6 +8002,10 @@ void PlantArchitecture::setPlantBasePosition(uint plantID, const helios::vec3 &b
         leaf_position += shift;
     }
     plant_instance.shadow_grid_origin += shift;
+
+    if (plant_instance.pose_state != nullptr) {
+        translatePlantRestPose(plant_instance, shift);
+    }
 
     // Collision geometry cached for the current growth step no longer matches the moved plant
     clearBVHCache();
@@ -8462,7 +8500,7 @@ static bool chooseLeafAngleTarget(PlantInstance::LeafAngleDistributionTracker &t
 
     // Somewhere inside the chosen bin rather than at its centre, so that the leaves filling one bin do not
     // all end up at exactly the same angle.
-    std::uniform_real_distribution<float> within_bin(0.f, 1.f);
+    helios::uniform_real_distribution<float> within_bin(0.f, 1.f);
     float target_inclination = inclination;
     float target_azimuth = azimuth;
     if (tracker.track_elevation) {
@@ -11398,6 +11436,8 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
         helios_runtime_error("ERROR (PlantArchitecture::duplicatePlantInstance): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
 
+    rejectPosedPlant(plantID, "duplicatePlantInstance");
+
     auto plant_shoot_tree = &plant_instances.at(plantID).shoot_tree;
 
     uint plantID_new = addPlantInstance(base_position, current_age);
@@ -11476,7 +11516,12 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
         return plantID_new;
     }
 
-    for (const auto &shoot: *plant_shoot_tree) {
+    // ID in the copy of each shoot of the source, or -1 for a source shoot the copy does not have. A pruned shoot stays in the
+    // source's tree as an empty shell, so the copy has fewer shoots and its IDs do not line up with the source's.
+    std::vector<int> copy_shootID_of_source(plant_shoot_tree->size(), -1);
+
+    for (size_t source_shootID = 0; source_shootID < plant_shoot_tree->size(); source_shootID++) {
+        const auto &shoot = plant_shoot_tree->at(source_shootID);
         uint shootID_new = 0; // ID of the new shoot; will be set once the shoot is created on the first loop iteration
         for (int node = 0; node < shoot->current_node_number; node++) {
             auto phytomer = shoot->phytomers.at(node);
@@ -11491,6 +11536,7 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
                 if (shoot->parent_shoot_ID == -1) {
                     // first shoot on plant
                     shootID_new = addBaseStemShoot(plantID_new, 1, original_base_rotation + base_rotation, internode_radius, internode_length_max, internode_scale_factor_fraction, leaf_scale_factor_fraction, 0, shoot->shoot_type_label);
+                    copy_shootID_of_source.at(source_shootID) = int(shootID_new);
                 } else {
                     // child shoot
                     // The node at which THIS shoot attaches to its parent -- not the parent's own
@@ -11499,12 +11545,17 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
                     // was relocated onto a single wrong node, so the copy's architecture did not match
                     // the original's.
                     uint parent_node = shoot->parent_node_index;
-                    uint parent_petiole_index = 0;
-                    for (auto &petiole: phytomer->axillary_vegetative_buds) {
-                        shootID_new = addChildShoot(plantID_new, shoot->parent_shoot_ID, parent_node, 1, original_base_rotation, internode_radius, internode_length_max, internode_scale_factor_fraction, leaf_scale_factor_fraction, 0,
-                                                    shoot->shoot_type_label, parent_petiole_index);
-                        parent_petiole_index++;
+                    // One shoot, on the petiole of the parent node that the source shoot grows from. (This used to add a shoot
+                    // for every petiole of the copied shoot's own first phytomer, which doubled each lateral of a plant with
+                    // two petioles per node and put them on the wrong petioles.)
+                    const int parent_shootID_copy = copy_shootID_of_source.at(shoot->parent_shoot_ID);
+                    if (parent_shootID_copy < 0) {
+                        helios_runtime_error("ERROR (PlantArchitecture::duplicatePlantInstance): Shoot " + std::to_string(source_shootID) + " of plant " + std::to_string(plantID) + " grows from shoot " + std::to_string(shoot->parent_shoot_ID) +
+                                             ", which has been pruned away. The plant's shoot tree is inconsistent.");
                     }
+                    shootID_new = addChildShoot(plantID_new, parent_shootID_copy, parent_node, 1, original_base_rotation, internode_radius, internode_length_max, internode_scale_factor_fraction, leaf_scale_factor_fraction, 0,
+                                                shoot->shoot_type_label, shoot->parent_petiole_index);
+                    copy_shootID_of_source.at(source_shootID) = int(shootID_new);
                     // The tree is replayed through addChildShoot() regardless of how the source shoot was
                     // created, so an axis continuation has to be re-marked here. Left unset, the copy is
                     // treated as a lateral branch and Shoot::updateShootNodes() displaces it off the
@@ -11541,10 +11592,14 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
     plant_instances.at(plantID_new).time_since_dormancy = plant_instances.at(plantID).time_since_dormancy;
     const std::vector<std::shared_ptr<Shoot>> &source_shoot_tree = plant_instances.at(plantID).shoot_tree;
     std::vector<std::shared_ptr<Shoot>> &new_shoot_tree = plant_instances.at(plantID_new).shoot_tree;
-    for (uint shootID = 0; shootID < new_shoot_tree.size() && shootID < source_shoot_tree.size(); shootID++) {
-        if (!source_shoot_tree.at(shootID)->isdormant && new_shoot_tree.at(shootID)->isdormant) {
+    for (uint source_shootID = 0; source_shootID < source_shoot_tree.size(); source_shootID++) {
+        if (copy_shootID_of_source.at(source_shootID) < 0) {
+            continue; // a pruned shell, which the copy does not have
+        }
+        const uint shootID = uint(copy_shootID_of_source.at(source_shootID));
+        if (!source_shoot_tree.at(source_shootID)->isdormant && new_shoot_tree.at(shootID)->isdormant) {
             new_shoot_tree.at(shootID)->breakDormancy();
-        } else if (source_shoot_tree.at(shootID)->isdormant && !new_shoot_tree.at(shootID)->isdormant) {
+        } else if (source_shoot_tree.at(source_shootID)->isdormant && !new_shoot_tree.at(shootID)->isdormant) {
             new_shoot_tree.at(shootID)->makeDormant();
         }
 
@@ -11552,7 +11607,7 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
         // per-shoot growth state: a duplicate of a reconstructed plant would otherwise revert to being
         // governed by the type its measured wood was built with, and grow differently from its original.
         auto &new_shoot = new_shoot_tree.at(shootID);
-        new_shoot->growth_state = source_shoot_tree.at(shootID)->growth_state;
+        new_shoot->growth_state = source_shoot_tree.at(source_shootID)->growth_state;
 
         // Two things do not follow from assigning growth_state, because both were already decided while
         // the tree above was being replayed -- at which point the copy was still governed by its build
@@ -11680,6 +11735,11 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
         if (plant_instances.find(plantID) == plant_instances.end()) {
             helios_runtime_error("ERROR (PlantArchitecture::advanceTime): Plant with ID of " + std::to_string(plantID) + " does not exist.");
         }
+    }
+
+    // Growth continues from a plant as it is posed: the pose becomes a permanent part of the plant, and stops being something that can be reset
+    for (uint plantID: plantIDs) {
+        bakePlantPose(plantID);
     }
 
     // Clear BVH cache at start of plant growth operation
@@ -12145,6 +12205,15 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                                 new_shoot_parameters->phytomer_parameters.internode.radius_initial.resample();
 
                                 uint childID = addChildShoot(plantID, shoot->ID, node_index, 1, base_rotation, internode_radius, internode_length_max, 0.01, 0.01, 0, vbud.shoot_type_label, parent_petiole_index);
+                                // The same bound holds for every phytomer the lateral grows later, which are otherwise sized from the shoot type's radius_initial alone. Without it a lateral
+                                // clamped at birth stepped up in width at its second node, and girth growth never removes a step.
+                                //
+                                // The bound is the bearing phytomer's radius at its creation, matching the birth clamp above, deliberately not its current radius (which addEpicormicShoot()
+                                // uses because epicormic shoots break from old, thickened wood). A phytomer built with radius 0 -- as some library plants append at a trunk tip -- records 0
+                                // here, and a bound of 0 would build every later phytomer of the lateral at the minimum tube radius, so no bound is set from it.
+                                if (phytomer->internode_radius_initial > 0.f) {
+                                    shoot_tree->at(childID)->growth_state.internode_radius_cap = phytomer->internode_radius_initial;
+                                }
 
                                 if (plant_instance.leaf_angle_tracking_enabled) {
                                     plant_instance.leaf_angle_tracker.pending_cohort.emplace_back(int(childID), 0u);
@@ -12182,6 +12251,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 while (shoot->phyllochron_instantaneous > 0.f && shoot->phyllochron_counter >= shoot->phyllochron_instantaneous && !shoot->phytomers.back()->isdormant && shoot->current_node_number < shoot->getGrowthNodeCap()) {
                     float internode_radius = shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.val();
                     shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.resample();
+                    if (shoot->growth_state.internode_radius_cap > 0.f) {
+                        internode_radius = std::fmin(internode_radius, shoot->growth_state.internode_radius_cap);
+                    }
                     float internode_length_max = shoot->internode_length_max_shoot_initial;
                     // Take the phytomer parameters from the shoot rather than from its type, matching the
                     // internode radius read two lines above. The shoot holds its own copy, so reading the
@@ -12306,12 +12378,13 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
         }
 
         // **** nitrogen model operations **** //
+        // Only for the plants being advanced: the other plants have not aged, so they must not take up or move nitrogen
         if (nitrogen_model_enabled) {
-            senesceLeafNitrogen(dt_max_days); // Senescing leaves → available pool
-            accumulateLeafNitrogen(dt_max_days); // Available pool → expanding leaves, then mature leaves (rate-limited)
-            removeFruitNitrogen(); // Available pool → fruit growth; the remainder is recorded as unmet demand
-            remobilizeNitrogen(dt_max_days); // Mature leaves → unmet demand of expanding leaves and fruit, then of younger mature leaves (first-order)
-            updateNitrogenStressFactor(); // Calculate and write stress factor to object data
+            senesceLeafNitrogen(plantIDs, dt_max_days); // Senescing leaves → available pool
+            accumulateLeafNitrogen(plantIDs, dt_max_days); // Available pool → expanding leaves, then mature leaves (rate-limited)
+            removeFruitNitrogen(plantIDs); // Available pool → fruit growth; the remainder is recorded as unmet demand
+            remobilizeNitrogen(plantIDs, dt_max_days); // Mature leaves → unmet demand of expanding leaves and fruit, then of younger mature leaves (first-order)
+            updateNitrogenStressFactor(plantIDs); // Calculate and write stress factor to object data
         }
 
         // Reset geometry counter if updates occurred this timestep

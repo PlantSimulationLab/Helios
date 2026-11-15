@@ -545,6 +545,44 @@ DOCTEST_TEST_CASE("PlantHydraulicsModel - computeConductance fabs correctness") 
     DOCTEST_CHECK(K == doctest::Approx(expected).epsilon(1e-5));
 }
 
+DOCTEST_TEST_CASE("PlantHydraulicsModel - negative or NaN hydraulic conductance is an error") {
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    float K;
+
+    // Directly: a negative saturated conductance, a NaN saturated conductance, and a NaN water potential in the vulnerability curve
+    DOCTEST_CHECK_THROWS_AS(K = computeConductance(HydraulicConductance(-0.05f), -0.5f, 298.15f), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(K = computeConductance(HydraulicConductance(nan), -0.5f, 298.15f), std::runtime_error);
+    DOCTEST_CHECK_THROWS_AS(K = computeConductance(HydraulicConductance(0.05f, -2.f, 3.f), nan, 298.15f), std::runtime_error);
+    DOCTEST_CHECK_NOTHROW(K = computeConductance(HydraulicConductance(0.f), -0.5f, 298.15f));
+    DOCTEST_CHECK(K == 0.f);
+
+    // Through run(), in the main water potential solution, with no optional outputs requested
+    for (int organ = 0; organ < 3; organ++) {
+        for (float bad: {-0.01f, nan}) {
+            for (int timespan: {0, 1000}) {
+                Context context;
+                PlantHydraulicsModel hydraulics(&context);
+                uint objID = context.addTileObject(nullorigin, make_vec2(1, 1), nullrotation, make_int2(2, 2));
+                std::vector<uint> leaves = context.getObjectPrimitiveUUIDs(objID);
+                context.setObjectData(objID, "plantID", 1);
+                context.setPrimitiveData(leaves, "latent_flux", 100.f);
+                PlantHydraulicsModelCoefficients coeffs;
+                coeffs.setRootHydraulicConductance(organ == 0 ? bad : 0.08f);
+                coeffs.setStemHydraulicConductance(organ == 1 ? bad : 0.05f);
+                coeffs.setLeafHydraulicConductance(organ == 2 ? bad : 0.02f);
+                coeffs.setRootHydraulicCapacitance(1.f);
+                coeffs.setStemHydraulicCapacitance(1.f);
+                hydraulics.setModelCoefficients(coeffs);
+                hydraulics.setSoilWaterPotentialOfPlant(1, -0.3f);
+                CAPTURE(organ);
+                CAPTURE(bad);
+                CAPTURE(timespan);
+                DOCTEST_CHECK_THROWS_AS(hydraulics.run(leaves, timespan, 100), std::runtime_error);
+            }
+        }
+    }
+}
+
 DOCTEST_TEST_CASE("PlantHydraulicsModel - non-steady-state leaf dynamics normalization") {
     // Bug 2: Leaf transient update added mol/m² to dimensionless RWC without dividing by Wsat.
     // Bug 6: Adaptive timestep delta_psi could be negative (missing fabs).
@@ -621,6 +659,182 @@ DOCTEST_TEST_CASE("PlantHydraulicsModel - Documentation Example 2") {
     }
 }
 
+DOCTEST_TEST_CASE("PlantHydraulicsModel - whole-plant hydraulic conductance K_plant and soil water potential outputs") {
+    // K_plant is the root, stem, and leaf conductances in series (per unit leaf area); it is written on request, or when the Buckley et al. (2026) stomatal model asks for it
+    const float K_root = 0.08f, K_stem = 0.05f, K_leaf = 0.02f; // mol/m^2/s/MPa, independent of water potential and temperature
+    const float K_plant_expected = 1.f / (1.f / K_root + 1.f / K_stem + 1.f / K_leaf);
+    const float psi_soil = -0.3f;
+
+    auto setup = [&](Context &context, PlantHydraulicsModel &hydraulics) {
+        uint objID = context.addTileObject(nullorigin, make_vec2(1, 1), nullrotation, make_int2(2, 2));
+        std::vector<uint> leaves = context.getObjectPrimitiveUUIDs(objID);
+        context.setObjectData(objID, "plantID", 1);
+        context.setPrimitiveData(leaves, "latent_flux", 100.f);
+        PlantHydraulicsModelCoefficients coeffs;
+        coeffs.setRootHydraulicConductance(K_root);
+        coeffs.setStemHydraulicConductance(K_stem);
+        coeffs.setLeafHydraulicConductance(K_leaf);
+        coeffs.setRootHydraulicCapacitance(1.f); // fixed capacitances, needed by the time-stepped solution
+        coeffs.setStemHydraulicCapacitance(1.f);
+        hydraulics.setModelCoefficients(coeffs);
+        hydraulics.setSoilWaterPotentialOfPlant(1, psi_soil);
+        return leaves;
+    };
+
+    SUBCASE("not written by default") {
+        Context context;
+        PlantHydraulicsModel hydraulics(&context);
+        std::vector<uint> leaves = setup(context, hydraulics);
+        hydraulics.run(leaves);
+        DOCTEST_CHECK(!context.doesPrimitiveDataExist(leaves.front(), "plant_hydraulic_conductance"));
+        DOCTEST_CHECK(!context.doesPrimitiveDataExist(leaves.front(), "soil_water_potential"));
+    }
+
+    SUBCASE("requested with outputPlantConductancePrimitiveData, steady state and time-stepped") {
+        for (int timespan: {0, 1000}) {
+            Context context;
+            PlantHydraulicsModel hydraulics(&context);
+            std::vector<uint> leaves = setup(context, hydraulics);
+            hydraulics.outputPlantConductancePrimitiveData(true);
+            hydraulics.run(leaves, timespan, 100);
+            for (uint UUID: leaves) {
+                float K_plant, psi;
+                DOCTEST_REQUIRE(context.doesPrimitiveDataExist(UUID, "plant_hydraulic_conductance"));
+                context.getPrimitiveData(UUID, "plant_hydraulic_conductance", K_plant);
+                context.getPrimitiveData(UUID, "soil_water_potential", psi);
+                DOCTEST_CHECK(K_plant == doctest::Approx(K_plant_expected).epsilon(1e-5));
+                DOCTEST_CHECK(psi == doctest::Approx(psi_soil).epsilon(1e-6));
+            }
+        }
+    }
+
+    SUBCASE("a soil water potential never set with setSoilWaterPotentialOfPlant() does not replace one set directly") {
+        Context context;
+        PlantHydraulicsModel hydraulics(&context);
+        uint objID = context.addTileObject(nullorigin, make_vec2(1, 1), nullrotation, make_int2(2, 2));
+        std::vector<uint> leaves = context.getObjectPrimitiveUUIDs(objID);
+        context.setObjectData(objID, "plantID", 2);
+        context.setPrimitiveData(leaves, "latent_flux", 100.f);
+        context.setPrimitiveData(leaves, "soil_water_potential", -1.5f); // set directly, e.g. from a soil model
+        hydraulics.outputPlantConductancePrimitiveData(true);
+        hydraulics.run(leaves);
+        float psi;
+        context.getPrimitiveData(leaves.front(), "soil_water_potential", psi);
+        DOCTEST_CHECK(psi == doctest::Approx(-1.5f).epsilon(1e-6));
+        DOCTEST_CHECK(context.doesPrimitiveDataExist(leaves.front(), "plant_hydraulic_conductance")); // K_plant is still written
+    }
+
+    SUBCASE("requested by the Buckley et al. (2026) stomatal model through global data") {
+        Context context;
+        PlantHydraulicsModel hydraulics(&context);
+        std::vector<uint> leaves = setup(context, hydraulics);
+        context.setGlobalData("buckley2026_stomatal_model_enabled", 1);
+        hydraulics.run(leaves);
+        float K_plant;
+        DOCTEST_REQUIRE(context.doesPrimitiveDataExist(leaves.front(), "plant_hydraulic_conductance"));
+        context.getPrimitiveData(leaves.front(), "plant_hydraulic_conductance", K_plant);
+        DOCTEST_CHECK(K_plant == doctest::Approx(K_plant_expected).epsilon(1e-5));
+        DOCTEST_CHECK(K_plant < K_leaf); // K_plant is not the leaf conductance
+    }
+
+    SUBCASE("a negative or NaN root, stem, or leaf conductance is an error, not a K_plant of zero") {
+        const float bad_values[] = {-0.01f, std::numeric_limits<float>::quiet_NaN()};
+        for (int organ = 0; organ < 3; organ++) {
+            for (float bad: bad_values) {
+                for (int timespan: {0, 1000}) {
+                    Context context;
+                    PlantHydraulicsModel hydraulics(&context);
+                    std::vector<uint> leaves = setup(context, hydraulics);
+                    PlantHydraulicsModelCoefficients coeffs;
+                    coeffs.setRootHydraulicConductance(organ == 0 ? bad : K_root);
+                    coeffs.setStemHydraulicConductance(organ == 1 ? bad : K_stem);
+                    coeffs.setLeafHydraulicConductance(organ == 2 ? bad : K_leaf);
+                    coeffs.setRootHydraulicCapacitance(1.f);
+                    coeffs.setStemHydraulicCapacitance(1.f);
+                    hydraulics.setModelCoefficients(coeffs);
+                    hydraulics.outputPlantConductancePrimitiveData(true);
+                    CAPTURE(organ);
+                    CAPTURE(bad);
+                    CAPTURE(timespan);
+                    DOCTEST_CHECK_THROWS_AS(hydraulics.run(leaves, timespan, 100), std::runtime_error);
+                }
+            }
+        }
+    }
+
+    SUBCASE("a zero conductance in the path gives a K_plant of zero") {
+        Context context;
+        PlantHydraulicsModel hydraulics(&context);
+        std::vector<uint> leaves = setup(context, hydraulics);
+        PlantHydraulicsModelCoefficients coeffs;
+        coeffs.setRootHydraulicConductance(0.f);
+        coeffs.setStemHydraulicConductance(K_stem);
+        coeffs.setLeafHydraulicConductance(K_leaf);
+        coeffs.setRootHydraulicCapacitance(1.f);
+        coeffs.setStemHydraulicCapacitance(1.f);
+        hydraulics.setModelCoefficients(coeffs);
+        hydraulics.outputPlantConductancePrimitiveData(true);
+        hydraulics.run(leaves);
+        float K_plant;
+        DOCTEST_REQUIRE(context.doesPrimitiveDataExist(leaves.front(), "plant_hydraulic_conductance"));
+        context.getPrimitiveData(leaves.front(), "plant_hydraulic_conductance", K_plant);
+        DOCTEST_CHECK(K_plant == 0.f);
+    }
+}
+
 int PlantHydraulicsModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
+}
+
+DOCTEST_TEST_CASE("PlantHydraulicsModel - a time-stepped run integrates the requested timespan") {
+    // Constant conductances and capacitances with time constants of several hundred seconds, so that the water potentials are still far
+    // from steady state after the 1000 s timespan and the simulated time is visible in the result
+    const float K_root = 0.08f, K_stem = 0.05f, K_leaf = 0.02f; // mol/m^2/s/MPa
+    const float C_root = 50.f, C_stem = 25.f; // mol/m^2/MPa
+    const float psi_soil = -0.3f;
+    const int timespan = 1000;
+
+    auto setup = [&](Context &context, PlantHydraulicsModel &hydraulics) {
+        uint objID = context.addTileObject(nullorigin, make_vec2(1, 1), nullrotation, make_int2(2, 2));
+        std::vector<uint> leaves = context.getObjectPrimitiveUUIDs(objID);
+        context.setObjectData(objID, "plantID", 1);
+        context.setPrimitiveData(leaves, "latent_flux", 440.f); // 0.01 mol/m^2/s
+        PlantHydraulicsModelCoefficients coeffs;
+        coeffs.setRootHydraulicConductance(K_root);
+        coeffs.setStemHydraulicConductance(K_stem);
+        coeffs.setLeafHydraulicConductance(K_leaf);
+        coeffs.setRootHydraulicCapacitance(C_root);
+        coeffs.setStemHydraulicCapacitance(C_stem);
+        hydraulics.setModelCoefficients(coeffs);
+        hydraulics.setSoilWaterPotentialOfPlant(1, psi_soil);
+        return leaves;
+    };
+
+    // Reference: the timespan covered by 1 s runs, each of which is a single 1 s step
+    Context context_reference;
+    PlantHydraulicsModel hydraulics_reference(&context_reference);
+    std::vector<uint> leaves_reference = setup(context_reference, hydraulics_reference);
+    for (int second = 0; second < timespan; second++) {
+        hydraulics_reference.run(leaves_reference, 1, 1);
+    }
+    const float stem_reference = hydraulics_reference.getStemWaterPotentialOfPlant(1);
+    const float root_reference = hydraulics_reference.getRootWaterPotentialOfPlant(1);
+    const float stem_steady_state = psi_soil - 0.01f / K_root - 0.01f / K_stem;
+    DOCTEST_REQUIRE(stem_reference < -0.3f); // has moved well away from its initial value...
+    DOCTEST_REQUIRE(stem_reference > stem_steady_state + 0.05f); // ...and has not yet reached steady state
+
+    for (int timestep: {1, 10, 60}) {
+        DOCTEST_CAPTURE(timestep);
+        Context context;
+        PlantHydraulicsModel hydraulics(&context);
+        std::vector<uint> leaves = setup(context, hydraulics);
+        hydraulics.run(leaves, timespan, timestep);
+        DOCTEST_CHECK(hydraulics.getStemWaterPotentialOfPlant(1) == doctest::Approx(stem_reference).epsilon(0.05));
+        DOCTEST_CHECK(hydraulics.getRootWaterPotentialOfPlant(1) == doctest::Approx(root_reference).epsilon(0.05));
+    }
+
+    Context context_invalid;
+    PlantHydraulicsModel hydraulics_invalid(&context_invalid);
+    std::vector<uint> leaves_invalid = setup(context_invalid, hydraulics_invalid);
+    DOCTEST_CHECK_THROWS(hydraulics_invalid.run(leaves_invalid, timespan, 0));
 }

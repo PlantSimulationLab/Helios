@@ -369,7 +369,7 @@ void helios::seedRandomGenerator(unsigned int seed) {
 }
 
 float helios::randu() {
-    std::uniform_real_distribution<float> uniform_distribution(0.f, 1.f);
+    helios::uniform_real_distribution<float> uniform_distribution(0.f, 1.f);
     std::lock_guard<std::mutex> lock(random_generator_mutex);
     return uniform_distribution(globalRandomGenerator());
 }
@@ -381,7 +381,7 @@ int helios::randu(int imin, int imax) {
     // uniform_int_distribution covers [imin,imax] inclusive with equal probability. The previous
     // "imin + lround(range * ru)" gave the two endpoints only half the weight of interior values,
     // because ru is drawn from a half-open interval and lround rounds to nearest.
-    std::uniform_int_distribution<int> uniform_distribution(imin, imax);
+    helios::uniform_int_distribution<int> uniform_distribution(imin, imax);
     std::lock_guard<std::mutex> lock(random_generator_mutex);
     return uniform_distribution(globalRandomGenerator());
 }
@@ -1571,13 +1571,14 @@ bool helios::PNGHasAlpha(const char *filename) {
     }
 
     // 3) Open file with RAII
+    const std::string resolved_path = resolveFilePath(fn).string();
     auto fileCloser = [](FILE *f) {
         if (f)
             std::fclose(f);
     };
-    std::unique_ptr<FILE, decltype(fileCloser)> fp(std::fopen(fn.c_str(), "rb"), fileCloser);
+    std::unique_ptr<FILE, decltype(fileCloser)> fp(std::fopen(resolved_path.c_str(), "rb"), fileCloser);
     if (!fp) {
-        helios_runtime_error("ERROR (PNGHasAlpha): File " + fn + " could not be opened for reading.");
+        helios_runtime_error("ERROR (PNGHasAlpha): File " + resolved_path + " could not be opened for reading.");
     }
 
     // 4) Read & validate PNG signature
@@ -1649,6 +1650,8 @@ std::vector<std::vector<bool>> helios::readPNGAlpha(const std::string &filename)
         helios_runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.");
     }
 
+    const std::string resolved_path = resolveFilePath(filename).string();
+
     std::vector<std::vector<bool>> mask;
     png_structp png_ptr = nullptr;
     png_infop info_ptr = nullptr;
@@ -1659,9 +1662,9 @@ std::vector<std::vector<bool>> helios::readPNGAlpha(const std::string &filename)
             if (f)
                 fclose(f);
         };
-        std::unique_ptr<FILE, decltype(fileDeleter)> fp(fopen(filename.c_str(), "rb"), fileDeleter);
+        std::unique_ptr<FILE, decltype(fileDeleter)> fp(fopen(resolved_path.c_str(), "rb"), fileDeleter);
         if (!fp) {
-            throw std::runtime_error("File " + filename + " could not be opened for reading.");
+            throw std::runtime_error("File " + resolved_path + " could not be opened for reading.");
         }
 
         // Read & validate PNG signature
@@ -1785,6 +1788,8 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
         helios_runtime_error("ERROR (readPNG): File " + filename + " is not PNG format.");
     }
 
+    const std::string resolved_path = resolveFilePath(filename).string();
+
     png_structp png_ptr = nullptr;
     png_infop info_ptr = nullptr;
 
@@ -1796,9 +1801,9 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
             if (f)
                 fclose(f);
         };
-        std::unique_ptr<FILE, decltype(fileDeleter)> fp(fopen(filename.c_str(), "rb"), fileDeleter);
+        std::unique_ptr<FILE, decltype(fileDeleter)> fp(fopen(resolved_path.c_str(), "rb"), fileDeleter);
         if (!fp) {
-            throw std::runtime_error("File " + filename + " could not be opened.");
+            throw std::runtime_error("File " + resolved_path + " could not be opened.");
         }
 
         // 3) Read & validate PNG signature
@@ -2001,9 +2006,10 @@ void helios::readPNGSingleChannel(const std::string &filename, uint &width, uint
         helios_runtime_error(prefix + "File " + filename + " is not PNG format. Save it as an 8-bit or 16-bit grayscale PNG.");
     }
 
-    std::unique_ptr<FILE, int (*)(FILE *)> fp(fopen(filename.c_str(), "rb"), fclose);
+    const std::string resolved_path = resolveFilePath(filename).string();
+    std::unique_ptr<FILE, int (*)(FILE *)> fp(fopen(resolved_path.c_str(), "rb"), fclose);
     if (!fp) {
-        helios_runtime_error(prefix + "File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
+        helios_runtime_error(prefix + "File " + resolved_path + " could not be opened. Check that the file exists and that you have permission to read it.");
     }
 
     single_channel_png_error[0] = '\0';
@@ -2261,9 +2267,10 @@ void helios::readJPEG(const std::string &filename, uint &width, uint &height, st
     JSAMPARRAY buffer;
     int row_stride;
 
-    std::unique_ptr<FILE, int (*)(FILE *)> infile(fopen(filename.c_str(), "rb"), fclose);
+    const std::string resolved_path = resolveFilePath(filename).string();
+    std::unique_ptr<FILE, int (*)(FILE *)> infile(fopen(resolved_path.c_str(), "rb"), fclose);
     if (!infile) {
-        helios_runtime_error("ERROR (Context::readJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
+        helios_runtime_error("ERROR (Context::readJPEG): File " + resolved_path + " could not be opened. Check that the file exists and that you have permission to read it.");
     }
 
     cinfo.err = jpeg_std_error(&jerr);
@@ -2322,9 +2329,10 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
     jpeg_decompress_struct cinfo{};
 
     jpeg_error_mgr jerr{};
-    std::unique_ptr<FILE, int (*)(FILE *)> infile(fopen(filename.c_str(), "rb"), fclose);
+    const std::string resolved_path = resolveFilePath(filename).string();
+    std::unique_ptr<FILE, int (*)(FILE *)> infile(fopen(resolved_path.c_str(), "rb"), fclose);
     if (!infile) {
-        helios_runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
+        helios_runtime_error("ERROR (Context::getImageResolutionJPEG): File " + resolved_path + " could not be opened. Check that the file exists and that you have permission to read it.");
     }
 
     cinfo.err = jpeg_std_error(&jerr);
@@ -3720,7 +3728,14 @@ std::filesystem::path helios::resolveProjectFile(const std::string &relativePath
         }
     }
 
-    // Strategy 3: Error - file not found in either location
+    // Strategy 3: Check the build directory (HELIOS_BUILD), where files shipped with Helios are located
+    const std::filesystem::path buildDirectory(getBuildDirectory());
+    const std::filesystem::path buildPath = buildDirectory / relativePath;
+    if (validateAssetPath(buildPath)) {
+        return std::filesystem::absolute(buildPath);
+    }
+
+    // Error - file not found in any location
     std::string errorMsg = "ERROR (resolveProjectFile): Could not locate file '" + relativePath + "'. Searched in:\n";
     errorMsg += "  - Current working directory: " + std::filesystem::current_path().string() + "\n";
     if (!projectRoot.empty()) {
@@ -3728,6 +3743,7 @@ std::filesystem::path helios::resolveProjectFile(const std::string &relativePath
     } else {
         errorMsg += "  - Project directory: (not found - no CMakeLists.txt found in parent directories)\n";
     }
+    errorMsg += "  - Build directory (HELIOS_BUILD): " + buildDirectory.string() + "\n";
     errorMsg += "Ensure the file exists in one of these locations.";
 
     helios_runtime_error(errorMsg);
@@ -3735,7 +3751,11 @@ std::filesystem::path helios::resolveProjectFile(const std::string &relativePath
 }
 
 std::vector<float> helios::importVectorFromFile(const std::string &filepath) {
-    std::ifstream stream(filepath.c_str());
+    if (filepath.empty()) {
+        helios_runtime_error("ERROR (helios::importVectorFromFile): The file path is empty.");
+    }
+    const std::string resolved_path = resolveFilePath(filepath).string();
+    std::ifstream stream(resolved_path);
 
     if (!stream.is_open()) {
         helios_runtime_error("ERROR (helios::importVectorFromFile): File " + filepath + " could not be opened for reading. Check that it exists and that you have permission to read it.");
@@ -3749,8 +3769,8 @@ std::vector<float> helios::importVectorFromFile(const std::string &filepath) {
 float helios::sample_Beta_distribution(float mu, float nu, std::minstd_rand0 *generator) {
     // 1) draw two independent Gamma variates:
     //    X ~ Gamma(α=ν, 1),  Y ~ Gamma(β=μ, 1)
-    std::gamma_distribution<float> dist_nu(nu, 1.0);
-    std::gamma_distribution<float> dist_mu(mu, 1.0);
+    helios::gamma_distribution<float> dist_nu(nu, 1.0);
+    helios::gamma_distribution<float> dist_mu(mu, 1.0);
 
     float X = dist_nu(*generator);
     float Y = dist_mu(*generator);
@@ -3799,7 +3819,7 @@ float helios::sample_ellipsoidal_azimuth(float e, float phi0_degrees, std::minst
     float b = std::sqrt(1.f - e * e);
 
     // sample the ellipse parameter t uniformly in [0,2π)
-    std::uniform_real_distribution<float> distT(0.f, 2.f * PI_F);
+    helios::uniform_real_distribution<float> distT(0.f, 2.f * PI_F);
     float t = distT(*generator);
 
     // point on the ellipse boundary

@@ -23,7 +23,7 @@ using namespace std;
 
 std::vector<std::vector<uint>> CanopyGenerator::addGrapeCluster(vec3 position, float grape_rad, float cluster_rad, helios::RGBcolor grape_color, uint grape_subdiv) {
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     float z = position.z;
 
@@ -153,7 +153,7 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
     std::vector<std::vector<uint>> UUID_leaf_plant;
     std::vector<std::vector<std::vector<uint>>> UUID_fruit_plant;
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     float canopy_rotation = params.canopy_rotation + getVariation(params.canopy_rotation_spread, generator);
 
@@ -458,7 +458,7 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
     std::vector<std::vector<uint>> UUID_leaf_plant;
     std::vector<std::vector<std::vector<uint>>> UUID_fruit_plant;
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     float canopy_rotation = params.canopy_rotation + getVariation(params.canopy_rotation_spread, generator);
 
@@ -821,7 +821,7 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
     std::vector<std::vector<uint>> UUID_leaf_plant;
     std::vector<std::vector<std::vector<uint>>> UUID_fruit_plant;
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     float canopy_rotation = params.canopy_rotation + getVariation(params.canopy_rotation_spread, generator);
 
@@ -1050,7 +1050,7 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
     std::vector<std::vector<uint>> UUID_leaf_plant;
     std::vector<std::vector<std::vector<uint>>> UUID_fruit_plant;
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     float canopy_rotation = params.canopy_rotation + getVariation(params.canopy_rotation_spread, generator);
 

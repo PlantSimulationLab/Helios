@@ -21,6 +21,133 @@
 
 #include "PlantArchitecture.h"
 
+//! Operation applied to every position and direction a plant stores, one value at a time
+/**
+ * Everything that has to treat all of a plant's stored geometry alike -- recording it, putting it back, turning it -- is written as one of these and handed to the visit functions of \ref Phytomer and
+ * \ref Shoot, so that the list of members holding geometry is written down exactly once, in those functions. A visit function calls point() or direction() once for each stored value, always in the same order.
+ */
+struct PlantSpatialStateVisitor {
+    virtual ~PlantSpatialStateVisitor() = default;
+    //! Visit a stored position in world coordinates
+    virtual void point(helios::vec3 &position) = 0;
+    //! Visit a stored direction in world coordinates, which turns with the organ but keeps its length
+    virtual void direction(helios::vec3 &direction) = 0;
+    //! Visit a stored offset between two positions on an organ, in world coordinates, which turns with the organ and stretches with it
+    virtual void offset(helios::vec3 &offset) = 0;
+    //! Visit a stored length of an organ in meters, which stretches with it
+    virtual void length(float &length) = 0;
+};
+
+//! Motion of part of a plant away from where it grew: a rotation followed by a translation, with a uniform stretch for an organ whose own length has been changed
+/**
+ * A position p goes to scale * rotation * p + translation. Only the centerline of an internode or petiole whose length is posed has a scale other than 1; everything it carries is moved rigidly.
+ * Held in double precision because the motion of an organ far out on the plant is the product of the motions of every joint between it and the base.
+ */
+struct PoseRigidTransform {
+    //! Rotation matrix in row-major order
+    double rotation[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+    //! Translation applied after the rotation and the stretch
+    double translation[3] = {0, 0, 0};
+    //! Uniform stretch of positions about the origin
+    double scale = 1;
+
+    //! Whether the transform leaves everything exactly where it is
+    [[nodiscard]] bool isIdentity() const;
+    //! Whether the transform turns nothing, i.e. is at most a translation
+    [[nodiscard]] bool isRotationIdentity() const;
+    bool operator==(const PoseRigidTransform &other) const;
+    //! Move a position
+    [[nodiscard]] helios::vec3 applyToPoint(const helios::vec3 &position) const;
+    //! Turn a direction, without stretching it
+    [[nodiscard]] helios::vec3 applyToDirection(const helios::vec3 &direction) const;
+    //! Turn and stretch an offset between two positions
+    [[nodiscard]] helios::vec3 applyToOffset(const helios::vec3 &offset) const;
+    //! Turn a direction back, by the inverse of the rotation
+    [[nodiscard]] helios::vec3 applyInverseToDirection(const helios::vec3 &direction) const;
+    //! The rigid motion that carries a body attached to the stretched organ at \p anchor: the body is turned, not stretched, and goes where its anchor goes
+    [[nodiscard]] PoseRigidTransform rigidMotionOfBodyAt(const helios::vec3 &anchor) const;
+    //! The transform that applies \p inner first and then this one
+    [[nodiscard]] PoseRigidTransform composedWith(const PoseRigidTransform &inner) const;
+};
+
+//! What a pose remembers about one Context object of a plant
+struct PoseObjectState {
+    uint objID = 0;
+    //! Transformation matrix of the object as the plant grew
+    std::array<float, 16> rest_object_matrix{};
+    //! Transformation matrix of each of the object's primitives as the plant grew, in the order of Context::getObjectPrimitiveUUIDs()
+    std::vector<std::array<float, 16>> rest_primitive_matrices;
+    //! Transformation matrix of the object as the pose last left it
+    std::array<float, 16> posed_object_matrix{};
+    //! Hash of the primitives' transformation matrices as the pose last left them, by which a change made by anything else is recognized
+    uint64_t posed_primitive_hash = 0;
+    //! Shared vertices of a leaf mesh that can droop, in world coordinates, as the plant grew. Empty for any other object.
+    /**
+     * A drooping blade is written through the mesh's shared vertex array, which is separate from its primitives and is what the next droop or reshaping of the leaf starts from. Moving the primitives
+     * alone would leave that array holding the droop of whatever orientation the leaf last settled in.
+     */
+    std::vector<helios::vec3> rest_shared_vertices;
+};
+
+//! What a pose remembers about one part of a plant that moves as a rigid body
+struct PoseGroupState {
+    //! Stored positions and directions of the part as the plant grew, in the order its visit function produces them
+    std::vector<helios::vec3> rest;
+    //! The same values as the pose last left them
+    std::vector<helios::vec3> posed;
+    //! Context objects that move with the part
+    std::vector<PoseObjectState> objects;
+    //! Motion of the part from where it grew, as last applied
+    PoseRigidTransform transform;
+    //! Motion of the part from where it grew under the joint poses now being applied
+    PoseRigidTransform pending_transform;
+    //! Whether the part has to be left to settle under gravity even where it stands as it grew
+    /**
+     * Set when something other than the pose has changed a leaf of the part while it was posed. What was recorded for the unposed plant is then the changed leaf with the droop of its posed orientation
+     * taken back out rigidly, which is not how it would hang unposed.
+     */
+    bool resettle_at_rest = false;
+};
+
+//! What a pose remembers about one shoot. The vectors are indexed as the shoot's phytomers, and within a phytomer as its petioles and floral buds.
+struct PoseShootState {
+    //! How the shoot sits on its parent, which turns with the parent rather than with the shoot
+    PoseGroupState attachment;
+    //! Geometry belonging to the shoot as a whole
+    PoseGroupState shoot;
+    std::vector<PoseGroupState> internodes;
+    std::vector<PoseGroupState> nodes;
+    std::vector<std::vector<PoseGroupState>> petioles;
+    std::vector<std::vector<std::vector<PoseGroupState>>> floral_buds;
+    //! Whether the shoot had an internode tube in the Context when the pose was recorded
+    bool has_internode_tube = false;
+    //! The shoot's internode tube, which is bent rather than moved rigidly because it spans every internode joint of the shoot
+    PoseObjectState internode_tube;
+};
+
+//! Pose of a plant: the offsets set at its joints, and the plant as it grew, which they are measured from
+struct PlantPoseState {
+    //! Offsets that have been set and are not zero
+    std::map<PlantJointID, PlantJointPose> joint_poses;
+    //! Indexed by shoot ID
+    std::vector<PoseShootState> shoots;
+    //! Shoot::base_offset_pinned of each shoot before the plant was posed, indexed by shoot ID, which is put back if the pose is undone
+    std::vector<bool> base_offset_pinned_before;
+};
+
+//! One rigid part of a plant, handed to the callback of PlantArchitecture::forEachPoseGroup()
+struct PoseGroupReference {
+    enum Kind { SHOOT_ATTACHMENT, SHOOT, INTERNODE, NODE, PETIOLE, FLORAL_BUD };
+    Kind kind = SHOOT;
+    PoseGroupState *state = nullptr;
+    Shoot *shoot = nullptr;
+    //! Null for SHOOT_ATTACHMENT and SHOOT
+    Phytomer *phytomer = nullptr;
+    uint node_index = 0;
+    uint petiole_index = 0;
+    uint bud_index = 0;
+};
+
 //! Look up a build parameter, falling back to a default if it was not given
 /**
  * Used by the library plant builders and by flower/fruit prototype functions to read the build parameters passed to \ref PlantArchitecture::buildPlantInstanceFromLibrary().

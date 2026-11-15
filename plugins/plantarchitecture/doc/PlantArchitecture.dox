@@ -119,7 +119,7 @@ A number of plant models are available in the plant architecture library, which 
 | Strawberry (*Fragaria × ananassa*)       | generic                            | "strawberry"               | mainstem                                           |
 | Sugar Beet (*Beta vulgaris*)             | generic                            | "sugarbeet"                | mainstem                                           |
 | Tomato (*Solanum lycopersicum*)          | determinate growth                 | "tomato"                   | mainstem                                           |
-| Cherry Tomato (*Solanum lycopersicum*)   | upright trained                    | "cherrytomato"             | mainstem                                           |
+| Cherry Tomato (*Solanum lycopersicum*)   | upright trained                    | "cherrytomato"             | mainstem, lateral                                  |
 | Walnut Tree (*Juglans regia*)            | generic                            | "walnut"                   | trunk, scaffold, proleptic                         |
 | Wheat (*Triticum aestivum*)              | generic                            | "wheat"                    | mainstem, tiller                                   |
 | Long greenhouse cucumber (high-wire) (*Cucumis sativus*) | trained on a string | "cucumber" | main |
@@ -2041,6 +2041,156 @@ Points worth knowing:
   sizes its lateral leaflets differently from its terminal one will show that as spread.
 - <b>Leaf area is blade area.</b> A leaflet's petiolule belongs to its leaf object but is excluded from every
   leaf-area result; \ref PlantArchitecture::getLeafBladeArea() gives the same quantity for a single leaf object.
+
+\section PlantArchPose Re-posing a Grown Plant
+
+A grown plant can be moved at its joints without being rebuilt: a whole plant turned about its base, a branch
+turned where it is attached, a stem bent at a node, a petiole or a peduncle swung about the node it grows
+from, an internode or a petiole made longer or shorter. This is what fitting a plant to a photograph or a scan needs, and it is also how a shoot is tied to a
+trellis wire part-way through a simulation and then left to grow on from there.
+
+Do not turn a plant's objects in the Context instead. The model keeps its own record of where every node,
+petiole, leaf base and bud is, and every later call -- and all later growth -- works from that record, so a
+plant turned only in the Context is, as far as the model is concerned, still where it grew.
+
+\subsection PlantArchPoseJoints The Skeleton
+
+The skeleton is the plant's own structure. \ref PlantArchitecture::getPlantJoints() lists its joints from
+the base outward, each named by a \ref PlantJointID holding the shoot, node, petiole and floral bud indices
+used throughout the rest of the interface:
+
+<table>
+<tr><th>Joint type</th><th>Where it is</th><th>What it carries</th></tr>
+<tr><td>PLANT_JOINT_ROOT</td><td>The base of the plant</td><td>The whole plant</td></tr>
+<tr><td>PLANT_JOINT_SHOOT</td><td>Where a shoot is attached to its parent shoot</td><td>The shoot and everything on it</td></tr>
+<tr><td>PLANT_JOINT_INTERNODE</td><td>The base of one phytomer's internode</td><td>That internode, the organs at its node, and everything further out along the shoot, including the shoots that grow from those nodes</td></tr>
+<tr><td>PLANT_JOINT_PETIOLE</td><td>The base of a petiole</td><td>The petiole and its leaves</td></tr>
+<tr><td>PLANT_JOINT_PEDUNCLE</td><td>The base of a floral bud's peduncle</td><td>The peduncle and its flowers or fruit</td></tr>
+</table>
+
+The base shoot has no PLANT_JOINT_SHOOT, because PLANT_JOINT_ROOT already turns it. A sessile leaf has no
+petiole joint, and only a bud that is flowering or fruiting has a peduncle joint.
+
+\ref PlantArchitecture::getPlantJointFrame() gives a joint's pivot point and its three axes as the plant
+currently stands (\ref PlantJointFrame): the direction of what the organ grows from, the direction of the
+organ itself where it leaves the joint, and the axis perpendicular to both.
+
+\subsection PlantArchPoseSetting Setting a Pose
+
+A pose is given per joint as a \ref PlantJointPose of three angles in degrees and a length:
+
+- <b>pitch</b> tilts the organ away from what it grows from (negative values tilt it toward its parent),
+- <b>yaw</b> carries it around what it grows from,
+- <b>roll</b> twists it about its own axis,
+- <b>length_scale</b> makes an internode or a petiole a multiple of the length it grew to. Its centerline is
+  stretched about the joint, keeping its shape, and whatever is attached along it or beyond it is carried to
+  where its point of attachment goes without being stretched itself.
+  \ref PlantArchitecture::setPlantJointLength() sets the same thing as a length in meters, keeping the angles
+  the joint already has.
+
+~~~~~~{cpp}
+PlantJointID branch;
+branch.type = PLANT_JOINT_SHOOT;
+branch.shootID = 3;
+
+PlantJointPose pose;
+pose.pitch_degrees = 20; // 20 degrees further from the stem than it grew
+pose.yaw_degrees = -35;  // and 35 degrees around the stem
+
+plantarchitecture.setPlantJointPose(plantID, branch, pose);
+~~~~~~
+
+Everything the joint carries moves as one rigid body about the joint, and nothing else moves. No organ is
+rebuilt, so object IDs and primitive UUIDs are unchanged, and the model's own record is moved along with
+the geometry.
+
+<b>A pose is an offset from the plant as it grew, not a step from where the plant is now.</b> Setting a joint
+to 20 degrees twice leaves it at 20 degrees, not 40. The same set of poses gives exactly the same plant
+whatever order they were set in and whatever poses the plant passed through on the way, and setting every
+joint back to zero -- or calling \ref PlantArchitecture::resetPlantPose() -- restores the grown plant exactly.
+\ref PlantArchitecture::getPlantJointPose() reads a joint's pose back.
+
+When many joints are to be set, as in a search over poses, set them together with
+\ref PlantArchitecture::setPlantJointPoses(). The plant is then moved once for the whole set rather than
+once per joint.
+
+Points worth knowing:
+
+- <b>The axes are those of the plant as it grew.</b> A joint's pitch is always about the pitch axis it had before
+  any pose was applied, so a pose does not depend on the poses of other joints.
+- <b>Leaves that bend under their own weight settle again.</b> A petiole or blade with a non-zero flexibility
+  (see \ref PlantArch_leafdroop and \ref PlantArch_petioledroop) is in balance with gravity where it grew.
+  Turned, it is not, so it is bent afresh in its new orientation, and is not carried perfectly rigidly. The
+  leaves of a species without flexibility are.
+- <b>Other changes to a posed plant are kept.</b> Reshaping or turning a leaf, or moving the plant with
+  \ref PlantArchitecture::setPlantBasePosition(), while the plant is posed changes what the pose is measured
+  from: reset the pose afterwards and the plant is the grown plant with that change. A change of structure is
+  different. Adding or removing an organ, or giving a petiole a different number of nodes with
+  \ref PlantArchitecture::setPetioleNodePositions(), makes the pose permanent the next time a pose is set, and
+  the pose can then no longer be reset.
+- <b>Indices a joint's type does not use must be zero.</b> A \ref PlantJointID reused for a joint of another
+  type, with an index left over from its previous use, is refused.
+- <b>A pose that cannot be applied changes nothing.</b> If, say, an internode has no length to turn about, an
+  error is raised and the plant keeps the poses it had.
+- <b>A posed peduncle lasts until its bud next changes state.</b> Flowers and fruit are rebuilt from the bud
+  when it goes from flower to fruit, which puts the peduncle back where the model builds it.
+- <b>A petiole or stem that leaves its parent almost in line with it has a nearly arbitrary pitch axis.</b>
+  Read the axis from \ref PlantArchitecture::getPlantJointFrame() rather than assuming which way a pitch
+  tilts the organ.
+
+\subsection PlantArchPoseGrowth Growing On from a Pose
+
+A pose lasts until the plant next grows. \ref PlantArchitecture::advanceTime() first makes the pose a
+permanent part of the plant, as \ref PlantArchitecture::bakePlantPose() does, and then grows the plant from
+where it stands: existing organs stay where they were posed, and new growth continues from them, pulled
+toward the vertical again in the usual way. An internode or petiole whose length was posed keeps it, and the
+length it is growing toward is moved by the same factor. After that every joint reads zero, there is nothing left to
+reset, and later poses are measured from the posed plant.
+
+~~~~~~{cpp}
+// Lay a cane down toward a trellis wire, then let the vine grow on from there
+PlantJointID cane;
+cane.type = PLANT_JOINT_SHOOT;
+cane.shootID = caneID;
+
+PlantJointPose tied;
+tied.pitch_degrees = 60;
+plantarchitecture.setPlantJointPose(plantID, cane, tied);
+
+plantarchitecture.advanceTime(plantID, 30);
+~~~~~~
+
+\subsection PlantArchPosePositions Posing a Shoot by the Positions of its Nodes
+
+When what is known is where a shoot should run -- along a wire, or along a centerline measured from a scan --
+rather than the angle at each joint, \ref PlantArchitecture::setShootNodePositions() works the joint poses
+out. It takes the position of the shoot's base followed by the tip of each of its internodes, so a shoot with
+N nodes takes N+1 positions:
+
+~~~~~~{cpp}
+// Run a four-node cane out along a wire at a height of 1 m
+std::vector<vec3> along_wire = {cane_base, make_vec3(0.1, 0, 1), make_vec3(0.2, 0, 1), make_vec3(0.3, 0, 1), make_vec3(0.4, 0, 1)};
+plantarchitecture.setShootNodePositions(plantID, caneID, along_wire);
+~~~~~~
+
+The shoot stays attached where it is, so the first position must be its base. Each internode keeps its own
+shape and is turned and scaled about its base until its tip is at its position, carrying its leaves, fruit and
+child shoots with it. The result is an ordinary pose: the internode joints can be read back with
+\ref PlantArchitecture::getPlantJointPose(), the shoot's other joints and the rest of the plant keep the poses
+they had, and \ref PlantArchitecture::resetPlantPose() undoes it.
+
+Positions say where each internode points but not how it is twisted about its own length. Each internode is
+reached by a pitch away from, and a yaw around, the internode before it, and that is what decides which way
+its leaves end up facing.
+
+Removing organs from a posed plant, or adding to it by hand, likewise makes its pose permanent the next
+time a pose is set. Flowers and fruit are the exception to "existing organs stay where they were posed":
+they are rebuilt whenever their bud changes state.
+
+\note A plant that is posed, or whose pose has been made permanent, cannot yet be written with
+\ref PlantArchitecture::writePlantStructureXML() or copied with \ref PlantArchitecture::duplicatePlantInstance().
+Both rebuild a plant from its growth parameters, which do not describe a pose, and so raise an error rather
+than write a plant that would be read back in a different shape.
 
 \section PlantArchConventions Coordinate Frames and Internal Storage Conventions
 

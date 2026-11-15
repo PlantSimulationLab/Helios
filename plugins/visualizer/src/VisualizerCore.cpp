@@ -313,7 +313,11 @@ static bool isPlausibleClassIDToken(const std::string &token) {
 
 std::vector<Visualizer::BoundingBox> Visualizer::readBoundingBoxFile(const std::string &bbox_file) {
 
-    std::ifstream file(bbox_file);
+    // helios::resolveFilePath() resolves an empty path to the working directory, which opens as an empty file
+    if (bbox_file.empty()) {
+        helios_runtime_error("ERROR (Visualizer::readBoundingBoxFile): The bounding box annotation file path is empty.");
+    }
+    std::ifstream file(helios::resolveFilePath(bbox_file));
     if (!file.is_open()) {
         helios_runtime_error("ERROR (Visualizer::readBoundingBoxFile): Could not open bounding box annotation file '" + bbox_file + "'. Check that the file exists and that you have permission to read it.");
     }
@@ -381,7 +385,11 @@ std::vector<Visualizer::BoundingBox> Visualizer::readBoundingBoxFile(const std::
 
 std::map<uint, std::string> Visualizer::readBoundingBoxClassNames(const std::string &classes_file) {
 
-    std::ifstream file(classes_file);
+    // helios::resolveFilePath() resolves an empty path to the working directory, which opens as an empty file
+    if (classes_file.empty()) {
+        helios_runtime_error("ERROR (Visualizer::readBoundingBoxClassNames): The class name file path is empty.");
+    }
+    std::ifstream file(helios::resolveFilePath(classes_file));
     if (!file.is_open()) {
         helios_runtime_error("ERROR (Visualizer::readBoundingBoxClassNames): Could not open class name file '" + classes_file + "'. Check that the file exists and that you have permission to read it.");
     }
@@ -435,7 +443,11 @@ std::map<uint, std::string> Visualizer::readBoundingBoxClassNames(const std::str
 
 std::vector<Visualizer::SegmentationMask> Visualizer::readSegmentationMaskFile(const std::string &mask_file, const std::string &image_file) {
 
-    std::ifstream file(mask_file);
+    // helios::resolveFilePath() resolves an empty path to the working directory, which opens as an empty file
+    if (mask_file.empty()) {
+        helios_runtime_error("ERROR (Visualizer::readSegmentationMaskFile): The segmentation mask file path is empty.");
+    }
+    std::ifstream file(helios::resolveFilePath(mask_file));
     if (!file.is_open()) {
         helios_runtime_error("ERROR (Visualizer::readSegmentationMaskFile): Could not open segmentation mask file '" + mask_file + "'. Check that the file exists and that you have permission to read it.");
     }
@@ -2352,10 +2364,12 @@ bool Visualizer::isSmoothShadingEnabled() const {
 }
 
 void Visualizer::enableNormalMaps() {
+    rendered_frame_is_current = false; // changes what is drawn
     normal_maps_enabled = true;
 }
 
 void Visualizer::disableNormalMaps() {
+    rendered_frame_is_current = false; // changes what is drawn
     normal_maps_enabled = false;
 }
 
@@ -3879,10 +3893,9 @@ helios::uint2 Visualizer::getTextureResolution(uint textureID) const {
 }
 
 bool validateTextureFile(const std::string &texture_file, bool pngonly) {
-    const std::filesystem::path p(texture_file);
-
-    // Check that the file exists and is a regular file
-    if (!std::filesystem::exists(p) || !std::filesystem::is_regular_file(p)) {
+    // Locate the file relative to the working directory or the HELIOS_BUILD directory, and check that it is a regular file
+    const std::filesystem::path p = helios::tryResolveFilePath(texture_file);
+    if (p.empty() || !std::filesystem::is_regular_file(p)) {
         return false;
     }
 

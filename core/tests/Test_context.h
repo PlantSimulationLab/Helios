@@ -62,6 +62,22 @@ TEST_CASE("Core Context State and Configuration") {
         DOCTEST_CHECK(!std::isnan(rn));
     }
 
+    SUBCASE("Seeding discards a normal value drawn before the seed") {
+        // The normal distribution makes its values in pairs and keeps the second for the next call
+        Context fresh;
+        fresh.seedRandomGenerator(5);
+        const float expected_first = fresh.randn();
+        const float expected_second = fresh.randn();
+
+        Context used;
+        used.seedRandomGenerator(99);
+        const float drawn_before_seed = used.randn(); // leaves the other value of its pair waiting
+        DOCTEST_CHECK(std::isfinite(drawn_before_seed));
+        used.seedRandomGenerator(5);
+        DOCTEST_CHECK(used.randn() == expected_first);
+        DOCTEST_CHECK(used.randn() == expected_second);
+    }
+
     SUBCASE("Texture utility methods") {
         Context ctx;
         {
@@ -273,14 +289,112 @@ TEST_CASE("Core Context State and Configuration") {
 
         float value;
         ctx.getMaterialData("leaf", "phong_specular", value);
-        ctx.assignMaterialToPrimitive(p, "leaf");
         DOCTEST_CHECK(!advanced());
+
+        // A primitive given a material with a different two-sided flag, normal map or material data than its own is given different material
+        // properties; one that differs only in color or texture changes how the primitive looks, which marks it dirty, and not the counter
+        ctx.addMaterial("plain_green");
+        ctx.addMaterial("plain_red");
+        ctx.setMaterialColor("plain_red", make_RGBAcolor(0.8f, 0.1f, 0.1f, 1.f));
+        DOCTEST_CHECK(advanced());
+        ctx.assignMaterialToPrimitive(p, "leaf"); // material data and a one-sided flag, where the default material has neither
+        DOCTEST_CHECK(advanced());
+        ctx.assignMaterialToPrimitive(p, "plain_green");
+        DOCTEST_CHECK(advanced());
+        ctx.assignMaterialToPrimitive(p, "plain_red");
+        DOCTEST_CHECK(!advanced());
+        ctx.setMaterialTwosidedFlag("plain_green", 0);
+        DOCTEST_CHECK(advanced());
+        ctx.assignMaterialToObject(std::vector<uint>{}, "plain_green"); // no objects: nothing changes
+        DOCTEST_CHECK(!advanced());
+        ctx.assignMaterialToPrimitive(std::vector<uint>{p}, "plain_green"); // only the two-sided flag differs
+        DOCTEST_CHECK(advanced());
 
         ctx.renameMaterial("leaf", "stem");
         DOCTEST_CHECK(advanced());
         ctx.addMaterial("bark");
         DOCTEST_CHECK(advanced());
         ctx.deleteMaterial("bark");
+        DOCTEST_CHECK(advanced());
+    }
+
+    SUBCASE("Primitive data revision") {
+        // Kept per label: advances with every change to primitive data of that label on any primitive, and with nothing else
+        Context ctx;
+        const uint p0 = ctx.addPatch();
+        const uint p1 = ctx.addPatch();
+        const std::vector<uint> both{p0, p1};
+        DOCTEST_CHECK(ctx.getPrimitiveDataRevision("rho") == 0); // no primitive has ever had it
+
+        uint64_t revision = ctx.getPrimitiveDataRevision("rho");
+        auto advanced = [&]() {
+            const uint64_t now = ctx.getPrimitiveDataRevision("rho");
+            const bool moved = now > revision;
+            revision = now;
+            return moved;
+        };
+
+        ctx.setPrimitiveData(p0, "rho", 0.2f);
+        DOCTEST_CHECK(advanced());
+        DOCTEST_CHECK(!advanced()); // reading it does not advance it
+        ctx.setPrimitiveData(p0, "rho", 0.2f); // setting the value it already has counts as a change
+        DOCTEST_CHECK(advanced());
+        ctx.setPrimitiveData(p0, "rho", std::vector<float>{0.3f});
+        DOCTEST_CHECK(advanced());
+        ctx.setPrimitiveData(both, "rho", 0.4f);
+        DOCTEST_CHECK(advanced());
+        ctx.setPrimitiveData(both, "rho", std::vector<float>{0.5f, 0.6f});
+        DOCTEST_CHECK(advanced());
+        ctx.scalePrimitiveData(both, "rho", 0.5f);
+        DOCTEST_CHECK(advanced());
+        ctx.incrementPrimitiveData(both, "rho", 0.1f);
+        DOCTEST_CHECK(advanced());
+
+        // Changes to other labels, other kinds of data, and to the primitives themselves leave it alone
+        float value;
+        ctx.getPrimitiveData(p0, "rho", value);
+        ctx.setPrimitiveData(both, "radiation_flux", 100.f);
+        ctx.clearPrimitiveData(p0, "radiation_flux");
+        ctx.clearPrimitiveData(p1, "never_set");
+        ctx.setGlobalData("rho", 0.1f);
+        ctx.translatePrimitive(p0, make_vec3(1, 0, 0));
+        ctx.setPrimitiveColor(p0, RGB::red);
+        DOCTEST_CHECK(!advanced());
+
+        // Copies and renames change the labels they write to and remove
+        ctx.duplicatePrimitiveData(p1, "radiation_flux", "rho");
+        DOCTEST_CHECK(advanced());
+        ctx.setPrimitiveData(p1, "other", 1.f);
+        ctx.duplicatePrimitiveData("other", "rho");
+        DOCTEST_CHECK(advanced());
+        ctx.renamePrimitiveData(p1, "rho", "rho_old");
+        DOCTEST_CHECK(advanced());
+        DOCTEST_CHECK(ctx.getPrimitiveDataRevision("rho_old") > 0);
+        ctx.renamePrimitiveData(p1, "rho_old", "rho");
+        DOCTEST_CHECK(advanced());
+        const uint p2 = ctx.addPatch();
+        ctx.copyPrimitiveData(p0, p2); // p2 gains the data
+        DOCTEST_CHECK(advanced());
+        ctx.copyPrimitiveData(p2, p0); // the data p0 had is replaced
+        DOCTEST_CHECK(advanced());
+
+        // Removing it, from one primitive, from several, by deleting a primitive that has it, and from every primitive
+        ctx.clearPrimitiveData(p2, "rho");
+        DOCTEST_CHECK(advanced());
+        ctx.clearPrimitiveData(p2, "rho"); // nothing left to remove
+        DOCTEST_CHECK(!advanced());
+        ctx.clearPrimitiveData(std::vector<uint>{p1}, "rho");
+        DOCTEST_CHECK(advanced());
+        ctx.setPrimitiveData(p1, "rho", 0.2f);
+        DOCTEST_CHECK(advanced());
+        ctx.deletePrimitive(p1);
+        DOCTEST_CHECK(advanced());
+        ctx.clearPrimitiveData("rho");
+        DOCTEST_CHECK(advanced());
+        DOCTEST_CHECK(!ctx.doesPrimitiveDataExist(p0, "rho"));
+
+        // The revision outlives the data, so that data set again is seen as a change
+        ctx.setPrimitiveData(p0, "rho", 0.2f);
         DOCTEST_CHECK(advanced());
     }
 
@@ -1751,6 +1865,31 @@ TEST_CASE("Texture Management") {
             DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == ctx.getPrimitiveMaterialLabel(UUIDs.front()));
         }
     }
+
+    SUBCASE("a PNG texture with an upper-case extension is read as a PNG") {
+        // Texture file validation accepts ".PNG", but the texture loader compared the extension against lower-case ".png"
+        // only, so an upper-case PNG was handed to the JPEG reader and rejected as "not JPEG format".
+        struct TemporaryFile {
+            std::filesystem::path path;
+            ~TemporaryFile() {
+                std::error_code error;
+                std::filesystem::remove(path, error);
+            }
+        };
+        const std::string lowercase_file = "lib/images/disk_texture.png";
+        const TemporaryFile uppercase_file{std::filesystem::temp_directory_path() / "helios_test_uppercase_extension.PNG"};
+        std::filesystem::copy_file(helios::resolveFilePath(lowercase_file), uppercase_file.path, std::filesystem::copy_options::overwrite_existing);
+
+        Context ctx;
+        const uint lowercase_patch = ctx.addPatch(nullorigin, make_vec2(1, 1), nullrotation, lowercase_file.c_str());
+        DOCTEST_REQUIRE(ctx.primitiveTextureHasTransparencyChannel(lowercase_patch));
+
+        uint uppercase_patch = 0;
+        DOCTEST_REQUIRE_NOTHROW(uppercase_patch = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1), nullrotation, uppercase_file.path.string().c_str()));
+        DOCTEST_CHECK(ctx.primitiveTextureHasTransparencyChannel(uppercase_patch));
+        DOCTEST_CHECK(ctx.getPrimitiveSolidFraction(uppercase_patch) == doctest::Approx(ctx.getPrimitiveSolidFraction(lowercase_patch)));
+        DOCTEST_CHECK(ctx.getPrimitiveSolidFraction(uppercase_patch) < 0.99f);
+    }
 }
 
 TEST_CASE("Texture and material changes reach the primitives using them") {
@@ -2042,8 +2181,8 @@ TEST_CASE("Texture and material changes reach the primitives using them") {
         }
     }
 
-    SUBCASE("Changing the subdivision of a tile that lost a sub-patch keeps its material") {
-        // The remaining sub-patches no longer line up with the subdivision grid, so a new sub-patch cannot be matched to the old one in its cell
+    SUBCASE("Changing the subdivision of a tile that lost a sub-patch skips it with a warning and keeps its material") {
+        // A tile with missing sub-patches is not regenerated, so its remaining sub-patches and their material are left as they were
         Context ctx;
         ctx.addMaterial("diamond");
         ctx.setMaterialTexture("diamond", diamond_texture);
@@ -2052,7 +2191,14 @@ TEST_CASE("Texture and material changes reach the primitives using them") {
         ctx.deletePrimitive(ctx.getObjectPrimitiveUUIDs(tile).back());
         DOCTEST_REQUIRE(ctx.getObjectPrimitiveUUIDs(tile).size() == 3);
 
-        ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
+        std::string warnings;
+        {
+            capture_cerr capture;
+            ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
+            warnings = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warnings.find("is missing primitives") != std::string::npos);
+        DOCTEST_CHECK(ctx.getObjectPrimitiveUUIDs(tile).size() == 3);
 
         for (uint UUID: ctx.getObjectPrimitiveUUIDs(tile)) {
             DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == "diamond");
@@ -2336,6 +2482,55 @@ TEST_CASE("Primitive spectral texture") {
         DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralPalette(untextured, "old"));
         DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralPalette(std::vector<uint>{patch, untextured}, "young"));
         DOCTEST_CHECK(ctx.getPrimitiveSpectralPalette(patch) == "old");
+    }
+
+    SUBCASE("The spectral texture revision advances when a primitive's class map or palette changes") {
+        Context ctx;
+        ctx.addSpectralPalette("young", two_classes);
+        const uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, shape_texture.c_str());
+        uint64_t revision = ctx.getSpectralTextureRevision();
+        auto advanced = [&]() {
+            const uint64_t now = ctx.getSpectralTextureRevision();
+            const bool moved = now > revision;
+            revision = now;
+            return moved;
+        };
+        DOCTEST_CHECK(!advanced());
+
+        ctx.setPrimitiveSpectralTexture(patch, class_map, "young");
+        DOCTEST_CHECK(advanced());
+        ctx.setPrimitiveSpectralTexture(patch, class_map, "young"); // what it already has
+        DOCTEST_CHECK(!advanced());
+
+        // Registering a palette changes no primitive; switching a primitive to it does
+        ctx.addSpectralPalette("old", three_classes);
+        DOCTEST_CHECK(!advanced());
+        ctx.setPrimitiveSpectralPalette(patch, "old");
+        DOCTEST_CHECK(advanced());
+        ctx.setPrimitiveSpectralPalette(patch, "old");
+        DOCTEST_CHECK(!advanced());
+        ctx.setPrimitiveSpectralTexture(patch, class_map, "young"); // the same class map with another palette
+        DOCTEST_CHECK(advanced());
+
+        // Primitive data and a rejected change leave it alone
+        ctx.setPrimitiveData(patch, "reflectivity_PAR", 0.1f);
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveSpectralPalette(patch, "missing"));
+        DOCTEST_CHECK(!advanced());
+
+        ctx.clearPrimitiveSpectralTexture(patch);
+        DOCTEST_CHECK(advanced());
+        ctx.clearPrimitiveSpectralTexture(patch); // it has none left
+        DOCTEST_CHECK(!advanced());
+
+        // A copy of a primitive with a spectral texture is a primitive given one; a copy of one without is not
+        const uint untextured_copy = ctx.copyPrimitive(patch);
+        DOCTEST_CHECK(!ctx.primitiveHasSpectralTexture(untextured_copy));
+        DOCTEST_CHECK(!advanced());
+        ctx.setPrimitiveSpectralTexture(patch, class_map, "young");
+        DOCTEST_CHECK(advanced());
+        const uint textured_copy = ctx.copyPrimitive(patch);
+        DOCTEST_CHECK(ctx.primitiveHasSpectralTexture(textured_copy));
+        DOCTEST_CHECK(advanced());
     }
 
     SUBCASE("A class map that does not match the primitive is rejected and changes nothing") {
@@ -5027,9 +5222,7 @@ TEST_CASE("Error Handling") {
         uint tri = context_test.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), RGB::green);
         capture_cerr cerr_buffer;
         vec3 center;
-#ifdef HELIOS_DEBUG
         DOCTEST_CHECK_THROWS_AS(center = context_test.getPatchCenter(tri), std::runtime_error);
-#endif
 
         uint vox = context_test.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
         std::vector<uint> vlist{vox};
@@ -8487,5 +8680,181 @@ TEST_CASE("Normal and bump maps on materials and primitives") {
 
     for (const auto &file: {normal_map, other_normal_map, bump_map}) {
         std::filesystem::remove(file);
+    }
+}
+
+TEST_CASE("Hiding and showing an object updates the primitives returned by getAllUUIDs") {
+    Context ctx;
+    uint patch = ctx.addPatch();
+    uint objID = ctx.addBoxObject(make_vec3(3, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+    DOCTEST_REQUIRE(ctx.getAllUUIDs().size() == 7); // also fills the cached list
+
+    ctx.hideObject(objID);
+    DOCTEST_CHECK(ctx.getAllUUIDs() == std::vector<uint>{patch});
+
+    ctx.showObject(objID);
+    DOCTEST_CHECK(ctx.getAllUUIDs().size() == 7);
+
+    ctx.hideObject(std::vector<uint>{objID});
+    DOCTEST_CHECK(ctx.getAllUUIDs().size() == 1);
+    ctx.showObject(std::vector<uint>{objID});
+    DOCTEST_CHECK(ctx.getAllUUIDs().size() == 7);
+}
+
+TEST_CASE("Tabular timeseries: sub-hourly HHMM times, blank lines, bad cells and out-of-order rows") {
+    const std::string file = (std::filesystem::temp_directory_path() / "helios_test_timeseries_hhmm.csv").string();
+
+    SUBCASE("an HHMM hour column below 0100 is minutes past midnight, not an hour") {
+        {
+            std::ofstream out(file);
+            out << "20250101,0015,1\n20250101,0030,2\n20250101,1200,3\n20250101,1500,4\n20250101,13,5\n";
+        }
+        Context ctx;
+        std::string warnings;
+        {
+            capture_cerr cerr_buffer;
+            ctx.loadTabularTimeseriesData(file, {"date", "hour", "T"}, ",", "YYYYMMDD", 0);
+            warnings = cerr_buffer.get_captured_output();
+        }
+        DOCTEST_CHECK(warnings.empty());
+        DOCTEST_REQUIRE(ctx.getTimeseriesLength("T") == 5);
+        const Date day = make_Date(1, 1, 2025);
+        DOCTEST_CHECK(ctx.queryTimeseriesData("T", day, make_Time(0, 15)) == doctest::Approx(1.f));
+        DOCTEST_CHECK(ctx.queryTimeseriesData("T", day, make_Time(0, 30)) == doctest::Approx(2.f));
+        DOCTEST_CHECK(ctx.queryTimeseriesData("T", day, make_Time(12, 0)) == doctest::Approx(3.f));
+        DOCTEST_CHECK(ctx.queryTimeseriesData("T", day, make_Time(15, 0)) == doctest::Approx(4.f));
+        DOCTEST_CHECK(ctx.queryTimeseriesData("T", day, make_Time(13, 0)) == doctest::Approx(5.f));
+    }
+
+    SUBCASE("a blank line in the middle of the file does not end the load") {
+        {
+            std::ofstream out(file);
+            out << "20250101,0100,1\n20250101,0200,2\n\n20250101,0300,3\n20250101,0400,4\n\n";
+        }
+        Context ctx;
+        ctx.loadTabularTimeseriesData(file, {"date", "hour", "T"}, ",", "YYYYMMDD", 0);
+        DOCTEST_CHECK(ctx.getTimeseriesLength("T") == 4);
+    }
+
+    SUBCASE("a day of year or year that is not a number is an error") {
+        {
+            std::ofstream out(file);
+            out << "2025,1,1,10\n2025,abc,2,11\n";
+        }
+        Context ctx;
+        DOCTEST_CHECK_THROWS(ctx.loadTabularTimeseriesData(file, {"year", "DOY", "hour", "T"}, ",", "YYYYMMDD", 0));
+        {
+            std::ofstream out(file);
+            out << "2025,1,1,10\nabc,2,2,11\n";
+        }
+        Context ctx_year;
+        DOCTEST_CHECK_THROWS(ctx_year.loadTabularTimeseriesData(file, {"year", "DOY", "hour", "T"}, ",", "YYYYMMDD", 0));
+    }
+
+    SUBCASE("points added out of order are kept sorted, and a duplicate time is skipped") {
+        Context ctx;
+        const Date day = make_Date(1, 1, 2025);
+        const std::vector<int> hours = {12, 3, 20, 7, 0, 23, 15, 9};
+        for (int hour: hours) {
+            ctx.addTimeseriesData("T", float(hour), day, make_Time(hour, 0));
+        }
+        {
+            capture_cerr cerr_buffer;
+            ctx.addTimeseriesData("T", 99.f, day, make_Time(7, 0)); // duplicate, in the middle
+            ctx.addTimeseriesData("T", 99.f, day, make_Time(0, 0)); // duplicate, first
+            ctx.addTimeseriesData("T", 99.f, day, make_Time(23, 0)); // duplicate, last
+        }
+        DOCTEST_REQUIRE(ctx.getTimeseriesLength("T") == hours.size());
+        float previous = -1.f;
+        for (uint i = 0; i < ctx.getTimeseriesLength("T"); i++) {
+            const float value = ctx.queryTimeseriesData("T", i);
+            DOCTEST_CHECK(value > previous);
+            DOCTEST_CHECK(value == float(ctx.queryTimeseriesTime("T", i).hour));
+            previous = value;
+        }
+    }
+
+    std::filesystem::remove(file);
+}
+
+TEST_CASE("Type-specific object and primitive methods reject the wrong type in every build type") {
+    // The type and existence checks behind these methods used to exist only in Debug builds. A Release build went on to
+    // dereference the null result of a failed dynamic_cast, and the tube-editing methods did so in every build.
+    Context ctx;
+    const uint tile = ctx.addTileObject(nullorigin, make_vec2(1, 1), nullrotation, make_int2(2, 2));
+    const uint sphere = ctx.addSphereObject(6, make_vec3(3, 0, 0), 0.5f);
+    const uint missing_object = 99999;
+    const uint patch = ctx.addPatch(make_vec3(0, 3, 0), make_vec2(1, 1));
+    const uint triangle = ctx.addTriangle(make_vec3(0, 6, 0), make_vec3(1, 6, 0), make_vec3(0, 7, 0));
+    const uint missing_primitive = 99999;
+
+    // True only for the std::runtime_error raised by helios_runtime_error(). The std::out_of_range of a failed map lookup
+    // does not count, since it names neither the method nor the ID.
+    const auto raisesHeliosError = [](auto &&call) {
+        capture_cerr cerr_buffer;
+        try {
+            call();
+        } catch (const std::runtime_error &) {
+            return true;
+        } catch (...) {
+            return false;
+        }
+        return false;
+    };
+
+    SUBCASE("object ID that does not exist") {
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getTileObjectSize(missing_object)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getSphereObjectRadius(missing_object)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getTubeObjectNodeCount(missing_object)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getBoxObjectCenter(missing_object)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getDiskObjectCenter(missing_object)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getPolymeshObjectVertexCount(missing_object)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getConeObjectLength(missing_object)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { ctx.scaleTubeGirth(missing_object, 2.f); }));
+    }
+
+    SUBCASE("primitive UUID that does not exist") {
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getPatchSize(missing_primitive)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getPatchCenter(missing_primitive)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getTriangleVertex(missing_primitive, 0)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { ctx.setTriangleVertices(missing_primitive, nullorigin, make_vec3(1, 0, 0), make_vec3(0, 1, 0)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getVoxelSize(missing_primitive)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getVoxelCenter(missing_primitive)); }));
+    }
+
+    SUBCASE("object of another type") {
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getTileObjectSize(sphere)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getSphereObjectRadius(tile)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getTubeObjectNodeCount(tile)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getBoxObjectCenter(tile)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getDiskObjectCenter(tile)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getPolymeshObjectVertexCount(tile)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getConeObjectLength(tile)); }));
+    }
+
+    SUBCASE("tube editing of an object that is not a tube") {
+        DOCTEST_CHECK(raisesHeliosError([&] { ctx.appendTubeSegment(tile, make_vec3(0, 0, 1), 0.1f, RGB::green); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { ctx.appendTubeSegment(tile, make_vec3(0, 0, 1), 0.1f, "lib/images/solid.jpg", make_vec2(0.f, 1.f)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { ctx.scaleTubeGirth(tile, 2.f); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { ctx.setTubeRadii(tile, {0.1f, 0.1f}); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { ctx.scaleTubeLength(tile, 2.f); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { ctx.pruneTubeNodes(tile, 1); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { ctx.setTubeNodes(tile, {nullorigin, make_vec3(0, 0, 1)}); }));
+    }
+
+    SUBCASE("primitive of another type") {
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getPatchSize(triangle)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getPatchCenter(triangle)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getTriangleVertex(patch, 0)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { ctx.setTriangleVertices(patch, nullorigin, make_vec3(1, 0, 0), make_vec3(0, 1, 0)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getVoxelSize(patch)); }));
+        DOCTEST_CHECK(raisesHeliosError([&] { static_cast<void>(ctx.getVoxelCenter(patch)); }));
+    }
+
+    SUBCASE("the matching type still works") {
+        DOCTEST_CHECK(ctx.getTileObjectSize(tile).x == doctest::Approx(1.f));
+        DOCTEST_CHECK(ctx.getSphereObjectRadius(sphere).x == doctest::Approx(0.5f));
+        DOCTEST_CHECK(ctx.getPatchSize(patch).x == doctest::Approx(1.f));
+        DOCTEST_CHECK(ctx.getTriangleVertex(triangle, 1).x == doctest::Approx(1.f));
     }
 }

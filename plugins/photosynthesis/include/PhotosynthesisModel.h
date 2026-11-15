@@ -911,7 +911,11 @@ public:
     //! Add optional output primitive data values to the Context
     /**
      * \param[in] label Name of primitive data. Available labels for the Farquhar model: "Ci" (intercellular CO2), "limitation_state" (0=Rubisco-limited, 1=electron transport-limited), "Gamma_CO2" (CO2 compensation point), "electron_transport_ratio"
-     * (relative light saturation Ja/Je of van der Tol et al. 2014: electron transport used by carbon metabolism divided by its light-limited potential; 1 in the dark and falling as light saturates photosynthesis; drives the RadiationModel SIF fluorescence yield). Additional labels for the C4 model: "Ci", "limitation_state" (1=enzyme-limited, 2=electron-transport-limited), "Cm" (mesophyll cytosolic CO2), "Vp" (PEP carboxylation rate), "electron_transport_ratio".
+     * (relative light saturation Ja/Je of van der Tol et al. 2014: electron transport used by carbon metabolism divided by its light-limited potential; 1 in the dark and falling as light saturates photosynthesis; drives the RadiationModel SIF
+     * fluorescence yield), "electron_transport_rate" (potential electron transport rate J at the leaf's light and temperature, umol/m^2/s), "dark_respiration" (day respiration Rd at the leaf temperature, umol/m^2/s). Additional labels for the C4
+     * model: "Ci", "limitation_state" (1=enzyme-limited, 2=electron-transport-limited), "Cm" (mesophyll cytosolic CO2), "Vp" (PEP carboxylation rate), "electron_transport_ratio".
+     * \note "electron_transport_rate" and "dark_respiration" are also written automatically for the Farquhar model when the StomatalConductanceModel Buckley et al. (2026) model is in use (global data "buckley2026_stomatal_model_enabled" is 1), since
+     * that model needs them.
      */
     void optionalOutputPrimitiveData(const char *label);
 
@@ -991,6 +995,17 @@ private:
     static float evaluateCm_C4(float Cm, std::vector<float> &variables, const C4ModelCoefficients &params);
 
     static float respondToTemperature(const PhotosyntheticTemperatureResponseParameters *temperatureResponseParameters, float T);
+
+    //! Potential electron transport rate and day respiration of the Farquhar model at a given light and leaf temperature
+    /**
+     * Neither depends on the intercellular CO2 concentration, so they are evaluated directly rather than by the Ci solver.
+     * \param[in] params Farquhar model coefficients
+     * \param[in] i_PAR Incident PAR photon flux density (umol/m^2/s)
+     * \param[in] TL Leaf temperature (K)
+     * \param[out] J Potential electron transport rate (umol/m^2/s): the smaller root of theta*J^2 - (alpha*Q + Jmax)*J + alpha*Q*Jmax = 0
+     * \param[out] Rd Day respiration (umol/m^2/s)
+     */
+    static void evaluateElectronTransportAndRespiration(const FarquharModelCoefficients &params, float i_PAR, float TL, double &J, float &Rd);
 
     float i_PAR_default;
     float TL_default;

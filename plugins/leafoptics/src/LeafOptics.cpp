@@ -565,10 +565,11 @@ const std::vector<LeafOptics::LeafClassDefinition> &LeafOptics::classDefinitions
     if (cached != class_map_definitions.end()) {
         return cached->second;
     }
-    if (!std::filesystem::exists(class_map_file)) {
-        helios_runtime_error("ERROR (LeafOptics): The class map '" + class_map_file + "' given by the primitive data \"spectral_class_map\" does not exist.");
+    const std::filesystem::path resolved_class_map_file = helios::tryResolveFilePath(class_map_file);
+    if (resolved_class_map_file.empty()) {
+        helios_runtime_error("ERROR (LeafOptics): The class map '" + class_map_file + "' given by the primitive data \"spectral_class_map\" does not exist relative to the working directory or the HELIOS_BUILD directory.");
     }
-    const std::string definitions_file = std::filesystem::path(class_map_file).replace_extension(".xml").string();
+    const std::string definitions_file = std::filesystem::path(resolved_class_map_file).replace_extension(".xml").string();
     if (!std::filesystem::exists(definitions_file)) {
         helios_runtime_error("ERROR (LeafOptics): The class map '" + class_map_file + "' has no class definitions. They must be in the XML file '" + definitions_file + "' (see the LeafOptics documentation, \"Leaves with a class map\").");
     }

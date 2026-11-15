@@ -2186,6 +2186,9 @@ CollisionDetection::OptimalPathResult CollisionDetection::findOptimalConePath(co
     result.collisionCount = 0;
     result.confidence = 0.0f;
 
+    // Build or refresh the acceleration structure as the other queries do. Without this, the first query on a new object (or
+    // one after clearBVH()) found no nodes and reported a clear path without casting a ray.
+    ensureBVHCurrent();
 
     if (bvh_nodes.empty()) {
         // No geometry to collide with, central axis is optimal

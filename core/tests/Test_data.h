@@ -209,6 +209,25 @@ TEST_CASE("Object Data") {
         ctx.duplicateObjectData(o2, "my_data", "my_data_copy");
         DOCTEST_CHECK(ctx.doesObjectDataExist(o2, "my_data_copy"));
 
+        // Regression: renameObjectData() and duplicateObjectData() wrote the new label's type straight onto the object,
+        // bypassing the Context-wide type registry that the label-only getObjectDataType() reads. The data existed on
+        // the object but the Context reported that the label did not exist at all, which broke every caller that looks
+        // a type up by label, and left the label free to take a value of a different type on another object.
+        DOCTEST_CHECK_NOTHROW(static_cast<void>(ctx.getObjectDataType("new_name")));
+        DOCTEST_CHECK(ctx.getObjectDataType("new_name") == HELIOS_TYPE_INT);
+        DOCTEST_CHECK_NOTHROW(static_cast<void>(ctx.getObjectDataType("my_data_copy")));
+        DOCTEST_CHECK(ctx.getObjectDataType("my_data_copy") == HELIOS_TYPE_INT);
+        bool mixed_type_rejected = false;
+        {
+            capture_cerr cerr_buffer;
+            try {
+                ctx.setObjectData(o2, "new_name", std::string("text"));
+            } catch (const std::runtime_error &) {
+                mixed_type_rejected = true;
+            }
+        }
+        DOCTEST_CHECK(mixed_type_rejected);
+
         std::vector<std::string> all_obj_labels = ctx.listAllObjectDataLabels();
         DOCTEST_CHECK(std::find(all_obj_labels.begin(), all_obj_labels.end(), "my_data") != all_obj_labels.end());
         DOCTEST_CHECK(std::find(all_obj_labels.begin(), all_obj_labels.end(), "new_name") != all_obj_labels.end());
@@ -492,6 +511,69 @@ TEST_CASE("Primitive Data") {
         ctx.clearPrimitiveData(p1, "new_data_name");
         DOCTEST_CHECK(!ctx.doesPrimitiveDataExist(p1, "new_data_name"));
         ctx.clearPrimitiveData(uuids, "global_copy_test");
+    }
+
+    SUBCASE("Setting data for a list of primitives counts the primitives that gain it") {
+        // A label is listed for as long as some primitive has data with it, whichever setter gave it to them. Each label is given to one primitive
+        // on its own first, so that the list setters meet primitives that already have the data and primitives that do not.
+        Context ctx_list;
+        std::vector<uint> patches;
+        for (int i = 0; i < 2000; i++) {
+            patches.push_back(ctx_list.addPatch());
+        }
+        std::vector<float> fluxes(patches.size());
+        for (size_t i = 0; i < patches.size(); i++) {
+            fluxes.at(i) = float(i);
+        }
+        auto listed = [&](const std::string &label) {
+            const std::vector<std::string> labels = ctx_list.listAllPrimitiveDataLabels();
+            return std::find(labels.begin(), labels.end(), label) != labels.end();
+        };
+
+        ctx_list.setPrimitiveData(patches.at(7), "flux", -1.f);
+        ctx_list.setPrimitiveData(patches, "flux", fluxes); // a value for each primitive
+        ctx_list.setPrimitiveData(patches, "flux", fluxes); // every primitive has it now
+        ctx_list.setPrimitiveData(patches.at(11), "albedo", -1.f);
+        ctx_list.setPrimitiveData(patches, "albedo", 0.25f); // one value for all of them
+        ctx_list.setPrimitiveData(patches, "albedo", 0.5f);
+
+        bool values_correct = true;
+        for (size_t i = 0; i < patches.size(); i++) {
+            float flux, albedo;
+            ctx_list.getPrimitiveData(patches.at(i), "flux", flux);
+            ctx_list.getPrimitiveData(patches.at(i), "albedo", albedo);
+            values_correct = values_correct && flux == float(i) && albedo == 0.5f;
+        }
+        DOCTEST_CHECK(values_correct);
+
+        // Removed from all but the last primitive, each label is still listed; removed from the last, it is not
+        for (const char *label: {"flux", "albedo"}) {
+            for (size_t i = 0; i + 1 < patches.size(); i++) {
+                ctx_list.clearPrimitiveData(patches.at(i), label);
+            }
+            DOCTEST_CHECK(listed(label));
+            ctx_list.clearPrimitiveData(patches.back(), label);
+            DOCTEST_CHECK(!listed(label));
+        }
+    }
+
+    SUBCASE("Setting data for a list that names a primitive that does not exist is an error that changes nothing") {
+        Context ctx_list;
+        const uint first = ctx_list.addPatch();
+        const uint last = ctx_list.addPatch();
+        const std::vector<uint> with_missing{first, 99999u, last};
+
+        DOCTEST_CHECK_THROWS_AS(ctx_list.setPrimitiveData(with_missing, "flux", std::vector<float>{1.f, 2.f, 3.f}), std::runtime_error);
+        DOCTEST_CHECK_THROWS_AS(ctx_list.setPrimitiveData(with_missing, "albedo", 0.5f), std::runtime_error);
+
+        for (const char *label: {"flux", "albedo"}) {
+            DOCTEST_CHECK(!ctx_list.doesPrimitiveDataExist(first, label));
+            DOCTEST_CHECK(!ctx_list.doesPrimitiveDataExist(last, label));
+        }
+        // No primitive has the data, so the labels are not listed
+        const std::vector<std::string> labels = ctx_list.listAllPrimitiveDataLabels();
+        DOCTEST_CHECK(std::find(labels.begin(), labels.end(), "flux") == labels.end());
+        DOCTEST_CHECK(std::find(labels.begin(), labels.end(), "albedo") == labels.end());
     }
 
     SUBCASE("Calculations") {
@@ -1552,6 +1634,48 @@ TEST_CASE("Advanced Area-Weighted Calculations") {
     }
 }
 
+TEST_CASE("The global data version changes whenever the data under a label changes") {
+    // A plug-in that read global data compares versions to tell whether it changed; a version seen before must never come back with other data
+    Context ctx;
+    std::map<std::string, std::set<uint64_t>> versions_seen; // by label
+    auto version_is_new = [&](const char *label) { return ctx.getGlobalDataVersion(label) != 0 && versions_seen[label].insert(ctx.getGlobalDataVersion(label)).second; };
+
+    ctx.setGlobalData("f", 1.f);
+    DOCTEST_CHECK(version_is_new("f"));
+    float value = 0;
+    ctx.getGlobalData("f", value);
+    DOCTEST_CHECK(!version_is_new("f")); // reading changes nothing
+
+    ctx.setGlobalData("f", 2.f);
+    DOCTEST_CHECK(version_is_new("f"));
+    ctx.incrementGlobalData("f", 1.f);
+    DOCTEST_CHECK(version_is_new("f"));
+    ctx.setGlobalData("d", 1.0);
+    DOCTEST_CHECK(version_is_new("d"));
+    ctx.incrementGlobalData("d", 1.0);
+    DOCTEST_CHECK(version_is_new("d"));
+    ctx.setGlobalData("i", 1);
+    DOCTEST_CHECK(version_is_new("i"));
+    ctx.incrementGlobalData("i", 1);
+    DOCTEST_CHECK(version_is_new("i"));
+    ctx.setGlobalData("u", 1u);
+    DOCTEST_CHECK(version_is_new("u"));
+    ctx.incrementGlobalData("u", 1u);
+    DOCTEST_CHECK(version_is_new("u"));
+
+    // Cleared and set again, or replaced by renaming other data onto the label, the label holds different data
+    ctx.clearGlobalData("f");
+    DOCTEST_CHECK(ctx.getGlobalDataVersion("f") == 0);
+    ctx.setGlobalData("f", 5.f);
+    DOCTEST_CHECK(version_is_new("f"));
+    ctx.renameGlobalData("d", "f");
+    DOCTEST_CHECK(version_is_new("f"));
+    ctx.renameGlobalData("f", "d");
+    DOCTEST_CHECK(version_is_new("d"));
+    ctx.duplicateGlobalData("d", "copy");
+    DOCTEST_CHECK(version_is_new("copy"));
+}
+
 TEST_CASE("Global Data Scaling") {
     Context ctx;
 
@@ -1787,9 +1911,7 @@ TEST_CASE("General Error Handling") {
     uint tri = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), RGB::green);
     capture_cerr cerr_buffer;
     vec3 center;
-#ifdef HELIOS_DEBUG
     DOCTEST_CHECK_THROWS_AS(center = ctx.getPatchCenter(tri), std::runtime_error);
-#endif
 
     uint vox = ctx.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
     std::vector<uint> vlist{vox};
@@ -2014,5 +2136,261 @@ TEST_CASE("Data Type Consistency and Caching") {
 
         // Should register as HELIOS_TYPE_FLOAT (vector types use base type)
         DOCTEST_CHECK(ctx.getPrimitiveDataType("temperature_profile") == HELIOS_TYPE_FLOAT);
+    }
+}
+
+TEST_CASE("Primitive data and area reductions keep small addends beside a large running sum") {
+    // One large value followed by many small ones. In single precision each small addend is below half the spacing of the
+    // running sum and is lost, which is how scene-wide sums over millions of primitives go wrong.
+    Context ctx;
+    std::vector<uint> UUIDs;
+    UUIDs.push_back(ctx.addPatch(make_vec3(0, 0, 0), make_vec2(10000, 10000))); // area 1e8
+    const int small_count = 1000;
+    for (int i = 0; i < small_count; i++) {
+        UUIDs.push_back(ctx.addPatch(make_vec3(float(i), 0, 1), make_vec2(1, 1))); // area 1
+    }
+    ctx.setPrimitiveData(UUIDs.front(), "value", 1.e8f);
+    ctx.setPrimitiveData(UUIDs.front(), "flag", 1.f);
+    ctx.setPrimitiveData(UUIDs.front(), "vector", make_vec3(1.e8f, 1.e8f, 1.e8f));
+    for (int i = 1; i <= small_count; i++) {
+        ctx.setPrimitiveData(UUIDs.at(i), "value", 1.f);
+        ctx.setPrimitiveData(UUIDs.at(i), "flag", 0.f);
+        ctx.setPrimitiveData(UUIDs.at(i), "vector", make_vec3(1.f, 1.f, 1.f));
+    }
+    const double exact_sum = 1.e8 + small_count;
+
+    float sum;
+    ctx.calculatePrimitiveDataSum(UUIDs, "value", sum);
+    DOCTEST_CHECK(sum == doctest::Approx(exact_sum).epsilon(1e-7));
+
+    float mean;
+    ctx.calculatePrimitiveDataMean(UUIDs, "value", mean);
+    DOCTEST_CHECK(mean == doctest::Approx(exact_sum / (small_count + 1)).epsilon(1e-6));
+
+    vec3 vector_sum;
+    ctx.calculatePrimitiveDataSum(UUIDs, "vector", vector_sum);
+    DOCTEST_CHECK(vector_sum.y == doctest::Approx(exact_sum).epsilon(1e-7));
+
+    vec3 vector_mean;
+    ctx.calculatePrimitiveDataMean(UUIDs, "vector", vector_mean);
+    DOCTEST_CHECK(vector_mean.z == doctest::Approx(exact_sum / (small_count + 1)).epsilon(1e-6));
+
+    DOCTEST_CHECK(ctx.sumPrimitiveSurfaceArea(UUIDs) == doctest::Approx(exact_sum).epsilon(1e-7));
+
+    // "flag" is 1 on the large patch only, so its area-weighted sum is the large area and its area-weighted mean is the
+    // large patch's share of the total area
+    ctx.setPrimitiveData(UUIDs, "one", 1.f);
+    float area_weighted_sum;
+    ctx.calculatePrimitiveDataAreaWeightedSum(UUIDs, "one", area_weighted_sum);
+    DOCTEST_CHECK(area_weighted_sum == doctest::Approx(exact_sum).epsilon(1e-7));
+
+    float area_weighted_mean;
+    ctx.calculatePrimitiveDataAreaWeightedMean(UUIDs, "flag", area_weighted_mean);
+    DOCTEST_CHECK(area_weighted_mean == doctest::Approx(1.e8 / exact_sum).epsilon(1e-6));
+
+    uint objID = ctx.addPolymeshObject(UUIDs);
+    DOCTEST_CHECK(ctx.getObjectArea(objID) == doctest::Approx(exact_sum).epsilon(1e-7));
+
+    ctx.setObjectDataFromPrimitiveDataMean(objID, "value");
+    float object_mean;
+    ctx.getObjectData(objID, "value", object_mean);
+    DOCTEST_CHECK(object_mean == doctest::Approx(exact_sum / (small_count + 1)).epsilon(1e-6));
+}
+
+TEST_CASE("Batch setPrimitiveData casts to the registered type and checks the vector sizes") {
+    Context ctx;
+    std::vector<uint> UUIDs;
+    for (int i = 0; i < 4; i++) {
+        UUIDs.push_back(ctx.addPatch(make_vec3(float(i), 0, 0), make_vec2(1, 1)));
+    }
+    ctx.setPrimitiveData(UUIDs.front(), "T", 300.f);
+    DOCTEST_REQUIRE(ctx.getPrimitiveDataType("T") == HELIOS_TYPE_FLOAT);
+
+    SUBCASE("one value per primitive") {
+        const std::vector<double> values = {301.0, 302.0, 303.0, 304.0};
+        {
+            capture_cerr cerr_buffer; // the cast is announced with a warning
+            ctx.setPrimitiveData(UUIDs, "T", values);
+        }
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("T") == HELIOS_TYPE_FLOAT);
+        for (size_t i = 0; i < UUIDs.size(); i++) {
+            float stored = 0;
+            DOCTEST_CHECK_NOTHROW(ctx.getPrimitiveData(UUIDs.at(i), "T", stored));
+            DOCTEST_CHECK(stored == doctest::Approx(float(values.at(i))));
+        }
+    }
+
+    SUBCASE("one value for all primitives") {
+        {
+            capture_cerr cerr_buffer;
+            ctx.setPrimitiveData(UUIDs, "T", 310.0);
+        }
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("T") == HELIOS_TYPE_FLOAT);
+        for (uint UUID: UUIDs) {
+            float stored = 0;
+            DOCTEST_CHECK_NOTHROW(ctx.getPrimitiveData(UUID, "T", stored));
+            DOCTEST_CHECK(stored == doctest::Approx(310.f));
+        }
+    }
+
+    SUBCASE("mismatched sizes are rejected in every build type") {
+        const std::vector<float> too_many = {1.f, 2.f, 3.f, 4.f, 5.f};
+        DOCTEST_CHECK_THROWS(ctx.setPrimitiveData(UUIDs, "T", too_many));
+    }
+}
+
+TEST_CASE("Batch setObjectData checks the vector sizes in every build type") {
+    // The size check used to exist only in Debug builds, so a Release build read past the end of a data vector that was
+    // shorter than the list of object IDs, and silently dropped the extra values of one that was longer.
+    Context ctx;
+    std::vector<uint> objIDs;
+    for (int i = 0; i < 4; i++) {
+        objIDs.push_back(ctx.addTileObject(make_vec3(float(i), 0, 0), make_vec2(1, 1), nullrotation, make_int2(1, 1)));
+    }
+
+    SUBCASE("more values than objects") {
+        const std::vector<float> too_many = {1.f, 2.f, 3.f, 4.f, 5.f};
+        bool rejected = false;
+        {
+            capture_cerr cerr_buffer;
+            try {
+                ctx.setObjectData(objIDs, "T", too_many);
+            } catch (const std::runtime_error &) {
+                rejected = true;
+            }
+        }
+        DOCTEST_CHECK(rejected);
+        DOCTEST_CHECK(!ctx.doesObjectDataExist(objIDs.front(), "T"));
+    }
+
+    SUBCASE("fewer values than objects") {
+        const std::vector<float> too_few = {1.f, 2.f, 3.f};
+        bool rejected = false;
+        {
+            capture_cerr cerr_buffer;
+            try {
+                ctx.setObjectData(objIDs, "T", too_few);
+            } catch (const std::runtime_error &) {
+                rejected = true;
+            }
+        }
+        DOCTEST_CHECK(rejected);
+        DOCTEST_CHECK(!ctx.doesObjectDataExist(objIDs.front(), "T"));
+    }
+
+    SUBCASE("one value per object is stored") {
+        const std::vector<float> values = {1.f, 2.f, 3.f, 4.f};
+        DOCTEST_CHECK_NOTHROW(ctx.setObjectData(objIDs, "T", values));
+        for (size_t i = 0; i < objIDs.size(); i++) {
+            float stored = 0;
+            DOCTEST_CHECK_NOTHROW(ctx.getObjectData(objIDs.at(i), "T", stored));
+            DOCTEST_CHECK(stored == doctest::Approx(values.at(i)));
+        }
+    }
+}
+
+TEST_CASE("setObjectData casts a value to the type already registered for its label") {
+    // A numeric value of a type other than the label's registered type was announced as "will be cast" but was stored as
+    // given, so one label held values of two types and a read with the registered type failed on the mismatched object.
+    Context ctx;
+    std::vector<uint> objIDs;
+    for (int i = 0; i < 4; i++) {
+        objIDs.push_back(ctx.addTileObject(make_vec3(float(i), 0, 0), make_vec2(1, 1), nullrotation, make_int2(1, 1)));
+    }
+    ctx.setObjectData(objIDs.front(), "T", 300.f);
+    DOCTEST_REQUIRE(ctx.getObjectDataType("T") == HELIOS_TYPE_FLOAT);
+
+    SUBCASE("one value on one object") {
+        {
+            capture_cerr cerr_buffer; // the cast is announced with a warning
+            ctx.setObjectData(objIDs.at(1), "T", 301.0);
+        }
+        DOCTEST_CHECK(ctx.getObjectDataType("T") == HELIOS_TYPE_FLOAT);
+        float stored = 0;
+        DOCTEST_CHECK_NOTHROW(ctx.getObjectData(objIDs.at(1), "T", stored));
+        DOCTEST_CHECK(stored == doctest::Approx(301.f));
+    }
+
+    SUBCASE("one value for a list of objects") {
+        {
+            capture_cerr cerr_buffer;
+            ctx.setObjectData(objIDs, "T", 310.0);
+        }
+        for (uint objID: objIDs) {
+            float stored = 0;
+            DOCTEST_CHECK_NOTHROW(ctx.getObjectData(objID, "T", stored));
+            DOCTEST_CHECK(stored == doctest::Approx(310.f));
+        }
+    }
+
+    SUBCASE("one value for a two-dimensional list of objects") {
+        const std::vector<std::vector<uint>> objIDs_2D = {{objIDs.at(0), objIDs.at(1)}, {objIDs.at(2), objIDs.at(3)}};
+        {
+            capture_cerr cerr_buffer;
+            ctx.setObjectData(objIDs_2D, "T", 320.0);
+        }
+        for (uint objID: objIDs) {
+            float stored = 0;
+            DOCTEST_CHECK_NOTHROW(ctx.getObjectData(objID, "T", stored));
+            DOCTEST_CHECK(stored == doctest::Approx(320.f));
+        }
+    }
+
+    SUBCASE("one value for a three-dimensional list of objects") {
+        const std::vector<std::vector<std::vector<uint>>> objIDs_3D = {{{objIDs.at(0), objIDs.at(1)}}, {{objIDs.at(2)}, {objIDs.at(3)}}};
+        {
+            capture_cerr cerr_buffer;
+            ctx.setObjectData(objIDs_3D, "T", 330.0);
+        }
+        for (uint objID: objIDs) {
+            float stored = 0;
+            DOCTEST_CHECK_NOTHROW(ctx.getObjectData(objID, "T", stored));
+            DOCTEST_CHECK(stored == doctest::Approx(330.f));
+        }
+    }
+
+    SUBCASE("one value per object") {
+        const std::vector<double> values = {341.0, 342.0, 343.0, 344.0};
+        {
+            capture_cerr cerr_buffer;
+            ctx.setObjectData(objIDs, "T", values);
+        }
+        for (size_t i = 0; i < objIDs.size(); i++) {
+            float stored = 0;
+            DOCTEST_CHECK_NOTHROW(ctx.getObjectData(objIDs.at(i), "T", stored));
+            DOCTEST_CHECK(stored == doctest::Approx(float(values.at(i))));
+        }
+    }
+
+    SUBCASE("several values on one object") {
+        const std::vector<double> values = {351.0, 352.0, 353.0};
+        {
+            capture_cerr cerr_buffer;
+            ctx.setObjectData(objIDs.at(1), "T", values);
+        }
+        std::vector<float> stored;
+        DOCTEST_CHECK_NOTHROW(ctx.getObjectData(objIDs.at(1), "T", stored));
+        DOCTEST_REQUIRE(stored.size() == values.size());
+        for (size_t i = 0; i < values.size(); i++) {
+            DOCTEST_CHECK(stored.at(i) == doctest::Approx(float(values.at(i))));
+        }
+    }
+
+    SUBCASE("a signed integer onto an unsigned label") {
+        ctx.setObjectData(objIDs.front(), "count", uint(3));
+        {
+            capture_cerr cerr_buffer;
+            ctx.setObjectData(objIDs.at(1), "count", 7);
+        }
+        uint stored = 0;
+        DOCTEST_CHECK_NOTHROW(ctx.getObjectData(objIDs.at(1), "count", stored));
+        DOCTEST_CHECK(stored == 7u);
+    }
+
+    SUBCASE("a value of the registered type is stored unchanged") {
+        ctx.setObjectData(objIDs.at(1), "T", 361.f);
+        float stored = 0;
+        DOCTEST_CHECK_NOTHROW(ctx.getObjectData(objIDs.at(1), "T", stored));
+        DOCTEST_CHECK(stored == doctest::Approx(361.f));
     }
 }

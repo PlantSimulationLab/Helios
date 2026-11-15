@@ -1524,7 +1524,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  radiationmodel.runBand("PAR"); //rebuilds the geometry automatically before tracing
  ~~~~~~
 
- \warning The <tt>twosided_flag</tt> and <tt>invisibility_flag</tt> primitive data (and a <tt>twosided_flag</tt> set through a material) are read by the ray tracer when the geometry is built. Because setting primitive data does not trigger a rebuild, \ref RadiationModel::updateGeometry() "updateGeometry()" must be called explicitly after changing them on primitives that were already part of a previous run.
+ \warning The <tt>twosided_flag</tt> and <tt>invisibility_flag</tt> primitive data (and a <tt>twosided_flag</tt> set through a material) are read by the ray tracer when the geometry is built. Because setting primitive data does not trigger a rebuild, \ref RadiationModel::updateGeometry() "updateGeometry()" must be called explicitly after changing them on primitives that were already part of a previous run, whether through primitive data, a material's two-sided flag, or a change of material. A change that has not been followed by updateGeometry() raises an error at the next \ref RadiationModel::runBand() "runBand()", as a changed normal map does.
 
  The geometry update can be somewhat costly, so \ref RadiationModel::updateGeometry() "updateGeometry()" may also be called directly simply to control when that cost is incurred:
 
@@ -1535,6 +1535,8 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
  ~~~~~~
 
  A final consideration is the \ref RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) "updateGeometry(UUIDs)" overload, which restricts the model to a subset of the Context primitives. A subset build is never rebuilt automatically, since doing so would discard the requested subset; call it again after modifying Context geometry.
+
+ The radiative properties of surfaces are likewise read from the Context automatically: a change to the primitive data, material data, spectra or spectral textures that set them takes effect at the next call to \ref RadiationModel::runBand() "runBand()". Reading them takes time in proportion to the number of primitives, so it is repeated only when something they are computed from has changed since the last run: that primitive data, a material, a spectral texture, the global data of a spectrum in use, the geometry, or the bands, sources and cameras of the model. Primitive data written as output by the radiation model or by other plug-ins does not count, and neither do source and diffuse fluxes that change from one run to the next, as in a loop over time steps. The exception is a band in which the sources and the sky have different spectra: their shares of the band's flux then weight the reflectivity and transmissivity of diffuse and scattered radiation (see above), so a change in those shares repeats the reading.
 
  The model will create several primitive data in the context with values set using simulation results (see Sect. "Output Primitive Data" above).
 

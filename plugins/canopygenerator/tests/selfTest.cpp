@@ -225,3 +225,63 @@ DOCTEST_TEST_CASE("CanopyGenerator White Spruce canopy_configuration selects the
 int CanopyGenerator::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
+
+DOCTEST_TEST_CASE("CanopyGenerator keeps the plants of earlier canopies when another canopy is built") {
+    Context context_test;
+    CanopyGenerator canopygenerator(&context_test);
+    canopygenerator.disableMessages();
+
+    VSPGrapevineParameters vines;
+    vines.plant_count = make_int2(2, 1);
+    canopygenerator.buildCanopy(vines);
+    DOCTEST_REQUIRE(canopygenerator.getPlantCount() == 2);
+    const auto vine_leaves = canopygenerator.getLeafUUIDs(1);
+    const auto vine_trunk = canopygenerator.getTrunkUUIDs(1);
+    DOCTEST_REQUIRE(!vine_leaves.empty());
+    DOCTEST_REQUIRE(!vine_trunk.empty());
+
+    SphericalCrownsCanopyParameters spheres;
+    spheres.plant_count = make_int2(1, 1);
+    spheres.canopy_origin = make_vec3(20, 0, 0);
+    canopygenerator.buildCanopy(spheres);
+    DOCTEST_CHECK(canopygenerator.getPlantCount() == 3);
+    DOCTEST_CHECK(canopygenerator.getLeafUUIDs(1) == vine_leaves);
+    const auto sphere_leaves = canopygenerator.getLeafUUIDs(2);
+    DOCTEST_CHECK(!sphere_leaves.empty());
+
+    ConicalCrownsCanopyParameters cones;
+    cones.plant_count = make_int2(1, 1);
+    cones.canopy_origin = make_vec3(40, 0, 0);
+    canopygenerator.buildCanopy(cones);
+    DOCTEST_CHECK(canopygenerator.getPlantCount() == 4);
+    DOCTEST_CHECK(canopygenerator.getLeafUUIDs(2) == sphere_leaves);
+    const auto cone_leaves = canopygenerator.getLeafUUIDs(3);
+    DOCTEST_CHECK(!cone_leaves.empty());
+
+    HomogeneousCanopyParameters homogeneous;
+    homogeneous.canopy_origin = make_vec3(60, 0, 0);
+    canopygenerator.buildCanopy(homogeneous);
+    DOCTEST_CHECK(canopygenerator.getPlantCount() == 5);
+    DOCTEST_CHECK(canopygenerator.getLeafUUIDs(1) == vine_leaves);
+    DOCTEST_CHECK(canopygenerator.getLeafUUIDs(3) == cone_leaves);
+    DOCTEST_CHECK(!canopygenerator.getLeafUUIDs(4).empty());
+
+    // The vines' trunks are still found under the vines' plant IDs, and the canopies without trunks have none
+    DOCTEST_CHECK(canopygenerator.getTrunkUUIDs(1) == vine_trunk);
+    DOCTEST_CHECK(canopygenerator.getTrunkUUIDs(4).empty());
+
+    // A plant with no trunk built before one that has a trunk does not shift the trunk's plant ID
+    Context context_tomato;
+    CanopyGenerator tomato_then_vine(&context_tomato);
+    tomato_then_vine.disableMessages();
+    TomatoParameters tomatoes;
+    tomatoes.plant_count = make_int2(1, 1);
+    tomato_then_vine.buildCanopy(tomatoes);
+    VSPGrapevineParameters one_vine;
+    one_vine.plant_count = make_int2(1, 1);
+    one_vine.canopy_origin = make_vec3(20, 0, 0);
+    tomato_then_vine.buildCanopy(one_vine);
+    DOCTEST_REQUIRE(tomato_then_vine.getPlantCount() == 2);
+    DOCTEST_CHECK(tomato_then_vine.getTrunkUUIDs(0).empty());
+    DOCTEST_CHECK(!tomato_then_vine.getTrunkUUIDs(1).empty());
+}

@@ -72,6 +72,24 @@ int LiDARcloud::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
 
+DOCTEST_TEST_CASE("LiDAR input files resolve through HELIOS_BUILD when the working directory is not the build directory") {
+    // Regression test. The scan XML, the scan data files it names and TreeQSM files were opened by a path relative to the working
+    // directory, so files relative to the build directory were found only when the process ran from there
+    ScopedForeignWorkingDirectory foreign_working_directory;
+
+    LiDARcloud pointcloud;
+    pointcloud.disableMessages();
+    DOCTEST_CHECK_NOTHROW(pointcloud.loadXML("plugins/lidar/xml/sphere.xml"));
+    DOCTEST_CHECK(pointcloud.getHitCount() > 0);
+
+    Context context;
+    LiDARcloud treeqsm_cloud;
+    treeqsm_cloud.disableMessages();
+    std::vector<uint> tube_UUIDs;
+    DOCTEST_CHECK_NOTHROW(tube_UUIDs = treeqsm_cloud.loadTreeQSM(&context, "plugins/lidar/data/cylinder_tree_QSM_test.txt", 6));
+    DOCTEST_CHECK(!tube_UUIDs.empty());
+}
+
 DOCTEST_TEST_CASE("LiDAR Single Voxel Sphere Test") {
     LiDARcloud pointcloud;
     pointcloud.disableMessages();
@@ -2201,6 +2219,10 @@ DOCTEST_TEST_CASE("LiDAR TreeQSM Loading Test") {
     Context context_error;
     DOCTEST_CHECK_THROWS(lidar.loadTreeQSM(&context_error, "nonexistent_file.txt", radial_subdivisions));
 
+    // An empty path must not be read as the working directory, which opens without error and holds no cylinders
+    DOCTEST_CHECK_THROWS_WITH(lidar.loadTreeQSM(&context_error, "", radial_subdivisions), doctest::Contains("path is empty"));
+    DOCTEST_CHECK_THROWS_WITH(lidar.loadTreeQSMColormap(&context_error, "", radial_subdivisions, "hot"), doctest::Contains("path is empty"));
+
     // Test with different radial subdivisions
     Context context_treeqsm3;
     std::vector<uint> tube_UUIDs3;
@@ -4015,6 +4037,128 @@ DOCTEST_TEST_CASE("LiDAR Zero Detection Threshold XML Round-Trip") {
     DOCTEST_CHECK(reloaded.getScanDetectionThreshold(0) == doctest::Approx(0.f));
     DOCTEST_CHECK(reloaded.getScanRecordPartialMisses(0) == true);
     std::filesystem::remove_all(out_dir);
+}
+
+DOCTEST_TEST_CASE("LiDAR synthetic scan records the misses of pulses that cross the voxel grid beside the scene geometry") {
+    // A small leaf in the middle of a larger voxel. Pulses that cross the voxel beside the leaf are transmission events for the voxel,
+    // and the leaf-area inversion needs them whether or not the scan is restricted to the grid: the geometry bounding box (just the
+    // leaf) is smaller than the voxel, so culling pulses against it alone would drop them.
+    auto scan = [](bool scan_grid_only, uint &miss_count, float &beam_count) {
+        Context ctx;
+        ctx.addPatch(make_vec3(0, 0, 0), make_vec2(0.4f, 0.4f));
+        LiDARcloud cloud;
+        cloud.disableMessages();
+        // Downward-looking scan from 5 m above, covering a cone wider than the voxel
+        ScanMetadata scan_metadata(make_vec3(0, 0, 5), 120, float(M_PI) - 0.35f, float(M_PI), 120, 0, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+        cloud.addScan(scan_metadata);
+        cloud.addGrid(make_vec3(0, 0, 0), make_vec3(2.f, 2.f, 1.f), make_int3(1, 1, 1), 0);
+        cloud.syntheticScan(&ctx, scan_grid_only, true);
+        miss_count = 0;
+        for (uint hit = 0; hit < cloud.getHitCount(); hit++) {
+            if (cloud.getHitData(hit, "is_miss") != 0.0) {
+                miss_count++;
+            }
+        }
+        cloud.triangulateHitPoints(0.04f, 10);
+        cloud.calculateLeafArea(&ctx, 1, -1.f);
+        beam_count = float(cloud.getCellBeamCount(0));
+    };
+
+    uint misses_grid_only = 0, misses_whole_scene = 0;
+    float beams_grid_only = 0, beams_whole_scene = 0;
+    scan(true, misses_grid_only, beams_grid_only);
+    scan(false, misses_whole_scene, beams_whole_scene);
+
+    DOCTEST_REQUIRE(misses_grid_only > 100); // most pulses that cross the voxel pass beside the leaf
+    DOCTEST_CHECK(misses_whole_scene == misses_grid_only);
+    DOCTEST_CHECK(beams_whole_scene == doctest::Approx(beams_grid_only));
+}
+
+DOCTEST_TEST_CASE("LiDAR synthetic G(theta) is the area-weighted mean projection of the leaves in each voxel") {
+    // Ten horizontal leaves seen from directly above project their full area, so G is 1. It must not grow with the number of leaves
+    // or scans, and each leaf is given the value of its own voxel.
+    Context ctx;
+    std::vector<uint> leaves;
+    for (int i = 0; i < 10; i++) {
+        leaves.push_back(ctx.addPatch(make_vec3(-0.05f + 0.01f * float(i), 0, 0.05f * float(i) - 0.2f), make_vec2(0.05f, 0.05f)));
+    }
+    LiDARcloud cloud;
+    cloud.disableMessages();
+    ScanMetadata scan(make_vec3(0, 0, 100), 100, float(M_PI) - 0.02f, float(M_PI), 100, 0, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+    cloud.addScan(scan);
+    cloud.addScan(scan);
+    cloud.addGrid(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1), 0);
+    cloud.syntheticScan(&ctx, true, true);
+    std::vector<float> leaf_area = cloud.calculateSyntheticLeafArea(&ctx);
+    DOCTEST_REQUIRE(leaf_area.size() == 1);
+    std::vector<float> Gtheta = cloud.calculateSyntheticGtheta(&ctx);
+    DOCTEST_REQUIRE(Gtheta.size() == 1);
+    DOCTEST_CHECK(Gtheta.front() == doctest::Approx(1.f).epsilon(0.01));
+    for (uint leaf: leaves) {
+        DOCTEST_REQUIRE(ctx.doesPrimitiveDataExist(leaf, "synthetic_Gtheta"));
+        float leaf_Gtheta = 0;
+        ctx.getPrimitiveData(leaf, "synthetic_Gtheta", leaf_Gtheta);
+        DOCTEST_CHECK(leaf_Gtheta == doctest::Approx(Gtheta.front()));
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR pulse filters group returns by scan and time stamp, and filter the last pulse too") {
+    auto build = [](LiDARcloud &cloud) {
+        cloud.disableMessages();
+        ScanMetadata scan(make_vec3(0, 0, 5), 10, 0, float(M_PI), 10, 0, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+        cloud.addScan(scan);
+        cloud.addScan(scan);
+        // {scan, timestamp, intensity}: scan 0 has two pulses of two returns each, scan 1 has two pulses of one return each that share
+        // scan 0's time stamps (every static synthetic scan numbers its pulses from zero)
+        const std::vector<std::array<double, 3>> returns = {{0, 0, 1}, {0, 0, 3}, {0, 1, 5}, {0, 1, 2}, {1, 0, 4}, {1, 1, 0.5}};
+        for (const auto &r: returns) {
+            std::map<std::string, double> data;
+            data["timestamp"] = r[1];
+            data["intensity"] = r[2];
+            cloud.addHitPoint(uint(r[0]), make_vec3(float(r[2]), 0, 0), make_SphericalCoord(0, 0), RGB::red, data);
+        }
+    };
+    auto intensities = [](LiDARcloud &cloud) {
+        std::vector<double> values;
+        for (uint hit = 0; hit < cloud.getHitCount(); hit++) {
+            values.push_back(cloud.getHitData(hit, "intensity"));
+        }
+        std::sort(values.begin(), values.end());
+        return values;
+    };
+
+    LiDARcloud strongest;
+    build(strongest);
+    strongest.maxPulseFilter("intensity");
+    DOCTEST_CHECK(intensities(strongest) == std::vector<double>{0.5, 3, 4, 5});
+
+    LiDARcloud weakest;
+    build(weakest);
+    weakest.minPulseFilter("intensity");
+    DOCTEST_CHECK(intensities(weakest) == std::vector<double>{0.5, 1, 2, 4});
+}
+
+DOCTEST_TEST_CASE("LiDAR hits are binned into a grid that was added after they were first triangulated") {
+    Context ctx;
+    ctx.addPatch(make_vec3(0, 0, 0), make_vec2(0.5f, 0.5f));
+    ScanMetadata scan(make_vec3(0, 0, 5), 200, float(M_PI) - 0.2f, float(M_PI), 200, 0, 2.f * float(M_PI), 0.f, 0.f, 0.f, 0.f, {});
+
+    LiDARcloud grid_first;
+    grid_first.disableMessages();
+    grid_first.addScan(scan);
+    grid_first.addGrid(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1), 0);
+    grid_first.syntheticScan(&ctx);
+    grid_first.triangulateHitPoints(0.04f, 10);
+    DOCTEST_REQUIRE(grid_first.getTriangleCount() > 0);
+
+    LiDARcloud grid_later;
+    grid_later.disableMessages();
+    grid_later.addScan(scan);
+    grid_later.syntheticScan(&ctx);
+    grid_later.triangulateHitPoints(0.04f, 10); // no grid yet: every hit is outside it
+    grid_later.addGrid(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1), 0);
+    grid_later.triangulateHitPoints(0.04f, 10);
+    DOCTEST_CHECK(grid_later.getTriangleCount() == grid_first.getTriangleCount());
 }
 
 DOCTEST_TEST_CASE("LiDAR Partial Miss Recording") {

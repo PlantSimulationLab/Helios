@@ -6,6 +6,32 @@
 
 using namespace helios;
 
+// This test case must stay FIRST in the file. The ozone climatology, extraterrestrial spectrum and atmosphere look-up tables are loaded once
+// per process and cached, so the load under test only happens here if no earlier test case has triggered it.
+TEST_CASE("SolarPosition data files resolve through HELIOS_BUILD when the working directory is not the build directory") {
+    // Regression test. These data files were opened by a path relative to the working directory, so they were found only when the
+    // process ran from the build directory
+    ScopedForeignWorkingDirectory foreign_working_directory;
+
+    Context context_s;
+    context_s.setDate(make_Date(21, 6, 2025));
+    context_s.setTime(make_Time(11, 0, 0));
+    SolarPosition sp(8, 38.55f, 121.76f, &context_s);
+    sp.setAtmosphericConditions(101325.f, 293.f, 0.4f, 0.1f);
+
+    // Ozone climatology (no ozone column set yet)
+    DOCTEST_CHECK_NOTHROW(static_cast<void>(sp.getOzoneColumn()));
+    // Set the ozone column so that the calls below exercise their own data files rather than the climatology
+    sp.setOzoneColumn(300.f);
+    // Extraterrestrial spectrum
+    DOCTEST_CHECK_NOTHROW(sp.calculateGlobalSolarSpectrum("foreign_cwd_global"));
+    // Atmosphere and thermal atmosphere look-up tables
+    DOCTEST_CHECK_NOTHROW(sp.calculateSensorAtmosphereSpectra("foreign_cwd_atm", make_vec3(0, 0, 1)));
+    DOCTEST_CHECK_NOTHROW(sp.calculateSensorThermalAtmosphere("foreign_cwd_thermal", make_vec3(0, 0, 1)));
+    // Prague sky model data set
+    DOCTEST_CHECK_NOTHROW(sp.enablePragueSkyModel());
+}
+
 TEST_CASE("SolarPosition constructor rejects an out-of-range location") {
     // Regression test. An out-of-range latitude or longitude used to print a warning and silently put the site at Davis, CA, and the UTC offset was not checked at all
     Context context_s;
@@ -1951,4 +1977,40 @@ TEST_CASE("SolarPosition - Prague error handling") {
 
     // Check needs update returns false when not enabled
     DOCTEST_CHECK(!solar.pragueSkyModelNeedsUpdate(0.33f));
+}
+
+TEST_CASE("SolarPosition sun azimuth does not depend on the clock the time is given in") {
+    // Davis, CA at 17:00 local standard time on 21 June, which is 01:00 UTC on 22 June. The sun is in the west.
+    Context context_local;
+    context_local.setDate(21, 6, 2025);
+    context_local.setTime(0, 0, 17);
+    SolarPosition sun_local(8, 38.55f, 121.76f, &context_local);
+
+    Context context_utc;
+    context_utc.setDate(22, 6, 2025);
+    context_utc.setTime(0, 0, 1);
+    SolarPosition sun_utc(0, 38.55f, 121.76f, &context_utc);
+
+    const float azimuth_local = sun_local.getSunAzimuth();
+    const float azimuth_utc = sun_utc.getSunAzimuth();
+    DOCTEST_CHECK(azimuth_local > float(M_PI)); // west of the meridian
+    DOCTEST_CHECK(sun_utc.getSunElevation() == doctest::Approx(sun_local.getSunElevation()).epsilon(0.01));
+    DOCTEST_CHECK(azimuth_utc == doctest::Approx(azimuth_local).epsilon(0.01));
+
+    // Beijing at 06:30 local time (UTC+8, so offset -8 and longitude -116.4 in the Helios convention), given as 22:30 UTC of the
+    // previous day. The sun is in the east.
+    Context context_beijing;
+    context_beijing.setDate(20, 6, 2025);
+    context_beijing.setTime(0, 30, 22);
+    SolarPosition sun_beijing(0, 39.9f, -116.4f, &context_beijing);
+    DOCTEST_CHECK(sun_beijing.getSunElevation() > 0.f);
+    DOCTEST_CHECK(sun_beijing.getSunAzimuth() < float(M_PI));
+
+    // Kiritimati (UTC+14 at 157.4 W) at 15:00 local time: an afternoon sun, west of the meridian
+    Context context_kiritimati;
+    context_kiritimati.setDate(21, 6, 2025);
+    context_kiritimati.setTime(0, 0, 15);
+    SolarPosition sun_kiritimati(-14, 1.87f, 157.4f, &context_kiritimati);
+    DOCTEST_CHECK(sun_kiritimati.getSunElevation() > 0.f);
+    DOCTEST_CHECK(sun_kiritimati.getSunAzimuth() > float(M_PI));
 }

@@ -307,6 +307,7 @@ uint CanopyGenerator::bean(const BeanParameters &params, const vec3 &origin) {
 
     beanShoot(params, origin, make_SphericalCoord(0.5 * PI_F, 0), 1, leaf_UUIDs, branch_UUIDs, fruit_UUIDs, leaf_prototype, generator, context);
 
+    UUID_trunk.emplace_back(); // this plant has no trunk; an empty entry keeps the per-plant lists the same length
     UUID_leaf.push_back(leaf_UUIDs);
     UUID_branch.push_back(branch_UUIDs);
     UUID_fruit.push_back(fruit_UUIDs);

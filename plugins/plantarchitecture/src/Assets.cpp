@@ -1538,7 +1538,7 @@ uint AsparagusLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototy
     if (generator == nullptr) {
         helios_runtime_error("ERROR (AsparagusLeafPrototype): Leaf prototype has no random number generator. Construct LeafPrototype with the Context's generator, which can be retrieved with Context::getRandomGenerator().");
     }
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
     auto randu = [&](float minval, float maxval) { return minval + unif_distribution(*generator) * (maxval - minval); };
 
     float curve_magnitude = randu(0.f, 0.2f);

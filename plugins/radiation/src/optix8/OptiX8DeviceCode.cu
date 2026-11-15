@@ -2748,11 +2748,13 @@ extern "C" __global__ void __closesthit__pixel_label() {
 //! The program for a scene without a background radiation field (Payload = PerRayData) or with one (PerRayDataDual), whose rays use that scene's hit and miss programs
 template <typename Payload>
 static __forceinline__ __device__ void raygenDirect() {
-    // 3D launch: x = x-strat index [0, dim_x), y = y-strat index [0, dim_y), z = prim
+    // 3D launch: x = prim, y = x-strat index [0, dim_x), z = y-strat index [0, dim_y). The primitive is along the first dimension because
+    // OptiX starts a launch that is thin in its first two dimensions and deep in the third far more slowly (see primitivesPerLaunch()
+    // in OptiX8Backend.cpp).
     const uint3    idx        = optixGetLaunchIndex();
-    const uint32_t xi         = idx.x;
-    const uint32_t yi         = idx.y;
-    const uint32_t prim_local = idx.z;
+    const uint32_t prim_local = idx.x;
+    const uint32_t xi         = idx.y;
+    const uint32_t yi         = idx.z;
 
     const uint32_t dim_x  = params.launch_dim_x;
     const uint32_t dim_y  = params.launch_dim_y;
@@ -2768,8 +2770,8 @@ static __forceinline__ __device__ void raygenDirect() {
     float T[16];
     loadTransformMatrix(prim_pos, T);
 
-    // Seeded by the global primitive position: rays are launched in batches of at most 65535 primitives, and a batch-local index
-    // would give primitives k and k + 65535 identical samples.
+    // Seeded by the global primitive position: rays are launched in batches of primitives (see primitivesPerLaunch() in
+    // OptiX8Backend.cpp), and a batch-local index would give the primitives at the same place in two batches identical samples.
     const uint32_t linear_idx = xi + dim_x * yi;
     uint32_t seed = tea<16>(linear_idx + Nrays * prim_pos, params.random_seed);
 
@@ -2958,11 +2960,11 @@ extern "C" __global__ void __raygen__direct_dual() {
 //! The program for a scene without a background radiation field (Payload = PerRayData) or with one (PerRayDataDual), whose rays use that scene's hit and miss programs
 template <typename Payload>
 static __forceinline__ __device__ void raygenDiffuse() {
-    // 3D launch: x=theta_idx, y=phi_idx, z=prim_local
+    // 3D launch: x=prim_local, y=theta_idx, z=phi_idx (the primitive along the first dimension, as in __raygen__direct)
     const uint3    idx        = optixGetLaunchIndex();
-    const uint32_t theta_idx  = idx.x;
-    const uint32_t phi_idx    = idx.y;
-    const uint32_t prim_local = idx.z;
+    const uint32_t prim_local = idx.x;
+    const uint32_t theta_idx  = idx.y;
+    const uint32_t phi_idx    = idx.z;
 
     const uint32_t dim_x = params.launch_dim_x;
     const uint32_t dim_y = params.launch_dim_y;

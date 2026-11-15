@@ -546,8 +546,8 @@ private:
         std::vector<float> toa_irradiance; // Extraterrestrial irradiance at the mean Earth-Sun distance in W/m²/nm
 
         //! Load the Wehrli (1985) spectrum from its National Laboratory of the Rockies distribution (after a header, each line holds a wavelength in nm, the spectral irradiance in W/m²/nm and the cumulative irradiance) and average it
-        //! over 1 nm bins centered on 300-2600 nm, each source value taken to apply halfway to the neighbouring wavelengths
-        void loadFromFile(const std::string &path);
+        //! over 1 nm bins centered on 300-2600 nm, each source value taken to apply halfway to the neighbouring wavelengths. The file name is resolved with helios::resolveFilePath().
+        void loadFromFile(const std::string &filename);
     };
 
     //! Ångström wavelength exponent of the aerosol optical depth in the spectral solar irradiance model; also converts the turbidity to the aerosol optical depth at 550 nm in calculateSensorAtmosphereSpectra()
@@ -596,8 +596,8 @@ private:
         std::string provenance;
         std::map<std::string, AtmosphereTable> tables;
 
-        //! Load the look-up table from its binary file
-        void loadFromFile(const std::string &path);
+        //! Load the look-up table from its binary file, whose name is resolved with helios::resolveFilePath()
+        void loadFromFile(const std::string &filename);
 
         //! Get a table by name
         [[nodiscard]] const AtmosphereTable &getTable(const std::string &name) const;

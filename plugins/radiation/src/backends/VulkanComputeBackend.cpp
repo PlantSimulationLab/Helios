@@ -3966,13 +3966,11 @@ namespace helios {
 
         // ========== Load Shaders ==========
 
-        // Shader paths (relative to build directory)
-        std::string shader_dir = "plugins/radiation/";
-
-        VkShaderModule shader_direct = loadShader(shader_dir + "direct_raygen.spv");
-        VkShaderModule shader_diffuse = loadShader(shader_dir + "diffuse_raygen.spv");
-        VkShaderModule shader_camera = loadShader(shader_dir + "camera_raygen.spv");
-        VkShaderModule shader_pixel_label = loadShader(shader_dir + "pixel_label_raygen.spv");
+        // Shaders are compiled into plugins/radiation/ of the build directory, located through helios::resolvePluginAsset()
+        VkShaderModule shader_direct = loadShader(helios::resolvePluginAsset("radiation", "direct_raygen.spv").string());
+        VkShaderModule shader_diffuse = loadShader(helios::resolvePluginAsset("radiation", "diffuse_raygen.spv").string());
+        VkShaderModule shader_camera = loadShader(helios::resolvePluginAsset("radiation", "camera_raygen.spv").string());
+        VkShaderModule shader_pixel_label = loadShader(helios::resolvePluginAsset("radiation", "pixel_label_raygen.spv").string());
 
         // ========== Create Compute Pipelines ==========
 

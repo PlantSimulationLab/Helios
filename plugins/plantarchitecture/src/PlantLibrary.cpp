@@ -343,13 +343,13 @@ float BuildParameterDistribution::sample(std::minstd_rand0 &generator) const {
         case Type::CONSTANT:
             return parameters.at(0);
         case Type::UNIFORM: {
-            std::uniform_real_distribution<float> unit_distribution(0.f, 1.f);
+            helios::uniform_real_distribution<float> unit_distribution(0.f, 1.f);
             return parameters.at(0) + unit_distribution(generator) * (parameters.at(1) - parameters.at(0));
         }
         case Type::NORMAL: {
             // The interval holds at least 0.1% of the distribution (checked by normal()), so this many draws all falling outside it has a probability below 1e-43
             constexpr int max_draws = 100000;
-            std::normal_distribution<float> normal_distribution(parameters.at(0), parameters.at(1));
+            helios::normal_distribution<float> normal_distribution(parameters.at(0), parameters.at(1));
             for (int draw = 0; draw < max_draws; draw++) {
                 const float value = normal_distribution(generator);
                 if (value >= parameters.at(2) && value <= parameters.at(3)) {
@@ -364,10 +364,10 @@ float BuildParameterDistribution::sample(std::minstd_rand0 &generator) const {
                 return parameters.front();
             }
             if (weights.empty()) {
-                std::uniform_int_distribution<size_t> index_distribution(0, parameters.size() - 1);
+                helios::uniform_int_distribution<size_t> index_distribution(0, parameters.size() - 1);
                 return parameters.at(index_distribution(generator));
             }
-            std::discrete_distribution<size_t> index_distribution(weights.begin(), weights.end());
+            helios::discrete_distribution<size_t> index_distribution(weights.begin(), weights.end());
             return parameters.at(index_distribution(generator));
         }
     }
@@ -3160,8 +3160,23 @@ void PlantArchitecture::initializeBougainvilleaShoots() {
 
     ShootParameters shoot_parameters_secondary = shoot_parameters;
     shoot_parameters_secondary.max_nodes = 15;
+    shoot_parameters_secondary.defineChildShootTypes({"tertiary"}, {1.0});
 
     defineShootType("secondary", shoot_parameters_secondary);
+
+    // Branching stops at the fourth order. A secondary shoot used to bear more secondary shoots, each of which breaks a little over two buds once it has its nodes, so the number of shoots doubled
+    // about every five weeks without limit: from some 70 leaves at half a year to some 2000 leaves and 1200 flower clusters at a year, and still doubling. Secondary shoots now bear tertiary shoots,
+    // and those bear quaternary shoots, whose buds do not break. That leaves the plant a cane with flowering branches, side branches and twigs, and a size that levels off once they have their nodes.
+    ShootParameters shoot_parameters_tertiary = shoot_parameters_secondary;
+    shoot_parameters_tertiary.defineChildShootTypes({"quaternary"}, {1.0});
+
+    defineShootType("tertiary", shoot_parameters_tertiary);
+
+    ShootParameters shoot_parameters_quaternary = shoot_parameters_tertiary;
+    shoot_parameters_quaternary.vegetative_bud_break_probability_min = 0;
+    shoot_parameters_quaternary.vegetative_bud_break_probability_max = 0;
+
+    defineShootType("quaternary", shoot_parameters_quaternary);
 }
 
 uint PlantArchitecture::buildBougainvilleaPlant(const helios::vec3 &base_position) {
@@ -4735,9 +4750,10 @@ void PlantArchitecture::initializeOliveTreeShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.015;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 20;
     shoot_parameters_trunk.max_nodes = trunkMaxNodes(olive_trunk_height, olive_trunk_internode_length);
-    // Rescaled when the per-phytomer 365/age decay was removed from incrementPhytomerInternodeGirth(), to keep base diameters at
-    // max_age where they were: girth is now proportional to cumulative downstream leaf area, which runs well above the old value.
-    shoot_parameters_trunk.girth_area_factor = 0.66f;
+    // Sets the trunk's cross-sectional area per unit of the leaf area it carries. At the previous 0.66 the trunk did not thicken at all for four years (it stayed at its planting radius of 1.5 cm
+    // until the tree carried about 11 m^2 of leaf) and reached only 4.9 cm across at five years, under a 3.7 m crown. 1.6 gives about 5 cm across at four years and 7.5 cm at five. The one series
+    // of measured olive trunk diameters found is for the low-vigor cultivar 'Chiquitita' (U.S. Plant Patent PP19,511): 2.2 cm at two years, 5.6 cm at four and 8.6 cm at six.
+    shoot_parameters_trunk.girth_area_factor = 1.6f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
     shoot_parameters_trunk.tortuosity = 20;
@@ -6299,7 +6315,9 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     shoot_parameters.elongation_rate_max = 0.1;
     shoot_parameters.girth_area_factor = 2.f;
     shoot_parameters.vegetative_bud_break_time = 40;
-    shoot_parameters.vegetative_bud_break_probability_min = 0.2;
+    // The plant is trained up a string as a single stem, whose side shoots are pinched out as they appear, so only the occasional one gets away. At the previous one node in five, the seven to ten
+    // side shoots a plant had by its maximum age made a crown on top of the stem its lower leaves had been stripped from, and it looked like a small tree.
+    shoot_parameters.vegetative_bud_break_probability_min = 0.05;
     shoot_parameters.vegetative_bud_break_probability_decay_rate = 0.;
     shoot_parameters.flower_bud_break_probability = 0.5;
     shoot_parameters.fruit_set_probability = 0.9;
@@ -6307,9 +6325,17 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     shoot_parameters.growth_requires_dormancy = false;
     shoot_parameters.determinate_shoot_growth = false;
 
-    shoot_parameters.defineChildShootTypes({"mainstem"}, {1.0});
+    shoot_parameters.defineChildShootTypes({"lateral"}, {1.0});
 
     defineShootType("mainstem", shoot_parameters);
+
+    // Side shoots do not branch again. A side shoot used to be another main stem, breaking buds like the stem it grew from, so every side shoot grew side shoots of its own without limit. A lateral
+    // is a main stem whose buds do not break.
+    ShootParameters shoot_parameters_lateral = shoot_parameters;
+    shoot_parameters_lateral.vegetative_bud_break_probability_min = 0;
+    shoot_parameters_lateral.vegetative_bud_break_probability_max = 0;
+
+    defineShootType("lateral", shoot_parameters_lateral);
 }
 
 uint PlantArchitecture::buildCherryTomatoPlant(const helios::vec3 &base_position) {
@@ -6788,6 +6814,10 @@ uint PlantArchitecture::buildCucumberPlant(const helios::vec3 &base_position) {
     breakPlantDormancy(plantID);
 
     setPlantPhenologicalThresholds(plantID, 0.0, 12.0, 6.0, 2.0, 14.0, 1000.0, 45.0, false);
+
+    // The crop ends when the stem has its last node (see max_nodes in initializeCucumberShoots()). Without this the plant took the default of 999 days, by which age its leaves, which live 45
+    // days, had long since all been shed from a stem that had stopped making new ones.
+    plant_instances.at(plantID).max_age = 165;
 
     // trained up a vertical string to a wire at 3.8 m: attraction points along it. CucumberMainPhytomerCallbackFunction() lowers and leans the
     // stem once its head reaches the wire, sliding the string along the row with it.

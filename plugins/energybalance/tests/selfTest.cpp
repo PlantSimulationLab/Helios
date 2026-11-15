@@ -512,43 +512,39 @@ DOCTEST_TEST_CASE("EnergyBalanceModel - Default value warnings") {
         DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
     }
 
-    DOCTEST_SUBCASE("Air temperature < 250K triggers warning") {
-        Context context;
-        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
-
-        context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
-        context.setPrimitiveData(UUID, "air_temperature", 25.f); // Likely Celsius
-
-        std::string output;
-        {
+    DOCTEST_SUBCASE("Inputs that are out of range or not finite are errors, with messages on or off") {
+        // Each of these used to be replaced by a default value (or, for a non-finite result, by 300 K) and the run continued
+        auto run_with = [](const std::string &label, float value, bool messages) {
+            Context context;
+            uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+            context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+            context.setPrimitiveData(UUID, "air_temperature", 300.f);
+            context.setPrimitiveData(UUID, label.c_str(), value);
             capture_cout capture;
             EnergyBalanceModel model(&context);
+            if (!messages) {
+                model.disableMessages();
+            }
             model.addRadiationBand("LW");
             model.run();
-            output = capture.get_captured_output();
+        };
+        const float not_a_number = std::numeric_limits<float>::quiet_NaN();
+        for (bool messages: {true, false}) {
+            DOCTEST_CAPTURE(messages);
+            DOCTEST_CHECK_THROWS(run_with("air_temperature", 25.f, messages)); // likely Celsius
+            DOCTEST_CHECK_THROWS(run_with("air_temperature", not_a_number, messages));
+            DOCTEST_CHECK_THROWS(run_with("air_humidity", 1.5f, messages));
+            DOCTEST_CHECK_THROWS(run_with("air_humidity", 90.f, messages)); // percent
+            DOCTEST_CHECK_THROWS(run_with("air_humidity", -0.1f, messages));
+            DOCTEST_CHECK_THROWS(run_with("air_humidity", not_a_number, messages));
+            DOCTEST_CHECK_THROWS(run_with("air_pressure", 101.f, messages)); // kPa
+            DOCTEST_CHECK_THROWS(run_with("air_pressure", not_a_number, messages));
+            DOCTEST_CHECK_THROWS(run_with("radiation_flux_LW", not_a_number, messages));
+            DOCTEST_CHECK_NOTHROW(run_with("air_temperature", 245.f, messages)); // a cold winter night, -28 C
+            DOCTEST_CHECK_NOTHROW(run_with("air_temperature", 190.f, messages)); // near the coldest air temperature measured on Earth, -89 C
+            DOCTEST_CHECK_NOTHROW(run_with("air_humidity", 0.5f, messages));
+            DOCTEST_CHECK_NOTHROW(run_with("air_pressure", 85000.f, messages));
         }
-        DOCTEST_CHECK(output.find("air_temperature_likely_celsius") != std::string::npos);
-        DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
-    }
-
-    DOCTEST_SUBCASE("Air humidity out of range triggers warning") {
-        Context context;
-        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
-
-        context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
-        context.setPrimitiveData(UUID, "air_temperature", 300.f);
-        context.setPrimitiveData(UUID, "air_humidity", 1.5f); // Out of range
-
-        std::string output;
-        {
-            capture_cout capture;
-            EnergyBalanceModel model(&context);
-            model.addRadiationBand("LW");
-            model.run();
-            output = capture.get_captured_output();
-        }
-        DOCTEST_CHECK(output.find("air_humidity_out_of_range_high") != std::string::npos);
-        DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
     }
 
     DOCTEST_SUBCASE("Messages can be disabled") {

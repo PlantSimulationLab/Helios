@@ -521,6 +521,7 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureXML): Plant ID " + std::to_string(plantID) + " does not exist.");
     }
+    rejectPosedPlant(plantID, "writePlantStructureXML");
 
     std::string output_file = filename;
     if (!validateOutputPath(output_file, {".xml", ".XML"})) {
@@ -541,6 +542,10 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
 
     output_xml << "\t\t<base_position> " << plant_instances.at(plantID).base_position.x << " " << plant_instances.at(plantID).base_position.y << " " << plant_instances.at(plantID).base_position.z << " </base_position>" << std::endl;
     output_xml << "\t\t<plant_age> " << plant_instances.at(plantID).current_age << " </plant_age>" << std::endl;
+    // Where the plant is in its season. With the per-shoot, per-phytomer and per-bud state written below, this lets a plant
+    // that is read back carry on from where it was saved; without it every shoot came back dormant with the season clock at
+    // zero, so the first time step broke dormancy again -- turning fruit back into flower buds and re-sampling every bud.
+    output_xml << "\t\t<time_since_dormancy> " << plant_instances.at(plantID).time_since_dormancy << " </time_since_dormancy>" << std::endl;
 
     // Phenological thresholds. These are set by setPlantPhenologicalThresholds() (called by every library
     // builder) and are not derivable from the shoot structure, so they must be persisted or a restored
@@ -623,6 +628,12 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
         output_xml << "\t\t\t<parent_shoot_ID> " << shoot->parent_shoot_ID << " </parent_shoot_ID>" << std::endl;
         output_xml << "\t\t\t<parent_node_index> " << shoot->parent_node_index << " </parent_node_index>" << std::endl;
         output_xml << "\t\t\t<parent_petiole_index> " << shoot->parent_petiole_index << " </parent_petiole_index>" << std::endl;
+        // Phenological state of the shoot (see <time_since_dormancy> above)
+        output_xml << "\t\t\t<is_dormant> " << (shoot->isdormant ? 1 : 0) << " </is_dormant>" << std::endl;
+        output_xml << "\t\t\t<dormancy_cycles> " << shoot->dormancy_cycles << " </dormancy_cycles>" << std::endl;
+        output_xml << "\t\t\t<meristem_is_alive> " << (shoot->meristem_is_alive ? 1 : 0) << " </meristem_is_alive>" << std::endl;
+        output_xml << "\t\t\t<phyllochron_counter> " << shoot->phyllochron_counter << " </phyllochron_counter>" << std::endl;
+        output_xml << "\t\t\t<nodes_this_season> " << shoot->nodes_this_season << " </nodes_this_season>" << std::endl;
         output_xml << "\t\t\t<base_rotation> " << rad2deg(shoot->base_rotation.pitch) << " " << rad2deg(shoot->base_rotation.yaw) << " " << rad2deg(shoot->base_rotation.roll) << " </base_rotation>" << std::endl;
 
         // An axis continuation created by appendShoot() is rebuilt below through addChildShoot(), which
@@ -648,6 +659,9 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
         }
         if (shoot->growth_state.max_nodes_per_season_growth_cap >= 0) {
             output_xml << "\t\t\t<max_nodes_per_season_growth_cap> " << shoot->growth_state.max_nodes_per_season_growth_cap << " </max_nodes_per_season_growth_cap>" << std::endl;
+        }
+        if (shoot->growth_state.internode_radius_cap > 0.f) {
+            output_xml << "\t\t\t<internode_radius_cap> " << shoot->growth_state.internode_radius_cap << " </internode_radius_cap>" << std::endl;
         }
 
         // A shoot whose geometry was prescribed cannot be rebuilt from lengths and angles alone. Every other
@@ -705,6 +719,10 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
 
                 // Write fruit scale factor
                 output_xml << "\t\t\t\t\t\t\t<current_fruit_scale_factor>" << fbud.current_fruit_scale_factor << "</current_fruit_scale_factor>" << std::endl;
+                // The bud's clocks (see <time_since_dormancy> above)
+                output_xml << "\t\t\t\t\t\t\t<bud_time_counter>" << fbud.time_counter << "</bud_time_counter>" << std::endl;
+                output_xml << "\t\t\t\t\t\t\t<bud_age>" << fbud.age << "</bud_age>" << std::endl;
+                output_xml << "\t\t\t\t\t\t\t<previous_fruit_scale_factor>" << fbud.previous_fruit_scale_factor << "</previous_fruit_scale_factor>" << std::endl;
 
                 // Write peduncle parameters
                 // Note: Write the STORED VALUES that were actually used for this peduncle geometry
@@ -777,6 +795,17 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
             // follows its age (LeafPrototype::flexibility_aging), so a reloaded plant whose phytomers all
             // started again from age zero gave its oldest leaves the stiffness of newly emerged ones.
             output_xml << "\t\t\t\t<phytomer_age>" << phytomer->age << "</phytomer_age>" << std::endl;
+            // Phenological state of the phytomer and of its vegetative buds (see <time_since_dormancy> above). The bud states are
+            // listed petiole by petiole, with a semicolon after each petiole's buds.
+            output_xml << "\t\t\t\t<phytomer_is_dormant>" << (phytomer->isdormant ? 1 : 0) << "</phytomer_is_dormant>" << std::endl;
+            output_xml << "\t\t\t\t<vegetative_bud_states>";
+            for (const auto &petiole_buds: phytomer->axillary_vegetative_buds) {
+                for (const auto &vbud: petiole_buds) {
+                    output_xml << " " << static_cast<int>(vbud.state);
+                }
+                output_xml << " ;";
+            }
+            output_xml << " </vegetative_bud_states>" << std::endl;
             // The leaf compliance is drawn from LeafPrototype::flexibility when the phytomer is created, so it cannot be
             // re-derived on reading without replaying the plant's random stream exactly.
             output_xml << "\t\t\t\t<leaf_flexibility>" << phytomer->leaf_flexibility << "</leaf_flexibility>" << std::endl;
@@ -1414,6 +1443,10 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
             int max_nodes_per_season_growth_cap = -1;
             if (pugi::xml_node season_cap_node = shoot.child("max_nodes_per_season_growth_cap")) {
                 max_nodes_per_season_growth_cap = parse_xml_tag_int(season_cap_node, "max_nodes_per_season_growth_cap", "PlantArchitecture::readPlantStructureXML");
+            }
+            float internode_radius_cap = -1.f;
+            if (pugi::xml_node radius_cap_node = shoot.child("internode_radius_cap")) {
+                internode_radius_cap = parse_xml_tag_float(radius_cap_node, "internode_radius_cap", "PlantArchitecture::readPlantStructureXML");
             }
 
             // Measured node positions, present only for a shoot built from prescribed geometry. Absent for
@@ -2191,6 +2224,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     }
                     restored_shoot->growth_state.max_nodes_growth_cap = max_nodes_growth_cap;
                     restored_shoot->growth_state.max_nodes_per_season_growth_cap = max_nodes_per_season_growth_cap;
+                    restored_shoot->growth_state.internode_radius_cap = internode_radius_cap;
 
                     base_shoot = false;
                 } else if (prescribed_internode_nodes.empty()) {
@@ -2508,6 +2542,10 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     shoot_ptr->shoot_internode_vertices[phytomer_index_in_shoot].assign(reconstructed_vertices.begin() + 1, reconstructed_vertices.end());
                     shoot_ptr->shoot_internode_radii[phytomer_index_in_shoot].assign(reconstructed_radii.begin() + 1, reconstructed_radii.end());
                 }
+                // The node is now where the file says it is, not where the constructor put it, and the organs placed on it below are placed there. Phytomer::setPetioleBase() moves a phytomer's
+                // organs by how far the node has moved since they were seated, so it has to be told they are seated here; a phytomer with petioles carries this in its first petiole's base, which is
+                // set below, but one without petioles has only this.
+                shoot_ptr->phytomers.at(phytomer_index_in_shoot)->seated_node_position = shoot_ptr->shoot_internode_vertices[phytomer_index_in_shoot].back();
 
                 // Helper function to recompute petiole orientation vectors from parent phytomer context
                 auto recomputePetioleOrientationVectors = [this, plantID](std::shared_ptr<Phytomer> phytomer_ptr, uint petiole_index, uint phytomer_index_in_shoot, float petiole_pitch_rad, float internode_phyllotactic_angle_rad,
@@ -2640,7 +2678,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     // Get current phytomer's petiole axis (NOT parent phytomer's petiole axis)
                     vec3 current_petiole_axis;
                     if (phytomer_ptr->petiole_vertices.empty()) {
-                        current_petiole_axis = parent_internode_axis;
+                        // No petiole: the petiole the phytomer would have had stands in, as it does where the Phytomer constructor sets the axis its peduncles are pitched about. Using the parent
+                        // internode here instead made the cross product below vanish, so every such peduncle was read back pitched about the x axis whichever way it had been built.
+                        current_petiole_axis = phytomer_ptr->getPetioleAxisVectorOrGhost(petiole_index, phytomer_ptr->getAxisVector(1.f, phytomer_ptr->getInternodeNodePositions()), phytomer_index_in_shoot);
                     } else {
                         // Use actual curved petiole geometry at base (fraction=0.f) to match generation behavior
                         current_petiole_axis = phytomer_ptr->getPetioleAxisVector(0.f, petiole_index);
@@ -3710,6 +3750,110 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
             plant_instances.at(plantID).shoot_tree.front()->updateShootNodes(true);
         }
 
+        // Restore where the plant was in its season: the season clock, the dormancy of each shoot and phytomer, and the state and
+        // clocks of each bud. Done last, over the finished shoot tree, because rebuilding the plant above goes through the growth
+        // calls that construct every shoot dormant with the clock at zero. All of the tags are optional: a file written before
+        // they existed has none, and its plant comes back dormant as it always did.
+        {
+            const std::string caller = "PlantArchitecture::readPlantStructureXML";
+            if (pugi::xml_node node = plant.child("time_since_dormancy")) {
+                plant_instances.at(plantID).time_since_dormancy = parse_xml_tag_float(node, "time_since_dormancy", caller);
+            }
+
+            // Collect the <floral_bud> tags of a phytomer, wherever they sit beneath it (they are written under their petiole,
+            // or apart from it when the petiole's leaf has been shed)
+            std::function<void(const pugi::xml_node &, std::vector<pugi::xml_node> &)> collectFloralBuds = [&collectFloralBuds](const pugi::xml_node &parent, std::vector<pugi::xml_node> &found) {
+                for (pugi::xml_node child = parent.first_child(); child; child = child.next_sibling()) {
+                    if (std::string(child.name()) == "floral_bud") {
+                        found.push_back(child);
+                    } else {
+                        collectFloralBuds(child, found);
+                    }
+                }
+            };
+
+            for (pugi::xml_node shoot = plant.child("shoot"); shoot; shoot = shoot.next_sibling("shoot")) {
+                const int shootID_in_file = shoot.attribute("ID").as_int();
+                auto mapped = shoot_ID_mapping.find(shootID_in_file);
+                if (mapped == shoot_ID_mapping.end()) {
+                    continue;
+                }
+                auto &restored_shoot = plant_instances.at(plantID).shoot_tree.at(mapped->second);
+
+                if (pugi::xml_node node = shoot.child("is_dormant")) {
+                    restored_shoot->isdormant = parse_xml_tag_int(node, "is_dormant", caller) != 0;
+                }
+                if (pugi::xml_node node = shoot.child("dormancy_cycles")) {
+                    restored_shoot->dormancy_cycles = uint(parse_xml_tag_int(node, "dormancy_cycles", caller));
+                }
+                if (pugi::xml_node node = shoot.child("meristem_is_alive")) {
+                    restored_shoot->meristem_is_alive = parse_xml_tag_int(node, "meristem_is_alive", caller) != 0;
+                }
+                if (pugi::xml_node node = shoot.child("phyllochron_counter")) {
+                    restored_shoot->phyllochron_counter = parse_xml_tag_float(node, "phyllochron_counter", caller);
+                }
+                if (pugi::xml_node node = shoot.child("nodes_this_season")) {
+                    restored_shoot->nodes_this_season = uint(parse_xml_tag_int(node, "nodes_this_season", caller));
+                }
+
+                size_t phytomer_index = 0;
+                for (pugi::xml_node phytomer = shoot.child("phytomer"); phytomer; phytomer = phytomer.next_sibling("phytomer"), phytomer_index++) {
+                    if (phytomer_index >= restored_shoot->phytomers.size()) {
+                        break;
+                    }
+                    auto &restored_phytomer = restored_shoot->phytomers.at(phytomer_index);
+
+                    if (pugi::xml_node node = phytomer.child("phytomer_is_dormant")) {
+                        restored_phytomer->isdormant = parse_xml_tag_int(node, "phytomer_is_dormant", caller) != 0;
+                    }
+
+                    if (pugi::xml_node node = phytomer.child("vegetative_bud_states")) {
+                        // Petiole by petiole, each petiole's buds followed by a semicolon
+                        const std::vector<std::string> petiole_lists = separate_string_by_delimiter(node.child_value(), ";");
+                        for (size_t petiole = 0; petiole < restored_phytomer->axillary_vegetative_buds.size() && petiole < petiole_lists.size(); petiole++) {
+                            std::istringstream state_stream(petiole_lists.at(petiole));
+                            auto &petiole_buds = restored_phytomer->axillary_vegetative_buds.at(petiole);
+                            int state_value;
+                            for (size_t bud = 0; bud < petiole_buds.size() && (state_stream >> state_value); bud++) {
+                                if (state_value < int(BUD_DORMANT) || state_value > int(BUD_DEAD)) {
+                                    helios_runtime_error("ERROR (" + caller + "): Shoot " + std::to_string(shootID_in_file) + " in '" + filename + "' has a vegetative bud state of " + std::to_string(state_value) +
+                                                         " in tag <vegetative_bud_states>, which is not a valid bud state.");
+                                }
+                                petiole_buds.at(bud).state = static_cast<BudState>(state_value);
+                            }
+                        }
+                    }
+
+                    std::vector<pugi::xml_node> floral_bud_nodes;
+                    collectFloralBuds(phytomer, floral_bud_nodes);
+                    for (const pugi::xml_node &floral_bud: floral_bud_nodes) {
+                        if (!floral_bud.child("bud_time_counter") || !floral_bud.child("parent_index") || !floral_bud.child("bud_index")) {
+                            continue;
+                        }
+                        const bool is_terminal = floral_bud.child("is_terminal") && parse_xml_tag_int(floral_bud.child("is_terminal"), "is_terminal", caller) != 0;
+                        const int bud_index = parse_xml_tag_int(floral_bud.child("bud_index"), "bud_index", caller);
+                        const int parent_index = parse_xml_tag_int(floral_bud.child("parent_index"), "parent_index", caller);
+                        // An axillary bud is filed under its petiole. A terminal bud records the phytomer it came from in the
+                        // same field, so it is found by its bud index among the terminal buds instead.
+                        for (auto &petiole_buds: restored_phytomer->floral_buds) {
+                            for (auto &fbud: petiole_buds) {
+                                const bool same_petiole = is_terminal || int(fbud.parent_index) == parent_index;
+                                if (fbud.isterminal == is_terminal && int(fbud.bud_index) == bud_index && same_petiole) {
+                                    fbud.time_counter = parse_xml_tag_float(floral_bud.child("bud_time_counter"), "bud_time_counter", caller);
+                                    if (pugi::xml_node node = floral_bud.child("bud_age")) {
+                                        fbud.age = parse_xml_tag_float(node, "bud_age", caller);
+                                    }
+                                    if (pugi::xml_node node = floral_bud.child("previous_fruit_scale_factor")) {
+                                        fbud.previous_fruit_scale_factor = parse_xml_tag_float(node, "previous_fruit_scale_factor", caller);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
     } // plant instances
 
     if (!quiet) {
@@ -3749,6 +3893,9 @@ struct USDLink {
     int parent_link_index;   // -1 for root
     USDLinkType link_type = USD_LINK_CAPSULE;
     int material_index = -1; // Index into ArticulationData::materials (-1 = default physics material)
+    PlantArticulationLinkType organ_type = ARTICULATION_LINK_INTERNODE;
+    PlantJointID joint;      // Innermost joint of the plant skeleton that carries the link
+    uint source_objID = 0;   // Context object the link was built from (0 = none)
 
     // Mesh data (only used when link_type == USD_LINK_MESH)
     std::vector<vec3> mesh_vertices;   // In local space (centroid at origin)
@@ -3869,6 +4016,21 @@ void computeJointLocalRot1(const USDLink &parent, const USDLink &child, USDJoint
     quatMultiply(inv_cw, inv_cx, inv_cy, inv_cz,
                  parent.qw, parent.qx, parent.qy, parent.qz,
                  joint.local_rot1_w, joint.local_rot1_x, joint.local_rot1_y, joint.local_rot1_z);
+}
+
+// Rotate a vector by a unit quaternion: q * v * conjugate(q)
+vec3 rotateByQuaternion(float qw, float qx, float qy, float qz, const vec3 &v) {
+    float tw, tx, ty, tz, rw, rx, ry, rz;
+    quatMultiply(qw, qx, qy, qz, 0.f, v.x, v.y, v.z, tw, tx, ty, tz);
+    quatMultiply(tw, tx, ty, tz, qw, -qx, -qy, -qz, rw, rx, ry, rz);
+    return {rx, ry, rz};
+}
+
+// Compute localPos1 so that the child's end of the joint is at the same point in the rest pose as the parent's end
+// (local_pos_parent). PhysX enforces both ends, so if they differ it moves the child when the simulation starts.
+void computeJointLocalPosChild(const USDLink &parent, const USDLink &child, USDJoint &joint) {
+    vec3 anchor_world = parent.position + rotateByQuaternion(parent.qw, parent.qx, parent.qy, parent.qz, joint.local_pos_parent);
+    joint.local_pos_child = rotateByQuaternion(child.qw, -child.qx, -child.qy, -child.qz, anchor_world - child.position);
 }
 
 struct ArticulationData {
@@ -4219,6 +4381,11 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
 
                 USDLink link;
                 link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Seg" + std::to_string(seg);
+                link.organ_type = ARTICULATION_LINK_INTERNODE;
+                link.joint.type = PLANT_JOINT_INTERNODE;
+                link.joint.shootID = shoot->ID;
+                link.joint.node_index = phytomer_idx;
+                link.source_objID = shoot->internode_tube_objID;
                 link.position = midpoint;
                 axisToQuaternion(axis_normalized, link.qw, link.qx, link.qy, link.qz);
                 link.radius = seg_radius;
@@ -4254,6 +4421,11 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                     joint.parent_link_index = -1;
                     joint.local_pos_parent = start;
                     joint.local_pos_child = vec3(0, 0, -half_len);
+                    // The world frame of the joint is unrotated, so the child frame is rotated back by the base segment's orientation
+                    joint.local_rot1_w = link.qw;
+                    joint.local_rot1_x = -link.qx;
+                    joint.local_rot1_y = -link.qy;
+                    joint.local_rot1_z = -link.qz;
                     joint.stiffness = 0;
                     joint.damping = 0;
                     joint.is_fixed = true;
@@ -4261,7 +4433,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                     joint.name = "J_" + data.links[parent_idx].name + "_to_" + link.name;
                     joint.parent_link_index = parent_idx;
                     joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
-                    joint.local_pos_child = vec3(0, 0, -half_len);
+                    computeJointLocalPosChild(data.links[parent_idx], data.links[this_link_idx], joint);
 
                     float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
                     joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
@@ -4329,6 +4501,14 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
 
                     USDLink link;
                     link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Pet" + std::to_string(petiole_idx) + "_Seg" + std::to_string(seg);
+                    link.organ_type = ARTICULATION_LINK_PETIOLE;
+                    link.joint.type = PLANT_JOINT_PETIOLE;
+                    link.joint.shootID = shoot->ID;
+                    link.joint.node_index = phytomer_idx;
+                    link.joint.petiole_index = petiole_idx;
+                    if (petiole_idx < phytomer->petiole_objIDs.size()) {
+                        link.source_objID = phytomer->petiole_objIDs[petiole_idx];
+                    }
                     link.position = midpoint;
                     axisToQuaternion(axis_normalized, link.qw, link.qx, link.qy, link.qz);
                     link.radius = seg_radius;
@@ -4367,7 +4547,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                     joint.parent_link_index = parent_idx;
                     joint.child_link_index = this_link_idx;
                     joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
-                    joint.local_pos_child = vec3(0, 0, -half_len);
+                    computeJointLocalPosChild(data.links[parent_idx], data.links[this_link_idx], joint);
                     float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
                     joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
                     joint.damping = computeJointDamping(joint.stiffness, params.damping_time_constant);
@@ -4408,6 +4588,17 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
 
                         USDLink link;
                         link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Pet" + std::to_string(petiole_idx) + "_Leaf" + std::to_string(leaf_idx);
+                        link.organ_type = ARTICULATION_LINK_LEAF;
+                        // A leaf is carried by its petiole, or by the internode when it is sessile
+                        link.joint.shootID = shoot->ID;
+                        link.joint.node_index = phytomer_idx;
+                        if (phytomer->petioleHasJoint(petiole_idx)) {
+                            link.joint.type = PLANT_JOINT_PETIOLE;
+                            link.joint.petiole_index = petiole_idx;
+                        } else {
+                            link.joint.type = PLANT_JOINT_INTERNODE;
+                        }
+                        link.source_objID = leaf_objID;
                         link.link_type = USD_LINK_MESH;
                         link.qw = 1; link.qx = 0; link.qy = 0; link.qz = 0;
                         link.radius = 0;
@@ -4432,7 +4623,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                         joint.parent_link_index = parent_idx;
                         joint.child_link_index = this_link_idx;
                         joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
-                        joint.local_pos_child = vec3(0, 0, 0);
+                        computeJointLocalPosChild(data.links[parent_idx], data.links[this_link_idx], joint);
                         joint.stiffness = params.organ_spring_stiffness;
                         joint.damping = params.organ_spring_damping;
                         joint.armature = computeJointArmature(joint.stiffness, params.armature_stability_ratio, params.physics_steps_per_second);
@@ -4482,6 +4673,16 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
 
                             USDLink link;
                             link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Ped" + std::to_string(petiole_idx) + "_B" + std::to_string(bud_idx) + "_Seg" + std::to_string(seg);
+                            link.organ_type = ARTICULATION_LINK_PEDUNCLE;
+                            link.joint.type = PLANT_JOINT_PEDUNCLE;
+                            link.joint.shootID = shoot->ID;
+                            link.joint.node_index = phytomer_idx;
+                            link.joint.petiole_index = petiole_idx;
+                            link.joint.bud_index = bud_idx;
+                            // The peduncle is a single tube object however many segments it has, so every segment's link is built from it
+                            if (!fbud.peduncle_objIDs.empty()) {
+                                link.source_objID = fbud.peduncle_objIDs.front();
+                            }
                             link.position = midpoint;
                             axisToQuaternion(axis_normalized, link.qw, link.qx, link.qy, link.qz);
                             link.radius = seg_radius;
@@ -4523,7 +4724,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                             joint.parent_link_index = parent_idx;
                             joint.child_link_index = this_link_idx;
                             joint.local_pos_parent = vec3(0, 0, data.links[parent_idx].half_length);
-                            joint.local_pos_child = vec3(0, 0, -half_len);
+                            computeJointLocalPosChild(data.links[parent_idx], data.links[this_link_idx], joint);
                             float avg_radius = (data.links[parent_idx].radius + seg_radius) / 2.f;
                             joint.stiffness = computeJointStiffness(params.elastic_modulus, avg_radius, length);
                             joint.damping = computeJointDamping(joint.stiffness, params.damping_time_constant);
@@ -4564,7 +4765,19 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                         uint organ_objID = fbud.inflorescence_objIDs[inf_idx];
 
                         USDLink link;
-                        link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_" + organ_label + std::to_string(inf_idx);
+                        link.name = "S" + std::to_string(shoot->ID) + "_P" + std::to_string(phytomer_idx) + "_Ped" + std::to_string(petiole_idx) + "_B" + std::to_string(bud_idx) + "_" + organ_label + std::to_string(inf_idx);
+                        link.organ_type = (fbud.state == BUD_FRUITING) ? ARTICULATION_LINK_FRUIT : ARTICULATION_LINK_FLOWER;
+                        // A flower or fruit is carried by its peduncle, or by the internode when the peduncle was not built
+                        link.joint.shootID = shoot->ID;
+                        link.joint.node_index = phytomer_idx;
+                        if (phytomer->peduncleHasJoint(petiole_idx, bud_idx)) {
+                            link.joint.type = PLANT_JOINT_PEDUNCLE;
+                            link.joint.petiole_index = petiole_idx;
+                            link.joint.bud_index = bud_idx;
+                        } else {
+                            link.joint.type = PLANT_JOINT_INTERNODE;
+                        }
+                        link.source_objID = organ_objID;
                         link.link_type = USD_LINK_MESH;
                         link.qw = 1; link.qx = 0; link.qy = 0; link.qz = 0;
                         link.radius = 0;
@@ -4583,7 +4796,7 @@ ArticulationData buildArticulationData(const PlantInstance &plant, const USDExpo
                         joint.parent_link_index = organ_attach;
                         joint.child_link_index = this_link_idx;
                         joint.local_pos_parent = vec3(0, 0, data.links[organ_attach].half_length);
-                        joint.local_pos_child = vec3(0, 0, 0);
+                        computeJointLocalPosChild(data.links[organ_attach], data.links[this_link_idx], joint);
                         joint.stiffness = params.organ_spring_stiffness;
                         joint.damping = params.organ_spring_damping;
                         joint.armature = computeJointArmature(joint.stiffness, params.armature_stability_ratio, params.physics_steps_per_second);
@@ -5230,6 +5443,67 @@ void PlantArchitecture::writePlantStructureUSD(uint plantID, const std::string &
     if (printmessages) {
         std::cout << "Wrote USD articulated plant to " << output_file << " (" << artic.links.size() << " links, " << artic.joints.size() << " joints)" << std::endl;
     }
+}
+
+PlantArticulation PlantArchitecture::getPlantArticulation(uint plantID, const USDExportParameters &params) const {
+
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantArticulation): Plant ID " + std::to_string(plantID) + " does not exist.");
+    }
+
+    const auto &plant = plant_instances.at(plantID);
+
+    if (plant.shoot_tree.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantArticulation): Plant " + std::to_string(plantID) + " has no shoots.");
+    }
+
+    ArticulationData artic = buildArticulationData(plant, params, context_ptr);
+
+    if (artic.links.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantArticulation): No valid segments found in plant " + std::to_string(plantID) + ". All segments may be shorter than min_segment_length.");
+    }
+
+    PlantArticulation articulation;
+    articulation.links.reserve(artic.links.size());
+    for (size_t i = 0; i < artic.links.size(); i++) {
+        const USDLink &usd_link = artic.links[i];
+        if (usd_link.parent_link_index >= static_cast<int>(i)) {
+            helios_runtime_error("ERROR (PlantArchitecture::getPlantArticulation): Link " + usd_link.name + " precedes its parent link, which the articulation ordering does not allow.");
+        }
+        PlantArticulationLink link;
+        link.name = usd_link.name;
+        link.type = usd_link.organ_type;
+        link.parent_index = usd_link.parent_link_index;
+        link.position = usd_link.position;
+        link.qw = usd_link.qw;
+        link.qx = usd_link.qx;
+        link.qy = usd_link.qy;
+        link.qz = usd_link.qz;
+        link.radius = usd_link.radius;
+        link.half_length = usd_link.half_length;
+        link.mass = usd_link.mass;
+        link.inertia_diagonal = usd_link.inertia_diagonal;
+        link.source_objID = usd_link.source_objID;
+        link.joint = usd_link.joint;
+        articulation.links.push_back(link);
+    }
+
+    for (const USDJoint &usd_joint: artic.joints) {
+        if (usd_joint.is_fixed) {
+            continue; // the root link is fixed to the world, which needs no joint
+        }
+        PlantArticulationJoint joint;
+        joint.parent_index = usd_joint.parent_link_index;
+        joint.child_index = usd_joint.child_link_index;
+        joint.anchor_in_parent = usd_joint.local_pos_parent;
+        joint.anchor_in_child = usd_joint.local_pos_child;
+        joint.stiffness = usd_joint.stiffness;
+        joint.damping = usd_joint.damping;
+        joint.armature = usd_joint.armature;
+        articulation.joints.push_back(joint);
+    }
+
+    return articulation;
 }
 
 // ============================================================================

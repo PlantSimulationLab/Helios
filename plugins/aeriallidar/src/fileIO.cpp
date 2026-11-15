@@ -159,21 +159,16 @@ void AerialLiDARcloud::loadXML(const char *filename) {
 
         if (!data_filename.empty()) {
 
-            char str[100];
-            strcpy(str, "input/"); // first look in the input directory
-            strcat(str, data_filename.c_str());
-            ifstream f(str);
-            if (!f.good()) {
-
-                // if not in input directory, try absolute path
-                strcpy(str, data_filename.c_str());
-                f.open(str);
-
-                if (!f.good()) {
-                    cout << "failed.\n ERROR (AerialLiDARcloud::loadXML): Data file `" << str << "' given for scan #" << scan_count << " does not exist." << endl;
-                    exit(EXIT_FAILURE);
+            // Look first in the input directory, then for the file as given (absolute or relative to the working directory), then relative to the HELIOS_BUILD directory
+            std::string str = "input/" + data_filename;
+            if (!std::filesystem::exists(str)) {
+                const std::filesystem::path resolved_data_file = tryResolveFilePath(data_filename);
+                if (resolved_data_file.empty()) {
+                    cout << "failed." << endl;
+                    helios_runtime_error("ERROR (AerialLiDARcloud::loadXML): Data file `" + data_filename + "' given for scan #" + std::to_string(scan_count) +
+                                         " does not exist in input/, relative to the working directory, or relative to the HELIOS_BUILD directory.");
                 }
-                f.close();
+                str = resolved_data_file.string();
             }
 
             // ------ ASCII data file format ------- //

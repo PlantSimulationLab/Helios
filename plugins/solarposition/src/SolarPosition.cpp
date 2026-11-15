@@ -103,7 +103,9 @@ SphericalCoord SolarPosition::calculateSunDirection(const helios::Time &time, co
     // solar elevation angle
     phi = acos_safe((sin(delta) - sin(theta) * sin(latitude * rad)) / (cos(theta) * cos(latitude * rad)));
 
-    if (LST > 12.f) {
+    // Afternoon (sun west of the meridian) is where the hour angle is positive. Test its sine, since the local solar time is not
+    // confined to 0-24 h: it falls outside when the clock is far from local solar time (times given in UTC, or zones near the date line).
+    if (std::sin(h) > 0.f) {
         phi = 2.f * M_PI - phi;
     }
 
@@ -594,7 +596,7 @@ float SolarPosition::getOzoneColumn() const {
 
 const std::vector<std::array<float, 12>> &SolarPosition::getOzoneClimatology() {
     static const std::vector<std::array<float, 12>> climatology = [] {
-        const std::string path = "plugins/solarposition/ozone_climatology/sbuv_total_ozone_climatology.txt";
+        const std::string path = resolvePluginAsset("solarposition", "ozone_climatology/sbuv_total_ozone_climatology.txt").string();
         std::ifstream file(path);
         if (!file.is_open()) {
             helios_runtime_error("ERROR (SolarPosition::getOzoneClimatology): Could not open ozone climatology file " + path + ".");
@@ -790,7 +792,8 @@ void SolarPosition::applyCloudCalibration(BroadbandSolarFlux &flux) const {
 
 // ===== SSolar-GOA Spectral Solar Radiation Model =====
 
-void SolarPosition::SpectralData::loadFromFile(const std::string &path) {
+void SolarPosition::SpectralData::loadFromFile(const std::string &filename) {
+    const std::string path = resolveFilePath(filename).string();
     std::ifstream file(path);
     if (!file.is_open()) {
         helios_runtime_error("ERROR (SolarPosition::SpectralData::loadFromFile): Could not open the extraterrestrial solar spectrum file " + path + ".");
@@ -1519,10 +1522,11 @@ const SolarPosition::AtmosphereLUT &SolarPosition::getThermalAtmosphereLUT() {
     return lut;
 }
 
-void SolarPosition::AtmosphereLUT::loadFromFile(const std::string &path) {
+void SolarPosition::AtmosphereLUT::loadFromFile(const std::string &filename) {
     // Surface pressure may be extrapolated this far above the largest tabulated pressure (sea level); Rayleigh scattering, the main pressure effect, is proportional to pressure
     const float max_extrapolated_pressure_hPa = 1050.f;
 
+    const std::string path = resolveFilePath(filename).string();
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
         helios_runtime_error("ERROR (SolarPosition::AtmosphereLUT::loadFromFile): Could not open atmospheric look-up table file " + path + ".");
@@ -1787,7 +1791,7 @@ void SolarPosition::enablePragueSkyModel() {
     prague_model = std::make_unique<helios::PragueSkyModelInterface>();
 
     // Always use the reduced dataset
-    std::string data_path = "plugins/solarposition/lib/prague_sky_model/PragueSkyModelReduced.dat";
+    const std::string data_path = resolvePluginAsset("solarposition", "lib/prague_sky_model/PragueSkyModelReduced.dat").string();
 
     try {
         prague_model->initialize(data_path);

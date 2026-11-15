@@ -2007,6 +2007,39 @@ TEST_CASE("Single-channel PNG images keep their integer values") {
     std::filesystem::remove(filename);
 }
 
+TEST_CASE("Image readers and resolveProjectFile resolve through HELIOS_BUILD when the working directory is not the build directory") {
+    // Regression test. The image readers opened their file by a path relative to the working directory, and resolveProjectFile() never
+    // looked in the HELIOS_BUILD directory, so files relative to the build directory were found only when the process ran from there.
+    // Texture file names stored by the Context are relative paths as given by the caller and are reopened later with these readers.
+    helios::ScopedForeignWorkingDirectory foreign_working_directory;
+
+    uint width = 0;
+    uint height = 0;
+    std::vector<helios::RGBAcolor> png_pixels;
+    DOCTEST_CHECK_NOTHROW(helios::readPNG("lib/images/disk_texture.png", width, height, png_pixels));
+    DOCTEST_CHECK(width > 0);
+
+    std::vector<helios::RGBcolor> jpeg_pixels;
+    DOCTEST_CHECK_NOTHROW(helios::readJPEG("lib/models/texture.jpg", width, height, jpeg_pixels));
+    DOCTEST_CHECK(width > 0);
+
+    helios::int2 jpeg_resolution;
+    DOCTEST_CHECK_NOTHROW(jpeg_resolution = helios::getImageResolutionJPEG("lib/images/solid.jpg"));
+    DOCTEST_CHECK(jpeg_resolution.x > 0);
+
+    bool has_alpha = false;
+    DOCTEST_CHECK_NOTHROW(has_alpha = helios::PNGHasAlpha("lib/images/disk_texture.png"));
+    DOCTEST_CHECK(has_alpha);
+
+    std::vector<std::vector<bool>> alpha_mask;
+    DOCTEST_CHECK_NOTHROW(alpha_mask = helios::readPNGAlpha("lib/images/disk_texture.png"));
+    DOCTEST_CHECK(!alpha_mask.empty());
+
+    std::filesystem::path resolved_project_file;
+    DOCTEST_CHECK_NOTHROW(resolved_project_file = helios::resolveProjectFile("lib/images/solid.jpg"));
+    DOCTEST_CHECK(std::filesystem::exists(resolved_project_file));
+}
+
 TEST_CASE("writeJPEG with metadata embeds EXIF and XMP markers") {
     using helios::ImageEXIFData;
 
@@ -2553,6 +2586,49 @@ TEST_CASE("annotation segmentation masks from a pixel-to-primitive map") {
         DOCTEST_CHECK(!coco_json["annotations"][0].contains("attributes"));
     }
 
+    SUBCASE("appending to a file that cannot be read as a COCO document is refused and leaves it untouched") {
+        // An existing file that failed to parse used to be treated as empty, so the write that followed replaced
+        // everything it held with the new image alone.
+        const std::vector<uint> pixel_UUIDs = buildTestPixelMap(resolution, {{UUID_a, 1, 5, 1, 4}});
+        auto readFileContents = [&json_file]() {
+            std::ifstream json_stream(json_file);
+            std::stringstream contents;
+            contents << json_stream.rdbuf();
+            return contents.str();
+        };
+
+        const std::string truncated_document = "{\"images\": [{\"id\": 0, \"file_name\": \"earlier.jpeg\"";
+        {
+            std::ofstream damaged_file(json_file);
+            damaged_file << truncated_document;
+        }
+        DOCTEST_CHECK(annotationCallThrows([&] { annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"leaf"}, {4}, json_file, image_file, {}, true, false, "test"); }));
+        DOCTEST_CHECK(readFileContents() == truncated_document);
+
+        const std::string not_an_object = "[1, 2, 3]";
+        {
+            std::ofstream array_file(json_file);
+            array_file << not_an_object;
+        }
+        DOCTEST_CHECK(annotationCallThrows([&] { annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"leaf"}, {4}, json_file, image_file, {}, true, false, "test"); }));
+        DOCTEST_CHECK(readFileContents() == not_an_object);
+
+        // A file with nothing in it holds nothing to lose, so appending to it starts a new document
+        {
+            std::ofstream empty_file(json_file);
+        }
+        DOCTEST_CHECK_NOTHROW(annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"leaf"}, {4}, json_file, image_file, {}, true, false, "test"));
+        DOCTEST_CHECK(readAnnotations()["images"].size() == 1);
+
+        // Without appending, an unreadable file is simply replaced
+        {
+            std::ofstream damaged_file(json_file);
+            damaged_file << truncated_document;
+        }
+        DOCTEST_CHECK_NOTHROW(annotation::writeLabelSegmentationMasks(&context, pixel_UUIDs, resolution, {"leaf"}, {4}, json_file, image_file, {}, false, false, "test"));
+        DOCTEST_CHECK(readAnnotations()["images"].size() == 1);
+    }
+
     SUBCASE("labels read from object data, with a .json extension added") {
         const uint objID = context.addPolymeshObject({UUID_a, UUID_b});
         context.setObjectData(objID, "plant", uint(9));
@@ -2805,5 +2881,163 @@ TEST_CASE("classifyBumpImage tells bump maps from normal maps") {
     std::filesystem::remove(gray_jpeg);
     for (const auto &file: {normal_file, gray_rgb_file, colour_file, gray_png}) {
         std::filesystem::remove(file);
+    }
+}
+
+TEST_CASE("Portable random distributions give the same sequence on every platform") {
+    // The values here were computed independently of the implementation, from the published definitions of the two engines and
+    // of each distribution. They do not depend on the standard library, so they hold on every platform.
+
+    SUBCASE("uniform real numbers from std::minstd_rand0") {
+        std::minstd_rand0 generator(1);
+        helios::uniform_real_distribution<float> unit;
+        DOCTEST_CHECK(unit(generator) == 0x1.0698p-17f);
+        DOCTEST_CHECK(unit(generator) == 0x1.0d63bp-3f);
+        DOCTEST_CHECK(unit(generator) == 0x1.82deb4p-1f);
+        DOCTEST_CHECK(unit(generator) == 0x1.d5a862p-2f);
+
+        std::minstd_rand0 generator_double(1);
+        helios::uniform_real_distribution<double> unit_double;
+        DOCTEST_CHECK(unit_double(generator_double) == 0x1.06990d63a8p-16);
+        DOCTEST_CHECK(unit_double(generator_double) == 0x1.d5a8614b80db5p-1);
+    }
+
+    SUBCASE("uniform real numbers from std::mt19937") {
+        std::mt19937 generator(1);
+        helios::uniform_real_distribution<float> unit;
+        DOCTEST_CHECK(unit(generator) == 0x1.ab07dp-2f);
+        DOCTEST_CHECK(unit(generator) == 0x1.fe8f02p-1f);
+        DOCTEST_CHECK(unit(generator) == 0x1.70ce6p-1f);
+
+        std::mt19937 generator_double(1);
+        helios::uniform_real_distribution<double> unit_double;
+        DOCTEST_CHECK(unit_double(generator_double) == 0x1.ab07d097fd1ep-2);
+    }
+
+    SUBCASE("uniform integers") {
+        std::minstd_rand0 minstd(1);
+        helios::uniform_int_distribution<int> digit(0, 9);
+        std::vector<int> digits;
+        for (int i = 0; i < 8; i++) {
+            digits.push_back(digit(minstd));
+        }
+        DOCTEST_CHECK(digits == std::vector<int>{0, 1, 7, 4, 5, 2, 0, 6});
+
+        std::mt19937 mersenne(1);
+        digits.clear();
+        for (int i = 0; i < 8; i++) {
+            digits.push_back(digit(mersenne));
+        }
+        DOCTEST_CHECK(digits == std::vector<int>{4, 9, 7, 9, 0, 1, 3, 9});
+
+        // A range wider than one draw of the generator
+        std::mt19937 wide_generator(1);
+        helios::uniform_int_distribution<uint64_t> wide(1, (std::numeric_limits<uint64_t>::max) ());
+        DOCTEST_CHECK(wide(wide_generator) == 7692698082559361260ULL);
+
+        // A signed range: every value is reached, and none outside it
+        std::mt19937 signed_generator(5);
+        helios::uniform_int_distribution<int> around_zero(-3, 3);
+        std::set<int> reached;
+        for (int i = 0; i < 2000; i++) {
+            reached.insert(around_zero(signed_generator));
+        }
+        DOCTEST_CHECK(reached == std::set<int>{-3, -2, -1, 0, 1, 2, 3});
+    }
+
+    SUBCASE("shuffle") {
+        std::mt19937 generator(1);
+        std::vector<int> order = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        helios::shuffle(order.begin(), order.end(), generator);
+        DOCTEST_CHECK(order == std::vector<int>{3, 9, 2, 1, 7, 0, 6, 5, 8, 4});
+    }
+
+    SUBCASE("normal distribution") {
+        std::minstd_rand0 generator(1);
+        helios::normal_distribution<float> standard_normal;
+        // Through a logarithm and a square root, so compared to within single-precision rounding
+        DOCTEST_CHECK(standard_normal(generator) == doctest::Approx(0.10604089f).epsilon(1e-6));
+        DOCTEST_CHECK(standard_normal(generator) == doctest::Approx(-1.3457154f).epsilon(1e-6));
+
+        // reset() discards the value held over from the last pair
+        std::minstd_rand0 generator_a(3), generator_b(3);
+        helios::normal_distribution<float> normal_a, normal_b;
+        const float first = normal_a(generator_a);
+        DOCTEST_CHECK(normal_b(generator_b) == first);
+        normal_a.reset();
+        normal_b.reset();
+        DOCTEST_CHECK(normal_a(generator_a) == normal_b(generator_b));
+    }
+
+    SUBCASE("each distribution has the moments it should") {
+        const int sample_count = 200000;
+        std::mt19937 generator(7);
+        auto moments = [&](const std::function<double()> &sample) {
+            double sum = 0, sum_squares = 0;
+            for (int i = 0; i < sample_count; i++) {
+                const double value = sample();
+                sum += value;
+                sum_squares += value * value;
+            }
+            const double mean = sum / sample_count;
+            return std::make_pair(mean, sum_squares / sample_count - mean * mean);
+        };
+
+        helios::uniform_real_distribution<float> uniform(2.f, 5.f);
+        float smallest = 5.f, largest = 2.f;
+        const auto uniform_moments = moments([&] {
+            const float value = uniform(generator);
+            smallest = std::min(smallest, value);
+            largest = std::max(largest, value);
+            return double(value);
+        });
+        DOCTEST_CHECK(smallest >= 2.f);
+        DOCTEST_CHECK(largest < 5.f);
+        DOCTEST_CHECK(uniform_moments.first == doctest::Approx(3.5).epsilon(0.01));
+        DOCTEST_CHECK(uniform_moments.second == doctest::Approx(0.75).epsilon(0.02));
+
+        helios::normal_distribution<float> normal(10.f, 2.f);
+        const auto normal_moments = moments([&] { return double(normal(generator)); });
+        DOCTEST_CHECK(normal_moments.first == doctest::Approx(10.0).epsilon(0.005));
+        DOCTEST_CHECK(normal_moments.second == doctest::Approx(4.0).epsilon(0.02));
+
+        helios::weibull_distribution<float> weibull(2.f, 3.f); // mean 3*Gamma(1.5), variance 9*(1 - pi/4)
+        const auto weibull_moments = moments([&] { return double(weibull(generator)); });
+        DOCTEST_CHECK(weibull_moments.first == doctest::Approx(2.658681).epsilon(0.01));
+        DOCTEST_CHECK(weibull_moments.second == doctest::Approx(1.931417).epsilon(0.03));
+
+        helios::gamma_distribution<float> gamma(2.5f, 2.f); // mean alpha*beta, variance alpha*beta^2
+        const auto gamma_moments = moments([&] { return double(gamma(generator)); });
+        DOCTEST_CHECK(gamma_moments.first == doctest::Approx(5.0).epsilon(0.01));
+        DOCTEST_CHECK(gamma_moments.second == doctest::Approx(10.0).epsilon(0.03));
+
+        helios::gamma_distribution<float> gamma_small_shape(0.5f, 1.f);
+        const auto gamma_small_moments = moments([&] { return double(gamma_small_shape(generator)); });
+        DOCTEST_CHECK(gamma_small_moments.first == doctest::Approx(0.5).epsilon(0.02));
+        DOCTEST_CHECK(gamma_small_moments.second == doctest::Approx(0.5).epsilon(0.05));
+
+        // A Cauchy distribution has no mean; half of it lies below its location and a quarter below location - scale
+        helios::cauchy_distribution<float> cauchy(1.f, 2.f);
+        int below_location = 0, below_lower_quartile = 0;
+        for (int i = 0; i < sample_count; i++) {
+            const float value = cauchy(generator);
+            below_location += (value < 1.f) ? 1 : 0;
+            below_lower_quartile += (value < -1.f) ? 1 : 0;
+        }
+        DOCTEST_CHECK(double(below_location) / sample_count == doctest::Approx(0.5).epsilon(0.02));
+        DOCTEST_CHECK(double(below_lower_quartile) / sample_count == doctest::Approx(0.25).epsilon(0.03));
+
+        const std::vector<float> weights = {1.f, 0.f, 3.f};
+        helios::discrete_distribution<size_t> discrete(weights.begin(), weights.end());
+        std::vector<int> counts(3, 0);
+        for (int i = 0; i < sample_count; i++) {
+            counts.at(discrete(generator))++;
+        }
+        DOCTEST_CHECK(double(counts.at(0)) / sample_count == doctest::Approx(0.25).epsilon(0.03));
+        DOCTEST_CHECK(counts.at(1) == 0);
+        DOCTEST_CHECK(double(counts.at(2)) / sample_count == doctest::Approx(0.75).epsilon(0.02));
+
+        std::vector<float> no_weight = {0.f, 0.f};
+        DOCTEST_CHECK_THROWS(helios::discrete_distribution<size_t>(no_weight.begin(), no_weight.end()));
     }
 }

@@ -177,9 +177,9 @@ struct taggedPtr {
 
 //! Distribution union object; union of normal_distribution, uniform_real_distribution, and weibull_distribution
 union distUnion {
-    std::normal_distribution<float> *normal;
-    std::uniform_real_distribution<float> *uniform;
-    std::weibull_distribution<float> *weibull;
+    helios::normal_distribution<float> *normal;
+    helios::uniform_real_distribution<float> *uniform;
+    helios::weibull_distribution<float> *weibull;
 };
 
 //! Struct to combine distribution objects (flag: -1 = N/A, 0 = normal, 1 = uniform, 2 = weibull) (repeat: false = randomize once per recording, true = randomize for every image)
@@ -260,24 +260,27 @@ bool parse_distribution(const std::string &input_string, distribution &converted
  ** \param[in] dist Distribution
  ** \param[in] randomize_repeat If true, randomize for every image.
  */
-distribution createDistribution(const std::normal_distribution<float> &dist, bool randomize_repeat);
+distribution createDistribution(const helios::normal_distribution<float> &dist, bool randomize_repeat);
 
 //! Function to create a distribution struct from a uniform real distribution
 /**
  ** \param[in] dist Distribution
  ** \param[in] randomize_repeat If true, randomize for every image.
  */
-distribution createDistribution(const std::uniform_real_distribution<float> &dist, bool randomize_repeat);
+distribution createDistribution(const helios::uniform_real_distribution<float> &dist, bool randomize_repeat);
 
 //! Function to create a distribution struct from a weibull distribution
 /**
  ** \param[in] dist Distribution
  ** \param[in] randomize_repeat If true, randomize for every image.
  */
-distribution createDistribution(const std::weibull_distribution<float> &dist, bool randomize_repeat);
+distribution createDistribution(const helios::weibull_distribution<float> &dist, bool randomize_repeat);
 
 
 class ProjectBuilder {
+    // Gives the self-tests access to the interface state that is otherwise only driven through the GUI
+    friend struct ProjectBuilderTestHelper;
+
 private:
     //! XML Document
     pugi::xml_document xmldoc;

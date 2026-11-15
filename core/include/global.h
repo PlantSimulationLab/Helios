@@ -91,6 +91,7 @@ constexpr To scast(From &&v) noexcept {
 
 
 #include "helios_vector_types.h"
+#include "portable_random.h"
 #include "image_metadata.h"
 
 // pugi XML parser
@@ -894,20 +895,20 @@ namespace helios {
 
     //! Check whether PNG image file has an alpha/transparency channel
     /**
-     * \param[in] filename Name of the PNG image file
+     * \param[in] filename Name of the PNG image file, resolved with resolveFilePath()
      */
     [[nodiscard]] bool PNGHasAlpha(const char *filename);
 
     //! Function to read the alpha channel from a PNG image
     /**
-     * \param[in] filename Name of the PNG image file
+     * \param[in] filename Name of the PNG image file, resolved with resolveFilePath()
      * \return 2D mask, where false denotes no material
      */
     [[nodiscard]] std::vector<std::vector<bool>> readPNGAlpha(const std::string &filename);
 
     //! Function to read a PNG image file into pixel data array
     /**
-     * \param[in] filename Name of the PNG image file
+     * \param[in] filename Name of the PNG image file, resolved with resolveFilePath()
      * \param[out] width Image width in pixels
      * \param[out] height Image height in pixels
      * \param[out] pixel_data Colors at each pixel (index at pixel_data[row*width+column])
@@ -936,7 +937,7 @@ namespace helios {
     //! Read a single-channel (grayscale) PNG image whose pixel values are integers, such as a class map
     /**
      * The values are returned exactly as stored, without scaling to [0,1], so that each pixel can be used as an index.
-     * \param[in] filename Name of the PNG image file, which must be 8-bit or 16-bit grayscale without transparency.
+     * \param[in] filename Name of the PNG image file, which must be 8-bit or 16-bit grayscale without transparency. It is resolved with resolveFilePath().
      * \param[out] width Image width in pixels
      * \param[out] height Image height in pixels
      * \param[out] pixel_values Value of each pixel, row by row from the top of the image (index at pixel_values[row*width+column])
@@ -967,16 +968,17 @@ namespace helios {
 
     //! Function to read a JPEG image file into pixel data array
     /**
-     * \param[in] filename Name of the JPEG image file
+     * \param[in] filename Name of the JPEG image file, resolved with resolveFilePath()
      * \param[out] width Image width in pixels
      * \param[out] height Image height in pixels
      * \param[out] pixel_data Colors at each pixel (index at pixel_data[row*width+column])
      */
     void readJPEG(const std::string &filename, uint &width, uint &height, std::vector<helios::RGBcolor> &pixel_data);
 
-    //! Function to read a JPEG image file into pixel data array
+    //! Get the resolution of a JPEG image file
     /**
-     * \param[in] filename Name of the JPEG image file
+     * \param[in] filename Name of the JPEG image file, resolved with resolveFilePath()
+     * \return Image width (x) and height (y) in pixels
      */
     [[nodiscard]] helios::int2 getImageResolutionJPEG(const std::string &filename);
 
@@ -1532,7 +1534,7 @@ namespace helios {
     /**
      * \param[in] relativePath Relative path to the file
      * \return Absolute path to the file
-     * \note Resolution order: 1) Current working directory, 2) Project directory, 3) Error
+     * \note Resolution order: 1) Current working directory, 2) Project directory (the nearest parent of the working directory containing CMakeLists.txt), 3) Build directory given by the HELIOS_BUILD environment variable (see resolveFilePath()), 4) Error
      * \throws std::runtime_error if file cannot be found
      * \ingroup functions
      */
@@ -1540,7 +1542,7 @@ namespace helios {
 
     //! Read values contained in a text file into a one-dimensional vector of floats
     /**
-     * \param[in] filepath Path to text file
+     * \param[in] filepath Path to text file, resolved with resolveFilePath()
      * \return One-dimensional vector of floats contained in text file
      */
     [[nodiscard]] std::vector<float> importVectorFromFile(const std::string &filepath);
