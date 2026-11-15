@@ -7738,3 +7738,40 @@ TEST_CASE("Visualizer reports normal maps on primitives with collinear texture c
     std::filesystem::remove(tilt_u);
     std::filesystem::remove(texture);
 }
+
+DOCTEST_TEST_CASE("Visualizer draws a window-normalized texture in its own sRGB values") {
+    // The fragment shader decoded every textured or colored fragment from sRGB to linear light when the linear
+    // pipeline was on (the default), but re-encoded only 3D geometry (coordinateFlag==1). A textured rectangle in
+    // window-normalized coordinates therefore came out in linear values: a uniform sRGB 128 texture was drawn as 55.
+    const std::string texture_file = "test_window_texture_gray128.jpeg";
+    const std::string capture_file = "test_window_texture_capture.jpeg";
+    const uint width = 200;
+    const uint height = 160;
+
+    helios::writeJPEG(texture_file, 64, 64, std::vector<RGBcolor>(64 * 64, make_RGBcolor(128.f / 255.f, 128.f / 255.f, 128.f / 255.f)));
+
+    {
+        Visualizer visualizer(width, height, 0, false, true);
+        visualizer.disableMessages();
+        visualizer.hideWatermark();
+        visualizer.hideNavigationGizmo();
+        visualizer.disableColorbar();
+        visualizer.setBackgroundColor(make_RGBcolor(1.f, 0.f, 0.f));
+        visualizer.addRectangleByCenter(make_vec3(0.5f, 0.5f, 0.f), make_vec2(0.8f, 0.8f), make_SphericalCoord(0, 0), texture_file.c_str(), Visualizer::COORDINATES_WINDOW_NORMALIZED);
+        visualizer.plotUpdate(true);
+        DOCTEST_REQUIRE_NOTHROW(visualizer.printWindow(capture_file.c_str(), "jpeg"));
+    }
+
+    uint read_width = 0;
+    uint read_height = 0;
+    std::vector<RGBcolor> pixels;
+    helios::readJPEG(capture_file, read_width, read_height, pixels);
+    DOCTEST_REQUIRE(read_width == width);
+    DOCTEST_REQUIRE(read_height == height);
+
+    const RGBcolor center = pixels.at((height / 2) * width + width / 2);
+    DOCTEST_CHECK_MESSAGE(std::fabs(center.g * 255.f - 128.f) <= 3.f, "a uniform sRGB 128 texture in window coordinates was drawn as " << center.g * 255.f);
+
+    std::filesystem::remove(texture_file);
+    std::filesystem::remove(capture_file);
+}
