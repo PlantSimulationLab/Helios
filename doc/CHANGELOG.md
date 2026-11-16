@@ -39,6 +39,10 @@
 - Fixed `utilities/create_project.sh` writing the wrong `#include` into `main.cpp` for the `soiltransport` and `parameteroptimization` plug-ins and an empty `#include ""` for `collisiondetection`, so a new project using any of them did not compile.
 - `utilities/create_project.sh` now stops with an error, before creating anything, when given a plug-in name it does not recognize. It used to print a message, leave the plug-in out of the project and report success.
 
+## Visualizer
+- Fixed geometry added in window-normalized coordinates being drawn too dark with the linear-light pipeline enabled (the default): its colors and textures were decoded from sRGB to linear light but never re-encoded, so an sRGB value of 128 was displayed as 55 (GitHub PR #111). This affected the default gradient background, background images, `Visualizer::displayImage()`, the colorbar, bounding-box overlays, the navigation gizmo and any user geometry added with `Visualizer::COORDINATES_WINDOW_NORMALIZED`. **These now appear brighter, in the colors of their source images.** 3D geometry is unchanged.
+- Fixed headless `Visualizer::printWindow()` writing past the end of its pixel buffer when the window width was not a multiple of 4, for JPEG output and for PNG output with an opaque background (GitHub PR #111). The captured image came out with skewed color bands, and the process could crash from heap corruption.
+
 # [1.3.98] 2026-11-15
 
 ## Core

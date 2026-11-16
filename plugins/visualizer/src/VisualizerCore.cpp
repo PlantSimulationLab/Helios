@@ -1301,6 +1301,9 @@ std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
     try {
         // Read pixels from the color attachment
         std::vector<unsigned char> pixel_data(data_size);
+        // pixel_data holds tightly packed rows; at the default pack alignment of 4, glReadPixels pads each GL_RGB row
+        // to a multiple of 4 bytes and overruns the buffer when the width is not a multiple of 4.
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
         glReadPixels(0, 0, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, pixel_data.data());
 
         error = glGetError();
@@ -1389,6 +1392,9 @@ std::vector<helios::RGBAcolor> Visualizer::readOffscreenPixelsRGBA(bool read_alp
     try {
         // Read pixels from the color attachment
         std::vector<unsigned char> pixel_data(data_size);
+        // pixel_data holds tightly packed rows; at the default pack alignment of 4, glReadPixels pads each GL_RGB row
+        // to a multiple of 4 bytes and overruns the buffer when the width is not a multiple of 4.
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
         if (read_alpha) {
             glReadPixels(0, 0, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), GL_RGBA, GL_UNSIGNED_BYTE, pixel_data.data());
         } else {
