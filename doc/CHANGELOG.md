@@ -15,9 +15,24 @@
 - `LiDARcloud::getHitBoundingBox()` and `getGridBoundingBox()` now raise an error when the point cloud has no hit points or no grid cells. With messages disabled they returned the inverted box (1e6, -1e6) of an empty search, and with messages enabled they printed a warning and left the outputs unchanged. As a result, `LiDARcloud::syntheticScan()` with `scan_grid_only` set and no grid now raises an error instead of scanning against that inverted box.
 - `LiDARcloud::triangulateHitPoints()` and the methods that add hits, the grid or triangles to a Visualizer now skip an empty point cloud whether or not messages are enabled; the early return used to be taken only when messages were enabled.
 
+## Aerial LiDAR
+- Errors in `AerialLiDARcloud` (for example a malformed XML file passed to `loadXML()`, an out-of-range hit or grid cell index, or a bad scan in `syntheticScan()`) now raise an exception instead of printing to standard error and ending the program.
+- Fixed `AerialLiDARcloud::getHitBoundingBox()` returning an inverted box of ±1e6 for a point cloud with no hits when messages were disabled; it now raises an error whatever the message setting. `addHitsToVisualizer()` and `addGridToVisualizer()` now return without adding anything when there are no scans whatever the message setting, instead of only when messages were enabled.
+- Fixed `AerialLiDARcloud::loadXML()` accepting a scan cone angle greater than 90 degrees. The angle was compared with 90 after its conversion to radians, so no angle under about 5,000 degrees was rejected.
+
 ## Radiation
-- Radiation cameras on the Vulkan backend are now rendered in tiles of at most 2^26 rays (pixels times antialiasing samples), the same limit as its direct and diffuse launches, instead of 2^30. A large camera with many samples could otherwise run long enough in one dispatch to trip the display driver's watchdog and lose the device. The image noise of such a camera changes, since each tile draws its own random seed.
+- Radiation cameras on the Vulkan and OptiX 8 backends are now rendered in tiles of at most 2^26 rays (pixels times antialiasing samples), the same limit as their direct and diffuse launches, instead of 2^30. A large camera with many samples could otherwise run long enough in one dispatch to trip the display driver's watchdog and lose the device. The image noise of such a camera changes, since each tile draws its own random seed.
 - On the Vulkan backend, a failed submission of a buffer upload, download or clear to the GPU now raises an error naming the failure, instead of being reported as a time-out five seconds later, and the time a transfer may take before it is treated as hung is raised from five seconds to ten minutes, so that a large buffer on a slow or software Vulkan device no longer fails.
+- The OptiX 8 backend of the radiation model no longer keeps copies on the GPU of the primitive vertices, UUIDs, object IDs and solid fractions that its ray-tracing programs never read, saving about 48 bytes of GPU memory per triangle (about 0.5 GB per 10 million triangles) and 60 per patch.
+- A failed OptiX call in the OptiX 6 backend of the radiation model now raises an error naming the OptiX error, instead of printing it and ending the program.
+
+## Collision Detection
+- Fixed GPU ray casts (`CollisionDetection::castRays()` and `castRaysSoA()` on batches of 1M rays or more against 500 or more primitives, as in large LiDAR synthetic scans) missing hits for rays parallel to an axis that run along or just inside a face of a bounding box or voxel. A ray a distance d inside a face could not hit anything farther than d × 10^8 along it, and a ray lying on a face was culled, so GPU and CPU builds returned different hits for the same rays. The GPU now treats such rays as the CPU does since 1.3.97.
+- CPU ray casts in `CollisionDetection` now raise an error if a BVH traversal fills its node stack, as the GPU path does, instead of silently skipping the rest of the subtree and missing its primitives. This cannot happen for a BVH built by `CollisionDetection`.
+
+## Energy Balance
+- Fixed the GPU solver of `EnergyBalanceModel::run()` printing one "Energy balance did not converge" line per primitive, even with messages disabled. Like the CPU solver, it now prints one line giving the number of primitives that did not converge, and only when messages are enabled.
+- A failed CUDA call in the GPU solver of `EnergyBalanceModel::run()` now raises an error instead of printing to standard error and ending the program.
 
 ## Canopy Generator
 - Fixed `CanopyGenerator::loadXML()` reading only the first `<canopygenerator>` block of a file, so the canopies in any later block were silently not built.
@@ -38,6 +53,7 @@
 ## Utilities
 - Fixed `utilities/create_project.sh` writing the wrong `#include` into `main.cpp` for the `soiltransport` and `parameteroptimization` plug-ins and an empty `#include ""` for `collisiondetection`, so a new project using any of them did not compile.
 - `utilities/create_project.sh` now stops with an error, before creating anything, when given a plug-in name it does not recognize. It used to print a message, leave the plug-in out of the project and report success.
+- `utilities/run_tests.sh` now builds and tests the CUDA-only `aeriallidar` and `voxelintersection` plug-ins in a full run when `nvcc` is found or `--requiregpu` is given. They were never built by it before, so a change that broke their compilation went unnoticed.
 
 ## Visualizer
 - Fixed geometry added in window-normalized coordinates being drawn too dark with the linear-light pipeline enabled (the default): its colors and textures were decoded from sRGB to linear light but never re-encoded, so an sRGB value of 128 was displayed as 55 (GitHub PR #111). This affected the default gradient background, background images, `Visualizer::displayImage()`, the colorbar, bounding-box overlays, the navigation gizmo and any user geometry added with `Visualizer::COORDINATES_WINDOW_NORMALIZED`. **These now appear brighter, in the colors of their source images.** 3D geometry is unchanged.

@@ -1544,9 +1544,10 @@ GPU_TEST_CASE("RadiationModel no direct or diffuse radiation leaks into a closed
 GPU_TEST_CASE("RadiationModel camera launches are tiled to the backend's per-launch ray budget") {
     // Camera launches were tiled to a fixed 2^30 rays, the OptiX 6 launch limit, while the Vulkan backend limits each of its
     // direct and diffuse launches to 2^26 rays so that no launch runs long enough to trip the display driver's watchdog. A
-    // Vulkan camera launch could therefore be up to 16 times that budget in a single dispatch. 2048 x 1024 pixels at 33
-    // samples is 69 million rays, just over the Vulkan budget: on that backend the camera must be split into tiles, and the
-    // tiled image of a uniform sky must be as uniform, and as bright, as an untiled one.
+    // Vulkan camera launch could therefore be up to 16 times that budget in a single dispatch. The OptiX 8 backend holds its
+    // direct and diffuse launches to the same 2^26 rays but kept the 2^30 camera budget. 2048 x 1024 pixels at 33 samples is
+    // 69 million rays, just over 2^26: on every backend but OptiX 6 (whose budget is its 2^30 launch limit) the camera must be
+    // split into tiles, and the tiled image of a uniform sky must be as uniform, and as bright, as an untiled one.
     Context context;
     context.addPatch(make_vec3(0, 0, -5), make_vec2(1, 1)); // out of view of the upward-looking camera
 
@@ -1575,8 +1576,9 @@ GPU_TEST_CASE("RadiationModel camera launches are tiled to the backend's per-lau
         messages = capture.get_captured_output();
     }
 
-    const bool vulkan_backend = radiation.getBackendName().find("Vulkan") != std::string::npos;
-    if (vulkan_backend) {
+    const std::string backend_name = radiation.getBackendName();
+    DOCTEST_INFO("backend " << backend_name);
+    if (backend_name.find("OptiX 6") == std::string::npos) {
         DOCTEST_CHECK(messages.find("Camera 'many_samples' requires 2 tiles") != std::string::npos);
     }
     DOCTEST_CHECK(messages.find("Camera 'reference' requires") == std::string::npos);

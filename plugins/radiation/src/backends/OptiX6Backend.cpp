@@ -23,7 +23,6 @@
 using namespace helios;
 
 // Forward declaration of error handling functions
-static void sutilReportError(const char *message);
 static void sutilHandleError(RTcontext context, RTresult code, const char *file, int line);
 
 OptiX6Backend::OptiX6Backend() {
@@ -1281,24 +1280,11 @@ std::string OptiX6Backend::getBackendName() const {
 
 // ========== Error Handling Helpers ==========
 
-static void sutilReportError(const char *message) {
-    fprintf(stderr, "OptiX Error: %s\n", message);
-#if defined(_WIN32) && defined(RELEASE_PUBLIC)
-    {
-        char s[2048];
-        sprintf(s, "OptiX Error: %s", message);
-        MessageBox(0, s, "OptiX Error", MB_OK | MB_ICONWARNING | MB_SYSTEMMODAL);
-    }
-#endif
-}
-
+//! Raise the error of a failed OptiX call (RT_CHECK_ERROR)
 static void sutilHandleError(RTcontext context, RTresult code, const char *file, int line) {
-    const char *message;
-    char s[2048];
+    const char *message = nullptr;
     rtContextGetErrorString(context, code, &message);
-    sprintf(s, "%s\n(%s:%d)", message, file, line);
-    sutilReportError(s);
-    exit(1);
+    helios_runtime_error("ERROR (OptiX6Backend): OptiX call failed: " + std::string(message != nullptr ? message : "unknown error") + " (" + std::string(file) + ":" + std::to_string(line) + ").");
 }
 
 // ========== Private Helper Methods: Buffer Management ==========
@@ -1913,11 +1899,6 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry &geometry) {
         }
         initializeBuffer2Dfloat3(bbox_vertices_RTbuffer, bbox_verts_2d);
         initializeBuffer1Dui(bbox_UUID_RTbuffer, geometry.bboxes.UUIDs);
-    }
-
-    // Object subdivisions
-    if (!geometry.object_subdivisions.empty()) {
-        initializeBuffer1Dint2(object_subdivisions_RTbuffer, geometry.object_subdivisions);
     }
 
     // Texture masks

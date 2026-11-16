@@ -373,9 +373,7 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     upload(d_primitive_positions,   geometry.primitive_positions.data(),  geometry.primitive_positions.size()  * sizeof(uint32_t));
     upload(d_primitive_uuid_arr,    geometry.primitive_UUIDs.data(),      geometry.primitive_UUIDs.size()      * sizeof(uint32_t));
     upload(d_primitiveID,           geometry.primitive_IDs.data(),        geometry.primitive_IDs.size()        * sizeof(uint32_t));
-    upload(d_objectID,              geometry.object_IDs.data(),           geometry.object_IDs.size()           * sizeof(uint32_t));
     upload(d_twosided_flag,         geometry.twosided_flags.data(),       geometry.twosided_flags.size()       * sizeof(char));
-    upload(d_primitive_solid_fraction, geometry.solid_fractions.data(),   geometry.solid_fractions.size()      * sizeof(float));
     upload(d_smoothing_vertex_indices, geometry.smoothing_vertex_indices.data(), geometry.smoothing_vertex_indices.size() * sizeof(int32_t));
 
     // object_subdivisions: vector<helios::int2> → flat int32 array (2 ints per prim)
@@ -386,37 +384,10 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
                               geometry.object_subdivisions.data(), bytes, cudaMemcpyHostToDevice));
     }
 
-    // Per-type geometry
-    if (geometry.patch_count > 0) {
-        upload(d_patch_vertices, geometry.patches.vertices.data(),
-               geometry.patches.vertices.size() * sizeof(helios::vec3));
-        upload(d_patch_UUIDs, geometry.patches.UUIDs.data(),
-               geometry.patches.UUIDs.size() * sizeof(uint32_t));
-    }
-    if (geometry.triangles.count > 0) {
-        upload(d_triangle_vertices, geometry.triangles.vertices.data(),
-               geometry.triangles.vertices.size() * sizeof(helios::vec3));
-        upload(d_triangle_UUIDs, geometry.triangles.UUIDs.data(),
-               geometry.triangles.UUIDs.size() * sizeof(uint32_t));
-    }
-    if (geometry.disk_count > 0) {
-        upload(d_disk_centers, geometry.disk_centers.data(), geometry.disk_centers.size() * sizeof(helios::vec3));
-        upload(d_disk_radii,   geometry.disk_radii.data(),   geometry.disk_radii.size()   * sizeof(float));
-        upload(d_disk_normals, geometry.disk_normals.data(), geometry.disk_normals.size() * sizeof(helios::vec3));
-        upload(d_disk_UUIDs,   geometry.disk_UUIDs.data(),   geometry.disk_UUIDs.size()   * sizeof(uint32_t));
-    }
-    if (geometry.tiles.count > 0) {
-        upload(d_tile_vertices, geometry.tiles.vertices.data(),
-               geometry.tiles.vertices.size() * sizeof(helios::vec3));
-        upload(d_tile_UUIDs, geometry.tiles.UUIDs.data(),
-               geometry.tiles.UUIDs.size() * sizeof(uint32_t));
-    }
     upload(d_periodic_excluded, geometry.periodic_excluded.data(), geometry.periodic_excluded.size() * sizeof(uint8_t));
     if (geometry.bbox_count > 0) {
         upload(d_bbox_vertices, geometry.bboxes.vertices.data(),
                geometry.bboxes.vertices.size() * sizeof(helios::vec3));
-        upload(d_bbox_UUIDs, geometry.bboxes.UUIDs.data(),
-               geometry.bboxes.UUIDs.size() * sizeof(uint32_t));
     }
 
     // Extend primitive_type and primitive_uuid arrays to include bbox entries (type=5).
@@ -525,10 +496,8 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     h_params.primitive_positions      = reinterpret_cast<uint32_t *>(d_primitive_positions);
     h_params.primitive_uuid           = reinterpret_cast<uint32_t *>(d_primitive_uuid_arr);
     h_params.primitiveID              = reinterpret_cast<uint32_t *>(d_primitiveID);
-    h_params.objectID                 = reinterpret_cast<uint32_t *>(d_objectID);
     h_params.object_subdivisions      = reinterpret_cast<int32_t *>(d_object_subdivisions);
     h_params.twosided_flag            = reinterpret_cast<int8_t *>(d_twosided_flag);
-    h_params.primitive_solid_fraction = reinterpret_cast<float *>(d_primitive_solid_fraction);
     h_params.smoothing_vertex_indices = reinterpret_cast<int32_t *>(d_smoothing_vertex_indices);
     if (geometry.smoothing_vertex_indices.empty()) {
         // Camera flux smoothing is off for this geometry. Clear any vertex flux left over from a previous build so that the camera program cannot read a buffer describing geometry that no longer exists.
@@ -543,18 +512,7 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     h_params.vertex_normal_count = 0;
     freeCUdeviceptr(d_vertex_normal_map_moments);
     h_params.vertex_normal_map_moments = nullptr;
-    h_params.patch_vertices           = reinterpret_cast<float3 *>(d_patch_vertices);
-    h_params.patch_UUIDs              = reinterpret_cast<uint32_t *>(d_patch_UUIDs);
-    h_params.triangle_vertices        = reinterpret_cast<float3 *>(d_triangle_vertices);
-    h_params.triangle_UUIDs           = reinterpret_cast<uint32_t *>(d_triangle_UUIDs);
-    h_params.disk_centers             = reinterpret_cast<float3 *>(d_disk_centers);
-    h_params.disk_radii               = reinterpret_cast<float *>(d_disk_radii);
-    h_params.disk_normals             = reinterpret_cast<float3 *>(d_disk_normals);
-    h_params.disk_UUIDs               = reinterpret_cast<uint32_t *>(d_disk_UUIDs);
-    h_params.tile_vertices            = reinterpret_cast<float3 *>(d_tile_vertices);
-    h_params.tile_UUIDs               = reinterpret_cast<uint32_t *>(d_tile_UUIDs);
     h_params.bbox_vertices            = reinterpret_cast<float3 *>(d_bbox_vertices);
-    h_params.bbox_UUIDs               = reinterpret_cast<uint32_t *>(d_bbox_UUIDs);
     h_params.Nprimitives              = Nprims;
     h_params.Nflux_slots              = static_cast<uint32_t>(geometry.fluxSlotCount());
     h_params.normal_map_slot_count    = static_cast<uint32_t>(geometry.normal_map_slot_count);
@@ -893,14 +851,13 @@ void OptiX8Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance
  * third, which OptiX 8.1 starts far more slowly: 65,535 primitives at one ray each took 4.5 ms that way and 0.2 ms this way
  * (RTX A5500, driver 580), which was most of the time of a run with few rays per primitive.
  *
- * OptiX refuses a launch of more than 2^30 threads, and a launch that runs for seconds can exceed the watchdog of a display
- * driver, so a launch is held to 2^26 threads, those of 65,536 primitives at 1,024 rays each, as well as to the 65,535
- * primitives that launches have always been held to. Launching a million primitives in batches of that size rather than at
- * once costs about a millisecond.
+ * A launch is held to OptiX8Backend::max_threads_per_launch (2^26) threads, those of 65,536 primitives at 1,024 rays each, as
+ * well as to the 65,535 primitives that launches have always been held to. Launching a million primitives in batches of that
+ * size rather than at once costs about a millisecond.
  * \param[in] rays_per_primitive Number of rays launched from each primitive, which is at least 1
+ * \param[in] max_threads_per_launch Largest number of threads in one launch
  */
-static uint32_t primitivesPerLaunch(uint64_t rays_per_primitive) {
-    const uint64_t max_threads_per_launch = uint64_t(1) << 26;
+static uint32_t primitivesPerLaunch(uint64_t rays_per_primitive, uint64_t max_threads_per_launch) {
     const uint64_t max_primitives_per_launch = 65535;
     return static_cast<uint32_t>(std::max<uint64_t>(1, std::min(max_primitives_per_launch, max_threads_per_launch / rays_per_primitive)));
 }
@@ -950,21 +907,18 @@ void OptiX8Backend::launchDirectRays(const RayTracingLaunchParams &launch_params
     h_params.launch_dim_x        = dim_x;
     h_params.launch_dim_y        = dim_y;
 
-    // prd_pool is unused (PRD allocated on thread stack in raygen)
-    h_params.prd_pool = nullptr;
 
     // The direct raygen record, or that of a scene with a background radiation field
     OptixShaderBindingTable direct_sbt = sbt;
     direct_sbt.raygenRecord = current_flux_field_count == 2 ? d_raygen_record_direct_dual : d_raygen_record_direct;
 
     // Launch in batches of primitives, with the primitive along the first dimension of the launch (see primitivesPerLaunch())
-    const uint32_t max_batch = primitivesPerLaunch(uint64_t(dim_x) * dim_y);
+    const uint32_t max_batch = primitivesPerLaunch(uint64_t(dim_x) * dim_y, max_threads_per_launch);
     uint32_t offset = launch_params.launch_offset;
     uint32_t remaining = launch_count;
     while (remaining > 0) {
         const uint32_t batch = std::min(remaining, max_batch);
         h_params.launch_offset = offset;
-        h_params.launch_count  = batch;
         uploadLaunchParams();
         OPTIX_CHECK(optixLaunch(optix_pipeline, cuda_stream, d_params,
                                 sizeof(OptiX8LaunchParams), &direct_sbt,
@@ -1091,21 +1045,19 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
     const uint32_t dim_y = (dim_x > 0) ? (rpp / dim_x) : 1u;
     h_params.launch_dim_x = dim_x;
     h_params.launch_dim_y = dim_y;
-    h_params.prd_pool     = nullptr;
 
     // The diffuse raygen record, or that of a scene with a background radiation field
     OptixShaderBindingTable diffuse_sbt = sbt;
     diffuse_sbt.raygenRecord = current_flux_field_count == 2 ? d_raygen_record_diffuse_dual : d_raygen_record_diffuse;
 
     // Launch in batches of primitives, with the primitive along the first dimension of the launch (see primitivesPerLaunch())
-    const uint32_t max_batch    = primitivesPerLaunch(uint64_t(dim_x) * dim_y);
+    const uint32_t max_batch    = primitivesPerLaunch(uint64_t(dim_x) * dim_y, max_threads_per_launch);
     const uint32_t launch_count = launch_params.launch_count;
     uint32_t offset    = launch_params.launch_offset;
     uint32_t remaining = launch_count;
     while (remaining > 0) {
         const uint32_t batch = std::min(remaining, max_batch);
         h_params.launch_offset = offset;
-        h_params.launch_count  = batch;
         uploadLaunchParams();
         OPTIX_CHECK(optixLaunch(optix_pipeline, cuda_stream, d_params,
                                 sizeof(OptiX8LaunchParams), &diffuse_sbt,
@@ -1747,29 +1699,16 @@ void OptiX8Backend::freeGeometryBuffers() {
     freeCUdeviceptr(d_primitive_positions);
     freeCUdeviceptr(d_primitive_uuid_arr);
     freeCUdeviceptr(d_primitiveID);
-    freeCUdeviceptr(d_objectID);
     freeCUdeviceptr(d_object_subdivisions);
     freeCUdeviceptr(d_twosided_flag);
     freeCUdeviceptr(d_periodic_excluded);
-    freeCUdeviceptr(d_primitive_solid_fraction);
     freeCUdeviceptr(d_smoothing_vertex_indices);
     freeCUdeviceptr(d_vertex_normals);
     h_params.vertex_normals = nullptr;
     h_params.vertex_normal_count = 0;
     freeCUdeviceptr(d_vertex_normal_map_moments);
     h_params.vertex_normal_map_moments = nullptr;
-    freeCUdeviceptr(d_patch_vertices);
-    freeCUdeviceptr(d_patch_UUIDs);
-    freeCUdeviceptr(d_triangle_vertices);
-    freeCUdeviceptr(d_triangle_UUIDs);
-    freeCUdeviceptr(d_disk_centers);
-    freeCUdeviceptr(d_disk_radii);
-    freeCUdeviceptr(d_disk_normals);
-    freeCUdeviceptr(d_disk_UUIDs);
-    freeCUdeviceptr(d_tile_vertices);
-    freeCUdeviceptr(d_tile_UUIDs);
     freeCUdeviceptr(d_bbox_vertices);
-    freeCUdeviceptr(d_bbox_UUIDs);
     freeCUdeviceptr(d_mask_data);
     freeCUdeviceptr(d_mask_offsets);
     freeCUdeviceptr(d_mask_sizes);
@@ -2019,18 +1958,13 @@ void OptiX8Backend::buildSBT() {
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_miss_records), ms_recs.data(),
                           N_ms * sizeof(MissRecord), cudaMemcpyHostToDevice));
 
-    // Hit group records: header + HitGroupData, 4 records (one per ray type)
+    // Hit group records, one per ray type. The hit programs read everything they need from the launch parameters, so a record
+    // holds only its header.
     struct alignas(OPTIX_SBT_RECORD_ALIGNMENT) HitRecord {
         char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-        HitGroupData data;
     };
     constexpr int N_hg = 6;
     std::vector<HitRecord> hg_recs(N_hg);
-    for (auto &r : hg_recs) {
-        r.data.vertices  = reinterpret_cast<float3 *>(d_patch_vertices);
-        r.data.UUIDs     = reinterpret_cast<uint32_t *>(d_patch_UUIDs);
-        r.data.prim_type = 0; // patch
-    }
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_direct,      &hg_recs[0]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_diffuse,     &hg_recs[1]));
     OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_camera,      &hg_recs[2]));
@@ -2058,13 +1992,10 @@ void OptiX8Backend::uploadLaunchParams() {
 
 void OptiX8Backend::applyLaunchParams(const RayTracingLaunchParams &params) {
     h_params.launch_offset          = params.launch_offset;
-    h_params.launch_count           = params.launch_count;
-    h_params.rays_per_primitive     = params.rays_per_primitive;
     h_params.random_seed            = params.random_seed;
     h_params.Nbands_global          = params.num_bands_global;
     h_params.Nbands_launch          = params.num_bands_launch;
     h_params.launch_face            = params.launch_face;
-    h_params.scattering_iteration   = params.scattering_iteration;
     h_params.specular_reflection_enabled = params.specular_reflection_enabled;
     h_params.normal_map_direct = params.normal_map_direct;
     h_params.camera_direct_per_pixel = params.camera_direct_per_pixel;
@@ -2077,8 +2008,6 @@ void OptiX8Backend::applyLaunchParams(const RayTracingLaunchParams &params) {
     h_params.camera_focal_length    = params.camera_focal_length;
     h_params.camera_lens_diameter   = params.camera_lens_diameter;
     h_params.FOV_aspect_ratio       = params.camera_fov_aspect;
-    h_params.camera_resolution.x      = params.camera_resolution.x;
-    h_params.camera_resolution.y      = params.camera_resolution.y;
     h_params.camera_viewplane_length= params.camera_viewplane_length;
     h_params.camera_pixel_offset.x    = params.camera_pixel_offset.x;
     h_params.camera_pixel_offset.y    = params.camera_pixel_offset.y;
