@@ -179,8 +179,9 @@ helios::vec3 AerialLiDARcloud::getHitXYZ(uint index) const {
 helios::SphericalCoord AerialLiDARcloud::getHitRaydir(uint index) const {
 
     if (index >= hits.size()) {
-        cerr << "ERROR (getHitRaydir): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getHitRaydir): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits.";
+        helios_runtime_error(message.str());
     }
 
     return hits.at(index).direction;
@@ -189,14 +190,16 @@ helios::SphericalCoord AerialLiDARcloud::getHitRaydir(uint index) const {
 float AerialLiDARcloud::getHitData(uint index, const char *label) const {
 
     if (index >= hits.size()) {
-        cerr << "ERROR (getHitData): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getHitData): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits.";
+        helios_runtime_error(message.str());
     }
 
     std::map<std::string, float> hit_data = hits.at(index).data;
     if (hit_data.find(label) == hit_data.end()) {
-        cerr << "ERROR (getHitData): Data value ``" << label << "'' does not exist." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getHitData): Data value ``" << label << "'' does not exist.";
+        helios_runtime_error(message.str());
     }
 
     return hit_data.at(label);
@@ -205,8 +208,9 @@ float AerialLiDARcloud::getHitData(uint index, const char *label) const {
 void AerialLiDARcloud::setHitData(uint index, const char *label, float value) {
 
     if (index >= hits.size()) {
-        cerr << "ERROR (setHitScalarData): Hit point index out of bounds. Tried to set hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setHitScalarData): Hit point index out of bounds. Tried to set hit #" << index << " but scan only has " << hits.size() << " hits.";
+        helios_runtime_error(message.str());
     }
 
     hits.at(index).data[label] = value;
@@ -229,8 +233,9 @@ bool AerialLiDARcloud::doesHitDataExist(uint index, const char *label) const {
 RGBcolor AerialLiDARcloud::getHitColor(uint index) const {
 
     if (index >= hits.size()) {
-        cerr << "ERROR (getHitColor): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getHitColor): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits.";
+        helios_runtime_error(message.str());
     }
 
     return hits.at(index).color;
@@ -239,8 +244,9 @@ RGBcolor AerialLiDARcloud::getHitColor(uint index) const {
 int AerialLiDARcloud::getHitScanID(uint index) const {
 
     if (index >= hits.size()) {
-        cerr << "ERROR (getHitColor): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getHitColor): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits.";
+        helios_runtime_error(message.str());
     }
 
     return hits.at(index).scanID;
@@ -249,8 +255,9 @@ int AerialLiDARcloud::getHitScanID(uint index) const {
 helios::int3 AerialLiDARcloud::getHitGridCell(uint index) const {
 
     if (index >= hits.size()) {
-        cerr << "ERROR (getHitGridCell): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getHitGridCell): Hit point index out of bounds. Requesting hit #" << index << " but scan only has " << hits.size() << " hits.";
+        helios_runtime_error(message.str());
     } else if (!hitgridcellcomputed) {
         cerr << "WARNING (getHitGridCell): calculateHitGridCell() must be run prior to calling this function" << std::endl;
         return make_int3(-1, -1, -1);
@@ -262,20 +269,24 @@ helios::int3 AerialLiDARcloud::getHitGridCell(uint index) const {
 void AerialLiDARcloud::setHitGridCell(uint index, const helios::int3 &ijk) {
 
     if (index >= hits.size()) {
-        cerr << "ERROR (setHitGridCell): Hit point index out of bounds. Tried to set hit #" << index << " but scan only has " << hits.size() << " hits." << endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setHitGridCell): Hit point index out of bounds. Tried to set hit #" << index << " but scan only has " << hits.size() << " hits.";
+        helios_runtime_error(message.str());
     }
     if (ijk.x >= gridresolution.x) {
-        cerr << "ERROR (setHitGridCell): Grid index in x-direction was specified as " << ijk.x << ", which is larger than the maximum value based on the grid dimension of " << gridresolution.x - 1 << "." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setHitGridCell): Grid index in x-direction was specified as " << ijk.x << ", which is larger than the maximum value based on the grid dimension of " << gridresolution.x - 1 << ".";
+        helios_runtime_error(message.str());
     }
     if (ijk.y >= gridresolution.y) {
-        cerr << "ERROR (setHitGridCell): Grid index in y-direction was specified as " << ijk.y << ", which is larger than the maximum value based on the grid dimension of " << gridresolution.y - 1 << "." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setHitGridCell): Grid index in y-direction was specified as " << ijk.y << ", which is larger than the maximum value based on the grid dimension of " << gridresolution.y - 1 << ".";
+        helios_runtime_error(message.str());
     }
     if (ijk.z >= gridresolution.z) {
-        cerr << "ERROR (setHitGridCell): Grid index in x-direction was specified as " << ijk.z << ", which is larger than the maximum value based on the grid dimension of " << gridresolution.z - 1 << "." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setHitGridCell): Grid index in x-direction was specified as " << ijk.z << ", which is larger than the maximum value based on the grid dimension of " << gridresolution.z - 1 << ".";
+        helios_runtime_error(message.str());
     }
 
     hits.at(index).gridcell = ijk;
@@ -302,8 +313,10 @@ void AerialLiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsiz
 
 void AerialLiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize, const char *color_value) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -362,8 +375,10 @@ void AerialLiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsiz
 
 void AerialLiDARcloud::addGridToVisualizer(Visualizer *visualizer) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (addGridToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (addGridToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -414,9 +429,8 @@ void AerialLiDARcloud::addGridToVisualizer(Visualizer *visualizer) const {
 
 void AerialLiDARcloud::getHitBoundingBox(helios::vec3 &boxmin, helios::vec3 &boxmax) const {
 
-    if (printmessages && hits.size() == 0) {
-        std::cout << "WARNING (getHitBoundingBox): There are no hit points in the point cloud, cannot determine bounding box...skipping." << std::endl;
-        return;
+    if (hits.empty()) {
+        helios_runtime_error("ERROR (AerialLiDARcloud::getHitBoundingBox): There are no hit points in the point cloud, so it has no bounding box.");
     }
 
     boxmin = make_vec3(1e6, 1e6, 1e6);
@@ -530,16 +544,19 @@ vec3 AerialLiDARcloud::getCellSize() const {
 void AerialLiDARcloud::setCellLeafArea(float area, const int3 &ijk) {
 
     if (ijk.x < 0 || ijk.x >= gridresolution.x) {
-        cerr << "ERROR (setCellLeafArea): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellLeafArea): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.y < 0 || ijk.y >= gridresolution.y) {
-        cerr << "ERROR (setCellLeafArea): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellLeafArea): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.z < 0 || ijk.z >= gridresolution.z) {
-        cerr << "ERROR (setCellLeafArea): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellLeafArea): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1;
+        helios_runtime_error(message.str());
     }
 
     if (leaf_area.size() != gridresolution.z) {
@@ -558,21 +575,25 @@ void AerialLiDARcloud::setCellLeafArea(float area, const int3 &ijk) {
 float AerialLiDARcloud::getCellLeafArea(const int3 &ijk) const {
 
     if (leaf_area.size() != gridresolution.z) {
-        cerr << "ERROR (getCellLeafArea): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU()." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellLeafArea): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU().";
+        helios_runtime_error(message.str());
     }
 
     if (ijk.x < 0 || ijk.x >= gridresolution.x) {
-        cerr << "ERROR (getCellLeafArea): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellLeafArea): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.y < 0 || ijk.y >= gridresolution.y) {
-        cerr << "ERROR (getCellLeafArea): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellLeafArea): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.z < 0 || ijk.z >= gridresolution.z) {
-        cerr << "ERROR (getCellLeafArea): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellLeafArea): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1;
+        helios_runtime_error(message.str());
     }
 
     return leaf_area.at(ijk.z).at(ijk.y).at(ijk.x);
@@ -581,21 +602,25 @@ float AerialLiDARcloud::getCellLeafArea(const int3 &ijk) const {
 float AerialLiDARcloud::getCellLeafAreaDensity(const int3 &ijk) const {
 
     if (leaf_area.size() != gridresolution.z) {
-        cerr << "ERROR (getCellLeafAreaDensity): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU()." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellLeafAreaDensity): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU().";
+        helios_runtime_error(message.str());
     }
 
     if (ijk.x < 0 || ijk.x >= gridresolution.x) {
-        cerr << "ERROR (getCellLeafAreaDensity): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellLeafAreaDensity): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.y < 0 || ijk.y >= gridresolution.y) {
-        cerr << "ERROR (getCellLeafAreaDensity): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellLeafAreaDensity): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.z < 0 || ijk.z >= gridresolution.z) {
-        cerr << "ERROR (getCellLeafAreaDensity): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellLeafAreaDensity): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1;
+        helios_runtime_error(message.str());
     }
 
     vec3 gridsize(gridextent.x / float(gridresolution.x), gridextent.y / float(gridresolution.y), gridextent.z / float(gridresolution.z));
@@ -606,16 +631,19 @@ float AerialLiDARcloud::getCellLeafAreaDensity(const int3 &ijk) const {
 void AerialLiDARcloud::setCellTransmissionProbability(int P_denom, int P_trans, const int3 &ijk) {
 
     if (ijk.x < 0 || ijk.x >= gridresolution.x) {
-        cerr << "ERROR (setCellTransmissionProbability): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellTransmissionProbability): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.y < 0 || ijk.y >= gridresolution.y) {
-        cerr << "ERROR (setCellTransmissionProbability): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellTransmissionProbability): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.z < 0 || ijk.z >= gridresolution.z) {
-        cerr << "ERROR (setCellTransmissionProbability): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellTransmissionProbability): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1;
+        helios_runtime_error(message.str());
     }
 
     if (P_counts.size() != gridresolution.z) {
@@ -634,21 +662,25 @@ void AerialLiDARcloud::setCellTransmissionProbability(int P_denom, int P_trans, 
 void AerialLiDARcloud::getCellTransmissionProbability(const int3 &ijk, int &P_denom, int &P_trans) const {
 
     if (P_counts.size() != gridresolution.z) {
-        cerr << "ERROR (getCellTransmissionProbability): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU()." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellTransmissionProbability): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU().";
+        helios_runtime_error(message.str());
     }
 
     if (ijk.x < 0 || ijk.x >= gridresolution.x) {
-        cerr << "ERROR (getCellTransmissionProbabilit): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellTransmissionProbabilit): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.y < 0 || ijk.y >= gridresolution.y) {
-        cerr << "ERROR (getCellTransmissionProbabilit): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellTransmissionProbabilit): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.z < 0 || ijk.z >= gridresolution.z) {
-        cerr << "ERROR (getCellTransmissionProbabilit): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellTransmissionProbabilit): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1;
+        helios_runtime_error(message.str());
     }
 
 
@@ -659,16 +691,19 @@ void AerialLiDARcloud::getCellTransmissionProbability(const int3 &ijk, int &P_de
 void AerialLiDARcloud::setCellRbar(float rbar, const int3 &ijk) {
 
     if (ijk.x < 0 || ijk.x >= gridresolution.x) {
-        cerr << "ERROR (setCellRbar): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellRbar): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.y < 0 || ijk.y >= gridresolution.y) {
-        cerr << "ERROR (setCellRbar): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellRbar): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.z < 0 || ijk.z >= gridresolution.z) {
-        cerr << "ERROR (setCellRbar): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellRbar): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1;
+        helios_runtime_error(message.str());
     }
 
     if (r_bar.size() != gridresolution.z) {
@@ -687,21 +722,25 @@ void AerialLiDARcloud::setCellRbar(float rbar, const int3 &ijk) {
 float AerialLiDARcloud::getCellRbar(const int3 &ijk) const {
 
     if (r_bar.size() != gridresolution.z) {
-        cerr << "ERROR (getCellRbar): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU()." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellRbar): Leaf area calculations have not been run yet. You must first call the function calculateLeafAreaGPU().";
+        helios_runtime_error(message.str());
     }
 
     if (ijk.x < 0 || ijk.x >= gridresolution.x) {
-        cerr << "ERROR (getCellRbar): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellRbar): Cell index in x-direction of " << ijk.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.y < 0 || ijk.y >= gridresolution.y) {
-        cerr << "ERROR (getCellRbar): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellRbar): Cell index in y-direction of " << ijk.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
     if (ijk.z < 0 || ijk.z >= gridresolution.z) {
-        cerr << "ERROR (getCellRbar): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellRbar): Cell index in z-direction of " << ijk.z << " is outside the allowable range of 0 to " << gridresolution.z - 1;
+        helios_runtime_error(message.str());
     }
 
     return r_bar.at(ijk.z).at(ijk.y).at(ijk.x);
@@ -805,11 +844,13 @@ void AerialLiDARcloud::generateHeightModel(int maxIter, float threshDist_ground,
     size_t Nhits = getHitCount();
 
     if (Ncells == 0) {
-        std::cerr << "ERROR (generateHeightModel): There are no grid cells in the point cloud." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (generateHeightModel): There are no grid cells in the point cloud.";
+        helios_runtime_error(message.str());
     } else if (Nhits == 0) {
-        std::cerr << "ERROR (generateHeightModel): There are no hits in the point cloud." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (generateHeightModel): There are no hits in the point cloud.";
+        helios_runtime_error(message.str());
     }
 
     // aggregate all points in a given x,y column
@@ -1078,12 +1119,14 @@ void AerialLiDARcloud::generateHeightModel(int maxIter, float threshDist_ground,
 void AerialLiDARcloud::setCellVegetationHeight(float height, const int2 &ij) {
 
     if (ij.x < 0 || ij.x >= gridresolution.x) {
-        cerr << "ERROR (setCellVegetationHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellVegetationHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ij.y < 0 || ij.y >= gridresolution.y) {
-        cerr << "ERROR (setCellVegetationHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellVegetationHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
 
     if (vegetation_height.size() != gridresolution.y) {
@@ -1099,17 +1142,20 @@ void AerialLiDARcloud::setCellVegetationHeight(float height, const int2 &ij) {
 float AerialLiDARcloud::getCellVegetationHeight(const int2 &ij) const {
 
     if (vegetation_height.size() != gridresolution.y) {
-        cerr << "ERROR (getCellVegetationHeight): Height calculations have not been run yet. You must first call the function generateHeightModel()." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellVegetationHeight): Height calculations have not been run yet. You must first call the function generateHeightModel().";
+        helios_runtime_error(message.str());
     }
 
     if (ij.x < 0 || ij.x >= gridresolution.x) {
-        cerr << "ERROR (getCellVegetationHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellVegetationHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ij.y < 0 || ij.y >= gridresolution.y) {
-        cerr << "ERROR (getCellVegetationHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellVegetationHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
 
     return vegetation_height.at(ij.y).at(ij.x);
@@ -1118,12 +1164,14 @@ float AerialLiDARcloud::getCellVegetationHeight(const int2 &ij) const {
 void AerialLiDARcloud::setCellMaximumHitHeight(float height, const int2 &ij) {
 
     if (ij.x < 0 || ij.x >= gridresolution.x) {
-        cerr << "ERROR (setCellMaximumHitHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellMaximumHitHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ij.y < 0 || ij.y >= gridresolution.y) {
-        cerr << "ERROR (setCellMaximumHitHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellMaximumHitHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
 
     if (maxhit_height.size() != gridresolution.y) {
@@ -1139,17 +1187,20 @@ void AerialLiDARcloud::setCellMaximumHitHeight(float height, const int2 &ij) {
 float AerialLiDARcloud::getCellMaximumHitHeight(const int2 &ij) const {
 
     if (maxhit_height.size() != gridresolution.y) {
-        cerr << "ERROR (getCellMaximumHitHeight): Height calculations have not been run yet. You must first call the function generateHeightModel()." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellMaximumHitHeight): Height calculations have not been run yet. You must first call the function generateHeightModel().";
+        helios_runtime_error(message.str());
     }
 
     if (ij.x < 0 || ij.x >= gridresolution.x) {
-        cerr << "ERROR (getCellMaximumHitHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellMaximumHitHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ij.y < 0 || ij.y >= gridresolution.y) {
-        cerr << "ERROR (getCellMaximumHitHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellMaximumHitHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
 
     return maxhit_height.at(ij.y).at(ij.x);
@@ -1158,12 +1209,14 @@ float AerialLiDARcloud::getCellMaximumHitHeight(const int2 &ij) const {
 void AerialLiDARcloud::setCellGroundHeight(float height, const int2 &ij) {
 
     if (ij.x < 0 || ij.x >= gridresolution.x) {
-        cerr << "ERROR (setCellGroundHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellGroundHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ij.y < 0 || ij.y >= gridresolution.y) {
-        cerr << "ERROR (setCellGroundHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellGroundHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
 
     if (ground_height.size() != gridresolution.y) {
@@ -1179,17 +1232,20 @@ void AerialLiDARcloud::setCellGroundHeight(float height, const int2 &ij) {
 float AerialLiDARcloud::getCellGroundHeight(const int2 &ij) const {
 
     if (ground_height.size() != gridresolution.y) {
-        cerr << "ERROR (getCellGroundHeight): Height calculations have not been run yet. You must first call the function generateHeightModel()." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellGroundHeight): Height calculations have not been run yet. You must first call the function generateHeightModel().";
+        helios_runtime_error(message.str());
     }
 
     if (ij.x < 0 || ij.x >= gridresolution.x) {
-        cerr << "ERROR (getCellGroundHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellGroundHeight): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ij.y < 0 || ij.y >= gridresolution.y) {
-        cerr << "ERROR (getCellGroundHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellGroundHeight): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
 
     return ground_height.at(ij.y).at(ij.x);
@@ -1245,12 +1301,14 @@ void AerialLiDARcloud::calculateCoverFraction() {
 void AerialLiDARcloud::setCellCoverFraction(float fcover, const int2 &ij) {
 
     if (ij.x < 0 || ij.x >= gridresolution.x) {
-        cerr << "ERROR (setCellCoverFraction): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellCoverFraction): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ij.y < 0 || ij.y >= gridresolution.y) {
-        cerr << "ERROR (setCellCoverFraction): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (setCellCoverFraction): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
 
     if (cover_fraction.size() != gridresolution.y) {
@@ -1266,17 +1324,20 @@ void AerialLiDARcloud::setCellCoverFraction(float fcover, const int2 &ij) {
 float AerialLiDARcloud::getCellCoverFraction(const int2 &ij) const {
 
     if (cover_fraction.size() != gridresolution.y) {
-        cerr << "ERROR (getCellCoverFraction): Cover fraction calculations have not been run yet. You must first call the function calculateCoverFraction()." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellCoverFraction): Cover fraction calculations have not been run yet. You must first call the function calculateCoverFraction().";
+        helios_runtime_error(message.str());
     }
 
     if (ij.x < 0 || ij.x >= gridresolution.x) {
-        cerr << "ERROR (getCellCoverFraction): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellCoverFraction): Cell index in x-direction of " << ij.x << " is outside the allowable range of 0 to " << gridresolution.x - 1;
+        helios_runtime_error(message.str());
     }
     if (ij.y < 0 || ij.y >= gridresolution.y) {
-        cerr << "ERROR (getCellCoverFraction): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1 << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (getCellCoverFraction): Cell index in y-direction of " << ij.y << " is outside the allowable range of 0 to " << gridresolution.y - 1;
+        helios_runtime_error(message.str());
     }
 
     return cover_fraction.at(ij.y).at(ij.x);

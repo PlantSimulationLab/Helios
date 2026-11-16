@@ -35,8 +35,9 @@ void AerialLiDARcloud::loadXML(const char *filename) {
     // Check if file exists
     ifstream f(resolved_filename);
     if (!f.good()) {
-        cerr << "failed.\n XML file does not exist." << endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (AerialLiDARcloud::loadXML): XML file " << filename << " does not exist.";
+        helios_runtime_error(message.str());
     }
 
     // Using "pugixml" parser.  See pugixml.org
@@ -48,18 +49,16 @@ void AerialLiDARcloud::loadXML(const char *filename) {
     // error checking
     if (!result) {
         cout << "failed." << endl;
-        cerr << "XML  file " << filename << " parsed with errors, attribute value: [" << xmldoc.child("node").attribute("attr").value() << "]\n";
-        cerr << "Error description: " << result.description() << "\n";
-        // cerr << "Error offset: " << result.offset << " (error at [..." << (filename + result.offset) << "]\n\n";
-        exit(EXIT_FAILURE);
+        helios_runtime_error("ERROR (AerialLiDARcloud::loadXML): XML file " + std::string(filename) + " could not be parsed: " + std::string(result.description()) + ".");
     }
 
     pugi::xml_node helios = xmldoc.child("helios");
 
     if (helios.empty()) {
         std::cout << "failed." << std::endl;
-        std::cerr << "ERROR (AerialLiDARcloud::loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags." << std::endl;
-        exit(EXIT_FAILURE);
+        std::ostringstream message;
+        message << "ERROR (AerialLiDARcloud::loadXML): XML file must have tag '<helios> ... </helios>' bounding all other tags.";
+        helios_runtime_error(message.str());
     }
 
     //-------------- Scans ---------------//
@@ -90,27 +89,31 @@ void AerialLiDARcloud::loadXML(const char *filename) {
             extent = string2vec2(extent_str); // note: pugi loads xml data as a character.  need to separate it into 2 floats
         }
         if (extent.x < 0 || extent.y < 0) {
-            cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): The scan extent must be positive (check scan #" << scan_count << ")." << endl;
-            exit(EXIT_FAILURE);
+            std::ostringstream message;
+            message << "ERROR (AerialLiDARcloud::loadXML): The scan extent must be positive (check scan #" << scan_count << ").";
+            helios_runtime_error(message.str());
         }
 
         // ----- cone angle ------//
         const char *cone_str = s.child_value("coneangle");
 
-        float coneAngle;
-        if (strlen(cone_str) == 0) {
-            coneAngle = 0;
-        } else {
-            coneAngle = atof(cone_str) * M_PI / 180.f;
+        // Given in degrees, and checked in degrees before being stored in radians
+        float coneAngle_degrees = 0;
+        if (strlen(cone_str) != 0) {
+            coneAngle_degrees = atof(cone_str);
         }
 
-        if (coneAngle < 0) {
-            cerr << "ERROR (AerialLiDARcloud::loadXML): cone angle cannot be less than 0." << endl;
-            exit(EXIT_FAILURE);
-        } else if (coneAngle > 90) {
-            cerr << "ERROR (AerialLiDARcloud::loadXML): cone angle cannot be greater than 90 degrees." << endl;
-            exit(EXIT_FAILURE);
+        if (coneAngle_degrees < 0) {
+            std::ostringstream message;
+            message << "ERROR (AerialLiDARcloud::loadXML): cone angle cannot be less than 0.";
+            helios_runtime_error(message.str());
+        } else if (coneAngle_degrees > 90) {
+            std::ostringstream message;
+            message << "ERROR (AerialLiDARcloud::loadXML): cone angle cannot be greater than 90 degrees.";
+            helios_runtime_error(message.str());
         }
+
+        const float coneAngle = coneAngle_degrees * float(M_PI) / 180.f;
 
         // ----- scan density ------//
         const char *density_str = s.child_value("scandensity");
@@ -122,8 +125,9 @@ void AerialLiDARcloud::loadXML(const char *filename) {
             scanDensity = atof(density_str);
 
             if (scanDensity <= 0) {
-                cerr << "ERROR (AerialLiDARcloud::loadXML): scan density should be greater than 0." << endl;
-                exit(EXIT_FAILURE);
+                std::ostringstream message;
+                message << "ERROR (AerialLiDARcloud::loadXML): scan density should be greater than 0.";
+                helios_runtime_error(message.str());
             }
         }
 
@@ -192,8 +196,9 @@ void AerialLiDARcloud::loadXML(const char *filename) {
 
             if (!datafile.is_open()) { // check that file exists
                 cout << "failed." << endl;
-                cerr << "ERROR (loadXML): data file does not exist." << endl;
-                exit(EXIT_FAILURE);
+                std::ostringstream message;
+                message << "ERROR (loadXML): data file does not exist.";
+                helios_runtime_error(message.str());
             }
 
             vec3 temp_xyz;
@@ -263,14 +268,17 @@ void AerialLiDARcloud::loadXML(const char *filename) {
 
                 // hit point
                 if (temp_xyz.x == -9999) {
-                    std::cerr << "ERROR (AerialLiDARcloud::loadXML): x-coordinate not specified for hit point #" << hit_count - 1 << " of scan #" << scan_count << std::endl;
-                    exit(EXIT_FAILURE);
+                    std::ostringstream message;
+                    message << "ERROR (AerialLiDARcloud::loadXML): x-coordinate not specified for hit point #" << hit_count - 1 << " of scan #" << scan_count;
+                    helios_runtime_error(message.str());
                 } else if (temp_xyz.y == -9999) {
-                    std::cerr << "ERROR (AerialLiDARcloud::loadXML): t-coordinate not specified for hit point #" << hit_count - 1 << " of scan #" << scan_count << std::endl;
-                    exit(EXIT_FAILURE);
+                    std::ostringstream message;
+                    message << "ERROR (AerialLiDARcloud::loadXML): t-coordinate not specified for hit point #" << hit_count - 1 << " of scan #" << scan_count;
+                    helios_runtime_error(message.str());
                 } else if (temp_xyz.z == -9999) {
-                    std::cerr << "ERROR (AerialLiDARcloud::loadXML): z-coordinate not specified for hit point #" << hit_count - 1 << " of scan #" << scan_count << std::endl;
-                    exit(EXIT_FAILURE);
+                    std::ostringstream message;
+                    message << "ERROR (AerialLiDARcloud::loadXML): z-coordinate not specified for hit point #" << hit_count - 1 << " of scan #" << scan_count;
+                    helios_runtime_error(message.str());
                 }
 
                 SphericalCoord temp_direction(1.f, 0.5f * M_PI - temp_zenith, temp_azimuth);
@@ -301,8 +309,9 @@ void AerialLiDARcloud::loadXML(const char *filename) {
         const char *center_str = s.child_value("center");
 
         if (strlen(center_str) == 0) {
-            cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): A center was not specified for grid #" << cell_count << endl;
-            exit(EXIT_FAILURE);
+            std::ostringstream message;
+            message << "ERROR (AerialLiDARcloud::loadXML): A center was not specified for grid #" << cell_count;
+            helios_runtime_error(message.str());
         }
 
         gridcenter = string2vec3(center_str); // note: pugi loads xml data as a character.  need to separate it into 3 floats
@@ -311,15 +320,17 @@ void AerialLiDARcloud::loadXML(const char *filename) {
         const char *gsize_str = s.child_value("size");
 
         if (strlen(gsize_str) == 0) {
-            cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): A size was not specified for grid cell #" << cell_count << endl;
-            exit(EXIT_FAILURE);
+            std::ostringstream message;
+            message << "ERROR (AerialLiDARcloud::loadXML): A size was not specified for grid cell #" << cell_count;
+            helios_runtime_error(message.str());
         }
 
         gridextent = string2vec3(gsize_str); // note: pugi loads xml data as a character.  need to separate it into 3 floats
 
         if (gridextent.x <= 0 || gridextent.y <= 0 || gridextent.z <= 0) {
-            cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): The grid size/extent must be positive." << endl;
-            exit(EXIT_FAILURE);
+            std::ostringstream message;
+            message << "ERROR (AerialLiDARcloud::loadXML): The grid size/extent must be positive.";
+            helios_runtime_error(message.str());
         }
 
         // ----- grid rotation ------//
@@ -342,8 +353,9 @@ void AerialLiDARcloud::loadXML(const char *filename) {
             Nx = atof(Nx_str);
         }
         if (Nx <= 0) {
-            cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): The number of gridcells must be positive." << endl;
-            exit(EXIT_FAILURE);
+            std::ostringstream message;
+            message << "ERROR (AerialLiDARcloud::loadXML): The number of gridcells must be positive.";
+            helios_runtime_error(message.str());
         }
 
         const char *Ny_str = s.child_value("Ny");
@@ -354,8 +366,9 @@ void AerialLiDARcloud::loadXML(const char *filename) {
             Ny = atof(Ny_str);
         }
         if (Ny <= 0) {
-            cerr << "failed.\nERROR (loadXML): The number of gridcells must be positive." << endl;
-            exit(EXIT_FAILURE);
+            std::ostringstream message;
+            message << "ERROR (loadXML): The number of gridcells must be positive.";
+            helios_runtime_error(message.str());
         }
 
         const char *Nz_str = s.child_value("Nz");
@@ -366,8 +379,9 @@ void AerialLiDARcloud::loadXML(const char *filename) {
             Nz = atof(Nz_str);
         }
         if (Nz <= 0) {
-            cerr << "failed.\nERROR (AerialLiDARcloud::loadXML): The number of gridcells must be positive." << endl;
-            exit(EXIT_FAILURE);
+            std::ostringstream message;
+            message << "ERROR (AerialLiDARcloud::loadXML): The number of gridcells must be positive.";
+            helios_runtime_error(message.str());
         }
 
         gridresolution = make_int3(Nx, Ny, Nz);

@@ -15,6 +15,11 @@
 - `LiDARcloud::getHitBoundingBox()` and `getGridBoundingBox()` now raise an error when the point cloud has no hit points or no grid cells. With messages disabled they returned the inverted box (1e6, -1e6) of an empty search, and with messages enabled they printed a warning and left the outputs unchanged. As a result, `LiDARcloud::syntheticScan()` with `scan_grid_only` set and no grid now raises an error instead of scanning against that inverted box.
 - `LiDARcloud::triangulateHitPoints()` and the methods that add hits, the grid or triangles to a Visualizer now skip an empty point cloud whether or not messages are enabled; the early return used to be taken only when messages were enabled.
 
+## Aerial LiDAR
+- Errors in `AerialLiDARcloud` (for example a malformed XML file passed to `loadXML()`, an out-of-range hit or grid cell index, or a bad scan in `syntheticScan()`) now raise an exception instead of printing to standard error and ending the program.
+- Fixed `AerialLiDARcloud::getHitBoundingBox()` returning an inverted box of ±1e6 for a point cloud with no hits when messages were disabled; it now raises an error whatever the message setting. `addHitsToVisualizer()` and `addGridToVisualizer()` now return without adding anything when there are no scans whatever the message setting, instead of only when messages were enabled.
+- Fixed `AerialLiDARcloud::loadXML()` accepting a scan cone angle greater than 90 degrees. The angle was compared with 90 after its conversion to radians, so no angle under about 5,000 degrees was rejected.
+
 ## Radiation
 - Radiation cameras on the Vulkan and OptiX 8 backends are now rendered in tiles of at most 2^26 rays (pixels times antialiasing samples), the same limit as their direct and diffuse launches, instead of 2^30. A large camera with many samples could otherwise run long enough in one dispatch to trip the display driver's watchdog and lose the device. The image noise of such a camera changes, since each tile draws its own random seed.
 - On the Vulkan backend, a failed submission of a buffer upload, download or clear to the GPU now raises an error naming the failure, instead of being reported as a time-out five seconds later, and the time a transfer may take before it is treated as hung is raised from five seconds to ten minutes, so that a large buffer on a slow or software Vulkan device no longer fails.
@@ -47,6 +52,7 @@
 ## Utilities
 - Fixed `utilities/create_project.sh` writing the wrong `#include` into `main.cpp` for the `soiltransport` and `parameteroptimization` plug-ins and an empty `#include ""` for `collisiondetection`, so a new project using any of them did not compile.
 - `utilities/create_project.sh` now stops with an error, before creating anything, when given a plug-in name it does not recognize. It used to print a message, leave the plug-in out of the project and report success.
+- `utilities/run_tests.sh` now builds and tests the CUDA-only `aeriallidar` and `voxelintersection` plug-ins in a full run when `nvcc` is found or `--requiregpu` is given. They were never built by it before, so a change that broke their compilation went unnoticed.
 
 # [1.3.98] 2026-11-15
 
