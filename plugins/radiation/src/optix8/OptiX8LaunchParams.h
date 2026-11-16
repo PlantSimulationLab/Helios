@@ -101,15 +101,6 @@ struct PerRayDataDual : PerRayData {
 };
 
 // ---------------------------------------------------------------------------
-// SBT hit-group record data (per primitive type).
-// ---------------------------------------------------------------------------
-struct HitGroupData {
-    float3*   vertices; //!< Device pointer to type-specific vertex array (layout varies by type)
-    uint32_t* UUIDs;    //!< Device pointer to type-specific UUID array
-    uint32_t  prim_type; //!< 0=patch, 1=triangle, 2=disk, 3=tile, 5=bbox
-};
-
-// ---------------------------------------------------------------------------
 // Main launch parameters structure.
 // Passed from host to device via optixLaunch(d_params, ...).
 // Accessible on device as: extern "C" __constant__ OptiX8LaunchParams params;
@@ -118,36 +109,20 @@ struct OptiX8LaunchParams {
     // Traversal handle
     OptixTraversableHandle traversable;
 
-    // ---- Per-ray-data pool (size = launch_dim_x * launch_dim_y) ----
-    PerRayData* prd_pool;
-
     // ---- Geometry buffers (device pointers) ----
     float*    transform_matrix;      //!< [prim * 16 + elem], row-major 4x4
     uint32_t* primitive_type;        //!< 0=patch,1=tri,2=disk,3=tile,5=bbox
     uint32_t* primitive_positions;   //!< UUID→array-index sparse lookup (size=max_UUID+1)
     uint32_t* primitiveID;           //!< First primitive index in parent object
-    uint32_t* objectID;              //!< Parent object ID for each primitive
     int32_t*  object_subdivisions;   //!< 2 ints per prim: [subdiv_x, subdiv_y]
     int8_t*   twosided_flag;         //!< 1=two-sided, 0=one-sided
-    float*    primitive_solid_fraction;
 
     // ---- Global UUID lookup (indexed by global primitive position) ----
     uint32_t* primitive_uuid;        //!< primitive_uuid[global_pos] = UUID of that primitive
 
-    // ---- Per-type geometry (also in SBT HitGroupData, mirrored here for easy access) ----
-    float3*   patch_vertices;        //!< [patch_idx * 4 + corner_idx]
-    uint32_t* patch_UUIDs;
-    float3*   triangle_vertices;     //!< [tri_idx * 3 + vertex_idx]
-    uint32_t* triangle_UUIDs;
-    float3*   disk_centers;
-    float*    disk_radii;
-    float3*   disk_normals;
-    uint32_t* disk_UUIDs;
-    float3*   tile_vertices;         //!< [tile_idx * 4 + corner_idx]
-    uint32_t* tile_UUIDs;
+    // ---- Per-type geometry ----
     float3*   bbox_vertices;         //!< [bbox_idx * 4 + corner_idx] (4 vertices per planar face)
     uint8_t*  periodic_excluded;     //!< [prim]: 1 if the primitive exists only in the central periodic copy of the domain; null when none is excluded
-    uint32_t* bbox_UUIDs;
 
     // ---- Material buffers ----
     float*    rho;        //!< Reflectivity [source * Nprims * Nbands_global + prim * Nbands_global + band]
@@ -264,11 +239,8 @@ struct OptiX8LaunchParams {
     uint32_t  Nbands_global;
     uint32_t  Nbands_launch;
     uint32_t  launch_offset;         //!< Starting primitive index for this launch
-    uint32_t  launch_count;          //!< Primitives to process in this launch
-    uint32_t  rays_per_primitive;
     uint32_t  random_seed;
     uint32_t  launch_face;           //!< 1=top face, 0=bottom face (diffuse)
-    uint32_t  scattering_iteration;
     uint32_t  specular_reflection_enabled; //!< 1 = this launch reads the surface layers' reflection lobe of the direct radiation
     uint32_t  surface_layer_table_size; //!< Number of mu values in each surface-layer albedo table
     uint32_t  below_horizon_diffuse_enabled; //!< 1 = the diffuse sky also reaches rays leaving below the horizon
@@ -288,7 +260,6 @@ struct OptiX8LaunchParams {
     float     camera_lens_diameter;
     float     camera_focal_length;
     float     FOV_aspect_ratio;
-    int2      camera_resolution;
     float     camera_viewplane_length;
     int2      camera_pixel_offset;
     int2      camera_resolution_full;

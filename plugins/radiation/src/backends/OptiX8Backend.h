@@ -221,25 +221,12 @@ namespace helios {
         CUdeviceptr d_primitive_type         = 0;
         CUdeviceptr d_primitive_positions    = 0;
         CUdeviceptr d_primitiveID            = 0;
-        CUdeviceptr d_objectID               = 0;
         CUdeviceptr d_object_subdivisions    = 0;
         CUdeviceptr d_twosided_flag          = 0;
-        CUdeviceptr d_primitive_solid_fraction = 0;
 
         // Per-type geometry
-        CUdeviceptr d_patch_vertices         = 0;
-        CUdeviceptr d_patch_UUIDs            = 0;
-        CUdeviceptr d_triangle_vertices      = 0;
-        CUdeviceptr d_triangle_UUIDs         = 0;
-        CUdeviceptr d_disk_centers           = 0;
-        CUdeviceptr d_disk_radii             = 0;
-        CUdeviceptr d_disk_normals           = 0;
-        CUdeviceptr d_disk_UUIDs             = 0;
-        CUdeviceptr d_tile_vertices          = 0;
-        CUdeviceptr d_tile_UUIDs             = 0;
         CUdeviceptr d_bbox_vertices          = 0;
         CUdeviceptr d_periodic_excluded      = 0;
-        CUdeviceptr d_bbox_UUIDs             = 0;
 
         // Global UUID array: d_primitive_uuid[global_pos] = UUID
         CUdeviceptr d_primitive_uuid_arr     = 0;
