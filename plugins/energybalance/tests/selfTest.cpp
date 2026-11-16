@@ -3,6 +3,19 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
 #include "doctest_utils.h"
+#ifdef HELIOS_CUDA_AVAILABLE
+#ifdef _WIN32
+#include <io.h>
+#define HELIOS_TEST_DUP _dup
+#define HELIOS_TEST_DUP2 _dup2
+#define HELIOS_TEST_CLOSE _close
+#else
+#include <unistd.h>
+#define HELIOS_TEST_DUP dup
+#define HELIOS_TEST_DUP2 dup2
+#define HELIOS_TEST_CLOSE close
+#endif
+#endif
 
 using namespace helios;
 
@@ -406,6 +419,158 @@ DOCTEST_TEST_CASE("EnergyBalanceModel GPU vs CPU Consistency") {
 
     // Verify GPU and CPU give same result (within floating-point precision)
     DOCTEST_CHECK(T_cpu == doctest::Approx(T_gpu).epsilon(1e-4));
+}
+#endif
+
+#ifdef HELIOS_CUDA_AVAILABLE
+namespace {
+    //! Run a callable and return everything written to the process's standard output while it ran
+    /**
+     * Unlike capture_cout, which swaps the buffer of std::cout, this redirects file descriptor 1 itself, so it also captures
+     * printf() from the host and from CUDA kernels (whose output is flushed to standard output when the device synchronizes).
+     */
+    template<typename Callable>
+    std::string captureStandardOutputDescriptor(Callable &&callable) {
+        std::cout.flush();
+        std::fflush(stdout);
+        FILE *capture_file = std::tmpfile();
+        DOCTEST_REQUIRE(capture_file != nullptr);
+        const int saved_stdout = HELIOS_TEST_DUP(1);
+        DOCTEST_REQUIRE(saved_stdout >= 0);
+        HELIOS_TEST_DUP2(fileno(capture_file), 1);
+        callable();
+        std::cout.flush();
+        std::fflush(stdout);
+        HELIOS_TEST_DUP2(saved_stdout, 1);
+        HELIOS_TEST_CLOSE(saved_stdout);
+
+        std::string captured;
+        std::rewind(capture_file);
+        char buffer[4096];
+        size_t bytes_read;
+        while ((bytes_read = std::fread(buffer, 1, sizeof(buffer), capture_file)) > 0) {
+            captured.append(buffer, bytes_read);
+        }
+        std::fclose(capture_file);
+        return captured;
+    }
+
+    //! Number of times \p pattern occurs in \p text
+    size_t countOccurrences(const std::string &text, const std::string &pattern) {
+        size_t count = 0;
+        for (size_t position = text.find(pattern); position != std::string::npos; position = text.find(pattern, position + pattern.size())) {
+            count++;
+        }
+        return count;
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("EnergyBalanceModel GPU and CPU solvers agree over varied surfaces") {
+    // The GPU and CPU solve the same surface energy balance; over surfaces spanning radiation loads, conductances, emissivities,
+    // one- and two-sided faces and storage, their temperatures must agree to within the solver tolerance.
+    Context context;
+    std::vector<uint> UUIDs;
+    for (int i = 0; i < 2000; i++) {
+        const uint UUID = context.addPatch(make_vec3(float(i), 0, 0), make_vec2(1, 1));
+        context.setPrimitiveData(UUID, "radiation_flux_SW", 50.f + 0.5f * float(i % 1500));
+        context.setPrimitiveData(UUID, "air_temperature", 280.f + float(i % 40));
+        context.setPrimitiveData(UUID, "air_humidity", 0.2f + 0.0003f * float(i % 2000));
+        context.setPrimitiveData(UUID, "moisture_conductance", (i % 5 == 0) ? 0.f : 0.01f * float(1 + i % 50));
+        context.setPrimitiveData(UUID, "emissivity_SW", 0.8f + 0.0001f * float(i % 2000));
+        context.setPrimitiveData(UUID, "boundarylayer_conductance", 0.1f + 0.02f * float(i % 100));
+        context.setPrimitiveData(UUID, "twosided_flag", uint(i % 2));
+        context.setPrimitiveData(UUID, "heat_capacity", (i % 3 == 0) ? 0.f : 2000.f);
+        context.setPrimitiveData(UUID, "temperature", 290.f + float(i % 30));
+        UUIDs.push_back(UUID);
+    }
+    auto readTemperatures = [&]() {
+        std::vector<float> temperatures(UUIDs.size());
+        for (size_t p = 0; p < UUIDs.size(); p++) {
+            context.getPrimitiveData(UUIDs[p], "temperature", temperatures[p]);
+        }
+        return temperatures;
+    };
+    const std::vector<float> initial_temperatures = readTemperatures();
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    if (!model.isGPUAccelerationEnabled()) {
+        helios::requireGPUOrFail("EnergyBalanceModel GPU and CPU solvers agree over varied surfaces needs a usable CUDA device.");
+        DOCTEST_MESSAGE("SKIPPED (no usable CUDA device): EnergyBalanceModel GPU and CPU solvers agree over varied surfaces");
+        return;
+    }
+
+    model.run(60.f);
+    const std::vector<float> gpu_temperatures = readTemperatures();
+
+    context.setPrimitiveData(UUIDs, "temperature", initial_temperatures);
+    model.disableGPUAcceleration();
+    model.run(60.f);
+    const std::vector<float> cpu_temperatures = readTemperatures();
+
+    DOCTEST_REQUIRE(gpu_temperatures.size() == cpu_temperatures.size());
+    size_t mismatches = 0;
+    float largest_difference = 0.f;
+    for (size_t p = 0; p < gpu_temperatures.size(); p++) {
+        const float difference = std::fabs(gpu_temperatures[p] - cpu_temperatures[p]);
+        largest_difference = std::max(largest_difference, difference);
+        if (difference > 1e-3f) {
+            mismatches++;
+        }
+    }
+    DOCTEST_INFO("largest GPU-CPU temperature difference " << largest_difference << " K");
+    DOCTEST_CHECK(mismatches == 0);
+}
+
+DOCTEST_TEST_CASE("EnergyBalanceModel GPU solver reports non-convergence once, and only with messages enabled") {
+    // A radiation load of 3e5 W/m^2 on surfaces with no moisture conductance drives the secant solve to tens of thousands of kelvin
+    // without converging in its iteration limit. The CPU solver reports this as one summary line when messages are enabled; the GPU
+    // solver must do the same, rather than print one line per primitive whatever the message setting.
+    const int surface_count = 50;
+    Context context;
+    std::vector<uint> UUIDs;
+    for (int i = 0; i < surface_count; i++) {
+        UUIDs.push_back(context.addPatch(make_vec3(float(i), 0, 0), make_vec2(1, 1)));
+    }
+    context.setPrimitiveData(UUIDs, "radiation_flux_SW", 3e5f);
+    context.setPrimitiveData(UUIDs, "air_temperature", 300.f);
+    context.setPrimitiveData(UUIDs, "moisture_conductance", 0.f);
+    context.setPrimitiveData(UUIDs, "temperature", 300.f);
+
+    EnergyBalanceModel model(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    if (!model.isGPUAccelerationEnabled()) {
+        helios::requireGPUOrFail("EnergyBalanceModel GPU non-convergence reporting needs a usable CUDA device.");
+        DOCTEST_MESSAGE("SKIPPED (no usable CUDA device): EnergyBalanceModel GPU non-convergence reporting");
+        return;
+    }
+
+    const std::string summary_line = "Energy balance did not converge for " + std::to_string(surface_count) + " primitives.";
+
+    const std::string gpu_quiet_output = captureStandardOutputDescriptor([&] { model.run(); });
+    context.setPrimitiveData(UUIDs, "temperature", 300.f);
+
+    std::string gpu_verbose_output = captureStandardOutputDescriptor([&] {
+        model.enableMessages();
+        model.run();
+        model.disableMessages();
+    });
+    context.setPrimitiveData(UUIDs, "temperature", 300.f);
+
+    model.disableGPUAcceleration();
+    std::string cpu_verbose_output = captureStandardOutputDescriptor([&] {
+        model.enableMessages();
+        model.run();
+        model.disableMessages();
+    });
+
+    DOCTEST_INFO("GPU output with messages disabled:\n" << gpu_quiet_output.substr(0, 2000));
+    DOCTEST_CHECK(countOccurrences(cpu_verbose_output, summary_line) == 1); // the input really does not converge
+    DOCTEST_CHECK(gpu_quiet_output.find("did not converge") == std::string::npos);
+    DOCTEST_CHECK(countOccurrences(gpu_verbose_output, "did not converge") == 1);
+    DOCTEST_CHECK(countOccurrences(gpu_verbose_output, summary_line) == 1);
 }
 #endif
 

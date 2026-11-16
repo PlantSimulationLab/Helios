@@ -17,7 +17,7 @@
 */
 
 #include "EnergyBalanceModel.h"
-#include "../include/EnergyBalanceModel.h"
+#include "EnergyBalanceSolver.h"
 
 #include "global.h"
 
@@ -30,21 +30,6 @@
 #endif
 
 using namespace helios;
-
-// Total conductance to water vapor of a surface: the stomata of each face and that face's boundary layer act in series, and the two faces act in parallel. A face with no stomata or no boundary-layer conductance has no vapor pathway,
-// which also avoids a 0/0 in the series expression.
-static inline float moistureConductance(float gbv_front, float gbv_back, float gS, float stomatal_sidedness) {
-    float gM = 0.f;
-    float gS_front = gS * stomatal_sidedness;
-    float gS_back = gS * (1.f - stomatal_sidedness);
-    if (gbv_front != 0.f && gS_front != 0.f) {
-        gM += gbv_front * gS_front / (gbv_front + gS_front);
-    }
-    if (gbv_back != 0.f && gS_back != 0.f) {
-        gM += gbv_back * gS_back / (gbv_back + gS_back);
-    }
-    return gM;
-}
 
 EnergyBalanceModel::EnergyBalanceModel(helios::Context *__context) {
 
@@ -1580,32 +1565,6 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
     std::cout << "------------------------------------------------------" << std::endl;
 }
 
-// Helper function: CPU version of energy balance evaluation
-static inline float evaluateEnergyBalance_CPU(float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gbv_front, float gbv_back, float gS, uint Nsides, float stomatal_sidedness, float heatcapacity,
-                                              float surfacehumidity, float dt, float Tprev) {
-
-    // Outgoing emission flux
-    float Rout = float(Nsides) * eps * 5.67e-8F * T * T * T * T;
-
-    // Sensible heat flux
-    float QH = cp_air_mol * gH * (T - Ta);
-
-    // Latent heat flux
-    float es = esat_Pa(T);
-    float gM = moistureConductance(gbv_front, gbv_back, gS, stomatal_sidedness);
-
-    float QL = gM * lambda_mol * (es * surfacehumidity - ea) / pressure;
-
-    // Storage heat flux
-    float storage = 0.f;
-    if (dt > 0) {
-        storage = heatcapacity * (T - Tprev) / dt;
-    }
-
-    // Residual
-    return R - Rout - QH - QL - Qother - storage;
-}
-
 void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint> &UUIDs, SurfaceEnergyBalanceInputs &inputs) {
 
     // Create warning aggregator for default value warnings
@@ -2127,54 +2086,12 @@ void EnergyBalanceModel::solveSurfaceTemperatures_CPU(const SurfaceEnergyBalance
 #endif
     for (int p = 0; p < (int) Nprimitives; p++) {
 
-        // Secant method parameters
-        const float err_max = 0.0001f;
-        const uint max_iter = 100;
-
-        // Initial guesses. The second guess must differ from the first, otherwise the two residuals are
-        // identical and the secant update below divides by zero (this happens when the supplied initial
-        // temperature equals the hardcoded second guess of 400 K).
-        float T_old = To[p];
-        float T_old_old = 400.f;
-        if (T_old_old == T_old) {
-            T_old_old = T_old + 100.f;
-        }
-
-        // Evaluate residual at initial guesses
-        float resid_old = evaluateEnergyBalance_CPU(T_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-        float resid_old_old = evaluateEnergyBalance_CPU(T_old_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-
-        // Secant method iteration. Initialize the result to the current best guess so that a degenerate
-        // early exit (identical residuals) never leaves the surface temperature uninitialized.
-        float T_new = T_old;
-        float resid = 100;
-        float err = resid;
-        uint iter = 0;
-        while (err > err_max && iter < max_iter) {
-
-            if (resid_old == resid_old_old) {
-                err = 0;
-                break;
-            }
-
-            T_new = fabs((T_old_old * resid_old - T_old * resid_old_old) / (resid_old - resid_old_old));
-
-            resid = evaluateEnergyBalance_CPU(T_new, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-
-            // Relative change of the newest secant step (measures the latest iterate, not the previous one)
-            err = fabs(T_new - T_old) / fabs(T_old);
-
-            resid_old_old = resid_old;
-            resid_old = resid;
-
-            T_old_old = T_old;
-            T_old = T_new;
-
-            iter++;
-        }
+        const SurfaceEnergyBalanceTerms terms{R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]};
+        float T_new;
+        const bool converged = solveSurfaceEnergyBalance(terms, To[p], T_new);
 
         // Track convergence failures (thread-safe)
-        if (err > err_max) {
+        if (!converged) {
 #ifdef USE_OPENMP
             int thread_id = omp_get_thread_num();
             thread_convergence_failures[thread_id]++;

@@ -23,6 +23,10 @@
 - Fixed GPU ray casts (`CollisionDetection::castRays()` and `castRaysSoA()` on batches of 1M rays or more against 500 or more primitives, as in large LiDAR synthetic scans) missing hits for rays parallel to an axis that run along or just inside a face of a bounding box or voxel. A ray a distance d inside a face could not hit anything farther than d × 10^8 along it, and a ray lying on a face was culled, so GPU and CPU builds returned different hits for the same rays. The GPU now treats such rays as the CPU does since 1.3.97.
 - CPU ray casts in `CollisionDetection` now raise an error if a BVH traversal fills its node stack, as the GPU path does, instead of silently skipping the rest of the subtree and missing its primitives. This cannot happen for a BVH built by `CollisionDetection`.
 
+## Energy Balance
+- Fixed the GPU solver of `EnergyBalanceModel::run()` printing one "Energy balance did not converge" line per primitive, even with messages disabled. Like the CPU solver, it now prints one line giving the number of primitives that did not converge, and only when messages are enabled.
+- A failed CUDA call in the GPU solver of `EnergyBalanceModel::run()` now raises an error instead of printing to standard error and ending the program.
+
 ## Canopy Generator
 - Fixed `CanopyGenerator::loadXML()` reading only the first `<canopygenerator>` block of a file, so the canopies in any later block were silently not built.
 
