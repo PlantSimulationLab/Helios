@@ -285,3 +285,42 @@ DOCTEST_TEST_CASE("CanopyGenerator keeps the plants of earlier canopies when ano
     DOCTEST_CHECK(tomato_then_vine.getTrunkUUIDs(0).empty());
     DOCTEST_CHECK(!tomato_then_vine.getTrunkUUIDs(1).empty());
 }
+
+DOCTEST_TEST_CASE("CanopyGenerator loadXML reads every <canopygenerator> block") {
+    // The loop over <canopygenerator> blocks advanced with next_sibling("CanopyGenerator"), which XML matches case-sensitively,
+    // so only the first block of a file was read and the canopies in any later block were silently left out.
+    const std::filesystem::path directory = std::filesystem::temp_directory_path();
+    const std::string block = "  <canopygenerator>\n    <HomogeneousCanopyParameters>\n      <leaf_area_index>0.5</leaf_area_index>\n    </HomogeneousCanopyParameters>\n  </canopygenerator>\n";
+    const std::filesystem::path one_block_file = directory / "helios_canopygenerator_one_block.xml";
+    const std::filesystem::path two_block_file = directory / "helios_canopygenerator_two_blocks.xml";
+    {
+        std::ofstream one(one_block_file);
+        one << "<helios>\n" << block << "</helios>\n";
+        std::ofstream two(two_block_file);
+        two << "<helios>\n" << block << block << "</helios>\n";
+    }
+
+    size_t one_block_primitives = 0;
+    size_t two_block_primitives = 0;
+    {
+        Context context;
+        CanopyGenerator canopygenerator(&context);
+        canopygenerator.disableMessages();
+        capture_cout cout_buffer;
+        canopygenerator.loadXML(one_block_file.string().c_str(), true);
+        one_block_primitives = context.getPrimitiveCount();
+    }
+    {
+        Context context;
+        CanopyGenerator canopygenerator(&context);
+        canopygenerator.disableMessages();
+        capture_cout cout_buffer;
+        canopygenerator.loadXML(two_block_file.string().c_str(), true);
+        two_block_primitives = context.getPrimitiveCount();
+    }
+    std::filesystem::remove(one_block_file);
+    std::filesystem::remove(two_block_file);
+
+    DOCTEST_REQUIRE(one_block_primitives > 0);
+    DOCTEST_CHECK(two_block_primitives == 2 * one_block_primitives);
+}

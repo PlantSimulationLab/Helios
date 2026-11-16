@@ -3279,7 +3279,6 @@ struct Shoot {
     bool meristem_is_alive = true;
 
     float phyllochron_counter = 0;
-    float phyllochron_min = 3.f;
     float elongation_max = 0.25;
 
     //! Ornstein-Uhlenbeck tortuosity curvature state (deg/m) applied about the shoot bending axis

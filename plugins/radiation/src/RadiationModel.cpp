@@ -5894,7 +5894,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
     std::map<std::string, std::vector<std::vector<float>>> radiation_in_camera;
 
-    size_t maxRays = 1024 * 1024 * 1024; // maximum number of total rays in a launch
+    // Largest number of rays in one camera or pixel-label launch; larger cameras are rendered in tiles
+    const size_t maxRays = backend->maxRaysPerLaunch();
 
     // ***** DIRECT LAUNCH FROM ALL RADIATION SOURCES ***** //
 
@@ -6574,8 +6575,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         }
 
         // Build launch parameters for diffuse rays
-        // Note: OptiX 6.5-specific batching (maxRays limit) should be handled inside the OptiX backend,
-        // not here in RadiationModel. Vulkan and other backends can launch all primitives at once.
+        // Every primitive is passed in one call; each backend splits it into launches within its own ray budget.
         helios::RayTracingLaunchParams params;
         params.launch_offset = 0;
         params.launch_count = Nprimitives; // Launch all primitives at once (backend handles batching if needed)
@@ -7161,8 +7161,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
                 // Validate antialiasing samples don't exceed maximum
                 if (camera.second.antialiasing_samples > maxRays) {
-                    helios_runtime_error("ERROR (runBand): Camera '" + camera.second.label + "' antialiasing samples (" + std::to_string(camera.second.antialiasing_samples) + ") exceeds OptiX maximum launch size (" + std::to_string(maxRays) +
-                                         "). Reduce antialiasing samples.");
+                    helios_runtime_error("ERROR (runBand): Camera '" + camera.second.label + "' antialiasing samples (" + std::to_string(camera.second.antialiasing_samples) + ") exceeds the maximum launch size of the ray-tracing backend (" +
+                                         std::to_string(maxRays) + "). Reduce antialiasing samples.");
                 }
 
                 // Compute tiling if needed

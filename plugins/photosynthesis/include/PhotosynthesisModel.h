@@ -985,8 +985,6 @@ private:
 
     float evaluateC4Model(const C4ModelCoefficients &params, float i_PAR, float TL, float CO2, float gC, float &Ci, float &Cm, float &Vp, int &limitation_state, float &electron_transport_ratio, helios::WarningAggregator &warnings);
 
-    float evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float fT, float Rd, float gC) const;
-
     static float evaluateCi_Farquhar(float Ci, std::vector<float> &variables, const void *parameters);
 
     static float evaluateCi_C4(float Ci, std::vector<float> &variables, const void *parameters);

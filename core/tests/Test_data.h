@@ -2394,3 +2394,41 @@ TEST_CASE("setObjectData casts a value to the type already registered for its la
         DOCTEST_CHECK(stored == doctest::Approx(361.f));
     }
 }
+
+TEST_CASE("Vector-valued data set on one object or primitive is counted and cast like scalar data") {
+    // setObjectData() with a vector of values for one object never counted the label, so the label was missing from
+    // listAllObjectDataLabels() and doesObjectDataExist(label) although the object held the data. setPrimitiveData() with
+    // a vector of values for one primitive announced that values of another numeric type would be cast to the label's
+    // registered type, but stored them as given, so reading them back in the registered type failed.
+    Context ctx;
+
+    SUBCASE("object label is counted") {
+        const uint objID = ctx.addTileObject(nullorigin, make_vec2(1, 1), nullrotation, make_int2(1, 1));
+        ctx.setObjectData(objID, "profile", std::vector<float>{1.f, 2.f, 3.f});
+        std::vector<std::string> labels = ctx.listAllObjectDataLabels();
+        DOCTEST_CHECK(std::find(labels.begin(), labels.end(), "profile") != labels.end());
+
+        ctx.clearObjectData(objID, "profile");
+        labels = ctx.listAllObjectDataLabels();
+        DOCTEST_CHECK(std::find(labels.begin(), labels.end(), "profile") == labels.end());
+    }
+
+    SUBCASE("primitive values are cast to the registered type") {
+        const uint UUID_a = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        const uint UUID_b = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+        ctx.setPrimitiveData(UUID_a, "profile", std::vector<float>{1.f});
+        DOCTEST_REQUIRE(ctx.getPrimitiveDataType("profile") == HELIOS_TYPE_FLOAT);
+
+        const std::vector<double> values = {4.0, 5.0, 6.0};
+        {
+            capture_cerr cerr_buffer; // the cast is announced with a warning
+            ctx.setPrimitiveData(UUID_b, "profile", values);
+        }
+        std::vector<float> stored;
+        DOCTEST_CHECK_NOTHROW(ctx.getPrimitiveData(UUID_b, "profile", stored));
+        DOCTEST_REQUIRE(stored.size() == values.size());
+        for (size_t i = 0; i < values.size(); i++) {
+            DOCTEST_CHECK(stored.at(i) == doctest::Approx(float(values.at(i))));
+        }
+    }
+}

@@ -1541,6 +1541,68 @@ GPU_TEST_CASE("RadiationModel no direct or diffuse radiation leaks into a closed
     }
 }
 
+GPU_TEST_CASE("RadiationModel camera launches are tiled to the backend's per-launch ray budget") {
+    // Camera launches were tiled to a fixed 2^30 rays, the OptiX 6 launch limit, while the Vulkan backend limits each of its
+    // direct and diffuse launches to 2^26 rays so that no launch runs long enough to trip the display driver's watchdog. A
+    // Vulkan camera launch could therefore be up to 16 times that budget in a single dispatch. 2048 x 1024 pixels at 33
+    // samples is 69 million rays, just over the Vulkan budget: on that backend the camera must be split into tiles, and the
+    // tiled image of a uniform sky must be as uniform, and as bright, as an untiled one.
+    Context context;
+    context.addPatch(make_vec3(0, 0, -5), make_vec2(1, 1)); // out of view of the upward-looking camera
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    radiation.setScatteringDepth("SW", 0);
+    radiation.setDiffuseRadiationFlux("SW", 1000.f);
+
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = make_int2(2048, 1024);
+    camera_properties.HFOV = 60;
+    camera_properties.focal_plane_distance = 10;
+    camera_properties.lens_diameter = 0.f;
+    radiation.addRadiationCamera("reference", {"SW"}, make_vec3(0, 0, 0), make_vec3(0, 0, 1), camera_properties, 1);
+    radiation.addRadiationCamera("many_samples", {"SW"}, make_vec3(0, 0, 0), make_vec3(0, 0, 1), camera_properties, 33);
+    radiation.updateGeometry();
+
+    std::string messages;
+    {
+        capture_cout capture;
+        radiation.enableMessages();
+        radiation.runBand("SW");
+        radiation.disableMessages();
+        messages = capture.get_captured_output();
+    }
+
+    const bool vulkan_backend = radiation.getBackendName().find("Vulkan") != std::string::npos;
+    if (vulkan_backend) {
+        DOCTEST_CHECK(messages.find("Camera 'many_samples' requires 2 tiles") != std::string::npos);
+    }
+    DOCTEST_CHECK(messages.find("Camera 'reference' requires") == std::string::npos);
+
+    const std::vector<float> reference = radiation.getCameraPixelData("reference", "SW");
+    const std::vector<float> many_samples = radiation.getCameraPixelData("many_samples", "SW");
+    DOCTEST_REQUIRE(reference.size() == size_t(2048) * 1024);
+    DOCTEST_REQUIRE(many_samples.size() == reference.size());
+
+    double reference_mean = 0.0;
+    for (float value: reference) {
+        reference_mean += value / double(reference.size());
+    }
+    DOCTEST_REQUIRE(reference_mean > 0.0);
+
+    // Every pixel sees the same uniform sky, so a tile that was not rendered, or was written to the wrong place, shows up as a
+    // pixel far from the reference brightness.
+    size_t pixels_off = 0;
+    for (float value: many_samples) {
+        if (std::fabs(value - reference_mean) > 1e-3 * reference_mean) {
+            pixels_off++;
+        }
+    }
+    DOCTEST_CHECK(pixels_off == 0);
+}
+
 GPU_TEST_CASE("RadiationModel diffuse rays launched in the plane of another surface do not hit it") {
     // Rays start with no minimum distance, so a ray launched in the plane of another surface meets it at a distance of zero, which
     // the intersection arithmetic may produce as -0. A hit at zero distance is not a hit, but the OptiX 8 backend accepted it, and

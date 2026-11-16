@@ -4259,6 +4259,24 @@ void WheatPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
     }
 }
 
+// The species' palettes: the spectra of each tissue class of an organ's class map, as
+// Heliades' radiation camera gives them. The spectra are in the radiation plug-in's
+// surface spectral libraries.
+static void CucumberSpectralPalettes(helios::Context *context) {
+    if (!context->doesSpectralPaletteExist("cucumber_fruit")) {  // the fruit's classes
+        context->addSpectralPalette("cucumber_fruit", {
+            {"cucumber_fruit_reflectivity", "cucumber_fruit_transmissivity", "skin: the organ's own spectra"},
+            {"cucumber_petal_reflectivity", "cucumber_petal_transmissivity", "withered_corolla: judged, the petal layer standing in for the dried corolla at the blossom end"}
+        });
+    }
+    if (!context->doesSpectralPaletteExist("cucumber_flower")) {  // the flower's classes
+        context->addSpectralPalette("cucumber_flower", {
+            {"cucumber_stem_reflectivity", "cucumber_stem_transmissivity", "ovary: the organ's own spectra"},
+            {"cucumber_petal_reflectivity", "cucumber_petal_transmissivity", "corolla: judged: a carotenoid layer (30 ug/cm2 carotenoids, 1 ug/cm2 chlorophyll) for the yellow corolla; no cucumber petal spectrum was found"}
+        });
+    }
+}
+
 // Baked by Heliades from the species' procedural fruit: each file is one
 // prototype, its parameters sampled about their means by their coefficients of
 // variation.
@@ -4267,6 +4285,13 @@ uint CucumberFruitPrototype(helios::Context *context_ptr, uint subdivisions, con
     const int pick = context_ptr->randu(0, int(variants.size()) - 1);
     const std::string &file = variants.at(pick);
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/Cucumber/" + file).string().c_str(), make_vec3(0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    // its spectra, and its tissue classes' through the class map baked with it;
+    // every copy made of this prototype carries them
+    helios::Context *context = context_ptr;
+    context->setPrimitiveData(UUIDs, "reflectivity_spectrum", std::string("cucumber_fruit_reflectivity"));
+    context->setPrimitiveData(UUIDs, "transmissivity_spectrum", std::string("cucumber_fruit_transmissivity"));
+    CucumberSpectralPalettes(context);
+    context->setPrimitiveSpectralTexture(UUIDs, helios::resolvePluginAsset("plantarchitecture", "assets/obj/Cucumber/" + file.substr(0, file.size() - 4) + "_classes.png").string(), "cucumber_fruit");
     return context_ptr->addPolymeshObject(UUIDs);
 }
 
@@ -4280,6 +4305,13 @@ uint CucumberFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bo
     const int pick = context_ptr->randu(0, int(variants.size()) - 1);
     const std::string &file = variants.at(pick);
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/Cucumber/" + file).string().c_str(), make_vec3(0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    // its spectra, and its tissue classes' through the class map baked with it;
+    // every copy made of this prototype carries them
+    helios::Context *context = context_ptr;
+    context->setPrimitiveData(UUIDs, "reflectivity_spectrum", std::string("cucumber_stem_reflectivity"));
+    context->setPrimitiveData(UUIDs, "transmissivity_spectrum", std::string("cucumber_stem_transmissivity"));
+    CucumberSpectralPalettes(context);
+    context->setPrimitiveSpectralTexture(UUIDs, helios::resolvePluginAsset("plantarchitecture", "assets/obj/Cucumber/" + file.substr(0, file.size() - 4) + "_classes.png").string(), "cucumber_flower");
     return context_ptr->addPolymeshObject(UUIDs);
 }
 

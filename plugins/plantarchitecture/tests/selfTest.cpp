@@ -44,6 +44,15 @@ public:
     static void setPetioluleRadiusFraction(LeafPrototype &prototype, float radius_fraction) {
         prototype.petiolule_radius_fraction = radius_fraction;
     }
+    static void adjustPhyllochronForCarbon(PlantArchitecture &pa, uint plantID, float dt) {
+        pa.checkCarbonPool_adjustPhyllochron(plantID, dt);
+    }
+    static const CarbohydrateParameters &getCarbohydrateParameters(const PlantArchitecture &pa, uint plantID) {
+        return pa.plant_instances.at(plantID).carb_parameters;
+    }
+    static bool forceUpdateOnCollision(const PlantArchitecture &pa) {
+        return pa.force_update_on_collision;
+    }
 };
 
 DOCTEST_TEST_CASE("PlantArchitecture Constructor") {
@@ -584,6 +593,41 @@ DOCTEST_TEST_CASE("Plant Library - cucumber is a single string-trained stem with
         DOCTEST_CHECK(shortest_full_size_fruit >= 0.25f);
         DOCTEST_CHECK(longest_full_size_fruit <= 0.40f);
     }
+}
+
+DOCTEST_TEST_CASE("Plant Library - cucumber fruit and flowers carry their spectra and tissue classes") {
+    // The fruit (skin, withered corolla) and the flower (ovary, corolla) are baked with a class map beside each texture, and the model
+    // gives them their spectra and a spectral texture whose palette names each tissue's spectra, as the species was rendered in Heliades.
+    // The organs on a grown plant are copies of the prototypes, so they must carry the texture too.
+    Context context;
+    context.seedRandomGenerator(1);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("cucumber");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 60.f);
+
+    const std::vector<std::pair<std::vector<uint>, std::string>> organs = {
+            {plantarchitecture.getPlantFruitObjectIDs(plantID), "cucumber_fruit"},
+            {plantarchitecture.getPlantFlowerObjectIDs(plantID), "cucumber_flower"},
+            {{CucumberFruitPrototype(&context, 1, {})}, "cucumber_fruit"},
+            {{CucumberFlowerPrototype(&context, 1, true, {})}, "cucumber_flower"},
+            {{CucumberFlowerPrototype(&context, 1, false, {})}, "cucumber_flower"}};
+    for (const auto &[objIDs, palette]: organs) {
+        DOCTEST_INFO(palette);
+        DOCTEST_CHECK(!objIDs.empty());
+        for (uint objID: objIDs) {
+            for (uint UUID: context.getObjectPrimitiveUUIDs(objID)) {
+                DOCTEST_REQUIRE(context.primitiveHasSpectralTexture(UUID));
+                DOCTEST_CHECK(context.getPrimitiveSpectralPalette(UUID) == palette);
+                DOCTEST_CHECK(std::filesystem::exists(context.getPrimitiveSpectralTextureFile(UUID)));
+                std::string reflectivity;
+                context.getPrimitiveData(UUID, "reflectivity_spectrum", reflectivity);
+                DOCTEST_CHECK(reflectivity == (palette == "cucumber_fruit" ? "cucumber_fruit_reflectivity" : "cucumber_stem_reflectivity"));
+            }
+        }
+    }
+    DOCTEST_CHECK(context.getSpectralPalette("cucumber_fruit").size() == 2);
+    DOCTEST_CHECK(context.getSpectralPalette("cucumber_flower").at(1).reflectivity_spectrum == "cucumber_petal_reflectivity");
 }
 
 DOCTEST_TEST_CASE("Plant Library - cucumber is lowered and leaned once its head reaches the wire") {
@@ -1672,6 +1716,83 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model does not abort on any li
         }
         DOCTEST_CHECK(!threw);
     }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture carbon-limited phyllochron scales the shoot type's phyllochron_min") {
+    // The slow-down applied when carbon is short was computed from a separate Shoot::phyllochron_min member that was never
+    // set and stayed at its 3-day initial value, instead of from the shoot type's phyllochron_min. A shoot type whose
+    // phyllochron is not 3 days was slowed by the wrong amount: three times too much at 1 day, and not at all at 10 days
+    // until the carbon ratio fell below 0.3.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    // Built without the carbohydrate model, which would starve the plant during the build since no carbon is supplied
+    // here. The phyllochron adjustment is exercised directly on the grown shoots.
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 20);
+
+    const CarbohydrateParameters &carbohydrate_parameters = PlantArchitectureTestHelper::getCarbohydrateParameters(plantarchitecture, plantID);
+    // The shoot with the most internode volume, since the base shoot of some plants has none
+    std::shared_ptr<Shoot> shoot;
+    float shoot_volume = 0.f;
+    for (const std::shared_ptr<Shoot> &candidate: PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID)) {
+        const float candidate_volume = candidate->calculateShootInternodeVolume();
+        if (candidate_volume > shoot_volume) {
+            shoot = candidate;
+            shoot_volume = candidate_volume;
+        }
+    }
+    DOCTEST_REQUIRE(shoot_volume > 0.f);
+    // Carbon pool at which the carbon ratio is 1
+    const float threshold_pool_molC = carbohydrate_parameters.carbohydrate_phyllochron_threshold * carbohydrate_parameters.stem_density * shoot_volume / C_molecular_wt;
+
+    const float dt = 1.f;
+    struct Case {
+        float phyllochron_min;
+        float carbon_ratio;
+    };
+    for (const Case &test_case: {Case{1.f, 0.5f}, Case{1.5f, 0.25f}, Case{10.f, 0.5f}}) {
+        DOCTEST_CAPTURE(test_case.phyllochron_min);
+        DOCTEST_CAPTURE(test_case.carbon_ratio);
+        shoot->shoot_parameters.phyllochron_min = test_case.phyllochron_min;
+        shoot->total_carbohydrate_pool_molC = test_case.carbon_ratio * threshold_pool_molC;
+
+        PlantArchitectureTestHelper::adjustPhyllochronForCarbon(plantarchitecture, plantID, dt);
+
+        const float expected = std::fmax(test_case.phyllochron_min, test_case.phyllochron_min / (test_case.carbon_ratio * dt));
+        DOCTEST_CHECK(shoot->phyllochron_instantaneous == doctest::Approx(expected).epsilon(1e-4));
+    }
+
+    // With carbon to spare the phyllochron stays at its minimum
+    shoot->shoot_parameters.phyllochron_min = 1.f;
+    shoot->total_carbohydrate_pool_molC = 4.f * threshold_pool_molC;
+    PlantArchitectureTestHelper::adjustPhyllochronForCarbon(plantarchitecture, plantID, dt);
+    DOCTEST_CHECK(shoot->phyllochron_instantaneous == doctest::Approx(1.f).epsilon(1e-4));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture default phytomer parameters give the peduncle a color") {
+    // The default constructor assigned the default green to the petiole a second time where it meant the peduncle, so the
+    // peduncle kept the black of a default-constructed color, and a shoot type that did not set one drew black peduncles.
+    const PhytomerParameters phytomer_parameters;
+    DOCTEST_CHECK(phytomer_parameters.peduncle.color == RGB::forestgreen);
+    DOCTEST_CHECK(phytomer_parameters.petiole.color == RGB::forestgreen);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture setGeometryUpdateScheduling stores force_update_on_collision") {
+    // The argument was accepted but never stored, so the Context was always updated when collision avoidance acted,
+    // whatever was asked for.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    DOCTEST_REQUIRE(PlantArchitectureTestHelper::forceUpdateOnCollision(plantarchitecture));
+
+    plantarchitecture.setGeometryUpdateScheduling(5, false);
+    DOCTEST_CHECK(!PlantArchitectureTestHelper::forceUpdateOnCollision(plantarchitecture));
+
+    plantarchitecture.setGeometryUpdateScheduling(5, true);
+    DOCTEST_CHECK(PlantArchitectureTestHelper::forceUpdateOnCollision(plantarchitecture));
+
+    DOCTEST_CHECK_THROWS(plantarchitecture.setGeometryUpdateScheduling(0, false));
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture carbohydrate model grows a plant when carbon is supplied") {

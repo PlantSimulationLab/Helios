@@ -421,6 +421,16 @@ namespace helios {
          */
         virtual std::string getBackendName() const = 0;
 
+        //! Largest number of rays the caller should submit in one camera or pixel-label launch
+        /**
+         * Camera launches are split into tiles of at most this many rays (pixels x antialiasing samples). The default is the
+         * 2^30-ray launch limit of OptiX 6. A backend that bounds its own launches more tightly, for instance to stay under a
+         * display driver's watchdog, overrides it.
+         */
+        [[nodiscard]] virtual size_t maxRaysPerLaunch() const {
+            return size_t(1024) * 1024 * 1024;
+        }
+
     protected:
         /**
          * @brief Validate geometry before upload (debug builds only)

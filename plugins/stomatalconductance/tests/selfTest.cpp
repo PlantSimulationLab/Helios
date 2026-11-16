@@ -1744,3 +1744,58 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Buckley2026 without photosynthesis
     context.setPrimitiveData(leaf, "plant_hydraulic_conductance", -0.01f);
     DOCTEST_CHECK_THROWS_AS(gsm.run(std::vector<uint>{leaf}), std::runtime_error);
 }
+
+DOCTEST_TEST_CASE("StomatalConductanceModel coefficients on a material that cannot be read raise an error") {
+    // Reading model coefficients from a primitive's material caught every exception and fell back to the default coefficients,
+    // so coefficients stored with the wrong type were silently replaced by the defaults.
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.addMaterial("leaf_material");
+    context.assignMaterialToPrimitive(UUID, "leaf_material");
+
+    StomatalConductanceModel model(&context);
+    model.disableMessages();
+    model.setModelCoefficients(BWBcoefficients());
+
+    SUBCASE("coefficients stored as double") {
+        context.setMaterialData("leaf_material", "gs_bwb_gs0", 0.08);
+        context.setMaterialData("leaf_material", "gs_bwb_a1", 9.0);
+        bool rejected = false;
+        {
+            capture_cerr cerr_buffer;
+            try {
+                model.run();
+            } catch (const std::runtime_error &) {
+                rejected = true;
+            }
+        }
+        DOCTEST_CHECK(rejected);
+    }
+
+    SUBCASE("coefficients stored as float are used") {
+        BWBcoefficients material_coefficients;
+        material_coefficients.gs0 = 0.15f; // far from the default 0.0733
+        material_coefficients.a1 = 12.f;
+        model.setModelCoefficients("leaf_material", material_coefficients);
+        model.setModelCoefficients(BWBcoefficients()); // the material's coefficients take precedence over the default
+        {
+            capture_cerr cerr_buffer;
+            DOCTEST_CHECK_NOTHROW(model.run());
+        }
+        float gs_material = 0;
+        context.getPrimitiveData(UUID, "moisture_conductance", gs_material);
+
+        Context default_context;
+        const uint default_UUID = default_context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        StomatalConductanceModel default_model(&default_context);
+        default_model.disableMessages();
+        default_model.setModelCoefficients(BWBcoefficients());
+        {
+            capture_cerr cerr_buffer;
+            default_model.run();
+        }
+        float gs_default = 0;
+        default_context.getPrimitiveData(default_UUID, "moisture_conductance", gs_default);
+        DOCTEST_CHECK(gs_material != doctest::Approx(gs_default));
+    }
+}

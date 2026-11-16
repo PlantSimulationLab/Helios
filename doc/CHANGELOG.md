@@ -1,5 +1,44 @@
 # Changelog
 
+# [1.3.99] 2026-XX-XX
+
+## Core
+- Fixed `Context::setObjectData()` with a vector of values for one object not counting the label, so the label was missing from `Context::listAllObjectDataLabels()` although the object held the data.
+- Fixed `Context::setPrimitiveData()` with a vector of values for one primitive storing the values in their own type when the label already held data of another numeric type, although the warning said they would be cast. Reading the data back in the registered type raised an error.
+
+## Plant Architecture
+- Fixed the carbohydrate model slowing a carbon-limited shoot's phyllochron as if every shoot type had a minimum phyllochron of 3 days, instead of using the shoot type's `phyllochron_min`. A shoot type with a shorter phyllochron was slowed too much (three times too much at 1 day), and one with a longer phyllochron was not slowed until its carbon fell much lower. This changes the growth of plants grown with the carbohydrate model enabled.
+- Fixed peduncles drawing black for any shoot type that did not set `PhytomerParameters::peduncle.color`, including the almond, apple and walnut models. The default peduncle color is now forest green, the same as the default petiole color.
+- Fixed `PlantArchitecture::setGeometryUpdateScheduling()` ignoring its `force_update_on_collision` argument, so the Context geometry was always updated when collision avoidance acted.
+
+## LiDAR
+- `LiDARcloud::getHitBoundingBox()` and `getGridBoundingBox()` now raise an error when the point cloud has no hit points or no grid cells. With messages disabled they returned the inverted box (1e6, -1e6) of an empty search, and with messages enabled they printed a warning and left the outputs unchanged. As a result, `LiDARcloud::syntheticScan()` with `scan_grid_only` set and no grid now raises an error instead of scanning against that inverted box.
+- `LiDARcloud::triangulateHitPoints()` and the methods that add hits, the grid or triangles to a Visualizer now skip an empty point cloud whether or not messages are enabled; the early return used to be taken only when messages were enabled.
+
+## Radiation
+- Radiation cameras on the Vulkan backend are now rendered in tiles of at most 2^26 rays (pixels times antialiasing samples), the same limit as its direct and diffuse launches, instead of 2^30. A large camera with many samples could otherwise run long enough in one dispatch to trip the display driver's watchdog and lose the device. The image noise of such a camera changes, since each tile draws its own random seed.
+- On the Vulkan backend, a failed submission of a buffer upload, download or clear to the GPU now raises an error naming the failure, instead of being reported as a time-out five seconds later, and the time a transfer may take before it is treated as hung is raised from five seconds to ten minutes, so that a large buffer on a slow or software Vulkan device no longer fails.
+
+## Canopy Generator
+- Fixed `CanopyGenerator::loadXML()` reading only the first `<canopygenerator>` block of a file, so the canopies in any later block were silently not built.
+
+## Photosynthesis
+- Fixed the empirical photosynthesis model giving a net photosynthesis of NaN for a leaf below 273 K, where its dark respiration rate R sqrt(T - 273) exp(-E_R/T) is not defined; the respiration rate is now taken as zero at or below 273 K. Fixed the same model giving 0 instead of the (negative) dark respiration rate for a leaf in the dark with closed stomata. The model is now solved exactly instead of iteratively, which changes its results slightly (within the old iteration's tolerance) and means it can no longer fail to converge.
+- `PhotosynthesisModel::run()` now raises an error when coefficients assigned to a primitive's material cannot be read, e.g., a value stored with the wrong type or a Farquhar coefficient set without its temperature-response values. Such coefficients were silently replaced by the default coefficients.
+
+## Stomatal Conductance
+- `StomatalConductanceModel::run()` now raises an error when coefficients assigned to a primitive's material cannot be read, e.g., a value stored with the wrong type. Such coefficients were silently replaced by the default coefficients.
+
+## Solar Position
+- Fixed `SolarPosition::calibrateTurbidityFromTimeseries()` overwriting the atmospheric conditions set with `setAtmosphericConditions()`. After a calibration the Context held a pressure of 101325 Pa, a temperature of 300 K, a relative humidity of 0.5 and the last turbidity tried by the solver, and every later flux calculation used them.
+
+## Parameter Optimization
+- Fixed Bayesian optimization not writing `ParameterOptimization::write_result_to_file`. The file is now written as for the other algorithms.
+
+## Utilities
+- Fixed `utilities/create_project.sh` writing the wrong `#include` into `main.cpp` for the `soiltransport` and `parameteroptimization` plug-ins and an empty `#include ""` for `collisiondetection`, so a new project using any of them did not compile.
+- `utilities/create_project.sh` now stops with an error, before creating anything, when given a plug-in name it does not recognize. It used to print a message, leave the plug-in out of the project and report success.
+
 # [1.3.98] 2026-11-15
 
 ## Core

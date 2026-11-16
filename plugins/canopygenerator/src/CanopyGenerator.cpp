@@ -1939,7 +1939,7 @@ void CanopyGenerator::loadXML(const char *filename, bool build) {
     }
 
     // looping over any Canopy Generator blocks specified in XML file
-    for (pugi::xml_node cgen = helios.child("canopygenerator"); cgen; cgen = cgen.next_sibling("CanopyGenerator")) {
+    for (pugi::xml_node cgen = helios.child("canopygenerator"); cgen; cgen = cgen.next_sibling("canopygenerator")) {
 
         // looping over any canopy types specified
 

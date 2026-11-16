@@ -2629,3 +2629,118 @@ DOCTEST_TEST_CASE("PhotosynthesisModel evaporating_faces sets the stomatal sided
     // Guard that the sidedness matters at these conditions, so the check above can discriminate.
     DOCTEST_CHECK(std::fabs(A_amphistomatous - A_hypostomatous) > 0.02f * A_hypostomatous);
 }
+
+DOCTEST_TEST_CASE("PhotosynthesisModel empirical model below freezing and with closed stomata in the dark") {
+    // The dark respiration rate R*sqrt(T - 273)*exp(-E_R/T) is not defined below 273 K, and was evaluated anyway, so a leaf
+    // below freezing was given a net photosynthesis of NaN. A leaf in the dark with its stomata closed was given 0 instead
+    // of -R_d: the iterative solve stopped on its first step and the unconverged result was replaced with 0.
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context);
+    photomodel.disableMessages();
+    const EmpiricalModelCoefficients coefficients;
+    photomodel.setModelCoefficients(coefficients);
+    context.setPrimitiveData(UUID, "air_CO2", 400.f);
+
+    SUBCASE("below freezing") {
+        context.setPrimitiveData(UUID, "radiation_flux_PAR", 500.f);
+        for (const float temperature: {272.f, 263.f, 250.f}) {
+            DOCTEST_CAPTURE(temperature);
+            context.setPrimitiveData(UUID, "temperature", temperature);
+            {
+                capture_cerr cerr_buffer;
+                photomodel.run();
+            }
+            float A = 0;
+            context.getPrimitiveData(UUID, "net_photosynthesis", A);
+            DOCTEST_CHECK(std::isfinite(A));
+        }
+    }
+
+    SUBCASE("dark with closed stomata") {
+        const float temperature = 300.f;
+        context.setPrimitiveData(UUID, "radiation_flux_PAR", 0.f);
+        context.setPrimitiveData(UUID, "temperature", temperature);
+        context.setPrimitiveData(UUID, "moisture_conductance", 0.f);
+        {
+            capture_cerr cerr_buffer;
+            photomodel.run();
+        }
+        float A = 0;
+        context.getPrimitiveData(UUID, "net_photosynthesis", A);
+        const float Rd = coefficients.R * std::sqrt(temperature - 273.f) * std::exp(-coefficients.ER / temperature);
+        DOCTEST_REQUIRE(Rd > 0.f);
+        DOCTEST_CHECK(A == doctest::Approx(-Rd).epsilon(1e-4));
+    }
+
+    SUBCASE("light with open stomata balances supply and demand") {
+        // With the exact solution, the assimilation rate equals the CO2 supply through the stomata, A = gC (Ca - Ci), so the
+        // reported Ci reproduces A. Checked through A only: at moderate light it must be positive and below what open stomata
+        // with Ci = Ca could supply.
+        context.setPrimitiveData(UUID, "radiation_flux_PAR", 500.f);
+        context.setPrimitiveData(UUID, "temperature", 298.f);
+        context.setPrimitiveData(UUID, "moisture_conductance", 0.25f);
+        photomodel.run();
+        float A = 0;
+        context.getPrimitiveData(UUID, "net_photosynthesis", A);
+        DOCTEST_CHECK(A > 0.f);
+        DOCTEST_CHECK(A < 0.25f / 1.6f * 400.f);
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel coefficients on a material that cannot be read raise an error") {
+    // Reading model coefficients from a primitive's material caught every exception and fell back to the default coefficients,
+    // so an incomplete Farquhar set (the temperature-response values missing) or coefficients stored with the wrong type were
+    // silently replaced by the defaults.
+    Context context;
+    const uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.addMaterial("leaf_material");
+    context.assignMaterialToPrimitive(UUID, "leaf_material");
+    context.setPrimitiveData(UUID, "radiation_flux_PAR", 500.f);
+
+    PhotosynthesisModel photomodel(&context);
+    photomodel.disableMessages();
+
+    SUBCASE("Farquhar values present without their temperature responses") {
+        photomodel.setModelCoefficients(FarquharModelCoefficients());
+        context.setMaterialData("leaf_material", "photo_fq_Vcmax", 80.f);
+        context.setMaterialData("leaf_material", "photo_fq_Jmax", 150.f);
+        context.setMaterialData("leaf_material", "photo_fq_Rd", 1.5f);
+        context.setMaterialData("leaf_material", "photo_fq_alpha", 0.3f);
+        bool rejected = false;
+        {
+            capture_cerr cerr_buffer;
+            try {
+                photomodel.run();
+            } catch (const std::runtime_error &) {
+                rejected = true;
+            }
+        }
+        DOCTEST_CHECK(rejected);
+    }
+
+    SUBCASE("empirical coefficient stored as double") {
+        const EmpiricalModelCoefficients defaults;
+        photomodel.setModelCoefficients(defaults);
+        context.setMaterialData("leaf_material", "photo_emp_Tref", defaults.Tref);
+        context.setMaterialData("leaf_material", "photo_emp_Ci_ref", defaults.Ci_ref);
+        context.setMaterialData("leaf_material", "photo_emp_Asat", double(defaults.Asat));
+        context.setMaterialData("leaf_material", "photo_emp_theta", defaults.theta);
+        context.setMaterialData("leaf_material", "photo_emp_Tmin", defaults.Tmin);
+        context.setMaterialData("leaf_material", "photo_emp_Topt", defaults.Topt);
+        context.setMaterialData("leaf_material", "photo_emp_q", defaults.q);
+        context.setMaterialData("leaf_material", "photo_emp_R", defaults.R);
+        context.setMaterialData("leaf_material", "photo_emp_ER", defaults.ER);
+        context.setMaterialData("leaf_material", "photo_emp_kC", defaults.kC);
+        bool rejected = false;
+        {
+            capture_cerr cerr_buffer;
+            try {
+                photomodel.run();
+            } catch (const std::runtime_error &) {
+                rejected = true;
+            }
+        }
+        DOCTEST_CHECK(rejected);
+    }
+}

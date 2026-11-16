@@ -566,20 +566,18 @@ BWBcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BWB(uint U
     BWBcoefficients coeffs;
     bool found = true;
 
-    try {
-        const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_BWB_gs0) && mat.doesMaterialDataExist(LABEL_BWB_a1)) {
+    // Errors reading the material's coefficients (a value of the wrong type, or one of a set missing) are not caught: falling back to
+    // the default coefficients would hide that the material's own were not used.
+    const Material &mat = context->getMaterial(materialID);
+    if (mat.doesMaterialDataExist(LABEL_BWB_gs0) && mat.doesMaterialDataExist(LABEL_BWB_a1)) {
 
-            mat.getMaterialData(LABEL_BWB_gs0, coeffs.gs0);
-            mat.getMaterialData(LABEL_BWB_a1, coeffs.a1);
+        mat.getMaterialData(LABEL_BWB_gs0, coeffs.gs0);
+        mat.getMaterialData(LABEL_BWB_a1, coeffs.a1);
 
-            // Cache the retrieved coefficients
-            material_coefficient_cache_BWB[materialID] = coeffs;
-            return coeffs;
-        } else {
-            found = false;
-        }
-    } catch (const std::exception &) {
+        // Cache the retrieved coefficients
+        material_coefficient_cache_BWB[materialID] = coeffs;
+        return coeffs;
+    } else {
         found = false;
     }
 
@@ -602,20 +600,18 @@ BBLcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BBL(uint U
     BBLcoefficients coeffs;
     bool found = true;
 
-    try {
-        const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_BBL_gs0) && mat.doesMaterialDataExist(LABEL_BBL_a1) && mat.doesMaterialDataExist(LABEL_BBL_D0)) {
+    // Errors reading the material's coefficients (a value of the wrong type, or one of a set missing) are not caught: falling back to
+    // the default coefficients would hide that the material's own were not used.
+    const Material &mat = context->getMaterial(materialID);
+    if (mat.doesMaterialDataExist(LABEL_BBL_gs0) && mat.doesMaterialDataExist(LABEL_BBL_a1) && mat.doesMaterialDataExist(LABEL_BBL_D0)) {
 
-            mat.getMaterialData(LABEL_BBL_gs0, coeffs.gs0);
-            mat.getMaterialData(LABEL_BBL_a1, coeffs.a1);
-            mat.getMaterialData(LABEL_BBL_D0, coeffs.D0);
+        mat.getMaterialData(LABEL_BBL_gs0, coeffs.gs0);
+        mat.getMaterialData(LABEL_BBL_a1, coeffs.a1);
+        mat.getMaterialData(LABEL_BBL_D0, coeffs.D0);
 
-            material_coefficient_cache_BBL[materialID] = coeffs;
-            return coeffs;
-        } else {
-            found = false;
-        }
-    } catch (const std::exception &) {
+        material_coefficient_cache_BBL[materialID] = coeffs;
+        return coeffs;
+    } else {
         found = false;
     }
 
@@ -636,19 +632,17 @@ MOPTcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_MOPT(uint
     MOPTcoefficients coeffs;
     bool found = true;
 
-    try {
-        const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_MOPT_gs0) && mat.doesMaterialDataExist(LABEL_MOPT_g1)) {
+    // Errors reading the material's coefficients (a value of the wrong type, or one of a set missing) are not caught: falling back to
+    // the default coefficients would hide that the material's own were not used.
+    const Material &mat = context->getMaterial(materialID);
+    if (mat.doesMaterialDataExist(LABEL_MOPT_gs0) && mat.doesMaterialDataExist(LABEL_MOPT_g1)) {
 
-            mat.getMaterialData(LABEL_MOPT_gs0, coeffs.gs0);
-            mat.getMaterialData(LABEL_MOPT_g1, coeffs.g1);
+        mat.getMaterialData(LABEL_MOPT_gs0, coeffs.gs0);
+        mat.getMaterialData(LABEL_MOPT_g1, coeffs.g1);
 
-            material_coefficient_cache_MOPT[materialID] = coeffs;
-            return coeffs;
-        } else {
-            found = false;
-        }
-    } catch (const std::exception &) {
+        material_coefficient_cache_MOPT[materialID] = coeffs;
+        return coeffs;
+    } else {
         found = false;
     }
 
@@ -669,21 +663,19 @@ BMFcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BMF(uint U
     BMFcoefficients coeffs;
     bool found = true;
 
-    try {
-        const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_BMF_Em) && mat.doesMaterialDataExist(LABEL_BMF_i0) && mat.doesMaterialDataExist(LABEL_BMF_k) && mat.doesMaterialDataExist(LABEL_BMF_b)) {
+    // Errors reading the material's coefficients (a value of the wrong type, or one of a set missing) are not caught: falling back to
+    // the default coefficients would hide that the material's own were not used.
+    const Material &mat = context->getMaterial(materialID);
+    if (mat.doesMaterialDataExist(LABEL_BMF_Em) && mat.doesMaterialDataExist(LABEL_BMF_i0) && mat.doesMaterialDataExist(LABEL_BMF_k) && mat.doesMaterialDataExist(LABEL_BMF_b)) {
 
-            mat.getMaterialData(LABEL_BMF_Em, coeffs.Em);
-            mat.getMaterialData(LABEL_BMF_i0, coeffs.i0);
-            mat.getMaterialData(LABEL_BMF_k, coeffs.k);
-            mat.getMaterialData(LABEL_BMF_b, coeffs.b);
+        mat.getMaterialData(LABEL_BMF_Em, coeffs.Em);
+        mat.getMaterialData(LABEL_BMF_i0, coeffs.i0);
+        mat.getMaterialData(LABEL_BMF_k, coeffs.k);
+        mat.getMaterialData(LABEL_BMF_b, coeffs.b);
 
-            material_coefficient_cache_BMF[materialID] = coeffs;
-            return coeffs;
-        } else {
-            found = false;
-        }
-    } catch (const std::exception &) {
+        material_coefficient_cache_BMF[materialID] = coeffs;
+        return coeffs;
+    } else {
         found = false;
     }
 
@@ -704,22 +696,20 @@ BBcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BB(uint UUI
     BBcoefficients coeffs;
     bool found = true;
 
-    try {
-        const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_BB_pi_0) && mat.doesMaterialDataExist(LABEL_BB_pi_m) && mat.doesMaterialDataExist(LABEL_BB_theta) && mat.doesMaterialDataExist(LABEL_BB_sigma) && mat.doesMaterialDataExist(LABEL_BB_chi)) {
+    // Errors reading the material's coefficients (a value of the wrong type, or one of a set missing) are not caught: falling back to
+    // the default coefficients would hide that the material's own were not used.
+    const Material &mat = context->getMaterial(materialID);
+    if (mat.doesMaterialDataExist(LABEL_BB_pi_0) && mat.doesMaterialDataExist(LABEL_BB_pi_m) && mat.doesMaterialDataExist(LABEL_BB_theta) && mat.doesMaterialDataExist(LABEL_BB_sigma) && mat.doesMaterialDataExist(LABEL_BB_chi)) {
 
-            mat.getMaterialData(LABEL_BB_pi_0, coeffs.pi_0);
-            mat.getMaterialData(LABEL_BB_pi_m, coeffs.pi_m);
-            mat.getMaterialData(LABEL_BB_theta, coeffs.theta);
-            mat.getMaterialData(LABEL_BB_sigma, coeffs.sigma);
-            mat.getMaterialData(LABEL_BB_chi, coeffs.chi);
+        mat.getMaterialData(LABEL_BB_pi_0, coeffs.pi_0);
+        mat.getMaterialData(LABEL_BB_pi_m, coeffs.pi_m);
+        mat.getMaterialData(LABEL_BB_theta, coeffs.theta);
+        mat.getMaterialData(LABEL_BB_sigma, coeffs.sigma);
+        mat.getMaterialData(LABEL_BB_chi, coeffs.chi);
 
-            material_coefficient_cache_BB[materialID] = coeffs;
-            return coeffs;
-        } else {
-            found = false;
-        }
-    } catch (const std::exception &) {
+        material_coefficient_cache_BB[materialID] = coeffs;
+        return coeffs;
+    } else {
         found = false;
     }
 
@@ -740,21 +730,19 @@ Buckley2026coefficients StomatalConductanceModel::getCoefficientsForPrimitive_Bu
     Buckley2026coefficients coeffs;
     bool found = true;
 
-    try {
-        const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_Buckley2026_s) && mat.doesMaterialDataExist(LABEL_Buckley2026_K_plant_at_25C) && mat.doesMaterialDataExist(LABEL_Buckley2026_b_o) && mat.doesMaterialDataExist(LABEL_Buckley2026_psi_c)) {
+    // Errors reading the material's coefficients (a value of the wrong type, or one of a set missing) are not caught: falling back to
+    // the default coefficients would hide that the material's own were not used.
+    const Material &mat = context->getMaterial(materialID);
+    if (mat.doesMaterialDataExist(LABEL_Buckley2026_s) && mat.doesMaterialDataExist(LABEL_Buckley2026_K_plant_at_25C) && mat.doesMaterialDataExist(LABEL_Buckley2026_b_o) && mat.doesMaterialDataExist(LABEL_Buckley2026_psi_c)) {
 
-            mat.getMaterialData(LABEL_Buckley2026_s, coeffs.s);
-            mat.getMaterialData(LABEL_Buckley2026_K_plant_at_25C, coeffs.K_plant_at_25C);
-            mat.getMaterialData(LABEL_Buckley2026_b_o, coeffs.b_o);
-            mat.getMaterialData(LABEL_Buckley2026_psi_c, coeffs.psi_c);
+        mat.getMaterialData(LABEL_Buckley2026_s, coeffs.s);
+        mat.getMaterialData(LABEL_Buckley2026_K_plant_at_25C, coeffs.K_plant_at_25C);
+        mat.getMaterialData(LABEL_Buckley2026_b_o, coeffs.b_o);
+        mat.getMaterialData(LABEL_Buckley2026_psi_c, coeffs.psi_c);
 
-            material_coefficient_cache_Buckley2026[materialID] = coeffs;
-            return coeffs;
-        } else {
-            found = false;
-        }
-    } catch (const std::exception &) {
+        material_coefficient_cache_Buckley2026[materialID] = coeffs;
+        return coeffs;
+    } else {
         found = false;
     }
 

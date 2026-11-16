@@ -4721,6 +4721,7 @@ namespace helios {
         //! Add vector data value associated with a primitive element
         /**
          * \tparam T Primitive data type
+         * \note If the label already holds data of another numeric type, the values are cast to that type with a warning.
          * \param[in] UUID Unique universal identifier of Primitive element
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (vector)
@@ -4762,9 +4763,14 @@ namespace helios {
             } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                 data_type = HELIOS_TYPE_STRING;
             }
-            registerOrValidatePrimitiveDataType(label, data_type);
+            const HeliosDataType target_type = registerOrValidatePrimitiveDataType(label, data_type);
 
-            primitives.at(UUID)->setPrimitiveData(label, data);
+            // Cast to the type already registered for this label, as the scalar overload does
+            if (target_type != data_type && isTypeCastingSupported(data_type, target_type)) {
+                storePrimitiveDataVectorWithTypeCasting(UUID, label, data, target_type);
+            } else {
+                primitives.at(UUID)->setPrimitiveData(label, data);
+            }
         }
 
         //! Add data value associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
@@ -6606,6 +6612,10 @@ namespace helios {
                 data_type = HELIOS_TYPE_STRING;
             }
             const HeliosDataType target_type = registerOrValidateObjectDataType(label, data_type);
+
+            if (!objects.at(objID)->doesObjectDataExist(label)) {
+                incrementObjectDataLabelCounter(label);
+            }
 
             // Cast to the type already registered for this label, as Context::setPrimitiveData() does
             if (target_type != data_type && isTypeCastingSupported(data_type, target_type)) {
@@ -9908,6 +9918,27 @@ namespace helios {
             return cast_data;
         }
 
+        //! Store a vector of primitive data on one primitive, casting each element to the type already registered for the label
+        template<typename T>
+        void storePrimitiveDataVectorWithTypeCasting(uint UUID, const char *label, const std::vector<T> &data, HeliosDataType target_type) {
+            // Only cast between numeric scalar types
+            if constexpr (std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double>) {
+                if (target_type == HELIOS_TYPE_INT) {
+                    primitives.at(UUID)->setPrimitiveData(label, castVectorElements<int>(data));
+                } else if (target_type == HELIOS_TYPE_UINT) {
+                    primitives.at(UUID)->setPrimitiveData(label, castVectorElements<uint>(data));
+                } else if (target_type == HELIOS_TYPE_FLOAT) {
+                    primitives.at(UUID)->setPrimitiveData(label, castVectorElements<float>(data));
+                } else if (target_type == HELIOS_TYPE_DOUBLE) {
+                    primitives.at(UUID)->setPrimitiveData(label, castVectorElements<double>(data));
+                } else {
+                    helios_runtime_error("ERROR (Context::setPrimitiveData): Cannot cast the values of data '" + std::string(label) + "' to its registered type " + dataTypeToString(target_type) + ".");
+                }
+            } else {
+                helios_runtime_error("ERROR (Context::setPrimitiveData): Data '" + std::string(label) + "' is not of a numeric type, so it cannot be cast to its registered type " + dataTypeToString(target_type) + ".");
+            }
+        }
+
         //! Store a vector of object data on one object, casting each element to the type already registered for the label
         template<typename T>
         void storeObjectDataVectorWithTypeCasting(uint objID, const char *label, const std::vector<T> &data, HeliosDataType target_type) {
@@ -9922,12 +9953,10 @@ namespace helios {
                 } else if (target_type == HELIOS_TYPE_DOUBLE) {
                     objects.at(objID)->setObjectData(label, castVectorElements<double>(data));
                 } else {
-                    // Fallback: store as original type
-                    objects.at(objID)->setObjectData(label, data);
+                    helios_runtime_error("ERROR (Context::setObjectData): Cannot cast the values of data '" + std::string(label) + "' to its registered type " + dataTypeToString(target_type) + ".");
                 }
             } else {
-                // For non-numeric types, store as-is
-                objects.at(objID)->setObjectData(label, data);
+                helios_runtime_error("ERROR (Context::setObjectData): Data '" + std::string(label) + "' is not of a numeric type, so it cannot be cast to its registered type " + dataTypeToString(target_type) + ".");
             }
         }
 

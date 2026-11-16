@@ -989,7 +989,7 @@ PhytomerParameters::PhytomerParameters(std::minstd_rand0 *generator) {
     peduncle.roll.initialize(0, generator);
     peduncle.yaw.initialize(0, generator);
     peduncle.curvature.initialize(0, generator);
-    petiole.color = RGB::forestgreen;
+    peduncle.color = RGB::forestgreen;
     peduncle.length_segments = 3;
     peduncle.radial_subdivisions = 7;
 
@@ -13329,6 +13329,7 @@ void PlantArchitecture::setGeometryUpdateScheduling(int update_frequency, bool f
     }
 
     geometry_update_frequency = update_frequency;
+    this->force_update_on_collision = force_update_on_collision;
     geometry_update_counter = 0; // Reset counter
 }
 

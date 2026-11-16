@@ -227,6 +227,68 @@ DOCTEST_TEST_CASE("LiDAR triangulateHitPoints Memory-Optimization Equivalence") 
     DOCTEST_CHECK(meshChecksum(cloud_b2) == meshChecksum(cloud_b));
 }
 
+DOCTEST_TEST_CASE("LiDAR handles an empty point cloud the same with messages on or off") {
+    // These checks were written as `if (printmessages && <empty>) { warn; return; }`, so the early return happened only
+    // when messages were enabled. With messages off the methods went on: a bounding box of an empty cloud came back as
+    // the inverted box (1e6, -1e6) the search starts from, and a grid-only synthetic scan with no grid ran with that
+    // box as its cull volume.
+    for (const bool messages: {true, false}) {
+        DOCTEST_CAPTURE(messages);
+        LiDARcloud cloud;
+        if (messages) {
+            cloud.enableMessages();
+        } else {
+            cloud.disableMessages();
+        }
+        std::vector<std::string> column_format;
+        ScanMetadata scan(make_vec3(0, 0, 0), 10, 0.0f, M_PI, 10, 0.0f, 2.0f * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, column_format);
+        cloud.addScan(scan);
+
+        bool hit_box_rejected = false;
+        bool grid_box_rejected = false;
+        bool grid_only_scan_rejected = false;
+        uint triangle_count = 1;
+        bool triangulation_threw = false;
+        {
+            capture_cout cout_buffer;
+            capture_cerr cerr_buffer;
+            vec3 boxmin, boxmax;
+            try {
+                cloud.getHitBoundingBox(boxmin, boxmax);
+            } catch (const std::runtime_error &) {
+                hit_box_rejected = true;
+            }
+            try {
+                cloud.getGridBoundingBox(boxmin, boxmax);
+            } catch (const std::runtime_error &) {
+                grid_box_rejected = true;
+            }
+
+            Context context;
+            context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+            try {
+                cloud.syntheticScan(&context, true, false);
+            } catch (const std::runtime_error &) {
+                grid_only_scan_rejected = true;
+            }
+
+            // A cloud with a scan but no hits has nothing to triangulate; it is skipped, not an error
+            try {
+                cloud.triangulateHitPoints(0.5f, 5.f);
+                cloud.triangulateHitPoints(0.5f, 5.f, "reflectance", 0.f, ">");
+                triangle_count = cloud.getTriangleCount();
+            } catch (const std::exception &) {
+                triangulation_threw = true;
+            }
+        }
+        DOCTEST_CHECK(hit_box_rejected);
+        DOCTEST_CHECK(grid_box_rejected);
+        DOCTEST_CHECK(grid_only_scan_rejected);
+        DOCTEST_CHECK(!triangulation_threw);
+        DOCTEST_CHECK(triangle_count == 0);
+    }
+}
+
 DOCTEST_TEST_CASE("LiDAR syntheticScan Progress Callback") {
     LiDARcloud cloud;
     cloud.disableMessages();

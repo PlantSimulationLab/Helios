@@ -98,13 +98,9 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Setting up the build project..."
-# Each plug-in is its own argument: create_project.sh does not split a quoted list, and skips a name it does not recognize rather than failing
+# Each plug-in is its own argument: create_project.sh does not split a quoted list. It fails on a plug-in name it does not recognize.
 if ! "${UTILPATH}/create_project.sh" "${PROJECT_DIR}" plantarchitecture visualizer > "${OUTPUT_DIR}/build.log" 2>&1; then
     echo "Error: Could not create the build project. See ${OUTPUT_DIR}/build.log"
-    exit 1
-fi
-if grep -q "Unknown plug-in" "${OUTPUT_DIR}/build.log"; then
-    echo "Error: create_project.sh did not recognize a plug-in this script needs. See ${OUTPUT_DIR}/build.log"
     exit 1
 fi
 if ! cp "${UTILPATH}/render_plant_library.cpp" "${PROJECT_DIR}/main.cpp"; then
