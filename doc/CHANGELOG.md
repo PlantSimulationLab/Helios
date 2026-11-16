@@ -19,6 +19,10 @@
 - Radiation cameras on the Vulkan and OptiX 8 backends are now rendered in tiles of at most 2^26 rays (pixels times antialiasing samples), the same limit as their direct and diffuse launches, instead of 2^30. A large camera with many samples could otherwise run long enough in one dispatch to trip the display driver's watchdog and lose the device. The image noise of such a camera changes, since each tile draws its own random seed.
 - On the Vulkan backend, a failed submission of a buffer upload, download or clear to the GPU now raises an error naming the failure, instead of being reported as a time-out five seconds later, and the time a transfer may take before it is treated as hung is raised from five seconds to ten minutes, so that a large buffer on a slow or software Vulkan device no longer fails.
 
+## Collision Detection
+- Fixed GPU ray casts (`CollisionDetection::castRays()` and `castRaysSoA()` on batches of 1M rays or more against 500 or more primitives, as in large LiDAR synthetic scans) missing hits for rays parallel to an axis that run along or just inside a face of a bounding box or voxel. A ray a distance d inside a face could not hit anything farther than d × 10^8 along it, and a ray lying on a face was culled, so GPU and CPU builds returned different hits for the same rays. The GPU now treats such rays as the CPU does since 1.3.97.
+- CPU ray casts in `CollisionDetection` now raise an error if a BVH traversal fills its node stack, as the GPU path does, instead of silently skipping the rest of the subtree and missing its primitives. This cannot happen for a BVH built by `CollisionDetection`.
+
 ## Canopy Generator
 - Fixed `CanopyGenerator::loadXML()` reading only the first `<canopygenerator>` block of a file, so the canopies in any later block were silently not built.
 

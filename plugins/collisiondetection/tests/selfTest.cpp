@@ -5976,6 +5976,49 @@ DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - Ray Stack Overflow Raises a
     DOCTEST_CHECK(leaked_MB < 100.0);
 }
 
+DOCTEST_TEST_CASE("CollisionDetection - CPU Ray Stack Overflow Raises Like the GPU") {
+    // The CPU traversals used to drop a child silently when their node stack was full, losing every primitive beneath it,
+    // where the GPU kernels raise. A chain BVH deeper than the stack (built with the GPU test helper, then traced with GPU
+    // acceleration off) must make every CPU ray cast raise.
+    Context context;
+    std::vector<uint> UUIDs = CollisionTests::addPatchRow(context, 200);
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "CPU ray-cast stack overflow (the chain BVH helper uploads to the GPU)")) {
+        return;
+    }
+    collision.disableAutomaticBVHRebuilds();
+
+    // Control: a chain shallower than the traversal stack is traced normally.
+    std::vector<uint> shallow_UUIDs(UUIDs.begin(), UUIDs.begin() + 100);
+    CollisionDetectionTestHelper::installChainBVH(collision, shallow_UUIDs, true);
+    collision.disableGPUAcceleration();
+    const CollisionDetection::HitResult control = collision.castRay(make_vec3(10, 0, 1), make_vec3(0, 0, -1));
+    DOCTEST_CHECK(control.hit);
+    DOCTEST_CHECK(control.primitive_UUID == UUIDs[5]);
+
+    collision.enableGPUAcceleration();
+    CollisionDetectionTestHelper::installChainBVH(collision, UUIDs, true);
+    collision.disableGPUAcceleration();
+
+    const std::string single_message = CollisionTests::thrownMessage([&] { (void) collision.castRay(make_vec3(10, 0, 1), make_vec3(0, 0, -1)); });
+    DOCTEST_CHECK(single_message.find("BVH traversal stack overflow on the CPU") != std::string::npos);
+
+    const std::vector<CollisionDetection::RayQuery> queries(64, CollisionDetection::RayQuery(make_vec3(10, 0, 1), make_vec3(0, 0, -1)));
+    const std::string batch_message = CollisionTests::thrownMessage([&] { (void) collision.castRays(queries); });
+    DOCTEST_CHECK(batch_message.find("BVH traversal stack overflow on the CPU") != std::string::npos);
+
+    // The flag is cleared by the error, so a later cast on a valid tree succeeds.
+    collision.enableGPUAcceleration();
+    CollisionDetectionTestHelper::installChainBVH(collision, shallow_UUIDs, true);
+    collision.disableGPUAcceleration();
+    const CollisionDetection::HitResult after = collision.castRay(make_vec3(10, 0, 1), make_vec3(0, 0, -1));
+    DOCTEST_CHECK(after.hit);
+}
+
 DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - Missing Cached Bounding Box Raises and Leaves Nothing on the GPU") {
     Context context;
     std::vector<uint> UUIDs = CollisionTests::addPatchRow(context, 10);
@@ -6134,6 +6177,75 @@ DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - GPU-Sized Ray Batches Uploa
     DOCTEST_CHECK(results.front().hit);
     DOCTEST_CHECK(results.front().primitive_UUID == UUIDs[5]);
     DOCTEST_CHECK(results.back().primitive_UUID == UUIDs[5]);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - Axis-parallel rays on or just inside a face hit at long range as on the CPU") {
+    // The GPU counterpart of "Axis-parallel ray just inside a face hits at long range". A ray parallel to an axis is inside
+    // that axis's slab along its whole length, so the bounding-box test must not turn its closeness to the face into a
+    // distance limit, and a ray lying exactly on a face must not be culled. The batch is large enough to take the GPU path,
+    // and every ray must give the same hit as the CPU traversal.
+    Context context;
+    const uint voxel_UUID = context.addVoxel(make_vec3(0, 0, 0), make_vec3(2, 2, 2)); // faces at x, y, z = +/-1
+    const uint patch_UUID = context.addPatch(make_vec3(10, 0, 0), make_vec2(2, 2)); // in the plane z = 0, edges at y = +/-1
+    for (int i = 0; i < 600; i++) { // far-away filler so the scene exceeds the GPU primitive threshold
+        float x = 100.0f + float(i % 30);
+        float y = float(i / 30);
+        context.addTriangle(make_vec3(x, y, 0), make_vec3(x + 0.5f, y, 0), make_vec3(x, y + 0.5f, 0));
+    }
+
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.enableGPUAcceleration();
+    collision.buildBVH();
+    if (!CollisionTests::gpuPathActive(collision, "GPU axis-parallel rays near a box face")) {
+        return;
+    }
+
+    // Each ray starts 500 m before the box along +z. Rays 1e-6 inside a face would be culled beyond 1e-6 / 1e-8 = 100 m by a
+    // test that replaced the zero direction component with 1e-8.
+    const float inset = 1e-6f;
+    const float start_z = -500.f;
+    const std::vector<vec3> origins_by_kind = {
+            make_vec3(1.f - inset, 0, start_z), make_vec3(-1.f + inset, 0, start_z), // voxel, just inside the x faces
+            make_vec3(1.f, 0, start_z), make_vec3(0, -1.f, start_z), // voxel, exactly on an x face and on a y face
+            make_vec3(10, 1.f - inset, start_z), make_vec3(10, -1.f + inset, start_z), // patch, just inside its y edges
+    };
+    const std::vector<uint> expected_UUID_by_kind = {voxel_UUID, voxel_UUID, voxel_UUID, voxel_UUID, patch_UUID, patch_UUID};
+    const std::vector<float> expected_distance_by_kind = {499.f, 499.f, 499.f, 499.f, 500.f, 500.f};
+
+    const size_t ray_count = 1000002; // a multiple of the number of kinds, above the 1M-ray GPU threshold
+    std::vector<CollisionDetection::RayQuery> queries(ray_count);
+    for (size_t r = 0; r < ray_count; r++) {
+        queries[r] = CollisionDetection::RayQuery(origins_by_kind[r % origins_by_kind.size()], make_vec3(0, 0, 1));
+    }
+
+    const std::vector<CollisionDetection::HitResult> gpu_results = collision.castRays(queries);
+    collision.disableGPUAcceleration();
+    const std::vector<CollisionDetection::HitResult> cpu_results = collision.castRays(queries);
+    DOCTEST_REQUIRE(gpu_results.size() == ray_count);
+    DOCTEST_REQUIRE(cpu_results.size() == ray_count);
+
+    // Count the disagreements over the whole batch, then report the first ray of each kind in detail
+    size_t gpu_misses = 0;
+    size_t cpu_gpu_mismatches = 0;
+    for (size_t r = 0; r < ray_count; r++) {
+        if (!gpu_results[r].hit) {
+            gpu_misses++;
+        }
+        if (gpu_results[r].hit != cpu_results[r].hit || gpu_results[r].primitive_UUID != cpu_results[r].primitive_UUID) {
+            cpu_gpu_mismatches++;
+        }
+    }
+    DOCTEST_CHECK(gpu_misses == 0);
+    DOCTEST_CHECK(cpu_gpu_mismatches == 0);
+    for (size_t kind = 0; kind < origins_by_kind.size(); kind++) {
+        DOCTEST_INFO("ray kind " << kind << " from " << origins_by_kind[kind].x << ", " << origins_by_kind[kind].y);
+        DOCTEST_CHECK(cpu_results[kind].hit);
+        DOCTEST_CHECK(cpu_results[kind].primitive_UUID == expected_UUID_by_kind[kind]);
+        DOCTEST_CHECK(gpu_results[kind].hit);
+        DOCTEST_CHECK(gpu_results[kind].primitive_UUID == expected_UUID_by_kind[kind]);
+        DOCTEST_CHECK(gpu_results[kind].distance == doctest::Approx(expected_distance_by_kind[kind]).epsilon(1e-5));
+    }
 }
 
 DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - GPU Ray Casts Pass Through Primitives Deleted With Automatic Rebuilds Disabled") {
