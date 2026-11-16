@@ -6206,8 +6206,8 @@ DOCTEST_TEST_CASE("CollisionDetection GPU-Specific - Axis-parallel rays on or ju
     const float inset = 1e-6f;
     const float start_z = -500.f;
     const std::vector<vec3> origins_by_kind = {
-            make_vec3(1.f - inset, 0, start_z), make_vec3(-1.f + inset, 0, start_z), // voxel, just inside the x faces
-            make_vec3(1.f, 0, start_z), make_vec3(0, -1.f, start_z), // voxel, exactly on an x face and on a y face
+            make_vec3(1.f - inset, 0, start_z),  make_vec3(-1.f + inset, 0, start_z), // voxel, just inside the x faces
+            make_vec3(1.f, 0, start_z),          make_vec3(0, -1.f, start_z), // voxel, exactly on an x face and on a y face
             make_vec3(10, 1.f - inset, start_z), make_vec3(10, -1.f + inset, start_z), // patch, just inside its y edges
     };
     const std::vector<uint> expected_UUID_by_kind = {voxel_UUID, voxel_UUID, voxel_UUID, voxel_UUID, patch_UUID, patch_UUID};
