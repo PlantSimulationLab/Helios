@@ -893,14 +893,13 @@ void OptiX8Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance
  * third, which OptiX 8.1 starts far more slowly: 65,535 primitives at one ray each took 4.5 ms that way and 0.2 ms this way
  * (RTX A5500, driver 580), which was most of the time of a run with few rays per primitive.
  *
- * OptiX refuses a launch of more than 2^30 threads, and a launch that runs for seconds can exceed the watchdog of a display
- * driver, so a launch is held to 2^26 threads, those of 65,536 primitives at 1,024 rays each, as well as to the 65,535
- * primitives that launches have always been held to. Launching a million primitives in batches of that size rather than at
- * once costs about a millisecond.
+ * A launch is held to OptiX8Backend::max_threads_per_launch (2^26) threads, those of 65,536 primitives at 1,024 rays each, as
+ * well as to the 65,535 primitives that launches have always been held to. Launching a million primitives in batches of that
+ * size rather than at once costs about a millisecond.
  * \param[in] rays_per_primitive Number of rays launched from each primitive, which is at least 1
+ * \param[in] max_threads_per_launch Largest number of threads in one launch
  */
-static uint32_t primitivesPerLaunch(uint64_t rays_per_primitive) {
-    const uint64_t max_threads_per_launch = uint64_t(1) << 26;
+static uint32_t primitivesPerLaunch(uint64_t rays_per_primitive, uint64_t max_threads_per_launch) {
     const uint64_t max_primitives_per_launch = 65535;
     return static_cast<uint32_t>(std::max<uint64_t>(1, std::min(max_primitives_per_launch, max_threads_per_launch / rays_per_primitive)));
 }
@@ -958,7 +957,7 @@ void OptiX8Backend::launchDirectRays(const RayTracingLaunchParams &launch_params
     direct_sbt.raygenRecord = current_flux_field_count == 2 ? d_raygen_record_direct_dual : d_raygen_record_direct;
 
     // Launch in batches of primitives, with the primitive along the first dimension of the launch (see primitivesPerLaunch())
-    const uint32_t max_batch = primitivesPerLaunch(uint64_t(dim_x) * dim_y);
+    const uint32_t max_batch = primitivesPerLaunch(uint64_t(dim_x) * dim_y, max_threads_per_launch);
     uint32_t offset = launch_params.launch_offset;
     uint32_t remaining = launch_count;
     while (remaining > 0) {
@@ -1098,7 +1097,7 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
     diffuse_sbt.raygenRecord = current_flux_field_count == 2 ? d_raygen_record_diffuse_dual : d_raygen_record_diffuse;
 
     // Launch in batches of primitives, with the primitive along the first dimension of the launch (see primitivesPerLaunch())
-    const uint32_t max_batch    = primitivesPerLaunch(uint64_t(dim_x) * dim_y);
+    const uint32_t max_batch    = primitivesPerLaunch(uint64_t(dim_x) * dim_y, max_threads_per_launch);
     const uint32_t launch_count = launch_params.launch_count;
     uint32_t offset    = launch_params.launch_offset;
     uint32_t remaining = launch_count;

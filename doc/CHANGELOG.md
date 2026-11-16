@@ -16,7 +16,7 @@
 - `LiDARcloud::triangulateHitPoints()` and the methods that add hits, the grid or triangles to a Visualizer now skip an empty point cloud whether or not messages are enabled; the early return used to be taken only when messages were enabled.
 
 ## Radiation
-- Radiation cameras on the Vulkan backend are now rendered in tiles of at most 2^26 rays (pixels times antialiasing samples), the same limit as its direct and diffuse launches, instead of 2^30. A large camera with many samples could otherwise run long enough in one dispatch to trip the display driver's watchdog and lose the device. The image noise of such a camera changes, since each tile draws its own random seed.
+- Radiation cameras on the Vulkan and OptiX 8 backends are now rendered in tiles of at most 2^26 rays (pixels times antialiasing samples), the same limit as their direct and diffuse launches, instead of 2^30. A large camera with many samples could otherwise run long enough in one dispatch to trip the display driver's watchdog and lose the device. The image noise of such a camera changes, since each tile draws its own random seed.
 - On the Vulkan backend, a failed submission of a buffer upload, download or clear to the GPU now raises an error naming the failure, instead of being reported as a time-out five seconds later, and the time a transfer may take before it is treated as hung is raised from five seconds to ten minutes, so that a large buffer on a slow or software Vulkan device no longer fails.
 
 ## Canopy Generator
