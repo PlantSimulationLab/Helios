@@ -1449,7 +1449,7 @@ helios::vec3 Phytomer::getLeafBasePosition(const uint petiole_index, const uint 
 void Phytomer::setVegetativeBudState(BudState state) {
     for (auto &petiole: axillary_vegetative_buds) {
         for (auto &bud: petiole) {
-            bud.state = state;
+            setVegetativeBudState(state, bud);
         }
     }
 }
@@ -1465,6 +1465,11 @@ void Phytomer::setVegetativeBudState(BudState state, uint petiole_index, uint bu
 }
 
 void Phytomer::setVegetativeBudState(BudState state, VegetativeBud &vbud) {
+    if (state == BUD_ACTIVE && vbud.state != BUD_ACTIVE) {
+        // The bud's clock toward breaking into a shoot starts now, whether the bud was just created or has just been woken from dormancy, and it gets a break time of its own when the clock is next read
+        vbud.time_counter = 0;
+        vbud.break_time_drawn = false;
+    }
     vbud.state = state;
 }
 
@@ -1495,6 +1500,10 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
         return;
     } else if (state == BUD_DORMANT || state == BUD_ACTIVE) {
         fbud.state = state;
+        if (state == BUD_ACTIVE) {
+            // The bud's clock toward its first reproductive stage starts now, so this is where its place in the plant's flowering window is decided
+            fbud.flowering_delay = plantarchitecture_ptr->samplePhenologicalDelay(plantarchitecture_ptr->plant_instances.at(this->plantID).flowering_duration);
+        }
         return;
     }
 
@@ -1538,6 +1547,9 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
 
         updateInflorescence(fbud);
         fbud.time_counter = 0;
+        if (fbud.state == BUD_FRUITING) {
+            fbud.fruit_maturity_delay = plantarchitecture_ptr->samplePhenologicalDelay(plantarchitecture_ptr->plant_instances.at(this->plantID).fruit_maturity_duration);
+        }
         // A maturity period of zero is an inflorescence that is already full size when it forms.
         if (fbud.state == BUD_FRUITING && fbud.dd_to_inflorescence_maturity != 0.f) {
             setInflorescenceScaleFraction(fbud, 0.25);
@@ -2218,10 +2230,7 @@ int Shoot::appendPhytomerInternal(float internode_radius, float internode_length
     return (int) phytomers.size() - 1;
 }
 
-void Shoot::breakDormancy() {
-    isdormant = false;
-
-    int phytomer_ind = 0;
+void Shoot::wakeFloralBuds() {
     for (auto &phytomer: phytomers) {
         for (auto &petiole: phytomer->floral_buds) {
             for (auto &fbud: petiole) {
@@ -2234,6 +2243,20 @@ void Shoot::breakDormancy() {
                 fbud.time_counter = 0;
             }
         }
+    }
+    floral_buds_awake = true;
+}
+
+void Shoot::breakDormancy() {
+    // advanceTime() wakes the floral buds when the plant's dormancy breaks, which can be before this shoot breaks vegetative dormancy. Waking them a second time would restart the clocks of buds already on
+    // their way to flowering.
+    if (!isdormant || !floral_buds_awake) {
+        wakeFloralBuds();
+    }
+    isdormant = false;
+
+    int phytomer_ind = 0;
+    for (auto &phytomer: phytomers) {
         for (auto &petiole: phytomer->axillary_vegetative_buds) {
             for (auto &vbud: petiole) {
                 if (vbud.state != BUD_DEAD) {
@@ -2263,6 +2286,8 @@ void Shoot::breakDormancy() {
 
 void Shoot::makeDormant() {
     isdormant = true;
+    floral_buds_awake = false;
+    budbreak_delay = 0;
     dormancy_cycles++;
     nodes_this_season = 0;
 
@@ -7562,6 +7587,10 @@ int PlantArchitecture::appendPhytomerToShoot(uint plantID, uint shootID, const P
                     if (fbud.isterminal) {
                         fbud.state = state;
                         current_shoot_ptr->phytomers.back()->updateInflorescence(fbud);
+                        if (state == BUD_FRUITING) {
+                            // Set here directly rather than through Phytomer::setFloralBudState(), so the draw that function makes at fruit set is made here
+                            fbud.fruit_maturity_delay = samplePhenologicalDelay(plant_instances.at(plantID).fruit_maturity_duration);
+                        }
                         if (state == BUD_FRUITING && fbud.dd_to_inflorescence_maturity != 0.f) {
                             // Initialize the fruit at 25% scale so it grows in gradually, matching the behavior of
                             // setFloralBudState(). Without this, current_fruit_scale_factor remains at its default of 1.0
@@ -9857,16 +9886,17 @@ std::string PlantArchitecture::determinePhenologyStage(uint plantID) const {
         helios_runtime_error("ERROR (PlantArchitecture::determinePhenologyStage): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
 
-    // Check if plant is dormant
-    if (isPlantDormant(plantID)) {
-        return "dormant";
-    }
-
-    // Check if plant has flowers or fruits (reproductive stage)
+    // Check if plant has flowers or fruits (reproductive stage). Checked before dormancy because flowers can open before any shoot breaks vegetative dormancy (see setPlantPhenologicalSpread()), and a plant
+    // in flower is not dormant. A plant made dormant carries no flowers or fruit, since going dormant kills every bud that is not itself dormant.
     std::vector<uint> flowers = getPlantFlowerObjectIDs(plantID);
     std::vector<uint> fruits = getPlantFruitObjectIDs(plantID);
     if (!flowers.empty() || !fruits.empty()) {
         return "reproductive";
+    }
+
+    // Check if plant is dormant
+    if (isPlantDormant(plantID)) {
+        return "dormant";
     }
 
     // Check if plant is approaching senescence
@@ -11468,6 +11498,9 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
         copy.dd_to_dormancy = source.dd_to_dormancy;
         copy.max_leaf_lifespan = source.max_leaf_lifespan;
         copy.is_evergreen = source.is_evergreen;
+        copy.budbreak_duration = source.budbreak_duration;
+        copy.flowering_duration = source.flowering_duration;
+        copy.fruit_maturity_duration = source.fruit_maturity_duration;
         copy.minimum_leaf_texture_stage = source.minimum_leaf_texture_stage;
 
         copy.max_age = source.max_age;
@@ -11585,53 +11618,147 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
         }
     }
 
-    // Match the source's dormancy state. Shoot::Shoot() constructs every shoot dormant, so a duplicate of
-    // an actively-growing plant came back dormant and stalled until its dormancy broke, while the plant it
-    // was copied from kept growing. Done after the whole tree is built, since the shoots are created
-    // incrementally above.
+    // The tree above is rebuilt by replaying shoot creation, which reproduces the architecture but not where each shoot, phytomer
+    // and bud is in its season, nor the girth the wood has put on. Without this the copy of a plant in flower came back with every
+    // floral bud at the start of its clock, the copy of a dormant leafless tree came back in leaf, and the copy of an old tree came
+    // back with the trunk it was planted with. The state is assigned directly rather than through Shoot::breakDormancy() or
+    // Shoot::makeDormant(), which draw random numbers and change the buds, both of which are copied here instead.
     plant_instances.at(plantID_new).time_since_dormancy = plant_instances.at(plantID).time_since_dormancy;
     const std::vector<std::shared_ptr<Shoot>> &source_shoot_tree = plant_instances.at(plantID).shoot_tree;
     std::vector<std::shared_ptr<Shoot>> &new_shoot_tree = plant_instances.at(plantID_new).shoot_tree;
+    const std::string caller = "PlantArchitecture::duplicatePlantInstance";
     for (uint source_shootID = 0; source_shootID < source_shoot_tree.size(); source_shootID++) {
         if (copy_shootID_of_source.at(source_shootID) < 0) {
             continue; // a pruned shell, which the copy does not have
         }
-        const uint shootID = uint(copy_shootID_of_source.at(source_shootID));
-        if (!source_shoot_tree.at(source_shootID)->isdormant && new_shoot_tree.at(shootID)->isdormant) {
-            new_shoot_tree.at(shootID)->breakDormancy();
-        } else if (source_shoot_tree.at(source_shootID)->isdormant && !new_shoot_tree.at(shootID)->isdormant) {
-            new_shoot_tree.at(shootID)->makeDormant();
+        const Shoot &source_shoot = *source_shoot_tree.at(source_shootID);
+        Shoot &new_shoot = *new_shoot_tree.at(uint(copy_shootID_of_source.at(source_shootID)));
+        if (new_shoot.phytomers.size() != source_shoot.phytomers.size() || new_shoot.shoot_internode_radii.size() != source_shoot.shoot_internode_radii.size()) {
+            helios_runtime_error("ERROR (" + caller + "): Shoot " + std::to_string(source_shootID) + " of plant " + std::to_string(plantID) + " has " + std::to_string(source_shoot.phytomers.size()) +
+                                 " phytomers, but its copy was rebuilt with " + std::to_string(new_shoot.phytomers.size()) + ". The plant's shoot tree is inconsistent.");
         }
 
-        // The tree above is rebuilt by replaying shoot creation, which reproduces geometry but not the
-        // per-shoot growth state: a duplicate of a reconstructed plant would otherwise revert to being
-        // governed by the type its measured wood was built with, and grow differently from its original.
-        auto &new_shoot = new_shoot_tree.at(shootID);
-        new_shoot->growth_state = source_shoot_tree.at(source_shootID)->growth_state;
+        // Where the shoot is in its season
+        new_shoot.isdormant = source_shoot.isdormant;
+        new_shoot.floral_buds_awake = source_shoot.floral_buds_awake;
+        new_shoot.budbreak_delay = source_shoot.budbreak_delay;
+        new_shoot.dormancy_cycles = source_shoot.dormancy_cycles;
+        new_shoot.nodes_this_season = source_shoot.nodes_this_season;
+        new_shoot.meristem_is_alive = source_shoot.meristem_is_alive;
+        new_shoot.phyllochron_counter = source_shoot.phyllochron_counter;
 
-        // Two things do not follow from assigning growth_state, because both were already decided while
-        // the tree above was being replayed -- at which point the copy was still governed by its build
-        // type. Shoot::gravitropic_curvature is latched from that type in the Shoot constructor, and
-        // Shoot::sampleChildShootType() stamped each vegetative bud as its phytomer was created. The XML
-        // restore path resolves the identical hazard the same way.
-        if (!new_shoot->growth_state.growth_type_label.empty()) {
-            auto &shoot_types_snapshot = plant_instances.at(plantID_new).shoot_types_snapshot;
-            const std::string &growth_type_label = new_shoot->growth_state.growth_type_label;
-            if (shoot_types_snapshot.find(growth_type_label) == shoot_types_snapshot.end()) {
-                helios_runtime_error("ERROR (PlantArchitecture::duplicatePlantInstance): Shoot " + std::to_string(shootID) + " grows as shoot type " + growth_type_label + ", which is not defined for this plant.");
+        // How the shoot grows. Its own parameters may have been edited since it was created, or reassigned by the growth priority, and
+        // a reconstructed shoot is governed by its growth type rather than the type its wood was built with. The rates and the
+        // gravitropic curvature were drawn for this shoot when it was created, and the curvature perturbations are the state of its
+        // tortuosity process.
+        new_shoot.shoot_parameters = source_shoot.shoot_parameters;
+        new_shoot.growth_state = source_shoot.growth_state;
+        new_shoot.phyllochron_instantaneous = source_shoot.phyllochron_instantaneous;
+        new_shoot.elongation_rate_instantaneous = source_shoot.elongation_rate_instantaneous;
+        new_shoot.leaf_expansion_rate_instantaneous = source_shoot.leaf_expansion_rate_instantaneous;
+        new_shoot.internode_length_max_shoot_initial = source_shoot.internode_length_max_shoot_initial;
+        new_shoot.gravitropic_curvature = source_shoot.gravitropic_curvature;
+        new_shoot.curvature_perturbation = source_shoot.curvature_perturbation;
+        new_shoot.yaw_perturbation = source_shoot.yaw_perturbation;
+        new_shoot.growth_priority = source_shoot.growth_priority;
+        new_shoot.growth_priority_baseline_set = source_shoot.growth_priority_baseline_set;
+        new_shoot.growth_priority_base_max_nodes = source_shoot.growth_priority_base_max_nodes;
+        new_shoot.growth_priority_base_max_nodes_per_season = source_shoot.growth_priority_base_max_nodes_per_season;
+        new_shoot.growth_priority_base_internode_length_max = source_shoot.growth_priority_base_internode_length_max;
+        new_shoot.growth_priority_base_bud_break_max = source_shoot.growth_priority_base_bud_break_max;
+
+        // The girth the wood has put on, which only ever grows
+        for (size_t node = 0; node < source_shoot.shoot_internode_radii.size(); node++) {
+            if (new_shoot.shoot_internode_radii.at(node).size() != source_shoot.shoot_internode_radii.at(node).size()) {
+                helios_runtime_error("ERROR (" + caller + "): Internode " + std::to_string(node) + " of shoot " + std::to_string(source_shootID) + " of plant " + std::to_string(plantID) + " has " +
+                                     std::to_string(source_shoot.shoot_internode_radii.at(node).size()) + " segments, but its copy was rebuilt with " + std::to_string(new_shoot.shoot_internode_radii.at(node).size()) + ".");
             }
-            new_shoot->gravitropic_curvature = shoot_types_snapshot.at(growth_type_label).gravitropic_curvature.val();
+        }
+        new_shoot.shoot_internode_radii = source_shoot.shoot_internode_radii;
 
-            for (auto &phytomer: new_shoot->phytomers) {
-                for (auto &petiole: phytomer->axillary_vegetative_buds) {
-                    const std::string restamped_type = new_shoot->sampleChildShootType();
-                    for (auto &vbud: petiole) {
-                        vbud.shoot_type_label = restamped_type;
+        for (size_t node = 0; node < source_shoot.phytomers.size(); node++) {
+            const Phytomer &source_phytomer = *source_shoot.phytomers.at(node);
+            Phytomer &new_phytomer = *new_shoot.phytomers.at(node);
+            new_phytomer.age = source_phytomer.age;
+            new_phytomer.isdormant = source_phytomer.isdormant;
+            // Leaves that have fallen, to dormancy or to age, are not regrown on the copy
+            if (!source_phytomer.hasLeaf() && new_phytomer.hasLeaf()) {
+                new_phytomer.removeLeaf();
+            }
+            // Vegetative buds carry no geometry, so they are copied whole: state, the shoot type they would grow, and their clocks. A
+            // bud that has grown a shoot refers to it by its ID, which differs in the copy when the source has pruned shells.
+            new_phytomer.axillary_vegetative_buds = source_phytomer.axillary_vegetative_buds;
+            for (auto &petiole: new_phytomer.axillary_vegetative_buds) {
+                for (auto &vbud: petiole) {
+                    if (vbud.shoot_ID != uint(-1)) {
+                        vbud.shoot_ID = (vbud.shoot_ID < copy_shootID_of_source.size() && copy_shootID_of_source.at(vbud.shoot_ID) >= 0) ? uint(copy_shootID_of_source.at(vbud.shoot_ID)) : uint(-1);
                     }
                 }
             }
         }
     }
+
+    // Rebuild the internode tubes with the copied girth before the floral buds are placed on them
+    if (!new_shoot_tree.empty()) {
+        new_shoot_tree.front()->updateShootNodes(true);
+    }
+
+    // Floral buds: the copy is given the source's buds, with their states, clocks, delays and fruit sizes, and their flowers and fruit are
+    // built anew on the copy's own phytomers. The copy's phytomers drew their own buds when they were created, which may not even be as
+    // many as the source has, so they are removed first.
+    for (uint source_shootID = 0; source_shootID < source_shoot_tree.size(); source_shootID++) {
+        if (copy_shootID_of_source.at(source_shootID) < 0) {
+            continue;
+        }
+        const Shoot &source_shoot = *source_shoot_tree.at(source_shootID);
+        Shoot &new_shoot = *new_shoot_tree.at(uint(copy_shootID_of_source.at(source_shootID)));
+        for (size_t node = 0; node < source_shoot.phytomers.size(); node++) {
+            const Phytomer &source_phytomer = *source_shoot.phytomers.at(node);
+            Phytomer &new_phytomer = *new_shoot.phytomers.at(node);
+            for (auto &petiole: new_phytomer.floral_buds) {
+                for (auto &fbud: petiole) {
+                    context_ptr->deleteObject(fbud.inflorescence_objIDs);
+                    context_ptr->deleteObject(fbud.peduncle_objIDs);
+                }
+            }
+            new_phytomer.floral_buds = source_phytomer.floral_buds;
+            // Peduncle storage is indexed like the floral buds, and was sized only for the petioles when the phytomer was built
+            if (new_phytomer.peduncle_length.size() < new_phytomer.floral_buds.size()) {
+                const size_t bud_entries = new_phytomer.floral_buds.size();
+                new_phytomer.peduncle_vertices.resize(bud_entries);
+                new_phytomer.peduncle_radii.resize(bud_entries);
+                new_phytomer.peduncle_length.resize(bud_entries);
+                new_phytomer.peduncle_radius.resize(bud_entries);
+                new_phytomer.peduncle_pitch.resize(bud_entries);
+                new_phytomer.peduncle_curvature.resize(bud_entries);
+                new_phytomer.peduncle_roll.resize(bud_entries);
+                new_phytomer.peduncle_yaw.resize(bud_entries);
+            }
+            for (size_t petiole = 0; petiole < new_phytomer.floral_buds.size(); petiole++) {
+                for (FloralBud &fbud: new_phytomer.floral_buds.at(petiole)) {
+                    // The source's geometry belongs to the source; the bud is placed on the copy as Phytomer construction and the XML reader place it
+                    fbud.inflorescence_objIDs.clear();
+                    fbud.inflorescence_bases.clear();
+                    fbud.inflorescence_rotation.clear();
+                    fbud.inflorescence_base_scales.clear();
+                    fbud.peduncle_objIDs.clear();
+                    if (fbud.isterminal || petiole >= new_phytomer.petiole_vertices.size()) {
+                        fbud.base_position = new_shoot.shoot_internode_vertices.at(node).back();
+                    } else {
+                        fbud.base_position = new_phytomer.petiole_vertices.at(petiole).front();
+                    }
+                    if (fbud.state == BUD_FLOWER_CLOSED || fbud.state == BUD_FLOWER_OPEN || fbud.state == BUD_FRUITING) {
+                        // Built at full size, then scaled to the size the source's fruit had reached
+                        const float fruit_scale = fbud.current_fruit_scale_factor;
+                        new_phytomer.updateInflorescence(fbud);
+                        fbud.current_fruit_scale_factor = 1.f;
+                        new_phytomer.setInflorescenceScaleFraction(fbud, fruit_scale);
+                    }
+                }
+            }
+        }
+    }
+    invalidateOrganIndex();
 
     // The copy's leaves were built with the first image of their series, after its phytomers had recorded a stage
     updatePlantLeafTextureStages(plantID_new, true);
@@ -11666,11 +11793,25 @@ void PlantArchitecture::deletePlantInstance(const std::vector<uint> &plantIDs) {
     }
 }
 
+namespace {
+    //! Check that a budbreak spread leaves every shoot time to break before the season it breaks in ends
+    void validatePhenologicalSpread(const std::string &caller, float budbreak_duration, float time_to_dormancy) {
+        // A non-positive time_to_dormancy schedules no dormancy cycle, so there is no season end to overrun
+        if (budbreak_duration > 0.f && time_to_dormancy > 0.f && budbreak_duration >= time_to_dormancy) {
+            helios_runtime_error("ERROR (PlantArchitecture::" + caller + "): The budbreak duration (" + std::to_string(budbreak_duration) + " days) must be less than the time from dormancy break to dormancy (" +
+                                 std::to_string(time_to_dormancy) + " days), or shoots would break dormancy after the season had ended. Shorten the budbreak duration given to setPlantPhenologicalSpread(), or "
+                                 "lengthen time_to_dormancy given to setPlantPhenologicalThresholds().");
+        }
+    }
+} // namespace
+
 void PlantArchitecture::setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_dormancy,
                                                        float max_leaf_lifespan, bool is_evergreen) {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::setPlantPhenologicalThresholds): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
+
+    validatePhenologicalSpread("setPlantPhenologicalThresholds", plant_instances.at(plantID).budbreak_duration, time_to_dormancy);
 
     plant_instances.at(plantID).dd_to_dormancy_break = time_to_dormancy_break;
     plant_instances.at(plantID).dd_to_flower_initiation = time_to_flower_initiation;
@@ -11684,6 +11825,34 @@ void PlantArchitecture::setPlantPhenologicalThresholds(uint plantID, float time_
         plant_instances.at(plantID).max_leaf_lifespan = max_leaf_lifespan;
     }
     plant_instances.at(plantID).is_evergreen = is_evergreen;
+}
+
+void PlantArchitecture::setPlantPhenologicalSpread(uint plantID, float budbreak_duration, float flowering_duration, float fruit_maturity_duration) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantPhenologicalSpread): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    const std::pair<const char *, float> durations[] = {{"budbreak_duration", budbreak_duration}, {"flowering_duration", flowering_duration}, {"fruit_maturity_duration", fruit_maturity_duration}};
+    for (const auto &[name, value]: durations) {
+        if (!std::isfinite(value) || value < 0.f) {
+            helios_runtime_error("ERROR (PlantArchitecture::setPlantPhenologicalSpread): " + std::string(name) + " was " + std::to_string(value) + ", but must be a finite, non-negative number of days. Use 0 for no spread.");
+        }
+    }
+
+    PlantInstance &plant_instance = plant_instances.at(plantID);
+    validatePhenologicalSpread("setPlantPhenologicalSpread", budbreak_duration, plant_instance.dd_to_dormancy);
+
+    plant_instance.budbreak_duration = budbreak_duration;
+    plant_instance.flowering_duration = flowering_duration;
+    plant_instance.fruit_maturity_duration = fruit_maturity_duration;
+}
+
+float PlantArchitecture::samplePhenologicalDelay(float duration) const {
+    if (duration <= 0.f) {
+        return 0.f;
+    }
+    // Truncated at two standard deviations either side of the mean, so the window holds about 95% of the untruncated distribution and its interquartile range is about a third of its width, as measured
+    // for the opening dates of individual apple flowers (Tang, Zhai & Xu 2025, Front. Agron. 7:1545070).
+    return BuildParameterDistribution::normal(0.5f * duration, 0.25f * duration, 0.f, duration).sample(*context_ptr->getRandomGenerator());
 }
 
 void PlantArchitecture::setPlantCarbohydrateModelParameters(uint plantID, const CarbohydrateParameters &carb_parameters) {
@@ -11710,6 +11879,9 @@ void PlantArchitecture::disablePlantPhenology(uint plantID) {
     // declaration for the full rationale. 1e6 makes the fruit simply never mature.
     plant_instances.at(plantID).dd_to_fruit_maturity = 1e6;
     plant_instances.at(plantID).dd_to_dormancy = 1e6;
+    plant_instances.at(plantID).budbreak_duration = 0;
+    plant_instances.at(plantID).flowering_duration = 0;
+    plant_instances.at(plantID).fruit_maturity_duration = 0;
 }
 
 void PlantArchitecture::advanceTime(float time_step_days) {
@@ -11930,6 +12102,14 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                 for (auto &phytomer: shoot->phytomers) {
                     phytomer->age += dt_max_days;
+                    // Advanced alongside the phytomer's age, so that a bud active since its node was created keeps a clock equal to the node's age
+                    for (auto &petiole: phytomer->axillary_vegetative_buds) {
+                        for (auto &vbud: petiole) {
+                            if (vbud.state == BUD_ACTIVE) {
+                                vbud.time_counter += dt_max_days;
+                            }
+                        }
+                    }
                     phytomer->updateLeafTextureStage();
 
                     if (phytomer->phytomer_parameters.phytomer_callback_function != nullptr) {
@@ -11941,22 +12121,34 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 // ****** PHENOLOGICAL TRANSITIONS ****** //
 
                 // breaking dormancy
-                if (shoot->isdormant && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
-                    shoot->phyllochron_counter = 0;
-                    shoot->breakDormancy();
-                    if (carbon_model_enabled)
-                    {
+                //
+                // The floral buds of every shoot wake when the plant's dormancy breaks, and the starch reserves the flowers draw on are mobilized with them. Each shoot then breaks vegetative dormancy once
+                // its own budbreak delay has passed, which is the same step when the plant has no budbreak spread. Starch is mobilized before the vegetative buds are sampled, which does not affect that
+                // sampling: mobilizing moves carbon between the shoot's pools without changing the total it reads.
+                if (shoot->isdormant && !shoot->floral_buds_awake && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
+                    shoot->wakeFloralBuds();
+                    shoot->budbreak_delay = samplePhenologicalDelay(plant_instance.budbreak_duration);
+                    if (carbon_model_enabled) {
                         shoot->mobilizeStarch();
                     }
                 }
+                if (shoot->isdormant && shoot->floral_buds_awake && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break + shoot->budbreak_delay) {
+                    // The shoot tip is a vegetative bud like its laterals, so after a dormancy it waits its vegetative_bud_break_time before it grows its first new node (the counter starts that far
+                    // below zero). A shoot that has never been dormant, such as the stem of a plant just built, starts at once.
+                    shoot->phyllochron_counter = shoot->dormancy_cycles > 0 ? -std::max(0.f, shoot->shoot_parameters.vegetative_bud_break_time.resample()) : 0.f;
+                    shoot->breakDormancy();
+                }
 
-                if (shoot->isdormant) {
+                if (shoot->isdormant && !shoot->floral_buds_awake) {
                     // dormant, don't do anything
                     continue;
                 }
 
+                // A shoot that is still dormant here has woken floral buds but has not yet broken vegetative dormancy: its flowers and fruit develop, but its leaves and stem do not grow.
+                const bool shoot_growing = !shoot->isdormant;
+
                 for (auto &phytomer: shoot->phytomers) {
-                    if (phytomer->age > plant_instance.max_leaf_lifespan) {
+                    if (shoot_growing && phytomer->age > plant_instance.max_leaf_lifespan) {
                         // delete old leaves that exceed maximum lifespan, resorbing their nitrogen first
                         if (nitrogen_model_enabled && !phytomer->leaf_objIDs.empty()) {
                             resorbLeafNitrogen(plant_instance, *shoot, *phytomer);
@@ -11985,8 +12177,8 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                                 // -- Flower initiation (closed flowers) -- //
                                 if (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation >= 0.f) {
                                     // bud is active and flower initiation is enabled
-                                    if ((!shoot->shoot_parameters.flowers_require_dormancy && fbud.time_counter >= plant_instance.dd_to_flower_initiation) ||
-                                        (shoot->shoot_parameters.flowers_require_dormancy && fbud.time_counter >= plant_instance.dd_to_flower_initiation)) {
+                                    // Leaving BUD_ACTIVE is the bud's first reproductive transition, so its flowering delay applies (see setPlantPhenologicalSpread())
+                                    if (fbud.time_counter >= plant_instance.dd_to_flower_initiation + fbud.flowering_delay) {
                                         fbud.time_counter = 0;
                                         if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val()) {
                                             phytomer->setFloralBudState(BUD_FLOWER_CLOSED, fbud);
@@ -12001,7 +12193,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                                     // -- Flower opening -- //
                                 } else if ((fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening >= 0.f) || (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation < 0.f && plant_instance.dd_to_flower_opening >= 0.f)) {
-                                    if (fbud.time_counter >= plant_instance.dd_to_flower_opening) {
+                                    // A bud opening straight from BUD_ACTIVE is making its first reproductive transition, so its flowering delay applies
+                                    const float opening_delay = fbud.state == BUD_ACTIVE ? fbud.flowering_delay : 0.f;
+                                    if (fbud.time_counter >= plant_instance.dd_to_flower_opening + opening_delay) {
                                         fbud.time_counter = 0;
                                         if (fbud.state == BUD_FLOWER_CLOSED) {
                                             phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud);
@@ -12030,7 +12224,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                                     // jumped straight to fruit set with no flowering (either flower opening disabled OR no flower prototype defined)
                                     (fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f)) {
                                     // jumped from closed flower to fruit set with no flower opening
-                                    if (fbud.time_counter >= plant_instance.dd_to_fruit_set) {
+                                    // A bud setting fruit straight from BUD_ACTIVE is making its first reproductive transition, so its flowering delay applies
+                                    const float fruit_set_delay = fbud.state == BUD_ACTIVE ? fbud.flowering_delay : 0.f;
+                                    if (fbud.time_counter >= plant_instance.dd_to_fruit_set + fruit_set_delay) {
                                         fbud.time_counter = 0;
                                         // When skipping flowering entirely (BUD_ACTIVE -> BUD_FRUITING), apply compound probability
                                         float fruit_set_prob = shoot->shoot_parameters.fruit_set_probability.val();
@@ -12055,6 +12251,41 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 }
 
                 // ****** GROWTH/SCALING OF CURRENT PHYTOMERS/FRUIT ****** //
+
+                auto growFruit = [&plant_instance](Phytomer &phytomer) {
+                    for (auto &petiole: phytomer.floral_buds) {
+                        for (auto &fbud: petiole) {
+                            // If the floral bud it in a 'fruiting' state, the fruit grows with time.
+                            // dd_to_fruit_maturity is a divisor here, so a non-positive value would give an
+                            // infinite or negative scale factor; guard rather than trust the call sites, since
+                            // setPlantPhenologicalThresholds() accepts any value and readPlantStructureXML()
+                            // feeds it whatever the file contains.
+                            // A bud may override the plant-level period with one of its own. An inflorescence that finishes
+                            // elongating long before the fruit it subtends ripens -- a maize tassel is fully expanded at VT, about
+                            // two months ahead of the ear -- cannot share the ear's clock without spending its whole life
+                            // undersized. The fruit maturity spread varies only the plant-level period.
+                            // The delay is added only to a positive plant-level period, so it cannot turn a disabled one into a usable one.
+                            float dd_to_maturity = plant_instance.dd_to_fruit_maturity > 0 ? plant_instance.dd_to_fruit_maturity + fbud.fruit_maturity_delay : plant_instance.dd_to_fruit_maturity;
+                            if (fbud.dd_to_inflorescence_maturity > 0) {
+                                dd_to_maturity = fbud.dd_to_inflorescence_maturity;
+                            }
+                            if (fbud.state == BUD_FRUITING && fbud.time_counter > 0 && dd_to_maturity > 0 && fbud.dd_to_inflorescence_maturity != 0.f) {
+                                // Save current scale for nitrogen model growth tracking
+                                fbud.previous_fruit_scale_factor = fbud.current_fruit_scale_factor;
+                                float scale = fmin(1, 0.25f + 0.75f * fbud.time_counter / dd_to_maturity);
+                                phytomer.setInflorescenceScaleFraction(fbud, scale);
+                            }
+                        }
+                    }
+                };
+
+                if (!shoot_growing) {
+                    // Woken floral buds on a shoot still waiting to break vegetative dormancy: only its fruit grows
+                    for (auto &phytomer: shoot->phytomers) {
+                        growFruit(*phytomer);
+                    }
+                    continue;
+                }
 
                 int node_index = 0;
                 for (auto &phytomer: shoot->phytomers) {
@@ -12136,33 +12367,19 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                         }
                     }
 
-                    // Fruit Growth
-                    for (auto &petiole: phytomer->floral_buds) {
-                        for (auto &fbud: petiole) {
-                            // If the floral bud it in a 'fruiting' state, the fruit grows with time.
-                            // dd_to_fruit_maturity is a divisor here, so a non-positive value would give an
-                            // infinite or negative scale factor; guard rather than trust the call sites, since
-                            // setPlantPhenologicalThresholds() accepts any value and readPlantStructureXML()
-                            // feeds it whatever the file contains.
-                            // A bud may override the plant-level period with one of its own. An inflorescence that finishes
-                            // elongating long before the fruit it subtends ripens -- a maize tassel is fully expanded at VT, about
-                            // two months ahead of the ear -- cannot share the ear's clock without spending its whole life
-                            // undersized.
-                            const float dd_to_maturity = fbud.dd_to_inflorescence_maturity > 0 ? fbud.dd_to_inflorescence_maturity : plant_instance.dd_to_fruit_maturity;
-                            if (fbud.state == BUD_FRUITING && fbud.time_counter > 0 && dd_to_maturity > 0 && fbud.dd_to_inflorescence_maturity != 0.f) {
-                                // Save current scale for nitrogen model growth tracking
-                                fbud.previous_fruit_scale_factor = fbud.current_fruit_scale_factor;
-                                float scale = fmin(1, 0.25f + 0.75f * fbud.time_counter / dd_to_maturity);
-                                phytomer->setInflorescenceScaleFraction(fbud, scale);
-                            }
-                        }
-                    }
+                    growFruit(*phytomer);
 
                     // ****** NEW CHILD SHOOTS FROM VEGETATIVE BUDS ****** //
                     uint parent_petiole_index = 0;
                     for (auto &petiole: phytomer->axillary_vegetative_buds) {
                         for (auto &vbud: petiole) {
-                            if (vbud.state == BUD_ACTIVE && phytomer->age + dt_max_days > shoot->shoot_parameters.vegetative_bud_break_time.val()) {
+                            // Each bud draws its own break time, from the shoot bearing it, and counts it from when it became active: on new growth that is when its node formed, and on older wood the
+                            // dormancy break that woke it. A constant break time draws no random number.
+                            if (vbud.state == BUD_ACTIVE && !vbud.break_time_drawn) {
+                                vbud.break_time = shoot->shoot_parameters.vegetative_bud_break_time.resample();
+                                vbud.break_time_drawn = true;
+                            }
+                            if (vbud.state == BUD_ACTIVE && vbud.time_counter + dt_max_days > vbud.break_time) {
                                 ShootParameters *new_shoot_parameters = &plant_instance.shoot_types_snapshot.at(vbud.shoot_type_label);
                                 int parent_node_count = shoot->current_node_number;
 

@@ -53,6 +53,14 @@ public:
     static bool forceUpdateOnCollision(const PlantArchitecture &pa) {
         return pa.force_update_on_collision;
     }
+    static float samplePhenologicalDelay(const PlantArchitecture &pa, float duration) {
+        return pa.samplePhenologicalDelay(duration);
+    }
+    //! Budbreak, flowering and fruit-maturity durations set by setPlantPhenologicalSpread(), as x, y and z
+    static helios::vec3 getPhenologicalSpread(const PlantArchitecture &pa, uint plantID) {
+        const auto &plant_instance = pa.plant_instances.at(plantID);
+        return helios::make_vec3(plant_instance.budbreak_duration, plant_instance.flowering_duration, plant_instance.fruit_maturity_duration);
+    }
 };
 
 DOCTEST_TEST_CASE("PlantArchitecture Constructor") {
@@ -794,16 +802,32 @@ DOCTEST_TEST_CASE("Plant Library - capsicum stops growing after its season") {
 DOCTEST_TEST_CASE("Plant Library - apple flowers in clusters at spur tips and below the tip of long shoots") {
     // An apple bears most of its fruit in clusters of five or six flowers at the tips of spurs on older wood. The axillary flower buds of
     // a long shoot lie below its few most distal nodes, and not on the latent basal nodes of its growth unit.
-    Context context;
-    context.seedRandomGenerator(3);
-    PlantArchitecture plantarchitecture(&context);
-    plantarchitecture.disableMessages();
-    plantarchitecture.loadPlantModelFromLibrary("apple");
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
-
     // The apple model breaks dormancy 165 days after the plant is built and goes dormant again 200 days later, so day 465 is the plant's
     // second winter: the long shoots of the second season are in their first dormancy, and spurs grown in that season hold their flower buds.
-    plantarchitecture.advanceTime(465);
+    //
+    // The checks need a tree that has grown spurs. A young tree grows only a few, 0 to 6 across 48 seeds measured, so seeds are tried in
+    // turn until one gives a tree with spurs rather than relying on any one seed's random sequence.
+    std::unique_ptr<Context> context_holder;
+    std::unique_ptr<PlantArchitecture> plantarchitecture_holder;
+    uint plantID = 0;
+    for (uint seed = 1; seed <= 10; seed++) {
+        plantarchitecture_holder.reset();
+        context_holder = std::make_unique<Context>();
+        context_holder->seedRandomGenerator(seed);
+        plantarchitecture_holder = std::make_unique<PlantArchitecture>(context_holder.get());
+        plantarchitecture_holder->disableMessages();
+        plantarchitecture_holder->loadPlantModelFromLibrary("apple");
+        plantID = plantarchitecture_holder->buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+        plantarchitecture_holder->advanceTime(465);
+        bool has_spur = false;
+        for (uint shootID: plantarchitecture_holder->getAllShootIDs(plantID)) {
+            has_spur = has_spur || (!plantarchitecture_holder->isShootPruned(plantID, shootID) && plantarchitecture_holder->getPlantShoot(plantID, shootID)->shoot_type_label == "spur");
+        }
+        if (has_spur) {
+            break;
+        }
+    }
+    PlantArchitecture &plantarchitecture = *plantarchitecture_holder;
 
     uint spur_count = 0;
     uint spur_axillary_floral_buds_alive = 0;
@@ -14605,6 +14629,344 @@ DOCTEST_TEST_CASE("PlantArchitecture XML round-trip preserves phenological thres
     std::remove(xml_filename.c_str());
 }
 
+namespace {
+    //! When each floral bud and shoot of a plant passed its phenological events, by day of the run
+    struct PhenologyTimeline {
+        //! Day each floral bud first opened, keyed by {shoot, phytomer, petiole, bud}
+        std::map<std::array<size_t, 4>, int> flower_open_day;
+        //! Day each floral bud set fruit
+        std::map<std::array<size_t, 4>, int> fruit_set_day;
+        //! Day each fruit reached full size
+        std::map<std::array<size_t, 4>, int> fruit_full_size_day;
+        //! Day each shoot that started the run dormant broke vegetative dormancy
+        std::map<size_t, int> budbreak_day;
+        //! Day of the run on which floral buds first woke
+        int floral_wake_day = -1;
+        //! Whether an open flower was ever seen on a shoot that had not yet broken vegetative dormancy
+        bool flower_on_dormant_shoot = false;
+        //! Whether a bud that had flowered or set fruit was ever seen back in an earlier state
+        bool bud_went_backward = false;
+    };
+
+    //! Advance a plant one day at a time, recording when each of its floral buds and shoots passes its phenological events
+    PhenologyTimeline recordPhenologyTimeline(PlantArchitecture &plantarchitecture, uint plantID, int days) {
+        PhenologyTimeline timeline;
+        std::set<size_t> shoots_dormant_at_start;
+        const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+        for (size_t s = 0; s < shoot_tree.size(); s++) {
+            if (shoot_tree.at(s)->isdormant) {
+                shoots_dormant_at_start.insert(s);
+            }
+        }
+        std::map<std::array<size_t, 4>, BudState> furthest_state;
+        for (int day = 1; day <= days; day++) {
+            plantarchitecture.advanceTime(plantID, 1.f);
+            for (size_t s = 0; s < shoot_tree.size(); s++) {
+                const auto &shoot = shoot_tree.at(s);
+                if (!shoot->isdormant && shoots_dormant_at_start.count(s) == 1 && timeline.budbreak_day.count(s) == 0) {
+                    timeline.budbreak_day[s] = day;
+                }
+                for (size_t p = 0; p < shoot->phytomers.size(); p++) {
+                    const auto &floral_buds = shoot->phytomers.at(p)->floral_buds;
+                    for (size_t petiole = 0; petiole < floral_buds.size(); petiole++) {
+                        for (size_t b = 0; b < floral_buds.at(petiole).size(); b++) {
+                            const FloralBud &fbud = floral_buds.at(petiole).at(b);
+                            const std::array<size_t, 4> key = {s, p, petiole, b};
+                            if (fbud.state != BUD_DEAD) {
+                                auto [furthest, inserted] = furthest_state.emplace(key, fbud.state);
+                                if (!inserted && furthest->second >= BUD_FLOWER_OPEN && fbud.state < furthest->second) {
+                                    timeline.bud_went_backward = true;
+                                }
+                                furthest->second = std::max(furthest->second, fbud.state);
+                            }
+                            if (fbud.state != BUD_DORMANT && fbud.state != BUD_DEAD && timeline.floral_wake_day < 0) {
+                                timeline.floral_wake_day = day;
+                            }
+                            if (fbud.state == BUD_FLOWER_OPEN) {
+                                timeline.flower_open_day.emplace(key, day);
+                                timeline.flower_on_dormant_shoot = timeline.flower_on_dormant_shoot || shoot->isdormant;
+                            } else if (fbud.state == BUD_FRUITING) {
+                                timeline.fruit_set_day.emplace(key, day);
+                                if (fbud.current_fruit_scale_factor >= 0.999f) {
+                                    timeline.fruit_full_size_day.emplace(key, day);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return timeline;
+    }
+
+    //! Build a dormant almond tree with a given phenological spread, which replaces the library's own
+    uint buildDormantAlmond(Context &context, PlantArchitecture &plantarchitecture, float budbreak_duration, float flowering_duration, float fruit_maturity_duration) {
+        context.seedRandomGenerator(7);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("almond");
+        // Grown through one season and put into dormancy, so its dormancy breaks on day 90 of the run (dd_to_dormancy_break) with a season's floral buds waiting on it
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 300);
+        plantarchitecture.makePlantDormant(plantID);
+        plantarchitecture.setPlantPhenologicalSpread(plantID, budbreak_duration, flowering_duration, fruit_maturity_duration);
+        return plantID;
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("PlantArchitecture flowering spread opens flowers over the flowering duration") {
+    // Almond flowers open straight from the active bud (no flower initiation stage), all woken together at the plant's dormancy break. Without a spread they all open on one day; with one they open across
+    // a window that begins on that same day and lasts the flowering duration.
+    constexpr float flowering_duration = 10.f;
+    constexpr int days = 110; // dormancy breaks on day 90 of the run
+
+    int simultaneous_day = -1;
+    {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        const uint plantID = buildDormantAlmond(context, plantarchitecture, 0, 0, 0);
+        const PhenologyTimeline timeline = recordPhenologyTimeline(plantarchitecture, plantID, days);
+        DOCTEST_REQUIRE(timeline.flower_open_day.size() >= 30);
+        std::set<int> open_days;
+        for (const auto &[key, day]: timeline.flower_open_day) {
+            open_days.insert(day);
+        }
+        DOCTEST_CHECK(open_days.size() == 1);
+        simultaneous_day = *open_days.begin();
+    }
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    const uint plantID = buildDormantAlmond(context, plantarchitecture, 0, flowering_duration, 0);
+    const PhenologyTimeline timeline = recordPhenologyTimeline(plantarchitecture, plantID, days);
+    DOCTEST_REQUIRE(timeline.flower_open_day.size() >= 30);
+
+    int first_day = days;
+    int last_day = 0;
+    double mean_day = 0;
+    for (const auto &[key, day]: timeline.flower_open_day) {
+        first_day = std::min(first_day, day);
+        last_day = std::max(last_day, day);
+        mean_day += day;
+    }
+    mean_day /= double(timeline.flower_open_day.size());
+
+    // Delays are drawn in [0, duration] and opening is tested once a day, so every flower opens within duration + 1 days of the simultaneous day
+    DOCTEST_CHECK(first_day >= simultaneous_day);
+    DOCTEST_CHECK(last_day <= simultaneous_day + int(flowering_duration) + 1);
+    DOCTEST_CHECK(last_day - first_day >= int(0.7f * flowering_duration));
+    // Opening is tested once a day, so a delay d adds ceil(d) days and the mean delay of duration/2 shows up about half a day later
+    DOCTEST_CHECK(std::abs(mean_day - (simultaneous_day + 0.5 * flowering_duration + 0.5)) <= 1.5);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture zero phenological spread draws no random numbers") {
+    // A plant given a zero spread must grow exactly as one never given a spread, so that plants not using it keep their random sequence. Walnut has no spread of its own in the library.
+    auto growWalnut = [](bool set_zero_spread) {
+        Context context;
+        context.seedRandomGenerator(11);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("walnut");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 200);
+        if (set_zero_spread) {
+            plantarchitecture.setPlantPhenologicalSpread(plantID, 0, 0, 0);
+        }
+        plantarchitecture.advanceTime(plantID, 200);
+        return std::make_pair(context.getPrimitiveCount(), plantarchitecture.sumPlantLeafArea(plantID));
+    };
+    const auto without_setter = growWalnut(false);
+    const auto with_zero_spread = growWalnut(true);
+    DOCTEST_CHECK(without_setter.first == with_zero_spread.first);
+    DOCTEST_CHECK(without_setter.second == with_zero_spread.second);
+
+    // The delay sampler itself: a zero duration leaves the Context's random sequence where it was, where a positive one moves it on
+    auto nextRandomAfterSampling = [](float duration) {
+        Context context;
+        context.seedRandomGenerator(3);
+        PlantArchitecture plantarchitecture(&context);
+        for (int i = 0; i < 20; i++) {
+            DOCTEST_CHECK(PlantArchitectureTestHelper::samplePhenologicalDelay(plantarchitecture, duration) >= 0.f);
+        }
+        return context.randu();
+    };
+    Context reference_context;
+    reference_context.seedRandomGenerator(3);
+    const float next_random_unsampled = reference_context.randu();
+    DOCTEST_CHECK(nextRandomAfterSampling(0.f) == next_random_unsampled);
+    DOCTEST_CHECK(nextRandomAfterSampling(10.f) != next_random_unsampled);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture fruit maturity spread varies the time fruit take to reach full size") {
+    // Almond fruit reach full size dd_to_fruit_maturity = 20 days after fruit set; with a spread of 15 days each takes between 20 and 35.
+    constexpr float fruit_maturity_duration = 15.f;
+    constexpr float dd_to_fruit_maturity = 20.f;
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    const uint plantID = buildDormantAlmond(context, plantarchitecture, 0, 0, fruit_maturity_duration);
+    const PhenologyTimeline timeline = recordPhenologyTimeline(plantarchitecture, plantID, 140);
+
+    std::vector<int> growth_days;
+    for (const auto &[key, full_size_day]: timeline.fruit_full_size_day) {
+        growth_days.push_back(full_size_day - timeline.fruit_set_day.at(key));
+    }
+    DOCTEST_REQUIRE(growth_days.size() >= 10);
+    const auto [shortest, longest] = std::minmax_element(growth_days.begin(), growth_days.end());
+    DOCTEST_CHECK(*shortest >= int(dd_to_fruit_maturity) - 1);
+    DOCTEST_CHECK(*longest <= int(dd_to_fruit_maturity + fruit_maturity_duration) + 1);
+    DOCTEST_CHECK(*longest - *shortest >= int(0.5f * fruit_maturity_duration));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture budbreak spread staggers leaf-out while floral buds wake at the dormancy break") {
+    constexpr float budbreak_duration = 20.f;
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    const uint plantID = buildDormantAlmond(context, plantarchitecture, budbreak_duration, 0, 0);
+    const PhenologyTimeline timeline = recordPhenologyTimeline(plantarchitecture, plantID, 120);
+
+    DOCTEST_REQUIRE(timeline.floral_wake_day > 0);
+    DOCTEST_REQUIRE(timeline.budbreak_day.size() >= 10);
+    int first_budbreak = 1000;
+    int last_budbreak = 0;
+    for (const auto &[shoot, day]: timeline.budbreak_day) {
+        first_budbreak = std::min(first_budbreak, day);
+        last_budbreak = std::max(last_budbreak, day);
+    }
+    // The window opens with the floral buds and lasts the budbreak duration
+    DOCTEST_CHECK(first_budbreak >= timeline.floral_wake_day);
+    DOCTEST_CHECK(last_budbreak <= timeline.floral_wake_day + int(budbreak_duration));
+    DOCTEST_CHECK(last_budbreak - first_budbreak >= int(0.6f * budbreak_duration));
+    // Flowers develop on shoots still waiting to break vegetative dormancy
+    DOCTEST_CHECK(timeline.flower_on_dormant_shoot);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture budbreak and flowering spreads together leave flowers to finish on shoots that break late") {
+    // With both spreads, many flowers are open or setting fruit by the time their shoot breaks vegetative dormancy. Breaking it must not wake its floral buds a second time, which would put flowers and
+    // fruit back to active buds and restart their clocks.
+    constexpr float flowering_duration = 10.f;
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    const uint plantID = buildDormantAlmond(context, plantarchitecture, 20, flowering_duration, 0);
+    const PhenologyTimeline timeline = recordPhenologyTimeline(plantarchitecture, plantID, 125);
+
+    DOCTEST_REQUIRE(timeline.flower_open_day.size() >= 30);
+    DOCTEST_REQUIRE(timeline.budbreak_day.size() >= 10);
+    DOCTEST_CHECK(timeline.flower_on_dormant_shoot);
+    DOCTEST_CHECK_FALSE(timeline.bud_went_backward);
+    // Flowering keeps to its own window, opened by the floral wake, whatever the day each shoot breaks
+    int last_open_day = 0;
+    for (const auto &[key, day]: timeline.flower_open_day) {
+        last_open_day = std::max(last_open_day, day);
+    }
+    DOCTEST_CHECK(last_open_day <= timeline.floral_wake_day + 3 + int(flowering_duration) + 1);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture phenological spread validation") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0.f);
+    plantarchitecture.setPlantPhenologicalThresholds(plantID, 5, -1, -1, -1, -1, 10);
+
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantPhenologicalSpread(plantID, 0, -1, 0));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantPhenologicalSpread(plantID, 0, 0, std::nanf("")));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantPhenologicalSpread(plantID + 1, 0, 0, 0));
+    // Every shoot must break before the season ends, dd_to_dormancy = 10 days after dormancy break
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantPhenologicalSpread(plantID, 10, 0, 0));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.setPlantPhenologicalSpread(plantID, 5, 0, 0));
+    // The same rule is checked when the thresholds are set after the spread
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantPhenologicalThresholds(plantID, 5, -1, -1, -1, -1, 5));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.setPlantPhenologicalThresholds(plantID, 5, -1, -1, -1, -1, 6));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture phenological spread is kept by XML round trip and duplicatePlantInstance") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    const uint plantID = buildDormantAlmond(context, plantarchitecture, 20, 10, 5);
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    // Buds woken at budbreak then wait 30 days to grow, so their clocks are running when the plant is written
+    for (const auto &shoot: shoot_tree) {
+        shoot->shoot_parameters.vegetative_bud_break_time = 30.f;
+    }
+    // Into the budbreak window: floral buds awake, some shoots still dormant and waiting on their budbreak delays
+    plantarchitecture.advanceTime(plantID, 95);
+
+    size_t shoots_waiting = 0;
+    double budbreak_delay_sum = 0;
+    double flowering_delay_sum = 0;
+    // The vegetative buds' clocks toward breaking into shoots (see ShootParameters::vegetative_bud_break_time)
+    double vegetative_clock_sum = 0;
+    double vegetative_break_time_sum = 0;
+    for (const auto &shoot: shoot_tree) {
+        if (shoot->isdormant && shoot->floral_buds_awake) {
+            shoots_waiting++;
+            budbreak_delay_sum += shoot->budbreak_delay;
+        }
+        for (const auto &phytomer: shoot->phytomers) {
+            for (const auto &petiole: phytomer->floral_buds) {
+                for (const auto &fbud: petiole) {
+                    flowering_delay_sum += fbud.flowering_delay;
+                }
+            }
+            for (const auto &petiole: phytomer->axillary_vegetative_buds) {
+                for (const auto &vbud: petiole) {
+                    vegetative_clock_sum += vbud.time_counter;
+                    vegetative_break_time_sum += vbud.break_time_drawn ? vbud.break_time : 0.f;
+                }
+            }
+        }
+    }
+    DOCTEST_REQUIRE(shoots_waiting > 0);
+    DOCTEST_REQUIRE(flowering_delay_sum > 0);
+
+    const uint duplicateID = plantarchitecture.duplicatePlantInstance(plantID, make_vec3(5, 0, 0), make_AxisRotation(0, 0, 0), 300);
+    const vec3 duplicate_spread = PlantArchitectureTestHelper::getPhenologicalSpread(plantarchitecture, duplicateID);
+    DOCTEST_CHECK(duplicate_spread == make_vec3(20, 10, 5));
+
+    const std::string xml_filename = "test_phenological_spread_roundtrip.xml";
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+
+    Context restore_context;
+    PlantArchitecture restore_plantarchitecture(&restore_context);
+    restore_plantarchitecture.disableMessages();
+    restore_plantarchitecture.loadPlantModelFromLibrary("almond");
+    std::vector<uint> restored_IDs;
+    DOCTEST_CHECK_NOTHROW(restored_IDs = restore_plantarchitecture.readPlantStructureXML(xml_filename, true));
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(restored_IDs.size() == 1);
+    const uint restoredID = restored_IDs.front();
+
+    DOCTEST_CHECK(PlantArchitectureTestHelper::getPhenologicalSpread(restore_plantarchitecture, restoredID) == make_vec3(20, 10, 5));
+    size_t restored_shoots_waiting = 0;
+    double restored_budbreak_delay_sum = 0;
+    double restored_flowering_delay_sum = 0;
+    double restored_vegetative_clock_sum = 0;
+    double restored_vegetative_break_time_sum = 0;
+    for (const auto &shoot: PlantArchitectureTestHelper::getShootTree(restore_plantarchitecture, restoredID)) {
+        if (shoot->isdormant && shoot->floral_buds_awake) {
+            restored_shoots_waiting++;
+            restored_budbreak_delay_sum += shoot->budbreak_delay;
+        }
+        for (const auto &phytomer: shoot->phytomers) {
+            for (const auto &petiole: phytomer->floral_buds) {
+                for (const auto &fbud: petiole) {
+                    restored_flowering_delay_sum += fbud.flowering_delay;
+                }
+            }
+            for (const auto &petiole: phytomer->axillary_vegetative_buds) {
+                for (const auto &vbud: petiole) {
+                    restored_vegetative_clock_sum += vbud.time_counter;
+                    restored_vegetative_break_time_sum += vbud.break_time_drawn ? vbud.break_time : 0.f;
+                }
+            }
+        }
+    }
+    DOCTEST_CHECK(restored_shoots_waiting == shoots_waiting);
+    DOCTEST_CHECK(restored_budbreak_delay_sum == doctest::Approx(budbreak_delay_sum).epsilon(1e-4));
+    DOCTEST_CHECK(restored_flowering_delay_sum == doctest::Approx(flowering_delay_sum).epsilon(1e-4));
+    DOCTEST_CHECK(vegetative_clock_sum > 0);
+    DOCTEST_CHECK(restored_vegetative_clock_sum == doctest::Approx(vegetative_clock_sum).epsilon(1e-4));
+    DOCTEST_CHECK(restored_vegetative_break_time_sum == doctest::Approx(vegetative_break_time_sum).epsilon(1e-4));
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture XML without phenology tags still loads") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -15441,6 +15803,106 @@ DOCTEST_TEST_CASE("PlantArchitecture duplicatePlantInstance copies dormancy stat
 
     for (uint shootID: plantarchitecture.getAllShootIDs(plantID_dup)) {
         DOCTEST_CHECK(plantarchitecture.getPlantShoot(plantID_dup, shootID)->isdormant == false);
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture duplicatePlantInstance copies the state of every shoot, phytomer and bud") {
+    // The copy is rebuilt by replaying shoot creation, which gave every floral bud a fresh clock, regrew the leaves of shoots that had not
+    // leafed out, put back the girth the tree was planted with, and lost each shoot's place in its season. Duplicated in bloom, with some
+    // shoots still waiting to leaf out (budbreak spread) and fruit setting, the copy must match the source bud for bud.
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    const uint plantID = buildDormantAlmond(context, plantarchitecture, 20, 10, 5);
+    plantarchitecture.advanceTime(plantID, 100);
+    const uint copyID = plantarchitecture.duplicatePlantInstance(plantID, make_vec3(5, 0, 0), make_AxisRotation(0, 0, 0), 300);
+
+    const auto &source_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    const auto &copy_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, copyID);
+    // The copy has no pruned shells, so its shoots pair with the source's unpruned shoots in order
+    std::vector<size_t> source_shoots;
+    for (size_t s = 0; s < source_tree.size(); s++) {
+        if (!plantarchitecture.isShootPruned(plantID, uint(s))) {
+            source_shoots.push_back(s);
+        }
+    }
+    DOCTEST_REQUIRE(source_shoots.size() == copy_tree.size());
+
+    size_t shoot_state_mismatches = 0, girth_mismatches = 0, phytomer_mismatches = 0, vegetative_bud_mismatches = 0, floral_bud_mismatches = 0;
+    size_t dormant_shoots = 0, leafless_phytomers = 0, open_flowers = 0, fruits = 0;
+    for (size_t i = 0; i < source_shoots.size(); i++) {
+        const Shoot &source = *source_tree.at(source_shoots.at(i));
+        const Shoot &copy = *copy_tree.at(i);
+        dormant_shoots += source.isdormant ? 1 : 0;
+        if (copy.isdormant != source.isdormant || copy.floral_buds_awake != source.floral_buds_awake || copy.budbreak_delay != source.budbreak_delay || copy.dormancy_cycles != source.dormancy_cycles ||
+            copy.nodes_this_season != source.nodes_this_season || copy.meristem_is_alive != source.meristem_is_alive || copy.phyllochron_counter != source.phyllochron_counter) {
+            shoot_state_mismatches++;
+        }
+        if (copy.shoot_internode_radii != source.shoot_internode_radii) {
+            girth_mismatches++;
+        }
+        // The copy's tube is built with that girth, not only told about it
+        if (context.doesObjectExist(source.internode_tube_objID) && context.doesObjectExist(copy.internode_tube_objID) &&
+            std::abs(context.getTubeObjectNodeRadii(copy.internode_tube_objID).front() - context.getTubeObjectNodeRadii(source.internode_tube_objID).front()) > 1e-6f) {
+            girth_mismatches++;
+        }
+        DOCTEST_REQUIRE(copy.phytomers.size() == source.phytomers.size());
+        for (size_t p = 0; p < source.phytomers.size(); p++) {
+            const Phytomer &source_phytomer = *source.phytomers.at(p);
+            const Phytomer &copy_phytomer = *copy.phytomers.at(p);
+            leafless_phytomers += source_phytomer.hasLeaf() ? 0 : 1;
+            if (copy_phytomer.age != source_phytomer.age || copy_phytomer.isdormant != source_phytomer.isdormant || copy_phytomer.hasLeaf() != source_phytomer.hasLeaf()) {
+                phytomer_mismatches++;
+            }
+            for (size_t petiole = 0; petiole < source_phytomer.axillary_vegetative_buds.size(); petiole++) {
+                for (size_t b = 0; b < source_phytomer.axillary_vegetative_buds.at(petiole).size(); b++) {
+                    const VegetativeBud &source_bud = source_phytomer.axillary_vegetative_buds.at(petiole).at(b);
+                    const bool matches = petiole < copy_phytomer.axillary_vegetative_buds.size() && b < copy_phytomer.axillary_vegetative_buds.at(petiole).size() &&
+                                         copy_phytomer.axillary_vegetative_buds.at(petiole).at(b).state == source_bud.state && copy_phytomer.axillary_vegetative_buds.at(petiole).at(b).time_counter == source_bud.time_counter;
+                    vegetative_bud_mismatches += matches ? 0 : 1;
+                }
+            }
+            if (copy_phytomer.floral_buds.size() != source_phytomer.floral_buds.size()) {
+                floral_bud_mismatches++;
+                continue;
+            }
+            for (size_t petiole = 0; petiole < source_phytomer.floral_buds.size(); petiole++) {
+                if (copy_phytomer.floral_buds.at(petiole).size() != source_phytomer.floral_buds.at(petiole).size()) {
+                    floral_bud_mismatches++;
+                    continue;
+                }
+                for (size_t b = 0; b < source_phytomer.floral_buds.at(petiole).size(); b++) {
+                    const FloralBud &source_bud = source_phytomer.floral_buds.at(petiole).at(b);
+                    const FloralBud &copy_bud = copy_phytomer.floral_buds.at(petiole).at(b);
+                    open_flowers += source_bud.state == BUD_FLOWER_OPEN ? 1 : 0;
+                    fruits += source_bud.state == BUD_FRUITING ? 1 : 0;
+                    if (copy_bud.state != source_bud.state || copy_bud.time_counter != source_bud.time_counter || copy_bud.age != source_bud.age || copy_bud.flowering_delay != source_bud.flowering_delay ||
+                        copy_bud.fruit_maturity_delay != source_bud.fruit_maturity_delay || std::abs(copy_bud.current_fruit_scale_factor - source_bud.current_fruit_scale_factor) > 1e-5f ||
+                        copy_bud.inflorescence_objIDs.size() != source_bud.inflorescence_objIDs.size()) {
+                        floral_bud_mismatches++;
+                    }
+                }
+            }
+        }
+    }
+    // The plant was duplicated in the middle of everything this test is about
+    DOCTEST_REQUIRE(dormant_shoots > 0);
+    DOCTEST_REQUIRE(dormant_shoots < source_shoots.size());
+    DOCTEST_REQUIRE(leafless_phytomers > 0);
+    DOCTEST_REQUIRE(open_flowers > 0);
+    DOCTEST_REQUIRE(fruits > 0);
+
+    DOCTEST_CHECK(shoot_state_mismatches == 0);
+    DOCTEST_CHECK(girth_mismatches == 0);
+    DOCTEST_CHECK(phytomer_mismatches == 0);
+    DOCTEST_CHECK(vegetative_bud_mismatches == 0);
+    DOCTEST_CHECK(floral_bud_mismatches == 0);
+    DOCTEST_CHECK(plantarchitecture.getPlantFlowerObjectIDs(copyID).size() == plantarchitecture.getPlantFlowerObjectIDs(plantID).size());
+    DOCTEST_CHECK(plantarchitecture.getPlantFruitObjectIDs(copyID).size() == plantarchitecture.getPlantFruitObjectIDs(plantID).size());
+    DOCTEST_CHECK(plantarchitecture.getPlantLeafCount(copyID) == plantarchitecture.getPlantLeafCount(plantID));
+    // The copy's flowers and fruit are its own, not the source's
+    for (uint objID: plantarchitecture.getPlantFruitObjectIDs(copyID)) {
+        const std::vector<uint> source_fruit = plantarchitecture.getPlantFruitObjectIDs(plantID);
+        DOCTEST_CHECK(std::find(source_fruit.begin(), source_fruit.end(), objID) == source_fruit.end());
     }
 }
 
@@ -22558,6 +23020,88 @@ DOCTEST_TEST_CASE("PlantArchitecture measured shoot takes its growth node cap fr
         DOCTEST_CHECK(int(shoot->phytomers.size()) <= growth_max_nodes);
     }
     DOCTEST_REQUIRE(grown_shoots > 0);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture vegetative_bud_break_time is drawn for each bud") {
+    // A distribution given to vegetative_bud_break_time was sampled once for each shoot and the value reused for all of its buds, so the
+    // laterals of a shoot all broke on the same day.
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 300);
+    plantarchitecture.makePlantDormant(plantID); // dormancy breaks on day 90 of the run, waking the buds of last season's wood together
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    const size_t shoots_at_start = shoot_tree.size();
+    for (const auto &shoot: shoot_tree) {
+        shoot->shoot_parameters.vegetative_bud_break_time.uniformDistribution(2, 30);
+    }
+
+    // Days after dormancy break on which the laterals of each shoot present at the start appeared
+    std::map<int, std::vector<int>> lateral_days_by_parent;
+    size_t shoots_seen = shoots_at_start;
+    for (int day = 1; day <= 125; day++) {
+        plantarchitecture.advanceTime(plantID, 1.f);
+        // New shoots are appended to the shoot tree
+        for (size_t s = shoots_seen; s < shoot_tree.size(); s++) {
+            const auto &shoot = shoot_tree.at(s);
+            if (shoot->parent_shoot_ID >= 0 && size_t(shoot->parent_shoot_ID) < shoots_at_start) {
+                lateral_days_by_parent[shoot->parent_shoot_ID].push_back(day - 90);
+            }
+        }
+        shoots_seen = shoot_tree.size();
+    }
+
+    int widest_spread_on_one_shoot = 0;
+    size_t laterals = 0;
+    for (const auto &[parentID, days]: lateral_days_by_parent) {
+        const auto [first, last] = std::minmax_element(days.begin(), days.end());
+        widest_spread_on_one_shoot = std::max(widest_spread_on_one_shoot, *last - *first);
+        laterals += days.size();
+        DOCTEST_CHECK(*first >= 1);
+        DOCTEST_CHECK(*last <= 31);
+    }
+    DOCTEST_REQUIRE(laterals >= 10);
+    DOCTEST_CHECK(widest_spread_on_one_shoot >= 10);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture vegetative_bud_break_time counts from dormancy break for laterals and shoot tips") {
+    // vegetative_bud_break_time is documented as the time after the bud is created or after dormancy is broken, but it was compared
+    // with the age of the node, so a bud on wood older than the break time broke on the first step after dormancy break.
+    constexpr float break_time = 20.f;
+    Context context;
+    context.seedRandomGenerator(7);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 300);
+    plantarchitecture.makePlantDormant(plantID); // dormancy breaks on day 90 of the run
+
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    const size_t shoots_at_start = shoot_tree.size();
+    for (const auto &shoot: shoot_tree) {
+        shoot->shoot_parameters.vegetative_bud_break_time = break_time;
+    }
+
+    // The shoot tips are vegetative buds too: after dormancy they wait the same time before growing a new node, so the leafless tree stays leafless until then
+    DOCTEST_REQUIRE(plantarchitecture.getPlantLeafCount(plantID) == 0);
+    int first_lateral_day = -1;
+    int first_leaf_day = -1;
+    for (int day = 1; day <= 130 && (first_lateral_day < 0 || first_leaf_day < 0); day++) {
+        plantarchitecture.advanceTime(plantID, 1.f);
+        if (first_lateral_day < 0 && shoot_tree.size() > shoots_at_start) {
+            first_lateral_day = day;
+        }
+        if (first_leaf_day < 0 && plantarchitecture.getPlantLeafCount(plantID) > 0) {
+            first_leaf_day = day;
+        }
+    }
+    DOCTEST_REQUIRE(first_lateral_day > 0);
+    DOCTEST_REQUIRE(first_leaf_day > 0);
+    DOCTEST_CHECK(first_lateral_day >= 90 + int(break_time) - 1);
+    DOCTEST_CHECK(first_leaf_day >= 90 + int(break_time) - 1);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture vegetative bud break follows the shoot, not the shoot type") {

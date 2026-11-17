@@ -1224,6 +1224,9 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position) {
     makePlantDormant(plantID);
 
     setPlantPhenologicalThresholds(plantID, 90, -1, 3, 7, 20, 275);
+    // Flowers open over about 8 days. The 'Kester' bloom period at the Kern County Regional Variety Trials averages Feb 18 - Mar 5, about 15 days from first bloom to petal fall (US Plant Patent PP27367);
+    // less the 7 days a flower stays open, that leaves about 8 days between the first and last flower opening. The figure is for a whole planting, so it is an upper bound on the spread within one tree.
+    setPlantPhenologicalSpread(plantID, 0, 8, 0);
     plant_instances.at(plantID).max_age = 3000;
 
     return plantID;
@@ -1640,6 +1643,9 @@ uint PlantArchitecture::buildAlmondTreeAldrich(const helios::vec3 &base_position
     makePlantDormant(plantID);
 
     setPlantPhenologicalThresholds(plantID, 90, -1, 3, 7, 20, 275);
+    // Flowers open over about 8 days. The 'Kester' bloom period at the Kern County Regional Variety Trials averages Feb 18 - Mar 5, about 15 days from first bloom to petal fall (US Plant Patent PP27367);
+    // less the 7 days a flower stays open, that leaves about 8 days between the first and last flower opening. The figure is for a whole planting, so it is an upper bound on the spread within one tree.
+    setPlantPhenologicalSpread(plantID, 0, 8, 0);
     // Seven-year QSM references are the calibration target for this variety, and growth stops entirely at
     // max_age, so a 5-year cap left the modelled tree at roughly a third of the reference height. Matches
     // the value used by the almond (Nonpareil) model.
@@ -1939,6 +1945,9 @@ uint PlantArchitecture::buildAlmondTreeIndependence(const helios::vec3 &base_pos
     makePlantDormant(plantID);
 
     setPlantPhenologicalThresholds(plantID, 90, -1, 3, 7, 20, 275);
+    // Flowers open over about 8 days. The 'Kester' bloom period at the Kern County Regional Variety Trials averages Feb 18 - Mar 5, about 15 days from first bloom to petal fall (US Plant Patent PP27367);
+    // less the 7 days a flower stays open, that leaves about 8 days between the first and last flower opening. The figure is for a whole planting, so it is an upper bound on the spread within one tree.
+    setPlantPhenologicalSpread(plantID, 0, 8, 0);
     plant_instances.at(plantID).max_age = 3000;
 
     return plantID;
@@ -2123,6 +2132,9 @@ uint PlantArchitecture::buildAlmondTreeWoodColony(const helios::vec3 &base_posit
     makePlantDormant(plantID);
 
     setPlantPhenologicalThresholds(plantID, 90, -1, 3, 7, 20, 275);
+    // Flowers open over about 8 days. The 'Kester' bloom period at the Kern County Regional Variety Trials averages Feb 18 - Mar 5, about 15 days from first bloom to petal fall (US Plant Patent PP27367);
+    // less the 7 days a flower stays open, that leaves about 8 days between the first and last flower opening. The figure is for a whole planting, so it is an upper bound on the spread within one tree.
+    setPlantPhenologicalSpread(plantID, 0, 8, 0);
     plant_instances.at(plantID).max_age = 1825;
 
     return plantID;
@@ -2327,6 +2339,8 @@ uint PlantArchitecture::buildAppleTree(const helios::vec3 &base_position) {
     makePlantDormant(plantID);
 
     setPlantPhenologicalThresholds(plantID, 165, -1, 3, 7, 30, 200);
+    // Flowers open over about 15 days: tagged flowers of five cultivars opened over 18-22 days in 2022 and 10-12 days in 2023 (Tang, Zhai & Xu 2025, Front. Agron. 7:1545070, doi:10.3389/fagro.2025.1545070).
+    setPlantPhenologicalSpread(plantID, 0, 15, 0);
     plant_instances.at(plantID).max_age = 1460;
 
     return plantID;
@@ -2688,6 +2702,8 @@ uint PlantArchitecture::buildAppleFruitingWall(const helios::vec3 &base_position
     makePlantDormant(plantID);
 
     setPlantPhenologicalThresholds(plantID, 165, -1, 3, 7, 30, 200);
+    // Flowers open over about 15 days: tagged flowers of five cultivars opened over 18-22 days in 2022 and 10-12 days in 2023 (Tang, Zhai & Xu 2025, Front. Agron. 7:1545070, doi:10.3389/fagro.2025.1545070).
+    setPlantPhenologicalSpread(plantID, 0, 15, 0);
     plant_instances.at(plantID).max_age = 3650;
 
     return plantID;
@@ -3837,6 +3853,9 @@ uint PlantArchitecture::buildGrapevineVSP(const helios::vec3 &base_position) {
     }
 
     uint plantID = addPlantInstance(base_position, 0);
+    // Grapevine has no flower stage here, so the spread falls on fruit set: an inflorescence flowers over about 7-10 days, giving berry set over about 8 days. Set before the vine is built,
+    // since its buds draw their delays when they are created.
+    setPlantPhenologicalSpread(plantID, 0, 8, 0);
 
     // Catch wires: guide the shoots into a narrow vertical curtain (see the trellis_points block above).
     setPlantAttractionPoints(plantID, flatten(trellis_points), 70.f, 0.35f, 0.15f);
@@ -4272,6 +4291,9 @@ uint PlantArchitecture::buildGrapevineWye(const helios::vec3 &base_position) {
     }
 
     uint plantID = addPlantInstance(base_position, 0);
+    // Grapevine has no flower stage here, so the spread falls on fruit set: an inflorescence flowers over about 7-10 days, giving berry set over about 8 days. Set before the vine is built,
+    // since its buds draw their delays when they are created.
+    setPlantPhenologicalSpread(plantID, 0, 8, 0);
 
     setPlantAttractionPoints(plantID, flatten(trellis_points), 70.f, 0.35f, 0.15f);
 
@@ -4773,7 +4795,9 @@ void PlantArchitecture::initializeOliveTreeShoots() {
     shoot_parameters_proleptic.girth_area_factor = 3.4f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.025;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 1.0;
-    shoot_parameters_proleptic.vegetative_bud_break_time = 30;
+    // Laterals break as soon as the shoot breaks dormancy. The model was calibrated with this at 30 days while bud break was still timed from the age of the node, which made it inert on old wood; counted
+    // from dormancy break, 30 days held back every spring flush, and no measurement supports a lag.
+    shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature.uniformDistribution(550, 650);
     shoot_parameters_proleptic.tortuosity = 100;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(35, 40);

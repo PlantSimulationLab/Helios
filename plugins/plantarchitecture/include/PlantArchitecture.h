@@ -621,6 +621,15 @@ struct VegetativeBud {
     std::string shoot_type_label;
     // ID of the shoot that the bud will produce if it breaks into a shoot
     uint shoot_ID = -1;
+    //! Days since the bud became active, which is since it was created or since the dormancy break that woke it
+    float time_counter = 0;
+    //! Days after becoming active at which the bud breaks into a shoot
+    /**
+     * Drawn for this bud from ShootParameters::vegetative_bud_break_time of the shoot bearing it, and compared with time_counter.
+     */
+    float break_time = 0;
+    //! Whether break_time has been drawn since the bud last became active
+    bool break_time_drawn = false;
 };
 
 struct FloralBud {
@@ -647,6 +656,16 @@ struct FloralBud {
      * is fully expanded at VT, some two months ahead of the ear it shares a plant with, so the two cannot be driven from one number. Left at -1, the bud follows the plant-level value.
      */
     float dd_to_inflorescence_maturity = -1;
+    //! Days by which this bud's first reproductive transition after it becomes active comes later than the plant-level threshold
+    /**
+     * Drawn when the bud becomes active. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float flowering_delay = 0;
+    //! Days by which this bud's fruit takes longer than the plant-level dd_to_fruit_maturity to reach full size
+    /**
+     * Drawn at fruit set. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float fruit_maturity_delay = 0;
 
 
     helios::vec3 base_position;
@@ -3268,12 +3287,28 @@ struct Shoot {
 
     float days_with_negative_carbon_balance = 0;
 
+    //! Break dormancy: wake the vegetative buds and resume growth, and wake the floral buds unless they have already woken this season
     void breakDormancy();
+    //! Wake the floral buds of a dormant shoot without breaking its vegetative dormancy, starting the clocks of their phenological stages
+    /**
+     * Floral buds wake when the plant's dormancy breaks, while the shoot itself may break vegetative dormancy up to the plant's budbreak duration later (see PlantArchitecture::setPlantPhenologicalSpread()).
+     */
+    void wakeFloralBuds();
     void makeDormant();
 
     void mobilizeStarch();
 
     bool isdormant;
+    //! Whether the floral buds have woken since the shoot last went dormant
+    /**
+     * Read only while the shoot is dormant: a dormant shoot whose floral buds are awake carries flowers and fruit while it waits to break vegetative dormancy.
+     */
+    bool floral_buds_awake = false;
+    //! Days after the plant's dormancy break at which this shoot breaks vegetative dormancy
+    /**
+     * Drawn each season when the shoot's floral buds wake. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float budbreak_delay = 0;
     uint dormancy_cycles = 0;
 
     bool meristem_is_alive = true;
@@ -3412,6 +3447,21 @@ struct PlantInstance {
     float dd_to_dormancy = 1e6; //!< effectively "never", keeping the dormancy predicate false
     float max_leaf_lifespan = 1e6;
     bool is_evergreen = false;
+    //! Days over which the shoots break vegetative dormancy, starting at dd_to_dormancy_break
+    /**
+     * Zero breaks every shoot at once. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float budbreak_duration = 0;
+    //! Days over which the floral buds make their first reproductive transition, starting at its threshold
+    /**
+     * Zero makes every bud transition at once. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float flowering_duration = 0;
+    //! Days by which the time fruit take to reach full size can exceed dd_to_fruit_maturity
+    /**
+     * Zero gives every fruit dd_to_fruit_maturity. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float fruit_maturity_duration = 0;
     //! The earliest image of LeafPrototype::leaf_texture_series that any leaf of the plant uses, whatever its age (see PlantArchitecture::setPlantMinimumLeafTextureStage())
     uint minimum_leaf_texture_stage = 0;
 
@@ -4181,11 +4231,18 @@ public:
 
     //! Duplicate an existing plant instance and specify its base position and age
     /**
-     * The copy is an independent plant instance carrying the source's configuration: its name, shoot parameters, phenological thresholds,
-     * maximum age, epicormic shoot probability, carbohydrate and nitrogen parameters, and dormancy state. Per-plant attraction points are
+     * The copy is an independent plant instance carrying the source's configuration: its name, shoot parameters, phenological thresholds
+     * and spread, maximum age, epicormic shoot probability, and carbohydrate and nitrogen parameters. Per-plant attraction points are
      * translated onto the new base position, since they are absolute world coordinates.
      *
-     * The carbohydrate and nitrogen pools are not copied, as they are simulation state rather than configuration; the copy starts with the
+     * It also carries where the source is in its season, so that it goes on growing as the source would: the dormancy and growth state
+     * of every shoot, including its own shoot parameters and the girth of its internodes; the age, dormancy and leaves of every
+     * phytomer; and every bud, with its state, clocks and phenological delays, the flowers and fruit of a floral bud being rebuilt at the
+     * size the source's had reached.
+     *
+     * The shape is rebuilt rather than copied: the architecture, internode lengths and leaf and organ sizes match the source, but the
+     * angles and curvatures that the growth model draws at random, such as leaf orientation and peduncle pitch, are drawn anew. The
+     * carbohydrate and nitrogen pools are not copied, as they are simulation state rather than configuration; the copy starts with the
      * pools of a newly created plant of the given age.
      *
      * \param[in] plantID ID of the existing plant instance to be duplicated.
@@ -4227,6 +4284,25 @@ public:
      */
     void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_dormancy,
                                         float max_leaf_lifespan = 1e6, bool is_evergreen = false);
+
+    //! Spread the timing of phenological events across the shoots and buds of a plant. All values are durations in days.
+    /**
+     * Without a spread, every shoot breaks dormancy on the same day and every bud reaches each stage on the same day. With one, each shoot or bud is given its own delay, drawn from a normal distribution
+     * truncated to the window [0, duration] with mean duration/2 and standard deviation duration/4. The thresholds set by \ref setPlantPhenologicalThresholds() then mark the start of each event, when the first
+     * shoot or bud reaches it, and the event continues for the given duration. A duration of 0 restores the default, in which no delays are drawn.
+     *
+     * \param[in] plantID ID of the plant.
+     * \param[in] budbreak_duration Days over which the shoots break vegetative dormancy (leaf-out), starting time_to_dormancy_break after the plant entered dormancy. The floral buds of every shoot wake at the start
+     * of the window whatever its shoot's delay, so flowering can come before leaf-out. Must be less than time_to_dormancy, so that every shoot breaks before the season ends.
+     * \param[in] flowering_duration Days over which the floral buds make their first reproductive transition after they become active: flower initiation, or flower opening, or fruit set, whichever is the first
+     * stage enabled by \ref setPlantPhenologicalThresholds(). The stages after it follow at their usual intervals, so a bud that flowers late also sets fruit late. Measured, this is the time from the first to the
+     * last flower opening, which is about the reported bloom period (onset to petal fall) less time_to_fruit_set.
+     * \param[in] fruit_maturity_duration Days by which the time each fruit takes to reach full size can exceed time_to_fruit_maturity. An inflorescence given its own maturity period through
+     * PhytomerParameters::inflorescence.inflorescence_maturity_period is not varied.
+     * \note A delay is drawn when the shoot or bud reaches the point at which it applies, so setting a spread affects only events still to come. Buds created during the season (on species whose flowers do not
+     * require dormancy) are already spread by the node they sit on, and the flowering delay is added to that.
+     */
+    void setPlantPhenologicalSpread(uint plantID, float budbreak_duration, float flowering_duration, float fruit_maturity_duration);
 
     //! Sets the carbohydrate model parameters for a specific plant.
     /**
@@ -6414,6 +6490,14 @@ public:
     friend class PlantArchitectureTestHelper;
 
 private:
+
+    //! Draw the delay of one shoot or bud within a phenological window of setPlantPhenologicalSpread
+    /**
+     * \param[in] duration Length of the window in days.
+     * \return Delay in days, from a normal distribution with mean duration/2 and standard deviation duration/4 truncated to [0, duration]. 0 without a draw when duration is 0, so that a plant with no spread
+     * consumes no random numbers.
+     */
+    [[nodiscard]] float samplePhenologicalDelay(float duration) const;
 
     //! Clear BVH cache (called at start of each growth cycle)
     void clearBVHCache() const;

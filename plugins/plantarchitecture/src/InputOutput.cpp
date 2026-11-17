@@ -559,6 +559,12 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
     output_xml << "\t\t<dd_to_dormancy> " << plant_instances.at(plantID).dd_to_dormancy << " </dd_to_dormancy>" << std::endl;
     output_xml << "\t\t<max_leaf_lifespan> " << plant_instances.at(plantID).max_leaf_lifespan << " </max_leaf_lifespan>" << std::endl;
     output_xml << "\t\t<is_evergreen> " << plant_instances.at(plantID).is_evergreen << " </is_evergreen>" << std::endl;
+    // Spread of the phenological events (see setPlantPhenologicalSpread()), written only when set so that files of plants without one are unchanged
+    if (plant_instances.at(plantID).budbreak_duration > 0.f || plant_instances.at(plantID).flowering_duration > 0.f || plant_instances.at(plantID).fruit_maturity_duration > 0.f) {
+        output_xml << "\t\t<budbreak_duration> " << plant_instances.at(plantID).budbreak_duration << " </budbreak_duration>" << std::endl;
+        output_xml << "\t\t<flowering_duration> " << plant_instances.at(plantID).flowering_duration << " </flowering_duration>" << std::endl;
+        output_xml << "\t\t<fruit_maturity_duration> " << plant_instances.at(plantID).fruit_maturity_duration << " </fruit_maturity_duration>" << std::endl;
+    }
     if (plant_instances.at(plantID).minimum_leaf_texture_stage > 0) {
         output_xml << "\t\t<minimum_leaf_texture_stage> " << plant_instances.at(plantID).minimum_leaf_texture_stage << " </minimum_leaf_texture_stage>" << std::endl;
     }
@@ -631,6 +637,11 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
         // Phenological state of the shoot (see <time_since_dormancy> above)
         output_xml << "\t\t\t<is_dormant> " << (shoot->isdormant ? 1 : 0) << " </is_dormant>" << std::endl;
         output_xml << "\t\t\t<dormancy_cycles> " << shoot->dormancy_cycles << " </dormancy_cycles>" << std::endl;
+        // A dormant shoot whose floral buds have woken is waiting out its budbreak delay (see setPlantPhenologicalSpread())
+        if (shoot->isdormant && shoot->floral_buds_awake) {
+            output_xml << "\t\t\t<floral_buds_awake> 1 </floral_buds_awake>" << std::endl;
+            output_xml << "\t\t\t<budbreak_delay> " << shoot->budbreak_delay << " </budbreak_delay>" << std::endl;
+        }
         output_xml << "\t\t\t<meristem_is_alive> " << (shoot->meristem_is_alive ? 1 : 0) << " </meristem_is_alive>" << std::endl;
         output_xml << "\t\t\t<phyllochron_counter> " << shoot->phyllochron_counter << " </phyllochron_counter>" << std::endl;
         output_xml << "\t\t\t<nodes_this_season> " << shoot->nodes_this_season << " </nodes_this_season>" << std::endl;
@@ -723,6 +734,13 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                 output_xml << "\t\t\t\t\t\t\t<bud_time_counter>" << fbud.time_counter << "</bud_time_counter>" << std::endl;
                 output_xml << "\t\t\t\t\t\t\t<bud_age>" << fbud.age << "</bud_age>" << std::endl;
                 output_xml << "\t\t\t\t\t\t\t<previous_fruit_scale_factor>" << fbud.previous_fruit_scale_factor << "</previous_fruit_scale_factor>" << std::endl;
+                // The bud's place in the plant's flowering and fruit-maturity windows (see setPlantPhenologicalSpread())
+                if (fbud.flowering_delay > 0.f) {
+                    output_xml << "\t\t\t\t\t\t\t<bud_flowering_delay>" << fbud.flowering_delay << "</bud_flowering_delay>" << std::endl;
+                }
+                if (fbud.fruit_maturity_delay > 0.f) {
+                    output_xml << "\t\t\t\t\t\t\t<bud_fruit_maturity_delay>" << fbud.fruit_maturity_delay << "</bud_fruit_maturity_delay>" << std::endl;
+                }
 
                 // Write peduncle parameters
                 // Note: Write the STORED VALUES that were actually used for this peduncle geometry
@@ -806,6 +824,24 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                 output_xml << " ;";
             }
             output_xml << " </vegetative_bud_states>" << std::endl;
+            // Each bud's clock toward breaking into a shoot, and the break time it drew (-1 if it has not drawn one yet), laid out like the states. A drawn break time below zero acts as zero, so
+            // it is written as zero and -1 stays free to mean "not drawn".
+            output_xml << "\t\t\t\t<vegetative_bud_time_counters>";
+            for (const auto &petiole_buds: phytomer->axillary_vegetative_buds) {
+                for (const auto &vbud: petiole_buds) {
+                    output_xml << " " << vbud.time_counter;
+                }
+                output_xml << " ;";
+            }
+            output_xml << " </vegetative_bud_time_counters>" << std::endl;
+            output_xml << "\t\t\t\t<vegetative_bud_break_times>";
+            for (const auto &petiole_buds: phytomer->axillary_vegetative_buds) {
+                for (const auto &vbud: petiole_buds) {
+                    output_xml << " " << (vbud.break_time_drawn ? std::max(0.f, vbud.break_time) : -1.f);
+                }
+                output_xml << " ;";
+            }
+            output_xml << " </vegetative_bud_break_times>" << std::endl;
             // The leaf compliance is drawn from LeafPrototype::flexibility when the phytomer is created, so it cannot be
             // re-derived on reading without replaying the plant's random stream exactly.
             output_xml << "\t\t\t\t<leaf_flexibility>" << phytomer->leaf_flexibility << "</leaf_flexibility>" << std::endl;
@@ -1349,6 +1385,18 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
             }
 
             setPlantPhenologicalThresholds(plantID, dd_to_dormancy_break, dd_to_flower_initiation, dd_to_flower_opening, dd_to_fruit_set, dd_to_fruit_maturity, dd_to_dormancy, max_leaf_lifespan, is_evergreen);
+        }
+
+        // Optional, and written only for a plant with a spread, so a file without these tags is a plant without one
+        if (plant.child("budbreak_duration") || plant.child("flowering_duration") || plant.child("fruit_maturity_duration")) {
+            float spread_durations[3] = {0.f, 0.f, 0.f};
+            const char *spread_tags[3] = {"budbreak_duration", "flowering_duration", "fruit_maturity_duration"};
+            for (int i = 0; i < 3; i++) {
+                if (plant.child(spread_tags[i])) {
+                    spread_durations[i] = parse_xml_tag_float(plant.child(spread_tags[i]), spread_tags[i], "PlantArchitecture::readPlantStructureXML");
+                }
+            }
+            setPlantPhenologicalSpread(plantID, spread_durations[0], spread_durations[1], spread_durations[2]);
         }
 
         if (plant.child("minimum_leaf_texture_stage")) {
@@ -3786,6 +3834,16 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 if (pugi::xml_node node = shoot.child("dormancy_cycles")) {
                     restored_shoot->dormancy_cycles = uint(parse_xml_tag_int(node, "dormancy_cycles", caller));
                 }
+                // Set whether or not the tag is present: replaying the shoot's construction may have woken its floral buds, and a dormant shoot left marked awake would never have them woken at its next
+                // dormancy break.
+                restored_shoot->floral_buds_awake = false;
+                restored_shoot->budbreak_delay = 0.f;
+                if (pugi::xml_node node = shoot.child("floral_buds_awake")) {
+                    restored_shoot->floral_buds_awake = parse_xml_tag_int(node, "floral_buds_awake", caller) != 0;
+                }
+                if (pugi::xml_node node = shoot.child("budbreak_delay")) {
+                    restored_shoot->budbreak_delay = parse_xml_tag_float(node, "budbreak_delay", caller);
+                }
                 if (pugi::xml_node node = shoot.child("meristem_is_alive")) {
                     restored_shoot->meristem_is_alive = parse_xml_tag_int(node, "meristem_is_alive", caller) != 0;
                 }
@@ -3824,6 +3882,34 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         }
                     }
 
+                    // The buds' clocks. A file written before these tags existed did not record them; its buds take the age of their node, which is what bud break was timed from then.
+                    for (auto &petiole_buds: restored_phytomer->axillary_vegetative_buds) {
+                        for (auto &vbud: petiole_buds) {
+                            vbud.time_counter = restored_phytomer->age;
+                            vbud.break_time_drawn = false;
+                        }
+                    }
+                    auto readVegetativeBudValues = [&](const char *tag, const std::function<void(VegetativeBud &, float)> &apply) {
+                        pugi::xml_node node = phytomer.child(tag);
+                        if (!node) {
+                            return;
+                        }
+                        const std::vector<std::string> petiole_lists = separate_string_by_delimiter(node.child_value(), ";");
+                        for (size_t petiole = 0; petiole < restored_phytomer->axillary_vegetative_buds.size() && petiole < petiole_lists.size(); petiole++) {
+                            std::istringstream value_stream(petiole_lists.at(petiole));
+                            auto &petiole_buds = restored_phytomer->axillary_vegetative_buds.at(petiole);
+                            float value;
+                            for (size_t bud = 0; bud < petiole_buds.size() && (value_stream >> value); bud++) {
+                                apply(petiole_buds.at(bud), value);
+                            }
+                        }
+                    };
+                    readVegetativeBudValues("vegetative_bud_time_counters", [](VegetativeBud &vbud, float value) { vbud.time_counter = value; });
+                    readVegetativeBudValues("vegetative_bud_break_times", [](VegetativeBud &vbud, float value) {
+                        vbud.break_time_drawn = value >= 0.f;
+                        vbud.break_time = std::max(0.f, value);
+                    });
+
                     std::vector<pugi::xml_node> floral_bud_nodes;
                     collectFloralBuds(phytomer, floral_bud_nodes);
                     for (const pugi::xml_node &floral_bud: floral_bud_nodes) {
@@ -3845,6 +3931,15 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                     }
                                     if (pugi::xml_node node = floral_bud.child("previous_fruit_scale_factor")) {
                                         fbud.previous_fruit_scale_factor = parse_xml_tag_float(node, "previous_fruit_scale_factor", caller);
+                                    }
+                                    // Absent tags are delays of 0, which is what the writer omits; set either way, since rebuilding the bud may have drawn one
+                                    fbud.flowering_delay = 0.f;
+                                    fbud.fruit_maturity_delay = 0.f;
+                                    if (pugi::xml_node node = floral_bud.child("bud_flowering_delay")) {
+                                        fbud.flowering_delay = parse_xml_tag_float(node, "bud_flowering_delay", caller);
+                                    }
+                                    if (pugi::xml_node node = floral_bud.child("bud_fruit_maturity_delay")) {
+                                        fbud.fruit_maturity_delay = parse_xml_tag_float(node, "bud_fruit_maturity_delay", caller);
                                     }
                                 }
                             }
