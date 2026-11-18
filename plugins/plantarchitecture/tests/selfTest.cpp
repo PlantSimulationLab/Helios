@@ -2633,6 +2633,56 @@ DOCTEST_TEST_CASE("PlantArchitecture builds fruit from current photosynthate aft
     DOCTEST_CHECK(dropped_without_photosynthate > 0.f);
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture fruit that has finished growing does not shield starving young fruit from drop") {
+    // Fruit drop weighs the growth the young fruit have received against their potential. A fruit that has reached its full
+    // size inside the drop window has nothing left to grow and its record is complete, so counting it would hide the shortfall
+    // of fruit still growing: here fruit matures at its potential in the light, and the fruit set after the light goes out must
+    // still drop.
+    auto grow = [](int dark_days, int &fruit_from_dark_kept) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 50);
+        constexpr float fruit_development_days = 10.f;
+        plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, fruit_development_days, 1000);
+        CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
+        params.fruit.reserve_funded_days = 2.f;
+        params.fruit.drop_window_end = 60.f;
+        plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+        plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+        plantarchitecture.enableCarbohydrateModel();
+        float fruit_dropped = 0.f;
+        fruit_from_dark_kept = 0;
+        for (int day = 0; day < 12 + dark_days; day++) {
+            const bool dark = day >= 12;
+            drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, dark ? 0.f : 1000.f, 12);
+            advanceAtReferenceTemperature(plantarchitecture, plantID, 1);
+            fruit_dropped += plantarchitecture.getPlantCarbonBudget(plantID).fruit_dropped; // the budget covers one advanceTime() call
+        }
+        for (const uint shootID: plantarchitecture.getAllShootIDs(plantID)) {
+            for (const auto &phytomer: plantarchitecture.getPlantShoot(plantID, shootID)->phytomers) {
+                for (const auto &petiole: phytomer->floral_buds) {
+                    for (const auto &fbud: petiole) {
+                        // Fruit still on the plant that was set after the light went out
+                        if (fbud.state == BUD_FRUITING && fbud.time_counter < float(dark_days)) {
+                            fruit_from_dark_kept++;
+                        }
+                    }
+                }
+            }
+        }
+        return fruit_dropped;
+    };
+
+    int fruit_from_dark_kept = 0;
+    const float dropped = grow(20, fruit_from_dark_kept);
+    DOCTEST_CHECK(dropped > 0.f);
+    // None of the fruit set in the dark reaches maturity on a starved record behind the fruit that matured in the light
+    DOCTEST_CHECK(fruit_from_dark_kept == 0);
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture fruit that has grown at its potential survives a brief shortfall of photosynthate") {
     // Fruit drop is judged on the growth the young fruit have received since set against their potential, not on the last
     // few days alone: fruit that grew at its potential for ten days loses little ground in a three-day dark spell and none of

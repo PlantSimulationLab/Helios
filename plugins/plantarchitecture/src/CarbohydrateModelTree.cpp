@@ -249,6 +249,10 @@ void PlantArchitecture::checkCarbonPool_dropFruit(uint plantID) {
                     if (fbud.state != BUD_FRUITING || fbud.time_counter <= fruit_params.reserve_funded_days || fbud.time_counter > fruit_params.drop_window_end) {
                         continue;
                     }
+                    // A fruit that has reached its full potential has nothing left to grow: dropping it would save no carbon, and its full record would hide the shortfall of the fruit still growing
+                    if (fbud.fruit_potential_fraction >= 1.f) {
+                        continue;
+                    }
                     const float mature_carbon = phytomer->calculateMatureFruitCarbon(fbud);
                     if (mature_carbon <= 0.f) {
                         continue;
