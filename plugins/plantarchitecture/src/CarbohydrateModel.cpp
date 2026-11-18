@@ -131,17 +131,20 @@ void PlantArchitecture::markShootConstructionCharged(Shoot &shoot) const {
                         // A panicle that already stands is taken as built at its potential for the part of the critical period that has passed, and its grain number as set if the period is over;
                         // otherwise an initialization after the critical period would fix the grain number at zero for want of a panicle it never saw grow.
                         GrainSink &grain = fbud.grain;
-                        if (!fbud.isterminal || fbud.state != BUD_FRUITING || grain.panicle_carbon_molC > 0.f || grain.grain_number_set) {
+                        if (!isGrassPanicle(fbud) || grain.panicle_carbon_molC > 0.f || grain.grain_number_set) {
                             break; // not a panicle, or one whose growth the model has already recorded
                         }
                         const CarbonGrassParameters &grass_params = plant_instance.carb_parameters.grass;
-                        const float critical_period_days = grass_params.anthesis_days + grass_params.grain_fill_lag_days;
-                        grain.panicle_carbon_molC = grass_params.panicle_potential_carbon * std::clamp(fbud.time_counter / critical_period_days, 0.f, 1.f);
-                        if (fbud.time_counter >= critical_period_days && !grain.grain_number_set) {
+                        const float critical_period_days = grassAnthesisAge(plant_instance) + grass_params.grain_fill_lag_days;
+                        const float grain_fill_days = grassMaturityAge(plant_instance) - critical_period_days;
+                        const float panicle_age = fbud.time_counter;
+                        grain.accounted_age = panicle_age;
+                        grain.panicle_carbon_molC = grass_params.panicle_potential_carbon * std::clamp(panicle_age / critical_period_days, 0.f, 1.f);
+                        if (panicle_age >= critical_period_days && !grain.grain_number_set) {
                             grain.grain_number = grass_params.grains_per_gram_panicle * grain.panicle_carbon_molC * C_molecular_wt / grass_params.panicle_carbon_percentage;
                             grain.grain_number_set = true;
                             // Grain already filled at initialization is likewise taken as built: at the potential rate for the filling time that has passed
-                            const float filled = std::clamp((fbud.time_counter - critical_period_days) / grass_params.grain_fill_days, 0.f, 1.f);
+                            const float filled = grain_fill_days > 0.f ? std::clamp((panicle_age - critical_period_days) / grain_fill_days, 0.f, 1.f) : 1.f;
                             grain.grain_potential_carbon_molC = grain.grain_number * grass_params.kernel_potential_carbon * filled;
                             grain.grain_carbon_molC = grain.grain_potential_carbon_molC;
                         }
@@ -278,6 +281,44 @@ void PlantArchitecture::accumulateHourlyLeafPhotosynthesis() {
     }
 }
 
+float PlantArchitecture::developmentThermalRate(const CarbonDevelopmentParameters &development, float air_temperature_C) {
+    if (air_temperature_C <= development.base_temperature || air_temperature_C >= development.maximum_temperature) {
+        return 0.f;
+    }
+    if (air_temperature_C <= development.optimum_temperature) {
+        return air_temperature_C - development.base_temperature;
+    }
+    return (development.optimum_temperature - development.base_temperature) * (development.maximum_temperature - air_temperature_C) / (development.maximum_temperature - development.optimum_temperature);
+}
+
+void PlantArchitecture::accumulateThermalTime(float air_temperature_C, float hours) {
+    accumulateThermalTime(getAllPlantIDs(), air_temperature_C, hours);
+}
+
+void PlantArchitecture::accumulateThermalTime(const std::vector<uint> &plantIDs, float air_temperature_C, float hours) {
+    if (!(hours > 0.f) || !std::isfinite(air_temperature_C)) {
+        helios_runtime_error("ERROR (PlantArchitecture::accumulateThermalTime): the period must be a positive number of hours and the air temperature finite (got " + std::to_string(hours) + " hours at " + std::to_string(air_temperature_C) + " C).");
+    }
+    for (uint plantID: plantIDs) {
+        if (plant_instances.find(plantID) == plant_instances.end()) {
+            helios_runtime_error("ERROR (PlantArchitecture::accumulateThermalTime): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+        }
+        PlantInstance &plant_instance = plant_instances.at(plantID);
+        plant_instance.pending_thermal_time_Cd += double(developmentThermalRate(plant_instance.carb_parameters.development, air_temperature_C)) * hours / 24.0;
+        plant_instance.pending_thermal_time_hours += hours;
+        // Grain filling has cardinal temperatures of its own, with no decline above its optimum
+        const CarbonGrassParameters &grass_params = plant_instance.carb_parameters.grass;
+        plant_instance.pending_grain_thermal_time_Cd += double(std::max(0.f, std::min(air_temperature_C, grass_params.grain_fill_optimum_temperature) - grass_params.grain_fill_base_temperature)) * hours / 24.0;
+    }
+}
+
+double PlantArchitecture::getPlantThermalTime(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantThermalTime): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    return plant_instances.at(plantID).cumulative_thermal_time_Cd;
+}
+
 void PlantArchitecture::accumulateShootPhotosynthesis(uint plantID) {
     PlantInstance &plant_instance = plant_instances.at(plantID);
     const CarbohydrateParameters &carbohydrate_params = plant_instance.carb_parameters;
@@ -340,10 +381,15 @@ void PlantArchitecture::subtractShootMaintenanceCarbon(uint plantID, float dt) {
     const float temperature_factor = plant_instance.respiration_temperature_factor;
 
     float wood_maintenance_respiration_step = 0.f;
+    bool any_living_shoot = false;
     for (const auto &shoot: plant_instance.shoot_tree) {
         if (shoot->isPruned()) {
             continue; // a pruned shoot has no living tissue to respire
         }
+        if (isSenescedGrassCulm(plant_instance, *shoot)) {
+            continue; // a grass culm that has died back after maturity no longer respires
+        }
+        any_living_shoot = true;
 
         // Respiration per unit of structural carbon falls steeply with wood age and size: current-year shoots respire
         // ~30x more than trunk wood per gram (Grossman & DeJong 1994a).
@@ -371,8 +417,10 @@ void PlantArchitecture::subtractShootMaintenanceCarbon(uint plantID, float dt) {
         }
     }
 
+    // The roots of a grass whose culms have all died back after maturity are dead with them
+    const bool roots_alive = any_living_shoot || carbohydrate_params.submodel != CARBON_SUBMODEL_GRASS;
     const float root_structural_carbon = plantRootStructuralCarbon(plantID);
-    const float root_respiration = root_structural_carbon * carbohydrate_params.r_m_r_20 * temperature_factor * dt;
+    const float root_respiration = roots_alive ? root_structural_carbon * carbohydrate_params.r_m_r_20 * temperature_factor * dt : 0.f;
     plant_instance.root_sugar_pool_molC -= root_respiration;
     plant_instance.carbon_budget.root_maintenance_respiration += root_respiration;
     plant_instance.step_maintenance_respiration_molC = wood_maintenance_respiration_step + root_respiration;
@@ -384,6 +432,7 @@ void PlantArchitecture::subtractShootGrowthCarbon(uint plantID, float dt) {
     PlantCarbonBudget &budget = plant_instance.carbon_budget;
 
     double reserve_funded_spending = 0.0; // stem, leaf and root growth, with growth respiration, charged to the pools this sub-step (mol C)
+    double stem_spending = 0.0; // the stem growth, with growth respiration, within it (mol C)
     float total_wood_growth = 0.f;
 
     for (const auto &shoot: plant_instance.shoot_tree) {
@@ -415,6 +464,7 @@ void PlantArchitecture::subtractShootGrowthCarbon(uint plantID, float dt) {
         budget.leaf_growth += leaf_growth;
         budget.growth_respiration += growth_respiration;
         reserve_funded_spending += wood_growth + leaf_growth + growth_respiration;
+        stem_spending += wood_growth * (1.f + carbohydrate_params.growth_respiration_fraction);
         total_wood_growth += wood_growth;
 
         if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
@@ -438,7 +488,7 @@ void PlantArchitecture::subtractShootGrowthCarbon(uint plantID, float dt) {
                 if (!shoot->isPruned() && shoot->parent_shoot_ID < 0 && !shoot->phytomers.empty()) {
                     for (const auto &petiole: shoot->phytomers.back()->floral_buds) {
                         for (const auto &fbud: petiole) {
-                            if (fbud.isterminal && fbud.state == BUD_FRUITING && fbud.time_counter >= grass_params.anthesis_days) {
+                            if (isGrassPanicle(fbud) && fbud.time_counter >= grassAnthesisAge(plant_instance)) {
                                 allocation = 0.f;
                             }
                         }
@@ -474,7 +524,7 @@ void PlantArchitecture::subtractShootGrowthCarbon(uint plantID, float dt) {
             subtractFruitGrowthCarbon(plantID, dt, reserve_funded_spending);
             break;
         case CARBON_SUBMODEL_GRASS:
-            subtractGrainGrowthCarbon(plantID, dt, reserve_funded_spending);
+            subtractGrainGrowthCarbon(plantID, dt, reserve_funded_spending, stem_spending);
             break;
     }
 }
@@ -579,8 +629,13 @@ void PlantArchitecture::allocateSurplusCarbon(uint plantID, float dt, const Plan
     }
     recordGirthSupply(to_girth_molC);
 
+    // In a grass, the stems of the culms that have not yet flowered are the residual sink
+    float forgone_molC = available_molC - girth_cost_molC - to_storage_molC;
+    if (forgone_molC > 0.f && carbohydrate_params.submodel == CARBON_SUBMODEL_GRASS) {
+        forgone_molC -= growGrassCulmsFromSurplus(plantID, forgone_molC);
+    }
+
     // Photosynthate with no sink is forgone: withdrawn from each compartment in proportion to its carbohydrate, sugar first
-    const float forgone_molC = available_molC - girth_cost_molC - to_storage_molC;
     if (forgone_molC <= 0.f) {
         return;
     }
@@ -780,9 +835,23 @@ void PlantArchitecture::checkCarbonPool_abortOrgans(uint plantID, float dt) {
 
         shoot->total_carbohydrate_pool_molC = shoot->sugar_pool_molC + shoot->starch_pool_molC;
 
+        // A grass culm past physiological maturity has finished its grain, and once it has died back it is not pruned for its carbon
+        const bool grass = plant_instance.carb_parameters.submodel == CARBON_SUBMODEL_GRASS;
+        if (grass && grassCulmPanicleAge(*shoot) >= grassMaturityAge(plant_instance)) {
+            shoot->days_with_negative_carbon_balance = 0;
+            continue;
+        }
+
         // A shoot left with no carbohydrate at all -- which, after redistribution, means the whole plant is exhausted -- dies.
         if (shoot->total_carbohydrate_pool_molC <= 0.f) {
             pruneBranch(plantID, shootID, 0);
+            continue;
+        }
+
+        // A culm bears a single panicle, so aborting flowers and fruit one at a time would cost it its whole crop at carbohydrate levels that field culms hold routinely around anthesis.
+        // Under the grass sub-model a shortage of carbohydrate costs grain number through the panicle's growth in the critical period, and grain weight through filling, not the panicle.
+        if (grass) {
+            shoot->days_with_negative_carbon_balance = 0;
             continue;
         }
 
@@ -947,6 +1016,13 @@ void PlantArchitecture::validateCarbonSubmodel(const CarbohydrateParameters &car
     if (!(carb_parameters.supply_averaging_days > 0.f)) {
         helios_runtime_error(where + "CarbohydrateParameters::supply_averaging_days must be positive (got " + std::to_string(carb_parameters.supply_averaging_days) + " days).");
     }
+    const CarbonDevelopmentParameters &development = carb_parameters.development;
+    if (!(development.base_temperature < development.optimum_temperature && development.optimum_temperature < development.maximum_temperature) ||
+        !(development.reference_temperature > development.base_temperature && development.reference_temperature < development.maximum_temperature)) {
+        helios_runtime_error(where + "CarbonDevelopmentParameters must have base_temperature < optimum_temperature < maximum_temperature and reference_temperature between the base and the maximum (got " +
+                             std::to_string(development.base_temperature) + ", " + std::to_string(development.optimum_temperature) + ", " + std::to_string(development.maximum_temperature) + " and " +
+                             std::to_string(development.reference_temperature) + " C).");
+    }
     switch (carb_parameters.submodel) {
         case CARBON_SUBMODEL_TREE:
             if (carb_parameters.wood.sapwood_area_per_leaf_area > 0.f && !(carb_parameters.wood.sapwood_functional_years > 0.f)) {
@@ -959,9 +1035,18 @@ void PlantArchitecture::validateCarbonSubmodel(const CarbohydrateParameters &car
             if (grass.stem_elongation_node < 1) {
                 helios_runtime_error(prefix + "stem_elongation_node must be at least 1 (got " + std::to_string(grass.stem_elongation_node) + ").");
             }
-            if (!(grass.anthesis_days > 0.f) || !(grass.grain_fill_lag_days >= 0.f) || !(grass.grain_fill_days > 0.f)) {
-                helios_runtime_error(prefix + "anthesis_days and grain_fill_days must be positive and grain_fill_lag_days must not be negative (got " + std::to_string(grass.anthesis_days) + ", " +
-                                     std::to_string(grass.grain_fill_lag_days) + " and " + std::to_string(grass.grain_fill_days) + " days).");
+            if (!(grass.grain_fill_optimum_temperature > grass.grain_fill_base_temperature) || !(carb_parameters.development.reference_temperature > grass.grain_fill_base_temperature)) {
+                helios_runtime_error(prefix + "grain_fill_optimum_temperature and CarbonDevelopmentParameters::reference_temperature must be above grain_fill_base_temperature (got " + std::to_string(grass.grain_fill_optimum_temperature) + ", " +
+                                     std::to_string(carb_parameters.development.reference_temperature) + " and " + std::to_string(grass.grain_fill_base_temperature) + " C).");
+            }
+            if (grass.tiller_establishment_leaves < 1) {
+                helios_runtime_error(prefix + "tiller_establishment_leaves must be at least 1 (got " + std::to_string(grass.tiller_establishment_leaves) + ").");
+            }
+            if (!(grass.girth_growth_rate > 0.f)) {
+                helios_runtime_error(prefix + "girth_growth_rate must be positive (got " + std::to_string(grass.girth_growth_rate) + " per day).");
+            }
+            if (!(grass.grain_fill_lag_days >= 0.f) || !(grass.post_maturity_senescence_days >= 0.f)) {
+                helios_runtime_error(prefix + "grain_fill_lag_days and post_maturity_senescence_days must not be negative (got " + std::to_string(grass.grain_fill_lag_days) + " and " + std::to_string(grass.post_maturity_senescence_days) + " days).");
             }
             if (!(grass.panicle_potential_carbon >= 0.f) || !(grass.panicle_carbon_percentage > 0.f) || !(grass.grains_per_gram_panicle >= 0.f) || !(grass.kernel_potential_carbon >= 0.f)) {
                 helios_runtime_error(prefix + "panicle_potential_carbon, grains_per_gram_panicle and kernel_potential_carbon must not be negative and panicle_carbon_percentage must be positive (got " +
@@ -1018,7 +1103,17 @@ CarbohydrateParameters CarbohydrateParameters::forSubmodel(CarbonSubmodel submod
             // Stem water-soluble carbohydrate reaches 30-50% of dry mass in cereal culms around anthesis (~0.15 g C / g DW), far above the 5% of tree wood, and accumulates within weeks
             params.root_storage_ratio = 1.f;
             params.storage_capacity = 0.15f;
-            params.storage_refill_rate = 0.1f;
+            params.storage_refill_rate = 1.f;
+            // A culm holds less than a day of its own growth and maintenance in the weeks before stem elongation, so the tree sub-model's threshold (~50 mg glucose/g) leaves no time for the
+            // slowdown to act before the culm is exhausted; growth slows from 0.05 g C / g DW (~125 mg glucose/g), still well below the 150-270 mg/g of grain-sorghum culms around anthesis
+            // (McBee & Miller 1993). The culm reserve floor (CarbonGrassParameters::culm_reserve_floor, 0.07) stays 0.02 above it.
+            params.carbohydrate_growth_threshold = 0.05f;
+            // Sorghum development before anthesis: base 11 C, optimum 30 C, maximum 42 C (Alagarswamy et al. 1986; Hammer et al. 1993; APSIM-Sorghum). At the 25 C reference a day is
+            // 14 C day, so the library sorghum's 3 d phyllochron is 42 C day (41 C day in APSIM-Sorghum; 57-63 C day in Craufurd et al. 1998 and Tirfessa et al. 2023).
+            params.development.base_temperature = 11.f;
+            params.development.optimum_temperature = 30.f;
+            params.development.maximum_temperature = 42.f;
+            params.development.reference_temperature = 25.f;
             break;
     }
     return params;

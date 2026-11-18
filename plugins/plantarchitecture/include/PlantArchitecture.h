@@ -544,13 +544,39 @@ struct CarbonWoodParameters {
     float branch_shedding_carbon_ratio = 1.f;
 };
 
+//! Temperature response of plant development under the carbohydrate model, held in CarbohydrateParameters::development
+/**
+ * With the carbohydrate model enabled, a plant develops in thermal time rather than in calendar days: the phyllochron, the ages of phytomers, leaves and buds, the phenological thresholds
+ * (PlantArchitecture::setPlantPhenologicalThresholds()), leaf expansion and maturation, and the reproductive windows of the sub-models all advance by developmental days, while
+ * respiration, storage, transport and the other carbon fluxes run on calendar time. A developmental day is the thermal time accumulated at reference_temperature in one day, so every
+ * parameter given in days is a duration at the reference temperature, and a plant held at that temperature develops exactly as it would in calendar days. The thermal time of an hour at
+ * air temperature T (C) is f(T)/24 C day, where f rises linearly from 0 at base_temperature to (optimum_temperature - base_temperature) at optimum_temperature and falls linearly back to 0
+ * at maximum_temperature. The air temperature is supplied with PlantArchitecture::accumulateThermalTime(). The plant's dormancy cycle keeps running in calendar days.
+ * Defaults are for almond (growing degree hours; Anderson et al. 1986, Acta Horticulturae 184:87); CarbohydrateParameters::forSubmodel(CARBON_SUBMODEL_GRASS) gives grain-sorghum values.
+ */
+struct CarbonDevelopmentParameters {
+    //! Air temperature below which development stops (C)
+    float base_temperature = 4.5f;
+    //! Air temperature at which development is fastest (C)
+    float optimum_temperature = 25.f;
+    //! Air temperature above which development stops (C)
+    float maximum_temperature = 36.f;
+    //! Air temperature at which one calendar day is one developmental day (C): the temperature at which the plant's day-valued parameters apply as given. Choose it near the
+    //! growing-season mean for which those parameters were set.
+    float reference_temperature = 20.f;
+};
+
 //! Parameters of the grass and grain mechanisms of the carbohydrate model, held in CarbohydrateParameters::grass: tillering, the culm reserve, stage-dependent root allocation and a grain sink
 /**
- * A culm -- the main stem or a tiller -- ends in a panicle that appears with its flag leaf, and from then the culm's reproductive clock runs in days. During the <b>critical period</b>, from
- * flag leaf to the start of effective grain filling (anthesis_days + grain_fill_lag_days), the panicle structure is built from current photosynthate in competition with the elongating stem;
- * at its end the grain number is fixed from the panicle mass built (grains_per_gram_panicle), so a carbon shortfall in the window costs grain number and cannot be made up later. The grain then
- * fills over grain_fill_days at a potential rate set by kernel_potential_carbon, from current photosynthate first and then from the culm and root reserves, so that the reserve contribution to
- * grain is an outcome rather than a constant. Defaults are for grain sorghum (Sorghum bicolor); where a rule is borrowed from maize or wheat the docstring says so.
+ * A culm -- the main stem or a tiller -- ends in a panicle that appears with its flag leaf, and from then the culm's reproductive clock runs in developmental days. Its stages are the
+ * plant's phenological thresholds (PlantArchitecture::setPlantPhenologicalThresholds()) counted from the flag leaf: anthesis is the time to fruit set and physiological maturity the
+ * time to fruit maturity. The culm's terminal bud must bear its panicle from the flag leaf, i.e. its shoot type has a fruit prototype and
+ * no flower prototype.
+ * During the <b>critical period</b>, from flag leaf to the start of effective grain filling (anthesis + grain_fill_lag_days), the panicle structure is built from current photosynthate in
+ * competition with the elongating stem; at its end the grain number is fixed from the panicle mass built (grains_per_gram_panicle), so a carbon shortfall in the window costs grain number and
+ * cannot be made up later. The grain then fills until physiological maturity at a potential rate set by kernel_potential_carbon, from current photosynthate first and then from the culm and
+ * root reserves, so that the reserve contribution to grain is an outcome rather than a constant. After maturity the culm's leaves senesce (post_maturity_senescence_days). Defaults are for
+ * grain sorghum (Sorghum bicolor); where a rule is borrowed from maize or wheat the docstring says so.
  */
 struct CarbonGrassParameters {
 
@@ -558,13 +584,33 @@ struct CarbonGrassParameters {
     //! Number of main-stem nodes at which stem elongation begins. From then the elongating stem is the dominant sink: tiller buds no longer break and existing tillers are judged on their own
     //! carbon balance (tiller_survival_carbon_ratio). The sorghum library plant's crown is its first six internodes (Nakamura & Goto 1996), so its seventh node elongates.
     int stem_elongation_node = 7;
-    //! Days from flag-leaf appearance (when the panicle appears on the culm) to anthesis. Sorghum: flag leaf to half-bloom is ~10-15 d.
-    float anthesis_days = 12.f;
-    //! Days from anthesis to the start of effective grain filling (the lag phase of endosperm cell division). The critical period for grain number runs from flag leaf to the start of filling
-    //! (van Oosterom & Hammer 2008, Field Crops Research 108:259).
+    //! Developmental days from anthesis to the start of effective grain filling (the lag phase of endosperm cell division). The critical period for grain number runs from flag leaf to the start
+    //! of filling (van Oosterom & Hammer 2008, Field Crops Research 108:259). Anthesis and physiological maturity are the plant's phenological thresholds (see CarbonGrassParameters), and the lag
+    //! must end before maturity.
     float grain_fill_lag_days = 5.f;
-    //! Days of effective grain filling. Sorghum half-bloom to physiological maturity is ~35 d (25-45 d).
-    float grain_fill_days = 35.f;
+    //! Developmental days after a culm's physiological maturity over which its remaining leaves senesce and are shed, oldest first, at an even rate. Sorghum canopies die within a few weeks
+    //! of maturity in senescent hybrids, while stay-green hybrids keep about twice the green leaf area at maturity (Borrell et al. 2000, Crop Science 40:1037); a longer period is a more
+    //! stay-green genotype. Leaves that reach PlantArchitecture::setPlantPhenologicalThresholds()'s max_leaf_lifespan first are shed then.
+    float post_maturity_senescence_days = 15.f;
+    //! Air temperature below which grain filling stops (C). From anthesis a culm's panicle clock runs on the grain-filling temperatures rather than CarbohydrateParameters::development's: its
+    //! developmental days per day are (min(T, grain_fill_optimum_temperature) - grain_fill_base_temperature) over the same expression at the plant's reference temperature. Sorghum grain
+    //! filling has a lower base than development before anthesis (5.7 C and 23.5 C; Hammer & Muchow 1994, Field Crops Research 36:221; APSIM-Sorghum), so grain fills faster than the plant
+    //! develops in a cool autumn.
+    float grain_fill_base_temperature = 5.7f;
+    //! Air temperature at and above which grain filling runs at its fastest (C); there is no decline above it (see grain_fill_base_temperature)
+    float grain_fill_optimum_temperature = 23.5f;
+
+    // -- Culm -- //
+    //! Rate (1/developmental day) at which a culm's internodes close the gap between their radius and the pipe-model radius set by the leaf and inflorescence area above them: each step closes
+    //! 1 - exp(-girth_growth_rate x dt) of it. Without the carbohydrate model the gap closes by half each step, so when the panicle appears with the flag leaf -- adding its area above every node
+    //! -- the whole culm would thicken within a day or two and its cost would fall on the panicle's critical period. A cereal internode adds girth over the one to three weeks of its elongation.
+    float girth_growth_rate = 0.1f;
+    //! Largest radius to which surplus photosynthate may thicken an internode of a culm, as a multiple of its pipe-model radius (the radius set by the leaf and inflorescence area above it).
+    //! Until a culm flowers its stem is the residual sink, as in APSIM-Sorghum, where the stem takes the dry matter the other organs do not: photosynthate beyond what maintenance, growth and
+    //! storage take is laid down as stem, thickening the internodes of the culms that have not yet reached anthesis, with growth respiration. Beyond this limit, and after anthesis, the surplus
+    //! is forgone (PlantCarbonBudget::photosynthesis_downregulation). Sorghum stem diameter varies by about a quarter with the assimilate each plant receives (22% thinner at high plant density;
+    //! Kebrom, McKinley & Mullet 2017, Biotechnology for Biofuels 10:159). 1 or less disables it.
+    float culm_thickening_max = 1.3f;
 
     // -- Panicle -- //
     //! Structural carbon of a full-size panicle (rachis, branches and glumes, without grain) at the end of the critical period when carbon does not limit (mol C). A grain sorghum panicle holds
@@ -580,15 +626,16 @@ struct CarbonGrassParameters {
     float grains_per_gram_panicle = 250.f;
 
     // -- Grain -- //
-    //! Potential structural carbon of one grain (mol C). Sorghum kernels are ~25-30 mg at ~0.42 g C/g DW. This is a ceiling that filling approaches at a constant potential rate over
-    //! grain_fill_days: sorghum grain weight responds to late source (Gambín et al. 2008), unlike maize, whose potential kernel weight is set by supply around silking.
+    //! Potential structural carbon of one grain (mol C). Sorghum kernels are ~25-30 mg at ~0.42 g C/g DW. This is a ceiling that filling approaches at a constant potential rate from the
+    //! end of the critical period to physiological maturity: sorghum grain weight responds to late source (Gambín et al. 2008), unlike maize, whose potential kernel weight is set by supply around silking.
     float kernel_potential_carbon = 1.05e-3f;
     //! Growth respiration of grain (mol C respired per mol C incorporated); starch-rich grain
     float grain_growth_respiration_fraction = 0.2f;
     //! Carbohydrate concentration (g C / g DW) to which grain filling may draw down the culm and root reserves. Above it the stem water-soluble carbohydrate is remobilized to the grain;
-    //! below it the grain grows only on current photosynthate, so that filling does not starve the culm (CarbohydrateParameters::carbohydrate_growth_threshold, 0.02 by default, is where a
-    //! shoot is short of carbon and, after carbohydrate_starvation_days, aborts its panicle). Wheat stems retain ~5-10% of dry mass as WSC at maturity after heavy remobilization.
-    float culm_reserve_floor = 0.04f;
+    //! below it the grain grows only on current photosynthate, so that filling does not starve the culm (CarbohydrateParameters::carbohydrate_growth_threshold, 0.05 for the grass sub-model, is where a
+    //! shoot is short of carbon and, after carbohydrate_starvation_days, aborts its panicle), and sits 0.02 below it so that maintenance does not take a culm drained by its grain under the threshold. Wheat stems retain ~5-10% of dry mass as WSC at
+    //! maturity after heavy remobilization; grain-sorghum culms hold 47-183 mg glucose/g (0.02-0.07 g C / g DW) at black layer (McBee & Miller 1993).
+    float culm_reserve_floor = 0.07f;
 
     // -- Tillers -- //
     //! Tiller bud outgrowth follows a carbon supply/demand index (Alam et al. 2014, New Phytologist 203:155): the plant's photosynthate supply rate (over the current advanceTime() call) relative to its vegetative growth demand
@@ -603,6 +650,11 @@ struct CarbonGrassParameters {
     //! stop forming and begin to die at the onset of stem elongation, youngest first, when the elongating stem becomes the dominant sink (Xie et al. 2015; Kebrom et al. 2012). Non-positive
     //! disables tiller death.
     float tiller_survival_carbon_ratio = 1.f;
+    //! Number of leaves a tiller must have before it is judged on its own carbon balance (tiller_survival_carbon_ratio). A young tiller builds leaves faster than its own few small ones pay
+    //! for them and is carried by the rest of the plant; its carbon records restart when it reaches this many leaves, and it is judged on its balance from then, once
+    //! CarbohydrateParameters::supply_averaging_days have passed. No measurement for sorghum was found: four is the leaf number at which the leaves of a fully lit tiller of the library plant
+    //! begin to pay for its growth.
+    int tiller_establishment_leaves = 4;
 
     // -- Roots -- //
     //! Fraction of the plant's net photosynthate allocated to root growth at emergence. It falls linearly to root_allocation_late as the main stem reaches its flag leaf and is 0 after
@@ -720,12 +772,14 @@ struct CarbohydrateParameters {
     CarbonWoodParameters wood;
     //! Tillers, culm reserve, roots and grain (CARBON_SUBMODEL_GRASS)
     CarbonGrassParameters grass;
+    //! Temperature response of development (all sub-models)
+    CarbonDevelopmentParameters development;
 
     //! Default parameters of a carbon sub-model
     /**
      * The default-constructed structure is the tree sub-model with almond values. For CARBON_SUBMODEL_GRASS the shared parameters are given grain-sorghum values: a culm of low dry density
      * that matures within weeks, thin leaves, herbaceous maintenance respiration, a culm reserve capacity of ~0.15 g C / g DW (stem water-soluble carbohydrate reaches 30-50% of dry mass in
-     * cereals), and a shoot:root ratio of 4.
+     * cereals) that fills within days, a growth threshold of 0.05 g C / g DW, and a shoot:root ratio of 4.
      * \param[in] submodel Sub-model to return the defaults of.
      * \return Parameters with \ref submodel set and every shared parameter at that sub-model's default.
      */
@@ -866,6 +920,10 @@ struct GrainSink {
     float grain_carbon_molC = 0;
     //! Structural carbon the grain could have received so far at its potential filling rate (mol C); grain_carbon_molC falls behind it when supply is short
     float grain_potential_carbon_molC = 0;
+    //! Leaves the culm bore when it reached physiological maturity, from which its post-maturity senescence is counted (-1 before maturity)
+    int leaves_at_maturity = -1;
+    //! Panicle age (developmental days since the flag leaf) up to which the panicle's and grain's potential growth has been accounted
+    float accounted_age = 0;
 };
 
 struct FloralBud {
@@ -3463,6 +3521,8 @@ struct Shoot {
     float phyllochron_recovery = phyllochron_increase;
 
     float days_with_negative_carbon_balance = 0;
+    //! Plant age (days) at which this tiller reached CarbonGrassParameters::tiller_establishment_leaves leaves and began to be judged on its own carbon balance; negative before then
+    float tiller_established_age = -1;
 
     void breakDormancy();
     void makeDormant();
@@ -3698,6 +3758,18 @@ struct PlantInstance {
     uint leaf_primitive_hours_missing_photosynthesis = 0;
     //! Net photosynthesis credited at the start of the current advanceTime() call, per day of the call (mol C / day)
     float photosynthesis_supply_rate_molC_day = 0;
+    //! Thermal time supplied by PlantArchitecture::accumulateThermalTime() since the last advanceTime() call (C day)
+    double pending_thermal_time_Cd = 0;
+    //! Hours of air temperature supplied by PlantArchitecture::accumulateThermalTime() since the last advanceTime() call
+    double pending_thermal_time_hours = 0;
+    //! Thermal time on the grain-filling temperatures (CarbonGrassParameters::grain_fill_base_temperature) supplied since the last advanceTime() call (C day)
+    double pending_grain_thermal_time_Cd = 0;
+    //! Developmental days per calendar day of a panicle past anthesis over the current advanceTime() call (CARBON_SUBMODEL_GRASS; see CarbonGrassParameters::grain_fill_base_temperature)
+    float grain_development_rate = 1.f;
+    //! Thermal time accumulated since the plant was built under the carbohydrate model (C day)
+    double cumulative_thermal_time_Cd = 0;
+    //! Developmental days per calendar day over the current advanceTime() call: 1 without the carbohydrate model, otherwise the call's thermal time over that of the reference temperature
+    float development_rate = 1.f;
     //! Fractional number of fruit owed to the drop rule but not yet removed
     float fruit_drop_debt = 0;
     //! Maintenance respiration of wood and roots charged in the current sub-step (mol C)
@@ -4337,6 +4409,13 @@ public:
      */
     void setPlantCarbohydrateModelParameters(const std::vector<uint> &plantIDs, const CarbohydrateParameters &carb_parameters);
 
+    //! Get the carbohydrate model parameters of a plant
+    /**
+     * \param[in] plantID ID of the plant.
+     * \return The plant's carbohydrate model parameters: those of its library model, or those last given to setPlantCarbohydrateModelParameters().
+     */
+    [[nodiscard]] CarbohydrateParameters getPlantCarbohydrateModelParameters(uint plantID) const;
+
     /**
      * \brief Disables the phenological progression of a specified plant instance.
      *
@@ -4407,6 +4486,40 @@ public:
      * credits the totals to the shoots' carbohydrate pools and resets them. Call once per simulated hour, after the photosynthesis model has run.
      */
     void accumulateHourlyLeafPhotosynthesis();
+
+    //! Accumulates the thermal time of a period of air temperature for every plant, to set how far the next advanceTime() call develops each plant under the carbohydrate model
+    /**
+     * With the carbohydrate model enabled, plant development runs in thermal time (see CarbonDevelopmentParameters): each advanceTime() call develops a plant by the thermal time supplied
+     * here since the previous call, in units of the thermal time of one day at CarbohydrateParameters::development's reference temperature, and then resets it. Call it once per simulated
+     * hour with the hour's mean air temperature (hours = 1), or once for a longer period at its mean temperature; the hours supplied between two advanceTime() calls must add up to the
+     * length of the call. Plants built at an age with buildPlantInstanceFromLibrary() or buildPlantCanopyFromLibrary() are grown to that age at the reference temperature and need none.
+     * \param[in] air_temperature_C Mean air temperature over the period (C).
+     * \param[in] hours Length of the period (hours, > 0).
+     */
+    void accumulateThermalTime(float air_temperature_C, float hours);
+
+    //! Accumulates the thermal time of a period of air temperature for the given plants (see accumulateThermalTime(float, float))
+    /**
+     * \param[in] plantIDs IDs of the plants.
+     * \param[in] air_temperature_C Mean air temperature over the period (C).
+     * \param[in] hours Length of the period (hours, > 0).
+     */
+    void accumulateThermalTime(const std::vector<uint> &plantIDs, float air_temperature_C, float hours);
+
+    //! Thermal time a plant has accumulated under the carbohydrate model since it was built (C day; see CarbonDevelopmentParameters)
+    /**
+     * \param[in] plantID ID of the plant.
+     * \return Thermal time credited by advanceTime() calls so far (C day), excluding any growth to the plant's build age.
+     */
+    [[nodiscard]] double getPlantThermalTime(uint plantID) const;
+
+    //! Development rate of a plant at an air temperature (C day of thermal time per day of that temperature; see CarbonDevelopmentParameters)
+    /**
+     * \param[in] development Temperature response of development.
+     * \param[in] air_temperature_C Air temperature (C).
+     * \return 0 at or below the base and at or above the maximum temperature, rising linearly to (optimum - base) at the optimum temperature and falling linearly beyond it.
+     */
+    [[nodiscard]] static float developmentThermalRate(const CarbonDevelopmentParameters &development, float air_temperature_C);
 
     //! Adjusts the plant's maintenance respiration rate based on the prevailing air temperature
     /**
@@ -6913,7 +7026,7 @@ protected:
      * The stem, leaf and root charges are shared by every sub-model. The reproductive sink is then charged by the plant's CarbonSubmodel (for CARBON_SUBMODEL_TREE, subtractFruitGrowthCarbon()),
      * which is told what the sub-step has spent from reserves so far.
      * \param[in] plantID ID of the plant whose shoots are debited
-     * \param[in] dt Length of the sub-step (days)
+     * \param[in] dt Length of the sub-step (calendar days)
      */
     void subtractShootGrowthCarbon(uint plantID, float dt);
 
@@ -6996,20 +7109,40 @@ protected:
 
     //! Charge the growth of a plant's panicles and grain (CarbonGrassParameters)
     /**
-     * For each culm with a panicle: during the critical period the panicle structure grows at its potential times the reproductive supply ratio (the photosynthate left after maintenance
-     * respiration and reserve-funded spending, relative to the potential growth of all such sinks, averaged over supply_averaging_days); at the end of the critical period the grain number is
+     * For each culm with a panicle: during the critical period the panicle structure grows at its potential times the reproductive supply ratio (the panicles' share, by demand, of the
+     * photosynthate left after maintenance respiration and leaf and root growth, which they divide with the growing stems, averaged over supply_averaging_days); at the end of the critical period the grain number is
      * fixed from the panicle carbon; during filling the grain grows at its potential, paid from the sub-step's remaining photosynthate first and then from the carbohydrate the culms and roots hold
      * above CarbonGrassParameters::culm_reserve_floor, the latter reported as PlantCarbonBudget::reserve_remobilization.
      * \param[in] plantID ID of the plant
-     * \param[in] dt Length of the sub-step (days)
+     * \param[in] dt Length of the sub-step (calendar days); each panicle's clock has already been advanced by its developmental days
      * \param[in] reserve_funded_spending_molC Stem, leaf and root growth (with growth respiration) already charged to the pools this sub-step (mol C)
+     * \param[in] stem_spending_molC The stem growth (with growth respiration) within reserve_funded_spending_molC (mol C)
      */
-    void subtractGrainGrowthCarbon(uint plantID, float dt, double reserve_funded_spending_molC);
+    void subtractGrainGrowthCarbon(uint plantID, float dt, double reserve_funded_spending_molC, double stem_spending_molC);
+    //! Lay surplus photosynthate down as stem in the culms of a grass that have not yet reached anthesis, thickening their internodes up to CarbonGrassParameters::culm_thickening_max times their pipe-model radius
+    /**
+     * \param[in] plantID ID of the plant
+     * \param[in] surplus_molC Photosynthate with no other sink this sub-step (mol C)
+     * \return The part of the surplus spent, growth respiration included (mol C)
+     */
+    float growGrassCulmsFromSurplus(uint plantID, float surplus_molC);
+    //! Radius the pipe model gives an internode: that of the cross-section its shoot type's girth_area_factor allots to the leaf area, and the inflorescence area borne on the stem's axis, above it
+    /**
+     * \param[in] shoot Shoot of the internode
+     * \param[in] node_number Index of the internode along the shoot
+     * \return Pipe-model radius (m)
+     */
+    [[nodiscard]] static float pipeModelInternodeRadius(const Shoot &shoot, uint node_number);
     //! Run the grass sub-model's shoot economy for a sub-step: note the onset of stem elongation and shed tillers that do not pay for themselves while the stem elongates
     /**
      * \param[in] plantID ID of the plant
      */
     void updateGrassTillers(uint plantID);
+    //! Shed the leaves of culms past physiological maturity under the grass sub-model, oldest first, at an even rate over CarbonGrassParameters::post_maturity_senescence_days
+    /**
+     * \param[in] plantID ID of the plant
+     */
+    void senesceMatureGrassCulms(uint plantID);
     //! Factor by which the grass sub-model scales the probability that a tiller bud breaks, from the plant's carbon supply/demand index (CarbonGrassParameters::tiller_supply_demand_min)
     /**
      * \param[in] plantID ID of the plant
@@ -7018,6 +7151,17 @@ protected:
     [[nodiscard]] float grassTillerBudBreakFactor(uint plantID) const;
     //! Fraction of the main stem's development from emergence (0) to flag leaf (1), from its node count (CARBON_SUBMODEL_GRASS)
     [[nodiscard]] float grassMainStemDevelopmentFraction(uint plantID) const;
+    //! Panicle age (developmental days since the flag leaf, the panicle's FloralBud::time_counter) at anthesis under CARBON_SUBMODEL_GRASS: the plant's time to fruit set
+    [[nodiscard]] static float grassAnthesisAge(const PlantInstance &plant_instance);
+    //! Panicle age at physiological maturity under CARBON_SUBMODEL_GRASS: the plant's time to fruit maturity
+    [[nodiscard]] static float grassMaturityAge(const PlantInstance &plant_instance);
+    //! Whether a floral bud is a culm's panicle under CARBON_SUBMODEL_GRASS: a fruiting terminal bud, which a culm bears from its flag leaf
+    [[nodiscard]] static bool isGrassPanicle(const FloralBud &fbud);
+    //! Panicle age of a culm under CARBON_SUBMODEL_GRASS (developmental days since its flag leaf), or -1 while it has no panicle
+    [[nodiscard]] static float grassCulmPanicleAge(const Shoot &shoot);
+    //! Whether a culm under CARBON_SUBMODEL_GRASS has died back after maturity: its panicle has passed physiological maturity plus CarbonGrassParameters::post_maturity_senescence_days. A dead
+    //! culm no longer respires, and neither it nor its grain is subject to the starvation rules.
+    [[nodiscard]] static bool isSenescedGrassCulm(const PlantInstance &plant_instance, const Shoot &shoot);
     //! Structural carbon of a plant's root system (mol C): the wood's divided by shoot_root_ratio under CARBON_SUBMODEL_TREE, or the carbon grown by allocation under CARBON_SUBMODEL_GRASS
     [[nodiscard]] float plantRootStructuralCarbon(uint plantID) const;
     //! Carbon (with growth respiration) a floral bud's reproductive organ would still need to reach its potential, which aborting it saves: the fruit's remaining dry matter under
@@ -7025,6 +7169,9 @@ protected:
     [[nodiscard]] float remainingReproductiveCarbon(const Phytomer &phytomer, const FloralBud &fbud) const;
 
     bool carbon_model_enabled = false;
+
+    //! True while buildPlantInstanceFromLibrary() or buildPlantCanopyFromLibrary() grows plants to their build age, which runs at the reference temperature with no thermal time supplied
+    bool growing_to_build_age = false;
 
     // --- Nitrogen Model --- //
 

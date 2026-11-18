@@ -3969,22 +3969,35 @@ void SorghumPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sh
         shoot_max_nodes = uint(tiller_max_nodes);
     }
 
-    // Leaf size and internode length are scaled separately along the shoot. A single ramp cannot serve both: the lowest leaves of a sorghum plant are already close to full length while the internodes
-    // carrying them are the shortest on the plant, so one factor either stunts the bottom leaves or spreads the base of the stem out too far.
+    // Leaf size and internode length are scaled separately along the shoot.
     //
-    // Blade length rises from the base, peaks several ranks below the top, and then falls away over the last few leaves. The rank of the largest leaf follows xs = 4.64 + 0.46*TLN for a total leaf number
-    // below 20.5 (Demarco, van Oosterom, Kholova & Hammer 2026, Annals of Botany 137(4):920), which places it three to four ranks below the flag leaf on a plant of this size and agrees with the profiles
-    // of Lafarge & Hammer (2002, Field Crops Research 77:137). Without the decline every leaf from the fourth node upward came out at the same maximum size, leaving the flag leaf fractionally the largest
-    // blade on the plant -- the opposite of the real canopy, where it is conspicuously the smallest.
-    float leaf_scale = fmin(1.f, 0.82f + 0.18f * float(shoot_node_index) / 3.f);
+    // Individual leaf area is bell-shaped in leaf rank: the first leaves are a few square centimetres, area rises steeply to the largest leaf a few ranks below the flag leaf, and falls again over
+    // the last leaves. Relative to the largest leaf, the area of the leaf at rank n is exp(a d^2 + b d^3), with d = n - xs the distance from the largest leaf's rank and, for a final leaf number N,
+    // a = -0.009 - exp(-0.2 N) and b = 0.0006 - exp(-0.43 N) (Carberry, Muchow & Hammer 1993, Field Crops Research 33:311; the function and coefficients of APSIM-Sorghum). The rank of the largest
+    // leaf is xs = 4.64 + 0.46 N for a final leaf number below 20.5 (Demarco, van Oosterom, Kholova & Hammer 2026, Annals of Botany 137(4):920), three to four ranks below the flag leaf on a plant
+    // of this size, in agreement with the profiles of Lafarge & Hammer (2002, Field Crops Research 77:137). On a 16-leaf plant the first leaf has under 1% of the largest leaf's area, the fifth
+    // about 10% and the flag leaf about 45%, and the whole plant about 7.4 times the largest leaf's area: 0.3 m2, against the 0.6 m2 of a ramp that started the lowest leaf at two thirds of the
+    // largest and held every leaf from the fourth up at the maximum.
+    //
+    // A tiller's leaves follow the main stem's profile from the rank its final leaf number leaves it at, so that its last leaves match the main stem's last leaves, as its final leaves emerge with
+    // them (Lafarge et al. 2002; APSIM-Sorghum drops a tiller's first leaf sizes in the same way).
+    //
+    // The blade keeps its proportions, so its length and width go as the square root of its area. Without a final leaf number (a shoot type with no max_nodes) the profile cannot be placed, and
+    // every leaf is built at the largest leaf's size.
+    float leaf_scale = 1.f;
     if (shoot_max_nodes > 0) {
-        const float largest_leaf_rank = 4.64f + 0.46f * float(shoot_max_nodes);
-        const float ranks_above_largest = float(shoot_node_index + 1) - largest_leaf_rank;
-        if (ranks_above_largest > 0.f) {
-            // Linear in blade length, so leaf area -- which goes as roughly its square -- falls off faster, leaving the flag leaf near 40% of the largest blade's area.
-            const float ranks_to_flag = fmax(1.f, float(shoot_max_nodes) - largest_leaf_rank);
-            leaf_scale *= fmax(0.80f, 1.f - 0.20f * ranks_above_largest / ranks_to_flag);
+        int final_leaf_number = int(shoot_max_nodes);
+        if (phytomer->rank != 0 && shoot->parent_shoot_ID >= 0) {
+            const std::shared_ptr<Shoot> &main_stem = plantarchitecture->getPlantShoot(phytomer->plantID, shoot->parent_shoot_ID);
+            final_leaf_number = std::max(final_leaf_number, main_stem->shoot_parameters.max_nodes.val());
         }
+        const float leaf_rank = float(shoot_node_index + 1 + (final_leaf_number - int(shoot_max_nodes)));
+        const float largest_leaf_rank = 4.64f + 0.46f * float(final_leaf_number);
+        const float a = -0.009f - std::exp(-0.2f * float(final_leaf_number));
+        const float b = 0.0006f - std::exp(-0.43f * float(final_leaf_number));
+        const float d = leaf_rank - largest_leaf_rank;
+        const float relative_area = std::exp(a * d * d + b * d * d * d);
+        leaf_scale = std::sqrt(std::min(1.f, relative_area));
     }
 
     // Applied relative to the size the blade is currently built at, rather than as an absolute target. leaf_size_max holds that size, and current_leaf_scale_factor -- how far the leaf has expanded toward

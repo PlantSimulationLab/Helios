@@ -485,7 +485,7 @@ Plant type string argument | time_to_dormancy_break | time_to_flower_initiation 
 "pistachio" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1825 days (5 years) |
 "puncturevine" | 0 | -1 | 14 | -1 | -1 | \f$\infty\f$ | 0 | 45 days             |
 "rice" | 0 | 4 | 3 | 7 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
-"sorghum" | 0 | -1 | -1 | 4 | 35 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"sorghum" | 0 | -1 | -1 | 12 | 52 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "soybean" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "sugarbeet" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "tomato" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
@@ -1237,7 +1237,7 @@ uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( make_vec3(0,0,0)
 
 <ul>
 <li><b>Position.</b> Tiller Tn grows from the axil of main-stem leaf n. Tillers are added in the order T3, T4, T2, T1, T5, T6, which is the hierarchy of tiller emergence, fertility and grain number reported by Lafarge, Broad & Hammer (2002, Annals of Botany 90:87). For field hybrids, Kim et al. (2010, Annals of Botany 106:57) likewise found fertile tillers mostly at T2-T4. A tiller_count of 2 therefore gives T3 and T4.</li>
-<li><b>Timing.</b> A tiller emerges about 9 days (2.5 phyllochrons) after the leaf that subtends it, so T3 appears as main-stem leaves 5-6 appear (Kim et al. 2010).</li>
+<li><b>Timing.</b> A tiller emerges about 7.5 days (2.5 phyllochrons) after the leaf that subtends it, so T3 appears as main-stem leaves 5-6 appear (Kim et al. 2010).</li>
 <li><b>Leaf number.</b> Each tiller has one leaf fewer than the main stem for every main-stem leaf below its own: on a 16-leaf main stem, T1 has 15 leaves and T6 has 10. This brings the final leaves of all tillers out together, shortly after the main stem's, as Lafarge et al. (2002) observed. Every tiller ends in a panicle, so a plant has tiller_count + 1 panicles.</li>
 <li><b>Crown.</b> The lowest six main-stem internodes do not elongate (each is 8 mm long), so the lowest leaves and all tillers emerge at the soil surface. The next two internodes are transitional and the rest elongate fully, following the basal internodes of sweet sorghum (Nakamura & Goto 1996, Japanese Journal of Crop Science 65:324).</li>
 <li><b>Orientation.</b> A tiller leans out over its subtending leaf, within the main stem's leaf plane. Its prophyll faces the main stem and its first leaf is opposite, so its own leaves begin in a plane parallel to that of the main stem (Choob 2022, Frontiers in Plant Science 13:855146). The tiller leaves the main stem at 15-30 degrees, and gravitropism brings it back to 10-20 degrees from vertical from base to tip by maturity; the lean of the plant (see \ref SorghumPlantVariation) adds to or takes from this. No measurements of these angles were found for sorghum, so they are estimates. They are set by the "tiller" shoot type and can be changed with \ref PlantArchitecture::updateCurrentShootParameters().</li>

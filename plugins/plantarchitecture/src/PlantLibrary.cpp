@@ -703,7 +703,16 @@ uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_p
     }
 
     if (age > 0) {
-        advanceTime(plantID, age);
+        // The build age is in days at the reference temperature: no thermal time is supplied for it
+        const bool was_growing_to_build_age = growing_to_build_age;
+        growing_to_build_age = true;
+        try {
+            advanceTime(plantID, age);
+        } catch (...) {
+            growing_to_build_age = was_growing_to_build_age;
+            throw;
+        }
+        growing_to_build_age = was_growing_to_build_age;
     }
 
     return plantID;
@@ -5541,7 +5550,9 @@ void PlantArchitecture::initializeSorghumShoots() {
 
     phytomer_parameters_sorghum.internode.pitch = 0;
     phytomer_parameters_sorghum.internode.phyllotactic_angle.uniformDistribution(155, 205);
-    phytomer_parameters_sorghum.internode.radius_initial = 0.003;
+    // A seedling's culm starts 3 mm across and thickens with the leaf area it carries (the pipe model, girth_area_factor). No measurement of the seedling's stem was found, so this is an
+    // estimate; at 6 mm, the crown of a seedling cost several times the carbon a seed holds.
+    phytomer_parameters_sorghum.internode.radius_initial = 0.0015;
     phytomer_parameters_sorghum.internode.color = make_RGBcolor(0.09, 0.13, 0.06);
     phytomer_parameters_sorghum.internode.length_segments = 2;
     phytomer_parameters_sorghum.internode.radial_subdivisions = 10;
@@ -5557,7 +5568,9 @@ void PlantArchitecture::initializeSorghumShoots() {
     phytomer_parameters_sorghum.leaf.pitch.uniformDistribution(-25, -12);
     phytomer_parameters_sorghum.leaf.yaw = 0;
     phytomer_parameters_sorghum.leaf.roll.uniformDistribution(-12, 12);
-    phytomer_parameters_sorghum.leaf.prototype_scale = 0.65;
+    // Size of the largest leaf (SorghumPhytomerCreationFunction() scales the others from it along the leaf-area profile): about 460 cm2, between the 420 cm2 (APSIM-Sorghum: 46.3 x final leaf
+    // number - 321) and 495 cm2 (Tirfessa et al. 2023, Agronomy for Sustainable Development 43:15: 36.9 x final leaf number - 95) of a 16-leaf grain sorghum.
+    phytomer_parameters_sorghum.leaf.prototype_scale = 0.62;
     phytomer_parameters_sorghum.leaf.prototype = leaf_prototype;
 
     phytomer_parameters_sorghum.peduncle.length = 0.3;
@@ -5582,6 +5595,8 @@ void PlantArchitecture::initializeSorghumShoots() {
     phytomer_parameters_sorghum.inflorescence.fruit_prototype_function = SorghumPaniclePrototype;
     // Panicles on neighbouring plants of one genotype differ in grain placement and branch layout; a few prototypes keep a plot from repeating one head.
     phytomer_parameters_sorghum.inflorescence.unique_prototypes = 3;
+    // The panicle exserts and reaches full size by anthesis, 12 days after the flag leaf; grain filling to physiological maturity (the time to fruit maturity, 52 days) adds mass, not size
+    phytomer_parameters_sorghum.inflorescence.inflorescence_maturity_period = 12;
 
     phytomer_parameters_sorghum.phytomer_creation_function = SorghumPhytomerCreationFunction;
 
@@ -5592,10 +5607,15 @@ void PlantArchitecture::initializeSorghumShoots() {
     // Buds are not thinned at random: SorghumPhytomerCreationFunction() chooses which leaf axils tiller.
     shoot_parameters_mainstem.vegetative_bud_break_probability_min = 1;
     // A tiller emerges about 2.5 phyllochrons after the leaf it is subtended by: tiller 3 appears around the tip appearance of main-stem leaves 5-6 in the field (Kim et al. 2010, Annals of Botany 106:57).
-    shoot_parameters_mainstem.vegetative_bud_break_time = 9;
+    shoot_parameters_mainstem.vegetative_bud_break_time = 7.5;
     shoot_parameters_mainstem.flower_bud_break_probability = 1;
-    shoot_parameters_mainstem.phyllochron_min = 3.5;
+    // A leaf every three days: 16 leaves in about 45 days and half-bloom near day 60, as in the field (Vanderlip, Kansas State S-3). Under the carbohydrate model, where a day is one at
+    // the 25 C reference temperature (14 C day above the 11 C base), this is 42 C day per leaf; APSIM-Sorghum uses 41, and field values run to 57-63 (Craufurd et al. 1998; Tirfessa et al. 2023).
+    shoot_parameters_mainstem.phyllochron_min = 3;
     shoot_parameters_mainstem.elongation_rate_max = 0.05;
+    // A leaf is fully expanded about two and a half phyllochrons after its tip appears: the count of fully expanded leaves runs 1.5-2.5 leaves behind that of leaf tips (APSIM-Sorghum
+    // corrects leaf number by 1.52 for the leaves still growing). Internodes elongate over the 20 days of elongation_rate_max.
+    shoot_parameters_mainstem.leaf_expansion_rate_max = 0.125;
     shoot_parameters_mainstem.girth_area_factor = 5.f;
     // The culm is left straight. Its lean is set at the base by buildSorghumPlant(). A gravitropic response acts only once the culm is off vertical, and is negligible a few degrees from it; a negative
     // value, which this used to be, bends the culm away from vertical and so exaggerated the lean rather than holding it.
@@ -5658,13 +5678,16 @@ uint PlantArchitecture::buildSorghumPlant(const helios::vec3 &base_position) {
     // The internode length is drawn for this plant, and redrawn for the next one: the shoot type would otherwise hand every plant the same value.
     const float internode_length_max = shoot_types.at("mainstem").internode_length_max.val();
     shoot_types.at("mainstem").internode_length_max.resample();
-    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(lean, lean_azimuth, phyllotaxis_azimuth), 0.003, internode_length_max, 0.01, 0.01, 0, "mainstem");
+    uint uID_stem = addBaseStemShoot(plantID, 1, make_AxisRotation(lean, lean_azimuth, phyllotaxis_azimuth), 0.0015, internode_length_max, 0.01, 0.01, 0, "mainstem");
 
     breakPlantDormancy(plantID);
 
-    // Grain fill (GS6 half-bloom -> GS9 physiological maturity) takes about 35 days, within a
-    // reported 25-45 day range (Vanderlip, Kansas State S-3; Gerik et al., Texas A&M B-6137).
-    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 4, 35, 1000);
+    // The panicle appears with the flag leaf (the terminal bud fruits when the culm reaches its node cap), so the fruit thresholds count from the flag leaf: half-bloom 12 days later
+    // (flag leaf to anthesis ~10-15 d; APSIM-Sorghum 170 C day), and physiological maturity 52 days later (the panicle geometry is full size by anthesis; see inflorescence_maturity_period). Grain fill (GS6
+    // half-bloom -> GS9 physiological maturity) thus takes about 40 days, within a reported 25-45 day range (Vanderlip, Kansas State S-3; Gerik et al., Texas A&M B-6137); the carbohydrate
+    // model's grass sub-model times the panicle and grain from the same thresholds. Leaves are given no lifespan here, so that a plant built at any age carries its full canopy; a
+    // season simulation can set one (about 55 days keeps 8-12 green leaves at soft dough; Vanderlip S-3), and the grass sub-model senesces the leaves after maturity.
+    setPlantPhenologicalThresholds(plantID, 0, -1, -1, 12, 52, 1000);
 
     plant_instances.at(plantID).max_age = 365;
 

@@ -1193,7 +1193,16 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
     }
 
     if (age > 0) {
-        advanceTime(plantIDs, age);
+        // The build age is in days at the reference temperature: no thermal time is supplied for it
+        const bool was_growing_to_build_age = growing_to_build_age;
+        growing_to_build_age = true;
+        try {
+            advanceTime(plantIDs, age);
+        } catch (...) {
+            growing_to_build_age = was_growing_to_build_age;
+            throw;
+        }
+        growing_to_build_age = was_growing_to_build_age;
     }
 
     return plantIDs;
@@ -7440,6 +7449,12 @@ void PlantArchitecture::enableGroundClipping(float ground_height) {
     ground_clipping_height = ground_height;
 }
 
+float PlantArchitecture::pipeModelInternodeRadius(const Shoot &shoot, uint node_number) {
+    const float supported_area = shoot.phytomers.at(node_number)->downstream_leaf_area + shoot.sumDownstreamInflorescenceArea(node_number);
+    const float internode_area = shoot.shoot_parameters.girth_area_factor.val() * supported_area * 1e-4f;
+    return sqrtf(internode_area / PI_F);
+}
+
 void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry) {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::incrementPhytomerInternodeGirth): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -7476,16 +7491,19 @@ void PlantArchitecture::incrementPhytomerInternodeGirth(uint plantID, uint shoot
     //
     // Only inflorescences borne on the stem's own axis are counted here -- Shoot::refreshDownstreamInflorescenceArea() gates the sum on Phytomer::inflorescenceLoadsStem(). A lateral flower cluster is not a
     // load the stem is sized by, and because the radius below only ever increases, letting a bloom in would leave a woody plant permanently thickened by flowers it has since dropped.
-    const float supported_area = leaf_area + shoot->sumDownstreamInflorescenceArea(node_number);
+    float phytomer_radius = pipeModelInternodeRadius(*shoot, node_number);
 
-    float internode_area = girth_area_factor * supported_area * 1e-4;
-    float phytomer_radius = sqrtf(internode_area / PI_F);
-
+    // The radius closes half of its gap to the pipe-model radius each step; a culm under the carbohydrate model's grass sub-model closes it at CarbonGrassParameters::girth_growth_rate instead
+    float closing_fraction = 0.5f;
+    const PlantInstance &plant_instance = plant_instances.at(plantID);
+    if (carbon_model_enabled && plant_instance.carb_parameters.submodel == CARBON_SUBMODEL_GRASS) {
+        closing_fraction = 1.f - std::exp(-plant_instance.carb_parameters.grass.girth_growth_rate * dt);
+    }
     auto &segment = shoot->shoot_internode_radii.at(node_number);
     for (float &radius: segment) {
         if (phytomer_radius > radius) {
             // radius should only increase
-            radius = radius + 0.5 * (phytomer_radius - radius);
+            radius = radius + closing_fraction * (phytomer_radius - radius);
         }
     }
 
@@ -11536,6 +11554,13 @@ void PlantArchitecture::setPlantCarbohydrateModelParameters(uint plantID, const 
     plant_instance.carb_parameters = carb_parameters;
 }
 
+CarbohydrateParameters PlantArchitecture::getPlantCarbohydrateModelParameters(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantCarbohydrateModelParameters): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    return plant_instances.at(plantID).carb_parameters;
+}
+
 void PlantArchitecture::setPlantCarbohydrateModelParameters(const std::vector<uint> &plantIDs, const CarbohydrateParameters &carb_parameters) {
     for (uint plantID: plantIDs) {
         setPlantCarbohydrateModelParameters(plantID, carb_parameters);
@@ -11612,6 +11637,42 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
     if (phyllochron_min == 9999) {
         return;
     }
+
+    // **** developmental time **** //
+    // Under the carbohydrate model a plant develops in thermal time: the call's developmental days are the thermal time supplied by accumulateThermalTime() over that of a day at the plant's
+    // reference temperature, while its carbon fluxes run on the call's calendar days. Growth to a plant's build age runs at the reference temperature.
+    float max_development_rate = 1.f;
+    for (uint plantID: plantIDs) {
+        PlantInstance &plant_instance = plant_instances.at(plantID);
+        plant_instance.development_rate = 1.f;
+        plant_instance.grain_development_rate = 1.f;
+        if (carbon_model_enabled && !growing_to_build_age) {
+            const CarbonDevelopmentParameters &development = plant_instance.carb_parameters.development;
+            const double expected_hours = 24.0 * double(time_step_days);
+            if (std::fabs(plant_instance.pending_thermal_time_hours - expected_hours) > 1e-3 * std::max(1.0, expected_hours)) {
+                helios_runtime_error("ERROR (PlantArchitecture::advanceTime): plant " + std::to_string(plantID) + " (" + plant_instance.plant_name + ") develops in thermal time under the carbohydrate model, but " +
+                                     std::to_string(plant_instance.pending_thermal_time_hours) + " hours of air temperature were supplied for a call of " + std::to_string(expected_hours) +
+                                     " hours. Call accumulateThermalTime() with the air temperature of every hour (or of the whole period) before each advanceTime() call.");
+            }
+            const float reference_rate = developmentThermalRate(development, development.reference_temperature);
+            plant_instance.development_rate = time_step_days > 0.f ? float(plant_instance.pending_thermal_time_Cd / reference_rate / time_step_days) : 0.f;
+            plant_instance.cumulative_thermal_time_Cd += plant_instance.pending_thermal_time_Cd;
+            if (plant_instance.carb_parameters.submodel == CARBON_SUBMODEL_GRASS) {
+                // A panicle past anthesis runs on the grain-filling temperatures, in the same units: days at the plant's reference temperature
+                const CarbonGrassParameters &grass_params = plant_instance.carb_parameters.grass;
+                const float grain_reference_rate = std::min(development.reference_temperature, grass_params.grain_fill_optimum_temperature) - grass_params.grain_fill_base_temperature;
+                plant_instance.grain_development_rate = time_step_days > 0.f ? float(plant_instance.pending_grain_thermal_time_Cd / grain_reference_rate / time_step_days) : 0.f;
+            }
+            max_development_rate = std::max(max_development_rate, plant_instance.development_rate);
+        }
+        if (!growing_to_build_age) {
+            plant_instance.pending_thermal_time_Cd = 0;
+            plant_instance.pending_grain_thermal_time_Cd = 0;
+            plant_instance.pending_thermal_time_hours = 0;
+        }
+    }
+    // The sub-step is sized so that no shoot develops by more than its phyllochron within one
+    phyllochron_min /= max_development_rate;
 
     // **** accumulate photosynthate **** //
     if (carbon_model_enabled) {
@@ -11706,6 +11767,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 continue;
             }
 
+            // Developmental days of this sub-step: calendar days under the carbohydrate model's thermal time (see the developmental time above), else calendar days. Plant age and the
+            // dormancy cycle stay on the calendar.
+            const float dt_dev = dt_max_days * plant_instance.development_rate;
             plant_instance.current_age += dt_max_days;
             plant_instance.time_since_dormancy += dt_max_days;
 
@@ -11778,7 +11842,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 auto shoot = shoot_tree->at(i);
 
                 for (auto &phytomer: shoot->phytomers) {
-                    phytomer->age += dt_max_days;
+                    phytomer->age += dt_dev;
                     phytomer->updateLeafTextureStage();
 
                     if (phytomer->phytomer_parameters.phytomer_callback_function != nullptr) {
@@ -11817,10 +11881,15 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                     for (auto &petiole: phytomer->floral_buds) {
                         for (auto &fbud: petiole) {
                             if (fbud.state != BUD_DORMANT && fbud.state != BUD_DEAD) {
-                                fbud.time_counter += dt_max_days;
+                                // A grass panicle past anthesis runs on the grain-filling temperatures of the carbohydrate model's grass sub-model
+                                float dt_bud = dt_dev;
+                                if (carbon_model_enabled && plant_instance.carb_parameters.submodel == CARBON_SUBMODEL_GRASS && isGrassPanicle(fbud) && fbud.time_counter >= grassAnthesisAge(plant_instance)) {
+                                    dt_bud = dt_max_days * plant_instance.grain_development_rate;
+                                }
+                                fbud.time_counter += dt_bud;
                                 // Accumulate age for any bud that has broken (past dormant/active state)
                                 if (fbud.state != BUD_ACTIVE) {
-                                    fbud.age += dt_max_days;
+                                    fbud.age += dt_bud;
                                 }
                             }
 
@@ -11904,7 +11973,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 for (auto &phytomer: shoot->phytomers) {
                     // scale internode length
                     if (phytomer->current_internode_scale_factor < 1) {
-                        float dL_internode = dt_max_days * shoot->elongation_rate_instantaneous * phytomer->internode_length_max;
+                        float dL_internode = dt_dev * shoot->elongation_rate_instantaneous * phytomer->internode_length_max;
                         float length_scale = fmin(1.f, (phytomer->getInternodeLength() + dL_internode) / phytomer->internode_length_max);
                         phytomer->setInternodeLengthScaleFraction(length_scale, false);
                     }
@@ -11925,7 +11994,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                         if (carbon_cambium) {
                             incrementPhytomerInternodeGirth_carb(plantID, shoot->ID, node_index, dt_max_days, false, shoot_length, shoot_volume);
                         } else {
-                            incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dt_max_days, false);
+                            incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dt_dev, false);
                         }
                     }
                 }
@@ -11957,7 +12026,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                             // the petiole then advances in lockstep with the blade exactly as it did when the blade carried it.
                             float petiole_scale = (petiole_index < phytomer->current_petiole_scale_factor.size()) ? phytomer->current_petiole_scale_factor.at(petiole_index) : 1.f;
                             if (petiole_still_elongating) {
-                                petiole_scale = fmin(1.f, phytomer->current_petiole_scale_factor.at(petiole_index) + dt_max_days * shoot->elongation_rate_instantaneous);
+                                petiole_scale = fmin(1.f, phytomer->current_petiole_scale_factor.at(petiole_index) + dt_dev * shoot->elongation_rate_instantaneous);
                             }
 
                             if (!leaf_still_expanding) {
@@ -11974,7 +12043,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                             // ShootParameters::leaf_expansion_rate_max. A species whose leaves finish expanding well before its
                             // internodes stop elongating cannot be represented by a single rate: fitting one to the leaves leaves
                             // every mature internode at its maximum length, and fitting it to the internodes leaves the leaves small.
-                            float dL_leaf = dt_max_days * shoot->leaf_expansion_rate_instantaneous * phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
+                            float dL_leaf = dt_dev * shoot->leaf_expansion_rate_instantaneous * phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
                             float leaf_scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer->phytomer_parameters.leaf.prototype_scale.val());
 
                             // Expressed as a fraction of THIS leaf's own full size rather than of the shoot type's prototype_scale. current_leaf_scale_factor means "how far this leaf has grown toward its
@@ -12015,7 +12084,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                     uint parent_petiole_index = 0;
                     for (auto &petiole: phytomer->axillary_vegetative_buds) {
                         for (auto &vbud: petiole) {
-                            if (vbud.state == BUD_ACTIVE && phytomer->age + dt_max_days > shoot->shoot_parameters.vegetative_bud_break_time.val()) {
+                            if (vbud.state == BUD_ACTIVE && phytomer->age + dt_dev > shoot->shoot_parameters.vegetative_bud_break_time.val()) {
                                 ShootParameters *new_shoot_parameters = &plant_instance.shoot_types_snapshot.at(vbud.shoot_type_label);
                                 int parent_node_count = shoot->current_node_number;
 
@@ -12103,7 +12172,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 // from that distribution. Append every phytomer the accumulated counter has earned rather than at
                 // most one, so the node production rate is the phyllochron and not the sub-step length. The node cap
                 // is re-checked each time because reaching it terminates apical growth.
-                shoot->phyllochron_counter += dt_max_days;
+                shoot->phyllochron_counter += dt_dev;
                 while (shoot->phyllochron_instantaneous > 0.f && shoot->phyllochron_counter >= shoot->phyllochron_instantaneous && !shoot->phytomers.back()->isdormant && shoot->current_node_number < shoot->getGrowthNodeCap()) {
                     float internode_radius = shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.val();
                     shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.resample();
@@ -12181,7 +12250,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
             // *** fruit-branch collision avoidance *** //
             // After the node update, so that the internode skeleton and the fruit positions are those of this time step.
             if (fruit_branch_collision_enabled) {
-                resolveFruitBranchCollisions(plantID, dt_max_days);
+                resolveFruitBranchCollisions(plantID, dt_dev);
             }
 
             // *** ground collision detection *** //
@@ -12200,6 +12269,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                         break;
                     case CARBON_SUBMODEL_GRASS:
                         updateGrassTillers(plantID);
+                        senesceMatureGrassCulms(plantID);
                         break;
                 }
                 allocateSurplusCarbon(plantID, dt_max_days, budget_before);
