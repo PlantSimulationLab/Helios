@@ -2088,6 +2088,43 @@ DOCTEST_TEST_CASE("PlantArchitecture builds fruit from current photosynthate aft
     DOCTEST_CHECK(dropped_without_photosynthate > 0.f);
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture fruit that has grown at its potential survives a brief shortfall of photosynthate") {
+    // Fruit drop is judged on the growth the young fruit have received since set against their potential, not on the last
+    // few days alone: fruit that grew at its potential for ten days loses little ground in a three-day dark spell and none of
+    // it drops, while fruit kept in the dark for good falls ever further behind and drops. A rule that looked only at the
+    // last supply_averaging_days read the dark spell as famine and dropped fruit that went on to grow normally.
+    auto grow = [](int dark_days) {
+        Context context;
+        context.seedRandomGenerator(12345);
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 75);
+        plantarchitecture.setPlantPhenologicalThresholds(plantID, 0, 40, 5, 5, 40, 1000);
+        CarbohydrateParameters params = constructionOnlyCarbohydrateParameters();
+        params.fruit.reserve_funded_days = 2.f;
+        params.fruit.drop_window_end = 40.f;
+        // A nearly linear dry-matter curve, so that ten days at the potential are a substantial share of the growth to date
+        params.fruit.dry_matter_midpoint = 0.5f;
+        params.fruit.dry_matter_width = 2.f;
+        plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+        plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+        plantarchitecture.enableCarbohydrateModel();
+        float fruit_dropped = 0.f;
+        for (int day = 0; day < 10 + dark_days + 3; day++) {
+            const bool dark = day >= 10 && day < 10 + dark_days;
+            drivePhotosynthesisForOneDay(context, plantarchitecture, plantID, dark ? 0.f : 15.f, 12);
+            plantarchitecture.advanceTime(plantID, 1);
+            fruit_dropped += plantarchitecture.getPlantCarbonBudget(plantID).fruit_dropped; // the budget covers one advanceTime() call
+        }
+        return fruit_dropped;
+    };
+
+    DOCTEST_CHECK(grow(0) == 0.f);
+    DOCTEST_CHECK(grow(4) == 0.f);
+    DOCTEST_CHECK(grow(25) > 0.f);
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture storage takes up surplus photosynthate toward capacity and the rest is forgone") {
     // Storage is a sink: of the photosynthate left after maintenance and growth it takes storage_refill_rate x (capacity -
     // pool) per day, radial growth takes its potential, and the rest is not fixed at all. Over one day of ample photosynthesis

@@ -1507,6 +1507,7 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
         fbud.previous_fruit_scale_factor = fbud.current_fruit_scale_factor;
         fbud.fruit_carbon_fraction_charged = 0.f;
         fbud.fruit_potential_fraction = 0.f;
+        fbud.fruit_drop_credit_fraction = 0.f;
         fbud.grain = GrainSink();
     }
 
@@ -12196,7 +12197,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 subtractShootGrowthCarbon(plantID, dt_max_days);
                 switch (plant_instance.carb_parameters.submodel) {
                     case CARBON_SUBMODEL_TREE:
-                        checkCarbonPool_dropFruit(plantID, dt_max_days);
+                        checkCarbonPool_dropFruit(plantID);
                         break;
                     case CARBON_SUBMODEL_GRASS:
                         updateGrassTillers(plantID);

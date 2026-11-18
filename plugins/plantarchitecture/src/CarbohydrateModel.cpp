@@ -126,6 +126,7 @@ void PlantArchitecture::markShootConstructionCharged(Shoot &shoot) const {
                     case CARBON_SUBMODEL_TREE:
                         fbud.fruit_carbon_fraction_charged = phytomer->calculateFruitDryMatterFraction(fbud);
                         fbud.fruit_potential_fraction = fbud.fruit_carbon_fraction_charged;
+                        fbud.fruit_drop_credit_fraction = fbud.fruit_carbon_fraction_charged;
                         break;
                     case CARBON_SUBMODEL_GRASS: {
                         // A panicle that already stands is taken as built at its potential for the part of the critical period that has passed, and its grain number as set if the period is over;
