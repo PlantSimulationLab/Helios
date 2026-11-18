@@ -70,6 +70,21 @@ struct PoseRigidTransform {
     [[nodiscard]] PoseRigidTransform composedWith(const PoseRigidTransform &inner) const;
 };
 
+//! Bend of a petiole along its length set by a joint pose (PlantJointPose::bend_degrees, PlantJointPose::bend_lateral_degrees), in the frame of the plant as it grew
+/**
+ * Each segment of the petiole's centerline is turned about \ref axis by the share of \ref angle that lies before it along the centerline's arclength.
+ */
+struct PosePetioleBend {
+    //! Unit axis of the bend, in world coordinates of the plant as it grew
+    double axis[3] = {1, 0, 0};
+    //! Turn accumulated from the base of the petiole to its tip, in radians; zero for a petiole that is not bent
+    double angle = 0;
+
+    bool operator==(const PosePetioleBend &other) const {
+        return angle == other.angle && (angle == 0 || (axis[0] == other.axis[0] && axis[1] == other.axis[1] && axis[2] == other.axis[2]));
+    }
+};
+
 //! What a pose remembers about one Context object of a plant
 struct PoseObjectState {
     uint objID = 0;
@@ -101,6 +116,10 @@ struct PoseGroupState {
     PoseRigidTransform transform;
     //! Motion of the part from where it grew under the joint poses now being applied
     PoseRigidTransform pending_transform;
+    //! Bend of a petiole along its length, as last applied, before its motion (only a petiole is ever bent)
+    PosePetioleBend bend;
+    //! Bend of a petiole along its length under the joint poses now being applied
+    PosePetioleBend pending_bend;
     //! Whether the part has to be left to settle under gravity even where it stands as it grew
     /**
      * Set when something other than the pose has changed a leaf of the part while it was posed. What was recorded for the unposed plant is then the changed leaf with the droop of its posed orientation
@@ -147,6 +166,70 @@ struct PoseGroupReference {
     uint petiole_index = 0;
     uint bud_index = 0;
 };
+
+// ---- Polylines (petiole and peduncle centerlines) ---- //
+
+//! Cumulative arclength at each node of a polyline
+inline std::vector<float> polylineNodeArclengths(const std::vector<helios::vec3> &polyline) {
+    std::vector<float> arclength(polyline.size(), 0.f);
+    for (size_t node = 1; node < polyline.size(); node++) {
+        arclength.at(node) = arclength.at(node - 1) + (polyline.at(node) - polyline.at(node - 1)).magnitude();
+    }
+    return arclength;
+}
+
+//! Index of the segment of a polyline containing a given arclength, for a polyline of at least two nodes
+inline size_t polylineSegmentAtArclength(const std::vector<float> &node_arclength, float arclength) {
+    size_t segment = 0;
+    while (segment + 2 < node_arclength.size() && arclength > node_arclength.at(segment + 1)) {
+        segment++;
+    }
+    return segment;
+}
+
+//! Point at a given arclength along a polyline, for a polyline of at least two nodes
+inline helios::vec3 polylinePointAtArclength(const std::vector<helios::vec3> &polyline, const std::vector<float> &node_arclength, float arclength) {
+    const size_t segment = polylineSegmentAtArclength(node_arclength, arclength);
+    const float segment_length = node_arclength.at(segment + 1) - node_arclength.at(segment);
+    const float t = segment_length > 0.f ? std::clamp((arclength - node_arclength.at(segment)) / segment_length, 0.f, 1.f) : 0.f;
+    return polyline.at(segment) + t * (polyline.at(segment + 1) - polyline.at(segment));
+}
+
+//! Unit tangent at a given arclength along a polyline, blended linearly between the tangents at its nodes so that it turns continuously along the curve rather than jumping at each node
+inline helios::vec3 polylineTangentAtArclength(const std::vector<helios::vec3> &polyline, const std::vector<float> &node_arclength, float arclength) {
+    const size_t segment = polylineSegmentAtArclength(node_arclength, arclength);
+    auto segmentDirection = [&polyline](size_t s) { return normalize(polyline.at(s + 1) - polyline.at(s)); };
+    auto nodeTangent = [&](size_t node) {
+        if (node == 0) {
+            return segmentDirection(0);
+        } else if (node + 1 == polyline.size()) {
+            return segmentDirection(node - 1);
+        }
+        const helios::vec3 sum = segmentDirection(node - 1) + segmentDirection(node);
+        return sum.magnitude() > 1e-6f ? normalize(sum) : segmentDirection(node);
+    };
+    const float segment_length = node_arclength.at(segment + 1) - node_arclength.at(segment);
+    const float t = segment_length > 0.f ? std::clamp((arclength - node_arclength.at(segment)) / segment_length, 0.f, 1.f) : 0.f;
+    const helios::vec3 blended = (1.f - t) * nodeTangent(segment) + t * nodeTangent(segment + 1);
+    return blended.magnitude() > 1e-6f ? normalize(blended) : segmentDirection(segment);
+}
+
+//! Arclength along a polyline of the point on it closest to a given point, for a polyline of at least two nodes
+inline float polylineArclengthOfClosestPoint(const std::vector<helios::vec3> &polyline, const std::vector<float> &node_arclength, const helios::vec3 &point) {
+    float nearest_distance = std::numeric_limits<float>::max();
+    float nearest_arclength = 0.f;
+    for (size_t segment = 0; segment + 1 < polyline.size(); segment++) {
+        const helios::vec3 span = polyline.at(segment + 1) - polyline.at(segment);
+        const float span_squared = span * span;
+        const float t = span_squared > 0.f ? std::clamp(((point - polyline.at(segment)) * span) / span_squared, 0.f, 1.f) : 0.f;
+        const float distance = (point - (polyline.at(segment) + t * span)).magnitude();
+        if (distance < nearest_distance) {
+            nearest_distance = distance;
+            nearest_arclength = node_arclength.at(segment) + t * (node_arclength.at(segment + 1) - node_arclength.at(segment));
+        }
+    }
+    return nearest_arclength;
+}
 
 //! Look up a build parameter, falling back to a default if it was not given
 /**

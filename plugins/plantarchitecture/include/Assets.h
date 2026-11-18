@@ -63,6 +63,111 @@ std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &res
  */
 std::vector<helios::vec3> buildLeafBladeLattice(const LeafShapeValues &shape);
 
+//! Arclength along the midrib of a leaf blade lattice at each of its stations, as a fraction of the midrib's whole length
+/**
+ * The midrib is the lattice row subdivisions_y / 2. Its stations are not evenly spaced along its arc in general: the longitudinal curvature of buildLeafBladeLattice() turns each station about the blade's base.
+ * \param[in] rest_vertices Lattice vertices, row-major over (Ny+1) rows of (Nx+1) vertices.
+ * \param[in] Nx Number of subdivisions along the blade.
+ * \param[in] Ny Number of subdivisions across the blade (even).
+ * \param[out] midrib_length If not null, receives the midrib's arclength in the units of \p rest_vertices.
+ * \return Nx+1 fractions, from 0 at the base to 1 at the tip.
+ */
+std::vector<float> leafMidribStationFractions(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float *midrib_length = nullptr);
+
+//! Place the stations of a blade's midrib along a polyline, without stretching the midrib between them
+/**
+ * The stations are walked out from the polyline's first point, each the first point further along the polyline at a distance from the one before of length_scale times the rest length of the midrib
+ * segment between them, and length_scale is found so that the last station lands on the polyline's end. The midrib so laid keeps the proportions of its rest segments, as a blade bent without stretching
+ * does, and a polyline through the stations of a midrib laid this way places them where they are.
+ * \param[in] polyline At least two points, no two consecutive ones coincident.
+ * \param[in] rest_segment_lengths Rest length of each midrib segment, from the base; all positive.
+ * \param[out] length_scale Factor by which the midrib's rest segment lengths are scaled to reach the polyline's end.
+ * \param[out] station_fractions If not null, receives the position of each station along the polyline as a fraction of its arclength.
+ * \return One station more than there are segments, the first at the polyline's first point and the last at its end.
+ */
+std::vector<helios::vec3> placeMidribStationsAlongPolyline(const std::vector<helios::vec3> &polyline, const std::vector<float> &rest_segment_lengths, float &length_scale, std::vector<float> *station_fractions = nullptr);
+
+//! Values attached to the points of a polyline, interpolated linearly by arclength at given fractions of it
+/**
+ * \param[in] polyline At least two points, no two consecutive ones coincident.
+ * \param[in] values One value per point of \p polyline.
+ * \param[in] fractions Fractions of the polyline's arclength, each in [0, 1].
+ * \return One value per fraction.
+ */
+std::vector<float> resamplePolylineValuesAtFractions(const std::vector<helios::vec3> &polyline, const std::vector<float> &values, const std::vector<float> &fractions);
+
+//! Lay a leaf blade lattice along a prescribed midrib
+/**
+ * Each row of the lattice across the blade is carried rigidly with its station on the midrib, so the blade's cross-section (fold, lateral curvature, roll, waves) and its width are kept while its midrib
+ * takes the prescribed path. The row at station i is turned by the rotation U_i that carries the midrib's rest direction there to its new direction, accumulated from the base as a rotation-minimizing
+ * frame: U_0 is the identity, so the base row keeps its rest orientation, and for i >= 1 U_i is U_{i-1} followed by the least rotation that takes U_{i-1} applied to the rest direction of segment (i-1, i)
+ * to its new direction. The row is then twisted about the midrib's new direction at the station by \p station_rolls[i]. For a midrib that stays in one plane through the rest midrib this is exactly the
+ * carry deformLeafLattice() applies to a drooping blade, which is laid out with this function.
+ * \param[in] rest_vertices Rest lattice vertices, row-major over (Ny+1) rows of (Nx+1) vertices, with the midrib in row Ny / 2.
+ * \param[in] Nx Number of subdivisions along the blade.
+ * \param[in] Ny Number of subdivisions across the blade (even).
+ * \param[in] station_positions New position of each of the Nx+1 midrib stations, in the frame of \p rest_vertices scaled by \p scale. No two consecutive positions may coincide.
+ * \param[in] station_rolls Twist of the row at each station about the midrib, in radians, right-handed about the midrib's direction from base to tip; either Nx+1 values or none for an untwisted blade.
+ * \param[in] scale Factor applied to each row's offset from its midrib station, for a lattice whose stations are laid out at another size than \p rest_vertices.
+ * \return Lattice vertices, parallel to \p rest_vertices.
+ */
+std::vector<helios::vec3> layLeafLatticeAlongMidrib(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, const std::vector<helios::vec3> &station_positions, const std::vector<float> &station_rolls,
+                                                    float scale = 1.f);
+
+//! Carry points of a leaf's mesh beyond its blade lattice (such as the join of its petiolule under the blade) with a blade laid along a midrib
+/**
+ * A point is carried with the midrib station it lies beside, by its position along the rest midrib, blending the carries of the two stations either side of it; a point behind the blade's base is left
+ * where it is. The carry of a station is that of its lattice row in layLeafLatticeAlongMidrib().
+ * \param[in] rest_vertices Rest lattice vertices, as for layLeafLatticeAlongMidrib().
+ * \param[in] Nx Number of subdivisions along the blade.
+ * \param[in] Ny Number of subdivisions across the blade (even).
+ * \param[in] station_positions New position of each of the Nx+1 midrib stations.
+ * \param[in] station_rolls Twist at each station in radians, Nx+1 values or none.
+ * \param[in] scale Factor applied to each point's offset from its midrib station.
+ * \param[in] points Rest positions of the points, in the frame of \p rest_vertices.
+ * \return Carried positions, parallel to \p points.
+ */
+std::vector<helios::vec3> carryPointsAlongMidrib(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, const std::vector<helios::vec3> &station_positions, const std::vector<float> &station_rolls, float scale,
+                                                 const std::vector<helios::vec3> &points);
+
+//! Normal of the upper side of a leaf blade laid along a midrib, at each midrib station
+/**
+ * The normal at a station is that of the blade as layLeafLatticeAlongMidrib() lays it, ignoring its fold and curvature across the midrib: the rest lattice's +z, which is the cross product of the rest
+ * midrib direction (+x) with the lattice's lateral axis (+y), carried by the station's rotation and twisted by its roll, and taken perpendicular to the midrib's new direction there.
+ * \param[in] rest_vertices Rest lattice vertices, as for layLeafLatticeAlongMidrib().
+ * \param[in] Nx Number of subdivisions along the blade.
+ * \param[in] Ny Number of subdivisions across the blade (even).
+ * \param[in] station_positions Position of each of the Nx+1 midrib stations.
+ * \param[in] station_rolls Twist at each station in radians, Nx+1 values or none.
+ * \return Unit normal at each station.
+ */
+std::vector<helios::vec3> leafMidribStationNormals(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, const std::vector<helios::vec3> &station_positions, const std::vector<float> &station_rolls);
+
+//! Twist about the midrib that turns the untwisted blade's normal at each station to a given normal
+/**
+ * The inverse of leafMidribStationNormals(): each given normal is taken perpendicular to the midrib's direction at its station and the signed angle to it from the untwisted normal is returned. An error is
+ * raised for a normal that is (nearly) parallel to the midrib, which fixes no twist.
+ * \param[in] rest_vertices Rest lattice vertices, as for layLeafLatticeAlongMidrib().
+ * \param[in] Nx Number of subdivisions along the blade.
+ * \param[in] Ny Number of subdivisions across the blade (even).
+ * \param[in] station_positions Position of each of the Nx+1 midrib stations.
+ * \param[in] station_normals Normal of the blade's upper side at each station; need not be unit length.
+ * \return Twist at each station in radians, in (-pi, pi].
+ */
+std::vector<float> leafMidribRollsFromNormals(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, const std::vector<helios::vec3> &station_positions, const std::vector<helios::vec3> &station_normals);
+
+//! Twist about the midrib of each station of a blade lattice, measured against its rest lattice laid untwisted along the same midrib
+/**
+ * The vector from the first to the last vertex of each row across the blade is compared with the same vector of the rest lattice carried by the station's untwisted rotation (see layLeafLatticeAlongMidrib()),
+ * both taken perpendicular to the midrib, so a blade laid by layLeafLatticeAlongMidrib() reads back the rolls it was laid with, and a blade bent in its own plane reads zero.
+ * \param[in] rest_vertices Rest lattice vertices.
+ * \param[in] current_vertices Current lattice vertices, in the same frame and at the same scale as their midrib is to be measured; parallel to \p rest_vertices.
+ * \param[in] Nx Number of subdivisions along the blade.
+ * \param[in] Ny Number of subdivisions across the blade (even).
+ * \return Twist at each station in radians, in (-pi, pi].
+ */
+std::vector<float> measureLeafMidribRolls(const std::vector<helios::vec3> &rest_vertices, const std::vector<helios::vec3> &current_vertices, uint Nx, uint Ny);
+
 //! Number of vertices a petiolule adds to a leaf prototype built by the generic leaf prototype function
 /**
  * The petiolule's vertices are appended after the blade lattice in the prototype's mesh, so this is what separates the two: the lattice is every vertex but the last petioluleVertexCount().
