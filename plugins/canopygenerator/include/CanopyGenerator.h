@@ -1056,7 +1056,7 @@ public:
 
     //! Reads the XML file of the given name and stores all the configured canopy parameters
     /**
-     * \param[in] filename Path to XML file to be read
+     * \param[in] filename Path to XML file to be read, resolved with helios::tryResolveFilePath()
      * \param[in] build true if we should build all the canopies for which we read parameters in the XML file
      */
     void loadXML(const char *filename, bool build = true);

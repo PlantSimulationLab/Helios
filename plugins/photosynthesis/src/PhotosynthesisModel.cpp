@@ -251,63 +251,89 @@ C4ModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_C4(uint UUI
 
     C4ModelCoefficients coeffs;
     bool found_in_material = false;
-    try {
-        const Material &mat = context->getMaterial(materialID);
-        // Use Vpmax presence as the sentinel — if it's set, assume the full C4 quartet is set.
-        if (mat.doesMaterialDataExist(LABEL_C4_Vpmax)) {
-            // Helper to deserialize a temperature-response quartet via the appropriate setter.
-            auto load_resp = [&](const char *base, const char *dHa_lbl, const char *dHd_lbl, const char *Topt_lbl, auto setter_constant, auto setter_arrhenius, auto setter_peaked) {
-                float v25 = 0.f, dHa = 0.f, dHd = 0.f, Topt = 0.f;
-                mat.getMaterialData(base, v25);
-                mat.getMaterialData(dHa_lbl, dHa);
-                mat.getMaterialData(dHd_lbl, dHd);
-                mat.getMaterialData(Topt_lbl, Topt);
-                if (Topt < 1000.f) {
-                    setter_peaked(v25, dHa, Topt - 273.15f, dHd);
-                } else if (dHa != 0.f) {
-                    setter_arrhenius(v25, dHa);
-                } else {
-                    setter_constant(v25);
-                }
-            };
+    // Errors reading the material's coefficients (a value of the wrong type, or one of a set missing) are not caught: falling back to
+    // the default coefficients would hide that the material's own were not used.
+    const Material &mat = context->getMaterial(materialID);
+    // Use Vpmax presence as the sentinel — if it's set, assume the full C4 quartet is set.
+    if (mat.doesMaterialDataExist(LABEL_C4_Vpmax)) {
+        // Helper to deserialize a temperature-response quartet via the appropriate setter.
+        auto load_resp = [&](const char *base, const char *dHa_lbl, const char *dHd_lbl, const char *Topt_lbl, auto setter_constant, auto setter_arrhenius, auto setter_peaked) {
+            float v25 = 0.f, dHa = 0.f, dHd = 0.f, Topt = 0.f;
+            mat.getMaterialData(base, v25);
+            mat.getMaterialData(dHa_lbl, dHa);
+            mat.getMaterialData(dHd_lbl, dHd);
+            mat.getMaterialData(Topt_lbl, Topt);
+            if (Topt < 1000.f) {
+                setter_peaked(v25, dHa, Topt - 273.15f, dHd);
+            } else if (dHa != 0.f) {
+                setter_arrhenius(v25, dHa);
+            } else {
+                setter_constant(v25);
+            }
+        };
 
-            load_resp(LABEL_C4_Vpmax, LABEL_C4_Vpmax_dHa, LABEL_C4_Vpmax_dHd, LABEL_C4_Vpmax_Topt, [&](float v) { coeffs.setVpmax(v); }, [&](float v, float a) { coeffs.setVpmax(v, a); }, [&](float v, float a, float t, float d) { coeffs.setVpmax(v, a, t, d); });
-            load_resp(LABEL_C4_Vcmax, LABEL_C4_Vcmax_dHa, LABEL_C4_Vcmax_dHd, LABEL_C4_Vcmax_Topt, [&](float v) { coeffs.setVcmax(v); }, [&](float v, float a) { coeffs.setVcmax(v, a); }, [&](float v, float a, float t, float d) { coeffs.setVcmax(v, a, t, d); });
-            load_resp(LABEL_C4_Jmax, LABEL_C4_Jmax_dHa, LABEL_C4_Jmax_dHd, LABEL_C4_Jmax_Topt, [&](float v) { coeffs.setJmax(v); }, [&](float v, float a) { coeffs.setJmax(v, a); }, [&](float v, float a, float t, float d) { coeffs.setJmax(v, a, t, d); });
-            load_resp(LABEL_C4_Rd, LABEL_C4_Rd_dHa, LABEL_C4_Rd_dHd, LABEL_C4_Rd_Topt, [&](float v) { coeffs.setRd(v); }, [&](float v, float a) { coeffs.setRd(v, a); }, [&](float v, float a, float t, float d) { coeffs.setRd(v, a, t, d); });
-            load_resp(LABEL_C4_gm, LABEL_C4_gm_dHa, LABEL_C4_gm_dHd, LABEL_C4_gm_Topt, [&](float v) { coeffs.setMesophyllConductance_gm(v); }, [&](float v, float a) { coeffs.setMesophyllConductance_gm(v, a); }, [&](float v, float a, float t, float d) { coeffs.setMesophyllConductance_gm(v, a, t, d); });
+        load_resp(
+                LABEL_C4_Vpmax, LABEL_C4_Vpmax_dHa, LABEL_C4_Vpmax_dHd, LABEL_C4_Vpmax_Topt, [&](float v) { coeffs.setVpmax(v); }, [&](float v, float a) { coeffs.setVpmax(v, a); },
+                [&](float v, float a, float t, float d) { coeffs.setVpmax(v, a, t, d); });
+        load_resp(
+                LABEL_C4_Vcmax, LABEL_C4_Vcmax_dHa, LABEL_C4_Vcmax_dHd, LABEL_C4_Vcmax_Topt, [&](float v) { coeffs.setVcmax(v); }, [&](float v, float a) { coeffs.setVcmax(v, a); },
+                [&](float v, float a, float t, float d) { coeffs.setVcmax(v, a, t, d); });
+        load_resp(LABEL_C4_Jmax, LABEL_C4_Jmax_dHa, LABEL_C4_Jmax_dHd, LABEL_C4_Jmax_Topt, [&](float v) { coeffs.setJmax(v); }, [&](float v, float a) { coeffs.setJmax(v, a); }, [&](float v, float a, float t, float d) { coeffs.setJmax(v, a, t, d); });
+        load_resp(LABEL_C4_Rd, LABEL_C4_Rd_dHa, LABEL_C4_Rd_dHd, LABEL_C4_Rd_Topt, [&](float v) { coeffs.setRd(v); }, [&](float v, float a) { coeffs.setRd(v, a); }, [&](float v, float a, float t, float d) { coeffs.setRd(v, a, t, d); });
+        load_resp(
+                LABEL_C4_gm, LABEL_C4_gm_dHa, LABEL_C4_gm_dHd, LABEL_C4_gm_Topt, [&](float v) { coeffs.setMesophyllConductance_gm(v); }, [&](float v, float a) { coeffs.setMesophyllConductance_gm(v, a); },
+                [&](float v, float a, float t, float d) { coeffs.setMesophyllConductance_gm(v, a, t, d); });
 
-            // Kinetic constants — public fields, written directly. Use defaults if a label is missing
-            // (older serializations may pre-date a field; missing labels keep struct defaults).
-            if (mat.doesMaterialDataExist(LABEL_C4_Kc_25)) mat.getMaterialData(LABEL_C4_Kc_25, coeffs.Kc_25);
-            if (mat.doesMaterialDataExist(LABEL_C4_Ko_25)) mat.getMaterialData(LABEL_C4_Ko_25, coeffs.Ko_25);
-            if (mat.doesMaterialDataExist(LABEL_C4_Kp_25)) mat.getMaterialData(LABEL_C4_Kp_25, coeffs.Kp_25);
-            if (mat.doesMaterialDataExist(LABEL_C4_gamma_star_25)) mat.getMaterialData(LABEL_C4_gamma_star_25, coeffs.gamma_star_25);
-            if (mat.doesMaterialDataExist(LABEL_C4_Om_25)) mat.getMaterialData(LABEL_C4_Om_25, coeffs.Om_25);
-            if (mat.doesMaterialDataExist(LABEL_C4_dH_Kc)) mat.getMaterialData(LABEL_C4_dH_Kc, coeffs.dH_Kc);
-            if (mat.doesMaterialDataExist(LABEL_C4_dH_Ko)) mat.getMaterialData(LABEL_C4_dH_Ko, coeffs.dH_Ko);
-            if (mat.doesMaterialDataExist(LABEL_C4_dH_Kp)) mat.getMaterialData(LABEL_C4_dH_Kp, coeffs.dH_Kp);
-            if (mat.doesMaterialDataExist(LABEL_C4_dH_gamma_star)) mat.getMaterialData(LABEL_C4_dH_gamma_star, coeffs.dH_gamma_star);
-            if (mat.doesMaterialDataExist(LABEL_C4_dH_Om)) mat.getMaterialData(LABEL_C4_dH_Om, coeffs.dH_Om);
+        // Kinetic constants — public fields, written directly. Use defaults if a label is missing
+        // (older serializations may pre-date a field; missing labels keep struct defaults).
+        if (mat.doesMaterialDataExist(LABEL_C4_Kc_25))
+            mat.getMaterialData(LABEL_C4_Kc_25, coeffs.Kc_25);
+        if (mat.doesMaterialDataExist(LABEL_C4_Ko_25))
+            mat.getMaterialData(LABEL_C4_Ko_25, coeffs.Ko_25);
+        if (mat.doesMaterialDataExist(LABEL_C4_Kp_25))
+            mat.getMaterialData(LABEL_C4_Kp_25, coeffs.Kp_25);
+        if (mat.doesMaterialDataExist(LABEL_C4_gamma_star_25))
+            mat.getMaterialData(LABEL_C4_gamma_star_25, coeffs.gamma_star_25);
+        if (mat.doesMaterialDataExist(LABEL_C4_Om_25))
+            mat.getMaterialData(LABEL_C4_Om_25, coeffs.Om_25);
+        if (mat.doesMaterialDataExist(LABEL_C4_dH_Kc))
+            mat.getMaterialData(LABEL_C4_dH_Kc, coeffs.dH_Kc);
+        if (mat.doesMaterialDataExist(LABEL_C4_dH_Ko))
+            mat.getMaterialData(LABEL_C4_dH_Ko, coeffs.dH_Ko);
+        if (mat.doesMaterialDataExist(LABEL_C4_dH_Kp))
+            mat.getMaterialData(LABEL_C4_dH_Kp, coeffs.dH_Kp);
+        if (mat.doesMaterialDataExist(LABEL_C4_dH_gamma_star))
+            mat.getMaterialData(LABEL_C4_dH_gamma_star, coeffs.dH_gamma_star);
+        if (mat.doesMaterialDataExist(LABEL_C4_dH_Om))
+            mat.getMaterialData(LABEL_C4_dH_Om, coeffs.dH_Om);
 
-            if (mat.doesMaterialDataExist(LABEL_C4_alpha)) mat.getMaterialData(LABEL_C4_alpha, coeffs.alpha_psII_fraction);
-            if (mat.doesMaterialDataExist(LABEL_C4_x)) mat.getMaterialData(LABEL_C4_x, coeffs.x_etr_partition);
-            if (mat.doesMaterialDataExist(LABEL_C4_Vpr)) mat.getMaterialData(LABEL_C4_Vpr, coeffs.Vpr);
-            if (mat.doesMaterialDataExist(LABEL_C4_Rm_frac)) mat.getMaterialData(LABEL_C4_Rm_frac, coeffs.Rm_frac);
-            if (mat.doesMaterialDataExist(LABEL_C4_fcyc)) mat.getMaterialData(LABEL_C4_fcyc, coeffs.fcyc);
-            if (mat.doesMaterialDataExist(LABEL_C4_gbs)) mat.getMaterialData(LABEL_C4_gbs, coeffs.gbs);
-            if (mat.doesMaterialDataExist(LABEL_C4_ao)) mat.getMaterialData(LABEL_C4_ao, coeffs.ao);
-            if (mat.doesMaterialDataExist(LABEL_C4_f_spectral)) mat.getMaterialData(LABEL_C4_f_spectral, coeffs.f_spectral);
-            if (mat.doesMaterialDataExist(LABEL_C4_theta_etr)) mat.getMaterialData(LABEL_C4_theta_etr, coeffs.theta_etr);
-            if (mat.doesMaterialDataExist(LABEL_C4_h_protons)) mat.getMaterialData(LABEL_C4_h_protons, coeffs.h_protons);
-            if (mat.doesMaterialDataExist(LABEL_C4_H_J)) mat.getMaterialData(LABEL_C4_H_J, coeffs.H_J);
-            if (mat.doesMaterialDataExist(LABEL_C4_H_Jcyc)) mat.getMaterialData(LABEL_C4_H_Jcyc, coeffs.H_Jcyc);
+        if (mat.doesMaterialDataExist(LABEL_C4_alpha))
+            mat.getMaterialData(LABEL_C4_alpha, coeffs.alpha_psII_fraction);
+        if (mat.doesMaterialDataExist(LABEL_C4_x))
+            mat.getMaterialData(LABEL_C4_x, coeffs.x_etr_partition);
+        if (mat.doesMaterialDataExist(LABEL_C4_Vpr))
+            mat.getMaterialData(LABEL_C4_Vpr, coeffs.Vpr);
+        if (mat.doesMaterialDataExist(LABEL_C4_Rm_frac))
+            mat.getMaterialData(LABEL_C4_Rm_frac, coeffs.Rm_frac);
+        if (mat.doesMaterialDataExist(LABEL_C4_fcyc))
+            mat.getMaterialData(LABEL_C4_fcyc, coeffs.fcyc);
+        if (mat.doesMaterialDataExist(LABEL_C4_gbs))
+            mat.getMaterialData(LABEL_C4_gbs, coeffs.gbs);
+        if (mat.doesMaterialDataExist(LABEL_C4_ao))
+            mat.getMaterialData(LABEL_C4_ao, coeffs.ao);
+        if (mat.doesMaterialDataExist(LABEL_C4_f_spectral))
+            mat.getMaterialData(LABEL_C4_f_spectral, coeffs.f_spectral);
+        if (mat.doesMaterialDataExist(LABEL_C4_theta_etr))
+            mat.getMaterialData(LABEL_C4_theta_etr, coeffs.theta_etr);
+        if (mat.doesMaterialDataExist(LABEL_C4_h_protons))
+            mat.getMaterialData(LABEL_C4_h_protons, coeffs.h_protons);
+        if (mat.doesMaterialDataExist(LABEL_C4_H_J))
+            mat.getMaterialData(LABEL_C4_H_J, coeffs.H_J);
+        if (mat.doesMaterialDataExist(LABEL_C4_H_Jcyc))
+            mat.getMaterialData(LABEL_C4_H_Jcyc, coeffs.H_Jcyc);
 
-            material_coefficient_cache_c4[materialID] = coeffs;
-            found_in_material = true;
-        }
-    } catch (const std::exception &) {
-        // No assigned material — fall through to UUID map / default.
+        material_coefficient_cache_c4[materialID] = coeffs;
+        found_in_material = true;
     }
 
     if (found_in_material) {
@@ -699,28 +725,26 @@ EmpiricalModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_Empi
     EmpiricalModelCoefficients coeffs;
     bool found = true;
 
-    try {
-        const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_EMP_Tref) && mat.doesMaterialDataExist(LABEL_EMP_Ci_ref) && mat.doesMaterialDataExist(LABEL_EMP_Asat) && mat.doesMaterialDataExist(LABEL_EMP_theta) && mat.doesMaterialDataExist(LABEL_EMP_Tmin) &&
-            mat.doesMaterialDataExist(LABEL_EMP_Topt) && mat.doesMaterialDataExist(LABEL_EMP_q) && mat.doesMaterialDataExist(LABEL_EMP_R) && mat.doesMaterialDataExist(LABEL_EMP_ER) && mat.doesMaterialDataExist(LABEL_EMP_kC)) {
+    // Errors reading the material's coefficients (a value of the wrong type, or one of a set missing) are not caught: falling back to
+    // the default coefficients would hide that the material's own were not used.
+    const Material &mat = context->getMaterial(materialID);
+    if (mat.doesMaterialDataExist(LABEL_EMP_Tref) && mat.doesMaterialDataExist(LABEL_EMP_Ci_ref) && mat.doesMaterialDataExist(LABEL_EMP_Asat) && mat.doesMaterialDataExist(LABEL_EMP_theta) && mat.doesMaterialDataExist(LABEL_EMP_Tmin) &&
+        mat.doesMaterialDataExist(LABEL_EMP_Topt) && mat.doesMaterialDataExist(LABEL_EMP_q) && mat.doesMaterialDataExist(LABEL_EMP_R) && mat.doesMaterialDataExist(LABEL_EMP_ER) && mat.doesMaterialDataExist(LABEL_EMP_kC)) {
 
-            mat.getMaterialData(LABEL_EMP_Tref, coeffs.Tref);
-            mat.getMaterialData(LABEL_EMP_Ci_ref, coeffs.Ci_ref);
-            mat.getMaterialData(LABEL_EMP_Asat, coeffs.Asat);
-            mat.getMaterialData(LABEL_EMP_theta, coeffs.theta);
-            mat.getMaterialData(LABEL_EMP_Tmin, coeffs.Tmin);
-            mat.getMaterialData(LABEL_EMP_Topt, coeffs.Topt);
-            mat.getMaterialData(LABEL_EMP_q, coeffs.q);
-            mat.getMaterialData(LABEL_EMP_R, coeffs.R);
-            mat.getMaterialData(LABEL_EMP_ER, coeffs.ER);
-            mat.getMaterialData(LABEL_EMP_kC, coeffs.kC);
+        mat.getMaterialData(LABEL_EMP_Tref, coeffs.Tref);
+        mat.getMaterialData(LABEL_EMP_Ci_ref, coeffs.Ci_ref);
+        mat.getMaterialData(LABEL_EMP_Asat, coeffs.Asat);
+        mat.getMaterialData(LABEL_EMP_theta, coeffs.theta);
+        mat.getMaterialData(LABEL_EMP_Tmin, coeffs.Tmin);
+        mat.getMaterialData(LABEL_EMP_Topt, coeffs.Topt);
+        mat.getMaterialData(LABEL_EMP_q, coeffs.q);
+        mat.getMaterialData(LABEL_EMP_R, coeffs.R);
+        mat.getMaterialData(LABEL_EMP_ER, coeffs.ER);
+        mat.getMaterialData(LABEL_EMP_kC, coeffs.kC);
 
-            material_coefficient_cache_empirical[materialID] = coeffs;
-            return coeffs;
-        } else {
-            found = false;
-        }
-    } catch (const std::exception &) {
+        material_coefficient_cache_empirical[materialID] = coeffs;
+        return coeffs;
+    } else {
         found = false;
     }
 
@@ -745,146 +769,144 @@ FarquharModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_Farqu
     FarquharModelCoefficients coeffs;
     bool found = true;
 
-    try {
-        const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_FQ_Vcmax) && mat.doesMaterialDataExist(LABEL_FQ_Jmax) && mat.doesMaterialDataExist(LABEL_FQ_Rd) && mat.doesMaterialDataExist(LABEL_FQ_alpha)) {
+    // Errors reading the material's coefficients (a value of the wrong type, or one of a set missing) are not caught: falling back to
+    // the default coefficients would hide that the material's own were not used.
+    const Material &mat = context->getMaterial(materialID);
+    if (mat.doesMaterialDataExist(LABEL_FQ_Vcmax) && mat.doesMaterialDataExist(LABEL_FQ_Jmax) && mat.doesMaterialDataExist(LABEL_FQ_Rd) && mat.doesMaterialDataExist(LABEL_FQ_alpha)) {
 
-            // Reconstruct temperature response parameters for Vcmax
-            float vcmax_25C, vcmax_dHa, vcmax_dHd, vcmax_Topt;
-            mat.getMaterialData(LABEL_FQ_Vcmax, vcmax_25C);
-            mat.getMaterialData("photo_fq_Vcmax_dHa", vcmax_dHa);
-            mat.getMaterialData("photo_fq_Vcmax_dHd", vcmax_dHd);
-            mat.getMaterialData("photo_fq_Vcmax_Topt", vcmax_Topt);
+        // Reconstruct temperature response parameters for Vcmax
+        float vcmax_25C, vcmax_dHa, vcmax_dHd, vcmax_Topt;
+        mat.getMaterialData(LABEL_FQ_Vcmax, vcmax_25C);
+        mat.getMaterialData("photo_fq_Vcmax_dHa", vcmax_dHa);
+        mat.getMaterialData("photo_fq_Vcmax_dHd", vcmax_dHd);
+        mat.getMaterialData("photo_fq_Vcmax_Topt", vcmax_Topt);
 
-            // Reconstruct for Jmax
-            float jmax_25C, jmax_dHa, jmax_dHd, jmax_Topt;
-            mat.getMaterialData(LABEL_FQ_Jmax, jmax_25C);
-            mat.getMaterialData("photo_fq_Jmax_dHa", jmax_dHa);
-            mat.getMaterialData("photo_fq_Jmax_dHd", jmax_dHd);
-            mat.getMaterialData("photo_fq_Jmax_Topt", jmax_Topt);
+        // Reconstruct for Jmax
+        float jmax_25C, jmax_dHa, jmax_dHd, jmax_Topt;
+        mat.getMaterialData(LABEL_FQ_Jmax, jmax_25C);
+        mat.getMaterialData("photo_fq_Jmax_dHa", jmax_dHa);
+        mat.getMaterialData("photo_fq_Jmax_dHd", jmax_dHd);
+        mat.getMaterialData("photo_fq_Jmax_Topt", jmax_Topt);
 
-            // Reconstruct for Rd
-            float rd_25C, rd_dHa, rd_dHd, rd_Topt;
-            mat.getMaterialData(LABEL_FQ_Rd, rd_25C);
-            mat.getMaterialData("photo_fq_Rd_dHa", rd_dHa);
-            mat.getMaterialData("photo_fq_Rd_dHd", rd_dHd);
-            mat.getMaterialData("photo_fq_Rd_Topt", rd_Topt);
+        // Reconstruct for Rd
+        float rd_25C, rd_dHa, rd_dHd, rd_Topt;
+        mat.getMaterialData(LABEL_FQ_Rd, rd_25C);
+        mat.getMaterialData("photo_fq_Rd_dHa", rd_dHa);
+        mat.getMaterialData("photo_fq_Rd_dHd", rd_dHd);
+        mat.getMaterialData("photo_fq_Rd_Topt", rd_Topt);
 
-            // Reconstruct for alpha
-            float alpha_25C, alpha_dHa;
-            mat.getMaterialData(LABEL_FQ_alpha, alpha_25C);
-            mat.getMaterialData("photo_fq_alpha_dHa", alpha_dHa);
+        // Reconstruct for alpha
+        float alpha_25C, alpha_dHa;
+        mat.getMaterialData(LABEL_FQ_alpha, alpha_25C);
+        mat.getMaterialData("photo_fq_alpha_dHa", alpha_dHa);
 
-            // Use setter methods to properly populate the coefficient struct
-            if (vcmax_Topt < 1000.f) { // Has optimum
-                coeffs.setVcmax(vcmax_25C, vcmax_dHa, vcmax_Topt - 273.15f, vcmax_dHd);
-            } else if (vcmax_dHa > 0.f) { // Monotonic increase
-                coeffs.setVcmax(vcmax_25C, vcmax_dHa);
-            } else { // Constant
-                coeffs.setVcmax(vcmax_25C);
-            }
-
-            if (jmax_Topt < 1000.f) {
-                coeffs.setJmax(jmax_25C, jmax_dHa, jmax_Topt - 273.15f, jmax_dHd);
-            } else if (jmax_dHa > 0.f) {
-                coeffs.setJmax(jmax_25C, jmax_dHa);
-            } else {
-                coeffs.setJmax(jmax_25C);
-            }
-
-            if (rd_Topt < 1000.f) {
-                coeffs.setRd(rd_25C, rd_dHa, rd_Topt - 273.15f, rd_dHd);
-            } else if (rd_dHa > 0.f) {
-                coeffs.setRd(rd_25C, rd_dHa);
-            } else {
-                coeffs.setRd(rd_25C);
-            }
-
-            if (alpha_dHa > 0.f) {
-                coeffs.setQuantumEfficiency_alpha(alpha_25C, alpha_dHa);
-            } else {
-                coeffs.setQuantumEfficiency_alpha(alpha_25C);
-            }
-
-            // Reconstruct gm temperature response if present. Missing labels leave the
-            // default (value_at_25C = +infinity, i.e., Cc ≡ Ci — legacy behavior).
-            if (mat.doesMaterialDataExist(LABEL_FQ_gm)) {
-                float gm_25C, gm_dHa = 0.f, gm_dHd = 0.f, gm_Topt = 10000.f;
-                mat.getMaterialData(LABEL_FQ_gm, gm_25C);
-                if (mat.doesMaterialDataExist(LABEL_FQ_gm_dHa)) {
-                    mat.getMaterialData(LABEL_FQ_gm_dHa, gm_dHa);
-                }
-                if (mat.doesMaterialDataExist(LABEL_FQ_gm_dHd)) {
-                    mat.getMaterialData(LABEL_FQ_gm_dHd, gm_dHd);
-                }
-                if (mat.doesMaterialDataExist(LABEL_FQ_gm_Topt)) {
-                    mat.getMaterialData(LABEL_FQ_gm_Topt, gm_Topt);
-                }
-                if (gm_Topt < 1000.f) {
-                    coeffs.setMesophyllConductance_gm(gm_25C, gm_dHa, gm_Topt - 273.15f, gm_dHd);
-                } else if (gm_dHa > 0.f) {
-                    coeffs.setMesophyllConductance_gm(gm_25C, gm_dHa);
-                } else {
-                    coeffs.setMesophyllConductance_gm(gm_25C);
-                }
-            }
-
-            // Reconstruct the TPU temperature response if present. Missing labels leave the
-            // struct default (older serializations pre-date these fields).
-            if (mat.doesMaterialDataExist(LABEL_FQ_TPU)) {
-                float tpu_25C, tpu_dHa = 0.f, tpu_dHd = 0.f, tpu_Topt = 10000.f;
-                mat.getMaterialData(LABEL_FQ_TPU, tpu_25C);
-                if (mat.doesMaterialDataExist(LABEL_FQ_TPU_dHa)) {
-                    mat.getMaterialData(LABEL_FQ_TPU_dHa, tpu_dHa);
-                }
-                if (mat.doesMaterialDataExist(LABEL_FQ_TPU_dHd)) {
-                    mat.getMaterialData(LABEL_FQ_TPU_dHd, tpu_dHd);
-                }
-                if (mat.doesMaterialDataExist(LABEL_FQ_TPU_Topt)) {
-                    mat.getMaterialData(LABEL_FQ_TPU_Topt, tpu_Topt);
-                }
-                if (tpu_Topt < 1000.f) {
-                    coeffs.setTPU(tpu_25C, tpu_dHa, tpu_Topt - 273.15f, tpu_dHd);
-                } else if (tpu_dHa > 0.f) {
-                    coeffs.setTPU(tpu_25C, tpu_dHa);
-                } else {
-                    coeffs.setTPU(tpu_25C);
-                }
-            }
-
-            // Reconstruct the light-response curvature theta if present.
-            if (mat.doesMaterialDataExist(LABEL_FQ_theta)) {
-                float theta_25C, theta_dHa = 0.f, theta_dHd = 0.f, theta_Topt = 10000.f;
-                mat.getMaterialData(LABEL_FQ_theta, theta_25C);
-                if (mat.doesMaterialDataExist(LABEL_FQ_theta_dHa)) {
-                    mat.getMaterialData(LABEL_FQ_theta_dHa, theta_dHa);
-                }
-                if (mat.doesMaterialDataExist(LABEL_FQ_theta_dHd)) {
-                    mat.getMaterialData(LABEL_FQ_theta_dHd, theta_dHd);
-                }
-                if (mat.doesMaterialDataExist(LABEL_FQ_theta_Topt)) {
-                    mat.getMaterialData(LABEL_FQ_theta_Topt, theta_Topt);
-                }
-                if (theta_Topt < 1000.f) {
-                    coeffs.setLightResponseCurvature_theta(theta_25C, theta_dHa, theta_Topt - 273.15f, theta_dHd);
-                } else if (theta_dHa > 0.f) {
-                    coeffs.setLightResponseCurvature_theta(theta_25C, theta_dHa);
-                } else {
-                    coeffs.setLightResponseCurvature_theta(theta_25C);
-                }
-            }
-
-            // Set O and TPU_flag. TPU_flag must be restored AFTER the setTPU() calls above,
-            // since setTPU() unconditionally enables the flag as a side effect.
-            mat.getMaterialData(LABEL_FQ_O, coeffs.O);
-            mat.getMaterialData(LABEL_FQ_TPU_flag, coeffs.TPU_flag);
-
-            material_coefficient_cache_farquhar[materialID] = coeffs;
-            return coeffs;
-        } else {
-            found = false;
+        // Use setter methods to properly populate the coefficient struct
+        if (vcmax_Topt < 1000.f) { // Has optimum
+            coeffs.setVcmax(vcmax_25C, vcmax_dHa, vcmax_Topt - 273.15f, vcmax_dHd);
+        } else if (vcmax_dHa > 0.f) { // Monotonic increase
+            coeffs.setVcmax(vcmax_25C, vcmax_dHa);
+        } else { // Constant
+            coeffs.setVcmax(vcmax_25C);
         }
-    } catch (const std::exception &) {
+
+        if (jmax_Topt < 1000.f) {
+            coeffs.setJmax(jmax_25C, jmax_dHa, jmax_Topt - 273.15f, jmax_dHd);
+        } else if (jmax_dHa > 0.f) {
+            coeffs.setJmax(jmax_25C, jmax_dHa);
+        } else {
+            coeffs.setJmax(jmax_25C);
+        }
+
+        if (rd_Topt < 1000.f) {
+            coeffs.setRd(rd_25C, rd_dHa, rd_Topt - 273.15f, rd_dHd);
+        } else if (rd_dHa > 0.f) {
+            coeffs.setRd(rd_25C, rd_dHa);
+        } else {
+            coeffs.setRd(rd_25C);
+        }
+
+        if (alpha_dHa > 0.f) {
+            coeffs.setQuantumEfficiency_alpha(alpha_25C, alpha_dHa);
+        } else {
+            coeffs.setQuantumEfficiency_alpha(alpha_25C);
+        }
+
+        // Reconstruct gm temperature response if present. Missing labels leave the
+        // default (value_at_25C = +infinity, i.e., Cc ≡ Ci — legacy behavior).
+        if (mat.doesMaterialDataExist(LABEL_FQ_gm)) {
+            float gm_25C, gm_dHa = 0.f, gm_dHd = 0.f, gm_Topt = 10000.f;
+            mat.getMaterialData(LABEL_FQ_gm, gm_25C);
+            if (mat.doesMaterialDataExist(LABEL_FQ_gm_dHa)) {
+                mat.getMaterialData(LABEL_FQ_gm_dHa, gm_dHa);
+            }
+            if (mat.doesMaterialDataExist(LABEL_FQ_gm_dHd)) {
+                mat.getMaterialData(LABEL_FQ_gm_dHd, gm_dHd);
+            }
+            if (mat.doesMaterialDataExist(LABEL_FQ_gm_Topt)) {
+                mat.getMaterialData(LABEL_FQ_gm_Topt, gm_Topt);
+            }
+            if (gm_Topt < 1000.f) {
+                coeffs.setMesophyllConductance_gm(gm_25C, gm_dHa, gm_Topt - 273.15f, gm_dHd);
+            } else if (gm_dHa > 0.f) {
+                coeffs.setMesophyllConductance_gm(gm_25C, gm_dHa);
+            } else {
+                coeffs.setMesophyllConductance_gm(gm_25C);
+            }
+        }
+
+        // Reconstruct the TPU temperature response if present. Missing labels leave the
+        // struct default (older serializations pre-date these fields).
+        if (mat.doesMaterialDataExist(LABEL_FQ_TPU)) {
+            float tpu_25C, tpu_dHa = 0.f, tpu_dHd = 0.f, tpu_Topt = 10000.f;
+            mat.getMaterialData(LABEL_FQ_TPU, tpu_25C);
+            if (mat.doesMaterialDataExist(LABEL_FQ_TPU_dHa)) {
+                mat.getMaterialData(LABEL_FQ_TPU_dHa, tpu_dHa);
+            }
+            if (mat.doesMaterialDataExist(LABEL_FQ_TPU_dHd)) {
+                mat.getMaterialData(LABEL_FQ_TPU_dHd, tpu_dHd);
+            }
+            if (mat.doesMaterialDataExist(LABEL_FQ_TPU_Topt)) {
+                mat.getMaterialData(LABEL_FQ_TPU_Topt, tpu_Topt);
+            }
+            if (tpu_Topt < 1000.f) {
+                coeffs.setTPU(tpu_25C, tpu_dHa, tpu_Topt - 273.15f, tpu_dHd);
+            } else if (tpu_dHa > 0.f) {
+                coeffs.setTPU(tpu_25C, tpu_dHa);
+            } else {
+                coeffs.setTPU(tpu_25C);
+            }
+        }
+
+        // Reconstruct the light-response curvature theta if present.
+        if (mat.doesMaterialDataExist(LABEL_FQ_theta)) {
+            float theta_25C, theta_dHa = 0.f, theta_dHd = 0.f, theta_Topt = 10000.f;
+            mat.getMaterialData(LABEL_FQ_theta, theta_25C);
+            if (mat.doesMaterialDataExist(LABEL_FQ_theta_dHa)) {
+                mat.getMaterialData(LABEL_FQ_theta_dHa, theta_dHa);
+            }
+            if (mat.doesMaterialDataExist(LABEL_FQ_theta_dHd)) {
+                mat.getMaterialData(LABEL_FQ_theta_dHd, theta_dHd);
+            }
+            if (mat.doesMaterialDataExist(LABEL_FQ_theta_Topt)) {
+                mat.getMaterialData(LABEL_FQ_theta_Topt, theta_Topt);
+            }
+            if (theta_Topt < 1000.f) {
+                coeffs.setLightResponseCurvature_theta(theta_25C, theta_dHa, theta_Topt - 273.15f, theta_dHd);
+            } else if (theta_dHa > 0.f) {
+                coeffs.setLightResponseCurvature_theta(theta_25C, theta_dHa);
+            } else {
+                coeffs.setLightResponseCurvature_theta(theta_25C);
+            }
+        }
+
+        // Set O and TPU_flag. TPU_flag must be restored AFTER the setTPU() calls above,
+        // since setTPU() unconditionally enables the flag as a side effect.
+        mat.getMaterialData(LABEL_FQ_O, coeffs.O);
+        mat.getMaterialData(LABEL_FQ_TPU_flag, coeffs.TPU_flag);
+
+        material_coefficient_cache_farquhar[materialID] = coeffs;
+        return coeffs;
+    } else {
         found = false;
     }
 
@@ -944,6 +966,17 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
 
     WarningAggregator warnings;
     warnings.setEnabled(message_flag); // Respect existing message flag
+
+    // The electron transport rate and day respiration are written when requested as optional output, and also whenever the StomatalConductanceModel Buckley et al. (2026) model is in use,
+    // which signals this through global data and computes the CO2-saturated electron-transport-limited rate J/4 - Rd from them.
+    bool buckley_inputs_requested = false;
+    if (context->doesGlobalDataExist("buckley2026_stomatal_model_enabled") && context->getGlobalDataType("buckley2026_stomatal_model_enabled") == HELIOS_TYPE_INT) {
+        int buckley_enabled = 0;
+        context->getGlobalData("buckley2026_stomatal_model_enabled", buckley_enabled);
+        buckley_inputs_requested = (buckley_enabled == 1);
+    }
+    const bool write_electron_transport_rate = buckley_inputs_requested || std::find(output_prim_data.begin(), output_prim_data.end(), "electron_transport_rate") != output_prim_data.end();
+    const bool write_dark_respiration = buckley_inputs_requested || std::find(output_prim_data.begin(), output_prim_data.end(), "dark_respiration") != output_prim_data.end();
 
     for (uint UUID: lUUIDs) {
 
@@ -1139,7 +1172,8 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             A = evaluateEmpiricalModel(coeffs, i_PAR, TL, CO2, gC);
         }
 
-        if (A == 0) {
+        // The empirical model is solved exactly, so an assimilation rate of zero from it is a result (e.g., below T_min and freezing) rather than a failure
+        if (A == 0 && (model == "farquhar" || model == "c4")) {
             warnings.addWarning("convergence_failure", "Solution did not converge for primitive " + std::to_string(UUID) + ".");
         }
 
@@ -1158,6 +1192,18 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 context->setPrimitiveData(UUID, "Cm", Cm_c4);
             } else if (data == "Vp" && model == "c4") {
                 context->setPrimitiveData(UUID, "Vp", Vp_c4);
+            }
+        }
+
+        if (model == "farquhar" && (write_electron_transport_rate || write_dark_respiration)) {
+            double J;
+            float Rd;
+            evaluateElectronTransportAndRespiration(getCoefficientsForPrimitive_Farquhar(UUID), i_PAR, TL, J, Rd);
+            if (write_electron_transport_rate) {
+                context->setPrimitiveData(UUID, "electron_transport_rate", static_cast<float>(J));
+            }
+            if (write_dark_respiration) {
+                context->setPrimitiveData(UUID, "dark_respiration", Rd);
             }
         }
     }
@@ -1205,91 +1251,39 @@ namespace {
     }
 } // namespace
 
-float PhotosynthesisModel::evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float fT, float Rd, float gC) const {
-
-
-    //--- CO2 Response Function --- //
-
-    float fC = params.kC * Ci / params.Ci_ref;
-
-
-    //--- Assimilation Rate --- //
-
-    float A = params.Asat * fL * fT * fC - Rd;
-
-    //--- Calculate error and update --- //
-
-    float resid = gC * (CO2 - Ci) - A;
-
-
-    return resid;
-}
-
 float PhotosynthesisModel::evaluateEmpiricalModel(const EmpiricalModelCoefficients &params, float i_PAR, float TL, float CO2, float gC) {
-
-    // initial guess for intercellular CO2
-    float Ci = CO2;
 
     //--- Light Response Function --- //
 
-    float fL = i_PAR / (params.theta + i_PAR);
-
-    assert(fL >= 0 && fL <= 1);
+    const float fL = i_PAR / (params.theta + i_PAR);
 
     //--- Temperature Response Function --- //
 
-    float fT = evaluateEmpiricalTemperatureResponse(params, TL);
+    const float fT = evaluateEmpiricalTemperatureResponse(params, TL);
 
     //--- Respiration Rate --- //
 
-    float Rd = params.R * sqrt(TL - 273.f) * exp(-params.ER / TL);
+    // R sqrt(T - 273) exp(-E_R/T) falls to zero at 273 K and is not defined below it, so it is taken as zero there, as f_T is clamped to zero outside the range over which it is defined
+    const float Rd = TL > 273.f ? params.R * std::sqrt(TL - 273.f) * std::exp(-params.ER / TL) : 0.f;
 
-    float Ci_old = Ci;
-    float Ci_old_old = 0.95f * Ci;
+    //--- Intercellular CO2 and assimilation --- //
 
-    float resid_old = evaluateCi_Empirical(params, Ci_old, CO2, fL, fT, Rd, gC);
-    float resid_old_old = evaluateCi_Empirical(params, Ci_old_old, CO2, fL, fT, Rd, gC);
-
-    float err = 10000, err_max = 0.01;
-    int iter = 0, max_iter = 100;
-    float resid;
-    while (err > err_max && iter < max_iter) {
-
-        if (resid_old == resid_old_old) { // this condition will cause NaN
-            break;
-        }
-
-        Ci = fabs((Ci_old_old * resid_old - Ci_old * resid_old_old) / (resid_old - resid_old_old));
-
-        resid = evaluateCi_Empirical(params, Ci, CO2, fL, fT, Rd, gC);
-
-        resid_old_old = resid_old;
-        resid_old = resid;
-
-        err = fabs(resid);
-
-        Ci_old_old = Ci_old;
-        Ci_old = Ci;
-
-        iter++;
+    // The assimilation rate is linear in Ci, A = k Ci - Rd with k = Asat fL fT kC / Ci_ref, and must equal the supply through the stomata, gC (CO2 - Ci). Solving
+    // the two together gives Ci exactly, so there is no iteration that could fail to converge. With no light and no conductance (k = gC = 0), A does not depend on Ci
+    // and is -Rd.
+    const float k = params.Asat * fL * fT * params.kC / params.Ci_ref;
+    if (k + gC <= 0.f) {
+        return -Rd;
     }
-
-    float A;
-    if (err > err_max) {
-        A = 0;
-    } else {
-        float fC = params.kC * Ci / params.Ci_ref;
-        A = params.Asat * fL * fT * fC - Rd;
-    }
-
-    return A;
+    const float Ci = (gC * CO2 + Rd) / (gC + k);
+    return k * Ci - Rd;
 }
 
 float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &variables, const void *parameters) {
 
     const FarquharModelCoefficients modelcoeffs = *reinterpret_cast<const FarquharModelCoefficients *>(parameters);
 
-    float Vcmax, Jmax, TPU, Rd, alpha, theta;
+    float Vcmax, TPU, Rd, alpha;
 
     float CO2 = variables[0];
     float Q = variables[1];
@@ -1314,17 +1308,9 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
         Vcmax = respondToTemperature(&modelcoeffs.VcmaxTempResponse, TL);
     }
 
-    if (modelcoeffs.Jmax > 0) {
-        Jmax = modelcoeffs.Jmax * expf(modelcoeffs.dH_Jmax * (invDiffRT));
-    } else {
-        Jmax = respondToTemperature(&modelcoeffs.JmaxTempResponse, TL);
-    }
-
-    if (modelcoeffs.Rd > 0) {
-        Rd = modelcoeffs.Rd * expf(modelcoeffs.dH_Rd * (invDiffRT));
-    } else {
-        Rd = respondToTemperature(&modelcoeffs.RdTempResponse, TL);
-    }
+    // Electron transport rate J and day respiration Rd do not depend on Ci
+    double J;
+    evaluateElectronTransportAndRespiration(modelcoeffs, Q, TL, J, Rd);
 
     if (modelcoeffs.alpha > 0) {
         alpha = modelcoeffs.alpha;
@@ -1334,7 +1320,6 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
 
 
     TPU = respondToTemperature(&modelcoeffs.TPUTempResponse, TL);
-    theta = respondToTemperature(&modelcoeffs.thetaTempResponse, TL);
 
     // Mesophyll conductance gm (mol CO2 / m^2 / s / bar). If gm is infinite/huge,
     // Cc ≡ Ci and we take the original legacy path below. Otherwise we solve a
@@ -1348,14 +1333,6 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
     float Kc = exp(c_Kc - dH_Kc / (R * TL));
     float Ko = exp(c_Ko - dH_Ko / (R * TL));
     float Kco = Kc * (1.f + O / Ko);
-
-    // thetaJ^2 + -(alphaQ+Jmax)J + alphaQJmax = 0
-    double a = std::max(theta, 0.0001f);
-    double ia = 1.000f / a;
-    double b = -(alpha * Q + Jmax);
-    double c = alpha * Q * Jmax;
-    double J = (-b - sqrt(pow(b, 2.000f) - 4.f * a * c)) * 0.5f * ia;
-    // J = Jmax * alpha * Q / (alpha * Q + Jmax);
 
     float A;
     float limitation_state;
@@ -1689,6 +1666,40 @@ float PhotosynthesisModel::evaluateC4Model(const C4ModelCoefficients &params, fl
 }
 
 
+void PhotosynthesisModel::evaluateElectronTransportAndRespiration(const FarquharModelCoefficients &params, float i_PAR, float TL, double &J, float &Rd) {
+
+    const float R = 0.0083144598; // molar gas constant (kJ/K/mol)
+    const float invDiffRT = (1.f / 298.15f - 1.f / TL) / R;
+
+    float Jmax;
+    if (params.Jmax > 0) {
+        Jmax = params.Jmax * expf(params.dH_Jmax * (invDiffRT));
+    } else {
+        Jmax = respondToTemperature(&params.JmaxTempResponse, TL);
+    }
+
+    if (params.Rd > 0) {
+        Rd = params.Rd * expf(params.dH_Rd * (invDiffRT));
+    } else {
+        Rd = respondToTemperature(&params.RdTempResponse, TL);
+    }
+
+    float alpha;
+    if (params.alpha > 0) {
+        alpha = params.alpha;
+    } else {
+        alpha = respondToTemperature(&params.alphaTempResponse, TL);
+    }
+    const float theta = respondToTemperature(&params.thetaTempResponse, TL);
+
+    // thetaJ^2 + -(alphaQ+Jmax)J + alphaQJmax = 0
+    double a = std::max(theta, 0.0001f);
+    double ia = 1.000f / a;
+    double b = -(alpha * i_PAR + Jmax);
+    double c = alpha * i_PAR * Jmax;
+    J = (-b - sqrt(pow(b, 2.000f) - 4.f * a * c)) * 0.5f * ia;
+}
+
 float PhotosynthesisModel::respondToTemperature(const PhotosyntheticTemperatureResponseParameters *params, float T_in_Kelvin) {
     float T = T_in_Kelvin;
     float R = 0.0083144598f;
@@ -1775,7 +1786,8 @@ void PhotosynthesisModel::enableMessages() {
 
 void PhotosynthesisModel::optionalOutputPrimitiveData(const char *label) {
 
-    if (strcmp(label, "Ci") == 0 || strcmp(label, "limitation_state") == 0 || strcmp(label, "Gamma_CO2") == 0 || strcmp(label, "electron_transport_ratio") == 0 || strcmp(label, "Cm") == 0 || strcmp(label, "Vp") == 0) {
+    if (strcmp(label, "Ci") == 0 || strcmp(label, "limitation_state") == 0 || strcmp(label, "Gamma_CO2") == 0 || strcmp(label, "electron_transport_ratio") == 0 || strcmp(label, "Cm") == 0 || strcmp(label, "Vp") == 0 ||
+        strcmp(label, "electron_transport_rate") == 0 || strcmp(label, "dark_respiration") == 0) {
         output_prim_data.emplace_back(label);
     } else {
         if (message_flag) {

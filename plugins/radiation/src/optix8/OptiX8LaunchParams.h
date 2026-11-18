@@ -43,20 +43,31 @@ typedef unsigned int uint;
 #define HELIOS_MAX_RADIATION_BANDS 32
 #endif
 
+// SBT layout. Hit groups: 0 direct, 1 diffuse, 2 camera, 3 pixel label, then the direct and diffuse hit groups of a scene with a
+// background radiation field (RayTracingGeometry::periodicDualField()) at DUAL_FIELD_SBT_OFFSET + 0 and + 1. Miss programs: 0 direct,
+// 1 diffuse, 2 camera, 3 pixel label, 4 camera shadow, then the direct and diffuse miss programs of such a scene at
+// DUAL_FIELD_SBT_OFFSET + 1 + 0 and + 1 + 1.
+#define DUAL_FIELD_SBT_OFFSET 4u
+
 // ---------------------------------------------------------------------------
 // Per-ray payload.  Passed by pointer-in-two-registers.
 // Allocated in a per-thread pool on the device.
 // ---------------------------------------------------------------------------
 struct PerRayData {
+    static constexpr bool is_dual = false; //!< Whether this is the payload of a scene with a background radiation field (PerRayDataDual)
     double strength;           //!< Ray energy
     uint   origin_UUID;        //!< UUID of origin primitive (0 = launched from source/camera)
     bool   face;               //!< Top face = true, bottom face = false
     uint   seed;               //!< LCG random seed
     unsigned char source_ID;   //!< Source index, or Nsources (the diffuse/scatter material slot) for diffuse rays (max 255 sources)
-    bool   skip_origin;        //!< The ray never hits the primitive origin_UUID (direct and diffuse rays; camera and pixel-label rays carry a pixel index there)
+    bool   skip_origin;        //!< The ray never hits the primitive origin_UUID in the periodic copy it left from (direct and diffuse rays; camera and pixel-label rays carry a pixel index there)
     bool   hit_periodic_boundary;
     float3 periodic_hit;       //!< World-space hit on the periodic wall
     float  periodic_hit_t;     //!< Distance from the segment origin to the periodic wall it hit
+    int    tile_x;             //!< Periodic copy of the domain the ray is in, x (0 = central; counted whenever a boundary is periodic)
+    int    tile_y;             //!< Periodic copy of the domain the ray is in, y
+    int    origin_tile_x;      //!< Periodic copy of the domain the origin primitive the ray skips is in (skip_origin), x
+    int    origin_tile_y;      //!< Periodic copy of the domain the origin primitive the ray skips is in, y
     //! Per-launch-band transmittance accumulated as the ray passes through translucent covers
     //! (glass/plastic). Initialised to 1 in the raygen programs; multiplied by the Fresnel+Bouguer
     //! tau(theta) in the any-hit program (direct) or the closest-hit programs (diffuse, camera);
@@ -70,12 +81,23 @@ struct PerRayData {
 };
 
 // ---------------------------------------------------------------------------
-// SBT hit-group record data (per primitive type).
+// Payload of the direct and diffuse rays of a scene with a background radiation field (RayTracingGeometry::periodicDualField()).
+// Those rays are launched by the *_dual raygen programs and handled by the *_dual hit and miss programs, which alone know of
+// the members added here; every other program sees a PerRayData. A scene without a background field never uses it, so its
+// rays carry nothing for it.
 // ---------------------------------------------------------------------------
-struct HitGroupData {
-    float3*   vertices; //!< Device pointer to type-specific vertex array (layout varies by type)
-    uint32_t* UUIDs;    //!< Device pointer to type-specific UUID array
-    uint32_t  prim_type; //!< 0=patch, 1=triangle, 2=disk, 3=tile, 5=bbox
+struct PerRayDataDual : PerRayData {
+    static constexpr bool is_dual = true;
+    //! The ray books what it delivers in both fields (its primitive is not excluded from the periodic boundary). Such a ray passes the excluded primitives, which the
+    //! background field does not contain, and records the nearest one it would have hit in each segment (the any-hit programs).
+    bool   dual_ray;
+    //! A dual ray's delivery to the scene as it is (field 0) is settled by an excluded primitive: a direct ray is blocked by it, and a diffuse ray has received its radiation
+    bool   excluded_resolved;
+    bool   recorded_face;      //!< Whether the top face of the recorded primitive was hit
+    float  recorded_t;         //!< Distance to the nearest excluded primitive passed in the current segment (infinite if none)
+    uint   recorded_position;  //!< Its position
+    float  recorded_u;         //!< Its hit attributes 2 and 3 (see __intersection__patch)
+    float  recorded_v;
 };
 
 // ---------------------------------------------------------------------------
@@ -87,35 +109,20 @@ struct OptiX8LaunchParams {
     // Traversal handle
     OptixTraversableHandle traversable;
 
-    // ---- Per-ray-data pool (size = launch_dim_x * launch_dim_y) ----
-    PerRayData* prd_pool;
-
     // ---- Geometry buffers (device pointers) ----
     float*    transform_matrix;      //!< [prim * 16 + elem], row-major 4x4
     uint32_t* primitive_type;        //!< 0=patch,1=tri,2=disk,3=tile,5=bbox
     uint32_t* primitive_positions;   //!< UUID→array-index sparse lookup (size=max_UUID+1)
     uint32_t* primitiveID;           //!< First primitive index in parent object
-    uint32_t* objectID;              //!< Parent object ID for each primitive
     int32_t*  object_subdivisions;   //!< 2 ints per prim: [subdiv_x, subdiv_y]
     int8_t*   twosided_flag;         //!< 1=two-sided, 0=one-sided
-    float*    primitive_solid_fraction;
 
     // ---- Global UUID lookup (indexed by global primitive position) ----
     uint32_t* primitive_uuid;        //!< primitive_uuid[global_pos] = UUID of that primitive
 
-    // ---- Per-type geometry (also in SBT HitGroupData, mirrored here for easy access) ----
-    float3*   patch_vertices;        //!< [patch_idx * 4 + corner_idx]
-    uint32_t* patch_UUIDs;
-    float3*   triangle_vertices;     //!< [tri_idx * 3 + vertex_idx]
-    uint32_t* triangle_UUIDs;
-    float3*   disk_centers;
-    float*    disk_radii;
-    float3*   disk_normals;
-    uint32_t* disk_UUIDs;
-    float3*   tile_vertices;         //!< [tile_idx * 4 + corner_idx]
-    uint32_t* tile_UUIDs;
+    // ---- Per-type geometry ----
     float3*   bbox_vertices;         //!< [bbox_idx * 4 + corner_idx] (4 vertices per planar face)
-    uint32_t* bbox_UUIDs;
+    uint8_t*  periodic_excluded;     //!< [prim]: 1 if the primitive exists only in the central periodic copy of the domain; null when none is excluded
 
     // ---- Material buffers ----
     float*    rho;        //!< Reflectivity [source * Nprims * Nbands_global + prim * Nbands_global + band]
@@ -201,6 +208,7 @@ struct OptiX8LaunchParams {
     const uint32_t* normal_maps;      //!< Packed normal maps, or nullptr when no primitive has one
     uint32_t  normal_map_direct;      //!< Camera launches: 1 if the host removed the direct launch's deposit from normal-mapped primitives' outgoing radiation, so the camera shades it per hit point
     uint32_t  camera_direct_per_pixel; //!< Camera launches: 1 if the camera evaluates the direct radiation of smoothed primitives per pixel sample (RayTracingLaunchParams::camera_direct_per_pixel)
+    uint32_t  camera_direct_all;     //!< Camera launches: 1 if it does so for every primitive but a translucent cover (RayTracingLaunchParams::camera_direct_all)
     const uint32_t* normal_map_slots; //!< Slot of each normal-mapped primitive in normal_map_moments (UINT32_MAX for none), or nullptr when no primitive has a map
     float*    normal_map_moments;     //!< [slot][face][launch band][3]: flux-weighted sum of the directions the diffuse radiation reaching each face came from
     const float* vertex_normal_map_moments; //!< [smoothing vertex][face][launch band][3]: normal_map_moments averaged onto the smoothing vertices; null unless smoothing and maps
@@ -223,16 +231,16 @@ struct OptiX8LaunchParams {
 
     // ---- Scalar parameters ----
     uint32_t  Nprimitives;
+    uint32_t  Nflux_slots;           //!< Slots per primitive dimension of the outgoing, scattered, camera, direct-flux and spectral buffers: Nprimitives, or 2 Nprimitives with a background field (slot Nprimitives + p), see RayTracingGeometry::fluxSlotCount()
+    uint32_t  vertex_field_stride;   //!< Number of smoothing vertices; the background field's vertex values are at vertex_field_stride + vertex (set with the vertex outgoing radiation)
+    uint32_t  normal_map_slot_count; //!< Number of normal-map slots; the background field's moments are in slots normal_map_slot_count + slot
     uint32_t  Nsources;
     uint32_t  Ncameras;
     uint32_t  Nbands_global;
     uint32_t  Nbands_launch;
     uint32_t  launch_offset;         //!< Starting primitive index for this launch
-    uint32_t  launch_count;          //!< Primitives to process in this launch
-    uint32_t  rays_per_primitive;
     uint32_t  random_seed;
     uint32_t  launch_face;           //!< 1=top face, 0=bottom face (diffuse)
-    uint32_t  scattering_iteration;
     uint32_t  specular_reflection_enabled; //!< 1 = this launch reads the surface layers' reflection lobe of the direct radiation
     uint32_t  surface_layer_table_size; //!< Number of mu values in each surface-layer albedo table
     uint32_t  below_horizon_diffuse_enabled; //!< 1 = the diffuse sky also reaches rays leaving below the horizon
@@ -240,6 +248,11 @@ struct OptiX8LaunchParams {
     uint32_t  bbox_UUID_base;        //!< Starting UUID for bboxes
 
     float2    periodic_flag;         //!< (x_periodic, y_periodic)
+    uint32_t  periodic_tile_tracking; //!< 1 if rays track the periodic copy of the domain they are in (excluded primitives or a limited number of copies)
+    int2      periodic_max_repeats;  //!< Periodic copies on each side of the central domain (x, y); -1 for no limit
+    float2    periodic_repeated_zbounds; //!< z-range of the geometry that repeats
+    float     periodic_escape_offset; //!< Distance beyond a face from which a ray leaving the periodic copies continues
+    int2      camera_tile;           //!< Periodic copy of the domain the camera is in
     float3    sun_direction;
     float     solar_disk_cos_angle;
     float2    camera_direction;      //!< (elevation, azimuth) in radians
@@ -247,7 +260,6 @@ struct OptiX8LaunchParams {
     float     camera_lens_diameter;
     float     camera_focal_length;
     float     FOV_aspect_ratio;
-    int2      camera_resolution;
     float     camera_viewplane_length;
     int2      camera_pixel_offset;
     int2      camera_resolution_full;

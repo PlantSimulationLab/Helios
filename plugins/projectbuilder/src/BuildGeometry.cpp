@@ -130,7 +130,7 @@ void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_a
             helios_runtime_error("ERROR: Value given for 'ground_model_obj_file' is empty.");
         } else if (ext != ".obj" && ext != ".OBJ") {
             helios_runtime_error("ERROR: File given for 'ground_model_obj_file' is not an .obj file.");
-        } else if (!std::filesystem::exists(ground_model_file)) {
+        } else if (helios::tryResolveFilePath(ground_model_file).empty()) {
             helios_runtime_error("ERROR: File given for 'ground_model_obj_file' does not exist.");
         }
     }
@@ -185,7 +185,7 @@ void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_a
                 helios_runtime_error("ERROR: Value given for 'canopy_model_obj_file' is empty.");
             } else if (ext != ".obj" && ext != ".OBJ") {
                 helios_runtime_error("ERROR: File given for 'canopy_model_obj_file' is not an .obj file.");
-            } else if (!std::filesystem::exists(ground_model_file)) {
+            } else if (helios::tryResolveFilePath(canopy_model_file).empty()) {
                 helios_runtime_error("ERROR: File given for 'canopy_model_obj_file' does not exist.");
             }
         }

@@ -9,6 +9,8 @@ projects/*
 plugins/*/build/*
 # Throwaway --project-dir builds used when debugging tests
 utilities/.scratch/
+# Personal, uncommitted Claude Code instructions
+CLAUDE.local.md
 
 # Radiation spectral data not distributed with the library
 plugins/radiation/spectral_data/GEMINI_LV1/

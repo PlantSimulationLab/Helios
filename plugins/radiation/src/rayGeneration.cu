@@ -21,7 +21,9 @@
 
 using namespace optix;
 
-RT_PROGRAM void direct_raygen() {
+//! The direct ray generation program for a scene without a background radiation field (see d_dualField()) or with one (dual_scene), whose rays are of the type with that scene's
+//! closest-hit and miss programs; inlined with a constant, each is its own code. Must match raygenDirect() in OptiX8DeviceCode.cu.
+static __device__ __forceinline__ void raygenDirect(const bool dual_scene) {
 
     uint Nrays = launch_dim.x * launch_dim.y;
     uint ray_index = launch_dim.x * launch_index.y + launch_index.x;
@@ -160,12 +162,19 @@ RT_PROGRAM void direct_raygen() {
 
                 // No minimum distance: the primitive the ray was launched from is skipped (isRayOrigin()), and a minimum distance
                 // let a ray launched that close to an adjacent surface pass through it where the two meet
-                optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, direct_ray_type, 0.f, ray_magnitude);
+                optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, dual_scene ? direct_dual_ray_type : direct_ray_type, 0.f, ray_magnitude);
 
                 prd.origin_UUID = UUID;
                 prd.source_ID = rr;
                 prd.hit_periodic_boundary = false;
+                prd.tile_x = 0; // launched from the central copy of the domain
+                prd.tile_y = 0;
+                prd.origin_tile_x = 0;
+                prd.origin_tile_y = 0;
                 initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
+                if (dual_scene) {
+                    d_startDualRay(prd, primitive_positions[UUID]);
+                }
 
                 if (dot(ray_direction, normal) > 0) {
                     prd.face = 1;
@@ -182,6 +191,9 @@ RT_PROGRAM void direct_raygen() {
                     // source only has the rest of the distance to the point it sampled on the source left to travel.
                     bool wrap_limit_reached = true;
                     for (int wrap = 0; wrap < MAX_PERIODIC_WRAPS; ++wrap) {
+                        if (dual_scene) {
+                            prd.recorded_t = NO_RECORDED_HIT; // no excluded primitive passed in this segment yet
+                        }
                         rtTrace(top_object, ray, prd);
 
                         if (!prd.hit_periodic_boundary) {
@@ -205,7 +217,18 @@ RT_PROGRAM void direct_raygen() {
     }
 }
 
-RT_PROGRAM void diffuse_raygen() {
+RT_PROGRAM void direct_raygen() {
+    raygenDirect(false);
+}
+
+//! direct_raygen for a scene with a background radiation field
+RT_PROGRAM void direct_raygen_dual() {
+    raygenDirect(true);
+}
+
+//! The diffuse ray generation program for a scene without a background radiation field (see d_dualField()) or with one (dual_scene), whose rays are of the type with that scene's
+//! closest-hit and miss programs; inlined with a constant, each is its own code. Must match raygenDiffuse() in OptiX8DeviceCode.cu.
+static __device__ __forceinline__ void raygenDiffuse(const bool dual_scene) {
 
     uint dimx = launch_dim.x * launch_dim.y;
     uint indx = launch_dim.x * launch_index.y + launch_index.x;
@@ -380,6 +403,10 @@ RT_PROGRAM void diffuse_raygen() {
             prd.palette_entry = d_spectralPaletteEntry(objID, d_originTextureUV(ptype, sp, puvID));
             prd.hit_periodic_boundary = false;
             initCoverTransmittance(prd); // translucent-cover attenuation starts at 1 (no covers crossed)
+            if (dual_scene) {
+                d_startDualRay(prd, primitive_positions[UUID]);
+            }
+            const unsigned int ray_type = dual_scene ? diffuse_dual_ray_type : diffuse_ray_type;
 
             // ---- "top" surface launch -------
             ray_origin = sp;
@@ -389,15 +416,22 @@ RT_PROGRAM void diffuse_raygen() {
 
                 // No minimum distance: the primitive the ray was launched from is skipped (isRayOrigin()), and a minimum distance
                 // let a ray launched that close to an adjacent surface pass through it where the two meet
-                ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 0.f, RT_DEFAULT_MAX);
+                ray = optix::make_Ray(ray_origin, ray_direction, ray_type, 0.f, RT_DEFAULT_MAX);
 
                 prd.face = 1;
 
                 // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
                 // translucent cover.
                 prd.hit_cover = false;
+                prd.tile_x = 0; // launched from the central copy of the domain
+                prd.tile_y = 0;
+                prd.origin_tile_x = 0;
+                prd.origin_tile_y = 0;
                 int wraps = 0;
                 for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
+                    if (dual_scene) {
+                        prd.recorded_t = NO_RECORDED_HIT; // no excluded primitive passed in this segment yet
+                    }
                     rtTrace(top_object, ray, prd);
 
                     if (prd.hit_periodic_boundary) {
@@ -421,15 +455,22 @@ RT_PROGRAM void diffuse_raygen() {
             } else if (launch_face == 0 && twosided_flag[objID] == 1) {
 
                 ray_direction = -ray_direction;
-                ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 0.f, RT_DEFAULT_MAX);
+                ray = optix::make_Ray(ray_origin, ray_direction, ray_type, 0.f, RT_DEFAULT_MAX);
 
                 prd.face = 0;
 
                 // Trace segment by segment: re-trace after wrapping through a periodic boundary and after passing a
                 // translucent cover.
                 prd.hit_cover = false;
+                prd.tile_x = 0; // launched from the central copy of the domain
+                prd.tile_y = 0;
+                prd.origin_tile_x = 0;
+                prd.origin_tile_y = 0;
                 int wraps = 0;
                 for (int segment = 0; segment < MAX_RAY_SEGMENTS; ++segment) {
+                    if (dual_scene) {
+                        prd.recorded_t = NO_RECORDED_HIT; // no excluded primitive passed in this segment yet
+                    }
                     rtTrace(top_object, ray, prd);
 
                     if (prd.hit_periodic_boundary) {
@@ -454,27 +495,21 @@ RT_PROGRAM void diffuse_raygen() {
     }
 }
 
-// Move a coordinate into [lower, upper) by a whole number of periods. A point on the lower face of a ray travelling out through
-// that face is moved to the upper face instead, so the ray starts inside the domain. Must match wrap_into_period() in the Vulkan
-// shaders.
-static __device__ __inline__ float wrapIntoPeriod(float coordinate, float direction, float lower, float upper) {
-    const float period = upper - lower;
-    float wrapped = coordinate - period * floorf((coordinate - lower) / period);
-    if (wrapped < lower || wrapped >= upper) {
-        wrapped = lower; // rounding at a whole number of periods
-    }
-    if (wrapped == lower && direction < 0.f) {
-        wrapped = upper;
-    }
-    return wrapped;
+RT_PROGRAM void diffuse_raygen() {
+    raygenDiffuse(false);
+}
+
+//! diffuse_raygen for a scene with a background radiation field
+RT_PROGRAM void diffuse_raygen_dual() {
+    raygenDiffuse(true);
 }
 
 // Move a camera ray that starts above or below the periodic boundary faces to the top or bottom of the faces. The faces span only
 // the height of the geometry, so the ray passes nothing it can hit on the way there; it is then moved into the domain laterally
 // by a whole number of periods, which is where it would have been wrapped to on the way. A ray that never reaches the faces'
-// height range is left where it is. Returns the distance the ray was moved along its direction. Must match
-// advance_to_periodic_faces() in the Vulkan shaders.
-static __device__ __inline__ float advanceToPeriodicFaces(float3 &ray_origin, const float3 &ray_direction) {
+// height range is left where it is. Returns the distance the ray was moved along its direction, and adds the whole periods it was
+// moved by laterally to the periodic copy of the domain the ray is in. Must match advance_to_periodic_faces() in the Vulkan shaders.
+static __device__ __inline__ float advanceToPeriodicFaces(float3 &ray_origin, const float3 &ray_direction, PerRayData &ray_data) {
     if (periodic_flag.x != 1 && periodic_flag.y != 1) {
         return 0.f;
     }
@@ -496,10 +531,16 @@ static __device__ __inline__ float advanceToPeriodicFaces(float3 &ray_origin, co
     const float t = (face_z - ray_origin.z) / ray_direction.z;
     float3 moved = make_float3(ray_origin.x + t * ray_direction.x, ray_origin.y + t * ray_direction.y, face_z);
     if (periodic_flag.x == 1) {
-        moved.x = wrapIntoPeriod(moved.x, ray_direction.x, bbox_vertices[make_uint2(0, 0)].x, bbox_vertices[make_uint2(1, 1)].x);
+        const float2 xbounds = periodicXBounds();
+        const float unwrapped = moved.x;
+        moved.x = wrapIntoPeriod(moved.x, ray_direction.x, xbounds.x, xbounds.y);
+        ray_data.tile_x += __float2int_rn((unwrapped - moved.x) / (xbounds.y - xbounds.x));
     }
     if (periodic_flag.y == 1) {
-        moved.y = wrapIntoPeriod(moved.y, ray_direction.y, bbox_vertices[make_uint2(0, 0)].y, bbox_vertices[make_uint2(1, 1)].y);
+        const float2 ybounds = periodicYBounds();
+        const float unwrapped = moved.y;
+        moved.y = wrapIntoPeriod(moved.y, ray_direction.y, ybounds.x, ybounds.y);
+        ray_data.tile_y += __float2int_rn((unwrapped - moved.y) / (ybounds.y - ybounds.x));
     }
     ray_origin = moved;
     return t;
@@ -592,7 +633,11 @@ RT_PROGRAM void camera_raygen() {
     initCoverTransmittance(prd); // camera throughput: no translucent covers crossed yet
 
     // A ray starting above or below a periodic domain is moved to it in one step
-    advanceToPeriodicFaces(ray_origin, ray_direction);
+    prd.tile_x = camera_tile.x; // the periodic copy of the domain the camera is in
+    prd.tile_y = camera_tile.y;
+    prd.origin_tile_x = prd.tile_x; // not used: the ray skips no primitive
+    prd.origin_tile_y = prd.tile_y;
+    advanceToPeriodicFaces(ray_origin, ray_direction, prd);
 
     ray = optix::make_Ray(ray_origin, ray_direction, camera_ray_type, 1e-5, RT_DEFAULT_MAX);
 
@@ -671,7 +716,11 @@ RT_PROGRAM void pixel_label_raygen() {
     optix::Ray ray;
 
     // A ray starting above or below a periodic domain is moved to it in one step; the distance counts toward the depth
-    prd.strength = advanceToPeriodicFaces(ray_origin, ray_direction); // distance travelled before any translucent covers passed
+    prd.tile_x = camera_tile.x; // the periodic copy of the domain the camera is in
+    prd.tile_y = camera_tile.y;
+    prd.origin_tile_x = prd.tile_x; // not used: the ray skips no primitive
+    prd.origin_tile_y = prd.tile_y;
+    prd.strength = advanceToPeriodicFaces(ray_origin, ray_direction, prd); // distance travelled before any translucent covers passed
 
     prd.origin_UUID = origin_ID;
     prd.palette_entry = 0xFFFFFFFFu; // camera rays leave no primitive

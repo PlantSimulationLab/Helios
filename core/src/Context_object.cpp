@@ -2548,7 +2548,7 @@ helios::vec3 CompoundObject::getObjectCenter() const {
 }
 
 float CompoundObject::getArea() const {
-    float area = 0.f;
+    double area = 0.0; // double precision so that small primitives are not lost beside a large running total
 
     for (uint UUID: UUIDs) {
         if (context->doesPrimitiveExist(UUID)) {
@@ -2556,7 +2556,7 @@ float CompoundObject::getArea() const {
         }
     }
 
-    return area;
+    return float(area);
 }
 
 void CompoundObject::setColor(const helios::RGBcolor &a_color) {

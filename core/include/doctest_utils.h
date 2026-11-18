@@ -18,7 +18,10 @@
 #define DOCTEST_UTILS_H
 
 #include <doctest.h>
+#include <cstdlib>
+#include <filesystem>
 #include <iostream>
+#include <random>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -224,6 +227,77 @@ namespace helios {
 
         return res;
     }
+
+    /**
+     * @brief Test helper that runs a scope from a working directory that is not the build directory
+     *
+     * Asset files shipped with Helios are opened by paths relative to the build directory (e.g. "plugins/solarposition/..."). They must
+     * resolve through the HELIOS_BUILD environment variable when the process working directory is somewhere else, which is the case
+     * for applications that do not run from the build directory (e.g. the Python bindings). On construction this helper sets
+     * HELIOS_BUILD to the build directory, if it is not already set, and changes the working directory to a new, empty temporary
+     * directory. On destruction it restores the original working directory, unsets HELIOS_BUILD if this helper set it, and removes the temporary directory.
+     *
+     * @note The working directory belongs to the whole process, so this must only be used from single-threaded test code.
+     * @note When HELIOS_BUILD is not already set, the test must be started from the build directory, which is what run_tests.sh does.
+     */
+    class ScopedForeignWorkingDirectory {
+    public:
+        ScopedForeignWorkingDirectory() : original_directory(std::filesystem::current_path()) {
+            std::random_device random_source;
+            foreign_directory = std::filesystem::temp_directory_path() / ("helios_foreign_cwd_" + std::to_string(random_source()) + std::to_string(random_source()));
+            std::filesystem::create_directories(foreign_directory);
+
+            if (std::getenv("HELIOS_BUILD") != nullptr) {
+                had_helios_build = true;
+            } else {
+                setEnvironmentVariable("HELIOS_BUILD", original_directory.string());
+            }
+
+            // Changing directory is the last step that can fail; undo the environment change if it does, since the destructor will not run
+            try {
+                std::filesystem::current_path(foreign_directory);
+            } catch (...) {
+                if (!had_helios_build) {
+                    unsetEnvironmentVariable("HELIOS_BUILD");
+                }
+                throw;
+            }
+        }
+
+        ~ScopedForeignWorkingDirectory() {
+            std::filesystem::current_path(original_directory);
+            if (!had_helios_build) {
+                unsetEnvironmentVariable("HELIOS_BUILD");
+            }
+            std::error_code ignored_error;
+            std::filesystem::remove_all(foreign_directory, ignored_error);
+        }
+
+        ScopedForeignWorkingDirectory(const ScopedForeignWorkingDirectory &) = delete;
+        ScopedForeignWorkingDirectory &operator=(const ScopedForeignWorkingDirectory &) = delete;
+
+    private:
+        // POSIX setenv()/unsetenv() do not exist in the MSVC runtime, which provides _putenv_s() instead.
+        static void setEnvironmentVariable(const char *name, const std::string &value) {
+#ifdef _MSC_VER
+            _putenv_s(name, value.c_str());
+#else
+            setenv(name, value.c_str(), 1);
+#endif
+        }
+
+        static void unsetEnvironmentVariable(const char *name) {
+#ifdef _MSC_VER
+            _putenv_s(name, ""); // an empty value deletes the variable on Windows
+#else
+            unsetenv(name);
+#endif
+        }
+
+        std::filesystem::path original_directory;
+        std::filesystem::path foreign_directory;
+        bool had_helios_build = false;
+    };
 
 } // namespace helios
 

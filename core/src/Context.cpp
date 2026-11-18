@@ -56,6 +56,9 @@ Context::Context() {
 
 void Context::seedRandomGenerator(uint seed) {
     generator.seed(seed);
+    // The normal distribution keeps the second value of each pair it makes; drop one made before this seed
+    unif_distribution.reset();
+    norm_distribution.reset();
 }
 
 std::minstd_rand0 *Context::getRandomGenerator() {
@@ -111,8 +114,9 @@ Texture::Texture(const char *texture_file) {
 
     //------ determine if transparency channel exists ---------//
 
-    // check if texture file has extension ".png"
-    const std::string &ext = getFileExtension(filename);
+    // check if texture file has extension ".png". The extension is compared in lower case because texture file validation accepts ".PNG" as well; compared as given, an upper-case PNG was handed to the JPEG reader below.
+    std::string ext = getFileExtension(filename);
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char character) { return std::tolower(character); });
     if (ext != ".png") {
         hastransparencychannel = false;
     } else {
@@ -302,6 +306,18 @@ uint64_t Context::getShapeRevision() const {
 
 uint64_t Context::getMaterialRevision() const {
     return material_revision.read();
+}
+
+uint64_t Context::getPrimitiveDataRevision(const char *label) const {
+    const auto revision = primitive_data_revisions.find(label);
+    if (revision == primitive_data_revisions.end()) {
+        return 0;
+    }
+    return revision->second.read();
+}
+
+uint64_t Context::getSpectralTextureRevision() const {
+    return spectral_texture_revision.read();
 }
 
 std::vector<uint> Context::getModifiedUUIDs(uint64_t &mark) const {
@@ -507,7 +523,7 @@ int Context::randu(int minrange, int maxrange) {
         // "minrange + lroundf(unif * range)" drew a continuous value from a half-open interval and
         // rounded it to nearest, so only half of the rounding window fell inside the range at each
         // end and the two endpoints came up about half as often as the interior values.
-        std::uniform_int_distribution<int> uniform_distribution(minrange, maxrange);
+        helios::uniform_int_distribution<int> uniform_distribution(minrange, maxrange);
         return uniform_distribution(generator);
     }
 }
@@ -641,20 +657,20 @@ void Context::addTimeseriesData(const char *label, float value, const Date &date
     double date_value = floor(date.year * 366.25) + date.JulianDay();
     date_value += double(time.hour) / 24. + double(time.minute) / 1440. + double(time.second) / 86400.;
 
-    std::vector<float> &data = timeseries_data[label];
+    // The series is kept sorted by date/time, so the insertion point is found by bisection. (A linear scan here made loading a
+    // long file quadratic in its number of rows.)
     std::vector<double> &datevalues = timeseries_datevalue[label];
+    std::vector<float> &values = timeseries_data[label];
 
-    // The series is kept sorted by date/time, so both the insertion point and any existing point at the same date/time
-    // are found by binary search. Scanning the whole series on every insertion made loading a long record quadratic
-    // in its length.
-    const auto position = std::lower_bound(datevalues.begin(), datevalues.end(), date_value);
-    if (position != datevalues.end() && *position == date_value) {
+    const auto insertion_point = std::lower_bound(datevalues.begin(), datevalues.end(), date_value);
+    if (insertion_point != datevalues.end() && *insertion_point == date_value) {
         std::cerr << "WARNING (Context::addTimeseriesData): Timeseries variable '" << label << "' already contains a data point at the specified date/time. Skipping duplicate timeseries date/time." << std::endl;
         return;
     }
-    const auto offset = position - datevalues.begin();
-    data.insert(data.begin() + offset, value);
-    datevalues.insert(position, date_value);
+
+    const auto index = insertion_point - datevalues.begin();
+    datevalues.insert(insertion_point, date_value);
+    values.insert(values.begin() + index, value);
 }
 
 void Context::updateTimeseriesData(const char *label, const Date &date, const Time &time, float new_value) {
@@ -1684,6 +1700,9 @@ void Context::regenerateTileObjectSubpatches(uint ObjID, const int2 &new_subdiv)
         getPrimitivePointer_private(UUIDs_new.at(k))->color_texture_ID = getPrimitivePointer_private(old_material_source)->color_texture_ID;
         getPrimitivePointer_private(UUIDs_new.at(k))->spectral_class_map_ID = getPrimitivePointer_private(old_material_source)->spectral_class_map_ID;
         getPrimitivePointer_private(UUIDs_new.at(k))->spectral_palette_ID = getPrimitivePointer_private(old_material_source)->spectral_palette_ID;
+        if (getPrimitivePointer_private(UUIDs_new.at(k))->spectral_class_map_ID != 0) {
+            spectral_texture_revision.markModified(); // a primitive given a spectral texture (see getSpectralTextureRevision())
+        }
     }
 
     tile->setPrimitiveUUIDs(UUIDs_new);
@@ -3050,11 +3069,9 @@ std::vector<std::string> Context::generateTexturesFromColormap(const std::string
     uint Ncolors = colormap_data.size();
 
     // check that texture file exists
-    std::ifstream tfile(texturefile);
-    if (!tfile) {
-        helios_runtime_error("ERROR (Context::generateTexturesFromColormap): Texture file " + texturefile + " does not exist, or you do not have permission to read it.");
+    if (tryResolveFilePath(texturefile).empty()) {
+        helios_runtime_error("ERROR (Context::generateTexturesFromColormap): Texture file " + texturefile + " does not exist relative to the working directory or the HELIOS_BUILD directory.");
     }
-    tfile.close();
 
     // get file extension
     std::string file_ext = getFileExtension(texturefile);
@@ -3662,9 +3679,11 @@ void Context::setPrimitiveSpectralTexture(const std::vector<uint> &UUIDs, const 
             primitive->spectral_class_map_ID = class_map_ID;
             primitive->spectral_palette_ID = palette_ID->second;
             primitive->markShapeModified();
+            spectral_texture_revision.markModified();
         } else if (primitive->spectral_palette_ID != palette_ID->second) {
             primitive->spectral_palette_ID = palette_ID->second;
             primitive->markDirty();
+            spectral_texture_revision.markModified();
         }
     }
 }
@@ -3699,6 +3718,7 @@ void Context::setPrimitiveSpectralPalette(const std::vector<uint> &UUIDs, const 
         if (primitive->spectral_palette_ID != palette_ID->second) {
             primitive->spectral_palette_ID = palette_ID->second;
             primitive->markDirty();
+            spectral_texture_revision.markModified();
         }
     }
 }
@@ -3719,6 +3739,7 @@ void Context::clearPrimitiveSpectralTexture(const std::vector<uint> &UUIDs) {
             primitive->spectral_class_map_ID = 0;
             primitive->spectral_palette_ID = 0;
             primitive->markShapeModified();
+            spectral_texture_revision.markModified();
         }
     }
 }
@@ -4182,6 +4203,9 @@ bool Context::isMaterialShared(uint materialID) const {
 void Context::updatePrimitiveSolidFraction(Primitive *primitive) {
     // An image giving the primitive its color, and a class map giving its spectra, were matched to the texture this primitive no longer has
     primitive->color_texture_ID = 0;
+    if (primitive->spectral_class_map_ID != 0) {
+        spectral_texture_revision.markModified();
+    }
     primitive->spectral_class_map_ID = 0;
     primitive->spectral_palette_ID = 0;
 
@@ -4200,6 +4224,20 @@ void Context::updatePrimitiveSolidFraction(Primitive *primitive) {
     primitive->setSolidFraction(textures.at(texture_file).getSolidFraction(uv));
 }
 
+namespace {
+    //! Whether a primitive moved from one material to the other is given different material properties: a two-sided flag, normal map or material data
+    /**
+     * Color and texture are left out: they change how the primitive looks, which marks it dirty. A plug-in that reads the others from the
+     * primitive's material learns of the move from Context::getMaterialRevision(). Material data is compared only by its presence, so two
+     * materials that both carry data count as different.
+     */
+    bool materialPropertiesDiffer(const Material &old_material, const Material &new_material) {
+        return old_material.twosided_flag != new_material.twosided_flag || old_material.normal_map_kind != new_material.normal_map_kind || old_material.normal_map_file != new_material.normal_map_file ||
+               old_material.normal_map_strength != new_material.normal_map_strength || old_material.normal_map_flip_green != new_material.normal_map_flip_green || !old_material.material_data_types.empty() ||
+               !new_material.material_data_types.empty();
+    }
+} // namespace
+
 void Context::setPrimitiveMaterial(Primitive *primitive, uint materialID) {
     const uint oldMaterialID = primitive->materialID;
     if (oldMaterialID == materialID) {
@@ -4209,6 +4247,9 @@ void Context::setPrimitiveMaterial(Primitive *primitive, uint materialID) {
         validateNormalMapFrame(primitive, "setPrimitiveMaterial", materials.at(materialID).normal_map_file);
     }
 
+    if (materialPropertiesDiffer(materials.at(oldMaterialID), materials.at(materialID))) {
+        material_revision.markModified();
+    }
     materials[oldMaterialID].reference_count--;
     materials[materialID].reference_count++;
     primitive->materialID = materialID;
@@ -5114,6 +5155,7 @@ void Context::hideObject(uint ObjID) {
         primitives.at(UUID)->ishidden = true;
         primitives.at(UUID)->stampModification();
     }
+    invalidateAllUUIDsCache(); // hidden primitives are not returned by getAllUUIDs()
 }
 
 void Context::hideObject(const std::vector<uint> &ObjIDs) {
@@ -5138,6 +5180,7 @@ void Context::showObject(uint ObjID) {
         primitives.at(UUID)->ishidden = false;
         primitives.at(UUID)->stampModification();
     }
+    invalidateAllUUIDsCache(); // shown primitives are returned by getAllUUIDs() again
 }
 
 void Context::showObject(const std::vector<uint> &ObjIDs) {
@@ -5366,92 +5409,62 @@ void Context::getObjectBoundingBox(const std::vector<uint> &ObjIDs, vec3 &min_co
     }
 }
 
-Tile *Context::getTileObjectPointer_private(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    } else if (objects.at(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
-        helios_runtime_error("ERROR (Context::getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Tile Object.");
+namespace {
+    //! Look up an object by ID and confirm it is of the expected type before casting to that type
+    /**
+     * Both checks are made in every build type. They used to be made only in Debug builds, so a Release build given the ID of an object of another type went on to dereference the null result of a failed
+     * dynamic_cast. The lookup is made once and its result reused, so the checks add no hash lookup to the one the cast already needed.
+     *
+     * \param[in] objects Objects of the Context, keyed by object ID.
+     * \param[in] ObjID ID of the object.
+     * \param[in] expected_type Type the object must have.
+     * \param[in] method_name Name of the Context method to report in an error message.
+     * \param[in] type_description Description of the expected type with its article (e.g. "a Tile Object"), for the error message.
+     * \return Pointer to the object as its concrete type.
+     */
+    template<typename ObjectClass>
+    ObjectClass *getTypedObjectPointer(const std::unordered_map<uint, CompoundObject *> &objects, uint ObjID, ObjectType expected_type, const char *method_name, const char *type_description) {
+        const auto object_iterator = objects.find(ObjID);
+        if (object_iterator == objects.end()) {
+            helios_runtime_error("ERROR (Context::" + std::string(method_name) + "): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
+        }
+        if (object_iterator->second->getObjectType() != expected_type) {
+            helios_runtime_error("ERROR (Context::" + std::string(method_name) + "): ObjectID of " + std::to_string(ObjID) + " is not " + std::string(type_description) + ".");
+        }
+        return dynamic_cast<ObjectClass *>(object_iterator->second);
     }
-#endif
-    return dynamic_cast<Tile *>(objects.at(ObjID));
+} // namespace
+
+Tile *Context::getTileObjectPointer_private(uint ObjID) const {
+    return getTypedObjectPointer<Tile>(objects, ObjID, OBJECT_TYPE_TILE, "getTileObjectPointer", "a Tile Object");
 }
 
 AdaptiveTile *Context::getAdaptiveTileObjectPointer_private(uint ObjID) const {
-    // Checked unconditionally rather than only under HELIOS_DEBUG, as the tile accessor above does. Without the check a Release build dereferences the null result of a failed dynamic_cast instead of reporting the
-    // mismatch, and confusing an adaptive tile with a uniform one is an easy mistake to make.
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getAdaptiveTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    } else if (objects.at(ObjID)->getObjectType() != OBJECT_TYPE_ADAPTIVE_TILE) {
-        helios_runtime_error("ERROR (Context::getAdaptiveTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not an Adaptive Tile Object.");
-    }
-    return dynamic_cast<AdaptiveTile *>(objects.at(ObjID));
+    return getTypedObjectPointer<AdaptiveTile>(objects, ObjID, OBJECT_TYPE_ADAPTIVE_TILE, "getAdaptiveTileObjectPointer", "an Adaptive Tile Object");
 }
 
 Sphere *Context::getSphereObjectPointer_private(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    } else if (objects.at(ObjID)->getObjectType() != OBJECT_TYPE_SPHERE) {
-        helios_runtime_error("ERROR (Context::getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Sphere Object.");
-    }
-#endif
-    return dynamic_cast<Sphere *>(objects.at(ObjID));
+    return getTypedObjectPointer<Sphere>(objects, ObjID, OBJECT_TYPE_SPHERE, "getSphereObjectPointer", "a Sphere Object");
 }
 
 Tube *Context::getTubeObjectPointer_private(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    } else if (objects.at(ObjID)->getObjectType() != OBJECT_TYPE_TUBE) {
-        helios_runtime_error("ERROR (Context::getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Tube Object.");
-    }
-#endif
-    return dynamic_cast<Tube *>(objects.at(ObjID));
+    return getTypedObjectPointer<Tube>(objects, ObjID, OBJECT_TYPE_TUBE, "getTubeObjectPointer", "a Tube Object");
 }
 
 Box *Context::getBoxObjectPointer_private(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    } else if (objects.at(ObjID)->getObjectType() != OBJECT_TYPE_BOX) {
-        helios_runtime_error("ERROR (Context::getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Box Object.");
-    }
-#endif
-    return dynamic_cast<Box *>(objects.at(ObjID));
+    return getTypedObjectPointer<Box>(objects, ObjID, OBJECT_TYPE_BOX, "getBoxObjectPointer", "a Box Object");
 }
 
 Disk *Context::getDiskObjectPointer_private(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    } else if (objects.at(ObjID)->getObjectType() != OBJECT_TYPE_DISK) {
-        helios_runtime_error("ERROR (Context::getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Disk Object.");
-    }
-#endif
-    return dynamic_cast<Disk *>(objects.at(ObjID));
+    return getTypedObjectPointer<Disk>(objects, ObjID, OBJECT_TYPE_DISK, "getDiskObjectPointer", "a Disk Object");
 }
 
 Polymesh *Context::getPolymeshObjectPointer_private(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    } else if (objects.at(ObjID)->getObjectType() != OBJECT_TYPE_POLYMESH) {
-        helios_runtime_error("ERROR (Context::getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Polymesh Object.");
-    }
-#endif
-    return dynamic_cast<Polymesh *>(objects.at(ObjID));
+    return getTypedObjectPointer<Polymesh>(objects, ObjID, OBJECT_TYPE_POLYMESH, "getPolymeshObjectPointer", "a Polymesh Object");
 }
 
 Cone *Context::getConeObjectPointer_private(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    } else if (objects.at(ObjID)->getObjectType() != OBJECT_TYPE_CONE) {
-        helios_runtime_error("ERROR (Context::getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " is not a Cone Object.");
-    }
-#endif
-    return dynamic_cast<Cone *>(objects.at(ObjID));
+    return getTypedObjectPointer<Cone>(objects, ObjID, OBJECT_TYPE_CONE, "getConeObjectPointer", "a Cone Object");
 }
 
 helios::vec3 Context::getTileObjectCenter(uint ObjID) const {
@@ -5567,57 +5580,27 @@ float Context::getTubeObjectSegmentVolume(uint ObjID, uint segment_index) const 
 }
 
 void Context::appendTubeSegment(uint ObjID, const helios::vec3 &node_position, float node_radius, const RGBcolor &node_color) {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::appendTubeSegment): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    dynamic_cast<Tube *>(objects.at(ObjID))->appendTubeSegment(node_position, node_radius, node_color);
+    getTubeObjectPointer_private(ObjID)->appendTubeSegment(node_position, node_radius, node_color);
 }
 
 void Context::appendTubeSegment(uint ObjID, const helios::vec3 &node_position, float node_radius, const char *texturefile, const helios::vec2 &textureuv_ufrac) {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::appendTubeSegment): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    dynamic_cast<Tube *>(objects.at(ObjID))->appendTubeSegment(node_position, node_radius, texturefile, textureuv_ufrac);
+    getTubeObjectPointer_private(ObjID)->appendTubeSegment(node_position, node_radius, texturefile, textureuv_ufrac);
 }
 
 void Context::scaleTubeGirth(uint ObjID, float scale_factor) {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::scaleTubeGirth): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    dynamic_cast<Tube *>(objects.at(ObjID))->scaleTubeGirth(scale_factor);
+    getTubeObjectPointer_private(ObjID)->scaleTubeGirth(scale_factor);
 }
 
 void Context::setTubeRadii(uint ObjID, const std::vector<float> &node_radii) {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::setTubeRadii): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    dynamic_cast<Tube *>(objects.at(ObjID))->setTubeRadii(node_radii);
+    getTubeObjectPointer_private(ObjID)->setTubeRadii(node_radii);
 }
 
 void Context::scaleTubeLength(uint ObjID, float scale_factor) {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::scaleTubeLength): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    dynamic_cast<Tube *>(objects.at(ObjID))->scaleTubeLength(scale_factor);
+    getTubeObjectPointer_private(ObjID)->scaleTubeLength(scale_factor);
 }
 
 void Context::pruneTubeNodes(uint ObjID, uint node_index) {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::pruneTubeNodes): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    dynamic_cast<Tube *>(objects.at(ObjID))->pruneTubeNodes(node_index);
+    getTubeObjectPointer_private(ObjID)->pruneTubeNodes(node_index);
 }
 
 uint Context::splitTubeObject(uint ObjID, uint node_index) {
@@ -5687,12 +5670,7 @@ uint Context::splitTubeObject(uint ObjID, uint node_index) {
 }
 
 void Context::setTubeNodes(uint ObjID, const std::vector<helios::vec3> &node_xyz) {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::setTubeNodes): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    dynamic_cast<Tube *>(objects.at(ObjID))->setTubeNodes(node_xyz);
+    getTubeObjectPointer_private(ObjID)->setTubeNodes(node_xyz);
 }
 
 helios::vec3 Context::getBoxObjectCenter(uint ObjID) const {

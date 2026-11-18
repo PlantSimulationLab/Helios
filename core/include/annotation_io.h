@@ -124,6 +124,7 @@ namespace helios::annotation {
      *
      * \param[in] filename Path of the COCO JSON file.
      * \param[in] append If true, an existing file at this path is loaded and added to. If false, a new document is started.
+     * An existing file that is empty is treated as absent. An existing file that is not empty and cannot be read as a JSON object raises an error, and the file is left unchanged.
      * \param[in] resolution Image dimensions in pixels.
      * \param[in] image_file Path of the image being annotated. Only its file name is recorded.
      * \return The COCO document and the image ID to use for annotations of this image.

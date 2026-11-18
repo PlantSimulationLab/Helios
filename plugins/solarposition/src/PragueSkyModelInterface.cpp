@@ -52,7 +52,7 @@ void PragueSkyModelInterface::initialize(const std::string &dataset_path) {
     } catch (const PragueSkyModel::DatasetNotFoundException &e) {
         std::ostringstream oss;
         oss << "ERROR (PragueSkyModelInterface::initialize): Prague dataset file not found: " << dataset_path << "\n"
-            << "Please ensure PragueSkyModelReduced.dat is present in plugins/radiation/spectral_data/prague_sky_model/\n"
+            << "Please ensure PragueSkyModelReduced.dat is present in plugins/solarposition/lib/prague_sky_model/ of the build directory\n"
             << "The reduced dataset should be ~26 MB.";
         helios_runtime_error(oss.str());
     } catch (const PragueSkyModel::DatasetReadException &e) {

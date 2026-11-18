@@ -322,10 +322,12 @@ void main(){
     vec2 wrapped = fract(texcoord) * uv_scale;
     vec3 texcoord3 = vec3(wrapped, float(textureID));
 
+    // Only 3D geometry (coordinateFlag==1) is decoded to linear light here, because the output stage at the end
+    // re-encodes to sRGB only for coordinateFlag==1. Window-normalized geometry is authored in display space.
     if( textureFlag==0 ){//Color by interpolating the colors at vertices
         color = fragmentColor;
         color.rgb = color.rgb*colorBoost;
-        if( linearPipeline==1 ){
+        if( linearPipeline==1 && coordinateFlag==1 ){
             color.rgb = srgbToLinear(clamp(color.rgb,0.0,1.0));
         }
     }else if( textureFlag==1 ){//Color by texture map
@@ -333,7 +335,7 @@ void main(){
         if(color.a<0.5 ){
             discard;
         }
-        if( linearPipeline==1 ){
+        if( linearPipeline==1 && coordinateFlag==1 ){
             color.rgb = srgbToLinear(color.rgb);
         }
     }else if( textureFlag==2 ){//Color by interpolating the colors at vertices, and set the transparency according to the red channel of the texture map given by textureSampler
@@ -342,7 +344,7 @@ void main(){
         if( color.a<0.5 ){
             discard;
         }
-        if( linearPipeline==1 ){
+        if( linearPipeline==1 && coordinateFlag==1 ){
             color.rgb = srgbToLinear(clamp(color.rgb,0.0,1.0));
         }
     }else if( textureFlag==4 ){//Color by texture map, blending the texture's alpha rather than testing it

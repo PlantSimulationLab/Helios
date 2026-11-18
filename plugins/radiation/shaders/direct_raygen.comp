@@ -107,6 +107,25 @@ layout(set = 0, binding = 18) readonly buffer SmoothingVertexIndicesBuffer { int
 layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer {
     float vertices[]; // 12 floats per face (4 vec3 vertices)
 } bbox_verts_buf;
+// Periodic copies of the domain rays track (see common/periodic_boundary.glsl and VulkanComputeBackend::uploadPeriodicInfo())
+layout(set = 0, binding = 22) readonly buffer PeriodicInfoBuffer {
+    uint tile_tracking; // 1 if rays track the periodic copy of the domain they are in
+    int max_repeats_x; // periodic copies on each side of the central domain; -1 for no limit
+    int max_repeats_y;
+    float repeated_zmin; // z-range of the geometry that repeats
+    float repeated_zmax;
+    float escape_offset; // distance beyond a face from which a ray leaving the periodic copies continues
+    int camera_tile_x; // periodic copy of the domain the camera is in (camera and pixel-label launches)
+    int camera_tile_y;
+    uint flux_field_count; // radiation fields: 2 with a background field (see common/buffer_indexing.glsl), else 1
+    uint flux_slot_count; // flux slots of the outgoing, scattered, camera and direct-flux buffers: primitive_count per field
+    uint normal_map_slot_count; // normal-map slots; the background field's moments are in slots normal_map_slot_count + slot
+    uint vertex_field_stride; // smoothing vertices; the background field's vertex values are at vertex_field_stride + vertex
+} periodic_info_buf;
+// Whether each primitive is excluded from the periodic boundary (1) or not (0); a one-element placeholder unless there is a background radiation field (see common/buffer_indexing.glsl)
+layout(set = 0, binding = 23) readonly buffer PeriodicExcludedBuffer {
+    uint excluded[];
+} periodic_excluded_buf;
 
 // ========== Descriptor Set 1: Materials/Sources ==========
 // NOTE on the three-float source/sky arrays below: std430 gives an array of `vec3` a 16-byte
@@ -228,7 +247,7 @@ layout(set = 2, binding = 9) buffer CameraScatterBottomBuffer {
 } camera_scatter_bottom_buf;
 
 layout(set = 2, binding = 10) buffer RadiationSpecularBuffer {
-    float radiation_specular[]; // [source * primitive * band] accumulated incident radiation
+    float radiation_specular[]; // [source][flux slot][band] accumulated incident radiation
 } radiation_specular_buf;
 
 // Each camera's white reference, laid out like the camera-weighted scatter. Zeroed once per runBand(), so it accumulates over all its launches.
@@ -392,6 +411,13 @@ void main() {
     if (prim_idx >= pc.primitive_count) {
         return; // Safety check
     }
+
+    // With a background radiation field, the rays of a primitive that is not excluded from the periodic boundary are dual rays (see traversal_record_excluded in common/bvh_traversal.glsl), which book
+    // what they deliver in both fields. The primitive is the same for every invocation of a workgroup, and so is the field count. Must match originBooksBothFields() in OptiX8DeviceCode.cu.
+    uint field_count = (dual_field() && periodic_excluded_buf.excluded[prim_idx] == 0u) ? 2u : 1u;
+    traversal_record_excluded = field_count == 2u;
+    uint field_stride = pc.primitive_count * pc.band_count; // one field's [primitive][band] block
+    uint slot_stride = flux_slot_stride(); // one [flux slot][band] block of the outgoing, scattered and camera buffers
 
     // Total rays per primitive (matches CUDA: Nrays = launch_dim.x * launch_dim.y)
     uint Nrays = pc.launch_dim_x * pc.launch_dim_y;
@@ -558,6 +584,8 @@ void main() {
                     atomicAdd(ray_counters_buf.counters[0], 1u);
                 }
                 bool is_occluded = reached != SOURCE_REACHED;
+                // An excluded primitive a dual ray passed stands between this primitive and the source in the scene as it is
+                bool blocked_in_scene = traversal_excluded_passed;
 
                 if (is_occluded) {
                     continue; // Ray blocked - no direct illumination from this source
@@ -607,127 +635,151 @@ void main() {
                         rho *= body_fraction;
                         tau *= body_fraction;
                     }
-                    float energy = flux * strength * absorption_factor;
-
-                    // Accumulate to radiation_in buffer with subgroup reduction
-                    // All threads in this subgroup write to the same rad_idx (same primitive),
-                    // so we reduce within the subgroup before issuing a single atomic.
+                    // A dual ray books what it delivers in the background field too. An excluded primitive it passed blocks it in the scene as it is (field 0) only, which few rays
+                    // meet. So that the others cost no more than in a scene without a background field, this launch leaves in the background's flux slots (field 1) only what the
+                    // excluded primitives kept from the scene as it is, and the backend adds the scene's slots to them when the launch is done (see
+                    // VulkanComputeBackend::completeBackgroundField()). The pass count is the same for every invocation of the subgroup, so its reductions are reached uniformly, and a
+                    // scene without a background field makes those of one field. Must match bookDirectOnOrigin() in OptiX8DeviceCode.cu, which books both fields in full.
                     uint rad_idx = index_prim_band(prim_idx, band, pc.band_count);
-                    float subgroup_sum = subgroupAdd(energy);
-                    if (subgroupElect()) {
-                        atomicAdd(rad_in_buf.radiation_in[rad_idx], subgroup_sum);
-                    }
-                    // The face can differ between invocations (e.g. rays toward an extended source), so the top-face share gets
-                    // its own reduction. The condition is a push constant, so every invocation reaches the subgroupAdd.
-                    if (pc.face_absorption_enabled != 0u) {
-                        float top_sum = subgroupAdd(is_top_face ? energy : 0.0);
-                        if (subgroupElect() && top_sum != 0.0) {
-                            atomicAdd(rad_in_top_buf.radiation_in_top[rad_idx], top_sum);
-                        }
-                    }
+                    uint field_passes = (field_count == 2u && subgroupAdd(blocked_in_scene ? 1u : 0u) > 0u) ? 2u : 1u;
+                    for (uint field = 0u; field < field_passes; field++) {
+                        // Field 0: what reaches the primitive in the scene as it is. Field 1: what an excluded primitive kept from it.
+                        float field_flux = ((field == 1u) == blocked_in_scene) ? flux : 0.0;
+                        uint slot_idx = rad_idx + field * field_stride; // [flux slot][band] index of the primitive in this field
 
-                    // Scatter: reflected and transmitted energy from direct illumination. Invocations of the same primitive can reach
-                    // different faces (rays toward an extended source), so each adds to the top and bottom sums according to its own face
-                    // rather than the subgroup taking the face of the invocation that writes.
-                    float scatter_rho = flux * strength * rho;
-                    float scatter_tau = flux * strength * tau;
-                    float scatter_top_sum = subgroupAdd(is_top_face ? scatter_rho : scatter_tau);
-                    float scatter_bottom_sum = subgroupAdd(is_top_face ? scatter_tau : scatter_rho);
-                    if (subgroupElect()) {
-                        atomicAdd(scatter_top_buf.scatter_top[rad_idx], scatter_top_sum);
-                        atomicAdd(scatter_bottom_buf.scatter_bottom[rad_idx], scatter_bottom_sum);
-                    }
+                        // What is absorbed is that of the scene as it is
+                        if (field == 0u) {
+                            float energy = field_flux * strength * absorption_factor;
 
-                    // Camera-weighted scatter, accumulated in parallel with the band-weighted scatter
-                    // above, once per camera against that camera's rho_cam/tau_cam. This launch runs
-                    // once per dispatch rather than once per camera, so weighting by a single camera
-                    // here would hand every other camera that camera's image. The loop bound is a push
-                    // constant, so control flow stays uniform and subgroupAdd is reached by every
-                    // active invocation in the subgroup.
-                    uint cam_scatter_stride = pc.primitive_count * pc.band_count;
-
-                    // What reaches a primitive with a spectral texture, from which each camera computes the outgoing radiation of its classes.
-                    // The condition is the same for every invocation, so the subgroupAdd is reached by all of them.
-                    if (pc.camera_count > 0u && palette_buf.words[0] != 0u) {
-                        float incident_top_sum = subgroupAdd(is_top_face ? flux * strength : 0.0);
-                        float incident_bottom_sum = subgroupAdd(is_top_face ? 0.0 : flux * strength);
-                        if (subgroupElect() && spectral_texture_on(prim_idx)) {
-                            if (incident_top_sum != 0.0) {
-                                atomicAdd(spectral_incident_buf.values[src_idx * cam_scatter_stride + rad_idx], incident_top_sum);
+                            // Accumulate to radiation_in buffer with subgroup reduction
+                            // All threads in this subgroup write to the same rad_idx (same primitive),
+                            // so we reduce within the subgroup before issuing a single atomic.
+                            float subgroup_sum = subgroupAdd(energy);
+                            if (subgroupElect()) {
+                                atomicAdd(rad_in_buf.radiation_in[rad_idx], subgroup_sum);
                             }
-                            if (incident_bottom_sum != 0.0) {
-                                atomicAdd(spectral_incident_buf.values[(pc.source_count + 1u + src_idx) * cam_scatter_stride + rad_idx], incident_bottom_sum);
+                            // The face can differ between invocations (e.g. rays toward an extended source), so the top-face share gets
+                            // its own reduction. The condition is a push constant, so every invocation reaches the subgroupAdd.
+                            if (pc.face_absorption_enabled != 0u) {
+                                float top_sum = subgroupAdd(is_top_face ? energy : 0.0);
+                                if (subgroupElect() && top_sum != 0.0) {
+                                    atomicAdd(rad_in_top_buf.radiation_in_top[rad_idx], top_sum);
+                                }
                             }
                         }
-                    }
 
-                    for (uint cam = 0u; cam < pc.camera_count; cam++) {
-                        uint cam_mat_idx = ((src_idx * pc.primitive_count + prim_idx) * pc.material_band_count + global_b) * pc.camera_count + cam;
-                        float rho_cam = use_palette ? spectral_palette_rho_cam(src_idx, origin_palette_entry, global_b, cam) : reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
-                        float tau_cam = use_palette ? spectral_palette_tau_cam(src_idx, origin_palette_entry, global_b, cam) : transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
-                        if (layer >= 0) {
-                            rho_cam *= body_fraction;
-                            tau_cam *= body_fraction;
-                        }
-                        if (origin_is_cover) {
-                            // A cover's reflectance is spectrally flat within a band: each camera weights it by its white reference.
-                            rho_cam = rho * white_reference_cam_buf.white_reference_cam[(src_idx * pc.material_band_count + global_b) * pc.camera_count + cam];
-                            tau_cam = 0.0;
-                        }
-                        float rho_cam_energy = flux * strength * rho_cam;
-                        float tau_cam_energy = flux * strength * tau_cam;
-                        float scatter_top_cam_sum = subgroupAdd(is_top_face ? rho_cam_energy : tau_cam_energy);
-                        float scatter_bottom_cam_sum = subgroupAdd(is_top_face ? tau_cam_energy : rho_cam_energy);
-                        uint cam_rad_idx = cam * cam_scatter_stride + rad_idx;
+                        // Scatter: reflected and transmitted energy from direct illumination. Invocations of the same primitive can reach
+                        // different faces (rays toward an extended source), so each adds to the top and bottom sums according to its own face
+                        // rather than the subgroup taking the face of the invocation that writes.
+                        float scatter_rho = field_flux * strength * rho;
+                        float scatter_tau = field_flux * strength * tau;
+                        float scatter_top_sum = subgroupAdd(is_top_face ? scatter_rho : scatter_tau);
+                        float scatter_bottom_sum = subgroupAdd(is_top_face ? scatter_tau : scatter_rho);
                         if (subgroupElect()) {
-                            atomicAdd(camera_scatter_top_buf.camera_scatter_top[cam_rad_idx], scatter_top_cam_sum);
-                            atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[cam_rad_idx], scatter_bottom_cam_sum);
-                        }
-                    }
-
-                    // White reference: the light arriving at this face straight from the source, weighted by each camera's
-                    // response to a white surface. A camera's "auto" white balance neutralizes it.
-                    for (uint cam = 0u; cam < pc.camera_count; cam++) {
-                        float white = white_reference_cam_buf.white_reference_cam[(src_idx * pc.material_band_count + global_b) * pc.camera_count + cam];
-                        float white_energy = flux * strength * white;
-                        float white_reference_top_sum = subgroupAdd(is_top_face ? white_energy : 0.0);
-                        float white_reference_bottom_sum = subgroupAdd(is_top_face ? 0.0 : white_energy);
-                        uint white_rad_idx = cam * cam_scatter_stride + rad_idx;
-                        if (subgroupElect()) {
-                            atomicAdd(white_reference_top_buf.white_reference_top[white_rad_idx], white_reference_top_sum);
-                            atomicAdd(white_reference_bottom_buf.white_reference_bottom[white_rad_idx], white_reference_bottom_sum);
-                        }
-                    }
-
-                    // The reflected energy is also kept in the face's second outgoing component, so that the host counts it in the energy
-                    // the launch delivering the lobe scatters, or absorbs it in place if that launch never comes; the host clears it
-                    // before that launch reads the outgoing buffers (cameras use the lobe alone)
-                    if (surface_layers_enabled()) {
-                        uint layer_offset = pc.primitive_count * pc.band_count;
-                        float layer_energy = flux * strength * layer_albedo;
-                        float layer_top_sum = subgroupAdd(is_top_face ? layer_energy : 0.0);
-                        float layer_bottom_sum = subgroupAdd(is_top_face ? 0.0 : layer_energy);
-                        if (subgroupElect()) {
-                            if (layer_top_sum != 0.0) {
-                                atomicAdd(scatter_top_buf.scatter_top[layer_offset + rad_idx], layer_top_sum);
-                            }
-                            if (layer_bottom_sum != 0.0) {
-                                atomicAdd(scatter_bottom_buf.scatter_bottom[layer_offset + rad_idx], layer_bottom_sum);
+                            {
+                                atomicAdd(scatter_top_buf.scatter_top[slot_idx], scatter_top_sum);
+                                atomicAdd(scatter_bottom_buf.scatter_bottom[slot_idx], scatter_bottom_sum);
                             }
                         }
-                    }
 
-                    // A surface layer reflects a source's direct radiation into its microfacet lobe around the mirror direction, which
-                    // the rays reading the first scattering of the direct radiation evaluate from the incident flux stored here
-                    // With camera flux smoothing, every smoothed primitive records it as well, for the camera to evaluate the direct radiation with the shading normal
-                    if (pc.specular_reflection_enabled > 0) {
-                        bool smoothed = !origin_is_cover && smoothing_indices_buf.indices.length() > int(prim_idx) * 4 + 3 && smoothing_indices_buf.indices[int(prim_idx) * 4] >= 0;
-                        // Also recorded for a primitive with a normal map, whose direct radiation cameras shade per hit point with the shading normal
-                        float spec_energy = (layer >= 0 || smoothed || (origin_map != NO_NORMAL_MAP && !origin_is_cover)) ? flux * strength : 0.0;
-                        float spec_sum = subgroupAdd(spec_energy);
-                        if (subgroupElect()) {
-                            uint spec_idx = src_idx * pc.primitive_count * pc.band_count + prim_idx * pc.band_count + band;
-                            atomicAdd(radiation_specular_buf.radiation_specular[spec_idx], spec_sum);
+                        // What reaches a primitive with a spectral texture, from which each camera computes the outgoing radiation of its classes.
+                        // The condition is the same for every invocation, so the subgroupAdd is reached by all of them.
+                        if (pc.camera_count > 0u && palette_buf.words[0] != 0u) {
+                            float incident_top_sum = subgroupAdd(is_top_face ? field_flux * strength * body_fraction : 0.0);
+                            float incident_bottom_sum = subgroupAdd(is_top_face ? 0.0 : field_flux * strength * body_fraction);
+                            if (subgroupElect() && spectral_texture_on(prim_idx)) {
+                                {
+                                    if (incident_top_sum != 0.0) {
+                                        atomicAdd(spectral_incident_buf.values[src_idx * slot_stride + slot_idx], incident_top_sum);
+                                    }
+                                    if (incident_bottom_sum != 0.0) {
+                                        atomicAdd(spectral_incident_buf.values[(pc.source_count + 1u + src_idx) * slot_stride + slot_idx], incident_bottom_sum);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Camera-weighted scatter, accumulated in parallel with the band-weighted scatter
+                        // above, once per camera against that camera's rho_cam/tau_cam. This launch runs
+                        // once per dispatch rather than once per camera, so weighting by a single camera
+                        // here would hand every other camera that camera's image. The loop bound is a push
+                        // constant, so control flow stays uniform and subgroupAdd is reached by every
+                        // active invocation in the subgroup.
+                        for (uint cam = 0u; cam < pc.camera_count; cam++) {
+                            uint cam_mat_idx = ((src_idx * pc.primitive_count + prim_idx) * pc.material_band_count + global_b) * pc.camera_count + cam;
+                            float rho_cam = use_palette ? spectral_palette_rho_cam(src_idx, origin_palette_entry, global_b, cam) : reflectivity_cam_buf.reflectivity_cam[cam_mat_idx];
+                            float tau_cam = use_palette ? spectral_palette_tau_cam(src_idx, origin_palette_entry, global_b, cam) : transmissivity_cam_buf.transmissivity_cam[cam_mat_idx];
+                            if (layer >= 0) {
+                                rho_cam *= body_fraction;
+                                tau_cam *= body_fraction;
+                            }
+                            if (origin_is_cover) {
+                                // A cover's reflectance is spectrally flat within a band: each camera weights it by its white reference.
+                                rho_cam = rho * white_reference_cam_buf.white_reference_cam[(src_idx * pc.material_band_count + global_b) * pc.camera_count + cam];
+                                tau_cam = 0.0;
+                            }
+                            float rho_cam_energy = field_flux * strength * rho_cam;
+                            float tau_cam_energy = field_flux * strength * tau_cam;
+                            float scatter_top_cam_sum = subgroupAdd(is_top_face ? rho_cam_energy : tau_cam_energy);
+                            float scatter_bottom_cam_sum = subgroupAdd(is_top_face ? tau_cam_energy : rho_cam_energy);
+                            uint cam_rad_idx = cam * slot_stride + slot_idx;
+                            if (subgroupElect()) {
+                                {
+                                    atomicAdd(camera_scatter_top_buf.camera_scatter_top[cam_rad_idx], scatter_top_cam_sum);
+                                    atomicAdd(camera_scatter_bottom_buf.camera_scatter_bottom[cam_rad_idx], scatter_bottom_cam_sum);
+                                }
+                            }
+                        }
+
+                        // White reference: the light arriving at this face straight from the source, weighted by each camera's
+                        // response to a white surface. A camera's "auto" white balance neutralizes it. It is that of the scene as it
+                        // is, with one value per primitive.
+                        if (field == 0u) {
+                            for (uint cam = 0u; cam < pc.camera_count; cam++) {
+                                float white = white_reference_cam_buf.white_reference_cam[(src_idx * pc.material_band_count + global_b) * pc.camera_count + cam];
+                                float white_energy = field_flux * strength * white;
+                                float white_reference_top_sum = subgroupAdd(is_top_face ? white_energy : 0.0);
+                                float white_reference_bottom_sum = subgroupAdd(is_top_face ? 0.0 : white_energy);
+                                uint white_rad_idx = cam * field_stride + rad_idx;
+                                if (subgroupElect()) {
+                                    atomicAdd(white_reference_top_buf.white_reference_top[white_rad_idx], white_reference_top_sum);
+                                    atomicAdd(white_reference_bottom_buf.white_reference_bottom[white_rad_idx], white_reference_bottom_sum);
+                                }
+                            }
+                        }
+
+                        // The reflected energy is also kept in the face's second outgoing component, so that the host counts it in the energy
+                        // the launch delivering the lobe scatters, or absorbs it in place if that launch never comes; the host clears it
+                        // before that launch reads the outgoing buffers (cameras use the lobe alone)
+                        if (surface_layers_enabled()) {
+                            float layer_energy = field_flux * strength * layer_albedo;
+                            float layer_top_sum = subgroupAdd(is_top_face ? layer_energy : 0.0);
+                            float layer_bottom_sum = subgroupAdd(is_top_face ? 0.0 : layer_energy);
+                            if (subgroupElect()) {
+                                {
+                                    if (layer_top_sum != 0.0) {
+                                        atomicAdd(scatter_top_buf.scatter_top[slot_stride + slot_idx], layer_top_sum);
+                                    }
+                                    if (layer_bottom_sum != 0.0) {
+                                        atomicAdd(scatter_bottom_buf.scatter_bottom[slot_stride + slot_idx], layer_bottom_sum);
+                                    }
+                                }
+                            }
+                        }
+
+                        // A surface layer reflects a source's direct radiation into its microfacet lobe around the mirror direction, which
+                        // the rays reading the first scattering of the direct radiation evaluate from the incident flux stored here
+                        // With camera flux smoothing, every smoothed primitive records it as well, for the camera to evaluate the direct radiation with the shading normal
+                        if (pc.specular_reflection_enabled > 0) {
+                            bool smoothed = !origin_is_cover && smoothing_indices_buf.indices.length() > int(prim_idx) * 4 + 3 && smoothing_indices_buf.indices[int(prim_idx) * 4] >= 0;
+                            // Also recorded for a primitive with a normal map, whose direct radiation cameras shade per hit point with the shading normal
+                            float spec_energy = (layer >= 0 || smoothed || (origin_map != NO_NORMAL_MAP && !origin_is_cover)) ? field_flux * strength : 0.0;
+                            float spec_sum = subgroupAdd(spec_energy);
+                            if (subgroupElect()) {
+                                {
+                                    atomicAdd(radiation_specular_buf.radiation_specular[direct_flux_index(src_idx, prim_idx, field, band)], spec_sum);
+                                }
+                            }
                         }
                     }
                 }

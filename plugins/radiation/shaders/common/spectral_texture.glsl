@@ -29,15 +29,16 @@
  * transmissivity, camera-weighted reflectivity and camera-weighted transmissivity tables, as float bits.
  *
  * Set 2, binding 16 receives the radiation reaching each face of each primitive with a spectral texture, per [face (top, bottom)][source
- * slot][primitive][launch band] (see RayTracingResults::spectral_incident), when there are cameras and some primitive has a spectral texture.
+ * slot][flux slot][launch band] (see RayTracingResults::spectral_incident), when there are cameras and some primitive has a spectral texture. A flux slot is a primitive in a radiation field (see
+ * buffer_indexing.glsl).
  *
  * Set 2, binding 17 holds the camera-weighted outgoing radiation of each class for the camera being traced (see
  * RayTracingBackend::uploadSpectralCameraFlux()): the number of class-flux slots S (0 for none), the launch band count B and the number of
- * primitives P; then the first slot of each primitive (0xFFFFFFFF for none); then the values per [face][slot][band] as float bits.
+ * flux slots P; then the first class-flux slot of each flux slot (0xFFFFFFFF for none); then the values per [face][slot][band] as float bits.
  *
  * Set 2, binding 19 holds, with camera flux smoothing, the radiation of primitives with a spectral texture on the smoothing vertices (see
  * RayTracingBackend::uploadSpectralVertexIncident()): the layer count L (0 for none: the source slots and then the emitted radiation), the
- * launch band count B, the vertex count V and the camera index; then the values per [face][layer][vertex][band] as float bits.
+ * launch band count B, the vertex count V of every radiation field together and the camera index; then the values per [face][layer][field][vertex][band] as float bits.
  *
  * Requires texture_mask.glsl (triangle_texture_uv) and the uv_data_buf / uv_ids_buf buffers.
  */
@@ -147,13 +148,13 @@ bool spectral_texture_on(uint prim_idx) {
     return palette_buf.words[0] != 0u && palette_buf.words[palette_buf.words[3] + prim_idx] != NO_PALETTE_ENTRY;
 }
 
-// Class-flux slot of the class a camera ray hits, or NO_PALETTE_ENTRY. hit_uv comes from the traversal: patch-local coordinates in
-// [0,1], or the barycentric weights of a triangle's second and third corners.
-uint spectral_camera_class_slot(uint prim_idx, uint prim_type, vec2 hit_uv) {
+// Class-flux slot of the class a camera ray hits on primitive prim_idx, read in the radiation field of flux slot flux_position (see buffer_indexing.glsl), or NO_PALETTE_ENTRY. hit_uv comes from the
+// traversal: patch-local coordinates in [0,1], or the barycentric weights of a triangle's second and third corners.
+uint spectral_camera_class_slot(uint prim_idx, uint flux_position, uint prim_type, vec2 hit_uv) {
     if (spectral_camera_flux_buf.words[0] == 0u) {
         return NO_PALETTE_ENTRY;
     }
-    uint first_slot = spectral_camera_flux_buf.words[3u + prim_idx];
+    uint first_slot = spectral_camera_flux_buf.words[3u + flux_position];
     if (first_slot == NO_PALETTE_ENTRY || !spectral_texture_on(prim_idx)) {
         return NO_PALETTE_ENTRY;
     }
@@ -181,18 +182,19 @@ bool spectral_vertex_on() {
 // With camera flux smoothing: the part of the camera-weighted outgoing radiation of the class of class-flux slot `slot` on primitive prim_idx, from one face in
 // a launch band, that is interpolated from the facet's vertices v (v.w < 0 for a triangle) with weights w: the emitted radiation (layer 1 of the vertex values)
 // and the class's reflectivity and transmissivity of material slot sky_slot (the sky and other surfaces) times the radiation reaching the two faces from there
-// (layer 0). The camera adds the direct radiation of the sources, which it takes from the facet itself.
-float spectral_smoothed_class_flux(uint prim_idx, uint slot, bool top_face, uint launch_band, uint global_band, ivec4 v, vec4 w, uint sky_slot) {
+// (layer 0). The camera adds the direct radiation of the sources, which it takes from the facet itself. The slot is that of flux slot flux_position of the primitive, and field_vertex_offset the
+// number of vertices before those of its radiation field (see buffer_indexing.glsl).
+float spectral_smoothed_class_flux(uint prim_idx, uint flux_position, uint slot, bool top_face, uint launch_band, uint global_band, ivec4 v, vec4 w, uint sky_slot, uint field_vertex_offset) {
     uint layers = spectral_vertex_buf.words[0];
     uint num_bands = spectral_vertex_buf.words[1];
     uint num_vertices = spectral_vertex_buf.words[2];
     uint camera = spectral_vertex_buf.words[3];
-    uint entry = palette_buf.words[palette_buf.words[3] + prim_idx] + (slot - spectral_camera_flux_buf.words[3u + prim_idx]);
+    uint entry = palette_buf.words[palette_buf.words[3] + prim_idx] + (slot - spectral_camera_flux_buf.words[3u + flux_position]);
     uint same_face = top_face ? 0u : 1u;
     float value[2][2];
     for (uint face = 0u; face < 2u; face++) {
         for (uint layer = 0u; layer < 2u; layer++) {
-            uint base = 4u + ((face * layers + layer) * num_vertices) * num_bands + launch_band;
+            uint base = 4u + ((face * layers + layer) * num_vertices + field_vertex_offset) * num_bands + launch_band;
             float sum = w.x * uintBitsToFloat(spectral_vertex_buf.words[base + uint(v.x) * num_bands]) + w.y * uintBitsToFloat(spectral_vertex_buf.words[base + uint(v.y) * num_bands]) +
                         w.z * uintBitsToFloat(spectral_vertex_buf.words[base + uint(v.z) * num_bands]);
             if (v.w >= 0) {

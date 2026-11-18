@@ -16,7 +16,9 @@ usage() {
     echo "  --debugbuild     Build with Debug configuration"
     echo "  --verbose        Show full build/compile output"
     echo "  --log-file <file>  Redirect all output to a specified log file"
-    echo "  --test <name>    Run only the specified test (e.g., --test radiation)"
+    echo "  --test <name>    Run only the specified test (e.g., --test radiation)."
+    echo "                   A full run includes the CUDA-only plug-ins (aeriallidar, voxelintersection) when nvcc is found or"
+    echo "                   --requiregpu is given."
     echo "  --tests <list>   Run specified tests (comma-separated, e.g., --tests \"radiation,lidar\")"
     echo "  --testcase <case> Pass specific test case(s) to doctest, comma-separated, with * wildcards (e.g., --testcase \"My Test Case\" or --testcase \"*first*,*second*\")"
     echo "  --doctestargs <args> Pass arguments directly to doctest (e.g., --doctestargs \"--help --list-test-cases\"); words are split on spaces, so quote any containing one (e.g., --doctestargs \"'--subcase=*a b*'\")"
@@ -456,7 +458,13 @@ if [[ "${OSTYPE}" == "linux"* ]]; then
     # After ~25-35 vkCreateInstance/vkDestroyInstance cycles, NVIDIA driver fails with VK_ERROR_INITIALIZATION_FAILED
 
     # Solution 1: Use only NVIDIA ICD (modern Vulkan loader method)
-    export VK_LOADER_DRIVERS_SELECT="nvidia*"
+    # Only where an NVIDIA driver is installed, and never over a driver choice the caller already made: the loader applies
+    # this filter on top of VK_ICD_FILENAMES / VK_DRIVER_FILES, so on a machine without an NVIDIA driver (an AMD or Intel GPU,
+    # or lavapipe in CI) it leaves no driver at all and every Vulkan test skips for "no GPU".
+    if [ -z "${VK_ICD_FILENAMES:-}${VK_DRIVER_FILES:-}${VK_LOADER_DRIVERS_SELECT:-}" ] &&
+       ls /usr/share/vulkan/icd.d/nvidia*.json /etc/vulkan/icd.d/nvidia*.json /usr/local/share/vulkan/icd.d/nvidia*.json >/dev/null 2>&1; then
+        export VK_LOADER_DRIVERS_SELECT="nvidia*"
+    fi
 
     # Solution 2: Increase file descriptor limit
     # NVIDIA driver has FD leak issue with VkFence objects
@@ -567,13 +575,31 @@ if [ -n "$INVALID_TEST_NAME" ]; then
   exit 1
 fi
 
+# Plug-ins that a plug-in's tests need in the build besides the plug-in itself. A plug-in with optional features compiles them only
+# when the plug-in they depend on is part of the build (#ifdef ENABLE_<PLUGIN>), and its tests of those features are compiled out
+# with them. Building these alongside it means "--test <plugin>" runs the same tests as a full run does. They are built as
+# libraries only: their own tests are neither built nor run.
+optional_plugins_for_tests() {
+  case "$1" in
+    projectbuilder) echo "plantarchitecture radiation solarposition energybalance boundarylayerconductance canopygenerator visualizer" ;;
+    *) echo "" ;;
+  esac
+}
+
+# Plug-ins that require the CUDA toolkit to compile (find_package(CUDAToolkit REQUIRED)). They join a full run when nvcc is on the
+# PATH, or when --requiregpu is given, so that a GPU runner that has lost its toolkit fails instead of silently leaving them out.
+CUDA_TEST_PLUGINS="aeriallidar voxelintersection"
+if command -v nvcc >/dev/null 2>&1 || [ "$REQUIREGPU" == "ON" ]; then
+  TEST_PLUGINS="${TEST_PLUGINS} ${CUDA_TEST_PLUGINS}"
+fi
+
 # Determine which plugins are needed for current test selection
 PLUGINS_TO_BUILD=${TEST_PLUGINS}
 if [ -n "$SPECIFIC_TEST" ]; then
   if [[ "$SPECIFIC_TEST" == "context" ]]; then
     PLUGINS_TO_BUILD=""  # Context test needs no plugins
   else
-    PLUGINS_TO_BUILD="$SPECIFIC_TEST"  # Only build the plugin being tested
+    PLUGINS_TO_BUILD="$SPECIFIC_TEST $(optional_plugins_for_tests "$SPECIFIC_TEST")"  # The plugin being tested, and those its tests need
   fi
 elif [ -n "$SPECIFIC_TESTS" ]; then
   PLUGINS_TO_BUILD=""
@@ -581,11 +607,12 @@ elif [ -n "$SPECIFIC_TESTS" ]; then
   for test in "${TESTS_ARRAY[@]}"; do
     test=$(echo "$test" | xargs)  # trim whitespace
     if [[ "$test" != "context" ]]; then
-      PLUGINS_TO_BUILD="$PLUGINS_TO_BUILD $test"
+      PLUGINS_TO_BUILD="$PLUGINS_TO_BUILD $test $(optional_plugins_for_tests "$test")"
     fi
   done
-  PLUGINS_TO_BUILD=$(echo "$PLUGINS_TO_BUILD" | xargs)  # trim leading/trailing whitespace
 fi
+# One of each, in a stable order, without leading or trailing whitespace
+PLUGINS_TO_BUILD=$(echo "$PLUGINS_TO_BUILD" | tr ' ' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' ' | xargs)
 
 # Create or verify project directory
 PROJECT_EXISTS="OFF"
@@ -790,6 +817,12 @@ else
       exit 0
     fi
 
+    # Test executables that a test filter matched nothing in, and the filter. With several executables a filter usually names the
+    # cases of one of them, so this is an error only if no executable had a matching case.
+    FILTER_UNMATCHED_EXECUTABLES=()
+    FILTER_MATCHED_COUNT=0
+    FILTER_DESCRIPTION=""
+
     # Run each test executable
     for test_exe in "${TEST_EXECUTABLES[@]}"; do
       
@@ -832,11 +865,12 @@ else
         fi
         # Check if doctest reports 0 matching test cases
         if echo "$MATCHED_CASES" | grep -q "current filters: 0"; then
-          echo -e "\x1B[31mError: No test cases in $test_exe match the filters: ${FILTER_ARGS[*]}\x1B[39m"
-          echo "Use --doctestargs \"--list-test-cases\" to see available test cases. Give several test cases as one comma-separated --testcase \"*first*,*second*\"."
-          ERROR_COUNT=$((ERROR_COUNT + 1))
+          FILTER_UNMATCHED_EXECUTABLES+=("$test_exe")
+          FILTER_DESCRIPTION="${FILTER_ARGS[*]}"
+          echo "Skipping $test_exe: none of its test cases match the filters: ${FILTER_ARGS[*]}"
           continue
         fi
+        FILTER_MATCHED_COUNT=$((FILTER_MATCHED_COUNT + 1))
       fi
 
       SHARD_NOTE=""
@@ -918,6 +952,13 @@ else
       fi
 
     done
+
+    # A filter that matched nothing in any executable ran no tests at all, which must not be reported as a pass
+    if [ ${#FILTER_UNMATCHED_EXECUTABLES[@]} -gt 0 ] && [ "$FILTER_MATCHED_COUNT" -eq 0 ]; then
+      echo -e "\x1B[31mError: No test cases in ${FILTER_UNMATCHED_EXECUTABLES[*]} match the filters: ${FILTER_DESCRIPTION}\x1B[39m"
+      echo "Use --doctestargs \"--list-test-cases\" to see available test cases. Give several test cases as one comma-separated --testcase \"*first*,*second*\"."
+      ERROR_COUNT=$((ERROR_COUNT + 1))
+    fi
 
     cd "$TEMP_BASE" || cleanup 1
 

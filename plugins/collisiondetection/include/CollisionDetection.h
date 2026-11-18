@@ -1079,6 +1079,11 @@ private:
     //! See setCancelFlag(); owned by the caller, read via volatile in castRaysSoA.
     volatile int *cancel_flag = nullptr;
 
+    //! Set by a CPU BVH traversal whose node stack filled up, which can happen only for a malformed tree. Traversals run
+    //! inside OpenMP regions, where an exception cannot propagate, so they set this flag and the caller raises the error
+    //! after the region with throwIfTraversalStackOverflowed().
+    std::atomic<bool> traversal_stack_overflowed{false};
+
     // -------- THREAD-SAFE PRIMITIVE CACHE --------
 
     /**
@@ -2079,6 +2084,12 @@ private:
      * \brief Single ray traversal methods for optimized BVH layouts
      */
     HitResult castRaySoATraversal(const RayQuery &query, RayTracingStats &stats);
+
+    /**
+     * \brief Raise an error if a CPU BVH traversal since the last call filled its node stack, and clear the flag
+     * \param[in] caller Name of the public method that ran the traversals, for the error message
+     */
+    void throwIfTraversalStackOverflowed(const std::string &caller);
 
     /**
      * \brief Coherent packet traversal of rays [begin, end) against the SoA BVH (shared stack).

@@ -351,9 +351,9 @@ void Visualizer::displayImageWithBoundingBoxes(const std::string &image_file, co
     if (!classes_file.empty()) {
         class_names = readBoundingBoxClassNames(classes_file);
     } else {
-        const std::string sibling_classes_file = helios::getFilePath(bbox_file, true) + "classes.txt";
+        const std::filesystem::path sibling_classes_file = helios::resolveFilePath(bbox_file).parent_path() / "classes.txt";
         if (std::filesystem::exists(sibling_classes_file)) {
-            class_names = readBoundingBoxClassNames(sibling_classes_file);
+            class_names = readBoundingBoxClassNames(sibling_classes_file.string());
         }
     }
 
@@ -1848,9 +1848,6 @@ void Visualizer::plotUpdate(bool hide_window) {
 }
 
 void Visualizer::prepareFrameGeometry() {
-    // Apply point cloud culling for performance optimization
-    updatePointCulling();
-
     // Set the view to fit window
     // Only a camera nobody has set is fitted to the scene. Judging that by the default coordinates
     // alone moved a camera that had been set to them on purpose.
@@ -1868,6 +1865,11 @@ void Visualizer::prepareFrameGeometry() {
             camera_eye_location = camera_lookat_center + sphere2cart(make_SphericalCoord(2.f * domain_bounding_radius, 20.f * PI_F / 180.f, 0));
         }
     }
+
+    // Apply point cloud culling for performance optimization. The camera matrices are brought up to date first, after the
+    // view has been fitted above: culling against the matrices of the frame before hid or showed points one frame late.
+    updatePerspectiveTransformation();
+    updatePointCulling();
 
     // Colorbar - update with aspect ratio correction
     updateColorbar();
@@ -3287,6 +3289,11 @@ void Visualizer::cullPointsByDistance(float maxDistance, float lodFactor) {
 
     glm::vec3 camera_pos(camera_eye_location.x, camera_eye_location.y, camera_eye_location.z);
 
+    // The size each point was added with, carried over from the last pass. A point seen for the first time has not been
+    // enlarged yet, so its stored size is that size. Rebuilding the map each pass also drops points that no longer exist.
+    std::unordered_map<size_t, float> base_sizes;
+    base_sizes.reserve(point_base_sizes.size());
+
     // Apply distance-based culling with level-of-detail and adaptive sizing. This runs after the
     // frustum pass and only ever hides points: a point the frustum pass has already culled stays
     // culled.
@@ -3295,6 +3302,13 @@ void Visualizer::cullPointsByDistance(float maxDistance, float lodFactor) {
         if (index_map.geometry_type != GeometryHandler::GEOMETRY_TYPE_POINT) {
             continue;
         }
+
+        const auto known_base_size = point_base_sizes.find(UUID);
+        float base_size = (known_base_size != point_base_sizes.end()) ? known_base_size->second : geometry_handler.getSize(UUID);
+        if (base_size <= 0) {
+            base_size = 1.0f;
+        }
+        base_sizes[UUID] = base_size;
         const size_t v = index_map.vertex_index;
         const size_t i = v / 3;
         const glm::vec3 point(vertex_data->at(v), vertex_data->at(v + 1), vertex_data->at(v + 2));
@@ -3324,13 +3338,16 @@ void Visualizer::cullPointsByDistance(float maxDistance, float lodFactor) {
         const bool currently_visible = visible_flags->at(index_map.visible_index) != 0;
         geometry_handler.setVisibility(UUID, currently_visible && should_render);
         if (currently_visible && should_render) {
-            // Apply adaptive sizing to maintain visual quality
-            float original_size = geometry_handler.getSize(UUID);
-            if (original_size <= 0)
-                original_size = 1.0f;
-            geometry_handler.setSize(UUID, original_size * adaptive_size);
+            // Apply adaptive sizing to maintain visual quality, always from the size the point was added with. Written only
+            // when it changes, so that a static view does not mark every point for re-upload.
+            const float adapted_size = base_size * adaptive_size;
+            if (geometry_handler.getSize(UUID) != adapted_size) {
+                geometry_handler.setSize(UUID, adapted_size);
+            }
         }
     }
+
+    point_base_sizes = std::move(base_sizes);
 }
 
 void Visualizer::updatePointCulling() {

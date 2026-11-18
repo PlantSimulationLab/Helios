@@ -206,6 +206,7 @@ uint CanopyGenerator::tomato(const TomatoParameters &params, const vec3 &origin)
         tomatoShoot(params, position, base_direction, length, tip_angle, leaf_UUIDs, branch_UUIDs, fruit_UUIDs, context);
     }
 
+    UUID_trunk.emplace_back(); // this plant has no trunk; an empty entry keeps the per-plant lists the same length
     UUID_leaf.push_back(leaf_UUIDs);
     UUID_branch.push_back(branch_UUIDs);
     UUID_fruit.push_back(fruit_UUIDs);

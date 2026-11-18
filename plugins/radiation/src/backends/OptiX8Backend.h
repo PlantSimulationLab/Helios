@@ -151,8 +151,19 @@ namespace helios {
         // Diagnostics
         void queryGPUMemory() const override;
         std::string getBackendName() const override { return "OptiX 8.1"; }
+        //! The same budget as each batch of a direct or diffuse launch, so that no camera launch runs longer than they do
+        [[nodiscard]] size_t maxRaysPerLaunch() const override {
+            return max_threads_per_launch;
+        }
 
     private:
+        //! Largest number of threads (rays) in one optixLaunch
+        /**
+         * OptiX refuses a launch of more than 2^30 threads, and a launch that runs for seconds can exceed the watchdog of a
+         * display driver, so direct and diffuse launches are batched, and camera launches tiled, to 2^26 threads.
+         */
+        static constexpr uint64_t max_threads_per_launch = uint64_t(1) << 26;
+
         // ---- OptiX pipeline objects ----
         OptixDeviceContext        optix_context    = nullptr;
         OptixModule               optix_module     = nullptr;
@@ -175,6 +186,13 @@ namespace helios {
         OptixProgramGroup pg_hit_diffuse         = nullptr;
         OptixProgramGroup pg_hit_camera          = nullptr;
         OptixProgramGroup pg_hit_pixel_label     = nullptr;
+        // Programs of the direct and diffuse ray types in a scene with a background radiation field (see DUAL_FIELD_SBT_OFFSET)
+        OptixProgramGroup pg_raygen_direct_dual  = nullptr;
+        OptixProgramGroup pg_raygen_diffuse_dual = nullptr;
+        OptixProgramGroup pg_miss_direct_dual    = nullptr;
+        OptixProgramGroup pg_miss_diffuse_dual   = nullptr;
+        OptixProgramGroup pg_hit_direct_dual     = nullptr;
+        OptixProgramGroup pg_hit_diffuse_dual    = nullptr;
 
         // ---- GAS / acceleration structure ----
         OptixTraversableHandle    gas_handle       = 0;
@@ -191,6 +209,8 @@ namespace helios {
         CUdeviceptr               d_raygen_record_diffuse     = 0;
         CUdeviceptr               d_raygen_record_camera      = 0;
         CUdeviceptr               d_raygen_record_pixel_label = 0;
+        CUdeviceptr               d_raygen_record_direct_dual  = 0; //!< with a background radiation field
+        CUdeviceptr               d_raygen_record_diffuse_dual = 0;
 
         // ---- Launch params (device copy) ----
         OptiX8LaunchParams        h_params         = {};
@@ -201,24 +221,12 @@ namespace helios {
         CUdeviceptr d_primitive_type         = 0;
         CUdeviceptr d_primitive_positions    = 0;
         CUdeviceptr d_primitiveID            = 0;
-        CUdeviceptr d_objectID               = 0;
         CUdeviceptr d_object_subdivisions    = 0;
         CUdeviceptr d_twosided_flag          = 0;
-        CUdeviceptr d_primitive_solid_fraction = 0;
 
         // Per-type geometry
-        CUdeviceptr d_patch_vertices         = 0;
-        CUdeviceptr d_patch_UUIDs            = 0;
-        CUdeviceptr d_triangle_vertices      = 0;
-        CUdeviceptr d_triangle_UUIDs         = 0;
-        CUdeviceptr d_disk_centers           = 0;
-        CUdeviceptr d_disk_radii             = 0;
-        CUdeviceptr d_disk_normals           = 0;
-        CUdeviceptr d_disk_UUIDs             = 0;
-        CUdeviceptr d_tile_vertices          = 0;
-        CUdeviceptr d_tile_UUIDs             = 0;
         CUdeviceptr d_bbox_vertices          = 0;
-        CUdeviceptr d_bbox_UUIDs             = 0;
+        CUdeviceptr d_periodic_excluded      = 0;
 
         // Global UUID array: d_primitive_uuid[global_pos] = UUID
         CUdeviceptr d_primitive_uuid_arr     = 0;
@@ -323,6 +331,9 @@ namespace helios {
         // ---- State ----
         bool     is_initialized          = false;
         size_t   current_primitive_count = 0;
+        //! Slots per primitive dimension of the outgoing, scattered, camera and direct-flux buffers: the primitive count, or twice it with a background field (RayTracingGeometry::fluxSlotCount())
+        size_t   current_flux_slot_count = 0;
+        size_t   current_flux_field_count = 1; //!< 2 with a background field (RayTracingGeometry::periodicDualField()), else 1
         size_t   current_patch_count     = 0;
         size_t   current_triangle_count  = 0;
         size_t   current_disk_count      = 0;
@@ -351,7 +362,11 @@ namespace helios {
         /// Raise an error unless the white reference device buffers hold one [prim][band] block per current camera, as the direct and diffuse kernels index them
         void requireWhiteReferenceBuffersSized(const char *caller, size_t launch_band_count) const;
 
+        //! Raise an error if outgoing radiation to upload holds more values than the device buffers do
+        void requireOutgoingUploadFits(const char *caller, size_t top_count, size_t bottom_count) const;
+
         /// Raise an error if a launch with specular reflection enabled would read or write a d_radiation_specular that zeroRadiationBuffers() did not allocate for it
+
         void requireSpecularBufferSized(const char *caller, const RayTracingLaunchParams &launch_params) const;
 
         /// Free all geometry-related device buffers

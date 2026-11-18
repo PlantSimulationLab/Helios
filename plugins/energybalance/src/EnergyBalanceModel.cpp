@@ -17,7 +17,7 @@
 */
 
 #include "EnergyBalanceModel.h"
-#include "../include/EnergyBalanceModel.h"
+#include "EnergyBalanceSolver.h"
 
 #include "global.h"
 
@@ -30,21 +30,6 @@
 #endif
 
 using namespace helios;
-
-// Total conductance to water vapor of a surface: the stomata of each face and that face's boundary layer act in series, and the two faces act in parallel. A face with no stomata or no boundary-layer conductance has no vapor pathway,
-// which also avoids a 0/0 in the series expression.
-static inline float moistureConductance(float gbv_front, float gbv_back, float gS, float stomatal_sidedness) {
-    float gM = 0.f;
-    float gS_front = gS * stomatal_sidedness;
-    float gS_back = gS * (1.f - stomatal_sidedness);
-    if (gbv_front != 0.f && gS_front != 0.f) {
-        gM += gbv_front * gS_front / (gbv_front + gS_front);
-    }
-    if (gbv_back != 0.f && gS_back != 0.f) {
-        gM += gbv_back * gS_back / (gbv_back + gS_back);
-    }
-    return gM;
-}
 
 EnergyBalanceModel::EnergyBalanceModel(helios::Context *__context) {
 
@@ -186,10 +171,22 @@ void EnergyBalanceModel::solveSurfaceTemperatures(const SurfaceEnergyBalanceInpu
     solveSurfaceTemperatures_CPU(inputs, dt, T);
 #endif
 
-    for (float &temperature: T) {
-        if (!std::isfinite(temperature)) { // catches NaN and infinities
-            temperature = temperature_default;
+    // A surface temperature that is not finite means the energy balance of that primitive had no solution, which comes from an input that
+    // is not finite or is far outside its physical range. Substituting a plausible temperature would hide that from every model downstream.
+    size_t nonfinite_count = 0;
+    size_t first_nonfinite = 0;
+    for (size_t u = 0; u < T.size(); u++) {
+        if (!std::isfinite(T[u])) { // catches NaN and infinities
+            if (nonfinite_count == 0) {
+                first_nonfinite = u;
+            }
+            nonfinite_count++;
         }
+    }
+    if (nonfinite_count > 0) {
+        helios_runtime_error("ERROR (EnergyBalanceModel::run): The surface temperature solution is not finite for " + std::to_string(nonfinite_count) + " of " + std::to_string(T.size()) +
+                             " primitives (the first is at position " + std::to_string(first_nonfinite) +
+                             " in the list of primitives being run). Check the primitive data the model reads for these primitives (radiation fluxes, air temperature, humidity, pressure, wind speed and conductances) for values that are not finite or are far outside their physical range.");
     }
 }
 
@@ -1568,32 +1565,6 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
     std::cout << "------------------------------------------------------" << std::endl;
 }
 
-// Helper function: CPU version of energy balance evaluation
-static inline float evaluateEnergyBalance_CPU(float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gbv_front, float gbv_back, float gS, uint Nsides, float stomatal_sidedness, float heatcapacity,
-                                              float surfacehumidity, float dt, float Tprev) {
-
-    // Outgoing emission flux
-    float Rout = float(Nsides) * eps * 5.67e-8F * T * T * T * T;
-
-    // Sensible heat flux
-    float QH = cp_air_mol * gH * (T - Ta);
-
-    // Latent heat flux
-    float es = esat_Pa(T);
-    float gM = moistureConductance(gbv_front, gbv_back, gS, stomatal_sidedness);
-
-    float QL = gM * lambda_mol * (es * surfacehumidity - ea) / pressure;
-
-    // Storage heat flux
-    float storage = 0.f;
-    if (dt > 0) {
-        storage = heatcapacity * (T - Tprev) / dt;
-    }
-
-    // Residual
-    return R - Rout - QH - QL - Qother - storage;
-}
-
 void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint> &UUIDs, SurfaceEnergyBalanceInputs &inputs) {
 
     // Create warning aggregator for default value warnings
@@ -1780,6 +1751,10 @@ void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint
                     }
                     float R;
                     context->getPrimitiveData(p, flux_labels[b].c_str(), R);
+                    if (!std::isfinite(R)) {
+                        helios_runtime_error("ERROR (EnergyBalanceModel::run): Primitive " + std::to_string(p) + " has a radiation flux of " + std::to_string(R) + " in primitive data '" + flux_labels[b] +
+                                             "', but it must be finite. Check the model or data that set it.");
+                    }
                     inputs.R[u] += R;
                 }
 
@@ -1797,10 +1772,10 @@ void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint
                 // Air temperature
                 if (air_temperature_given && context->doesPrimitiveDataExist(p, "air_temperature")) {
                     context->getPrimitiveData(p, "air_temperature", inputs.Ta[u]);
-                    if (inputs.Ta[u] < 250.f) {
-                        warnings.addWarning("air_temperature_likely_celsius",
-                                            "Value of " + std::to_string(inputs.Ta[u]) + " in 'air_temperature' is very small - should be in Kelvin, using default (" + std::to_string(air_temperature_default) + " K)");
-                        inputs.Ta[u] = air_temperature_default;
+                    // 150 K is below any air temperature measured on Earth (about 184 K) and far above any temperature in Celsius
+                    if (!std::isfinite(inputs.Ta[u]) || inputs.Ta[u] < 150.f) {
+                        helios_runtime_error("ERROR (EnergyBalanceModel::run): Primitive " + std::to_string(p) + " has an air temperature of " + std::to_string(inputs.Ta[u]) +
+                                             " in primitive data 'air_temperature', but it must be a finite value in Kelvin of at least 150 K. A value this small is usually a temperature given in Celsius.");
                     }
                 } else {
                     inputs.Ta[u] = air_temperature_default;
@@ -1811,12 +1786,9 @@ void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint
                 float hr;
                 if (air_humidity_given && context->doesPrimitiveDataExist(p, "air_humidity")) {
                     context->getPrimitiveData(p, "air_humidity", hr);
-                    if (hr > 1.f) {
-                        warnings.addWarning("air_humidity_out_of_range_high", "Value of " + std::to_string(hr) + " in 'air_humidity' > 1.0 - should be fractional [0,1], using default (" + std::to_string(air_humidity_default) + ")");
-                        hr = air_humidity_default;
-                    } else if (hr < 0.f) {
-                        warnings.addWarning("air_humidity_out_of_range_low", "Value of " + std::to_string(hr) + " in 'air_humidity' < 0.0 - should be fractional [0,1], using default (" + std::to_string(air_humidity_default) + ")");
-                        hr = air_humidity_default;
+                    if (!std::isfinite(hr) || hr > 1.f || hr < 0.f) {
+                        helios_runtime_error("ERROR (EnergyBalanceModel::run): Primitive " + std::to_string(p) + " has an air relative humidity of " + std::to_string(hr) +
+                                             " in primitive data 'air_humidity', but it must be a fraction between 0 and 1. A value above 1 is usually a humidity given in percent.");
                     }
                 } else {
                     hr = air_humidity_default;
@@ -1830,14 +1802,9 @@ void EnergyBalanceModel::gatherSurfaceEnergyBalanceInputs(const std::vector<uint
                 // Air pressure
                 if (air_pressure_given && context->doesPrimitiveDataExist(p, "air_pressure")) {
                     context->getPrimitiveData(p, "air_pressure", inputs.pressure[u]);
-                    if (inputs.pressure[u] < 10000.f) {
-                        if (message_flag) {
-                            warnings.addWarning("air_pressure_out_of_range", "Value of " + std::to_string(inputs.pressure[u]) +
-                                                                                     " given in 'air_pressure' primitive data is very small. "
-                                                                                     "Values should be given in units of Pascals. Assuming default value of " +
-                                                                                     std::to_string(pressure_default));
-                        }
-                        inputs.pressure[u] = pressure_default;
+                    if (!std::isfinite(inputs.pressure[u]) || inputs.pressure[u] < 10000.f) {
+                        helios_runtime_error("ERROR (EnergyBalanceModel::run): Primitive " + std::to_string(p) + " has an air pressure of " + std::to_string(inputs.pressure[u]) +
+                                             " in primitive data 'air_pressure', but it must be a finite value in Pascals of at least 10000 Pa. A value this small is usually a pressure given in kPa.");
                     }
                 } else {
                     inputs.pressure[u] = pressure_default;
@@ -2119,54 +2086,12 @@ void EnergyBalanceModel::solveSurfaceTemperatures_CPU(const SurfaceEnergyBalance
 #endif
     for (int p = 0; p < (int) Nprimitives; p++) {
 
-        // Secant method parameters
-        const float err_max = 0.0001f;
-        const uint max_iter = 100;
-
-        // Initial guesses. The second guess must differ from the first, otherwise the two residuals are
-        // identical and the secant update below divides by zero (this happens when the supplied initial
-        // temperature equals the hardcoded second guess of 400 K).
-        float T_old = To[p];
-        float T_old_old = 400.f;
-        if (T_old_old == T_old) {
-            T_old_old = T_old + 100.f;
-        }
-
-        // Evaluate residual at initial guesses
-        float resid_old = evaluateEnergyBalance_CPU(T_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-        float resid_old_old = evaluateEnergyBalance_CPU(T_old_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-
-        // Secant method iteration. Initialize the result to the current best guess so that a degenerate
-        // early exit (identical residuals) never leaves the surface temperature uninitialized.
-        float T_new = T_old;
-        float resid = 100;
-        float err = resid;
-        uint iter = 0;
-        while (err > err_max && iter < max_iter) {
-
-            if (resid_old == resid_old_old) {
-                err = 0;
-                break;
-            }
-
-            T_new = fabs((T_old_old * resid_old - T_old * resid_old_old) / (resid_old - resid_old_old));
-
-            resid = evaluateEnergyBalance_CPU(T_new, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-
-            // Relative change of the newest secant step (measures the latest iterate, not the previous one)
-            err = fabs(T_new - T_old) / fabs(T_old);
-
-            resid_old_old = resid_old;
-            resid_old = resid;
-
-            T_old_old = T_old;
-            T_old = T_new;
-
-            iter++;
-        }
+        const SurfaceEnergyBalanceTerms terms{R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]};
+        float T_new;
+        const bool converged = solveSurfaceEnergyBalance(terms, To[p], T_new);
 
         // Track convergence failures (thread-safe)
-        if (err > err_max) {
+        if (!converged) {
 #ifdef USE_OPENMP
             int thread_id = omp_get_thread_num();
             thread_convergence_failures[thread_id]++;

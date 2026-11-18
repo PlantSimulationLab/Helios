@@ -27,6 +27,7 @@ extern "C" {
 }
 
 #include "Visualizer.h"
+#include "VisualizerMacOS.h"
 
 #include "json.hpp"
 
@@ -55,6 +56,9 @@ using namespace helios;
 // GLFW should be initialized once and kept alive for the entire application lifetime
 // This avoids macOS-specific issues with reinitializing GLFW after termination
 static int glfw_reference_count = 0;
+
+// Number of Visualizers with a GLFW window that can be shown (not headless). On macOS a headless Visualizer makes the process a background application, with no Dock icon, only while there are none.
+static int glfw_windowed_visualizer_count = 0;
 
 // Number of Visualizers rendering through each EGL display. eglGetPlatformDisplayEXT returns the same display for the same device to
 // every caller, and eglTerminate is not reference counted, so a display is terminated only when no Visualizer uses it.
@@ -309,7 +313,11 @@ static bool isPlausibleClassIDToken(const std::string &token) {
 
 std::vector<Visualizer::BoundingBox> Visualizer::readBoundingBoxFile(const std::string &bbox_file) {
 
-    std::ifstream file(bbox_file);
+    // helios::resolveFilePath() resolves an empty path to the working directory, which opens as an empty file
+    if (bbox_file.empty()) {
+        helios_runtime_error("ERROR (Visualizer::readBoundingBoxFile): The bounding box annotation file path is empty.");
+    }
+    std::ifstream file(helios::resolveFilePath(bbox_file));
     if (!file.is_open()) {
         helios_runtime_error("ERROR (Visualizer::readBoundingBoxFile): Could not open bounding box annotation file '" + bbox_file + "'. Check that the file exists and that you have permission to read it.");
     }
@@ -377,7 +385,11 @@ std::vector<Visualizer::BoundingBox> Visualizer::readBoundingBoxFile(const std::
 
 std::map<uint, std::string> Visualizer::readBoundingBoxClassNames(const std::string &classes_file) {
 
-    std::ifstream file(classes_file);
+    // helios::resolveFilePath() resolves an empty path to the working directory, which opens as an empty file
+    if (classes_file.empty()) {
+        helios_runtime_error("ERROR (Visualizer::readBoundingBoxClassNames): The class name file path is empty.");
+    }
+    std::ifstream file(helios::resolveFilePath(classes_file));
     if (!file.is_open()) {
         helios_runtime_error("ERROR (Visualizer::readBoundingBoxClassNames): Could not open class name file '" + classes_file + "'. Check that the file exists and that you have permission to read it.");
     }
@@ -431,7 +443,11 @@ std::map<uint, std::string> Visualizer::readBoundingBoxClassNames(const std::str
 
 std::vector<Visualizer::SegmentationMask> Visualizer::readSegmentationMaskFile(const std::string &mask_file, const std::string &image_file) {
 
-    std::ifstream file(mask_file);
+    // helios::resolveFilePath() resolves an empty path to the working directory, which opens as an empty file
+    if (mask_file.empty()) {
+        helios_runtime_error("ERROR (Visualizer::readSegmentationMaskFile): The segmentation mask file path is empty.");
+    }
+    std::ifstream file(helios::resolveFilePath(mask_file));
     if (!file.is_open()) {
         helios_runtime_error("ERROR (Visualizer::readSegmentationMaskFile): Could not open segmentation mask file '" + mask_file + "'. Check that the file exists and that you have permission to read it.");
     }
@@ -1285,6 +1301,9 @@ std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
     try {
         // Read pixels from the color attachment
         std::vector<unsigned char> pixel_data(data_size);
+        // pixel_data holds tightly packed rows; at the default pack alignment of 4, glReadPixels pads each GL_RGB row
+        // to a multiple of 4 bytes and overruns the buffer when the width is not a multiple of 4.
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
         glReadPixels(0, 0, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, pixel_data.data());
 
         error = glGetError();
@@ -1373,6 +1392,9 @@ std::vector<helios::RGBAcolor> Visualizer::readOffscreenPixelsRGBA(bool read_alp
     try {
         // Read pixels from the color attachment
         std::vector<unsigned char> pixel_data(data_size);
+        // pixel_data holds tightly packed rows; at the default pack alignment of 4, glReadPixels pads each GL_RGB row
+        // to a multiple of 4 bytes and overruns the buffer when the width is not a multiple of 4.
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
         if (read_alpha) {
             glReadPixels(0, 0, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), GL_RGBA, GL_UNSIGNED_BYTE, pixel_data.data());
         } else {
@@ -1593,6 +1615,20 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
         openWindow();
     }
+
+#ifdef __APPLE__
+    // GLFW makes the process a regular Cocoa application, with a Dock icon, when it creates its first window, although a headless Visualizer's window is never shown. A process using only headless
+    // Visualizers is made an accessory application instead, which has no Dock icon or menu bar, and, having no visible window, does not take focus. (Not a prohibited application: macOS refuses to make
+    // one regular again.) A windowed Visualizer makes it a regular application again, which a headless one created earlier would otherwise have left without an icon or a menu bar.
+    if (headless) {
+        if (glfw_windowed_visualizer_count == 0) {
+            visualizer_macos::setActivationPolicy(visualizer_macos::ActivationPolicy::Accessory);
+        }
+    } else {
+        glfw_windowed_visualizer_count++;
+        visualizer_macos::setActivationPolicy(visualizer_macos::ActivationPolicy::Regular);
+    }
+#endif
 
     } // end of the GLFW context branch
 
@@ -2152,6 +2188,10 @@ Visualizer::~Visualizer() {
         glfwPollEvents();
 #endif
 
+        if (!headless) {
+            glfw_windowed_visualizer_count--;
+        }
+
         // Decrement reference count and only terminate GLFW when last Visualizer is destroyed
         // Keeping GLFW initialized avoids macOS issues with pixel format caching and context reinitialization
         glfw_reference_count--;
@@ -2330,10 +2370,12 @@ bool Visualizer::isSmoothShadingEnabled() const {
 }
 
 void Visualizer::enableNormalMaps() {
+    rendered_frame_is_current = false; // changes what is drawn
     normal_maps_enabled = true;
 }
 
 void Visualizer::disableNormalMaps() {
+    rendered_frame_is_current = false; // changes what is drawn
     normal_maps_enabled = false;
 }
 
@@ -3857,10 +3899,9 @@ helios::uint2 Visualizer::getTextureResolution(uint textureID) const {
 }
 
 bool validateTextureFile(const std::string &texture_file, bool pngonly) {
-    const std::filesystem::path p(texture_file);
-
-    // Check that the file exists and is a regular file
-    if (!std::filesystem::exists(p) || !std::filesystem::is_regular_file(p)) {
+    // Locate the file relative to the working directory or the HELIOS_BUILD directory, and check that it is a regular file
+    const std::filesystem::path p = helios::tryResolveFilePath(texture_file);
+    if (p.empty() || !std::filesystem::is_regular_file(p)) {
         return false;
     }
 

@@ -231,48 +231,55 @@ __device__ __forceinline__ bool rayTriangleIntersect(const float3 &ray_origin, c
     }
 }
 
-//! Sign-preserving reciprocal of a ray direction for slab-method AABB tests. Clamps each near-zero component to
-//! +/-PARALLEL_EPS before the reciprocal so an axis-aligned ray lying exactly on a box face computes
-//! (bound - origin == 0) * huge == 0 (finite) instead of (bound - origin == 0) * inf == NaN, which would corrupt the
-//! fminf/fmaxf slab interval and spuriously reject a box the ray actually crosses. Mirrors the CPU aabbIntersectSoA SSE
-//! path (CollisionDetection_RayTracing.cpp).
-__device__ __forceinline__ float3 safeRayInvDir(const float3 &dir) {
+//! Entry and exit distances of a ray through an axis-aligned box (slab method), as in the CPU aabbIntersectSoA()
+/**
+ * A ray parallel to an axis (direction component below PARALLEL_EPS in magnitude) can meet the box only if its origin lies
+ * within that axis's slab, faces included, and the slab then sets no limit on t. Dividing by a small stand-in for the zero
+ * component instead would cut the slab off at (distance to the face) / (stand-in), culling the box for an axis-aligned ray on
+ * or near a face.
+ * \param[in] ray_origin Ray origin
+ * \param[in] ray_dir Ray direction
+ * \param[in] aabb_min Minimum corner of the box
+ * \param[in] aabb_max Maximum corner of the box
+ * \param[out] t_enter Largest of the per-axis entry distances (-infinity if every axis is parallel)
+ * \param[out] t_exit Smallest of the per-axis exit distances (+infinity if every axis is parallel)
+ * \return False if the ray is parallel to an axis and its origin lies outside that axis's slab; true otherwise
+ */
+__device__ __forceinline__ bool raySlabInterval(const float3 &ray_origin, const float3 &ray_dir, const float3 &aabb_min, const float3 &aabb_max, float &t_enter, float &t_exit) {
     constexpr float PARALLEL_EPS = 1e-8f;
-    float dx = (fabsf(dir.x) < PARALLEL_EPS) ? copysignf(PARALLEL_EPS, dir.x) : dir.x;
-    float dy = (fabsf(dir.y) < PARALLEL_EPS) ? copysignf(PARALLEL_EPS, dir.y) : dir.y;
-    float dz = (fabsf(dir.z) < PARALLEL_EPS) ? copysignf(PARALLEL_EPS, dir.z) : dir.z;
-    return make_float3(1.0f / dx, 1.0f / dy, 1.0f / dz);
+    const float origin[3] = {ray_origin.x, ray_origin.y, ray_origin.z};
+    const float direction[3] = {ray_dir.x, ray_dir.y, ray_dir.z};
+    const float box_min[3] = {aabb_min.x, aabb_min.y, aabb_min.z};
+    const float box_max[3] = {aabb_max.x, aabb_max.y, aabb_max.z};
+
+    t_enter = -INFINITY;
+    t_exit = INFINITY;
+    for (int axis = 0; axis < 3; axis++) {
+        if (fabsf(direction[axis]) < PARALLEL_EPS) {
+            if (origin[axis] < box_min[axis] || origin[axis] > box_max[axis]) {
+                return false;
+            }
+            continue;
+        }
+        const float inverse_direction = 1.0f / direction[axis];
+        float t_near = (box_min[axis] - origin[axis]) * inverse_direction;
+        float t_far = (box_max[axis] - origin[axis]) * inverse_direction;
+        if (t_near > t_far) {
+            const float swap = t_near;
+            t_near = t_far;
+            t_far = swap;
+        }
+        t_enter = fmaxf(t_enter, t_near);
+        t_exit = fminf(t_exit, t_far);
+    }
+    return true;
 }
 
 __device__ __forceinline__ bool warpRayAABBIntersect(const float3 &ray_origin, const float3 &ray_dir, const float3 &aabb_min, const float3 &aabb_max, float max_dist) {
-    // Optimized ray-AABB intersection using slab method
-    // Compute intersection distances for each axis (sign-preserving reciprocal avoids 0*inf=NaN for axis-aligned rays).
-    float3 inv_dir = safeRayInvDir(ray_dir);
-
-    float3 t_min = make_float3((aabb_min.x - ray_origin.x) * inv_dir.x, (aabb_min.y - ray_origin.y) * inv_dir.y, (aabb_min.z - ray_origin.z) * inv_dir.z);
-
-    float3 t_max = make_float3((aabb_max.x - ray_origin.x) * inv_dir.x, (aabb_max.y - ray_origin.y) * inv_dir.y, (aabb_max.z - ray_origin.z) * inv_dir.z);
-
-    // Handle negative ray directions
-    if (ray_dir.x < 0.0f) {
-        float temp = t_min.x;
-        t_min.x = t_max.x;
-        t_max.x = temp;
+    float t_enter, t_exit;
+    if (!raySlabInterval(ray_origin, ray_dir, aabb_min, aabb_max, t_enter, t_exit)) {
+        return false;
     }
-    if (ray_dir.y < 0.0f) {
-        float temp = t_min.y;
-        t_min.y = t_max.y;
-        t_max.y = temp;
-    }
-    if (ray_dir.z < 0.0f) {
-        float temp = t_min.z;
-        t_min.z = t_max.z;
-        t_max.z = temp;
-    }
-
-    // Find the intersection interval
-    float t_enter = fmaxf(fmaxf(t_min.x, t_min.y), t_min.z);
-    float t_exit = fminf(fminf(t_max.x, t_max.y), t_max.z);
 
     // Check if intersection exists and is within ray limits
     return (t_enter <= t_exit) && (t_exit >= 0.0f) && (t_enter <= max_dist);
@@ -364,33 +371,10 @@ __device__ __forceinline__ bool rayPatchIntersect(const float3 &origin, const fl
 __device__ bool rayVoxelIntersect(const float3 &ray_origin, const float3 &ray_direction, const float3 &aabb_min, const float3 &aabb_max, float &distance) {
     const float EPSILON = 1e-6f; // matches the CPU voxel branch of intersectCachedPrimitive()
 
-    // Calculate t values for each slab (sign-preserving reciprocal avoids 0*inf=NaN for axis-aligned rays grazing a face).
-    float3 inv_dir = safeRayInvDir(ray_direction);
-
-    float3 t_min = make_float3((aabb_min.x - ray_origin.x) * inv_dir.x, (aabb_min.y - ray_origin.y) * inv_dir.y, (aabb_min.z - ray_origin.z) * inv_dir.z);
-
-    float3 t_max = make_float3((aabb_max.x - ray_origin.x) * inv_dir.x, (aabb_max.y - ray_origin.y) * inv_dir.y, (aabb_max.z - ray_origin.z) * inv_dir.z);
-
-    // Handle negative ray directions
-    if (ray_direction.x < 0.0f) {
-        float temp = t_min.x;
-        t_min.x = t_max.x;
-        t_max.x = temp;
+    float t_enter, t_exit;
+    if (!raySlabInterval(ray_origin, ray_direction, aabb_min, aabb_max, t_enter, t_exit)) {
+        return false;
     }
-    if (ray_direction.y < 0.0f) {
-        float temp = t_min.y;
-        t_min.y = t_max.y;
-        t_max.y = temp;
-    }
-    if (ray_direction.z < 0.0f) {
-        float temp = t_min.z;
-        t_min.z = t_max.z;
-        t_max.z = temp;
-    }
-
-    // Find the intersection interval
-    float t_enter = fmaxf(fmaxf(t_min.x, t_min.y), t_min.z);
-    float t_exit = fminf(fminf(t_max.x, t_max.y), t_max.z);
 
     // Check for intersection
     if (t_enter > t_exit || t_exit < 0.0f) {

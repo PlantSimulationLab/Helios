@@ -939,7 +939,8 @@ void PlantArchitecture::checkCarbonPool_adjustPhyllochron(uint plantID, float dt
 
         float phyllochron_carbon_ratio = shoot->total_carbohydrate_pool_molC / (carbohydrate_params.carbohydrate_growth_threshold * carbohydrate_params.stem_density * shoot_volume / C_molecular_wt);
 
-        shoot->phyllochron_instantaneous = std::fmax(shoot->shoot_parameters.phyllochron_min.val(), shoot->phyllochron_min / (phyllochron_carbon_ratio * dt));
+        const float phyllochron_min = shoot->shoot_parameters.phyllochron_min.val();
+        shoot->phyllochron_instantaneous = std::fmax(phyllochron_min, phyllochron_min / (phyllochron_carbon_ratio * dt));
 
         // Organ expansion slows in proportion to the carbohydrate available below the threshold.
         const float growth_fraction = std::clamp(phyllochron_carbon_ratio, 0.f, 1.f);

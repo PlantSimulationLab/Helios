@@ -170,8 +170,8 @@ void SyntheticAnnotation::addSkyDome(const char *filename) {
         skydome_texture_file.clear();
         return;
     }
-    if (!std::filesystem::exists(filename)) {
-        helios_runtime_error("ERROR (SyntheticAnnotation::addSkyDome): Sky dome texture file " + std::string(filename) + " does not exist.");
+    if (helios::tryResolveFilePath(filename).empty()) {
+        helios_runtime_error("ERROR (SyntheticAnnotation::addSkyDome): Sky dome texture file " + std::string(filename) + " does not exist relative to the working directory or the HELIOS_BUILD directory.");
     }
     skydome_texture_file = filename;
 }

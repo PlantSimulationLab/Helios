@@ -110,7 +110,7 @@ public:
     //! Load tree library from an XML file
     /**
      * If a tree definition specifies a leaf angle distribution via the <code>LeafAngleDist</code> tag, the distribution must integrate to 1 to within 0.001, otherwise an error is thrown.
-     * \param[in] filename XML file with path relative to build directory
+     * \param[in] filename XML file, resolved with helios::resolveFilePath() (absolute, relative to the working directory, or relative to the HELIOS_BUILD directory)
      * \param[in] silent Disable output messages
      */
     void loadXML(const char *filename, bool silent = false);

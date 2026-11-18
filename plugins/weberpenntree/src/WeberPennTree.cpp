@@ -619,7 +619,7 @@ float WeberPennTree::ShapeRatio(uint shape, float ratio) {
 
 float WeberPennTree::getVariation(float V) {
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     return -V + 2.f * unif_distribution(generator) * V;
 }
@@ -819,7 +819,8 @@ void WeberPennTree::loadXML(const char *filename, bool silent) {
     pugi::xml_document xmldoc;
 
     // load file
-    pugi::xml_parse_result result = xmldoc.load_file(filename);
+    const std::string resolved_filename = helios::resolveFilePath(filename).string();
+    pugi::xml_parse_result result = xmldoc.load_file(resolved_filename.c_str());
 
     // error checking
     if (!result) {

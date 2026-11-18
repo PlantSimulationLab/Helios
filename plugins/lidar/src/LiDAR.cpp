@@ -1354,6 +1354,7 @@ void LiDARcloud::appendHitData(const std::map<std::string, double> &data) {
 }
 
 void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz, const SphericalCoord &direction, const RGBcolor &color, const map<string, double> &data) {
+    hitgridcellcomputed = false; // the new hit has not been binned into the grid
 
     // Every check comes before the cloud is touched, so a rejected call leaves it exactly as it was: no virtualized
     // miss collapsed into storage and no column created for a label the rejected hit carried.
@@ -1377,6 +1378,7 @@ void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz, const SphericalCoord 
 }
 
 void LiDARcloud::addHitPoint(uint scanID, const vec3 &xyz, const int2 &row_column, const RGBcolor &color, const map<string, double> &data) {
+    hitgridcellcomputed = false; // the new hit has not been binned into the grid
 
     // As for the other overload: validate before touching the cloud.
     if (scanID >= scans.size()) {
@@ -2172,6 +2174,7 @@ helios::vec3 LiDARcloud::hitOriginOrFallback(uint index, const helios::vec3 &fal
 }
 
 void LiDARcloud::coordinateShift(const vec3 &shift) {
+    hitgridcellcomputed = false; // moved hits fall in different grid cells
     // A virtualized miss's position is reconstructed from the scan origin captured when it was created,
     // so a transform applied to `hits` and to scans[].origin would leave the misses behind. Rotation
     // would also have to rotate the fitted angular model, not just an origin. Collapse them to real
@@ -2192,6 +2195,7 @@ void LiDARcloud::coordinateShift(const vec3 &shift) {
 }
 
 void LiDARcloud::coordinateShift(uint scanID, const vec3 &shift) {
+    hitgridcellcomputed = false; // moved hits fall in different grid cells
     // A virtualized miss's position is reconstructed from the scan origin captured when it was created,
     // so a transform applied to `hits` and to scans[].origin would leave the misses behind. Rotation
     // would also have to rotate the fitted angular model, not just an origin. Collapse them to real
@@ -2216,6 +2220,7 @@ void LiDARcloud::coordinateShift(uint scanID, const vec3 &shift) {
 }
 
 void LiDARcloud::coordinateRotation(const SphericalCoord &rotation) {
+    hitgridcellcomputed = false; // moved hits fall in different grid cells
     // A virtualized miss's position is reconstructed from the scan origin captured when it was created,
     // so a transform applied to `hits` and to scans[].origin would leave the misses behind. Rotation
     // would also have to rotate the fitted angular model, not just an origin. Collapse them to real
@@ -2238,6 +2243,7 @@ void LiDARcloud::coordinateRotation(const SphericalCoord &rotation) {
 }
 
 void LiDARcloud::coordinateRotation(uint scanID, const SphericalCoord &rotation) {
+    hitgridcellcomputed = false; // moved hits fall in different grid cells
     // A virtualized miss's position is reconstructed from the scan origin captured when it was created,
     // so a transform applied to `hits` and to scans[].origin would leave the misses behind. Rotation
     // would also have to rotate the fitted angular model, not just an origin. Collapse them to real
@@ -2263,6 +2269,7 @@ void LiDARcloud::coordinateRotation(uint scanID, const SphericalCoord &rotation)
 }
 
 void LiDARcloud::coordinateRotation(float rotation, const vec3 &line_base, const vec3 &line_direction) {
+    hitgridcellcomputed = false; // moved hits fall in different grid cells
     // A virtualized miss's position is reconstructed from the scan origin captured when it was created,
     // so a transform applied to `hits` and to scans[].origin would leave the misses behind. Rotation
     // would also have to rotate the fitted angular model, not just an origin. Collapse them to real
@@ -2341,8 +2348,10 @@ void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize) con
 
 void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize, const RGBcolor &point_color) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (LiDARcloud::addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (LiDARcloud::addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -2355,8 +2364,10 @@ void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize, con
 
 void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize, const char *color_value) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (LiDARcloud::addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (LiDARcloud::addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -2413,8 +2424,10 @@ void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize, con
 
 void LiDARcloud::addGridToVisualizer(Visualizer *visualizer) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (LiDARcloud::addGridToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (LiDARcloud::addGridToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -2435,7 +2448,6 @@ void LiDARcloud::addGridToVisualizer(Visualizer *visualizer) const {
         cmap.setRange(minval, maxval);
     }
 
-    vec3 origin;
     for (uint i = 0; i < getGridCellCount(); i++) {
 
         if (getCellLeafAreaDensity(i) == 0) {
@@ -2454,20 +2466,15 @@ void LiDARcloud::addGridToVisualizer(Visualizer *visualizer) const {
         RGBAcolor color = make_RGBAcolor(cmap.query(getCellLeafAreaDensity(i)), 0.5);
 
         visualizer->addVoxelByCenter(center, size, rotation, color, Visualizer::COORDINATES_CARTESIAN);
-
-        origin = origin + center / float(getGridCellCount());
     }
-
-    vec3 boxmin, boxmax;
-    getHitBoundingBox(boxmin, boxmax);
-
-    float R = 2.f * sqrt(pow(boxmax.x - boxmin.x, 2) + pow(boxmax.y - boxmin.y, 2) + pow(boxmax.z - boxmin.z, 2));
 }
 
 void LiDARcloud::addTrianglesToVisualizer(Visualizer *visualizer) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (LiDARcloud::addGeometryToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (LiDARcloud::addGeometryToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -2481,8 +2488,10 @@ void LiDARcloud::addTrianglesToVisualizer(Visualizer *visualizer) const {
 
 void LiDARcloud::addTrianglesToVisualizer(Visualizer *visualizer, uint gridcell) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (LiDARcloud::addTrianglesToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (LiDARcloud::addTrianglesToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -2501,6 +2510,7 @@ void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv,
 }
 
 void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv, float rotation, const std::vector<float> &column_z_offsets) {
+    hitgridcellcomputed = false; // the hits have to be binned again into the new cells
     if (size.x <= 0 || size.y <= 0 || size.z <= 0) {
         cerr << "failed.\n";
         helios_runtime_error("ERROR (LiDARcloud::addGrid): The grid cell size must be positive.");
@@ -2777,9 +2787,8 @@ std::vector<uint> LiDARcloud::addTrunkReconstructionToContext(Context *context) 
 
 void LiDARcloud::getHitBoundingBox(helios::vec3 &boxmin, helios::vec3 &boxmax) const {
 
-    if (printmessages && hits.size() == 0) {
-        std::cout << "WARNING (getHitBoundingBox): There are no hit points in the point cloud, cannot determine bounding box...skipping." << std::endl;
-        return;
+    if (hits.empty()) {
+        helios_runtime_error("ERROR (LiDARcloud::getHitBoundingBox): There are no hit points in the point cloud, so it has no bounding box.");
     }
 
     boxmin = make_vec3(1e6, 1e6, 1e6);
@@ -2812,9 +2821,8 @@ void LiDARcloud::getHitBoundingBox(helios::vec3 &boxmin, helios::vec3 &boxmax) c
 
 void LiDARcloud::getGridBoundingBox(helios::vec3 &boxmin, helios::vec3 &boxmax) const {
 
-    if (printmessages && getGridCellCount() == 0) {
-        std::cout << "WARNING (getGridBoundingBox): There are no grid cells in the point cloud, cannot determine bounding box...skipping." << std::endl;
-        return;
+    if (getGridCellCount() == 0) {
+        helios_runtime_error("ERROR (LiDARcloud::getGridBoundingBox): There are no grid cells in the point cloud, so the grid has no bounding box. Add a grid with addGrid() or addGridCell(), or load one from XML.");
     }
 
     boxmin = make_vec3(1e6, 1e6, 1e6);
@@ -3200,60 +3208,69 @@ namespace {
     }
 } // namespace
 
+namespace {
+    //! Keep one return per pulse: the one with the largest (or smallest) value of a scalar field.
+    /**
+     * A pulse is identified by its scan and its time stamp together. Time stamps alone are not unique across scans: every static synthetic
+     * scan numbers its pulses from zero, and real scans often carry time relative to the start of the scan.
+     */
+    void filterPulseReturns(LiDARcloud &cloud, const char *scalar, bool keep_largest, const std::string &method_name, const std::string &filter_name) {
+        struct PulseReturn {
+            int scanID;
+            double timestamp;
+            double value;
+            size_t hit_index;
+        };
+
+        const size_t hit_count = cloud.getHitCount();
+        std::vector<PulseReturn> returns;
+        returns.reserve(hit_count);
+        for (uint r = 0; r < hit_count; r++) {
+            if (!cloud.doesHitDataExist(r, "timestamp")) {
+                helios_runtime_error("ERROR (LiDARcloud::" + method_name + "): Hit point " + std::to_string(r) + " does not have scalar data 'timestamp', which is required for " + filter_name + " pulse filtering.");
+            } else if (!cloud.doesHitDataExist(r, scalar)) {
+                helios_runtime_error("ERROR (LiDARcloud::" + method_name + "): Hit point " + std::to_string(r) + " does not have scalar data '" + scalar + "', which is required for " + filter_name + " pulse filtering.");
+            }
+            returns.push_back({cloud.getHitScanID(r), cloud.getHitData(r, "timestamp"), cloud.getHitData(r, scalar), r});
+        }
+
+        // Order by pulse, and within a pulse so that the return to keep comes first
+        std::sort(returns.begin(), returns.end(), [keep_largest](const PulseReturn &a, const PulseReturn &b) {
+            if (a.scanID != b.scanID) {
+                return a.scanID < b.scanID;
+            }
+            if (a.timestamp != b.timestamp) {
+                return a.timestamp < b.timestamp;
+            }
+            if (a.value != b.value) {
+                return keep_largest ? a.value > b.value : a.value < b.value;
+            }
+            return a.hit_index < b.hit_index;
+        });
+
+        std::vector<size_t> to_delete;
+        for (size_t i = 1; i < returns.size(); i++) {
+            const bool same_pulse = returns[i].scanID == returns[i - 1].scanID && returns[i].timestamp == returns[i - 1].timestamp;
+            if (same_pulse) {
+                to_delete.push_back(returns[i].hit_index);
+            }
+        }
+
+        // Delete from the highest index down so that the remaining indices stay valid
+        std::sort(to_delete.begin(), to_delete.end());
+        for (size_t i = to_delete.size(); i-- > 0;) {
+            cloud.deleteHitPoint(uint(to_delete[i]));
+        }
+    }
+} // namespace
+
 void LiDARcloud::maxPulseFilter(const char *scalar) {
 
     if (printmessages) {
         std::cout << "Filtering point cloud by maximum " << scalar << " per pulse..." << std::flush;
     }
 
-    std::vector<std::vector<double>> timestamps;
-    timestamps.resize(getHitCount());
-
-    std::size_t delete_count = 0;
-    for (std::size_t r = 0; r < getHitCount(); r++) {
-
-        if (!doesHitDataExist(r, "timestamp")) {
-            helios_runtime_error("ERROR (LiDARcloud::maxPulseFilter): Hit point " + std::to_string(r) + " does not have scalar data 'timestamp', which is required for max pulse filtering.");
-        } else if (!doesHitDataExist(r, scalar)) {
-            helios_runtime_error("ERROR (LiDARcloud::maxPulseFilter): Hit point " + std::to_string(r) + " does not have scalar data '" + scalar + "', which is required for max pulse filtering.");
-        }
-
-        // Store the original hit index as double(r): see minPulseFilter for the precision rationale.
-        std::vector<double> v{getHitData(r, "timestamp"), getHitData(r, scalar), double(r)};
-
-        timestamps.at(r) = v;
-    }
-
-    std::sort(timestamps.begin(), timestamps.end(), sortcol0);
-
-    std::vector<std::vector<double>> isort;
-    std::vector<int> to_delete;
-    double time_old = timestamps.at(0).at(0);
-    for (std::size_t r = 0; r < timestamps.size(); r++) {
-
-        if (timestamps.at(r).at(0) != time_old) {
-
-            if (isort.size() > 1) {
-
-                std::sort(isort.begin(), isort.end(), sortcol1);
-
-                for (int i = 0; i < isort.size() - 1; i++) {
-                    to_delete.push_back(int(isort.at(i).at(2)));
-                }
-            }
-
-            isort.resize(0);
-            time_old = timestamps.at(r).at(0);
-        }
-
-        isort.push_back(timestamps.at(r));
-    }
-
-    std::sort(to_delete.begin(), to_delete.end());
-
-    for (int i = to_delete.size() - 1; i >= 0; i--) {
-        deleteHitPoint(to_delete.at(i));
-    }
+    filterPulseReturns(*this, scalar, true, "maxPulseFilter", "max");
 
     if (printmessages) {
         std::cout << "done." << std::endl;
@@ -3266,56 +3283,7 @@ void LiDARcloud::minPulseFilter(const char *scalar) {
         std::cout << "Filtering point cloud by minimum " << scalar << " per pulse..." << std::flush;
     }
 
-    std::vector<std::vector<double>> timestamps;
-    timestamps.resize(getHitCount());
-
-    std::size_t delete_count = 0;
-    for (std::size_t r = 0; r < getHitCount(); r++) {
-
-        if (!doesHitDataExist(r, "timestamp")) {
-            helios_runtime_error("ERROR (LiDARcloud::minPulseFilter): Hit point " + std::to_string(r) + " does not have scalar data 'timestamp', which is required for min pulse filtering.");
-        } else if (!doesHitDataExist(r, scalar)) {
-            helios_runtime_error("ERROR (LiDARcloud::minPulseFilter): Hit point " + std::to_string(r) + " does not have scalar data '" + scalar + "', which is required for min pulse filtering.");
-        }
-
-        // Store the original hit index as double(r), not float(r): the index round-trips
-        // through this double vector and is read back via int(...). float has only 24 bits of
-        // mantissa, so indices above 2^24 would alias and corrupt the delete mapping.
-        std::vector<double> v{getHitData(r, "timestamp"), getHitData(r, scalar), double(r)};
-
-        timestamps.at(r) = v;
-    }
-
-    std::sort(timestamps.begin(), timestamps.end(), sortcol0);
-
-    std::vector<std::vector<double>> isort;
-    std::vector<int> to_delete;
-    double time_old = timestamps.at(0).at(0);
-    for (std::size_t r = 0; r < timestamps.size(); r++) {
-
-        if (timestamps.at(r).at(0) != time_old) {
-
-            if (isort.size() > 1) {
-
-                std::sort(isort.begin(), isort.end(), sortcol1);
-
-                for (int i = 1; i < isort.size(); i++) {
-                    to_delete.push_back(int(isort.at(i).at(2)));
-                }
-            }
-
-            isort.resize(0);
-            time_old = timestamps.at(r).at(0);
-        }
-
-        isort.push_back(timestamps.at(r));
-    }
-
-    std::sort(to_delete.begin(), to_delete.end());
-
-    for (int i = to_delete.size() - 1; i >= 0; i--) {
-        deleteHitPoint(to_delete.at(i));
-    }
+    filterPulseReturns(*this, scalar, false, "minPulseFilter", "min");
 
     if (printmessages) {
         std::cout << "done." << std::endl;
@@ -5990,11 +5958,15 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
                              "moving scan, call the calculateLeafArea overload that takes a G(theta) argument (it does not require triangulation).");
     }
 
-    if (printmessages && getScanCount() == 0) {
-        cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
+    if (getScanCount() == 0) {
+        if (printmessages) {
+            cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
+        }
         return;
-    } else if (printmessages && getHitCount() == 0) {
-        cout << "WARNING (triangulateHitPoints): No hit points have been added to the point cloud.  Skipping triangulation..." << endl;
+    } else if (getHitCount() == 0) {
+        if (printmessages) {
+            cout << "WARNING (triangulateHitPoints): No hit points have been added to the point cloud.  Skipping triangulation..." << endl;
+        }
         return;
     }
 
@@ -6244,11 +6216,15 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
                              "moving scan, call the calculateLeafArea overload that takes a G(theta) argument (it does not require triangulation).");
     }
 
-    if (printmessages && getScanCount() == 0) {
-        cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
+    if (getScanCount() == 0) {
+        if (printmessages) {
+            cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
+        }
         return;
-    } else if (printmessages && getHitCount() == 0) {
-        cout << "WARNING (triangulateHitPoints): No hit points have been added to the point cloud.  Skipping triangulation..." << endl;
+    } else if (getHitCount() == 0) {
+        if (printmessages) {
+            cout << "WARNING (triangulateHitPoints): No hit points have been added to the point cloud.  Skipping triangulation..." << endl;
+        }
         return;
     }
 
@@ -6488,7 +6464,7 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta(helios::Context *context
     uint Ncells = getGridCellCount();
 
     std::vector<float> Gtheta;
-    Gtheta.resize(Ncells);
+    Gtheta.resize(Ncells, 0.f);
 
     std::vector<float> area_sum;
     area_sum.resize(Ncells, 0.f);
@@ -6525,24 +6501,23 @@ std::vector<float> LiDARcloud::calculateSyntheticGtheta(helios::Context *context
         }
     }
 
+    // G is the area-weighted mean of the projection |n . r| over the primitives (and scans) of each cell
     for (uint v = 0; v < Ncells; v++) {
-        if (cell_tri_count[v] > 0) {
-            Gtheta[v] *= float(cell_tri_count[v]) / (area_sum[v]);
+        if (cell_tri_count[v] > 0 && area_sum[v] > 0.f) {
+            Gtheta[v] /= area_sum[v];
         }
     }
 
-
-    std::vector<float> output_Gtheta;
-    output_Gtheta.resize(Ncells, 0.f);
-
-    for (int v = 0; v < Ncells; v++) {
-        output_Gtheta.at(v) = Gtheta.at(v);
-        if (context->doesPrimitiveDataExist(UUIDs.at(v), "gridCell")) {
-            context->setPrimitiveData(UUIDs.at(v), "synthetic_Gtheta", Gtheta.at(v));
+    // Give each primitive the value of the cell it is in
+    for (uint UUID: UUIDs) {
+        if (context->doesPrimitiveDataExist(UUID, "gridCell")) {
+            uint gridCell;
+            context->getPrimitiveData(UUID, "gridCell", gridCell);
+            context->setPrimitiveData(UUID, "synthetic_Gtheta", Gtheta.at(gridCell));
         }
     }
 
-    return output_Gtheta;
+    return Gtheta;
 }
 
 void LiDARcloud::setCellLeafArea(float area, uint index) {
@@ -6964,7 +6939,7 @@ void LiDARcloud::backfillLeavesAlphaMask(const vector<float> &leaf_size, float l
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::minstd_rand0 generator;
     generator.seed(seed);
-    std::normal_distribution<float> randn;
+    helios::normal_distribution<float> randn;
 
     uint Ngroups = reconstructed_triangles.size();
 
@@ -9562,6 +9537,19 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         // Determine bounding box for Context geometry
         helios::vec2 xbounds, ybounds, zbounds;
         context->getDomainBoundingBox(xbounds, ybounds, zbounds);
+
+        // When misses are recorded, also enclose the voxel grid. A pulse that crosses a voxel beside the geometry is a
+        // transmission event for that voxel, which the leaf-area inversion needs; culling against the geometry alone would
+        // drop it whenever the grid extends past the geometry (e.g. a grid with a margin around a crown). A Context with no
+        // geometry is left alone: no pulse hits its bounding box, and every pulse is then recorded as a miss below.
+        if (record_misses && getGridCellCount() > 0 && context->getPrimitiveCount() > 0) {
+            helios::vec3 grid_min, grid_max;
+            getGridBoundingBox(grid_min, grid_max);
+            xbounds = helios::make_vec2(std::min(xbounds.x, grid_min.x), std::max(xbounds.y, grid_max.x));
+            ybounds = helios::make_vec2(std::min(ybounds.x, grid_min.y), std::max(ybounds.y, grid_max.y));
+            zbounds = helios::make_vec2(std::min(zbounds.x, grid_min.z), std::max(zbounds.y, grid_max.z));
+        }
+
         bb_center = helios::make_vec3(xbounds.x + 0.5 * (xbounds.y - xbounds.x), ybounds.x + 0.5 * (ybounds.y - ybounds.x), zbounds.x + 0.5 * (zbounds.y - zbounds.x));
         bb_size = helios::make_vec3(xbounds.y - xbounds.x, ybounds.y - ybounds.x, zbounds.y - zbounds.x);
 
@@ -10153,8 +10141,9 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
                 count++;
             }
-            // NOTE: Miss recording for rays that don't hit BB removed - those rays can't interact with grid.
-            // Misses for traced rays are recorded via line 3733 when record_misses=true.
+            // Pulses that miss the bounding box are not recorded as misses. With record_misses the box encloses the voxel
+            // grid as well as the geometry (see above), so those pulses cannot cross a voxel. Misses for traced pulses are
+            // recorded where the returns are assembled.
         }
 
         // Handle case where no rays hit bounding box
@@ -10374,7 +10363,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         std::minstd_rand0 &context_generator = *context->getRandomGenerator();
         std::minstd_rand0 divergence_generator = context_generator;
         std::minstd_rand0 aperture_generator = context_generator;
-        std::uniform_real_distribution<float> unit_uniform; // the distribution Context::randu() samples
+        helios::uniform_real_distribution<float> unit_uniform; // the distribution Context::randu() samples
         if (draw_divergence && draw_aperture) {
             for (size_t k = 0; k < 2 * N; k++) {
                 static_cast<void>(unit_uniform(aperture_generator)); // skip past the divergence draws
@@ -10583,10 +10572,10 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             // beam index so the (thread-parallel) noise is reproducible and independent of thread count. When
             // range_noise_stddev==0 no random numbers are drawn and the output is bit-identical to the serial path.
             std::mt19937 beam_rng;
-            std::normal_distribution<float> range_noise_dist;
+            helios::normal_distribution<float> range_noise_dist;
             if (range_noise_stddev > 0.f) {
                 beam_rng.seed(range_noise_seed_salt + static_cast<unsigned int>(global_r));
-                range_noise_dist = std::normal_distribution<float>(0.f, range_noise_stddev);
+                range_noise_dist = helios::normal_distribution<float>(0.f, range_noise_stddev);
             }
 
             int real_hit_index = 0;

@@ -32,6 +32,10 @@ class PlantArchitecture;
 class CollisionDetection;
 struct Shoot;
 struct Phytomer;
+struct PlantSpatialStateVisitor;
+struct PlantPoseState;
+struct PoseGroupReference;
+struct PoseRigidTransform;
 
 //! Function that builds a fruit prototype and returns its object ID
 /**
@@ -174,13 +178,13 @@ public:
                 throw(std::runtime_error("ERROR (PlantArchitecture): Random parameter was not properly initialized with random number generator."));
             }
             if (distribution == "uniform") {
-                std::uniform_real_distribution<float> unif_distribution;
+                helios::uniform_real_distribution<float> unif_distribution;
                 constval = distribution_parameters.at(0) + unif_distribution(*generator) * (distribution_parameters.at(1) - distribution_parameters.at(0));
             } else if (distribution == "normal") {
-                std::normal_distribution<float> norm_distribution(distribution_parameters.at(0), distribution_parameters.at(1));
+                helios::normal_distribution<float> norm_distribution(distribution_parameters.at(0), distribution_parameters.at(1));
                 constval = norm_distribution(*generator);
             } else if (distribution == "weibull") {
-                std::weibull_distribution<float> wbull_distribution(distribution_parameters.at(0), distribution_parameters.at(1));
+                helios::weibull_distribution<float> wbull_distribution(distribution_parameters.at(0), distribution_parameters.at(1));
                 constval = wbull_distribution(*generator);
             }
         }
@@ -272,10 +276,10 @@ public:
                 throw(std::runtime_error("ERROR (PlantArchitecture): Random parameter was not properly initialized with random number generator."));
             }
             if (distribution == "uniform") {
-                std::uniform_int_distribution<> unif_distribution(distribution_parameters.at(0), distribution_parameters.at(1));
+                helios::uniform_int_distribution<> unif_distribution(distribution_parameters.at(0), distribution_parameters.at(1));
                 constval = unif_distribution(*generator);
             } else if (distribution == "discretevalues") {
-                std::uniform_int_distribution<> unif_distribution(0, distribution_parameters.size() - 1);
+                helios::uniform_int_distribution<> unif_distribution(0, distribution_parameters.size() - 1);
                 constval = distribution_parameters.at(unif_distribution(*generator));
             }
         }
@@ -908,6 +912,15 @@ struct VegetativeBud {
     std::string shoot_type_label;
     // ID of the shoot that the bud will produce if it breaks into a shoot
     uint shoot_ID = -1;
+    //! Days since the bud became active, which is since it was created or since the dormancy break that woke it
+    float time_counter = 0;
+    //! Days after becoming active at which the bud breaks into a shoot
+    /**
+     * Drawn for this bud from ShootParameters::vegetative_bud_break_time of the shoot bearing it, and compared with time_counter.
+     */
+    float break_time = 0;
+    //! Whether break_time has been drawn since the bud last became active
+    bool break_time_drawn = false;
 };
 
 //! Grain sink of a culm's terminal panicle under the carbohydrate model's grass sub-model, CARBON_SUBMODEL_GRASS
@@ -961,6 +974,17 @@ struct FloralBud {
     float dd_to_inflorescence_maturity = -1;
     //! Grain sink of this bud's panicle (carbohydrate model, CARBON_SUBMODEL_GRASS); reset when the bud sets fruit
     GrainSink grain;
+    //! Days by which this bud's first reproductive transition after it becomes active comes later than the plant-level threshold
+    /**
+     * Drawn when the bud becomes active. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float flowering_delay = 0;
+    //! Days by which this bud's fruit takes longer than the plant-level dd_to_fruit_maturity to reach full size
+    /**
+     * Drawn at fruit set. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float fruit_maturity_delay = 0;
+
 
     helios::vec3 base_position;
     AxisRotation base_rotation;
@@ -1009,6 +1033,19 @@ struct LeafShapeValues {
     uint subdivisions_y = 2;
     //! Translation of the lattice in the prototype frame: \ref LeafPrototype::leaf_offset, plus the petiolule's length when the blade sits beyond one
     helios::vec3 lattice_offset;
+};
+
+//! Shape of a leaf blade's midrib, as returned by PlantArchitecture::getLeafMidrib()
+/**
+ * One entry per station of the blade's lattice along its length (LeafShapeValues::subdivisions_x + 1 stations), from the base of the blade to its tip. See \ref PlantArch_blademidrib.
+ */
+struct LeafMidrib {
+    //! Position of each midrib station in world coordinates
+    std::vector<helios::vec3> positions;
+    //! Unit normal of the blade's upper side at each station, in world coordinates, perpendicular to the midrib there and ignoring the blade's fold and curvature across the midrib
+    std::vector<helios::vec3> normals;
+    //! Twist of the blade about its midrib at each station, in radians, right-handed about the midrib's direction from base to tip, measured from the blade bent along the same midrib without twisting
+    std::vector<float> rolls;
 };
 
 struct LeafPrototype {
@@ -1098,7 +1135,7 @@ public:
     //! Ratio of leaf width to leaf length
     RandomParameter_float leaf_aspect_ratio;
 
-    //! Fraction of folding along the leaf midrib. =0 means leaf is flat, =1 means leaf is completely folded in half along midrib.
+    //! Fraction of folding along the leaf midrib. =0 means leaf is flat, =1 means leaf is completely folded in half along midrib with its halves raised; a negative value folds the halves down by as much (=-1: folded shut downward).
     RandomParameter_float midrib_fold_fraction;
 
     // Parameters for leaf curvature
@@ -1306,7 +1343,7 @@ public:
 
     void sampleIdentifier() {
         assert(generator != nullptr);
-        std::uniform_int_distribution<uint> unif_distribution;
+        helios::uniform_int_distribution<uint> unif_distribution;
         this->unique_prototype_identifier = unif_distribution(*generator);
     }
 
@@ -2016,6 +2053,15 @@ struct ShootGrowthState {
     std::string growth_type_label;
     //! True if this shoot's existing geometry was prescribed by the caller rather than generated by the growth model.
     bool geometry_is_prescribed = false;
+    //! Upper bound (m) on the initial radius of phytomers this shoot grows at its apex; a value of zero or less (the default, -1) means no bound beyond the shoot type's radius_initial.
+    /**
+     * Set when a shoot emerges, so that the limit that keeps the shoot's first phytomer from being thicker than its bearing axis
+     * also applies to every phytomer the shoot grows afterwards. For a lateral that breaks from a bud during advanceTime() it is the
+     * bearing phytomer's radius at that phytomer's creation; for an epicormic shoot (PlantArchitecture::addEpicormicShoot()) it is the
+     * bearing internode's current radius, since epicormic shoots break from old wood that has thickened since. A shoot that continues
+     * its parent's axis (PlantArchitecture::appendShoot()) inherits the parent's bound.
+     */
+    float internode_radius_cap = -1.f;
 };
 
 //! Caller-prescribed geometry for a single internode, used to build a shoot from measured node positions.
@@ -2180,6 +2226,52 @@ public:
      */
     [[nodiscard]] float getPetioleLength(uint petiole_index) const;
 
+    //! Whether a petiole has a joint in the plant skeleton (see PlantArchitecture::getPlantJoints())
+    /**
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \return True if the petiole has a centerline of non-zero length. False for the petiole of a sessile leaf, and for an index the phytomer does not have.
+     */
+    [[nodiscard]] bool petioleHasJoint(uint petiole_index) const;
+
+    //! Whether the peduncle of a floral bud has a joint in the plant skeleton (see PlantArchitecture::getPlantJoints())
+    /**
+     * \param[in] petiole_index Index of the petiole the floral bud belongs to.
+     * \param[in] bud_index Index of the floral bud within the petiole.
+     * \return True if the peduncle has been built, with a centerline of non-zero length.
+     */
+    [[nodiscard]] bool peduncleHasJoint(uint petiole_index, uint bud_index) const;
+
+    //! Visit every position and direction stored for one petiole and its leaves. Not intended for use outside the plug-in.
+    /**
+     * Together with visitFloralBudSpatialState(), visitNodeSpatialState() and the visit functions of \ref Shoot, this is the one place that lists the members holding a plant's geometry in world
+     * coordinates. A member added to the phytomer that holds a position or a direction has to be visited here, or re-posing the plant will leave it behind.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] visitor Operation applied to each value.
+     */
+    void visitPetioleSpatialState(uint petiole_index, PlantSpatialStateVisitor &visitor);
+
+    //! Visit every position and direction stored for one floral bud, its peduncle and its flowers or fruit. Not intended for use outside the plug-in.
+    /**
+     * \param[in] petiole_index Index of the petiole the floral bud belongs to.
+     * \param[in] bud_index Index of the floral bud within the petiole.
+     * \param[in] visitor Operation applied to each value.
+     */
+    void visitFloralBudSpatialState(uint petiole_index, uint bud_index, PlantSpatialStateVisitor &visitor);
+
+    //! Visit every direction stored for the node of the phytomer itself, rather than for one of its organs. Not intended for use outside the plug-in.
+    /**
+     * \param[in] visitor Operation applied to each value.
+     */
+    void visitNodeSpatialState(PlantSpatialStateVisitor &visitor);
+
+    //! Let a petiole and its leaves settle under gravity again after they have been turned. Not intended for use outside the plug-in.
+    /**
+     * Bends the petiole from its rest shape and then lets each blade droop from its own, as advanceTime() does, but without waiting for the leaf to have grown. Does nothing for a species whose petioles and
+     * leaves are rigid, or for a petiole or leaf whose geometry was prescribed.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     */
+    void resettlePetioleUnderGravity(uint petiole_index);
+
     /**
      * \brief Retrieves the radius of the internode based on the stem fraction.
      *
@@ -2320,10 +2412,18 @@ public:
      * \param[in] leaf_bases_new Base position of each leaf in world coordinates, one per leaf on the petiole and ordered as the petiole's existing leaves are.
      * \param[in] leaf_rotations_new Roll, pitch and yaw of each leaf in radians, as intrinsic rotations in the leaf's rest frame on the petiole (see PlantArchitecture::setPetioleLeafGeometry()).
      * \param[in] leaf_sizes_new Fully-elongated size of each leaf in meters. All sizes must be greater than zero.
+     * \param[in] leaf_stalk_lengths_new [optional] Length of each leaf's stalk (petiolule) in meters, for a leaf prototype that builds one: the distance from the leaf's base to where its blade begins.
+     * One per leaf, all greater than zero; with none given each stalk is the species' share of its blade's length (LeafPrototype::petiolule_length). Either way a stalk is as thick as the petiole is where
+     * the leaf's base lies along it.
      * \note Supplying a different number of leaves than the petiole carries raises an error rather than adding or removing leaves; change the count with setPetioleLeafCount() first.
      * \note Rebuilding each leaf object discards any primitive data a caller has attached to it. The object label and material are restored, but other primitive data is not.
+     * \param[in] leaf_stalk_bases_new [optional] Where each leaf's stalk leaves the petiole, in world coordinates, one per leaf. A stalk is otherwise built back along its blade's own line from the leaf's base, and a
+     * measured stalk seldom lies on that line: it rises from the petiole to a blade held a few millimetres off it. With these the stalk runs straight from the given point to where the blade begins and
+     * bends there into the join under the blade, which is unchanged; the blade stays where its base, angles and size put it. A stalk may be no longer than its blade and must reach the blade from behind
+     * its base, and it is as thick as the petiole where it leaves it; anything else raises an error. Needs a leaf prototype that builds a stalk.
      */
-    void setPetioleLeafGeometry(uint petiole_index, const std::vector<helios::vec3> &leaf_bases_new, const std::vector<AxisRotation> &leaf_rotations_new, const std::vector<float> &leaf_sizes_new);
+    void setPetioleLeafGeometry(uint petiole_index, const std::vector<helios::vec3> &leaf_bases_new, const std::vector<AxisRotation> &leaf_rotations_new, const std::vector<float> &leaf_sizes_new,
+                                const std::vector<float> &leaf_stalk_lengths_new = {}, const std::vector<helios::vec3> &leaf_stalk_bases_new = {});
 
     //! Change the number of leaves (leaflets) on a petiole, rebuilding them procedurally.
     /**
@@ -2383,7 +2483,7 @@ public:
      * \param[in] aspect_ratio Ratio of blade width to length; greater than zero.
      * \param[in] longitudinal_curvature Curvature along the blade's length (+ up, - down).
      * \param[in] lateral_curvature Curvature across the blade's width (+ up, - down).
-     * \param[in] midrib_fold_fraction Fold along the midrib, from 0 (flat) to 1 (folded shut).
+     * \param[in] midrib_fold_fraction Fold along the midrib, from -1 (halves folded down shut) through 0 (flat) to 1 (halves folded up shut).
      */
     void setPetioleLeafShape(uint petiole_index, float aspect_ratio, float longitudinal_curvature, float lateral_curvature, float midrib_fold_fraction);
 
@@ -2427,13 +2527,71 @@ public:
      */
     [[nodiscard]] bool canReshapeLeafInPlace(uint petiole_index, uint leaf_index, const LeafShapeValues &shape) const;
 
+    //! Set whether one leaf bends under its own weight. See PlantArchitecture::setLeafDroop().
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] droops True to bend the blade under its own weight from its rest shape, false to give it its rest shape.
+     */
+    void setLeafDroop(uint petiole_index, uint leaf_index, bool droops);
+
+    //! Whether one leaf bends under its own weight
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return True if the blade is bent under its own weight from its rest shape.
+     */
+    [[nodiscard]] bool doesLeafDroop(uint petiole_index, uint leaf_index) const;
+
+    //! Lay one leaf's blade along a prescribed midrib, twisted by a roll at each point. See PlantArchitecture::setLeafMidrib().
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] midrib Points of the midrib in world coordinates, from the base of the blade to its tip.
+     * \param[in] rolls Twist of the blade about its midrib at each point, in radians; one per point, or none for an untwisted blade.
+     */
+    void setLeafMidrib(uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<float> &rolls);
+
+    //! Lay one leaf's blade along a prescribed midrib, turned to face a given normal at each point. See PlantArchitecture::setLeafMidrib().
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] midrib Points of the midrib in world coordinates, from the base of the blade to its tip.
+     * \param[in] normals Normal of the blade's upper side at each point, in world coordinates; one per point.
+     */
+    void setLeafMidrib(uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<helios::vec3> &normals);
+
+    //! Current midrib of one leaf's blade. See PlantArchitecture::getLeafMidrib().
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return Midrib stations, normals and rolls of the blade as it now is.
+     */
+    [[nodiscard]] LeafMidrib getLeafMidrib(uint petiole_index, uint leaf_index) const;
+
+    //! Return one leaf's blade from a prescribed midrib to its own shape. See PlantArchitecture::clearLeafMidrib().
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     */
+    void clearLeafMidrib(uint petiole_index, uint leaf_index);
+
+    //! Whether one leaf's blade is laid along a midrib prescribed by setLeafMidrib()
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return True if the blade follows a prescribed midrib.
+     */
+    [[nodiscard]] bool hasLeafMidrib(uint petiole_index, uint leaf_index) const;
+
     //! Rebuild the leaflets of one petiole with each turned by its own offset from the leaf's angles.
     /**
      * Every leaflet on a petiole is otherwise turned by the same leaf.pitch, leaf.yaw and leaf.roll, mirrored from one side of the petiole to the other, so the two members of a pair are always mirror images.
      * Scanned compound leaves are not: their pairs' members differ by a median of about 13 degrees in yaw and 12 in pitch. This gives each leaflet its own offset, added to the leaf's angles, and rebuilds
      * the petiole's leaves with them. Yaw is taken in the leaf's mirrored sense, so a positive yaw offset swings a lateral further toward the tip whichever side it is on; on the terminal leaflet, which has
-     * no yaw of its own, it turns the leaflet in the petiole plane. The offsets are kept on the phytomer and reapplied by every later rebuild of the petiole with the same number of leaves, and cleared by one
-     * with a different number.
+     * no yaw of its own, it turns the leaflet to one side of its petiole's tip (counter-clockwise seen from above for a positive offset). A roll offset on the terminal turns it about its own midrib; the
+     * terminal takes no roll from leaf.roll, so the offset is the whole of its roll. The offsets are kept on the phytomer, reapplied by every later rebuild of the petiole with the same number of leaves,
+     * cleared by one with a different number, and written to and read from the plant structure XML.
      * \param[in] petiole_index Index of the petiole within the internode.
      * \param[in] pitch_offsets_degrees Pitch offset of each leaflet in degrees, in the petiole's leaf order; one per leaflet.
      * \param[in] yaw_offsets_degrees Yaw offset of each leaflet in degrees; one per leaflet.
@@ -2576,18 +2734,15 @@ public:
     /**
      * \brief Rotates a petiole and everything anchored to it (its leaves) about the petiole base.
      *
-     * Performs a solid-body rotation: the petiole tube and all leaves attached to it rotate
-     * together so the leaves remain anchored at the petiole tip. The terminal floral bud and
-     * its peduncle/inflorescence are anchored to the internode (not the petiole) and are not
-     * affected.
+     * Performs a solid-body rotation: the petiole tube and all leaves attached to it rotate together, along with everything the phytomer stores about them, so the leaves remain anchored where they
+     * were on the petiole and the turned petiole is what later growth, and a plant structure file, describe. The floral buds of the phytomer and their peduncles and inflorescences are anchored to the
+     * internode (not the petiole) and are not affected. The rotation is an increment on the petiole as it stands; to set a petiole's pose as an offset from the way it grew, which can be undone
+     * exactly, use PlantArchitecture::setPlantJointPose() with a PLANT_JOINT_PETIOLE joint.
      *
      * \param[in] petiole_index Index identifying the petiole within the phytomer
-     * \param[in] rotation AxisRotation. Pitch tilts the petiole further from the internode
-     *                     about the petiole's stored rotation axis at the petiole base; only
-     *                     the magnitude is used (matching the construction's convention of
-     *                     `abs(petiole_pitch)`). Yaw rotates the petiole around the internode
-     *                     axis (azimuth around the stem). Roll rolls the petiole around its
-     *                     own length axis.
+     * \param[in] rotation AxisRotation, in radians, applied as pitch, then yaw, then roll. A positive pitch tilts the petiole further from the internode and a negative pitch toward it, about the
+     *                     axis the petiole was tilted about when it was built. Yaw rotates the petiole around the internode axis (azimuth around the stem). Roll rolls the petiole around its own
+     *                     length axis.
      */
     void rotatePetiole(uint petiole_index, const AxisRotation &rotation);
 
@@ -2669,6 +2824,28 @@ private:
      * \param[in] caller Name of the public method, for error messages.
      */
     [[nodiscard]] uint reshapedLeafSubdivisionsY(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested, const char *caller) const;
+
+    //! Rest blade lattice of a leaf in its own object frame, built from its recorded shape, and the number of vertices its mesh has beyond the lattice (none, or a petiolule)
+    /**
+     * Raises an error for a leaf whose shape was not recorded (one not built by GenericLeafPrototype()) or whose object no longer carries its lattice.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] caller Name of the public method, for error messages.
+     * \param[out] appended_count Number of mesh vertices beyond the lattice.
+     */
+    [[nodiscard]] std::vector<helios::vec3> leafRestLatticeLocal(uint petiole_index, uint leaf_index, const char *caller, size_t &appended_count) const;
+
+    //! Rest positions, in the leaf's own frame, of the petiolule vertices that follow a leaf's blade lattice in its mesh, if any
+    /**
+     * Taken from the leaf's recorded rest shape where it has one, and otherwise read back from the object, which then has its rest shape.
+     */
+    [[nodiscard]] std::vector<helios::vec3> leafRestAppendedVerticesLocal(uint petiole_index, uint leaf_index, size_t appended_count) const;
+
+    //! Write a leaf's blade, laid along the midrib recorded in its LeafShapeState, into its object
+    void layLeafAlongRecordedMidrib(uint petiole_index, uint leaf_index);
+
+    //! Shared body of the two setLeafMidrib() overloads; exactly one of rolls and normals is used
+    void setLeafMidribFromPolyline(uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<float> *rolls, const std::vector<helios::vec3> *normals);
 
     //! Remove the leaves and petioles of the phytomer, optionally handing their Context objects to the caller instead of deleting them
     /**
@@ -2848,6 +3025,20 @@ public:
      */
     void bendPetioleUnderLeafWeight(uint petiole_index);
 
+    //! Move the leaves of a petiole from one centerline of the petiole to another
+    /**
+     * Each leaf keeps the fraction of the petiole's length it is attached at, is turned by the rotation that carries the centerline's old direction there onto its new one, and is moved to the new
+     * position of that point. The leaf objects are rotated and translated rather than rebuilt, and the stored leaf bases are updated. The petiole's own stored centerline is not changed.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] previous_nodes Centerline the leaves are currently attached along.
+     * \param[in] previous_arclength Arclength from the base to each node of previous_nodes.
+     * \param[in] new_nodes Centerline to carry the leaves to.
+     * \param[in] new_arclength Arclength from the base to each node of new_nodes.
+     * \param[in] leaf_arclength_fraction Fraction of the petiole's length at which each leaf is attached, indexed as the petiole's leaves.
+     */
+    void carryLeavesAlongPetiole(uint petiole_index, const std::vector<helios::vec3> &previous_nodes, const std::vector<float> &previous_arclength, const std::vector<helios::vec3> &new_nodes, const std::vector<float> &new_arclength,
+                                 const std::vector<float> &leaf_arclength_fraction);
+
     //! Record the current centerline of one petiole as its undeformed rest shape
     /**
      * Called wherever a petiole's centerline is generated or replaced wholesale, so that \ref bendPetioleUnderLeafWeight() bends from the new shape. Also marks the petiole as needing to be bent again.
@@ -2872,9 +3063,11 @@ public:
      * \param[in] leaf_yaw_angle Leaf yaw angle (radians), as stored in \ref leaf_rotation rather than as applied.
      * \param[in] prescribed Whether the angles were prescribed from measurements. A prescribed leaf does not go through the procedural chain: its angles are intrinsic rotations in the leaf's rest frame on
      * the petiole, the same for every leaf position and node (see PlantArchitecture::setPetioleLeafGeometry()), and it receives no side signs, elevation offsets or blade-up correction.
+     * \param[in] terminal_roll_angle Roll (radians) of a compound leaf's terminal leaflet about its own midrib, from its offset in setPetioleLeafletAngleOffsets(). The terminal takes no roll from
+     * leaf_roll_angle, so this is the only roll it is given; ignored for every other leaf and for a prescribed one.
      */
     void orientLeaf(uint objID_leaf, uint petiole_index, uint leaf_index, int leaves_per_petiole, float ind_from_tip, float compound_rotation, const helios::vec3 &petiole_tip_axis, float leaf_roll_angle, float leaf_pitch_angle, float leaf_yaw_angle,
-                    bool prescribed = false);
+                    bool prescribed = false, float terminal_roll_angle = 0.f);
 
     //! Re-aim one leaf so that its blade faces a given direction, keeping \ref leaf_rotation in step with the geometry
     /**
@@ -2903,9 +3096,44 @@ public:
      * \param[in] prototype_index Which of the unique prototypes is being built, which selects its variant in LeafPrototype::leaf_texture_series. A leaf that is not one of the unique prototypes uses the default, and so the first variant.
      * \param[in] leaflet_size The size this leaflet will be given, in meters, when it is not the shoot type's (a leaflet rebuilt on one phytomer); with petiole_radius, its petiolule is sized from these. Negative means the shoot type's.
      * \param[in] petiole_radius The radius of the petiole where this leaflet attaches, in meters, when it is not the shoot type's. Negative means the shoot type's.
+     * \param[in] petiolule_length The length of this leaflet's own stalk in meters, when it is not the species' share of the blade's length (a leaflet placed from a measurement); needs leaflet_size. Negative means the species'.
      * \return Object ID of the new leaflet.
      */
-    uint buildLeafPrototype(int leaves_per_petiole, float ind_from_tip, uint prototype_index = 0, float leaflet_size = -1.f, float petiole_radius = -1.f);
+    uint buildLeafPrototype(int leaves_per_petiole, float ind_from_tip, uint prototype_index = 0, float leaflet_size = -1.f, float petiole_radius = -1.f, float petiolule_length = -1.f);
+
+    //! The thickest stalk (radius, m) a leaf placed by setPetioleLeafGeometry() is given
+    /**
+     * A placed leaf's stalk is as thick as the petiole is where it leaves it, but no thicker than this share of the leaf's own length: a stalk scales with the leaf it carries, and a small
+     * leaflet on a thick rachis otherwise has a stalk nearly the size of its blade.
+     *
+     * \param[in] leaf_size Length of the leaf's blade, in meters.
+     * \return The largest stalk radius, in meters.
+     */
+    [[nodiscard]] static float placedStalkRadiusMax(float leaf_size) {
+        return 0.02f * leaf_size;
+    }
+
+    //! The sharpest turn (radians) between a placed leaf's stalk and its blade
+    /**
+     * A stalk given a base on the petiole by setPetioleLeafGeometry() runs from there to where the blade begins. It may come to the blade from behind, in the blade's own line (no turn), or rise to it
+     * from beneath (a quarter turn) and a little past that, for a leaflet held over its petiole; a stalk that would turn further than this runs back along its blade and is refused.
+     *
+     * \return The largest angle between the stalk's line and the blade's, in radians (120 degrees).
+     */
+    [[nodiscard]] static float placedStalkTurnMax() {
+        return 2.f * PI_F / 3.f;
+    }
+
+    //! Move the start of a placed leaf's stalk to where it leaves the petiole
+    /**
+     * See PlantArchitecture::setPetioleLeafGeometry(). The stalk's first ring is put at stalk_base, across the line from there to where the blade begins, and the ring where the blade begins is mitred
+     * between that line and the blade's own; the join under the blade is left as built.
+     * \param[in] objID_leaf Object ID of the leaf, already posed and translated.
+     * \param[in] petiole_index Index of the petiole the leaf hangs from, whose radius the stalk takes where it leaves it.
+     * \param[in] stalk_base Where the stalk leaves the petiole, in world coordinates.
+     * \param[in] leaf_size Size of the leaf in meters, which the stalk may not be longer than.
+     */
+    void placeLeafStalk(uint objID_leaf, uint petiole_index, const helios::vec3 &stalk_base, float leaf_size);
 
     //! Draw a leaf object's petiolule with the petiole's material
     /**
@@ -2952,6 +3180,10 @@ public:
     //! Whether each leaf's pose was prescribed by setPetioleLeafGeometry() rather than generated. Indexed as <code>leaf_objIDs</code>. Recorded by PlantArchitecture::writePlantStructureXML() so that the pose is restored.
     std::vector<std::vector<bool>> leaf_pose_prescribed;
 
+    //! Where the stalk of a leaf placed with its own stalk base leaves the petiole, by the leaf's object ID (see PlantArchitecture::setPetioleLeafGeometry()). Recorded by
+    //! PlantArchitecture::writePlantStructureXML() so that the stalk is put back when the plant is read.
+    std::map<uint, helios::vec3> leaf_stalk_base_placed;
+
     //! Each leaflet's own (pitch, yaw, roll) offset from the leaf's angles, in degrees, set by setPetioleLeafletAngleOffsets(). First index is petiole within internode, second leaf within petiole; empty for a
     //! petiole whose leaflets have none.
     std::vector<std::vector<helios::vec3>> leaflet_angle_offsets;
@@ -2992,6 +3224,18 @@ public:
         std::vector<helios::vec3> rest_vertices;
         //! Undeformed petiolule vertices that follow the lattice in the mesh, if any
         std::vector<helios::vec3> rest_appended_vertices;
+        //! Position, in the frame buildLeafBladeLattice() builds the blade in, of the origin of the leaf object's own frame (see PlantArchitecture::LeafRestGeometry::lattice_frame_offset)
+        helios::vec3 lattice_frame_offset;
+        //! Whether the blade is laid along a midrib prescribed by setLeafMidrib()
+        bool has_midrib = false;
+        //! Prescribed midrib stations in the leaf's own frame, one per lattice column. Held in the leaf's frame so that any rigid motion of the leaf object carries them.
+        std::vector<helios::vec3> midrib_stations;
+        //! Twist of the blade at each prescribed midrib station, in radians, in the leaf's own frame
+        std::vector<float> midrib_rolls;
+        //! Factor by which the blade's rest lattice is scaled, in the leaf's own frame, for its midrib to have the prescribed length
+        float midrib_length_scale = 1.f;
+        //! Whether the blade drooped before its midrib was prescribed, which clearLeafMidrib() restores
+        bool deformable_before_midrib = false;
     };
 
     //! Shapes of leaves that are not, or no longer, simply copies of a cached prototype: those built fresh by the prototype function, and those reshaped in place. Keyed by leaf object ID.
@@ -3002,7 +3246,13 @@ public:
     bool last_built_leaf_shape_valid = false;
 
     //! Record on the phytomer the shape of a leaf just built by buildLeafPrototype() rather than copied from the prototype cache
+    /**
+     * Must be called before the leaf is scaled, rotated or translated: the offset of the leaf's own frame from its blade lattice is read from its transformation matrix, which is then a translation alone.
+     */
     void recordBuiltLeafShape(uint objID_leaf);
+
+    //! Position, in the frame of buildLeafBladeLattice(), of the origin of a leaf object's own frame, looked up as getLeafShape() looks up the shape
+    [[nodiscard]] helios::vec3 leafLatticeFrameOffset(uint petiole_index, uint leaf_index) const;
 
     //! Bending flexibility this phytomer's leaves were built with
     /**
@@ -3104,6 +3354,13 @@ public:
 
 protected:
     helios::vec3 inflorescence_bending_axis;
+
+    //! Position of the phytomer's node -- the tip of its internode -- when its organs were last seated on it
+    /**
+     * setPetioleBase() moves the phytomer's organs by how far the node has moved since. A phytomer with petioles has this in the base of its first petiole; one without petioles, which can still carry
+     * floral buds, has nowhere else to keep it.
+     */
+    helios::vec3 seated_node_position;
 
     helios::Context *context_ptr;
 
@@ -3374,6 +3631,25 @@ struct Shoot {
      */
     [[nodiscard]] helios::vec3 getShootAxisVector(float shoot_fraction) const;
 
+    //! Visit the positions of one phytomer's internode nodes. Not intended for use outside the plug-in (see Phytomer::visitPetioleSpatialState()).
+    /**
+     * \param[in] node_index Index of the phytomer along the shoot.
+     * \param[in] visitor Operation applied to each value.
+     */
+    void visitInternodeSpatialState(uint node_index, PlantSpatialStateVisitor &visitor);
+
+    //! Visit what the shoot stores about how it sits on its parent, which turns with the parent node rather than with the shoot. Not intended for use outside the plug-in.
+    /**
+     * \param[in] visitor Operation applied to each value.
+     */
+    void visitAttachmentSpatialState(PlantSpatialStateVisitor &visitor);
+
+    //! Visit the positions and directions stored for the shoot as a whole, which turn with the shoot. Not intended for use outside the plug-in.
+    /**
+     * \param[in] visitor Operation applied to each value.
+     */
+    void visitShootSpatialState(PlantSpatialStateVisitor &visitor);
+
     //! Reports whether this shoot has been pruned away entirely
     /**
      * A shoot pruned at node 0 keeps its slot in the plant's shoot tree so that shoot IDs remain
@@ -3466,6 +3742,13 @@ struct Shoot {
      * feeds, so it is cached and recomputed only when the parent internode has turned or thickened.
      */
     helios::vec3 cached_base_offset = helios::make_vec3(0, 0, 0);
+    //! Whether the side of the parent this shoot is seated on is held where it is, and carried with the parent, rather than worked out again from the parent's petiole or the shoot's base rotation
+    /**
+     * Set while the plant is posed and kept once a pose is made permanent (see PlantArchitecture::bakePlantPose()); put back if the pose is undone. The petiole and base rotation describe where the
+     * shoot was seated as it grew; once the plant has been re-posed they no longer say where the shoot is, and working the seat out from them again would slide the shoot's base around its parent
+     * the next time the parent thickened or the shoot was re-seated.
+     */
+    bool base_offset_pinned = false;
     helios::vec3 last_parent_internode_axis = helios::make_vec3(1e30f, 1e30f, 1e30f);
     float last_parent_node_radius = -1.f;
 
@@ -3529,17 +3812,32 @@ struct Shoot {
     //! Plant age (days) at which this tiller reached CarbonGrassParameters::tiller_establishment_leaves leaves and began to be judged on its own carbon balance; negative before then
     float tiller_established_age = -1;
 
+    //! Break dormancy: wake the vegetative buds and resume growth, and wake the floral buds unless they have already woken this season
     void breakDormancy();
+    //! Wake the floral buds of a dormant shoot without breaking its vegetative dormancy, starting the clocks of their phenological stages
+    /**
+     * Floral buds wake when the plant's dormancy breaks, while the shoot itself may break vegetative dormancy up to the plant's budbreak duration later (see PlantArchitecture::setPlantPhenologicalSpread()).
+     */
+    void wakeFloralBuds();
     void makeDormant();
 
 
     bool isdormant;
+    //! Whether the floral buds have woken since the shoot last went dormant
+    /**
+     * Read only while the shoot is dormant: a dormant shoot whose floral buds are awake carries flowers and fruit while it waits to break vegetative dormancy.
+     */
+    bool floral_buds_awake = false;
+    //! Days after the plant's dormancy break at which this shoot breaks vegetative dormancy
+    /**
+     * Drawn each season when the shoot's floral buds wake. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float budbreak_delay = 0;
     uint dormancy_cycles = 0;
 
     bool meristem_is_alive = true;
 
     float phyllochron_counter = 0;
-    float phyllochron_min = 3.f;
     float elongation_max = 0.25;
 
     //! Ornstein-Uhlenbeck tortuosity curvature state (deg/m) applied about the shoot bending axis
@@ -3635,6 +3933,12 @@ struct PlantInstance {
     std::vector<std::shared_ptr<Shoot>> shoot_tree;
     helios::vec3 base_position;
     float current_age;
+
+    //! Pose of the plant set through PlantArchitecture::setPlantJointPose(), with the plant as it grew, which the pose is measured from. Null while the plant stands as it grew.
+    std::shared_ptr<PlantPoseState> pose_state;
+
+    //! Whether a pose has been made a permanent part of the plant (see PlantArchitecture::bakePlantPose()), so that its geometry is no longer what its growth parameters alone describe
+    bool pose_baked = false;
     float time_since_dormancy = 0;
     helios::Context *context_ptr;
     std::string plant_name;
@@ -3671,6 +3975,21 @@ struct PlantInstance {
     float dd_to_dormancy = 1e6; //!< effectively "never", keeping the dormancy predicate false
     float max_leaf_lifespan = 1e6;
     bool is_evergreen = false;
+    //! Days over which the shoots break vegetative dormancy, starting at dd_to_dormancy_break
+    /**
+     * Zero breaks every shoot at once. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float budbreak_duration = 0;
+    //! Days over which the floral buds make their first reproductive transition, starting at its threshold
+    /**
+     * Zero makes every bud transition at once. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float flowering_duration = 0;
+    //! Days by which the time fruit take to reach full size can exceed dd_to_fruit_maturity
+    /**
+     * Zero gives every fruit dd_to_fruit_maturity. See PlantArchitecture::setPlantPhenologicalSpread().
+     */
+    float fruit_maturity_duration = 0;
     //! The earliest image of LeafPrototype::leaf_texture_series that any leaf of the plant uses, whatever its age (see PlantArchitecture::setPlantMinimumLeafTextureStage())
     uint minimum_leaf_texture_stage = 0;
 
@@ -3976,6 +4295,178 @@ struct USDExportParameters {
     uint solver_position_iterations = 32;
     //! Minimum segment length (m). Segments shorter than this are skipped.
     float min_segment_length = 0.001f;
+};
+
+//! Kind of joint in the skeleton of a plant (see PlantArchitecture::getPlantJoints())
+enum PlantJointType {
+    //! Base of the whole plant, at PlantArchitecture::getPlantBasePosition(). Carries every organ of the plant.
+    PLANT_JOINT_ROOT,
+    //! Attachment of a shoot to the node of the parent shoot it grows from. Carries the shoot and everything on it.
+    PLANT_JOINT_SHOOT,
+    //! Base of the internode of one phytomer. Carries that internode, the organs at its node, and every phytomer and child shoot further out along the shoot.
+    PLANT_JOINT_INTERNODE,
+    //! Base of a petiole, at the node it grows from. Carries the petiole and its leaves.
+    PLANT_JOINT_PETIOLE,
+    //! Base of the peduncle of a floral bud. Carries the peduncle and its flowers or fruit.
+    PLANT_JOINT_PEDUNCLE
+};
+
+//! Identifier of one joint in the skeleton of a plant
+/**
+ * A joint is named by the organ it is the base of, using the same indices as the rest of the plant architecture interface, so an identifier stays valid for as long as that organ exists: growth adds
+ * joints without renaming the ones there, while a petiole joint goes when its leaf is shed and a peduncle joint when its bud stops flowering or fruiting. Indices that do not apply to the joint's type
+ * must be left at zero; an identifier with one set is refused.
+ */
+struct PlantJointID {
+    //! Kind of joint
+    PlantJointType type = PLANT_JOINT_ROOT;
+    //! ID of the shoot the joint belongs to (not used by PLANT_JOINT_ROOT)
+    uint shootID = 0;
+    //! Index of the phytomer along the shoot (PLANT_JOINT_INTERNODE, PLANT_JOINT_PETIOLE, PLANT_JOINT_PEDUNCLE)
+    uint node_index = 0;
+    //! Index of the petiole within the phytomer (PLANT_JOINT_PETIOLE, PLANT_JOINT_PEDUNCLE)
+    uint petiole_index = 0;
+    //! Index of the floral bud within the petiole (PLANT_JOINT_PEDUNCLE)
+    uint bud_index = 0;
+
+    bool operator==(const PlantJointID &other) const {
+        return type == other.type && shootID == other.shootID && node_index == other.node_index && petiole_index == other.petiole_index && bud_index == other.bud_index;
+    }
+    bool operator!=(const PlantJointID &other) const {
+        return !(*this == other);
+    }
+    bool operator<(const PlantJointID &other) const {
+        if (type != other.type) {
+            return type < other.type;
+        }
+        if (shootID != other.shootID) {
+            return shootID < other.shootID;
+        }
+        if (node_index != other.node_index) {
+            return node_index < other.node_index;
+        }
+        if (petiole_index != other.petiole_index) {
+            return petiole_index < other.petiole_index;
+        }
+        return bud_index < other.bud_index;
+    }
+};
+
+//! Where a joint of a plant is and how the organ it carries is oriented (see PlantArchitecture::getPlantJointFrame())
+struct PlantJointFrame {
+    //! Point the joint turns about, in world coordinates
+    helios::vec3 pivot;
+    //! Unit direction of what the organ grows from, in world coordinates: the vertical for the plant root, the parent internode for a shoot, petiole or peduncle, and the previous internode for an internode.
+    helios::vec3 parent_axis;
+    //! Unit direction of the organ where it leaves the joint, in world coordinates
+    helios::vec3 organ_axis;
+    //! Unit axis, in world coordinates, about which the organ is tilted toward or away from parent_axis. It is perpendicular to both; when the two are parallel it is an arbitrary perpendicular.
+    helios::vec3 pitch_axis;
+    //! Length in meters of the organ along its centerline: the internode, petiole or peduncle. Zero for joints whose organ has no length of its own (the plant root and a shoot).
+    float length = 0;
+};
+
+//! Pose of one joint of a plant: how far the organ it carries is turned from the way it grew (see PlantArchitecture::setPlantJointPose())
+/**
+ * The three angles are applied about the axes of the joint as the plant grew (see \ref PlantJointFrame), roll first, then pitch, then yaw. A default-constructed pose is the plant as it grew.
+ */
+struct PlantJointPose {
+    //! Tilt of the organ away from what it grows from, in degrees, about PlantJointFrame::pitch_axis. Negative values tilt it toward its parent.
+    float pitch_degrees = 0;
+    //! Turn of the organ around what it grows from, in degrees, about PlantJointFrame::parent_axis
+    float yaw_degrees = 0;
+    //! Twist of the organ about its own axis, in degrees, about PlantJointFrame::organ_axis
+    float roll_degrees = 0;
+    //! Length of the organ as a multiple of the length it grew to. Only an internode or a petiole has a length to pose (PLANT_JOINT_INTERNODE, PLANT_JOINT_PETIOLE); it must be 1 for any other joint.
+    /**
+     * The organ's centerline is stretched about the joint, keeping its shape, and everything attached along it or beyond it is carried to where its point of attachment goes, without being stretched
+     * itself. To set a length in meters, divide it by the organ's grown length, which is PlantJointFrame::length divided by the length_scale the joint currently has.
+     */
+    float length_scale = 1;
+    //! Bend of a petiole along its length, in degrees, about PlantJointFrame::pitch_axis: positive curls it further from what it grows from, as a positive pitch_degrees tilts it. Only a petiole has a bend to pose (PLANT_JOINT_PETIOLE); it must be 0 for any other joint.
+    /**
+     * Where pitch_degrees turns the whole petiole rigidly about its base, a bend turns it progressively along its length, so it can be pushed or pulled into a new shape without a kink. The bend is the
+     * change, from the way the petiole grew, in the angle between its direction at its base and its direction at its tip: the first segment of its centerline keeps its direction, the last is turned by the
+     * whole bend, and the segments between are turned by shares that grow evenly with arclength. It is an offset like the angles, so zero leaves the curvature the petiole grew with. Each leaf on the
+     * petiole is carried rigidly to where its point of attachment goes and turned with the centerline there. The bend is applied to the petiole as it grew, about the joint's axes as it grew, before the
+     * joint is turned by its angles, so it is independent of them, and roll_degrees turns the plane of the bend with the petiole. A petiole whose centerline has a single segment has one direction and cannot
+     * be bent. See \ref PlantArchPoseBend.
+     */
+    float bend_degrees = 0;
+    //! Sideways bend of a petiole along its length, in degrees, about the axis perpendicular to both PlantJointFrame::organ_axis and PlantJointFrame::pitch_axis: positive turns it the way a positive yaw_degrees turns it around the stem. Only a petiole has a bend to pose; it must be 0 for any other joint.
+    /**
+     * Spread along the petiole as bend_degrees is. The two bends together are one bend, of the size of their vector sum, about the axis that combines them: the angle between the petiole's directions at
+     * its base and its tip changes by that size.
+     */
+    float bend_lateral_degrees = 0;
+};
+
+//! Kind of plant organ represented by a PlantArticulationLink
+enum PlantArticulationLinkType {
+    //! Capsule segment of a shoot internode
+    ARTICULATION_LINK_INTERNODE,
+    //! Capsule segment of a leaf petiole
+    ARTICULATION_LINK_PETIOLE,
+    //! Capsule segment of a flower or fruit peduncle
+    ARTICULATION_LINK_PEDUNCLE,
+    //! Leaf blade mass body
+    ARTICULATION_LINK_LEAF,
+    //! Fruit mass body
+    ARTICULATION_LINK_FRUIT,
+    //! Flower mass body
+    ARTICULATION_LINK_FLOWER
+};
+
+//! One rigid link of a plant articulation (see PlantArchitecture::getPlantArticulation())
+struct PlantArticulationLink {
+    //! Unique name of the link within the plant
+    std::string name;
+    //! Organ the link represents
+    PlantArticulationLinkType type = ARTICULATION_LINK_INTERNODE;
+    //! Index of the parent link, or -1 if the link is the root and is fixed to the world
+    int parent_index = -1;
+    //! World-space position of the link frame origin in the rest pose: the capsule midpoint, or the organ mesh centroid
+    helios::vec3 position;
+    //! World-space orientation of the link frame in the rest pose as a unit quaternion (w,x,y,z). The local +z axis is the capsule axis.
+    float qw = 1, qx = 0, qy = 0, qz = 0;
+    //! Capsule radius in meters (zero for leaf, fruit, and flower links)
+    float radius = 0;
+    //! Half-length of the capsule shaft in meters (zero for leaf, fruit, and flower links)
+    float half_length = 0;
+    //! Mass in kg
+    float mass = 0;
+    //! Principal moments of inertia about the link frame axes in kg*m^2
+    helios::vec3 inertia_diagonal;
+    //! Context object the link was built from: the tube object for internode, petiole, and peduncle segments, or the organ object. Zero if none.
+    uint source_objID = 0;
+    //! Innermost joint of the plant skeleton that carries this link (see PlantArchitecture::getPlantJoints()): the internode, petiole or peduncle a segment is part of, or the one a leaf, flower or fruit hangs from.
+    PlantJointID joint;
+};
+
+//! Elastic joint connecting a plant articulation link to its parent
+struct PlantArticulationJoint {
+    //! Index of the parent link
+    int parent_index = -1;
+    //! Index of the child link
+    int child_index = -1;
+    //! Joint anchor in the parent link frame
+    helios::vec3 anchor_in_parent;
+    //! Joint anchor in the child link frame
+    helios::vec3 anchor_in_child;
+    //! Rotational spring stiffness in N*m/rad
+    float stiffness = 0;
+    //! Rotational damping in N*m*s/rad
+    float damping = 0;
+    //! Artificial joint inertia in kg*m^2 that caps the joint's own natural frequency
+    float armature = 0;
+};
+
+//! Physics-ready articulated rigid-body description of a plant
+struct PlantArticulation {
+    //! Links ordered so that every parent precedes its children
+    std::vector<PlantArticulationLink> links;
+    //! One joint per non-root link
+    std::vector<PlantArticulationJoint> joints;
 };
 
 //! Opaque storage for a single growth animation frame snapshot (defined in InputOutput.cpp)
@@ -4351,11 +4842,18 @@ public:
 
     //! Duplicate an existing plant instance and specify its base position and age
     /**
-     * The copy is an independent plant instance carrying the source's configuration: its name, shoot parameters, phenological thresholds,
-     * maximum age, epicormic shoot probability, carbohydrate and nitrogen parameters, and dormancy state. Per-plant attraction points are
+     * The copy is an independent plant instance carrying the source's configuration: its name, shoot parameters, phenological thresholds
+     * and spread, maximum age, epicormic shoot probability, and carbohydrate and nitrogen parameters. Per-plant attraction points are
      * translated onto the new base position, since they are absolute world coordinates.
      *
-     * The carbohydrate and nitrogen pools are not copied, as they are simulation state rather than configuration; the copy starts with the
+     * It also carries where the source is in its season, so that it goes on growing as the source would: the dormancy and growth state
+     * of every shoot, including its own shoot parameters and the girth of its internodes; the age, dormancy and leaves of every
+     * phytomer; and every bud, with its state, clocks and phenological delays, the flowers and fruit of a floral bud being rebuilt at the
+     * size the source's had reached.
+     *
+     * The shape is rebuilt rather than copied: the architecture, internode lengths and leaf and organ sizes match the source, but the
+     * angles and curvatures that the growth model draws at random, such as leaf orientation and peduncle pitch, are drawn anew. The
+     * carbohydrate and nitrogen pools are not copied, as they are simulation state rather than configuration; the copy starts with the
      * pools of a newly created plant of the given age.
      *
      * \param[in] plantID ID of the existing plant instance to be duplicated.
@@ -4397,6 +4895,27 @@ public:
      */
     void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_dormancy,
                                         float max_leaf_lifespan = 1e6, bool is_evergreen = false);
+
+    //! Spread the timing of phenological events across the shoots and buds of a plant. All values are durations in days.
+    /**
+     * Without a spread, every shoot breaks dormancy on the same day and every bud reaches each stage on the same day. With one, each shoot or bud is given its own delay, drawn from a normal distribution
+     * truncated to the window [0, duration] with mean duration/2 and standard deviation duration/4. The thresholds set by \ref setPlantPhenologicalThresholds() then mark the start of each event, when the first
+     * shoot or bud reaches it, and the event continues for the given duration. A duration of 0 restores the default, in which no delays are drawn.
+     *
+     * \param[in] plantID ID of the plant.
+     * \param[in] budbreak_duration Days over which the shoots break vegetative dormancy (leaf-out), starting time_to_dormancy_break after the plant entered dormancy. The floral buds of every shoot wake at the start
+     * of the window whatever its shoot's delay, so flowering can come before leaf-out. Must be less than time_to_dormancy, so that every shoot breaks before the season ends.
+     * \param[in] flowering_duration Days over which the floral buds make their first reproductive transition after they become active: flower initiation, or flower opening, or fruit set, whichever is the first
+     * stage enabled by \ref setPlantPhenologicalThresholds(). The stages after it follow at their usual intervals, so a bud that flowers late also sets fruit late. Measured, this is the time from the first to the
+     * last flower opening, which is about the reported bloom period (onset to petal fall) less time_to_fruit_set.
+     * \param[in] fruit_maturity_duration Days by which the time each fruit takes to reach full size can exceed time_to_fruit_maturity. An inflorescence given its own maturity period through
+     * PhytomerParameters::inflorescence.inflorescence_maturity_period is not varied.
+     * \note With the carbohydrate model enabled, the flowering and fruit maturity spreads are in developmental days, like the bud clocks they delay (see CarbonDevelopmentParameters), while
+     * the budbreak spread is in calendar days, since the dormancy cycle runs on the calendar.
+     * \note A delay is drawn when the shoot or bud reaches the point at which it applies, so setting a spread affects only events still to come. Buds created during the season (on species whose flowers do not
+     * require dormancy) are already spread by the node they sit on, and the flowering delay is added to that.
+     */
+    void setPlantPhenologicalSpread(uint plantID, float budbreak_duration, float flowering_duration, float fruit_maturity_duration);
 
     //! Sets the carbohydrate model parameters for a specific plant.
     /**
@@ -4580,6 +5099,7 @@ public:
      * \param[in] radius_taper Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius).
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the new shoot to be used to reference it later.
+     * \note The new shoot inherits the parent's bound on the radius of phytomers grown at its apex (ShootGrowthState::internode_radius_cap), if the parent has one.
      * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint appendShoot(uint plantID, int parent_shoot_ID, uint current_node_number, const AxisRotation &base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction,
@@ -4674,6 +5194,43 @@ public:
     uint addShootFromNodePositions(uint plantID, int parent_shoot_ID, uint parent_node_index, const std::vector<helios::vec3> &internode_node_positions, const std::vector<float> &internode_radii, const std::string &shoot_type_label,
                                    const std::string &growth_shoot_type_label, uint petiole_index = 0);
 
+    //! Manually append a shoot whose internode geometry is prescribed by measured node positions, continuing the axis of its parent shoot.
+    /**
+     * The counterpart of appendShoot() for measured geometry, as addShootFromNodePositions() is of addChildShoot(). The new shoot carries on from the tip of the parent shoot's last node along the same
+     * botanical axis: its base is seated on that tip, on the parent's axis, rather than on the parent's surface as a lateral branch is, and the parent stops producing phytomers at its apex. Use it where
+     * one axis is built as two shoots because its parts are of different shoot types - a hypocotyl and the stem above its cotyledons, for example. Built with addShootFromNodePositions() instead, the upper
+     * shoot is a lateral and stands nearly a parent radius beside the axis it continues.
+     *
+     * The whole path is translated so that its first position lies on the parent's tip, so all relative geometry is preserved exactly, and an error is raised if the first position is further from that
+     * tip than a shoot connected to it could be. Everything else is as for addShootFromNodePositions().
+     *
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] parent_shoot_ID ID of the shoot whose axis the new shoot continues.
+     * \param[in] internode_node_positions Positions of the internode nodes in world coordinates, ordered from the base of the shoot to its tip. Element 0 is the base of the shoot, at the parent's tip. At
+     * least two positions are required, and no two consecutive positions may be coincident.
+     * \param[in] internode_radii Radius of the shoot at each node, one per entry of internode_node_positions. All radii must be greater than zero.
+     * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
+     * \return ID of the newly generated shoot.
+     * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
+     */
+    uint appendShootFromNodePositions(uint plantID, int parent_shoot_ID, const std::vector<helios::vec3> &internode_node_positions, const std::vector<float> &internode_radii, const std::string &shoot_type_label);
+
+    //! Manually append a shoot whose internode geometry is prescribed by measured node positions, continuing the axis of its parent shoot and growing afterwards as a different shoot type.
+    /**
+     * As the overload above, with the shoot type that governs the shoot's future growth given separately from the one its measured geometry is built with. See the corresponding overload of
+     * addShootFromNodePositions() for what each of the two types supplies.
+     *
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] parent_shoot_ID ID of the shoot whose axis the new shoot continues.
+     * \param[in] internode_node_positions Positions of the internode nodes in world coordinates, ordered from the base of the shoot to its tip. Element 0 is the base of the shoot, at the parent's tip.
+     * \param[in] internode_radii Radius of the shoot at each node, one per entry of internode_node_positions. All radii must be greater than zero.
+     * \param[in] shoot_type_label Label of the shoot type whose parameters are used to build the measured geometry.
+     * \param[in] growth_shoot_type_label Label of the shoot type whose parameters govern the shoot's future growth.
+     * \return ID of the newly generated shoot.
+     */
+    uint appendShootFromNodePositions(uint plantID, int parent_shoot_ID, const std::vector<helios::vec3> &internode_node_positions, const std::vector<float> &internode_radii, const std::string &shoot_type_label,
+                                      const std::string &growth_shoot_type_label);
+
     //! Manually add a child epicormic shoot (water sprout) at an arbitrary position along the shoot
     /**
      * \param[in] plantID ID of the plant instance.
@@ -4681,13 +5238,14 @@ public:
      * \param[in] parent_position_fraction Position along the parent shoot to add the epicormic shoot as a fraction of the parent shoot length.
      * \param[in] current_node_number Number of nodes of the newly added shoot.
      * \param[in] zenith_perturbation_degrees Pitch angle of epicormic shoot base away from parent shoot axis (degrees).
-     * \param[in] internode_radius Initial radius of the internodes along the shoot.
+     * \param[in] internode_radius Initial radius of the internodes along the shoot. Values larger than the current radius of the parent internode the shoot emerges from are reduced to that radius.
      * \param[in] internode_length_max Length of the internode of the newly appended shoot.
      * \param[in] internode_length_scale_factor_fraction Scaling factor of the maximum internode length to determine the actual initial internode length at the time of creation (=1 applies no scaling).
      * \param[in] leaf_scale_factor_fraction Scaling factor of the leaf/petiole to determine the actual initial leaf size at the time of creation (=1 applies no scaling).
      * \param[in] radius_taper Tapering factor of the internode radius along the shoot (0=constant radius, 1=linear taper to zero radius).
      * \param[in] shoot_type_label Label of the shoot type to be used for the new shoot. This requires that the shoot type has already been defined using the defineShootType() method.
      * \return ID of the newly generated shoot.
+     * \note Phytomers the shoot later grows during advanceTime() are likewise built no thicker than the parent internode's radius at the time the shoot emerged (see ShootGrowthState::internode_radius_cap).
      * \note Cannot be used inside a phytomer callback (\ref PhytomerParameters::phytomer_creation_function or \ref PhytomerParameters::phytomer_callback_function): a call made from one raises an error. See \ref PlantArchCallbackEdits.
      */
     uint addEpicormicShoot(uint plantID, int parent_shoot_ID, float parent_position_fraction, uint current_node_number, float zenith_perturbation_degrees, float internode_radius, float internode_length_max,
@@ -5019,6 +5577,9 @@ public:
      * The supplied positions are the nodes of the petiole tube, ordered from the base outward. Their number is free and need not match the shoot type's PetioleParameters::length_segments; the petiole tube is
      * rebuilt to match. The caller controls petiole length by choosing where to put the nodes.
      *
+     * The petiole's leaves are carried to the new path: each stays at the fraction of the petiole's length it was attached at, and is turned as the petiole's direction there has turned. They are the same
+     * leaf objects, moved rather than rebuilt. (The leaves of a petiole that had no length, such as that of a sessile leaf, have no position along it to keep and are left where they are.)
+     *
      * The first supplied position is snapped onto the tip of the internode the petiole grows from, and the rest of the path is translated by the same amount. All relative geometry -- directions, segment lengths
      * and curvature -- is preserved exactly; only the absolute position changes, and only by the discrepancy between the first supplied position and the internode tip. An error is raised if that discrepancy is
      * large enough that the petiole would not be attached to the stem. The snap is not cosmetic: every petiole is re-seated onto its internode tip on each timestep, by translating the whole phytomer by the
@@ -5064,11 +5625,17 @@ public:
      * \param[in] leaf_bases Base position of each leaf in world coordinates, one per leaf on the petiole.
      * \param[in] leaf_rotations Roll, pitch and yaw of each leaf in radians, one per leaf on the petiole.
      * \param[in] leaf_sizes Fully-elongated size of each leaf in meters, one per leaf on the petiole. All sizes must be greater than zero.
+     * \param[in] leaf_stalk_lengths [optional] Length of each leaf's stalk (petiolule) in meters, for a leaf prototype that builds one: the distance from the leaf's base to where its blade begins. One per
+     * leaf, all greater than zero; with none given each stalk is the species' share of its blade's length. A stalk is as thick as the petiole is where the leaf's base lies along it, whatever the leaf's size.
      * \note Supplying a different number of leaves than the petiole carries raises an error rather than adding or removing leaves; change the count with setPetioleLeafCount() first.
      * \note Rebuilding each leaf discards primitive data a caller has attached to it. The object label and material are restored; other primitive data is not.
+     * \param[in] leaf_stalk_bases [optional] Where each leaf's stalk leaves the petiole, in world coordinates, one per leaf. A stalk is otherwise built back along its blade's own line from the leaf's base, and a
+     * measured stalk seldom lies on that line: it rises from the petiole to a blade held a few millimetres off it. With these the stalk runs straight from the given point to where the blade begins and
+     * bends there into the join under the blade, which is unchanged; the blade stays where its base, angles and size put it. A stalk may be no longer than its blade and must reach the blade from behind
+     * its base, and it is as thick as the petiole where it leaves it; anything else raises an error. Needs a leaf prototype that builds a stalk.
      */
     void setPetioleLeafGeometry(uint plantID, uint shootID, uint node_index, uint petiole_index, const std::vector<helios::vec3> &leaf_bases, const std::vector<AxisRotation> &leaf_rotations,
-                                const std::vector<float> &leaf_sizes);
+                                const std::vector<float> &leaf_sizes, const std::vector<float> &leaf_stalk_lengths = {}, const std::vector<helios::vec3> &leaf_stalk_bases = {});
 
     //! Change the number of leaves (leaflets) on a petiole of an existing phytomer.
     /**
@@ -5141,7 +5708,7 @@ public:
      * \param[in] aspect_ratio Ratio of blade width to length; greater than zero.
      * \param[in] longitudinal_curvature Curvature along the blade's length (+ up, - down).
      * \param[in] lateral_curvature Curvature across the blade's width (+ up, - down).
-     * \param[in] midrib_fold_fraction Fold along the midrib, from 0 (flat) to 1 (folded shut).
+     * \param[in] midrib_fold_fraction Fold along the midrib, from -1 (halves folded down shut) through 0 (flat) to 1 (halves folded up shut).
      */
     void setPetioleLeafShape(uint plantID, uint shootID, uint node_index, uint petiole_index, float aspect_ratio, float longitudinal_curvature, float lateral_curvature, float midrib_fold_fraction);
 
@@ -5168,6 +5735,116 @@ public:
      * \param[in] roll_fraction Roll as a fraction of a closed tube, from 0 (flat) to 1 (edges meeting).
      */
     void setPlantLeafRoll(uint plantID, float roll_fraction);
+
+    //! Set whether one leaf bends under its own weight
+    /**
+     * A leaf of a species with a non-zero LeafPrototype::flexibility bends under its own weight as it grows, but a leaf placed with setPetioleLeafGeometry() or rebuilt by setPetioleLeafCount() keeps its
+     * prototype's rest shape. Turning droop on gives such a leaf the bend a grown leaf has: the plug-in's own self-weight deflection, worked out from the leaf's orientation as it is placed, its size taken as
+     * its fully expanded size, and its compliance aged with its phytomer, exactly as for a grown leaf. The leaf keeps bending as it would if it had grown there: it is bent again when its orientation changes
+     * (for example by a joint pose) and as its phytomer ages. Turning droop off gives a leaf, grown or placed, its rest shape. The leaf keeps its object and primitives; only its vertices move. The setting is
+     * recorded by writePlantStructureXML(). See \ref PlantArch_leafdroop.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] droops True to bend the blade under its own weight, false to give it its rest shape.
+     * \note Only a leaf built by the generic leaf prototype has a rest shape to bend from; an OBJ-loaded or custom-built leaf raises an error. Turning droop on for a leaf of a species whose flexibility is
+     * zero, or for a leaf whose blade follows a midrib prescribed by setLeafMidrib(), raises an error.
+     */
+    void setLeafDroop(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, bool droops);
+
+    //! Whether one leaf bends under its own weight (see setLeafDroop())
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return True if the blade is bent under its own weight.
+     */
+    [[nodiscard]] bool doesLeafDroop(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const;
+
+    //! Lay one leaf's blade along a prescribed midrib, twisted about it by a given roll at each point
+    /**
+     * Bends the blade so that its midrib follows a polyline, as when a blade is fitted to a midrib traced in a point cloud: a grass blade that rises, arches over and hangs, a curvature that changes along
+     * the blade, or a blade that twists, none of which the blade's own shape terms can give. Each row of the blade's lattice across its width is carried rigidly with its station on the midrib, so the
+     * blade keeps its outline and its cross-section (fold, lateral curvature, roll, waves) and is bent without being stretched.
+     *
+     * The midrib is given in world coordinates from the base of the blade (where the blade begins, beyond any stalk) to its tip, by any number of points of at least two. The first point is moved onto the
+     * blade's base, and the rest of the polyline with it, and an error is raised if it is further from it than 1 mm or 2% of the polyline's length, whichever is larger. The blade's stations are laid along
+     * the polyline keeping the proportions of the blade's own midrib segments, and the blade takes the polyline's length: a longer or shorter midrib scales the blade, its width with it.
+     *
+     * Each row turns with the midrib segment that ends at its station, carried from the blade's base without twisting (a rotation-minimizing frame, which has no special direction, so a blade pointing
+     * straight up is no different from any other); the row at the base keeps the orientation the blade has where it leaves its stalk or petiole. The roll at each point then twists the blade about the
+     * midrib from there, and is interpolated along the midrib between points. A blade given its own midrib as read by getLeafMidrib(), or the midrib of the same blade drooped under its own weight, takes
+     * that shape.
+     *
+     * The midrib replaces the blade's droop, which is turned off while it is prescribed, and its longitudinal curvature. It is held in the leaf's own frame, so moving the leaf (a joint pose,
+     * setPlantBasePosition()) carries it, and reshapeLeaf() lays the new cross-section along it. The petiole's growth is pinned as setPetioleLeafGeometry() pins it, so that advanceTime() does not rescale
+     * the blade. The leaf keeps its object and primitives. setPetioleLeafGeometry() and setPetioleLeafCount() rebuild the leaf and so discard its midrib. The midrib is recorded by
+     * writePlantStructureXML(). See \ref PlantArch_blademidrib.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] midrib Points of the midrib in world coordinates, from the base of the blade to its tip; at least two, no two consecutive ones coincident.
+     * \param[in] rolls Twist of the blade about the midrib at each point, in radians, right-handed about the midrib's direction from base to tip, measured from the blade bent along the midrib without
+     * twisting; one per point, or none for an untwisted blade.
+     * \note Only a leaf built by the generic leaf prototype has a lattice to lay along a midrib; an OBJ-loaded or custom-built leaf raises an error.
+     */
+    void setLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<float> &rolls = {});
+
+    //! Lay one leaf's blade along a prescribed midrib, turned about it to face a given normal at each point
+    /**
+     * As setLeafMidrib(uint, uint, uint, uint, uint, const std::vector<helios::vec3>&, const std::vector<float>&), but the blade's twist is given by the normal of its upper side at each point, as a point
+     * cloud gives it, rather than by a roll. The normals are interpolated along the midrib between points and taken perpendicular to it; a normal that is (nearly) parallel to the midrib raises an error,
+     * since it does not fix how the blade is turned. The normal is that of the blade ignoring its fold and curvature across the midrib.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] midrib Points of the midrib in world coordinates, from the base of the blade to its tip; at least two, no two consecutive ones coincident.
+     * \param[in] normals Normal of the blade's upper side at each point, in world coordinates; one per point. They need not be unit length.
+     */
+    void setLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<helios::vec3> &normals);
+
+    //! Get the midrib of one leaf's blade as the blade now is
+    /**
+     * Works for any leaf built by the generic leaf prototype, whether its midrib was prescribed or not. For a blade with no prescribed midrib the midrib is read from the blade itself and its rolls are
+     * measured against its rest shape laid untwisted along the same midrib, so a grown or drooped blade reads rolls of zero. Passing the result back to setLeafMidrib() leaves the blade as it is.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return Position, normal and roll at each station of the blade's lattice along its length, from base to tip.
+     */
+    [[nodiscard]] LeafMidrib getLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const;
+
+    //! Return one leaf's blade from a prescribed midrib to its own shape
+    /**
+     * The blade takes its rest shape again, at the size it had before its midrib was prescribed, and droops again if it drooped then. Does nothing for a leaf with no prescribed midrib.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     */
+    void clearLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index);
+
+    //! Whether one leaf's blade is laid along a midrib prescribed by setLeafMidrib()
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return True if the blade follows a prescribed midrib.
+     */
+    [[nodiscard]] bool hasLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const;
 
     //! Rebuild the leaflets of one petiole of an existing phytomer with each turned by its own offset from the leaf's angles.
     /**
@@ -5197,6 +5874,142 @@ public:
      * \param[in] base_position Coordinates representing the new base position of the plant
      */
     void setPlantBasePosition(uint plantID, const helios::vec3 &base_position);
+
+    //! List the joints of a plant's skeleton
+    /**
+     * The skeleton is the plant's own structure: one joint at the base of the plant, one where each shoot is attached to its parent, one at the base of each internode, one at the base of each petiole
+     * and one at the base of each peduncle. Joints are listed from the base of the plant outward, so that every joint comes after the joints that carry it.
+     *
+     * The base shoot of a plant has no PLANT_JOINT_SHOOT of its own, since PLANT_JOINT_ROOT already turns it. The first internode of every shoot does have a PLANT_JOINT_INTERNODE, whose pivot
+     * is the shoot's attachment point. Petioles of zero length (sessile leaves) and peduncles that have not been built have no joint. Pruned shoots contribute nothing.
+     *
+     * \param[in] plantID ID of the plant instance.
+     * \return Identifiers of the plant's joints, from the base outward.
+     */
+    [[nodiscard]] std::vector<PlantJointID> getPlantJoints(uint plantID) const;
+
+    //! Get the position and orientation of one joint of a plant's skeleton, as the plant currently stands
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] joint Identifier of the joint, as listed by getPlantJoints().
+     * \return Pivot point, axes and organ length of the joint in world coordinates.
+     */
+    [[nodiscard]] PlantJointFrame getPlantJointFrame(uint plantID, const PlantJointID &joint) const;
+
+    //! Re-pose a grown plant by turning one of its joints
+    /**
+     * Turns the organ the joint carries, together with everything growing from it, as one rigid body about the joint, and leaves the rest of the plant where it is. An internode or a petiole can also be
+     * made longer or shorter (PlantJointPose::length_scale), which carries everything beyond it along its axis. The geometry in the Context and
+     * everything the plant architecture model stores about the plant are moved together, so later calls see the plant as it now stands. No organ is rebuilt: object IDs and primitive UUIDs are unchanged.
+     *
+     * The pose is an offset from the plant as it grew, not an increment on its current pose. Setting a joint, then other joints, then the first joint again gives the same plant as setting them in any
+     * other order, and setting every joint back to zero (or calling resetPlantPose()) restores the grown plant exactly.
+     *
+     * Petioles and leaves that bend under their own weight (a non-zero flexibility) settle under gravity again in their new orientation, so they are not carried perfectly rigidly; those of a rigid
+     * species are. Changes made to a posed plant by other calls that leave its structure alone, such as \ref Phytomer::reshapeLeaf() or \ref setPlantBasePosition(), are kept, and become part of what
+     * the pose is measured from: resetting the pose then gives the grown plant with those changes.
+     *
+     * A pose lasts until the plant next grows or changes structure: advanceTime() first makes the pose permanent, as bakePlantPose() does, and growth continues from the posed plant. A change of
+     * structure made by another call while the plant is posed -- an organ added or removed, or a petiole given a different number of nodes with \ref setPetioleNodePositions() -- likewise makes the pose
+     * permanent the next time a pose is set, and resetPlantPose() then raises an error, because the plant as it grew can no longer be told apart from the pose.
+     *
+     * A flower or fruit is rebuilt from its bud whenever the bud changes state, for example from flower to fruit, so the pose of a peduncle lasts only until then.
+     *
+     * If a pose cannot be applied, for example a turn about an internode that has no length, an error is raised and the plant is left with the poses it had.
+     *
+     * \note Do not also rotate the plant's objects in the Context, or the plant architecture model will no longer describe them. This cannot be called from inside a phytomer callback.
+     * \note A plant that is posed, or whose pose has been made permanent, cannot yet be written by writePlantStructureXML() or copied by duplicatePlantInstance(), which raise an error.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] joint Identifier of the joint, as listed by getPlantJoints().
+     * \param[in] pose Offset of the joint from the way the plant grew.
+     */
+    void setPlantJointPose(uint plantID, const PlantJointID &joint, const PlantJointPose &pose);
+
+    //! Re-pose a grown plant by turning several of its joints at once
+    /**
+     * As setPlantJointPose(), but the plant is moved once for the whole set, which is much faster than setting the joints one at a time. Joints that are not named keep the pose they have.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] joints Identifiers of the joints, as listed by getPlantJoints().
+     * \param[in] poses Offset of each joint from the way the plant grew, in the order of \p joints.
+     */
+    void setPlantJointPoses(uint plantID, const std::vector<PlantJointID> &joints, const std::vector<PlantJointPose> &poses);
+
+    //! Set the length of an internode or a petiole of a grown plant in meters
+    /**
+     * A convenience for setPlantJointPose(): the length is converted to PlantJointPose::length_scale using the length the organ grew to, and the angles already set for the joint are kept.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] joint Identifier of a PLANT_JOINT_INTERNODE or PLANT_JOINT_PETIOLE joint, as listed by getPlantJoints().
+     * \param[in] length Length of the organ along its centerline, in meters.
+     */
+    void setPlantJointLength(uint plantID, const PlantJointID &joint, float length);
+
+    //! Push or pull the tip of a petiole of a grown plant to a given position, bending the petiole smoothly along its length
+    /**
+     * A convenience for setPlantJointPose() on the PLANT_JOINT_PETIOLE joint of the petiole: its bend (PlantJointPose::bend_degrees and PlantJointPose::bend_lateral_degrees) and its length
+     * (PlantJointPose::length_scale) are worked out so that the tip of its centerline lands on \p tip_position, while the angles already set for the joint (pitch, yaw and roll) are kept. The petiole
+     * leaves its base in the direction it already had and curves evenly toward the target, so there is no kink, and its leaves are carried with it as for any other pose. A petiole that bends under the
+     * weight of its leaves is aimed again until its tip settles on the target. The result can be read back with getPlantJointPose() and undone with resetPlantPose().
+     *
+     * A target is out of reach, and an error is raised with the plant left as it was, when no bend brings the tip to it, when reaching it would bend the petiole by more than 180 degrees from base to
+     * tip, or when it would scale the petiole's length by less than 0.25 or more than 4; a target behind the petiole's base is usually the first of these. Turning the joint toward the target first
+     * (PlantJointPose::pitch_degrees and yaw_degrees) brings it within reach. A petiole whose centerline has a single segment cannot be bent and also raises an error.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] tip_position Position in world coordinates for the tip of the petiole's centerline.
+     */
+    void setPetioleTipPosition(uint plantID, uint shootID, uint node_index, uint petiole_index, const helios::vec3 &tip_position);
+
+    //! Re-pose a grown shoot by giving the positions of its nodes
+    /**
+     * Bends and stretches the shoot at its internode joints so that its nodes are where they are given, as when a cane is laid along a trellis wire or a stem is fitted to a measured centerline. It is a
+     * convenience for setPlantJointPoses(): the pose of each of the shoot's PLANT_JOINT_INTERNODE joints is worked out and set, replacing any pose those joints had, and everything on the shoot is
+     * carried as for any other pose. The poses of all other joints are kept, and the result can be read back with getPlantJointPose() and undone with resetPlantPose().
+     *
+     * One position is given for the base of the shoot and one for the tip of each of its internodes, so a shoot with N nodes takes N+1 positions. The shoot stays attached where it is: the first position
+     * must be at its base, and a small discrepancy there moves the whole path onto the base. Each internode keeps its own shape, and is turned and scaled so that its tip is at its position.
+     *
+     * The positions fix where each internode points but not how it is twisted about its own length. An internode is reached by a pitch away from, and a yaw around, the internode before it, which is what
+     * decides which way its leaves end up facing.
+     *
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot.
+     * \param[in] node_positions Position in world coordinates of the base of the shoot, followed by the tip of each of its internodes from the base outward.
+     */
+    void setShootNodePositions(uint plantID, uint shootID, const std::vector<helios::vec3> &node_positions);
+
+    //! Get the pose of one joint of a plant, as an offset from the way the plant grew
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] joint Identifier of the joint, as listed by getPlantJoints().
+     * \return Offset last set for the joint with setPlantJointPose(). A default-constructed pose (zero angles, a length scale of 1) for a joint that has not been posed, or after the pose has been made permanent.
+     */
+    [[nodiscard]] PlantJointPose getPlantJointPose(uint plantID, const PlantJointID &joint) const;
+
+    //! Whether a plant currently has a pose, that is, a joint turned from the way the plant grew
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return True if any joint has a non-zero pose that has not been made permanent.
+     */
+    [[nodiscard]] bool isPlantPosed(uint plantID) const;
+
+    //! Put a plant back exactly as it grew, undoing every joint pose
+    /**
+     * Changes made to the posed plant by other calls (see setPlantJointPose()) are kept. Does nothing for a plant that has no pose. An error is raised if the structure of the plant was changed while
+     * it was posed, since the plant as it grew can then no longer be restored.
+     * \param[in] plantID ID of the plant instance.
+     */
+    void resetPlantPose(uint plantID);
+
+    //! Make the pose of a plant a permanent part of it
+    /**
+     * The plant stays as it is posed, and that becomes the plant "as it grew": every joint then reads zero, and later poses are measured from it. advanceTime() does this for a posed plant before it grows
+     * it, so that, for example, a shoot tied to a trellis wire stays there and goes on growing from where it was tied. An internode or petiole whose length was posed keeps that length, and the length it
+     * is growing toward is moved by the same factor, so that later growth does not undo it. Does nothing for a plant that has no pose.
+     * \param[in] plantID ID of the plant instance.
+     */
+    void bakePlantPose(uint plantID);
 
     /**
      * \brief Sets the leaf elevation angle distribution for a specific plant.
@@ -6393,6 +7206,19 @@ public:
      */
     void writePlantStructureUSD(uint plantID, const std::string &filename, const USDExportParameters &params = USDExportParameters()) const;
 
+    //! Get the articulated rigid-body description of a plant used for physics simulation
+    /**
+     * Builds the same links and joints that writePlantStructureUSD() exports, without writing a file, so that a physics
+     * engine can be driven from them directly. Each internode, petiole, and peduncle segment becomes a capsule link, and
+     * each leaf, fruit, and flower becomes a mass link, connected to its parent by an elastic joint whose stiffness,
+     * damping, and armature are computed from the export parameters.
+     *
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] params Parameters controlling the physical properties of links and joints.
+     * \return Links and joints of the plant articulation, with every parent link preceding its children.
+     */
+    [[nodiscard]] PlantArticulation getPlantArticulation(uint plantID, const USDExportParameters &params = USDExportParameters()) const;
+
     //! Register the current plant state as a growth animation frame.
     /**
      * Captures a snapshot of the plant's geometry (all links, transforms, meshes, and materials) at the
@@ -6513,6 +7339,14 @@ public:
 
 private:
 
+    //! Draw the delay of one shoot or bud within a phenological window of setPlantPhenologicalSpread
+    /**
+     * \param[in] duration Length of the window in days.
+     * \return Delay in days, from a normal distribution with mean duration/2 and standard deviation duration/4 truncated to [0, duration]. 0 without a draw when duration is 0, so that a plant with no spread
+     * consumes no random numbers.
+     */
+    [[nodiscard]] float samplePhenologicalDelay(float duration) const;
+
     //! Clear BVH cache (called at start of each growth cycle)
     void clearBVHCache() const;
 
@@ -6599,6 +7433,14 @@ private:
      * \param[in] operation Name of the rejected operation, e.g. "addChildShoot"
      */
     void rejectStructuralOperationInCallback(const std::string &operation) const;
+
+    //! Build a shoot along prescribed node positions: what addShootFromNodePositions() and appendShootFromNodePositions() both do
+    /**
+     * \param[in] continues_parent_axis True to seat the base on the tip of the parent's last node, on its axis, as an axis continuation; false to seat it on the parent's surface at parent_node_index, as a lateral.
+     * \param[in] caller Name of the public method, for error messages.
+     */
+    uint prescribedShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, const std::vector<helios::vec3> &internode_node_positions, const std::vector<float> &internode_radii, const std::string &shoot_type_label,
+                         const std::string &growth_shoot_type_label, uint petiole_index, bool continues_parent_axis, const std::string &caller);
 
     //! Apply a validated cut: the removal performed by pruneBranch()
     void applyPruneBranch(uint plantID, uint shootID, uint node_index, std::vector<uint> *detached_objIDs = nullptr);
@@ -6739,6 +7581,12 @@ protected:
         //! Shape the prototype blade was built with, recorded for every blade built by GenericLeafPrototype() whether or not it droops
         LeafShapeValues shape;
         bool has_shape = false;
+        //! Position, in the frame buildLeafBladeLattice() builds the blade in, of the origin of the prototype object's own frame
+        /**
+         * Context::addPolymeshObject() puts an object's origin at the first vertex of its first primitive, not at the origin the blade was built about, so a vertex of the object's own frame (which every
+         * copy of the prototype shares) is a lattice vertex minus this offset. Recorded for every blade, drooping or not.
+         */
+        helios::vec3 lattice_frame_offset;
     };
     std::map<LeafPrototypeCacheKey, std::vector<std::vector<LeafRestGeometry>>> unique_leaf_prototype_rest_geometry;
 
@@ -6898,6 +7746,62 @@ protected:
      * \param[in] function_name Name of the calling function, used in the error message.
      */
     void validateShootID(uint plantID, uint shootID, const std::string &function_name) const;
+
+    //! Resolve a joint identifier to the shoot and phytomer it names, raising an error that names the calling function if the joint does not exist
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] joint Identifier of the joint.
+     * \param[in] function_name Name of the calling function, for the error message.
+     * \return Phytomer the joint belongs to, or nullptr for PLANT_JOINT_ROOT and PLANT_JOINT_SHOOT, which belong to no single phytomer.
+     */
+    Phytomer *validatePlantJoint(uint plantID, const PlantJointID &joint, const std::string &function_name) const;
+
+    //! Call a function for every rigid part of a plant, in an order that depends only on the plant's structure
+    /**
+     * \param[in] plant_instance Plant whose parts are visited.
+     * \param[in,out] pose_state Pose of the plant.
+     * \param[in] create_missing If true, entries of \p pose_state are created to match the plant's structure. If false, they must already match.
+     * \param[in] callback Function called for each part.
+     * \return False, without having called the callback for every part, if \p create_missing is false and the plant's structure does not match \p pose_state.
+     */
+    bool forEachPoseGroup(PlantInstance &plant_instance, PlantPoseState &pose_state, bool create_missing, const std::function<void(PoseGroupReference &)> &callback) const;
+
+    //! Record a plant as it stands, as what its pose is measured from
+    void capturePlantRestPose(PlantInstance &plant_instance) const;
+
+    //! Fold changes made to a posed plant by anything other than the pose into what the pose is measured from
+    /**
+     * \return False if the plant's structure has changed since the pose was recorded, in which case nothing can be folded in and the pose has to be made permanent as it stands.
+     */
+    bool rebindPlantRestPose(PlantInstance &plant_instance) const;
+
+    //! Motion of each rigid part of a shoot, and of every shoot growing from it, under the joint poses that are set. The plant's stored geometry must be as the plant grew.
+    void computeShootPoseTransforms(uint plantID, uint shootID, const PoseRigidTransform &carrier_transform) const;
+
+    //! Put a plant's stored geometry back as the plant grew, and work out the motion of each of its rigid parts under the joint poses that are set
+    void computePlantPoseTransforms(uint plantID);
+
+    //! Get a plant ready for a pose to be set: keep what else has been done to it since it was last posed, and record it as it grew if that has not been done
+    void preparePlantForPosing(uint plantID);
+
+    //! Forget the record of a plant as it grew, once every joint is back at zero and the plant stands exactly as recorded
+    void releasePlantPoseState(PlantInstance &plant_instance) const;
+
+    //! Move a plant to the joint poses that are set, or, if they cannot be applied, put the previous poses back and raise the error again
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] previous_joint_poses Joint poses the plant had before the ones now set, which are known to apply.
+     */
+    void evaluatePlantPoseOrRestore(uint plantID, const std::map<PlantJointID, PlantJointPose> &previous_joint_poses);
+
+    //! Move a plant to the joint poses that are set
+    void evaluatePlantPose(uint plantID);
+
+    //! Carry a translation of a whole posed plant into what its pose is measured from (see setPlantBasePosition())
+    void translatePlantRestPose(PlantInstance &plant_instance, const helios::vec3 &shift) const;
+
+    //! Raise an error naming the calling function if a plant is posed, or has had a pose made permanent, for functions that rebuild a plant from its growth parameters alone
+    void rejectPosedPlant(uint plantID, const std::string &function_name) const;
 
     //! Shared implementation of the leaf angle distribution tracking setters
     /**
@@ -7178,12 +8082,14 @@ protected:
 
     // --- Nitrogen Model --- //
 
+    // Each of these acts only on the plants given, which are the plants being advanced by advanceTime()
+
     //! Return nitrogen from senescing leaves to the plant's available pool, starting senescence in leaves that have reached its onset
-    void senesceLeafNitrogen(float dt);
-    void accumulateLeafNitrogen(float dt);
-    void remobilizeNitrogen(float dt);
-    void updateNitrogenStressFactor();
-    void removeFruitNitrogen();
+    void senesceLeafNitrogen(const std::vector<uint> &plantIDs, float dt);
+    void accumulateLeafNitrogen(const std::vector<uint> &plantIDs, float dt);
+    void remobilizeNitrogen(const std::vector<uint> &plantIDs, float dt);
+    void updateNitrogenStressFactor(const std::vector<uint> &plantIDs);
+    void removeFruitNitrogen(const std::vector<uint> &plantIDs);
     //! Return what remains of the resorbable nitrogen of a phytomer's senescing leaves to the plant's available pool before the leaves are shed
     void resorbLeafNitrogen(PlantInstance &plant, Shoot &shoot, const Phytomer &phytomer);
 
@@ -7468,6 +8374,10 @@ eturn Candidate list with its refresh age and shoot count filled in
     void initializeWheatShoots();
 
     uint buildWheatPlant(const helios::vec3 &base_position);
+
+    void initializeCucumberShoots();
+
+    uint buildCucumberPlant(const helios::vec3 &base_position);
 };
 
 #include "Assets.h"

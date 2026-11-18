@@ -1017,7 +1017,7 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   }
  ~~~~~~
 
- <b>Ground area basis.</b> The overloads that do not take a ground area use the horizontal (x-y) footprint of the bounding box of <i>all</i> primitives in the Context. This is the same extent the radiation model derives when a periodic boundary is enforced via <code>RadiationModel::enforcePeriodicBoundary()</code>, so for a periodic scene whose ground is set exactly to the periodic domain edge, the automatically-determined basis is the correct one.
+ <b>Ground area basis.</b> The overloads that do not take a ground area use the horizontal (x-y) footprint of the bounding box of <i>all</i> primitives in the Context. This is the same extent the radiation model derives when a periodic boundary is enforced via <code>RadiationModel::enforcePeriodicBoundary()</code> with no excluded primitives, so for a periodic scene whose ground is set exactly to the periodic domain edge, the automatically-determined basis is the correct one.
 
  In other situations it may not be. Because every primitive contributes to the bounding box, a ground primitive that extends beyond the canopy will enlarge the area basis and correspondingly reduce the reported area index, even though the ground itself is not counted in the numerator. The same applies to any other geometry placed away from the canopy. Whenever the domain is not cropped tightly to the canopy, pass the ground area explicitly.
 
@@ -2072,7 +2072,7 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
      <tr><td>DOY or Jul</td><td>Day of year starting at Jan. 1 (DOY=1)</td><td>year+DOY -OR- date -OR- datetime</td></tr>
      <tr><td>date</td><td>Date string delimited by '/' or '-' character, or compact 8-digit (e.g., 20260203). Default format YYYY-MM-DD.</td><td>year+DOY -OR- date -OR- datetime</td></tr>
      <tr><td>datetime</td><td>Combined date+time string (e.g., ISO-8601 "2026-02-03T10:00:00Z", compact "2026020310", or space-separated "2026-02-03 10:00"). Cannot be combined with 'date' or 'hour'.</td><td>year+DOY -OR- date -OR- datetime</td></tr>
-     <tr><td>hour</td><td>Hour of the day. Can be specified either as 13 or 1300 (for 1PM example).</td><td>hour -OR- time -OR- datetime</td></tr>
+     <tr><td>hour</td><td>Hour of the day. Can be specified either as 13 or 1300 (for 1PM example). A value of three or more digits is read as HHMM, so 0015 is 15 minutes past midnight.</td><td>hour -OR- time -OR- datetime</td></tr>
      <tr><td>time</td><td>Time string in HH, HH:MM, or HH:MM:SS format. Auto-detected based on presence of colons.</td><td>hour -OR- time -OR- datetime</td></tr>
      <tr><td>minute</td><td>Minute of the hour. If 'hour' above is specified with minute included (e.g., 1315), the minute field will be automatically added.</td><td>no</td></tr>
      <tr><td>second</td><td>Second of the minute.</td><td>no</td></tr>
@@ -2299,6 +2299,8 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   \section Export Exporting Project to XML File Format
 
  All geometry and global/primitive data loaded into the Context can be written to an XML file using the \ref helios::Context::writeXML() function, which can be later read back in using the \ref helios::Context::loadXML(). This functionality can be used to save progress during a simulation run, or to ensure that consistent geometry is always used across simulation runs, among other things.
+
+ String data is written so that it reads back exactly. Each string value is written in double quotes (e.g., <tt>"first value" "second"</tt>), with a backslash before any double quote or backslash inside a value. Unquoted text is read as values separated by whitespace, which is how files written by Helios 1.3.97 and earlier hold string data, so when writing a tag by hand, a value that contains a space must be quoted. Numeric data with several values, such as the components of a vec3, is separated by spaces as before.
 
   An XML file can be written as follows:
 
