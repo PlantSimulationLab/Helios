@@ -717,6 +717,19 @@ struct LeafShapeValues {
     helios::vec3 lattice_offset;
 };
 
+//! Shape of a leaf blade's midrib, as returned by PlantArchitecture::getLeafMidrib()
+/**
+ * One entry per station of the blade's lattice along its length (LeafShapeValues::subdivisions_x + 1 stations), from the base of the blade to its tip. See \ref PlantArch_blademidrib.
+ */
+struct LeafMidrib {
+    //! Position of each midrib station in world coordinates
+    std::vector<helios::vec3> positions;
+    //! Unit normal of the blade's upper side at each station, in world coordinates, perpendicular to the midrib there and ignoring the blade's fold and curvature across the midrib
+    std::vector<helios::vec3> normals;
+    //! Twist of the blade about its midrib at each station, in radians, right-handed about the midrib's direction from base to tip, measured from the blade bent along the same midrib without twisting
+    std::vector<float> rolls;
+};
+
 struct LeafPrototype {
 public:
     //! Constructor - sets random number generator
@@ -2152,6 +2165,63 @@ public:
      */
     [[nodiscard]] bool canReshapeLeafInPlace(uint petiole_index, uint leaf_index, const LeafShapeValues &shape) const;
 
+    //! Set whether one leaf bends under its own weight. See PlantArchitecture::setLeafDroop().
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] droops True to bend the blade under its own weight from its rest shape, false to give it its rest shape.
+     */
+    void setLeafDroop(uint petiole_index, uint leaf_index, bool droops);
+
+    //! Whether one leaf bends under its own weight
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return True if the blade is bent under its own weight from its rest shape.
+     */
+    [[nodiscard]] bool doesLeafDroop(uint petiole_index, uint leaf_index) const;
+
+    //! Lay one leaf's blade along a prescribed midrib, twisted by a roll at each point. See PlantArchitecture::setLeafMidrib().
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] midrib Points of the midrib in world coordinates, from the base of the blade to its tip.
+     * \param[in] rolls Twist of the blade about its midrib at each point, in radians; one per point, or none for an untwisted blade.
+     */
+    void setLeafMidrib(uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<float> &rolls);
+
+    //! Lay one leaf's blade along a prescribed midrib, turned to face a given normal at each point. See PlantArchitecture::setLeafMidrib().
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] midrib Points of the midrib in world coordinates, from the base of the blade to its tip.
+     * \param[in] normals Normal of the blade's upper side at each point, in world coordinates; one per point.
+     */
+    void setLeafMidrib(uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<helios::vec3> &normals);
+
+    //! Current midrib of one leaf's blade. See PlantArchitecture::getLeafMidrib().
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return Midrib stations, normals and rolls of the blade as it now is.
+     */
+    [[nodiscard]] LeafMidrib getLeafMidrib(uint petiole_index, uint leaf_index) const;
+
+    //! Return one leaf's blade from a prescribed midrib to its own shape. See PlantArchitecture::clearLeafMidrib().
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     */
+    void clearLeafMidrib(uint petiole_index, uint leaf_index);
+
+    //! Whether one leaf's blade is laid along a midrib prescribed by setLeafMidrib()
+    /**
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return True if the blade follows a prescribed midrib.
+     */
+    [[nodiscard]] bool hasLeafMidrib(uint petiole_index, uint leaf_index) const;
+
     //! Rebuild the leaflets of one petiole with each turned by its own offset from the leaf's angles.
     /**
      * Every leaflet on a petiole is otherwise turned by the same leaf.pitch, leaf.yaw and leaf.roll, mirrored from one side of the petiole to the other, so the two members of a pair are always mirror images.
@@ -2392,6 +2462,28 @@ private:
      * \param[in] caller Name of the public method, for error messages.
      */
     [[nodiscard]] uint reshapedLeafSubdivisionsY(uint petiole_index, uint leaf_index, const LeafShapeValues &shape_requested, const char *caller) const;
+
+    //! Rest blade lattice of a leaf in its own object frame, built from its recorded shape, and the number of vertices its mesh has beyond the lattice (none, or a petiolule)
+    /**
+     * Raises an error for a leaf whose shape was not recorded (one not built by GenericLeafPrototype()) or whose object no longer carries its lattice.
+     * \param[in] petiole_index Index of the petiole within the internode.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] caller Name of the public method, for error messages.
+     * \param[out] appended_count Number of mesh vertices beyond the lattice.
+     */
+    [[nodiscard]] std::vector<helios::vec3> leafRestLatticeLocal(uint petiole_index, uint leaf_index, const char *caller, size_t &appended_count) const;
+
+    //! Rest positions, in the leaf's own frame, of the petiolule vertices that follow a leaf's blade lattice in its mesh, if any
+    /**
+     * Taken from the leaf's recorded rest shape where it has one, and otherwise read back from the object, which then has its rest shape.
+     */
+    [[nodiscard]] std::vector<helios::vec3> leafRestAppendedVerticesLocal(uint petiole_index, uint leaf_index, size_t appended_count) const;
+
+    //! Write a leaf's blade, laid along the midrib recorded in its LeafShapeState, into its object
+    void layLeafAlongRecordedMidrib(uint petiole_index, uint leaf_index);
+
+    //! Shared body of the two setLeafMidrib() overloads; exactly one of rolls and normals is used
+    void setLeafMidribFromPolyline(uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<float> *rolls, const std::vector<helios::vec3> *normals);
 
     //! Remove the leaves and petioles of the phytomer, optionally handing their Context objects to the caller instead of deleting them
     /**
@@ -2772,6 +2864,16 @@ public:
         std::vector<helios::vec3> rest_appended_vertices;
         //! Position, in the frame buildLeafBladeLattice() builds the blade in, of the origin of the leaf object's own frame (see PlantArchitecture::LeafRestGeometry::lattice_frame_offset)
         helios::vec3 lattice_frame_offset;
+        //! Whether the blade is laid along a midrib prescribed by setLeafMidrib()
+        bool has_midrib = false;
+        //! Prescribed midrib stations in the leaf's own frame, one per lattice column. Held in the leaf's frame so that any rigid motion of the leaf object carries them.
+        std::vector<helios::vec3> midrib_stations;
+        //! Twist of the blade at each prescribed midrib station, in radians, in the leaf's own frame
+        std::vector<float> midrib_rolls;
+        //! Factor by which the blade's rest lattice is scaled, in the leaf's own frame, for its midrib to have the prescribed length
+        float midrib_length_scale = 1.f;
+        //! Whether the blade drooped before its midrib was prescribed, which clearLeafMidrib() restores
+        bool deformable_before_midrib = false;
     };
 
     //! Shapes of leaves that are not, or no longer, simply copies of a cached prototype: those built fresh by the prototype function, and those reshaped in place. Keyed by leaf object ID.
@@ -3806,6 +3908,22 @@ struct PlantJointPose {
      * itself. To set a length in meters, divide it by the organ's grown length, which is PlantJointFrame::length divided by the length_scale the joint currently has.
      */
     float length_scale = 1;
+    //! Bend of a petiole along its length, in degrees, about PlantJointFrame::pitch_axis: positive curls it further from what it grows from, as a positive pitch_degrees tilts it. Only a petiole has a bend to pose (PLANT_JOINT_PETIOLE); it must be 0 for any other joint.
+    /**
+     * Where pitch_degrees turns the whole petiole rigidly about its base, a bend turns it progressively along its length, so it can be pushed or pulled into a new shape without a kink. The bend is the
+     * change, from the way the petiole grew, in the angle between its direction at its base and its direction at its tip: the first segment of its centerline keeps its direction, the last is turned by the
+     * whole bend, and the segments between are turned by shares that grow evenly with arclength. It is an offset like the angles, so zero leaves the curvature the petiole grew with. Each leaf on the
+     * petiole is carried rigidly to where its point of attachment goes and turned with the centerline there. The bend is applied to the petiole as it grew, about the joint's axes as it grew, before the
+     * joint is turned by its angles, so it is independent of them, and roll_degrees turns the plane of the bend with the petiole. A petiole whose centerline has a single segment has one direction and cannot
+     * be bent. See \ref PlantArchPoseBend.
+     */
+    float bend_degrees = 0;
+    //! Sideways bend of a petiole along its length, in degrees, about the axis perpendicular to both PlantJointFrame::organ_axis and PlantJointFrame::pitch_axis: positive turns it the way a positive yaw_degrees turns it around the stem. Only a petiole has a bend to pose; it must be 0 for any other joint.
+    /**
+     * Spread along the petiole as bend_degrees is. The two bends together are one bend, of the size of their vector sum, about the axis that combines them: the angle between the petiole's directions at
+     * its base and its tip changes by that size.
+     */
+    float bend_lateral_degrees = 0;
 };
 
 //! Kind of plant organ represented by a PlantArticulationLink
@@ -5037,6 +5155,116 @@ public:
      */
     void setPlantLeafRoll(uint plantID, float roll_fraction);
 
+    //! Set whether one leaf bends under its own weight
+    /**
+     * A leaf of a species with a non-zero LeafPrototype::flexibility bends under its own weight as it grows, but a leaf placed with setPetioleLeafGeometry() or rebuilt by setPetioleLeafCount() keeps its
+     * prototype's rest shape. Turning droop on gives such a leaf the bend a grown leaf has: the plug-in's own self-weight deflection, worked out from the leaf's orientation as it is placed, its size taken as
+     * its fully expanded size, and its compliance aged with its phytomer, exactly as for a grown leaf. The leaf keeps bending as it would if it had grown there: it is bent again when its orientation changes
+     * (for example by a joint pose) and as its phytomer ages. Turning droop off gives a leaf, grown or placed, its rest shape. The leaf keeps its object and primitives; only its vertices move. The setting is
+     * recorded by writePlantStructureXML(). See \ref PlantArch_leafdroop.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] droops True to bend the blade under its own weight, false to give it its rest shape.
+     * \note Only a leaf built by the generic leaf prototype has a rest shape to bend from; an OBJ-loaded or custom-built leaf raises an error. Turning droop on for a leaf of a species whose flexibility is
+     * zero, or for a leaf whose blade follows a midrib prescribed by setLeafMidrib(), raises an error.
+     */
+    void setLeafDroop(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, bool droops);
+
+    //! Whether one leaf bends under its own weight (see setLeafDroop())
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return True if the blade is bent under its own weight.
+     */
+    [[nodiscard]] bool doesLeafDroop(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const;
+
+    //! Lay one leaf's blade along a prescribed midrib, twisted about it by a given roll at each point
+    /**
+     * Bends the blade so that its midrib follows a polyline, as when a blade is fitted to a midrib traced in a point cloud: a grass blade that rises, arches over and hangs, a curvature that changes along
+     * the blade, or a blade that twists, none of which the blade's own shape terms can give. Each row of the blade's lattice across its width is carried rigidly with its station on the midrib, so the
+     * blade keeps its outline and its cross-section (fold, lateral curvature, roll, waves) and is bent without being stretched.
+     *
+     * The midrib is given in world coordinates from the base of the blade (where the blade begins, beyond any stalk) to its tip, by any number of points of at least two. The first point is moved onto the
+     * blade's base, and the rest of the polyline with it, and an error is raised if it is further from it than 1 mm or 2% of the polyline's length, whichever is larger. The blade's stations are laid along
+     * the polyline keeping the proportions of the blade's own midrib segments, and the blade takes the polyline's length: a longer or shorter midrib scales the blade, its width with it.
+     *
+     * Each row turns with the midrib segment that ends at its station, carried from the blade's base without twisting (a rotation-minimizing frame, which has no special direction, so a blade pointing
+     * straight up is no different from any other); the row at the base keeps the orientation the blade has where it leaves its stalk or petiole. The roll at each point then twists the blade about the
+     * midrib from there, and is interpolated along the midrib between points. A blade given its own midrib as read by getLeafMidrib(), or the midrib of the same blade drooped under its own weight, takes
+     * that shape.
+     *
+     * The midrib replaces the blade's droop, which is turned off while it is prescribed, and its longitudinal curvature. It is held in the leaf's own frame, so moving the leaf (a joint pose,
+     * setPlantBasePosition()) carries it, and reshapeLeaf() lays the new cross-section along it. The petiole's growth is pinned as setPetioleLeafGeometry() pins it, so that advanceTime() does not rescale
+     * the blade. The leaf keeps its object and primitives. setPetioleLeafGeometry() and setPetioleLeafCount() rebuild the leaf and so discard its midrib. The midrib is recorded by
+     * writePlantStructureXML(). See \ref PlantArch_blademidrib.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] midrib Points of the midrib in world coordinates, from the base of the blade to its tip; at least two, no two consecutive ones coincident.
+     * \param[in] rolls Twist of the blade about the midrib at each point, in radians, right-handed about the midrib's direction from base to tip, measured from the blade bent along the midrib without
+     * twisting; one per point, or none for an untwisted blade.
+     * \note Only a leaf built by the generic leaf prototype has a lattice to lay along a midrib; an OBJ-loaded or custom-built leaf raises an error.
+     */
+    void setLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<float> &rolls = {});
+
+    //! Lay one leaf's blade along a prescribed midrib, turned about it to face a given normal at each point
+    /**
+     * As setLeafMidrib(uint, uint, uint, uint, uint, const std::vector<helios::vec3>&, const std::vector<float>&), but the blade's twist is given by the normal of its upper side at each point, as a point
+     * cloud gives it, rather than by a roll. The normals are interpolated along the midrib between points and taken perpendicular to it; a normal that is (nearly) parallel to the midrib raises an error,
+     * since it does not fix how the blade is turned. The normal is that of the blade ignoring its fold and curvature across the midrib.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \param[in] midrib Points of the midrib in world coordinates, from the base of the blade to its tip; at least two, no two consecutive ones coincident.
+     * \param[in] normals Normal of the blade's upper side at each point, in world coordinates; one per point. They need not be unit length.
+     */
+    void setLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<helios::vec3> &normals);
+
+    //! Get the midrib of one leaf's blade as the blade now is
+    /**
+     * Works for any leaf built by the generic leaf prototype, whether its midrib was prescribed or not. For a blade with no prescribed midrib the midrib is read from the blade itself and its rolls are
+     * measured against its rest shape laid untwisted along the same midrib, so a grown or drooped blade reads rolls of zero. Passing the result back to setLeafMidrib() leaves the blade as it is.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return Position, normal and roll at each station of the blade's lattice along its length, from base to tip.
+     */
+    [[nodiscard]] LeafMidrib getLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const;
+
+    //! Return one leaf's blade from a prescribed midrib to its own shape
+    /**
+     * The blade takes its rest shape again, at the size it had before its midrib was prescribed, and droops again if it drooped then. Does nothing for a leaf with no prescribed midrib.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     */
+    void clearLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index);
+
+    //! Whether one leaf's blade is laid along a midrib prescribed by setLeafMidrib()
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] leaf_index Index of the leaf on the petiole.
+     * \return True if the blade follows a prescribed midrib.
+     */
+    [[nodiscard]] bool hasLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const;
+
     //! Rebuild the leaflets of one petiole of an existing phytomer with each turned by its own offset from the leaf's angles.
     /**
      * See Phytomer::setPetioleLeafletAngleOffsets(). Every leaflet of a leaf is otherwise turned by one set of angles, mirrored across the petiole.
@@ -5133,6 +5361,24 @@ public:
      * \param[in] length Length of the organ along its centerline, in meters.
      */
     void setPlantJointLength(uint plantID, const PlantJointID &joint, float length);
+
+    //! Push or pull the tip of a petiole of a grown plant to a given position, bending the petiole smoothly along its length
+    /**
+     * A convenience for setPlantJointPose() on the PLANT_JOINT_PETIOLE joint of the petiole: its bend (PlantJointPose::bend_degrees and PlantJointPose::bend_lateral_degrees) and its length
+     * (PlantJointPose::length_scale) are worked out so that the tip of its centerline lands on \p tip_position, while the angles already set for the joint (pitch, yaw and roll) are kept. The petiole
+     * leaves its base in the direction it already had and curves evenly toward the target, so there is no kink, and its leaves are carried with it as for any other pose. A petiole that bends under the
+     * weight of its leaves is aimed again until its tip settles on the target. The result can be read back with getPlantJointPose() and undone with resetPlantPose().
+     *
+     * A target is out of reach, and an error is raised with the plant left as it was, when no bend brings the tip to it, when reaching it would bend the petiole by more than 180 degrees from base to
+     * tip, or when it would scale the petiole's length by less than 0.25 or more than 4; a target behind the petiole's base is usually the first of these. Turning the joint toward the target first
+     * (PlantJointPose::pitch_degrees and yaw_degrees) brings it within reach. A petiole whose centerline has a single segment cannot be bent and also raises an error.
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shootID ID of the shoot carrying the phytomer.
+     * \param[in] node_index Index of the phytomer within the shoot.
+     * \param[in] petiole_index Index of the petiole within the phytomer.
+     * \param[in] tip_position Position in world coordinates for the tip of the petiole's centerline.
+     */
+    void setPetioleTipPosition(uint plantID, uint shootID, uint node_index, uint petiole_index, const helios::vec3 &tip_position);
 
     //! Re-pose a grown shoot by giving the positions of its nodes
     /**

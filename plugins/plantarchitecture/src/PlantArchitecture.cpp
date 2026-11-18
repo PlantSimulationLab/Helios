@@ -5376,68 +5376,6 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
     last_scale = deflection_state;
 }
 
-//! Cumulative arclength at each node of a polyline
-static std::vector<float> polylineNodeArclengths(const std::vector<vec3> &polyline) {
-    std::vector<float> arclength(polyline.size(), 0.f);
-    for (size_t node = 1; node < polyline.size(); node++) {
-        arclength.at(node) = arclength.at(node - 1) + (polyline.at(node) - polyline.at(node - 1)).magnitude();
-    }
-    return arclength;
-}
-
-//! Index of the segment of a polyline containing a given arclength, for a polyline of at least two nodes
-static size_t polylineSegmentAtArclength(const std::vector<float> &node_arclength, float arclength) {
-    size_t segment = 0;
-    while (segment + 2 < node_arclength.size() && arclength > node_arclength.at(segment + 1)) {
-        segment++;
-    }
-    return segment;
-}
-
-//! Point at a given arclength along a polyline, for a polyline of at least two nodes
-static vec3 polylinePointAtArclength(const std::vector<vec3> &polyline, const std::vector<float> &node_arclength, float arclength) {
-    const size_t segment = polylineSegmentAtArclength(node_arclength, arclength);
-    const float segment_length = node_arclength.at(segment + 1) - node_arclength.at(segment);
-    const float t = segment_length > 0.f ? std::clamp((arclength - node_arclength.at(segment)) / segment_length, 0.f, 1.f) : 0.f;
-    return polyline.at(segment) + t * (polyline.at(segment + 1) - polyline.at(segment));
-}
-
-//! Unit tangent at a given arclength along a polyline, blended linearly between the tangents at its nodes so that it turns continuously along the curve rather than jumping at each node
-static vec3 polylineTangentAtArclength(const std::vector<vec3> &polyline, const std::vector<float> &node_arclength, float arclength) {
-    const size_t segment = polylineSegmentAtArclength(node_arclength, arclength);
-    auto segmentDirection = [&polyline](size_t s) { return normalize(polyline.at(s + 1) - polyline.at(s)); };
-    auto nodeTangent = [&](size_t node) {
-        if (node == 0) {
-            return segmentDirection(0);
-        } else if (node + 1 == polyline.size()) {
-            return segmentDirection(node - 1);
-        }
-        const vec3 sum = segmentDirection(node - 1) + segmentDirection(node);
-        return sum.magnitude() > 1e-6f ? normalize(sum) : segmentDirection(node);
-    };
-    const float segment_length = node_arclength.at(segment + 1) - node_arclength.at(segment);
-    const float t = segment_length > 0.f ? std::clamp((arclength - node_arclength.at(segment)) / segment_length, 0.f, 1.f) : 0.f;
-    const vec3 blended = (1.f - t) * nodeTangent(segment) + t * nodeTangent(segment + 1);
-    return blended.magnitude() > 1e-6f ? normalize(blended) : segmentDirection(segment);
-}
-
-//! Arclength along a polyline of the point on it closest to a given point, for a polyline of at least two nodes
-static float polylineArclengthOfClosestPoint(const std::vector<vec3> &polyline, const std::vector<float> &node_arclength, const vec3 &point) {
-    float nearest_distance = std::numeric_limits<float>::max();
-    float nearest_arclength = 0.f;
-    for (size_t segment = 0; segment + 1 < polyline.size(); segment++) {
-        const vec3 span = polyline.at(segment + 1) - polyline.at(segment);
-        const float span_squared = span * span;
-        const float t = span_squared > 0.f ? std::clamp(((point - polyline.at(segment)) * span) / span_squared, 0.f, 1.f) : 0.f;
-        const float distance = (point - (polyline.at(segment) + t * span)).magnitude();
-        if (distance < nearest_distance) {
-            nearest_distance = distance;
-            nearest_arclength = node_arclength.at(segment) + t * (node_arclength.at(segment + 1) - node_arclength.at(segment));
-        }
-    }
-    return nearest_arclength;
-}
-
 void Phytomer::recordPetioleRestShape(uint petiole_index) {
     if (petiole_index >= petiole_vertices.size()) {
         helios_runtime_error("ERROR (PlantArchitecture::Phytomer::recordPetioleRestShape): Petiole index of " + std::to_string(petiole_index) + " was given, but this phytomer has " +
@@ -6302,6 +6240,15 @@ void Phytomer::reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeV
     const LeafShapeValues current = getLeafShape(petiole_index, leaf_index);
     const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
 
+    // A blade laid along a prescribed midrib takes its new cross-section along that midrib. Its stations are laid out in the proportions of the rest midrib's segments, which the longitudinal curvature sets,
+    // so that cannot change under it.
+    const bool has_midrib = hasLeafMidrib(petiole_index, leaf_index);
+    if (has_midrib && (shape_requested.longitudinal_curvature != current.longitudinal_curvature || shape_requested.longitudinal_curvature_exponent != current.longitudinal_curvature_exponent)) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): The blade of leaf object " + std::to_string(objID_leaf) +
+                             " is laid along a prescribed midrib, which takes the place of its longitudinal curvature, so the curvature cannot be changed. Call clearLeafMidrib() first, or keep the "
+                             "longitudinal_curvature and longitudinal_curvature_exponent the leaf has.");
+    }
+
     LeafShapeValues shape = shape_requested;
     shape.subdivisions_y = reshapedLeafSubdivisionsY(petiole_index, leaf_index, shape_requested, "PlantArchitecture::Phytomer::reshapeLeaf");
 
@@ -6487,7 +6434,11 @@ void Phytomer::reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeV
     state.reshaped = true;
     state.lattice_frame_offset = lattice_frame_offset;
     state.deformable = deformable;
-    if (deformable) {
+    if (has_midrib) {
+        // The petiolule's rest shape and the midrib are the leaf's own and are kept; the blade is laid along the midrib again from its new rest shape
+        state.rest_vertices = lattice;
+        layLeafAlongRecordedMidrib(petiole_index, leaf_index);
+    } else if (deformable) {
         state.rest_vertices = lattice;
         state.rest_appended_vertices = rest_appended_vertices;
         leaf_last_deformed_scale.at(petiole_index).at(leaf_index) = -1.f;
@@ -6499,6 +6450,462 @@ void Phytomer::reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeV
 
     context_ptr->computePolymeshObjectVertexNormals(objID_leaf, 180.f);
     plantarchitecture_ptr->invalidateOrganIndex();
+}
+
+namespace {
+
+    //! A leaf object's transformation from its own frame to world coordinates, with the inverse of its linear part
+    /**
+     * A leaf is only ever scaled uniformly, rotated and translated, so its transformation is a similarity with a positive determinant, and directions and right-handed angles keep their sense through it.
+     */
+    struct LeafObjectFrame {
+        float matrix[16];
+        float inverse_linear[9];
+
+        LeafObjectFrame(helios::Context *context_ptr, uint objID_leaf, const char *caller) {
+            context_ptr->getObjectTransformationMatrix(objID_leaf, matrix);
+            const vec3 column_x = make_vec3(matrix[0], matrix[4], matrix[8]);
+            const vec3 column_y = make_vec3(matrix[1], matrix[5], matrix[9]);
+            const vec3 column_z = make_vec3(matrix[2], matrix[6], matrix[10]);
+            const float determinant = column_x * cross(column_y, column_z);
+            if (!(determinant > 0.f)) {
+                helios_runtime_error(std::string("ERROR (") + caller + "): The transformation of leaf object " + std::to_string(objID_leaf) +
+                                     " is singular or mirrored, so its blade cannot be laid along a midrib.");
+            }
+            // Rows of the inverse are the cross products of the columns over the determinant
+            const vec3 row_x = cross(column_y, column_z) / determinant;
+            const vec3 row_y = cross(column_z, column_x) / determinant;
+            const vec3 row_z = cross(column_x, column_y) / determinant;
+            const vec3 rows[3] = {row_x, row_y, row_z};
+            for (int r = 0; r < 3; r++) {
+                inverse_linear[r * 3] = rows[r].x;
+                inverse_linear[r * 3 + 1] = rows[r].y;
+                inverse_linear[r * 3 + 2] = rows[r].z;
+            }
+        }
+
+        [[nodiscard]] vec3 toWorld(const vec3 &p) const {
+            return make_vec3(matrix[0] * p.x + matrix[1] * p.y + matrix[2] * p.z + matrix[3], matrix[4] * p.x + matrix[5] * p.y + matrix[6] * p.z + matrix[7],
+                             matrix[8] * p.x + matrix[9] * p.y + matrix[10] * p.z + matrix[11]);
+        }
+
+        [[nodiscard]] vec3 directionToWorld(const vec3 &d) const {
+            return make_vec3(matrix[0] * d.x + matrix[1] * d.y + matrix[2] * d.z, matrix[4] * d.x + matrix[5] * d.y + matrix[6] * d.z, matrix[8] * d.x + matrix[9] * d.y + matrix[10] * d.z);
+        }
+
+        [[nodiscard]] vec3 directionToLocal(const vec3 &d) const {
+            return make_vec3(inverse_linear[0] * d.x + inverse_linear[1] * d.y + inverse_linear[2] * d.z, inverse_linear[3] * d.x + inverse_linear[4] * d.y + inverse_linear[5] * d.z,
+                             inverse_linear[6] * d.x + inverse_linear[7] * d.y + inverse_linear[8] * d.z);
+        }
+
+        [[nodiscard]] vec3 toLocal(const vec3 &p) const {
+            return directionToLocal(p - make_vec3(matrix[3], matrix[7], matrix[11]));
+        }
+    };
+
+} // namespace
+
+std::vector<vec3> Phytomer::leafRestLatticeLocal(uint petiole_index, uint leaf_index, const char *caller, size_t &appended_count) const {
+    if (petiole_index >= leaf_objIDs.size() || leaf_index >= leaf_objIDs.at(petiole_index).size()) {
+        helios_runtime_error(std::string("ERROR (") + caller + "): Leaf " + std::to_string(leaf_index) + " of petiole " + std::to_string(petiole_index) + " does not exist on this phytomer.");
+    }
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const LeafShapeValues shape = getLeafShape(petiole_index, leaf_index);
+    if (!context_ptr->doesObjectExist(objID_leaf)) {
+        helios_runtime_error(std::string("ERROR (") + caller + "): Leaf object " + std::to_string(objID_leaf) + " no longer exists in the Context.");
+    }
+    const size_t lattice_count = size_t(shape.subdivisions_x + 1) * size_t(shape.subdivisions_y + 1);
+    const size_t vertex_count = context_ptr->getPolymeshObjectVertices(objID_leaf).size();
+    if (vertex_count < lattice_count || (vertex_count - lattice_count != 0 && vertex_count - lattice_count != petioluleVertexCount())) {
+        helios_runtime_error(std::string("ERROR (") + caller + "): Leaf object " + std::to_string(objID_leaf) + " does not carry the " + std::to_string(shape.subdivisions_x) + " x " +
+                             std::to_string(shape.subdivisions_y) + " blade lattice it was built with.");
+    }
+    appended_count = vertex_count - lattice_count;
+
+    // The rest shape the leaf droops from, where it has one, so that the blade is laid out from exactly the shape its droop starts from
+    const auto state = leaf_shape_state.find(objID_leaf);
+    if (state != leaf_shape_state.end()) {
+        if (state->second.rest_vertices.size() == lattice_count) {
+            return state->second.rest_vertices;
+        }
+    } else if (petiole_index < leaf_prototype_index.size() && leaf_index < leaf_prototype_index.at(petiole_index).size() && leaf_prototype_index.at(petiole_index).at(leaf_index) >= 0) {
+        const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
+        const PlantArchitecture::LeafPrototypeCacheKey cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaf_prototype_index.at(petiole_index).size()));
+        const auto cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(cache_key);
+        if (cache != plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() && cache->second.size() > uint(prototype) && cache->second.at(prototype).size() > leaf_index &&
+            cache->second.at(prototype).at(leaf_index).vertices.size() == lattice_count) {
+            return cache->second.at(prototype).at(leaf_index).vertices;
+        }
+    }
+
+    // Otherwise the lattice is built from the leaf's shape and moved into its object's frame, as reshapeLeaf() builds it
+    const vec3 lattice_frame_offset = leafLatticeFrameOffset(petiole_index, leaf_index);
+    std::vector<vec3> lattice = buildLeafBladeLattice(shape);
+    for (vec3 &vertex: lattice) {
+        vertex = vertex - lattice_frame_offset;
+    }
+    return lattice;
+}
+
+std::vector<vec3> Phytomer::leafRestAppendedVerticesLocal(uint petiole_index, uint leaf_index, size_t appended_count) const {
+    if (appended_count == 0) {
+        return {};
+    }
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const auto state = leaf_shape_state.find(objID_leaf);
+    if (state != leaf_shape_state.end()) {
+        if (state->second.rest_appended_vertices.size() == appended_count) {
+            return state->second.rest_appended_vertices;
+        }
+        if (state->second.deformable || state->second.has_midrib) {
+            helios_runtime_error("ERROR (PlantArchitecture::Phytomer::leafRestAppendedVerticesLocal): The rest shape of the petiolule of leaf object " + std::to_string(objID_leaf) +
+                                 " was not recorded. This is a bug in the plant architecture plug-in.");
+        }
+    } else if (petiole_index < leaf_prototype_index.size() && leaf_index < leaf_prototype_index.at(petiole_index).size() && leaf_prototype_index.at(petiole_index).at(leaf_index) >= 0) {
+        const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
+        const PlantArchitecture::LeafPrototypeCacheKey cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaf_prototype_index.at(petiole_index).size()));
+        const auto cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(cache_key);
+        if (cache != plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() && cache->second.size() > uint(prototype) && cache->second.at(prototype).size() > leaf_index &&
+            cache->second.at(prototype).at(leaf_index).appended_vertices.size() == appended_count) {
+            return cache->second.at(prototype).at(leaf_index).appended_vertices;
+        }
+    }
+    if (state == leaf_shape_state.end() && doesLeafDroop(petiole_index, leaf_index)) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::leafRestAppendedVerticesLocal): Leaf object " + std::to_string(objID_leaf) +
+                             " droops, but the rest shape of its petiolule was not recorded with its prototype, so it cannot be read back from the drooped leaf. This is a bug in the plant architecture plug-in.");
+    }
+    // A leaf that neither droops nor follows a midrib has its petiolule at rest, so it is read back from the object
+    const LeafObjectFrame frame(context_ptr, objID_leaf, "PlantArchitecture::Phytomer::leafRestAppendedVerticesLocal");
+    const std::vector<vec3> vertices = context_ptr->getPolymeshObjectVertices(objID_leaf);
+    std::vector<vec3> appended;
+    appended.reserve(appended_count);
+    for (size_t v = vertices.size() - appended_count; v < vertices.size(); v++) {
+        appended.push_back(frame.toLocal(vertices.at(v)));
+    }
+    return appended;
+}
+
+bool Phytomer::doesLeafDroop(uint petiole_index, uint leaf_index) const {
+    if (petiole_index >= leaf_objIDs.size() || leaf_index >= leaf_objIDs.at(petiole_index).size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::doesLeafDroop): Leaf " + std::to_string(leaf_index) + " of petiole " + std::to_string(petiole_index) + " does not exist on this phytomer.");
+    }
+    if (leaf_flexibility <= 0.f) {
+        return false;
+    }
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const auto state = leaf_shape_state.find(objID_leaf);
+    if (state != leaf_shape_state.end()) {
+        return state->second.deformable;
+    }
+    // A plain copy of a cached prototype droops from the prototype's rest shape if one was recorded (see deformLeafUnderSelfWeight())
+    if (petiole_index >= leaf_prototype_index.size() || leaf_index >= leaf_prototype_index.at(petiole_index).size() || leaf_prototype_index.at(petiole_index).at(leaf_index) < 0) {
+        return false;
+    }
+    const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
+    const PlantArchitecture::LeafPrototypeCacheKey cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaf_prototype_index.at(petiole_index).size()));
+    const auto cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(cache_key);
+    return cache != plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() && cache->second.size() > uint(prototype) && cache->second.at(prototype).size() > leaf_index &&
+           !cache->second.at(prototype).at(leaf_index).vertices.empty() && cache->second.at(prototype).at(leaf_index).subdivisions_x > 0;
+}
+
+void Phytomer::setLeafDroop(uint petiole_index, uint leaf_index, bool droops) {
+    constexpr const char *caller = "PlantArchitecture::setLeafDroop";
+    size_t appended_count = 0;
+    const std::vector<vec3> rest_lattice = leafRestLatticeLocal(petiole_index, leaf_index, caller, appended_count);
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+
+    const auto state_existing = leaf_shape_state.find(objID_leaf);
+    if (droops && state_existing != leaf_shape_state.end() && state_existing->second.has_midrib) {
+        helios_runtime_error("ERROR (PlantArchitecture::setLeafDroop): The blade of leaf object " + std::to_string(objID_leaf) +
+                             " is laid along a prescribed midrib, which is its final shape, so it cannot also droop. Call clearLeafMidrib() first.");
+    }
+    if (droops && leaf_flexibility <= 0.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setLeafDroop): The leaves of this phytomer have a flexibility of zero (LeafPrototype::flexibility), so leaf object " + std::to_string(objID_leaf) +
+                             " has no droop to take.");
+    }
+    // A blade laid along a midrib does not droop while it is; turning droop off decides only that it will not droop again once its midrib is cleared
+    if (!droops && state_existing != leaf_shape_state.end() && state_existing->second.has_midrib) {
+        state_existing->second.deformable_before_midrib = false;
+        return;
+    }
+    if (doesLeafDroop(petiole_index, leaf_index) == droops) {
+        return;
+    }
+
+    // The rest shape is gathered before the leaf's state is touched, since it is looked up from that state
+    const std::vector<vec3> rest_appended = leafRestAppendedVerticesLocal(petiole_index, leaf_index, appended_count);
+    if (state_existing == leaf_shape_state.end()) {
+        LeafShapeState state;
+        state.shape = getLeafShape(petiole_index, leaf_index);
+        state.lattice_frame_offset = leafLatticeFrameOffset(petiole_index, leaf_index);
+        leaf_shape_state[objID_leaf] = state;
+    }
+    LeafShapeState &state = leaf_shape_state.at(objID_leaf);
+    // The rest shape is kept when droop is turned off as well, so that turning it on again bends exactly the blade that was bent before
+    state.rest_vertices = rest_lattice;
+    state.rest_appended_vertices = rest_appended;
+    state.deformable = droops;
+    leaf_last_deformed_scale.at(petiole_index).at(leaf_index) = -1.f;
+
+    if (droops) {
+        deformLeafUnderSelfWeight(petiole_index, leaf_index);
+    } else {
+        const LeafObjectFrame frame(context_ptr, objID_leaf, caller);
+        std::vector<vec3> vertices;
+        vertices.reserve(rest_lattice.size() + rest_appended.size());
+        for (const vec3 &vertex: rest_lattice) {
+            vertices.push_back(frame.toWorld(vertex));
+        }
+        for (const vec3 &vertex: rest_appended) {
+            vertices.push_back(frame.toWorld(vertex));
+        }
+        context_ptr->setPolymeshObjectVertices(objID_leaf, vertices);
+    }
+    plantarchitecture_ptr->invalidateOrganIndex();
+}
+
+void Phytomer::layLeafAlongRecordedMidrib(uint petiole_index, uint leaf_index) {
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const LeafShapeState &state = leaf_shape_state.at(objID_leaf);
+    const uint Nx = state.shape.subdivisions_x;
+    const uint Ny = state.shape.subdivisions_y;
+
+    const std::vector<vec3> lattice = layLeafLatticeAlongMidrib(state.rest_vertices, Nx, Ny, state.midrib_stations, state.midrib_rolls, state.midrib_length_scale);
+    const std::vector<vec3> appended = carryPointsAlongMidrib(state.rest_vertices, Nx, Ny, state.midrib_stations, state.midrib_rolls, state.midrib_length_scale, state.rest_appended_vertices);
+
+    const LeafObjectFrame frame(context_ptr, objID_leaf, "PlantArchitecture::setLeafMidrib");
+    std::vector<vec3> vertices;
+    vertices.reserve(lattice.size() + appended.size());
+    for (const vec3 &vertex: lattice) {
+        vertices.push_back(frame.toWorld(vertex));
+    }
+    for (const vec3 &vertex: appended) {
+        vertices.push_back(frame.toWorld(vertex));
+    }
+    context_ptr->setPolymeshObjectVertices(objID_leaf, vertices);
+    context_ptr->computePolymeshObjectVertexNormals(objID_leaf, 180.f);
+}
+
+void Phytomer::setLeafMidribFromPolyline(uint petiole_index, uint leaf_index, const std::vector<vec3> &midrib, const std::vector<float> *rolls, const std::vector<vec3> *normals) {
+    constexpr const char *caller = "PlantArchitecture::setLeafMidrib";
+    size_t appended_count = 0;
+    const std::vector<vec3> rest_lattice = leafRestLatticeLocal(petiole_index, leaf_index, caller, appended_count);
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const LeafShapeValues shape = getLeafShape(petiole_index, leaf_index);
+    const uint Nx = shape.subdivisions_x;
+    const uint Ny = shape.subdivisions_y;
+
+    if (midrib.size() < 2) {
+        helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): A midrib needs at least two points, but " + std::to_string(midrib.size()) + " were given for leaf object " + std::to_string(objID_leaf) + ".");
+    }
+    for (const vec3 &point: midrib) {
+        if (!std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(point.z)) {
+            helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): The midrib given for leaf object " + std::to_string(objID_leaf) + " has a point that is not finite.");
+        }
+    }
+    for (size_t point = 1; point < midrib.size(); point++) {
+        if ((midrib.at(point) - midrib.at(point - 1)).magnitude() == 0.f) {
+            helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): Points " + std::to_string(point - 1) + " and " + std::to_string(point) + " of the midrib given for leaf object " + std::to_string(objID_leaf) +
+                                 " coincide.");
+        }
+    }
+    if (rolls != nullptr) {
+        if (!rolls->empty() && rolls->size() != midrib.size()) {
+            helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): Expected one roll per midrib point (" + std::to_string(midrib.size()) + ") or none, but " + std::to_string(rolls->size()) +
+                                 " were given for leaf object " + std::to_string(objID_leaf) + ".");
+        }
+        for (const float roll: *rolls) {
+            if (!std::isfinite(roll)) {
+                helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): The rolls given for leaf object " + std::to_string(objID_leaf) + " must be finite.");
+            }
+        }
+    }
+    if (normals != nullptr && normals->size() != midrib.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): Expected one normal per midrib point (" + std::to_string(midrib.size()) + "), but " + std::to_string(normals->size()) +
+                             " were given for leaf object " + std::to_string(objID_leaf) + ".");
+    }
+
+    const LeafObjectFrame frame(context_ptr, objID_leaf, caller);
+
+    // The first point is the base of the blade, which does not move: it is where the blade leaves its stalk or its petiole, and every way the blade can be bent (droop, a midrib) holds it there.
+    const std::vector<vec3> rest_midrib = [&]() {
+        std::vector<vec3> row(Nx + 1);
+        for (uint i = 0; i <= Nx; i++) {
+            row.at(i) = rest_lattice.at(size_t(Ny / 2) * (Nx + 1) + i);
+        }
+        return row;
+    }();
+    const vec3 blade_base = frame.toWorld(rest_midrib.front());
+    float polyline_length = 0.f;
+    for (size_t point = 1; point < midrib.size(); point++) {
+        polyline_length += (midrib.at(point) - midrib.at(point - 1)).magnitude();
+    }
+    const vec3 shift = blade_base - midrib.front();
+    const float base_tolerance = std::max(1e-3f, 0.02f * polyline_length);
+    if (shift.magnitude() > base_tolerance) {
+        helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): The midrib given for leaf object " + std::to_string(objID_leaf) + " starts " + std::to_string(shift.magnitude() * 1000.f) +
+                             " mm from the base of its blade, further than the " + std::to_string(base_tolerance * 1000.f) +
+                             " mm it may be moved onto it. A midrib starts where the blade begins: the leaf's base, or the end of its stalk for a leaf that has one. Place the leaf first (setPetioleLeafGeometry()).");
+    }
+
+    // Laid out in the leaf's own frame, where the rest lattice is, so that the midrib is carried by anything that later moves the leaf object
+    std::vector<vec3> polyline_local(midrib.size());
+    for (size_t point = 0; point < midrib.size(); point++) {
+        polyline_local.at(point) = frame.toLocal(midrib.at(point) + shift);
+    }
+    std::vector<float> rest_segment_lengths(Nx);
+    for (uint i = 1; i <= Nx; i++) {
+        rest_segment_lengths.at(i - 1) = (rest_midrib.at(i) - rest_midrib.at(i - 1)).magnitude();
+    }
+    float length_scale = 1.f;
+    std::vector<float> station_fractions;
+    std::vector<vec3> stations = placeMidribStationsAlongPolyline(polyline_local, rest_segment_lengths, length_scale, &station_fractions);
+    // The base station is the blade's base itself, exactly, so that the blade stays seated where it was
+    stations.front() = rest_midrib.front();
+
+    std::vector<float> station_rolls;
+    if (rolls != nullptr && !rolls->empty()) {
+        station_rolls = resamplePolylineValuesAtFractions(polyline_local, *rolls, station_fractions);
+    } else if (normals != nullptr) {
+        std::vector<vec3> station_normals(Nx + 1, nullorigin);
+        std::vector<float> component(midrib.size());
+        for (int axis = 0; axis < 3; axis++) {
+            for (size_t point = 0; point < midrib.size(); point++) {
+                const vec3 local_normal = frame.directionToLocal(normals->at(point));
+                component.at(point) = axis == 0 ? local_normal.x : (axis == 1 ? local_normal.y : local_normal.z);
+            }
+            const std::vector<float> resampled = resamplePolylineValuesAtFractions(polyline_local, component, station_fractions);
+            for (uint i = 0; i <= Nx; i++) {
+                (axis == 0 ? station_normals.at(i).x : (axis == 1 ? station_normals.at(i).y : station_normals.at(i).z)) = resampled.at(i);
+            }
+        }
+        station_rolls = leafMidribRollsFromNormals(rest_lattice, Nx, Ny, stations, station_normals);
+    }
+
+    // Checked before anything is changed, so that a midrib the blade cannot be laid along leaves the leaf as it was
+    static_cast<void>(layLeafLatticeAlongMidrib(rest_lattice, Nx, Ny, stations, station_rolls, length_scale));
+
+    const bool droops_now = doesLeafDroop(petiole_index, leaf_index);
+    const auto state_existing = leaf_shape_state.find(objID_leaf);
+    const bool had_midrib = state_existing != leaf_shape_state.end() && state_existing->second.has_midrib;
+    const std::vector<vec3> rest_appended = leafRestAppendedVerticesLocal(petiole_index, leaf_index, appended_count);
+
+    // The blade's size is now the midrib's, so growth must not rescale it
+    lockPetioleScale(petiole_index);
+
+    if (state_existing == leaf_shape_state.end()) {
+        LeafShapeState state;
+        state.shape = shape;
+        state.lattice_frame_offset = leafLatticeFrameOffset(petiole_index, leaf_index);
+        leaf_shape_state[objID_leaf] = state;
+    }
+    LeafShapeState &state = leaf_shape_state.at(objID_leaf);
+    if (!had_midrib) {
+        state.deformable_before_midrib = droops_now;
+    }
+    state.rest_vertices = rest_lattice;
+    state.rest_appended_vertices = rest_appended;
+    state.deformable = false;
+    state.has_midrib = true;
+    state.midrib_stations = stations;
+    state.midrib_rolls = station_rolls;
+    state.midrib_length_scale = length_scale;
+    leaf_last_deformed_scale.at(petiole_index).at(leaf_index) = -1.f;
+
+    layLeafAlongRecordedMidrib(petiole_index, leaf_index);
+    plantarchitecture_ptr->invalidateOrganIndex();
+}
+
+void Phytomer::setLeafMidrib(uint petiole_index, uint leaf_index, const std::vector<vec3> &midrib, const std::vector<float> &rolls) {
+    setLeafMidribFromPolyline(petiole_index, leaf_index, midrib, &rolls, nullptr);
+}
+
+void Phytomer::setLeafMidrib(uint petiole_index, uint leaf_index, const std::vector<vec3> &midrib, const std::vector<vec3> &normals) {
+    setLeafMidribFromPolyline(petiole_index, leaf_index, midrib, nullptr, &normals);
+}
+
+LeafMidrib Phytomer::getLeafMidrib(uint petiole_index, uint leaf_index) const {
+    constexpr const char *caller = "PlantArchitecture::getLeafMidrib";
+    size_t appended_count = 0;
+    const std::vector<vec3> rest_lattice = leafRestLatticeLocal(petiole_index, leaf_index, caller, appended_count);
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const LeafShapeValues shape = getLeafShape(petiole_index, leaf_index);
+    const uint Nx = shape.subdivisions_x;
+    const uint Ny = shape.subdivisions_y;
+    const LeafObjectFrame frame(context_ptr, objID_leaf, caller);
+
+    std::vector<vec3> stations;
+    std::vector<float> rolls;
+    std::vector<vec3> rest_for_normals = rest_lattice;
+    const auto state = leaf_shape_state.find(objID_leaf);
+    if (state != leaf_shape_state.end() && state->second.has_midrib) {
+        stations = state->second.midrib_stations;
+        rolls = state->second.midrib_rolls;
+    } else {
+        // Read from the blade as it is, in the leaf's own frame
+        const std::vector<vec3> vertices = context_ptr->getPolymeshObjectVertices(objID_leaf);
+        std::vector<vec3> current_lattice(rest_lattice.size());
+        for (size_t v = 0; v < rest_lattice.size(); v++) {
+            current_lattice.at(v) = frame.toLocal(vertices.at(v));
+        }
+        stations.resize(Nx + 1);
+        for (uint i = 0; i <= Nx; i++) {
+            stations.at(i) = current_lattice.at(size_t(Ny / 2) * (Nx + 1) + i);
+        }
+        rolls = measureLeafMidribRolls(rest_lattice, current_lattice, Nx, Ny);
+    }
+    if (rolls.empty()) {
+        rolls.assign(Nx + 1, 0.f);
+    }
+    const std::vector<vec3> normals_local = leafMidribStationNormals(rest_for_normals, Nx, Ny, stations, rolls);
+
+    LeafMidrib result;
+    result.positions.reserve(Nx + 1);
+    result.normals.reserve(Nx + 1);
+    for (uint i = 0; i <= Nx; i++) {
+        result.positions.push_back(frame.toWorld(stations.at(i)));
+        result.normals.push_back(normalize(frame.directionToWorld(normals_local.at(i))));
+    }
+    result.rolls = rolls;
+    return result;
+}
+
+void Phytomer::clearLeafMidrib(uint petiole_index, uint leaf_index) {
+    if (!hasLeafMidrib(petiole_index, leaf_index)) {
+        return;
+    }
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    LeafShapeState &state = leaf_shape_state.at(objID_leaf);
+    state.has_midrib = false;
+    state.midrib_stations.clear();
+    state.midrib_rolls.clear();
+    state.midrib_length_scale = 1.f;
+    state.deformable = state.deformable_before_midrib;
+    leaf_last_deformed_scale.at(petiole_index).at(leaf_index) = -1.f;
+
+    const LeafObjectFrame frame(context_ptr, objID_leaf, "PlantArchitecture::clearLeafMidrib");
+    std::vector<vec3> vertices;
+    vertices.reserve(state.rest_vertices.size() + state.rest_appended_vertices.size());
+    for (const vec3 &vertex: state.rest_vertices) {
+        vertices.push_back(frame.toWorld(vertex));
+    }
+    for (const vec3 &vertex: state.rest_appended_vertices) {
+        vertices.push_back(frame.toWorld(vertex));
+    }
+    context_ptr->setPolymeshObjectVertices(objID_leaf, vertices);
+    if (state.deformable) {
+        deformLeafUnderSelfWeight(petiole_index, leaf_index);
+    }
+    context_ptr->computePolymeshObjectVertexNormals(objID_leaf, 180.f);
+    plantarchitecture_ptr->invalidateOrganIndex();
+}
+
+bool Phytomer::hasLeafMidrib(uint petiole_index, uint leaf_index) const {
+    if (petiole_index >= leaf_objIDs.size() || leaf_index >= leaf_objIDs.at(petiole_index).size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::hasLeafMidrib): Leaf " + std::to_string(leaf_index) + " of petiole " + std::to_string(petiole_index) + " does not exist on this phytomer.");
+    }
+    const auto state = leaf_shape_state.find(leaf_objIDs.at(petiole_index).at(leaf_index));
+    return state != leaf_shape_state.end() && state->second.has_midrib;
 }
 
 void Phytomer::rebuildPetioleLeaves(uint petiole_index, uint leaf_count) {
@@ -7931,6 +8338,53 @@ void PlantArchitecture::setPlantLeafRoll(uint plantID, float roll_fraction) {
             }
         }
     }
+}
+
+namespace {
+    //! Phytomer at a node of a shoot, with the shoot and node checked
+    std::shared_ptr<Phytomer> phytomerAtNode(const std::vector<std::shared_ptr<Shoot>> &shoot_tree, uint shootID, uint node_index, const char *caller) {
+        const auto &shoot = shoot_tree.at(shootID);
+        if (node_index >= shoot->phytomers.size()) {
+            helios_runtime_error(std::string("ERROR (PlantArchitecture::") + caller + "): Shoot " + std::to_string(shootID) + " does not have a node " + std::to_string(node_index) + "; it has " +
+                                 std::to_string(shoot->phytomers.size()) + " nodes.");
+        }
+        return shoot->phytomers.at(node_index);
+    }
+} // namespace
+
+void PlantArchitecture::setLeafDroop(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, bool droops) {
+    validateShootID(plantID, shootID, "setLeafDroop");
+    phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "setLeafDroop")->setLeafDroop(petiole_index, leaf_index, droops);
+}
+
+bool PlantArchitecture::doesLeafDroop(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const {
+    validateShootID(plantID, shootID, "doesLeafDroop");
+    return phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "doesLeafDroop")->doesLeafDroop(petiole_index, leaf_index);
+}
+
+void PlantArchitecture::setLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<float> &rolls) {
+    validateShootID(plantID, shootID, "setLeafMidrib");
+    phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "setLeafMidrib")->setLeafMidrib(petiole_index, leaf_index, midrib, rolls);
+}
+
+void PlantArchitecture::setLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<helios::vec3> &normals) {
+    validateShootID(plantID, shootID, "setLeafMidrib");
+    phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "setLeafMidrib")->setLeafMidrib(petiole_index, leaf_index, midrib, normals);
+}
+
+LeafMidrib PlantArchitecture::getLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const {
+    validateShootID(plantID, shootID, "getLeafMidrib");
+    return phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "getLeafMidrib")->getLeafMidrib(petiole_index, leaf_index);
+}
+
+void PlantArchitecture::clearLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) {
+    validateShootID(plantID, shootID, "clearLeafMidrib");
+    phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "clearLeafMidrib")->clearLeafMidrib(petiole_index, leaf_index);
+}
+
+bool PlantArchitecture::hasLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const {
+    validateShootID(plantID, shootID, "hasLeafMidrib");
+    return phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "hasLeafMidrib")->hasLeafMidrib(petiole_index, leaf_index);
 }
 
 void PlantArchitecture::setPetioleLeaflets(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale,

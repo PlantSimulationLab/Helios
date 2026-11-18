@@ -1034,6 +1034,42 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                                        << "\" subdivisions_y=\"" << shape.subdivisions_y << "\"/>" << std::endl;
                         }
                     }
+                    // Whether the blade droops, where that is not what the reader gives it by default: a copy of a cached prototype droops and a blade built afresh does not (see Phytomer::setLeafDroop()). For a
+                    // blade laid along a midrib it is whether it drooped before, which clearLeafMidrib() restores.
+                    if (phytomer->leaf_flexibility > 0.f && petiole < phytomer->leaf_objIDs.size() && leaf < phytomer->leaf_objIDs.at(petiole).size()) {
+                        const auto shape_state = phytomer->leaf_shape_state.find(phytomer->leaf_objIDs.at(petiole).at(leaf));
+                        const bool has_midrib = shape_state != phytomer->leaf_shape_state.end() && shape_state->second.has_midrib;
+                        const bool droops = has_midrib ? shape_state->second.deformable_before_midrib : phytomer->doesLeafDroop(petiole, leaf);
+                        const bool droops_by_default = petiole < phytomer->leaf_prototype_index.size() && leaf < phytomer->leaf_prototype_index.at(petiole).size() && phytomer->leaf_prototype_index.at(petiole).at(leaf) >= 0;
+                        if (droops != droops_by_default) {
+                            output_xml << "\t\t\t\t\t\t\t<leaf_droops>" << (droops ? 1 : 0) << "</leaf_droops>" << std::endl;
+                        }
+                    }
+                    // A blade laid along a prescribed midrib (setLeafMidrib()): its stations and rolls in the leaf's own frame, so that the reader lays the rebuilt blade along them wherever the leaf ends up
+                    if (petiole < phytomer->leaf_objIDs.size() && leaf < phytomer->leaf_objIDs.at(petiole).size()) {
+                        const auto shape_state = phytomer->leaf_shape_state.find(phytomer->leaf_objIDs.at(petiole).at(leaf));
+                        if (shape_state != phytomer->leaf_shape_state.end() && shape_state->second.has_midrib) {
+                            // Written with enough digits to read back as the same floats, so that the blade is laid out again where it was
+                            const std::streamsize previous_precision = output_xml.precision(std::numeric_limits<float>::max_digits10);
+                            output_xml << "\t\t\t\t\t\t\t<leaf_midrib>";
+                            for (const vec3 &station: shape_state->second.midrib_stations) {
+                                output_xml << " " << station.x << " " << station.y << " " << station.z;
+                            }
+                            output_xml << " </leaf_midrib>" << std::endl;
+                            output_xml << "\t\t\t\t\t\t\t<leaf_midrib_roll>";
+                            if (shape_state->second.midrib_rolls.empty()) {
+                                for (size_t station = 0; station < shape_state->second.midrib_stations.size(); station++) {
+                                    output_xml << " 0";
+                                }
+                            } else {
+                                for (const float roll: shape_state->second.midrib_rolls) {
+                                    output_xml << " " << roll;
+                                }
+                            }
+                            output_xml << " </leaf_midrib_roll>" << std::endl;
+                            output_xml.precision(previous_precision);
+                        }
+                    }
                     // A leaf posed by setPetioleLeafGeometry() is placed and oriented from the caller's values rather than from the petiole, so its base and the fact that its pose was prescribed are recorded.
                     if (petiole < phytomer->leaf_pose_prescribed.size() && leaf < phytomer->leaf_pose_prescribed.at(petiole).size() && phytomer->leaf_pose_prescribed.at(petiole).at(leaf)) {
                         const vec3 &leaf_base = phytomer->leaf_bases.at(petiole).at(leaf);
@@ -1700,6 +1736,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 std::vector<std::vector<vec3>> leaf_prescribed_base; // base position of each prescribed leaf
                 std::vector<std::vector<bool>> leaf_stalk_placed; // whether each leaf's stalk was placed with a base of its own
                 std::vector<std::vector<vec3>> leaf_stalk_base; // where such a stalk leaves the petiole
+                std::vector<std::vector<int>> leaf_droops; // whether each blade droops from <leaf_droops>: 1 or 0, or -1 when the file leaves it at the reader's default
+                std::vector<std::vector<std::vector<vec3>>> leaf_midrib_stations; // prescribed midrib stations of each blade in its own frame; empty for a blade with none
+                std::vector<std::vector<std::vector<float>>> leaf_midrib_rolls; // twist at each prescribed midrib station
                 std::vector<std::vector<vec3>> prescribed_petiole_nodes_all; // measured centerline of each petiole; empty for a generated petiole
                 std::vector<std::vector<float>> prescribed_petiole_radii_all; // radius at each node of a measured centerline
 
@@ -2019,6 +2058,9 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     leaf_stalk_base.resize(leaf_stalk_base.size() + 1);
                     leaf_reshaped.resize(leaf_reshaped.size() + 1);
                     leaf_reshaped_shape.resize(leaf_reshaped_shape.size() + 1);
+                    leaf_droops.resize(leaf_droops.size() + 1);
+                    leaf_midrib_stations.resize(leaf_midrib_stations.size() + 1);
+                    leaf_midrib_rolls.resize(leaf_midrib_rolls.size() + 1);
                     floral_bud_data.resize(floral_bud_data.size() + 1); // Always resize to stay in sync with leaf vectors
 
                     std::vector<vec3> saved_leaf_bases; // Saved leaf attachment positions
@@ -2114,6 +2156,44 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         }
                         leaf_reshaped.back().push_back(bool(shape_node));
                         leaf_reshaped_shape.back().push_back(reshaped_shape);
+
+                        // Whether the blade droops, and the midrib it is laid along. Optional: absent for a blade left as the reader builds it and in files written before these were recorded.
+                        int droops = -1;
+                        node_string = "leaf_droops";
+                        if (leaf.child(node_string.c_str())) {
+                            droops = parse_xml_tag_int(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") != 0 ? 1 : 0;
+                        }
+                        leaf_droops.back().push_back(droops);
+                        std::vector<vec3> midrib_stations;
+                        std::vector<float> midrib_rolls;
+                        if (const pugi::xml_node midrib_node = leaf.child("leaf_midrib")) {
+                            std::vector<float> values;
+                            std::istringstream midrib_stream(midrib_node.child_value());
+                            float value;
+                            while (midrib_stream >> value) {
+                                values.push_back(value);
+                            }
+                            if (values.size() < 6 || values.size() % 3 != 0) {
+                                helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A <leaf_midrib> in '" + filename + "' does not hold at least two points of three coordinates each.");
+                            }
+                            for (size_t v = 0; v < values.size(); v += 3) {
+                                midrib_stations.push_back(make_vec3(values.at(v), values.at(v + 1), values.at(v + 2)));
+                            }
+                            const pugi::xml_node roll_node = leaf.child("leaf_midrib_roll");
+                            if (!roll_node) {
+                                helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A leaf in '" + filename + "' has a <leaf_midrib> but no <leaf_midrib_roll>.");
+                            }
+                            std::istringstream roll_stream(roll_node.child_value());
+                            while (roll_stream >> value) {
+                                midrib_rolls.push_back(value);
+                            }
+                            if (midrib_rolls.size() != midrib_stations.size()) {
+                                helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): A <leaf_midrib_roll> in '" + filename + "' has " + std::to_string(midrib_rolls.size()) + " rolls for " +
+                                                     std::to_string(midrib_stations.size()) + " midrib stations.");
+                            }
+                        }
+                        leaf_midrib_stations.back().push_back(midrib_stations);
+                        leaf_midrib_rolls.back().push_back(midrib_rolls);
                     }
 
                     // Store saved_leaf_bases for this petiole
@@ -3249,6 +3329,23 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                             shape.roll_fraction = saved_shape.roll_fraction;
                             shape.subdivisions_y = saved_shape.subdivisions_y;
                             phytomer_ptr->reshapeLeaf(uint(petiole), uint(leaf), shape);
+                        }
+
+                        // Droop as saved, then the midrib, which records whether the blade drooped before it
+                        if (leaf < int(leaf_droops[petiole].size()) && leaf_droops[petiole][leaf] >= 0) {
+                            phytomer_ptr->setLeafDroop(uint(petiole), uint(leaf), leaf_droops[petiole][leaf] == 1);
+                        }
+                        if (leaf < int(leaf_midrib_stations[petiole].size()) && !leaf_midrib_stations[petiole][leaf].empty()) {
+                            // The stations are in the leaf's own frame; the rebuilt leaf's matrix carries them to where it now is
+                            float transform[16];
+                            context_ptr->getObjectTransformationMatrix(phytomer_ptr->leaf_objIDs[petiole][leaf], transform);
+                            std::vector<vec3> midrib_world;
+                            midrib_world.reserve(leaf_midrib_stations[petiole][leaf].size());
+                            for (const vec3 &p: leaf_midrib_stations[petiole][leaf]) {
+                                midrib_world.push_back(make_vec3(transform[0] * p.x + transform[1] * p.y + transform[2] * p.z + transform[3], transform[4] * p.x + transform[5] * p.y + transform[6] * p.z + transform[7],
+                                                                 transform[8] * p.x + transform[9] * p.y + transform[10] * p.z + transform[11]));
+                            }
+                            phytomer_ptr->setLeafMidrib(uint(petiole), uint(leaf), midrib_world, leaf_midrib_rolls[petiole][leaf]);
                         }
 
                         // The blade is placed at its rest shape above, exactly as the Phytomer constructor

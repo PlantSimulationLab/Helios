@@ -1370,6 +1370,20 @@ parameters, which kinked the leaf by a fixed angle at a fixed station along its 
 The mature leaf is shaped much as it was, but now arrives at that shape as it expands rather than starting out with it. Setting \htmlonly<span style="font-family: Courier, monospace; color: blue;">flexibility</span>\endhtmlonly
 explicitly always takes precedence, and the deprecated parameters will be removed in a future version.
 
+A leaf placed from measurements with \ref PlantArchitecture::setPetioleLeafGeometry(), or rebuilt by \ref PlantArchitecture::setPetioleLeafCount(), keeps its prototype's rest shape and does not droop.
+\ref PlantArchitecture::setLeafDroop() turns the droop on for such a leaf, one leaf at a time. The bend is the plug-in's own, worked out from the orientation the leaf has been placed in, with its
+size taken as its fully grown size and its compliance aged with its phytomer, so a leaf placed exactly where a grown leaf of the same shape is takes that leaf's droop to well under a micrometre. This
+matters for a long grass blade placed from a fit to a point cloud: the droop a free fit finds cannot be folded into the blade's rest shape (its longitudinal curvature), because a blade that rises, arches
+over and hangs is not a shape at rest. The same call turns the droop off for any leaf, giving it its rest shape, and \ref PlantArchitecture::doesLeafDroop() reports the setting. The leaf keeps its object
+and primitives, and the setting is recorded by \ref PlantArchitecture::writePlantStructureXML().
+
+~~~~~~{cpp}
+plantarchitecture.setPetioleLeafGeometry(plantID, shootID, node, 0, {leaf_base}, {leaf_angles}, {leaf_size});
+plantarchitecture.setLeafDroop(plantID, shootID, node, 0, 0, true);   // bend the placed blade under its own weight
+~~~~~~
+
+To give a blade a measured shape rather than the one its own weight gives it, lay it along its midrib instead (\ref PlantArch_blademidrib).
+
 \subsection PlantArch_petioledroop Petiole Droop Under Leaf Weight
 
 The leaf droop described above bends the blade about its own base, so it cannot change the shape of the petiole that carries it. In many dicots the petiole is not rigid: as a leaf enlarges and ages, its petiole
@@ -2029,7 +2043,8 @@ Points worth knowing:
 - <b>Prescribed organs do not change as the plant grows.</b> The petiole is not re-scaled and the leaves are
   neither re-scaled nor re-placed by \ref PlantArchitecture::advanceTime(). Prescribed leaves are also
   exempt from the self-weight droop, so the blade keeps the prototype's rest shape rather than continuing to
-  arch over as the leaf ages.
+  arch over as the leaf ages, unless the droop is turned on with \ref PlantArchitecture::setLeafDroop()
+  (see \ref PlantArch_leafdroop).
 - <b>Prescribed organs survive a save and reload.</b> \ref PlantArchitecture::writePlantStructureXML() records a
   prescribed petiole path, and each prescribed leaf's base and pose, and
   \ref PlantArchitecture::readPlantStructureXML() restores them. A prescribed leaf is rebuilt from the prototype
@@ -2037,6 +2052,46 @@ Points worth knowing:
 - <b>Rebuilding a leaf discards primitive data attached to it.</b> Each leaf object is rebuilt from its
   prototype so that it can be given an absolute orientation. The object label and material are restored;
   any other primitive data a caller has set on that leaf is not.
+
+\subsection PlantArch_blademidrib Laying a Blade Along a Measured Midrib
+
+A blade's own shape terms -- its longitudinal curvature, fold, lateral curvature, roll and waves -- and its droop
+under its own weight describe a blade that bends in one plane with a curvature that varies smoothly from base to
+tip. A measured blade often does not: a long maize or sorghum blade rises, arches over and hangs, its curvature
+changes along it, and it twists. \ref PlantArchitecture::setLeafMidrib() lays an existing blade along a midrib
+traced from a scan, which is what "pulling" on a blade means:
+
+~~~~~~{cpp}
+// The midrib from the base of the blade to its tip, in world coordinates, as many points as the scan resolves
+std::vector<helios::vec3> midrib = { /* traced midrib points */ };
+
+// Either the blade's twist at each point, as a roll about the midrib in radians...
+std::vector<float> rolls = { /* one per point, or none for an untwisted blade */ };
+plantarchitecture.setLeafMidrib(plantID, shootID, node, 0, 0, midrib, rolls);
+
+// ...or the normal of its upper surface at each point, as a point cloud gives it
+std::vector<helios::vec3> normals = { /* one per point */ };
+plantarchitecture.setLeafMidrib(plantID, shootID, node, 0, 0, midrib, normals);
+
+// Read the blade's midrib back, for any leaf built by the generic leaf prototype
+LeafMidrib current = plantarchitecture.getLeafMidrib(plantID, shootID, node, 0, 0);
+~~~~~~
+
+Each row of the blade's lattice across its width is carried rigidly with its station on the midrib, so the blade
+keeps its outline (its texture) and its cross-section and is bent without being stretched. The stations keep the
+proportions of the blade's own midrib, and the blade takes the midrib's length: a longer or shorter midrib scales the
+blade, its width with it.
+
+<ul>
+<li><b>The midrib starts at the base of the blade.</b> That is the leaf's base, or the end of its stalk for a leaflet that has one. The first point is moved onto it, and the rest of the midrib with it; an error is raised if it is further than 1 mm or 2% of the midrib's length away. Place the leaf first, with \ref PlantArchitecture::setPetioleLeafGeometry(), so that its base is where the midrib starts.</li>
+<li><b>Each row turns with the midrib segment ending at its station.</b> The rotation is carried out from the blade's base without twisting (a rotation-minimizing frame), so a roll of zero everywhere gives an untwisted blade. The row at the base keeps the orientation the blade has where it leaves its stalk or petiole. Because the frame has no special direction, a blade that leaves its base pointing straight up, as a grass blade leaving its whorl does, is handled like any other.</li>
+<li><b>Rolls and normals.</b> A roll is the blade's twist about the midrib, in radians, right-handed about the direction from base to tip, measured from the untwisted blade. A normal is the direction of the blade's upper surface, ignoring its fold and curvature across the midrib; it is taken perpendicular to the midrib, and one that lies along the midrib is refused. Both are interpolated along the midrib between the points they are given at.</li>
+<li><b>Exact by any path.</b> The call sets the blade's shape, not a change to it, and the midrib, normals and rolls that \ref PlantArchitecture::getLeafMidrib() returns put the blade back as it is. A blade drooped under its own weight reads rolls of zero, and a blade at rest laid along a drooped blade's midrib takes the drooped blade's shape to well under a micrometre, because the droop carries the blade along its midrib in the same way.</li>
+<li><b>The midrib takes the place of the droop and the longitudinal curvature.</b> The droop is turned off while a midrib is prescribed, and \ref PlantArchitecture::setLeafDroop() refuses to turn it back on. \ref Phytomer::reshapeLeaf() lays a new cross-section (fold, lateral curvature, roll, waves) along the same midrib but refuses a change to the longitudinal curvature, which the midrib supersedes. \ref PlantArchitecture::clearLeafMidrib() returns the blade to its own shape at the size it had before, drooping again if it drooped then.</li>
+<li><b>The midrib moves with the leaf.</b> It is held in the leaf's own frame, so a joint pose (\ref PlantArchPose) or \ref PlantArchitecture::setPlantBasePosition() carries the laid blade rigidly. The petiole's growth is pinned as \ref PlantArchitecture::setPetioleLeafGeometry() pins it, so that \ref PlantArchitecture::advanceTime() does not rescale the blade.</li>
+<li><b>Identity and persistence.</b> The leaf keeps its object and primitives. \ref PlantArchitecture::setPetioleLeafGeometry() and \ref PlantArchitecture::setPetioleLeafCount() rebuild the leaf and so discard its midrib. The midrib is recorded by \ref PlantArchitecture::writePlantStructureXML().</li>
+<li><b>Generic blades only.</b> A leaf loaded from an OBJ model or built by a custom prototype function has no lattice to lay along a midrib, and raises an error.</li>
+</ul>
 
 \subsection PlantArchRealizedParameters Measuring What the Model Actually Built
 
@@ -2232,6 +2287,48 @@ they are rebuilt whenever their bud changes state.
 \ref PlantArchitecture::writePlantStructureXML() or copied with \ref PlantArchitecture::duplicatePlantInstance().
 Both rebuild a plant from its growth parameters, which do not describe a pose, and so raise an error rather
 than write a plant that would be read back in a different shape.
+
+\subsection PlantArchPoseBend Bending a Petiole
+
+The pitch, yaw and roll of a petiole joint turn the petiole rigidly about its base. To push or pull a petiole into a
+new shape without putting a kink in it, a petiole joint can also be bent along its length:
+\ref PlantJointPose::bend_degrees bends it in the plane of its pitch (positive curls it further from the stem, as a
+positive pitch tilts it), and \ref PlantJointPose::bend_lateral_degrees bends it sideways (positive turns it the way a
+positive yaw does). A bend is the change, from the way the petiole grew, in the angle between the petiole's direction
+at its base and its direction at its tip. The petiole leaves its base in the direction it had, its last segment is
+turned by the whole bend, and the segments between are turned by shares that grow evenly along its arclength, so it
+curves from base to tip without a kink. Zero leaves the curvature the petiole grew with. Each leaf is carried rigidly
+to where its point of attachment goes and turned with the centerline there. A petiole whose centerline has a single
+segment (PetioleParameters::length_segments of 1, as in many grass models) has one direction and cannot be bent; turn
+it with its pitch and yaw instead.
+
+~~~~~~{cpp}
+PlantJointID petiole_joint;
+petiole_joint.type = PLANT_JOINT_PETIOLE;
+petiole_joint.shootID = shootID;
+petiole_joint.node_index = 3;
+
+PlantJointPose pose;
+pose.pitch_degrees = 10;      // tilt the whole petiole away from the stem...
+pose.bend_degrees = -25;      // ...and curl it back up along its length
+plantarchitecture.setPlantJointPose(plantID, petiole_joint, pose);
+
+// Or drag its tip to a point: the bend and length are worked out, the joint's pitch, yaw and roll kept
+plantarchitecture.setPetioleTipPosition(plantID, shootID, 3, 0, measured_petiole_tip);
+~~~~~~
+
+A bend is part of the joint's pose like its angles and its length: it is an offset from the petiole as it grew,
+applied to the petiole as it grew and about the joint's axes as it grew, before the joint is turned, so the same pose
+gives the same petiole by any path and \ref PlantArchitecture::resetPlantPose() undoes it exactly. Object IDs and
+primitive UUIDs are kept. A petiole that bends under the weight of its leaves (\ref PlantArch_petioledroop) settles from
+its bent shape. Only a petiole joint can be bent.
+
+\ref PlantArchitecture::setPetioleTipPosition() solves for the two bends and the length scale that put the tip of the
+petiole's centerline on a given point. A petiole that bends under the weight of its leaves is aimed again until its
+tip settles on the point. A point is out of reach, and an error is raised with the plant left as it was, when no bend
+brings the tip to it, when it would take a bend of more than 180 degrees, or when it would scale the petiole's length
+by less than 0.25 or more than 4. A point behind the petiole's base is usually out of reach; turning the joint toward
+it first with its pitch and yaw brings it within reach.
 
 \section PlantArchConventions Coordinate Frames and Internal Storage Conventions
 

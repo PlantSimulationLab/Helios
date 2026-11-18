@@ -12736,6 +12736,373 @@ DOCTEST_TEST_CASE("setPlantJointPose refuses joints and poses that make no sense
     std::remove("unposed_plant_test.xml");
 }
 
+namespace {
+
+    //! Largest distance between corresponding vertices of two lists
+    float largestPointDifference(const std::vector<vec3> &a, const std::vector<vec3> &b) {
+        if (a.size() != b.size()) {
+            return 1e30f;
+        }
+        float largest = 0;
+        for (size_t v = 0; v < a.size(); v++) {
+            largest = std::max(largest, (a.at(v) - b.at(v)).magnitude());
+        }
+        return largest;
+    }
+
+    //! Angle in degrees between two directions, resolved down to small angles (an arccosine of the dot product cannot tell apart directions closer than about 0.02 degrees in single precision)
+    float directionAngleDegrees(vec3 a, vec3 b) {
+        a.normalize();
+        b.normalize();
+        return rad2deg(std::atan2(cross(a, b).magnitude(), a * b));
+    }
+
+    //! A petiole joint of a plant whose petiole carries leaves and has at least two segments, the longest such petiole
+    bool findBendablePetioleJoint(const PlantArchitecture &plantarchitecture, uint plantID, PlantJointID &petiole_joint) {
+        const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+        float longest = 0;
+        bool found = false;
+        for (const PlantJointID &joint: plantarchitecture.getPlantJoints(plantID)) {
+            if (joint.type != PLANT_JOINT_PETIOLE) {
+                continue;
+            }
+            const Phytomer &phytomer = *shoot_tree.at(joint.shootID)->phytomers.at(joint.node_index);
+            if (phytomer.leaf_objIDs.at(joint.petiole_index).empty() || phytomer.petiole_vertices.at(joint.petiole_index).size() < 3) {
+                continue;
+            }
+            const float length = plantarchitecture.getPlantJointFrame(plantID, joint).length;
+            if (length > longest) {
+                longest = length;
+                petiole_joint = joint;
+                found = true;
+            }
+        }
+        return found;
+    }
+
+    //! Largest change in the distance between any two of the first vertices of an object, which is zero for an object moved rigidly
+    float largestRigidityError(const std::vector<vec3> &vertices_before, const std::vector<vec3> &vertices_after) {
+        float largest = 0;
+        const size_t count = std::min<size_t>(vertices_before.size(), 40);
+        for (size_t a = 0; a < count; a++) {
+            for (size_t b = a + 1; b < count; b++) {
+                largest = std::max(largest, std::fabs((vertices_before.at(a) - vertices_before.at(b)).magnitude() - (vertices_after.at(a) - vertices_after.at(b)).magnitude()));
+            }
+        }
+        return largest;
+    }
+
+} // namespace
+
+DOCTEST_TEST_CASE("A petiole joint bend curves the petiole along its length without a kink and carries its leaves rigidly") {
+    Context context;
+    context.seedRandomGenerator(11);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+    PlantJointID petiole_joint;
+    DOCTEST_REQUIRE(findBendablePetioleJoint(plantarchitecture, plantID, petiole_joint));
+    const Phytomer &phytomer = *shoot_tree.at(petiole_joint.shootID)->phytomers.at(petiole_joint.node_index);
+    const PlantJointFrame frame = plantarchitecture.getPlantJointFrame(plantID, petiole_joint);
+    const std::vector<vec3> nodes_grown = phytomer.petiole_vertices.at(petiole_joint.petiole_index);
+    const std::vector<uint> leaf_objIDs = phytomer.leaf_objIDs.at(petiole_joint.petiole_index);
+    const uint tube_objID = phytomer.petiole_objIDs.at(petiole_joint.petiole_index);
+    const std::vector<uint> tube_UUIDs = context.getObjectPrimitiveUUIDs(tube_objID);
+    std::vector<std::vector<uint>> leaf_UUIDs;
+    std::vector<std::vector<vec3>> leaf_vertices_grown;
+    for (const uint objID: leaf_objIDs) {
+        leaf_UUIDs.push_back(context.getObjectPrimitiveUUIDs(objID));
+        leaf_vertices_grown.push_back(context.getPolymeshObjectVertices(objID));
+    }
+    const std::vector<uint> objIDs_grown = plantarchitecture.getAllPlantObjectIDs(plantID);
+
+    // Arclength of each node as it grew
+    std::vector<float> arclength(nodes_grown.size(), 0.f);
+    for (size_t node = 1; node < nodes_grown.size(); node++) {
+        arclength.at(node) = arclength.at(node - 1) + (nodes_grown.at(node) - nodes_grown.at(node - 1)).magnitude();
+    }
+
+    PlantJointPose bend;
+    bend.bend_degrees = 30;
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, bend);
+    const std::vector<vec3> nodes_bent = phytomer.petiole_vertices.at(petiole_joint.petiole_index);
+    DOCTEST_REQUIRE(nodes_bent.size() == nodes_grown.size());
+
+    // No organ was rebuilt
+    DOCTEST_CHECK(plantarchitecture.getAllPlantObjectIDs(plantID) == objIDs_grown);
+    DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(tube_objID) == tube_UUIDs);
+
+    // Bent without being stretched; the base stays put and the petiole leaves it in the direction it had
+    DOCTEST_CHECK((nodes_bent.front() - nodes_grown.front()).magnitude() < 1e-7f);
+    for (size_t node = 1; node < nodes_grown.size(); node++) {
+        DOCTEST_CHECK(std::fabs((nodes_bent.at(node) - nodes_bent.at(node - 1)).magnitude() - (nodes_grown.at(node) - nodes_grown.at(node - 1)).magnitude()) < 1e-6f);
+    }
+    DOCTEST_CHECK(directionAngleDegrees(nodes_bent.at(1) - nodes_bent.at(0), nodes_grown.at(1) - nodes_grown.at(0)) < 1e-3f);
+
+    // Each segment is turned about the pitch axis by a share of the bend growing evenly with arclength, from none for the first to all of it for the last, so the angle between the petiole's base and
+    // tip directions changes by exactly the bend
+    const float bend_length = arclength.at(nodes_grown.size() - 2);
+    for (size_t segment = 1; segment + 1 < nodes_grown.size(); segment++) {
+        const vec3 grown_direction = normalize(nodes_grown.at(segment + 1) - nodes_grown.at(segment));
+        const vec3 bent_direction = normalize(nodes_bent.at(segment + 1) - nodes_bent.at(segment));
+        const vec3 expected = rotatePointAboutLine(grown_direction, nullorigin, frame.pitch_axis, deg2rad(30.f * arclength.at(segment) / bend_length));
+        DOCTEST_CHECK(directionAngleDegrees(bent_direction, expected) < 1e-3f);
+    }
+    const vec3 grown_tip_direction = nodes_grown.back() - nodes_grown.at(nodes_grown.size() - 2);
+    const vec3 bent_tip_direction = nodes_bent.back() - nodes_bent.at(nodes_bent.size() - 2);
+    DOCTEST_CHECK(directionAngleDegrees(grown_tip_direction, bent_tip_direction) == doctest::Approx(30.f).epsilon(1e-4));
+    // A positive bend curls the petiole further from the stem, as a positive pitch tilts it
+    const vec3 tip_grown_offset = nodes_grown.back() - frame.pivot;
+    const vec3 tip_bent_offset = nodes_bent.back() - frame.pivot;
+    DOCTEST_CHECK(cross(tip_grown_offset, tip_bent_offset) * frame.pitch_axis > 0.f);
+
+    // The leaves are moved as rigid bodies, keeping their objects and primitives
+    for (size_t leaf = 0; leaf < leaf_objIDs.size(); leaf++) {
+        DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(leaf_objIDs.at(leaf)) == leaf_UUIDs.at(leaf));
+        const std::vector<vec3> vertices_bent = context.getPolymeshObjectVertices(leaf_objIDs.at(leaf));
+        DOCTEST_CHECK(largestRigidityError(leaf_vertices_grown.at(leaf), vertices_bent) < 2e-6f);
+        DOCTEST_CHECK((vertices_bent.front() - leaf_vertices_grown.at(leaf).front()).magnitude() > 1e-4f);
+    }
+
+    // The sideways bend turns the petiole the way a yaw does
+    plantarchitecture.resetPlantPose(plantID);
+    PlantJointPose yaw;
+    yaw.yaw_degrees = 5;
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, yaw);
+    const vec3 tip_yawed = phytomer.petiole_vertices.at(petiole_joint.petiole_index).back();
+    PlantJointPose lateral;
+    lateral.bend_lateral_degrees = 10;
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, lateral);
+    const vec3 tip_lateral = phytomer.petiole_vertices.at(petiole_joint.petiole_index).back();
+    DOCTEST_CHECK((tip_yawed - nodes_grown.back()) * (tip_lateral - nodes_grown.back()) > 0.f);
+    DOCTEST_CHECK(directionAngleDegrees(phytomer.petiole_vertices.at(petiole_joint.petiole_index).at(1) - nodes_grown.front(), nodes_grown.at(1) - nodes_grown.front()) < 1e-3f);
+    plantarchitecture.resetPlantPose(plantID);
+}
+
+DOCTEST_TEST_CASE("A petiole joint bend is absolute, the same by any path, and undone exactly by a reset") {
+    Context context;
+    context.seedRandomGenerator(12);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    PlantJointID petiole_joint;
+    DOCTEST_REQUIRE(findBendablePetioleJoint(plantarchitecture, plantID, petiole_joint));
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+    PlantJointPose pose_a;
+    pose_a.pitch_degrees = 10;
+    pose_a.bend_degrees = 25;
+    pose_a.bend_lateral_degrees = -15;
+    pose_a.length_scale = 1.2f;
+    PlantJointPose pose_b;
+    pose_b.bend_degrees = -40;
+    pose_b.roll_degrees = 20;
+
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, pose_a);
+    const std::map<uint, std::vector<vec3>> vertices_a = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    DOCTEST_CHECK(largestVertexDifference(vertices_a, vertices_grown) > 1e-3f);
+    const PlantJointPose read_back = plantarchitecture.getPlantJointPose(plantID, petiole_joint);
+    DOCTEST_CHECK(read_back.bend_degrees == pose_a.bend_degrees);
+    DOCTEST_CHECK(read_back.bend_lateral_degrees == pose_a.bend_lateral_degrees);
+
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, pose_b);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_a) > 1e-3f);
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, pose_a);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_a) == 0.f);
+
+    // A pose whose only non-zero term is a bend is still a pose
+    PlantJointPose bend_only;
+    bend_only.bend_lateral_degrees = 12;
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, bend_only);
+    DOCTEST_CHECK(plantarchitecture.isPlantPosed(plantID));
+
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+
+    // Setting the bend back to zero is a reset too
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, bend_only);
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, PlantJointPose());
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+
+    // Where a bend, a turn and a stretch together put the petiole and the leaflet at its tip, worked out here independently: the grown centerline bent about the pitch axis, stretched about the
+    // pivot, then turned by the joint; the leaflet turned by the whole bend about its base and carried with the tip
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+    const Phytomer &phytomer = *shoot_tree.at(petiole_joint.shootID)->phytomers.at(petiole_joint.node_index);
+    const PlantJointFrame frame = plantarchitecture.getPlantJointFrame(plantID, petiole_joint);
+    const std::vector<vec3> nodes_grown = phytomer.petiole_vertices.at(petiole_joint.petiole_index);
+    std::vector<float> arclength(nodes_grown.size(), 0.f);
+    for (size_t node = 1; node < nodes_grown.size(); node++) {
+        arclength.at(node) = arclength.at(node - 1) + (nodes_grown.at(node) - nodes_grown.at(node - 1)).magnitude();
+    }
+    PlantJointPose combined;
+    combined.pitch_degrees = 10;
+    combined.yaw_degrees = -20;
+    combined.bend_degrees = 25;
+    combined.length_scale = 1.2f;
+    std::vector<vec3> nodes_expected = {nodes_grown.front()};
+    for (size_t node = 1; node < nodes_grown.size(); node++) {
+        const float turn = deg2rad(combined.bend_degrees) * arclength.at(node - 1) / arclength.at(nodes_grown.size() - 2);
+        nodes_expected.push_back(nodes_expected.back() + rotatePointAboutLine(nodes_grown.at(node) - nodes_grown.at(node - 1), nullorigin, frame.pitch_axis, turn));
+    }
+    for (vec3 &node: nodes_expected) {
+        node = expectedPosedPoint(frame.pivot + combined.length_scale * (node - frame.pivot), frame, combined);
+    }
+    std::vector<uint> tip_leaves;
+    std::vector<std::vector<vec3>> tip_leaf_vertices_grown;
+    for (size_t leaf = 0; leaf < phytomer.leaf_objIDs.at(petiole_joint.petiole_index).size(); leaf++) {
+        if ((phytomer.leaf_bases.at(petiole_joint.petiole_index).at(leaf) - nodes_grown.back()).magnitude() < 1e-6f) {
+            tip_leaves.push_back(phytomer.leaf_objIDs.at(petiole_joint.petiole_index).at(leaf));
+            tip_leaf_vertices_grown.push_back(context.getPolymeshObjectVertices(tip_leaves.back()));
+        }
+    }
+    DOCTEST_REQUIRE(!tip_leaves.empty());
+
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, combined);
+    DOCTEST_CHECK(largestPointDifference(phytomer.petiole_vertices.at(petiole_joint.petiole_index), nodes_expected) < 2e-6f);
+    for (size_t leaf = 0; leaf < tip_leaves.size(); leaf++) {
+        // The leaflet's base goes where the tip goes, and the leaflet is turned about it by the bend and then by the joint
+        std::vector<vec3> expected;
+        for (const vec3 &vertex: tip_leaf_vertices_grown.at(leaf)) {
+            const vec3 turned_by_bend = rotatePointAboutLine(vertex - nodes_grown.back(), nullorigin, frame.pitch_axis, deg2rad(combined.bend_degrees));
+            const vec3 turned_by_joint = expectedPosedPoint(frame.pivot + turned_by_bend, frame, combined) - frame.pivot;
+            expected.push_back(nodes_expected.back() + turned_by_joint);
+        }
+        DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(tip_leaves.at(leaf)), expected) < 2e-6f);
+    }
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+}
+
+DOCTEST_TEST_CASE("setPetioleTipPosition bends a petiole so that its tip reaches a point, keeping the joint's angles") {
+    Context context;
+    context.seedRandomGenerator(13);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+    const auto &shoot_tree = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID);
+
+    PlantJointID petiole_joint;
+    DOCTEST_REQUIRE(findBendablePetioleJoint(plantarchitecture, plantID, petiole_joint));
+    const Phytomer &phytomer = *shoot_tree.at(petiole_joint.shootID)->phytomers.at(petiole_joint.node_index);
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    const std::vector<uint> objIDs_grown = plantarchitecture.getAllPlantObjectIDs(plantID);
+
+    // The joint is turned first; the tip is then pulled down and to one side
+    PlantJointPose turn;
+    turn.pitch_degrees = 8;
+    turn.yaw_degrees = -12;
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, turn);
+    const PlantJointFrame frame = plantarchitecture.getPlantJointFrame(plantID, petiole_joint);
+    const vec3 base = phytomer.petiole_vertices.at(petiole_joint.petiole_index).front();
+    const vec3 tip = phytomer.petiole_vertices.at(petiole_joint.petiole_index).back();
+    const vec3 sideways = normalize(cross(frame.organ_axis, make_vec3(0, 0, 1)));
+    const vec3 target = tip + 0.25f * frame.length * make_vec3(0, 0, -1) + 0.15f * frame.length * sideways;
+
+    plantarchitecture.setPetioleTipPosition(plantID, petiole_joint.shootID, petiole_joint.node_index, petiole_joint.petiole_index, target);
+
+    const std::vector<vec3> &nodes = phytomer.petiole_vertices.at(petiole_joint.petiole_index);
+    DOCTEST_CHECK((nodes.back() - target).magnitude() < 2e-6f);
+    DOCTEST_CHECK((nodes.front() - base).magnitude() < 1e-6f);
+    const PlantJointPose pose = plantarchitecture.getPlantJointPose(plantID, petiole_joint);
+    DOCTEST_CHECK(pose.pitch_degrees == turn.pitch_degrees);
+    DOCTEST_CHECK(pose.yaw_degrees == turn.yaw_degrees);
+    DOCTEST_CHECK(pose.roll_degrees == turn.roll_degrees);
+    DOCTEST_CHECK(std::fabs(pose.bend_degrees) + std::fabs(pose.bend_lateral_degrees) > 1.f);
+    // The petiole still leaves its base in the direction the joint's turn gave it
+    DOCTEST_CHECK(directionAngleDegrees(nodes.at(1) - nodes.at(0), frame.organ_axis) < 1e-2f);
+    DOCTEST_CHECK(plantarchitecture.getAllPlantObjectIDs(plantID) == objIDs_grown);
+
+    // The petiole's own tip again: nothing more to bend
+    plantarchitecture.setPetioleTipPosition(plantID, petiole_joint.shootID, petiole_joint.node_index, petiole_joint.petiole_index, nodes.back());
+    DOCTEST_CHECK((nodes.back() - target).magnitude() < 2e-6f);
+
+    // A point behind the petiole's base cannot be reached by bending, and the plant is left as it was
+    const std::map<uint, std::vector<vec3>> vertices_before = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    const vec3 behind = base - 0.8f * frame.length * frame.organ_axis - 0.01f * frame.parent_axis;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleTipPosition(plantID, petiole_joint.shootID, petiole_joint.node_index, petiole_joint.petiole_index, behind));
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_before) == 0.f);
+    // So is a point far beyond the petiole, which would take a petiole many times as long, as a position given in the wrong units would
+    const vec3 far_beyond = base + 20.f * frame.length * frame.organ_axis;
+    std::string far_error;
+    try {
+        plantarchitecture.setPetioleTipPosition(plantID, petiole_joint.shootID, petiole_joint.node_index, petiole_joint.petiole_index, far_beyond);
+    } catch (const std::exception &error) {
+        far_error = error.what();
+    }
+    DOCTEST_CHECK(far_error.find("scale the length") != std::string::npos);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_before) == 0.f);
+
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+}
+
+DOCTEST_TEST_CASE("A bend is refused for a joint other than a petiole, for a petiole of one segment, and when it is not finite") {
+    Context context;
+    context.seedRandomGenerator(14);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 15);
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+    PlantJointID internode_joint;
+    internode_joint.type = PLANT_JOINT_INTERNODE;
+    PlantJointPose bend;
+    bend.bend_degrees = 10;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(plantID, internode_joint, bend));
+    PlantJointID root_joint;
+    root_joint.type = PLANT_JOINT_ROOT;
+    PlantJointPose lateral;
+    lateral.bend_lateral_degrees = 10;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(plantID, root_joint, lateral));
+
+    PlantJointID petiole_joint;
+    DOCTEST_REQUIRE(findBendablePetioleJoint(plantarchitecture, plantID, petiole_joint));
+    PlantJointPose not_finite;
+    not_finite.bend_degrees = std::numeric_limits<float>::infinity();
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPlantJointPose(plantID, petiole_joint, not_finite));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleTipPosition(plantID, petiole_joint.shootID, petiole_joint.node_index, petiole_joint.petiole_index, make_vec3(NAN, 0, 0)));
+    PlantJointID missing_joint = petiole_joint;
+    missing_joint.node_index = 9999;
+    DOCTEST_CHECK_THROWS(plantarchitecture.setPetioleTipPosition(plantID, missing_joint.shootID, missing_joint.node_index, missing_joint.petiole_index, make_vec3(0, 0, 0)));
+
+    DOCTEST_CHECK(!plantarchitecture.isPlantPosed(plantID));
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+
+    // A sorghum petiole has a single segment, so its base and tip directions are the same and there is no bend to give it
+    Context context_sorghum;
+    context_sorghum.seedRandomGenerator(14);
+    PlantArchitecture sorghum(&context_sorghum);
+    sorghum.disableMessages();
+    sorghum.loadPlantModelFromLibrary("sorghum");
+    const uint sorghumID = sorghum.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+    const auto &sorghum_shoots = PlantArchitectureTestHelper::getShootTree(sorghum, sorghumID);
+    bool found_single_segment = false;
+    for (const PlantJointID &joint: sorghum.getPlantJoints(sorghumID)) {
+        if (joint.type == PLANT_JOINT_PETIOLE && sorghum_shoots.at(joint.shootID)->phytomers.at(joint.node_index)->petiole_vertices.at(joint.petiole_index).size() == 2) {
+            found_single_segment = true;
+            const std::map<uint, std::vector<vec3>> sorghum_grown = plantPrimitiveVertices(context_sorghum, sorghum, sorghumID);
+            PlantJointPose sorghum_bend;
+            sorghum_bend.bend_degrees = 20;
+            DOCTEST_CHECK_THROWS(sorghum.setPlantJointPose(sorghumID, joint, sorghum_bend));
+            const vec3 tip = sorghum_shoots.at(joint.shootID)->phytomers.at(joint.node_index)->petiole_vertices.at(joint.petiole_index).back();
+            DOCTEST_CHECK_THROWS(sorghum.setPetioleTipPosition(sorghumID, joint.shootID, joint.node_index, joint.petiole_index, tip + make_vec3(0, 0, 0.001f)));
+            DOCTEST_CHECK(!sorghum.isPlantPosed(sorghumID));
+            DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context_sorghum, sorghum, sorghumID), sorghum_grown) == 0.f);
+            break;
+        }
+    }
+    DOCTEST_CHECK(found_single_segment);
+}
+
 DOCTEST_TEST_CASE("USD export basic structure") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -19240,6 +19607,57 @@ DOCTEST_TEST_CASE("PlantArchitecture petiole droop bends the petiole into an arc
     for (size_t v = 1; v < rigid_nodes.size(); v++) {
         DOCTEST_CHECK((rigid_nodes.at(v) - rigid_nodes.at(v - 1)).magnitude() == doctest::Approx((flexible_nodes.at(v) - flexible_nodes.at(v - 1)).magnitude()).epsilon(1e-3));
     }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture a flexible petiole bent by a joint pose settles from its bent shape and is restored by a reset") {
+    Context context;
+    context.seedRandomGenerator(777);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    const uint plantID = growPetioleDroopPlant(context, plantarchitecture, horizontalPetioleDroopSettings(1.f, 0.f), 20);
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, 0);
+    const Phytomer &oldest = *shoot->phytomers.front();
+    const std::map<uint, std::vector<vec3>> vertices_grown = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    const std::vector<vec3> nodes_grown = oldest.petiole_vertices.at(0);
+    const std::vector<vec3> rest_offsets_grown = oldest.petiole_rest_offsets.at(0);
+
+    PlantJointID joint;
+    joint.type = PLANT_JOINT_PETIOLE;
+    joint.shootID = 0;
+    joint.node_index = 0;
+    joint.petiole_index = 0;
+    PlantJointPose curl;
+    curl.bend_degrees = -35; // up, against gravity
+    plantarchitecture.setPlantJointPose(plantID, joint, curl);
+    const std::vector<vec3> nodes_curled = oldest.petiole_vertices.at(0);
+    DOCTEST_REQUIRE(nodes_curled.size() == nodes_grown.size());
+
+    // The shape the petiole droops from is bent, and the petiole has settled from it: it keeps its length and its base, and its tip has risen
+    DOCTEST_CHECK(largestPointDifference(oldest.petiole_rest_offsets.at(0), rest_offsets_grown) > 1e-3f);
+    DOCTEST_CHECK((nodes_curled.front() - nodes_grown.front()).magnitude() < 1e-6f);
+    for (size_t node = 1; node < nodes_grown.size(); node++) {
+        DOCTEST_CHECK((nodes_curled.at(node) - nodes_curled.at(node - 1)).magnitude() == doctest::Approx((nodes_grown.at(node) - nodes_grown.at(node - 1)).magnitude()).epsilon(1e-3));
+    }
+    DOCTEST_CHECK(nodes_curled.back().z > nodes_grown.back().z + 1e-3f);
+
+    // The same bend reached by another path settles the same way, and a reset restores the plant exactly
+    const std::map<uint, std::vector<vec3>> vertices_curled = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    PlantJointPose other;
+    other.bend_lateral_degrees = 20;
+    plantarchitecture.setPlantJointPose(plantID, joint, other);
+    plantarchitecture.setPlantJointPose(plantID, joint, curl);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_curled) == 0.f);
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
+    DOCTEST_CHECK(largestPointDifference(oldest.petiole_rest_offsets.at(0), rest_offsets_grown) == 0.f);
+
+    // Dragged to a point, the petiole's tip lands there once the petiole has settled under its leaves' weight, not only before
+    const float length = plantarchitecture.getPlantJointFrame(plantID, joint).length;
+    const vec3 target = nodes_grown.back() + make_vec3(0, 0, 0.2f * length);
+    plantarchitecture.setPetioleTipPosition(plantID, 0, 0, 0, target);
+    DOCTEST_CHECK((oldest.petiole_vertices.at(0).back() - target).magnitude() <= std::max(1e-6f, 1e-5f * length));
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_grown) == 0.f);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture petiole droop holds the insertion angle while the outer petiole arches over") {
@@ -25935,6 +26353,751 @@ DOCTEST_TEST_CASE("PlantArchitecture leaf roll and leaf shape survive an XML rou
     DOCTEST_CHECK(std::fabs(meanNormalProjectedFraction(context, rolled_read) / rolled_fraction - 1.0) < 0.01);
     DOCTEST_CHECK(shoot_read->phytomers.at(reshaped_node)->getLeafShape(0, 0).aspect_ratio == doctest::Approx(0.04f));
     DOCTEST_CHECK(std::fabs(context.getObjectArea(reshaped_read) / reshaped_area - 1.f) < 0.01f);
+}
+
+namespace {
+
+    //! A fully expanded, drooping leaf of a grown plant: the one on the main stem with the largest blade
+    bool findLargestDroopingLeaf(const PlantArchitecture &plantarchitecture, uint plantID, uint &node_index) {
+        const auto shoot = plantarchitecture.getPlantShoot(plantID, 0);
+        float largest = 0;
+        bool found = false;
+        for (uint node = 0; node < shoot->phytomers.size(); node++) {
+            const auto &phytomer = shoot->phytomers.at(node);
+            if (phytomer->leaf_objIDs.empty() || phytomer->leaf_objIDs.at(0).empty() || phytomer->current_leaf_scale_factor.at(0) < 1.f || !phytomer->doesLeafDroop(0, 0)) {
+                continue;
+            }
+            if (phytomer->leaf_size_max.at(0).at(0) > largest) {
+                largest = phytomer->leaf_size_max.at(0).at(0);
+                node_index = node;
+                found = true;
+            }
+        }
+        return found;
+    }
+
+    //! Angles, in the leaf's rest frame on its petiole (see PlantArchitecture::setPetioleLeafGeometry()), that orient a single leaf as a leaf object's transformation matrix orients it
+    /**
+     * The prescribed orientation is Rz(azimuth) Ry(-elevation) Rz(yaw) Ry(-pitch) Rx(roll), applied to the unit leaf, with azimuth and elevation those of the petiole tip axis; the petiole's part is taken
+     * back out and what is left is split into its yaw, pitch and roll.
+     */
+    AxisRotation prescribedAnglesOfLeafMatrix(const float matrix[16], const vec3 &petiole_tip_axis) {
+        vec3 columns[3];
+        for (int c = 0; c < 3; c++) {
+            columns[c] = normalize(make_vec3(matrix[c], matrix[4 + c], matrix[8 + c]));
+        }
+        const vec3 t = normalize(petiole_tip_axis);
+        const float elevation = asin_safe(t.z);
+        const float horizontal = std::sqrt(t.x * t.x + t.y * t.y);
+        const float azimuth = horizontal < 1e-6f ? 0.f : std::atan2(t.y, t.x);
+        // M = Ry(elevation) Rz(-azimuth) R, column by column
+        float M[3][3];
+        for (int c = 0; c < 3; c++) {
+            const vec3 &v = columns[c];
+            const vec3 z_turned = make_vec3(std::cos(-azimuth) * v.x - std::sin(-azimuth) * v.y, std::sin(-azimuth) * v.x + std::cos(-azimuth) * v.y, v.z);
+            const vec3 y_turned = make_vec3(std::cos(elevation) * z_turned.x + std::sin(elevation) * z_turned.z, z_turned.y, -std::sin(elevation) * z_turned.x + std::cos(elevation) * z_turned.z);
+            M[0][c] = y_turned.x;
+            M[1][c] = y_turned.y;
+            M[2][c] = y_turned.z;
+        }
+        // M = Rz(yaw) Ry(theta) Rx(roll) with theta = -pitch
+        AxisRotation angles;
+        const float theta = asin_safe(-M[2][0]);
+        angles.pitch = -theta;
+        angles.roll = std::atan2(M[2][1], M[2][2]);
+        angles.yaw = std::atan2(M[1][0], M[0][0]);
+        return angles;
+    }
+
+    //! Length of a polyline
+    float polylineLength(const std::vector<vec3> &points) {
+        float length = 0;
+        for (size_t p = 1; p < points.size(); p++) {
+            length += (points.at(p) - points.at(p - 1)).magnitude();
+        }
+        return length;
+    }
+
+} // namespace
+
+DOCTEST_TEST_CASE("PlantArchitecture setLeafDroop gives a leaf placed at a grown leaf's pose the grown leaf's droop, and a rest blade given the drooped midrib takes its shape") {
+    Context context;
+    context.seedRandomGenerator(21);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, 0);
+
+    uint node = 0;
+    DOCTEST_REQUIRE(findLargestDroopingLeaf(plantarchitecture, plantID, node));
+    const auto &phytomer = shoot->phytomers.at(node);
+    const uint objID_grown = phytomer->leaf_objIDs.at(0).at(0);
+    const std::vector<vec3> vertices_grown = context.getPolymeshObjectVertices(objID_grown);
+    const LeafShapeValues shape_grown = phytomer->getLeafShape(0, 0);
+    const float size_grown = phytomer->leaf_size_max.at(0).at(0) * phytomer->current_leaf_scale_factor.at(0);
+    const vec3 base_grown = phytomer->leaf_bases.at(0).at(0);
+    const LeafMidrib midrib_grown = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    float matrix_grown[16];
+    context.getObjectTransformationMatrix(objID_grown, matrix_grown);
+    const AxisRotation angles = prescribedAnglesOfLeafMatrix(matrix_grown, phytomer->getPetioleAxisVector(1.f, 0));
+
+    // A grown blade reads back the untwisted midrib it droops along
+    for (const float roll: midrib_grown.rolls) {
+        DOCTEST_CHECK(std::fabs(roll) < 1e-4f);
+    }
+
+    // Placed where the grown leaf is, with its shape, the leaf is at rest
+    plantarchitecture.setPetioleLeafGeometry(plantID, 0, node, 0, {base_grown}, {angles}, {size_grown});
+    LeafShapeValues shape_placed = phytomer->getLeafShape(0, 0);
+    LeafShapeValues shape_wanted = shape_grown;
+    shape_wanted.lattice_offset = shape_placed.lattice_offset;
+    phytomer->reshapeLeaf(0, 0, shape_wanted);
+    const uint objID_placed = phytomer->leaf_objIDs.at(0).at(0);
+    DOCTEST_CHECK(!plantarchitecture.doesLeafDroop(plantID, 0, node, 0, 0));
+    float matrix_placed[16];
+    context.getObjectTransformationMatrix(objID_placed, matrix_placed);
+    float largest_matrix_difference = 0;
+    for (int i = 0; i < 12; i++) {
+        largest_matrix_difference = std::max(largest_matrix_difference, std::fabs(matrix_placed[i] - matrix_grown[i]));
+    }
+    DOCTEST_REQUIRE(largest_matrix_difference < 1e-5f);
+    const std::vector<vec3> vertices_rest = context.getPolymeshObjectVertices(objID_placed);
+    DOCTEST_REQUIRE(vertices_rest.size() == vertices_grown.size());
+    DOCTEST_CHECK(largestPointDifference(vertices_rest, vertices_grown) > 0.01f);
+
+    // With droop on it takes the grown leaf's droop
+    const std::vector<uint> UUIDs_placed = context.getObjectPrimitiveUUIDs(objID_placed);
+    plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, true);
+    DOCTEST_CHECK(plantarchitecture.doesLeafDroop(plantID, 0, node, 0, 0));
+    DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(objID_placed) == UUIDs_placed);
+    const std::vector<vec3> vertices_drooped = context.getPolymeshObjectVertices(objID_placed);
+    const float droop_difference = largestPointDifference(vertices_drooped, vertices_grown);
+    DOCTEST_MESSAGE("Placed leaf with droop on vs. grown leaf, largest vertex difference: " << droop_difference * 1e6f << " um over a blade of " << size_grown << " m");
+    DOCTEST_CHECK(droop_difference < 2e-6f);
+
+    // Off gives the rest shape back, and on again the same droop
+    plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, false);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID_placed), vertices_rest) < 1e-6f);
+    plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, true);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID_placed), vertices_drooped) == 0.f);
+
+    // A blade at rest laid along the drooped grown blade's midrib takes the drooped blade's shape
+    plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, false);
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, midrib_grown.positions, midrib_grown.rolls);
+    DOCTEST_CHECK(plantarchitecture.hasLeafMidrib(plantID, 0, node, 0, 0));
+    DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(objID_placed) == UUIDs_placed);
+    const float midrib_difference = largestPointDifference(context.getPolymeshObjectVertices(objID_placed), vertices_grown);
+    DOCTEST_MESSAGE("Rest blade laid along the drooped blade's midrib vs. drooped blade, largest vertex difference: " << midrib_difference * 1e6f << " um");
+    DOCTEST_CHECK(midrib_difference < 2e-6f);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture setLeafDroop turns a grown leaf's droop off and on again, survives an XML round trip, and refuses what it cannot do") {
+    Context context;
+    context.seedRandomGenerator(21);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, 0);
+
+    uint node = 0;
+    DOCTEST_REQUIRE(findLargestDroopingLeaf(plantarchitecture, plantID, node));
+    const uint objID = shoot->phytomers.at(node)->leaf_objIDs.at(0).at(0);
+    const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(objID);
+    const std::vector<vec3> vertices_grown = context.getPolymeshObjectVertices(objID);
+
+    plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, false);
+    DOCTEST_CHECK(!plantarchitecture.doesLeafDroop(plantID, 0, node, 0, 0));
+    const std::vector<vec3> vertices_rest = context.getPolymeshObjectVertices(objID);
+    DOCTEST_CHECK(largestPointDifference(vertices_rest, vertices_grown) > 0.01f);
+    // A blade at rest is straight along its midrib but for its own curvature, so its midrib's rolls read zero too
+    for (const float roll: plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0).rolls) {
+        DOCTEST_CHECK(std::fabs(roll) < 1e-4f);
+    }
+
+    plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, true);
+    const std::vector<vec3> vertices_drooped = context.getPolymeshObjectVertices(objID);
+    DOCTEST_CHECK(largestPointDifference(vertices_drooped, vertices_grown) < 1e-6f);
+    plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, false);
+    plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, true);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID), vertices_drooped) == 0.f);
+    DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(objID) == UUIDs);
+
+    // A leaf placed with droop turned on is read back drooping
+    const auto &phytomer = shoot->phytomers.at(node);
+    float matrix[16];
+    context.getObjectTransformationMatrix(objID, matrix);
+    const AxisRotation angles = prescribedAnglesOfLeafMatrix(matrix, phytomer->getPetioleAxisVector(1.f, 0));
+    plantarchitecture.setPetioleLeafGeometry(plantID, 0, node, 0, {phytomer->leaf_bases.at(0).at(0)}, {angles}, {phytomer->leaf_size_max.at(0).at(0)});
+    // Its shape is recorded by the plant structure file only once it has been reshaped
+    phytomer->reshapeLeaf(0, 0, phytomer->getLeafShape(0, 0));
+    plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, true);
+    const std::vector<vec3> vertices_placed = context.getPolymeshObjectVertices(phytomer->leaf_objIDs.at(0).at(0));
+    const std::string xml_filename = "test_leaf_droop_roundtrip.xml";
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    const std::vector<uint> plantIDs_read = plantarchitecture.readPlantStructureXML(xml_filename, true);
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(plantIDs_read.size() == 1);
+    DOCTEST_CHECK(plantarchitecture.doesLeafDroop(plantIDs_read.front(), 0, node, 0, 0));
+    const uint objID_read = plantarchitecture.getPlantShoot(plantIDs_read.front(), 0)->phytomers.at(node)->leaf_objIDs.at(0).at(0);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID_read), vertices_placed) < 1e-4f);
+
+    // A leaf of a species that does not droop
+    Context context_rigid;
+    context_rigid.seedRandomGenerator(21);
+    PlantArchitecture plantarchitecture_rigid(&context_rigid);
+    plantarchitecture_rigid.disableMessages();
+    plantarchitecture_rigid.loadPlantModelFromLibrary("bean");
+    const uint bean = plantarchitecture_rigid.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 20);
+    uint bean_node = 0;
+    const auto bean_shoot = plantarchitecture_rigid.getPlantShoot(bean, 0);
+    while (bean_node < bean_shoot->phytomers.size() && (bean_shoot->phytomers.at(bean_node)->leaf_objIDs.empty() || bean_shoot->phytomers.at(bean_node)->leaf_objIDs.at(0).empty())) {
+        bean_node++;
+    }
+    DOCTEST_REQUIRE(bean_node < bean_shoot->phytomers.size());
+    DOCTEST_CHECK(!plantarchitecture_rigid.doesLeafDroop(bean, 0, bean_node, 0, 0));
+    DOCTEST_CHECK_THROWS(plantarchitecture_rigid.setLeafDroop(bean, 0, bean_node, 0, 0, true));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setLeafDroop(plantID, 0, 9999, 0, 0, true));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture setLeafMidrib lays a blade along a midrib, straight or twisted, longer or shorter, and getLeafMidrib reads it back") {
+    Context context;
+    context.seedRandomGenerator(21);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, 0);
+
+    uint node = 0;
+    DOCTEST_REQUIRE(findLargestDroopingLeaf(plantarchitecture, plantID, node));
+    const auto &phytomer = shoot->phytomers.at(node);
+    const uint objID = phytomer->leaf_objIDs.at(0).at(0);
+    const std::vector<uint> UUIDs = context.getObjectPrimitiveUUIDs(objID);
+    const std::vector<vec3> vertices_grown = context.getPolymeshObjectVertices(objID);
+    const LeafShapeValues shape = phytomer->getLeafShape(0, 0);
+    const uint Nx = shape.subdivisions_x;
+    const uint Ny = shape.subdivisions_y;
+    const LeafMidrib midrib_grown = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    DOCTEST_REQUIRE(midrib_grown.positions.size() == Nx + 1);
+    DOCTEST_REQUIRE(midrib_grown.normals.size() == Nx + 1);
+    const float length_grown = polylineLength(midrib_grown.positions);
+    const vec3 base = midrib_grown.positions.front();
+    const vec3 direction = normalize(midrib_grown.positions.at(1) - base);
+
+    // Its own midrib, by rolls or by normals, leaves the blade as it is
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, midrib_grown.positions, midrib_grown.rolls);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID), vertices_grown) < 2e-6f);
+    DOCTEST_CHECK(!plantarchitecture.doesLeafDroop(plantID, 0, node, 0, 0));
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, midrib_grown.positions, midrib_grown.normals);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID), vertices_grown) < 2e-6f);
+    DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(objID) == UUIDs);
+
+    // A straight midrib, from just beside the blade's base, gives a straight blade along it
+    const std::vector<vec3> straight = {base + make_vec3(0.0003f, 0, 0), base + make_vec3(0.0003f, 0, 0) + length_grown * direction};
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, straight);
+    const LeafMidrib midrib_straight = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    DOCTEST_CHECK((midrib_straight.positions.front() - base).magnitude() < 1e-6f);
+    for (uint i = 0; i <= Nx; i++) {
+        const vec3 from_base = midrib_straight.positions.at(i) - base;
+        DOCTEST_CHECK((from_base - (from_base * direction) * direction).magnitude() < 1e-5f);
+        DOCTEST_CHECK(std::fabs(midrib_straight.rolls.at(i)) < 1e-5f);
+    }
+    DOCTEST_CHECK(std::fabs(polylineLength(midrib_straight.positions) / length_grown - 1.f) < 1e-4f);
+    const std::vector<vec3> vertices_straight = context.getPolymeshObjectVertices(objID);
+
+    // Twisted a quarter turn from base to tip: the rolls read back, and the tip faces a quarter turn from the base
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, straight, std::vector<float>{0.f, 0.5f * PI_F});
+    const LeafMidrib midrib_twisted = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    for (uint i = 0; i <= Nx; i++) {
+        DOCTEST_CHECK(midrib_twisted.rolls.at(i) == doctest::Approx(0.5f * PI_F * polylineLength(std::vector<vec3>(midrib_twisted.positions.begin(), midrib_twisted.positions.begin() + i + 1)) /
+                                                                     polylineLength(midrib_twisted.positions)).epsilon(1e-4));
+    }
+    DOCTEST_CHECK(std::fabs(midrib_twisted.normals.front() * midrib_twisted.normals.back()) < 1e-4f);
+    DOCTEST_CHECK(std::fabs(midrib_twisted.normals.front() * direction) < 1e-4f);
+    // The same twist given by its normals
+    const std::vector<vec3> vertices_twisted = context.getPolymeshObjectVertices(objID);
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, midrib_twisted.positions, midrib_twisted.normals);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID), vertices_twisted) < 1e-5f);
+
+    // Absolute and exact: the straight blade a second time is the straight blade
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, straight);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID), vertices_straight) == 0.f);
+
+    // Half as long again: the blade grows with its midrib, across as well as along
+    auto bladeWidthAtMiddle = [&]() {
+        const std::vector<vec3> vertices = context.getPolymeshObjectVertices(objID);
+        const uint i = Nx / 2;
+        return (vertices.at(size_t(Ny) * (Nx + 1) + i) - vertices.at(i)).magnitude();
+    };
+    const float width_straight = bladeWidthAtMiddle();
+    const std::vector<vec3> longer = {straight.front(), straight.front() + 1.5f * length_grown * direction};
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, longer);
+    DOCTEST_CHECK(std::fabs(polylineLength(plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0).positions) / (1.5f * length_grown) - 1.f) < 1e-4f);
+    DOCTEST_CHECK(bladeWidthAtMiddle() / width_straight == doctest::Approx(1.5f).epsilon(1e-3));
+
+    // Cleared, the blade droops again as it did
+    plantarchitecture.clearLeafMidrib(plantID, 0, node, 0, 0);
+    DOCTEST_CHECK(!plantarchitecture.hasLeafMidrib(plantID, 0, node, 0, 0));
+    DOCTEST_CHECK(plantarchitecture.doesLeafDroop(plantID, 0, node, 0, 0));
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID), vertices_grown) < 1e-6f);
+    DOCTEST_CHECK(context.getObjectPrimitiveUUIDs(objID) == UUIDs);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture a prescribed midrib moves with its plant, is kept by reshapeLeaf, and survives an XML round trip") {
+    Context context;
+    context.seedRandomGenerator(21);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, 0);
+
+    uint node = 0;
+    DOCTEST_REQUIRE(findLargestDroopingLeaf(plantarchitecture, plantID, node));
+    const auto &phytomer = shoot->phytomers.at(node);
+    const uint objID = phytomer->leaf_objIDs.at(0).at(0);
+    const LeafMidrib midrib_grown = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+
+    // A blade that rises, arches over and hangs, twisting as it goes
+    const vec3 base = midrib_grown.positions.front();
+    const float length = polylineLength(midrib_grown.positions);
+    vec3 outward = midrib_grown.positions.back() - base;
+    outward.z = 0;
+    outward.normalize();
+    std::vector<vec3> arch;
+    std::vector<float> rolls;
+    for (int point = 0; point <= 20; point++) {
+        const float angle = 0.5f * PI_F - 1.6f * PI_F * float(point) / 20.f * 0.8f;
+        if (point == 0) {
+            arch.push_back(base);
+        } else {
+            arch.push_back(arch.back() + (length / 20.f) * (std::cos(angle) * outward + std::sin(angle) * make_vec3(0, 0, 1)));
+        }
+        rolls.push_back(0.6f * float(point) / 20.f);
+    }
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, arch, rolls);
+    const std::vector<vec3> vertices_arch = context.getPolymeshObjectVertices(objID);
+    const std::map<uint, std::vector<vec3>> primitive_vertices_arch = plantPrimitiveVertices(context, plantarchitecture, plantID);
+    const LeafMidrib midrib_arch = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    DOCTEST_CHECK(midrib_arch.positions.back().z < base.z);
+    DOCTEST_CHECK(std::fabs(midrib_arch.rolls.back() - 0.6f) < 1e-4f);
+
+    // A joint pose carries it rigidly; a reset brings it back exactly
+    PlantJointID root_joint;
+    root_joint.type = PLANT_JOINT_ROOT;
+    const PlantJointFrame root_frame = plantarchitecture.getPlantJointFrame(plantID, root_joint);
+    PlantJointPose lean;
+    lean.pitch_degrees = 25;
+    lean.yaw_degrees = 40;
+    plantarchitecture.setPlantJointPose(plantID, root_joint, lean);
+    const std::vector<vec3> vertices_leaning = context.getPolymeshObjectVertices(objID);
+    float largest_departure_from_rigid = 0;
+    for (size_t v = 0; v < vertices_arch.size(); v++) {
+        largest_departure_from_rigid = std::max(largest_departure_from_rigid, (vertices_leaning.at(v) - expectedPosedPoint(vertices_arch.at(v), root_frame, lean)).magnitude());
+    }
+    DOCTEST_CHECK(largest_departure_from_rigid < 2e-6f);
+    const LeafMidrib midrib_leaning = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    DOCTEST_CHECK((midrib_leaning.positions.back() - expectedPosedPoint(midrib_arch.positions.back(), root_frame, lean)).magnitude() < 2e-6f);
+    DOCTEST_CHECK(std::fabs(midrib_leaning.rolls.back() - midrib_arch.rolls.back()) < 1e-5f);
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), primitive_vertices_arch) == 0.f);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID), vertices_arch) < 1e-6f);
+
+    // A new cross-section is laid along the same midrib; the midrib's curvature cannot be changed under it
+    LeafShapeValues folded = phytomer->getLeafShape(0, 0);
+    folded.midrib_fold_fraction = 0.4f;
+    phytomer->reshapeLeaf(0, 0, folded);
+    const LeafMidrib midrib_folded = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    DOCTEST_CHECK(largestPointDifference(midrib_folded.positions, midrib_arch.positions) < 1e-6f);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID), vertices_arch) > 1e-4f);
+    LeafShapeValues curved = phytomer->getLeafShape(0, 0);
+    curved.longitudinal_curvature += 0.2f;
+    DOCTEST_CHECK_THROWS(phytomer->reshapeLeaf(0, 0, curved));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, true));
+
+    // Written and read back, the blade is laid along the same midrib
+    const std::vector<vec3> vertices_saved = context.getPolymeshObjectVertices(objID);
+    const std::string xml_filename = "test_leaf_midrib_roundtrip.xml";
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    const std::vector<uint> plantIDs_read = plantarchitecture.readPlantStructureXML(xml_filename, true);
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(plantIDs_read.size() == 1);
+    DOCTEST_CHECK(plantarchitecture.hasLeafMidrib(plantIDs_read.front(), 0, node, 0, 0));
+    const uint objID_read = plantarchitecture.getPlantShoot(plantIDs_read.front(), 0)->phytomers.at(node)->leaf_objIDs.at(0).at(0);
+    const float read_difference = largestPointDifference(context.getPolymeshObjectVertices(objID_read), vertices_saved);
+    DOCTEST_MESSAGE("Midrib blade read back from XML, largest vertex difference: " << read_difference * 1e6f << " um");
+    DOCTEST_CHECK(read_difference < 2e-5f);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture setLeafMidrib refuses a midrib it cannot lay a blade along") {
+    Context context;
+    context.seedRandomGenerator(21);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+
+    uint node = 0;
+    DOCTEST_REQUIRE(findLargestDroopingLeaf(plantarchitecture, plantID, node));
+    const uint objID = plantarchitecture.getPlantShoot(plantID, 0)->phytomers.at(node)->leaf_objIDs.at(0).at(0);
+    const std::vector<vec3> vertices_grown = context.getPolymeshObjectVertices(objID);
+    const LeafMidrib midrib = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    const vec3 base = midrib.positions.front();
+    const vec3 tip = midrib.positions.back();
+
+    DOCTEST_CHECK_THROWS(plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, std::vector<vec3>{base}));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, std::vector<vec3>{base, base, tip}));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, std::vector<vec3>{base + make_vec3(0.1f, 0, 0), tip}));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, std::vector<vec3>{base, tip}, std::vector<float>{0.f}));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, std::vector<vec3>{base, tip}, std::vector<float>{0.f, NAN}));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, std::vector<vec3>{base, tip}, std::vector<vec3>{tip - base, tip - base}));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, std::vector<vec3>{base, tip}, std::vector<vec3>{make_vec3(0, 0, 1)}));
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getLeafMidrib(plantID, 0, 9999, 0, 0)));
+    // A midrib that doubles straight back on itself
+    const vec3 halfway = base + 0.5f * (tip - base);
+    DOCTEST_CHECK_THROWS(plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, std::vector<vec3>{base, halfway, base + 0.0001f * normalize(cross(tip - base, make_vec3(0, 0, 1)))}));
+    // Nothing above changed the leaf
+    DOCTEST_CHECK(!plantarchitecture.hasLeafMidrib(plantID, 0, node, 0, 0));
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(objID), vertices_grown) == 0.f);
+
+    // A leaf loaded from an OBJ model has no lattice to lay along a midrib, and no rest shape to droop from
+    Context context_bean;
+    context_bean.seedRandomGenerator(21);
+    PlantArchitecture plantarchitecture_bean(&context_bean);
+    plantarchitecture_bean.disableMessages();
+    plantarchitecture_bean.loadPlantModelFromLibrary("bindweed");
+    const uint bean = plantarchitecture_bean.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+    const auto &bindweed_shoots = PlantArchitectureTestHelper::getShootTree(plantarchitecture_bean, bean);
+    bool found_leaf = false;
+    uint bean_shoot = 0;
+    uint bean_node = 0;
+    for (uint shoot_index = 0; shoot_index < bindweed_shoots.size() && !found_leaf; shoot_index++) {
+        for (uint node_index = 0; node_index < bindweed_shoots.at(shoot_index)->phytomers.size() && !found_leaf; node_index++) {
+            const auto &bindweed_phytomer = bindweed_shoots.at(shoot_index)->phytomers.at(node_index);
+            if (!bindweed_phytomer->leaf_objIDs.empty() && !bindweed_phytomer->leaf_objIDs.at(0).empty()) {
+                found_leaf = true;
+                bean_shoot = shoot_index;
+                bean_node = node_index;
+            }
+        }
+    }
+    DOCTEST_REQUIRE(found_leaf);
+    const vec3 bean_base = bindweed_shoots.at(bean_shoot)->phytomers.at(bean_node)->leaf_bases.at(0).at(0);
+    DOCTEST_CHECK_THROWS(plantarchitecture_bean.setLeafMidrib(bean, bean_shoot, bean_node, 0, 0, std::vector<vec3>{bean_base, bean_base + make_vec3(0.05f, 0, 0)}));
+    DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture_bean.getLeafMidrib(bean, bean_shoot, bean_node, 0, 0)));
+    DOCTEST_CHECK_THROWS(plantarchitecture_bean.setLeafDroop(bean, bean_shoot, bean_node, 0, 0, false));
+}
+
+namespace {
+
+    //! Largest distance from any vertex of any primitive of an object to the nearest of the object's shared mesh vertices, which is zero when the two describe the same surface
+    float sharedVerticesMismatch(const Context &context, uint objID) {
+        const std::vector<vec3> shared_vertices = context.getPolymeshObjectVertices(objID);
+        float largest = 0;
+        for (const uint UUID: context.getObjectPrimitiveUUIDs(objID)) {
+            for (const vec3 &vertex: context.getPrimitiveVertices(UUID)) {
+                float nearest = 1e30f;
+                for (const vec3 &shared_vertex: shared_vertices) {
+                    nearest = std::min(nearest, (shared_vertex - vertex).magnitude());
+                }
+                largest = std::max(largest, nearest);
+            }
+        }
+        return largest;
+    }
+
+} // namespace
+
+DOCTEST_TEST_CASE("PlantArchitecture a midrib or a droop setting given while a plant is posed is kept, as the leaf's own shape, when the pose is reset") {
+    Context context;
+    context.seedRandomGenerator(22);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, 0);
+
+    uint node = 0;
+    DOCTEST_REQUIRE(findLargestDroopingLeaf(plantarchitecture, plantID, node));
+    uint other_node = node == 0 ? 1 : node - 1;
+    while (other_node < shoot->phytomers.size() && (shoot->phytomers.at(other_node)->leaf_objIDs.empty() || shoot->phytomers.at(other_node)->leaf_objIDs.at(0).empty() ||
+                                                   !shoot->phytomers.at(other_node)->doesLeafDroop(0, 0))) {
+        other_node = other_node == 0 ? node + 1 : other_node - 1;
+    }
+    DOCTEST_REQUIRE(other_node < shoot->phytomers.size());
+    const uint objID = shoot->phytomers.at(node)->leaf_objIDs.at(0).at(0);
+    const uint other_objID = shoot->phytomers.at(other_node)->leaf_objIDs.at(0).at(0);
+    const std::vector<vec3> other_vertices_grown = context.getPolymeshObjectVertices(other_objID);
+
+    PlantJointID root_joint;
+    root_joint.type = PLANT_JOINT_ROOT;
+    const PlantJointFrame root_frame = plantarchitecture.getPlantJointFrame(plantID, root_joint);
+    PlantJointPose lean;
+    lean.pitch_degrees = 30;
+    lean.yaw_degrees = 20;
+    plantarchitecture.setPlantJointPose(plantID, root_joint, lean);
+
+    // A straight midrib along the way the posed blade leaves its base, and the other leaf's droop turned off
+    const LeafMidrib midrib_posed = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    const vec3 base = midrib_posed.positions.front();
+    const float length = polylineLength(midrib_posed.positions);
+    const vec3 direction = normalize(midrib_posed.positions.at(1) - base);
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, std::vector<vec3>{base, base + length * direction}, std::vector<float>{0.f, 0.4f});
+    const std::vector<vec3> vertices_midrib_posed = context.getPolymeshObjectVertices(objID);
+    plantarchitecture.setLeafDroop(plantID, 0, other_node, 0, 0, false);
+
+    plantarchitecture.resetPlantPose(plantID);
+
+    // The midrib blade is the posed one turned back, its mesh and its primitives agreeing
+    DOCTEST_CHECK(plantarchitecture.hasLeafMidrib(plantID, 0, node, 0, 0));
+    const std::vector<vec3> vertices_midrib_reset = context.getPolymeshObjectVertices(objID);
+    float largest_departure = 0;
+    for (size_t v = 0; v < vertices_midrib_reset.size(); v++) {
+        largest_departure = std::max(largest_departure, (expectedPosedPoint(vertices_midrib_reset.at(v), root_frame, lean) - vertices_midrib_posed.at(v)).magnitude());
+    }
+    DOCTEST_CHECK(largest_departure < 2e-6f);
+    DOCTEST_CHECK(sharedVerticesMismatch(context, objID) < 1e-6f);
+
+    // The other leaf no longer droops where it grew either, and turning its droop back on gives the droop it grew with
+    DOCTEST_CHECK(!plantarchitecture.doesLeafDroop(plantID, 0, other_node, 0, 0));
+    DOCTEST_CHECK(sharedVerticesMismatch(context, other_objID) < 1e-6f);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(other_objID), other_vertices_grown) > 1e-2f);
+    plantarchitecture.setLeafDroop(plantID, 0, other_node, 0, 0, true);
+    DOCTEST_CHECK(largestPointDifference(context.getPolymeshObjectVertices(other_objID), other_vertices_grown) < 2e-6f);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture a prescribed midrib is held as the plant goes on growing, and a re-meshing reshape keeps it") {
+    Context context;
+    context.seedRandomGenerator(23);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 30);
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, 0);
+
+    // The youngest leaf with a blade, still expanding
+    uint node = 0;
+    for (uint n = 0; n < shoot->phytomers.size(); n++) {
+        const auto &phytomer = shoot->phytomers.at(n);
+        if (!phytomer->leaf_objIDs.empty() && !phytomer->leaf_objIDs.at(0).empty() && phytomer->leaf_size_max.at(0).at(0) * phytomer->current_leaf_scale_factor.at(0) > 0.05f) {
+            node = n;
+        }
+    }
+    const auto &phytomer = shoot->phytomers.at(node);
+    const uint objID = phytomer->leaf_objIDs.at(0).at(0);
+    const LeafMidrib midrib_grown = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    const vec3 base = midrib_grown.positions.front();
+    const float length = polylineLength(midrib_grown.positions);
+    const vec3 direction = normalize(midrib_grown.positions.at(1) - base);
+    // A young blade leaves its whorl nearly upright, so it is turned out sideways, square to the way it leaves its base
+    const vec3 sideways = normalize(cross(direction, std::fabs(direction.x) < 0.9f ? make_vec3(1, 0, 0) : make_vec3(0, 1, 0)));
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, std::vector<vec3>{base, base + 0.6f * length * direction, base + length * (0.6f * direction + 0.4f * sideways)},
+                                    std::vector<float>{0.f, 0.2f, 0.5f});
+    const LeafMidrib midrib_set = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+
+    // Growth may carry the leaf with its node, but does not change the blade's shape or size
+    plantarchitecture.advanceTime(plantID, 5);
+    DOCTEST_REQUIRE(plantarchitecture.hasLeafMidrib(plantID, 0, node, 0, 0));
+    const LeafMidrib midrib_grown_on = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    DOCTEST_REQUIRE(midrib_grown_on.positions.size() == midrib_set.positions.size());
+    float largest_change = 0;
+    for (size_t i = 0; i < midrib_set.positions.size(); i++) {
+        for (size_t j = i + 1; j < midrib_set.positions.size(); j += 7) {
+            largest_change = std::max(largest_change, std::fabs((midrib_set.positions.at(i) - midrib_set.positions.at(j)).magnitude() - (midrib_grown_on.positions.at(i) - midrib_grown_on.positions.at(j)).magnitude()));
+        }
+        DOCTEST_CHECK(std::fabs(midrib_grown_on.rolls.at(i) - midrib_set.rolls.at(i)) < 1e-5f);
+    }
+    DOCTEST_CHECK(largest_change < 1e-5f);
+
+    // A roll the blade has too few cells across for re-meshes it, and the new blade is laid along the same midrib
+    LeafShapeValues rolled = phytomer->getLeafShape(0, 0);
+    rolled.roll_fraction = 0.5f;
+    DOCTEST_REQUIRE(!phytomer->canReshapeLeafInPlace(0, 0, rolled));
+    const size_t vertex_count_before = context.getPolymeshObjectVertices(objID).size();
+    phytomer->reshapeLeaf(0, 0, rolled);
+    DOCTEST_CHECK(context.getPolymeshObjectVertices(objID).size() > vertex_count_before);
+    const LeafMidrib midrib_rolled = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    DOCTEST_CHECK(largestPointDifference(midrib_rolled.positions, midrib_grown_on.positions) < 2e-6f);
+    for (size_t i = 0; i < midrib_rolled.rolls.size(); i++) {
+        DOCTEST_CHECK(midrib_rolled.rolls.at(i) == midrib_grown_on.rolls.at(i));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture a leaflet on a stalk is laid along a midrib with its stalk in place, and read back so") {
+    Context context;
+    context.seedRandomGenerator(24);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    PlantJointID petiole_joint;
+    DOCTEST_REQUIRE(findBendablePetioleJoint(plantarchitecture, plantID, petiole_joint));
+    const auto &phytomer = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID).at(petiole_joint.shootID)->phytomers.at(petiole_joint.node_index);
+    const uint petiole = petiole_joint.petiole_index;
+    const uint objID = phytomer->leaf_objIDs.at(petiole).at(0);
+    const std::vector<vec3> vertices_grown = context.getPolymeshObjectVertices(objID);
+    const size_t stalk_count = petioluleVertexCount();
+    DOCTEST_REQUIRE(vertices_grown.size() > stalk_count);
+    const size_t first_stalk_vertex = vertices_grown.size() - stalk_count;
+
+    // The midrib it has, bent down progressively and twisted
+    const LeafMidrib midrib_grown = plantarchitecture.getLeafMidrib(plantID, petiole_joint.shootID, petiole_joint.node_index, petiole, 0);
+    const vec3 base = midrib_grown.positions.front();
+    const vec3 lateral = normalize(cross(midrib_grown.positions.back() - base, make_vec3(0, 0, 1)));
+    std::vector<vec3> bent_midrib = {base};
+    std::vector<float> rolls = {0.f};
+    for (size_t i = 1; i < midrib_grown.positions.size(); i++) {
+        const float turn = 0.6f * float(i) / float(midrib_grown.positions.size() - 1);
+        bent_midrib.push_back(bent_midrib.back() + rotatePointAboutLine(midrib_grown.positions.at(i) - midrib_grown.positions.at(i - 1), nullorigin, lateral, turn));
+        rolls.push_back(0.3f * turn);
+    }
+    plantarchitecture.setLeafMidrib(plantID, petiole_joint.shootID, petiole_joint.node_index, petiole, 0, bent_midrib, rolls);
+    const std::vector<vec3> vertices_laid = context.getPolymeshObjectVertices(objID);
+    DOCTEST_REQUIRE(vertices_laid.size() == vertices_grown.size());
+    DOCTEST_CHECK(largestPointDifference(plantarchitecture.getLeafMidrib(plantID, petiole_joint.shootID, petiole_joint.node_index, petiole, 0).positions, bent_midrib) < 2e-6f);
+
+    // The stalk's cylinder, behind the blade, is where it was; the blade has moved
+    for (size_t v = first_stalk_vertex; v < first_stalk_vertex + 2 * petioluleRadialSubdivisions(); v++) {
+        DOCTEST_CHECK((vertices_laid.at(v) - vertices_grown.at(v)).magnitude() < 2e-6f);
+    }
+    DOCTEST_CHECK(largestPointDifference(vertices_laid, vertices_grown) > 1e-3f);
+
+    // Written and read back, the blade and its stalk are where they were
+    const std::string xml_filename = "test_stalk_leaf_midrib_roundtrip.xml";
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    const std::vector<uint> plantIDs_read = plantarchitecture.readPlantStructureXML(xml_filename, true);
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(plantIDs_read.size() == 1);
+    const auto &phytomer_read = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantIDs_read.front()).at(petiole_joint.shootID)->phytomers.at(petiole_joint.node_index);
+    DOCTEST_CHECK(phytomer_read->hasLeafMidrib(petiole, 0));
+    const float read_difference = largestPointDifference(context.getPolymeshObjectVertices(phytomer_read->leaf_objIDs.at(petiole).at(0)), vertices_laid);
+    DOCTEST_CHECK(read_difference < 2e-6f);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture whether a blade laid along a midrib droops once the midrib is cleared is kept, and survives an XML round trip") {
+    Context context;
+    context.seedRandomGenerator(25);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("sorghum");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 40);
+    const auto shoot = plantarchitecture.getPlantShoot(plantID, 0);
+    uint node = 0;
+    DOCTEST_REQUIRE(findLargestDroopingLeaf(plantarchitecture, plantID, node));
+    const auto &phytomer = shoot->phytomers.at(node);
+
+    // A placed leaf, which does not droop by default, given droop and then a midrib
+    float matrix[16];
+    context.getObjectTransformationMatrix(phytomer->leaf_objIDs.at(0).at(0), matrix);
+    const AxisRotation angles = prescribedAnglesOfLeafMatrix(matrix, phytomer->getPetioleAxisVector(1.f, 0));
+    plantarchitecture.setPetioleLeafGeometry(plantID, 0, node, 0, {phytomer->leaf_bases.at(0).at(0)}, {angles}, {phytomer->leaf_size_max.at(0).at(0)});
+    phytomer->reshapeLeaf(0, 0, phytomer->getLeafShape(0, 0));
+    plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, true);
+    const LeafMidrib midrib = plantarchitecture.getLeafMidrib(plantID, 0, node, 0, 0);
+    const vec3 base = midrib.positions.front();
+    const std::vector<vec3> straight = {base, base + polylineLength(midrib.positions) * normalize(midrib.positions.at(1) - base)};
+    plantarchitecture.setLeafMidrib(plantID, 0, node, 0, 0, straight);
+    DOCTEST_CHECK(!plantarchitecture.doesLeafDroop(plantID, 0, node, 0, 0));
+
+    // Read back, it still follows its midrib, and droops again once that is cleared
+    const std::string xml_filename = "test_leaf_droop_midrib_roundtrip.xml";
+    plantarchitecture.writePlantStructureXML(plantID, xml_filename);
+    const std::vector<uint> plantIDs_read = plantarchitecture.readPlantStructureXML(xml_filename, true);
+    std::remove(xml_filename.c_str());
+    DOCTEST_REQUIRE(plantIDs_read.size() == 1);
+    DOCTEST_CHECK(plantarchitecture.hasLeafMidrib(plantIDs_read.front(), 0, node, 0, 0));
+    plantarchitecture.clearLeafMidrib(plantIDs_read.front(), 0, node, 0, 0);
+    DOCTEST_CHECK(plantarchitecture.doesLeafDroop(plantIDs_read.front(), 0, node, 0, 0));
+
+    // Turning droop off while the midrib is prescribed is what holds once it is cleared
+    plantarchitecture.setLeafDroop(plantID, 0, node, 0, 0, false);
+    DOCTEST_CHECK(plantarchitecture.hasLeafMidrib(plantID, 0, node, 0, 0));
+    plantarchitecture.clearLeafMidrib(plantID, 0, node, 0, 0);
+    DOCTEST_CHECK(!plantarchitecture.doesLeafDroop(plantID, 0, node, 0, 0));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture a leaflet whose stalk was placed stays on its petiole when the petiole is bent") {
+    Context context;
+    context.seedRandomGenerator(26);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 25);
+
+    PlantJointID petiole_joint;
+    DOCTEST_REQUIRE(findBendablePetioleJoint(plantarchitecture, plantID, petiole_joint));
+    const auto &phytomer = PlantArchitectureTestHelper::getShootTree(plantarchitecture, plantID).at(petiole_joint.shootID)->phytomers.at(petiole_joint.node_index);
+    const uint petiole = petiole_joint.petiole_index;
+    const std::vector<vec3> &centerline = phytomer->petiole_vertices.at(petiole);
+
+    // Each leaflet placed where it is, with its stalk leaving the petiole a little behind its base: on the petiole for the leaflet at the tip, along the blade's line for the others
+    std::vector<vec3> bases, stalk_bases;
+    std::vector<AxisRotation> angles;
+    std::vector<float> sizes;
+    const vec3 tip_direction = normalize(centerline.back() - centerline.at(centerline.size() - 2));
+    for (size_t leaf = 0; leaf < phytomer->leaf_objIDs.at(petiole).size(); leaf++) {
+        float matrix[16];
+        context.getObjectTransformationMatrix(phytomer->leaf_objIDs.at(petiole).at(leaf), matrix);
+        const vec3 leaf_base = phytomer->leaf_bases.at(petiole).at(leaf);
+        bases.push_back(leaf_base);
+        angles.push_back(prescribedAnglesOfLeafMatrix(matrix, phytomer->getPetioleAxisVector(1.f, petiole)));
+        sizes.push_back(phytomer->leaf_size_max.at(petiole).at(leaf) * phytomer->current_leaf_scale_factor.at(petiole));
+        if ((leaf_base - centerline.back()).magnitude() < 1e-6f) {
+            stalk_bases.push_back(leaf_base - 0.005f * tip_direction);
+        } else {
+            stalk_bases.push_back(leaf_base - 0.002f * normalize(make_vec3(matrix[0], matrix[4], matrix[8])));
+        }
+    }
+    plantarchitecture.setPetioleLeafGeometry(plantID, petiole_joint.shootID, petiole_joint.node_index, petiole, bases, angles, sizes, {}, stalk_bases);
+    const std::map<uint, std::vector<vec3>> vertices_placed = plantPrimitiveVertices(context, plantarchitecture, plantID);
+
+    auto stalkRingCentre = [&](uint objID) {
+        const std::vector<vec3> vertices = context.getPolymeshObjectVertices(objID);
+        const size_t first = vertices.size() - petioluleVertexCount();
+        vec3 centre = nullorigin;
+        for (uint k = 0; k < petioluleRadialSubdivisions(); k++) {
+            centre = centre + vertices.at(first + k) / float(petioluleRadialSubdivisions());
+        }
+        return centre;
+    };
+
+    auto distanceToCenterline = [&](const vec3 &point) {
+        float nearest = 1e30f;
+        for (size_t node = 0; node + 1 < centerline.size(); node++) {
+            const vec3 segment = centerline.at(node + 1) - centerline.at(node);
+            const float t = std::clamp(((point - centerline.at(node)) * segment) / (segment * segment), 0.f, 1.f);
+            nearest = std::min(nearest, (centerline.at(node) + t * segment - point).magnitude());
+        }
+        return nearest;
+    };
+    std::vector<float> stalk_distance_placed;
+    for (const uint objID: phytomer->leaf_objIDs.at(petiole)) {
+        stalk_distance_placed.push_back(distanceToCenterline(phytomer->leaf_stalk_base_placed.at(objID)));
+    }
+
+    PlantJointPose bend;
+    bend.bend_degrees = 35;
+    bend.bend_lateral_degrees = -15;
+    plantarchitecture.setPlantJointPose(plantID, petiole_joint, bend);
+    for (size_t leaf = 0; leaf < phytomer->leaf_objIDs.at(petiole).size(); leaf++) {
+        const uint objID = phytomer->leaf_objIDs.at(petiole).at(leaf);
+        const vec3 stalk_base = phytomer->leaf_stalk_base_placed.at(objID);
+        // The stalk starts where its recorded base is, and that base is as near the bent petiole as it was to the petiole as placed
+        DOCTEST_CHECK((stalkRingCentre(objID) - stalk_base).magnitude() < 2e-6f);
+        // (Distance to a polyline is not kept exactly by a bend near its vertices, so this is only to some micrometres)
+        DOCTEST_CHECK(std::fabs(distanceToCenterline(stalk_base) - stalk_distance_placed.at(leaf)) < 2e-5f);
+        DOCTEST_CHECK(sharedVerticesMismatch(context, objID) < 1e-6f);
+    }
+
+    plantarchitecture.resetPlantPose(plantID);
+    DOCTEST_CHECK(largestVertexDifference(plantPrimitiveVertices(context, plantarchitecture, plantID), vertices_placed) == 0.f);
+    for (const uint objID: phytomer->leaf_objIDs.at(petiole)) {
+        DOCTEST_CHECK((stalkRingCentre(objID) - phytomer->leaf_stalk_base_placed.at(objID)).magnitude() < 2e-6f);
+        DOCTEST_CHECK(sharedVerticesMismatch(context, objID) < 1e-6f);
+    }
 }
 
 //! Expected world-frame midrib and blade normal of a prescribed leaf, derived independently of Phytomer::orientLeaf().
