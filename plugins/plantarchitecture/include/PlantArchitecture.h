@@ -520,8 +520,10 @@ struct CarbonFruitParameters {
     float reserve_funded_days = 14.f;
     //! Days after fruit set after which fruit no longer drops for lack of carbon. Almond drops most of its excess fruit ~20-60 days after full bloom (Lordan et al. 2021).
     float drop_window_end = 63;
-    //! Fruit past its reserve-funded period drops when the fruit supply ratio falls below this value: a fraction (1 - ratio / this) x dt / supply_averaging_days of it per sub-step, most
-    //! recently set first, until drop_window_end days after set. Apple fruitlets growing at under ~50-60% of the dominant fruit's rate abscise (Celton et al. 2014).
+    //! Fruit past its reserve-funded period, up to drop_window_end days after set, drops when the growth it has received since set falls below this fraction of its potential growth to date.
+    //! The test is made on that fruit as a whole: the most recently set is dropped first until the carbon the young fruit have received, including what the dropped fruit had received, is
+    //! at least this fraction of the potential of the fruit that remain. A brief shortfall after a period of full growth therefore drops nothing; a sustained one drops fruit until the rest can
+    //! be fed. Apple fruitlets growing at under ~50-60% of the dominant fruit's rate abscise (Celton et al. 2014).
     float abscission_growth_ratio = 0.55f;
 };
 
@@ -948,6 +950,9 @@ struct FloralBud {
     float fruit_carbon_fraction_charged = 0;
     //! Fraction of the mature fruit's structural carbon the fruit could have laid down so far: its potential, which fruit_carbon_fraction_charged falls behind when growth is carbon-limited
     float fruit_potential_fraction = 0;
+    //! Fraction of the mature fruit's structural carbon credited to the fruit when fruit drop is judged: what it has been charged, plus its share of what the young fruit dropped beside it had
+    //! been charged (see CarbonFruitParameters::abscission_growth_ratio)
+    float fruit_drop_credit_fraction = 0;
     //! Days for this bud's inflorescence to expand from its initial quarter size to full size, overriding the plant-level dd_to_fruit_maturity when positive.
     /**
      * The plant-level threshold is a fruit-ripening period, which is the right clock for a fruit but not for an inflorescence that finishes elongating before the fruit it subtends even sets. A maize tassel
@@ -3770,8 +3775,6 @@ struct PlantInstance {
     double cumulative_thermal_time_Cd = 0;
     //! Developmental days per calendar day over the current advanceTime() call: 1 without the carbohydrate model, otherwise the call's thermal time over that of the reference temperature
     float development_rate = 1.f;
-    //! Fractional number of fruit owed to the drop rule but not yet removed
-    float fruit_drop_debt = 0;
     //! Maintenance respiration of wood and roots charged in the current sub-step (mol C)
     float step_maintenance_respiration_molC = 0;
     //! Recent photosynthate available to the reproductive sinks built from current photosynthate (fruit past its reserve-funded period; panicle structure) and their potential growth:
@@ -7099,11 +7102,11 @@ protected:
     void subtractFruitGrowthCarbon(uint plantID, float dt, double reserve_funded_spending_molC);
     //! Drop young fruit that current photosynthate cannot supply
     /**
-     * Fruit past its reserve-funded period and up to CarbonFruitParameters::drop_window_end days after set drops while the fruit supply ratio is below CarbonFruitParameters::abscission_growth_ratio.
+     * Fruit past its reserve-funded period and up to CarbonFruitParameters::drop_window_end days after set drops while the growth it has received since set is below
+     * CarbonFruitParameters::abscission_growth_ratio of its potential, most recently set first, until the remaining young fruit can be fed.
      * \param[in] plantID ID of the plant
-     * \param[in] dt Length of the sub-step (days)
      */
-    void checkCarbonPool_dropFruit(uint plantID, float dt);
+    void checkCarbonPool_dropFruit(uint plantID);
 
     // --- Carbohydrate model: CARBON_SUBMODEL_GRASS (CarbohydrateModelGrass.cpp) --- //
 

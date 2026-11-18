@@ -149,6 +149,7 @@ void PlantArchitecture::subtractFruitGrowthCarbon(uint plantID, float dt, double
                         if (fbud.time_counter <= fruit_params.reserve_funded_days) {
                             fruit_growth += potential_carbon;
                             fbud.fruit_carbon_fraction_charged += potential_increment;
+                            fbud.fruit_drop_credit_fraction += potential_increment;
                             fbud.fruit_potential_fraction = dry_matter_fraction;
                         } else {
                             photosynthate_fruit.push_back({shoot.get(), &fbud, potential_carbon, dry_matter_fraction});
@@ -205,32 +206,39 @@ void PlantArchitecture::subtractFruitGrowthCarbon(uint plantID, float dt, double
         fruit.shoot->season_fruit_cost_molC += fruit_growth + fruit_growth_respiration;
         budget.fruit_growth += fruit_growth;
         budget.growth_respiration += fruit_growth_respiration;
-        fruit.fbud->fruit_carbon_fraction_charged += supply_ratio * (fruit.potential_fraction - fruit.fbud->fruit_potential_fraction);
+        const float charged_increment = supply_ratio * (fruit.potential_fraction - fruit.fbud->fruit_potential_fraction);
+        fruit.fbud->fruit_carbon_fraction_charged += charged_increment;
+        fruit.fbud->fruit_drop_credit_fraction += charged_increment;
         fruit.fbud->fruit_potential_fraction = fruit.potential_fraction;
     }
 }
 
 // -------------------- Fruit drop -------------------- //
 
-void PlantArchitecture::checkCarbonPool_dropFruit(uint plantID, float dt) {
+void PlantArchitecture::checkCarbonPool_dropFruit(uint plantID) {
     PlantInstance &plant_instance = plant_instances.at(plantID);
-    const CarbohydrateParameters &carbohydrate_params = plant_instance.carb_parameters;
-    const CarbonFruitParameters &fruit_params = carbohydrate_params.fruit;
+    const CarbonFruitParameters &fruit_params = plant_instance.carb_parameters.fruit;
     if (!(fruit_params.drop_window_end > fruit_params.reserve_funded_days)) {
         helios_runtime_error("ERROR (PlantArchitecture::checkCarbonPool_dropFruit): CarbonFruitParameters::drop_window_end must exceed reserve_funded_days (got " + std::to_string(fruit_params.drop_window_end) + " and " +
                              std::to_string(fruit_params.reserve_funded_days) + " days).");
     }
-    if (!(carbohydrate_params.supply_averaging_days > 0.f)) {
-        helios_runtime_error("ERROR (PlantArchitecture::checkCarbonPool_dropFruit): CarbohydrateParameters::supply_averaging_days must be positive (got " + std::to_string(carbohydrate_params.supply_averaging_days) + ").");
+    if (!(fruit_params.abscission_growth_ratio > 0.f && fruit_params.abscission_growth_ratio <= 1.f)) {
+        helios_runtime_error("ERROR (PlantArchitecture::checkCarbonPool_dropFruit): CarbonFruitParameters::abscission_growth_ratio must be greater than 0 and at most 1 (got " + std::to_string(fruit_params.abscission_growth_ratio) +
+                             ").");
     }
 
-    // Fruit past its reserve-funded period that can still drop
+    // Fruit past its reserve-funded period that can still drop, with the carbon it has been credited and its potential carbon to date (mol C)
     struct YoungFruit {
         float days_since_set;
         Phytomer *phytomer;
         FloralBud *fbud;
+        float mature_carbon;
+        float credit;
+        float potential;
     };
     std::vector<YoungFruit> young_fruit;
+    double credit_total = 0.0;
+    double potential_total = 0.0;
     for (const auto &shoot: plant_instance.shoot_tree) {
         if (shoot->isPruned()) {
             continue;
@@ -238,32 +246,47 @@ void PlantArchitecture::checkCarbonPool_dropFruit(uint plantID, float dt) {
         for (const auto &phytomer: shoot->phytomers) {
             for (auto &petiole: phytomer->floral_buds) {
                 for (auto &fbud: petiole) {
-                    if (fbud.state == BUD_FRUITING && fbud.time_counter > fruit_params.reserve_funded_days && fbud.time_counter <= fruit_params.drop_window_end) {
-                        young_fruit.push_back({fbud.time_counter, phytomer.get(), &fbud});
+                    if (fbud.state != BUD_FRUITING || fbud.time_counter <= fruit_params.reserve_funded_days || fbud.time_counter > fruit_params.drop_window_end) {
+                        continue;
                     }
+                    const float mature_carbon = phytomer->calculateMatureFruitCarbon(fbud);
+                    if (mature_carbon <= 0.f) {
+                        continue;
+                    }
+                    const float credit = mature_carbon * fbud.fruit_drop_credit_fraction;
+                    const float potential = mature_carbon * fbud.fruit_potential_fraction;
+                    young_fruit.push_back({fbud.time_counter, phytomer.get(), &fbud, mature_carbon, credit, potential});
+                    credit_total += credit;
+                    potential_total += potential;
                 }
             }
         }
     }
 
-    // Fruit built from current photosynthate drops when it cannot grow at the rate it needs: a supply ratio below
-    // abscission_growth_ratio drops the fraction of that fruit that would restore the ratio over the averaging period.
-    if (!(fruit_params.abscission_growth_ratio > 0.f && fruit_params.abscission_growth_ratio <= 1.f)) {
-        helios_runtime_error("ERROR (PlantArchitecture::checkCarbonPool_dropFruit): CarbonFruitParameters::abscission_growth_ratio must be greater than 0 and at most 1 (got " + std::to_string(fruit_params.abscission_growth_ratio) +
-                             ").");
-    }
-    const float supply_ratio = plant_instance.reproductive_supply_ratio;
-    if (young_fruit.empty() || supply_ratio >= fruit_params.abscission_growth_ratio) {
-        plant_instance.fruit_drop_debt = 0.f;
+    // The young fruit drop when the growth they have received since set falls below abscission_growth_ratio of their potential to date. Judged on growth since set, a shortfall of
+    // a few days after a period of full growth costs little ground and drops nothing. The most recently set fruit drops first until the carbon the young fruit have received is enough
+    // for those that remain: the carbon a dropped fruit had received is lost to the plant, but it counts toward the remaining fruit's growth, so that dropping fruit restores the
+    // ratio rather than leaving it where it was to drop fruit again at the next sub-step.
+    if (young_fruit.empty() || credit_total >= fruit_params.abscission_growth_ratio * potential_total) {
         return;
     }
-    const float drop_fraction = std::min(1.f, (1.f - supply_ratio / fruit_params.abscission_growth_ratio) * dt / carbohydrate_params.supply_averaging_days);
-    plant_instance.fruit_drop_debt += drop_fraction * float(young_fruit.size());
-    const auto drop_count = std::min(size_t(plant_instance.fruit_drop_debt), young_fruit.size());
-    plant_instance.fruit_drop_debt -= float(drop_count);
     std::sort(young_fruit.begin(), young_fruit.end(), [](const YoungFruit &a, const YoungFruit &b) { return a.days_since_set < b.days_since_set; });
-    for (size_t i = 0; i < drop_count; i++) {
-        young_fruit.at(i).phytomer->setFloralBudState(BUD_DEAD, *young_fruit.at(i).fbud);
+    double potential_kept = potential_total;
+    double credit_of_dropped = 0.0;
+    size_t drop_count = 0;
+    while (drop_count < young_fruit.size() && credit_total < fruit_params.abscission_growth_ratio * potential_kept) {
+        const YoungFruit &fruit = young_fruit.at(drop_count);
+        fruit.phytomer->setFloralBudState(BUD_DEAD, *fruit.fbud);
+        potential_kept -= fruit.potential;
+        credit_of_dropped += fruit.credit;
+        drop_count++;
+    }
+    // The remaining young fruit take the dropped fruit's credit in proportion to their potential
+    if (potential_kept > 0.0) {
+        for (size_t i = drop_count; i < young_fruit.size(); i++) {
+            const YoungFruit &fruit = young_fruit.at(i);
+            fruit.fbud->fruit_drop_credit_fraction += float(credit_of_dropped * fruit.potential / potential_kept / fruit.mature_carbon);
+        }
     }
     plant_instance.carbon_budget.fruit_dropped += float(drop_count);
 }
