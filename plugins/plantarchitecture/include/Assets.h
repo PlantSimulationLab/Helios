@@ -24,6 +24,10 @@
  * Treats the blade as a cantilever clamped at its base and loaded by its own distributed weight. The bending moment at each station along the midrib is the weight of everything distal to it acting through
  * its horizontal lever arm; curvature is proportional to that moment and is integrated along the arc to give the deflected centreline, which the rest of the lattice is then carried along with.
  *
+ * The blade is clamped where its petiole meets it (\p attachment), at the midrib station nearest that point. A blade attached at its rear edge is one cantilever from its base to its tip. A blade whose
+ * petiole meets it inside its outline - a cordate blade with basal lobes reaching behind the joint, given a negative \ref LeafPrototype::leaf_offset x - is two: the blade ahead of the joint, and the
+ * lobes behind it, each bending under its own weight, so the joint stays at the petiole tip.
+ *
  * The deflection is computed from the undeformed rest lattice every time rather than accumulated onto the previous result, so a leaf that stops growing stops drooping instead of creeping downward.
  * Because the moment grows with the cube of blade length while the stiffness does not, a leaf that doubles in length droops roughly eight times as far - growth-driven droop falls out of the mechanics
  * and needs no separate age term.
@@ -42,10 +46,12 @@
  * perpendicular to the direction the blade leaves its base, which is the behaviour every species was calibrated with. Passing the true direction of gravity lets a blade that leaves its base steeply - a
  * grass leaf emerging from the whorl - arch over past horizontal and hang, which the default cannot produce: it stops the bend once the blade points along the frame's -z, 90 degrees from its base
  * direction. The blade bends only in its own plane, so the component of gravity across the blade does not bend it, and each station stops turning once it points along gravity.
+ * \param[in] attachment Where the petiole meets the blade, in the frame of \p rest_vertices at unit length. The default, the frame's origin, is where a blade is built about; a leaf object's own frame has
+ * its origin elsewhere (see PlantArchitecture::LeafRestGeometry::lattice_frame_offset), and there the attachment is minus that offset.
  * \return Deflected lattice vertices, parallel to \p rest_vertices.
  */
-std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float scale, float mature_scale, float flexibility, float taper = 1.f,
-                                            const helios::vec3 &gravity = helios::make_vec3(0.f, 0.f, -1.f));
+std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float scale, float mature_scale, float flexibility, float taper = 1.f, const helios::vec3 &gravity = helios::make_vec3(0.f, 0.f, -1.f),
+                                            const helios::vec3 &attachment = helios::make_vec3(0.f, 0.f, 0.f));
 
 //! Build the vertex lattice of a generic leaf blade in the prototype's own frame
 /**

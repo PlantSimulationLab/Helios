@@ -18431,6 +18431,59 @@ DOCTEST_TEST_CASE("PlantArchitecture leaf deflection behaves sensibly outside th
     }
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture leaf deflection holds a blade where its petiole meets it") {
+
+    // A cordate blade's basal lobes reach behind the point where its petiole joins it, which the prototype records as leaf_offset: the rest lattice is shifted along -x so that the attachment sits at the
+    // frame origin, the petiole tip. The blade is held there, so that is where it must be clamped. Clamped at the rear of its lobes instead, a drooping blade swung down about the wrong point, its true
+    // attachment dropped below the petiole tip and left it floating off the blade, and its lobes were loaded as if they were the inner part of a forward cantilever rather than hanging back from the joint.
+    const uint Nx = 40;
+    const uint Ny = 4;
+    auto index = [&](uint i, uint j) { return size_t(j) * (size_t(Nx) + 1) + size_t(i); };
+    auto shiftedBlade = [&](float offset_x) {
+        std::vector<vec3> lattice = makeFlatBladeLattice(Nx, Ny, 0.8f);
+        for (vec3 &vertex: lattice) {
+            vertex.x += offset_x;
+        }
+        return lattice;
+    };
+
+    DOCTEST_SUBCASE("The attachment stays at the petiole tip and both sides droop") {
+        // Attached 0.3 of the blade in from its rear: station 12 of 40 lies at the frame origin.
+        const std::vector<vec3> deformed = deformLeafLattice(shiftedBlade(-0.3f), Nx, Ny, 1.f, 1.f, 5.f);
+        const vec3 attachment = deformed.at(index(12, Ny / 2));
+        DOCTEST_CHECK_MESSAGE(attachment.magnitude() < 1e-4f, "attachment moved to (" << attachment.x << ", " << attachment.y << ", " << attachment.z << ")");
+        DOCTEST_CHECK(deformed.at(index(Nx, Ny / 2)).z < -0.01f); // the blade ahead of the joint droops
+        DOCTEST_CHECK(deformed.at(index(0, Ny / 2)).z < -0.001f); // and so do the lobes hanging back from it
+        DOCTEST_CHECK(deformed.at(index(0, Ny / 2)).x < 0.f); // still behind the joint
+    }
+
+    DOCTEST_SUBCASE("A blade held at its rear in a frame whose origin is elsewhere droops as it does in its own") {
+        // A leaf object's frame has its origin at its first kept vertex, which on a blade tapering to nothing at its base lies several stations in and to one side, so the rest lattice arrives shifted
+        // although the blade is held at its rear. Told where it is held, it must droop exactly as it does in the frame it was built in.
+        const vec3 shift = make_vec3(-0.08f, 0.05f, -0.06f);
+        std::vector<vec3> shifted = makeFlatBladeLattice(Nx, Ny, 0.15f);
+        const std::vector<vec3> own = deformLeafLattice(shifted, Nx, Ny, 1.f, 1.f, 5.f);
+        for (vec3 &vertex: shifted) {
+            vertex = vertex + shift;
+        }
+        const std::vector<vec3> moved = deformLeafLattice(shifted, Nx, Ny, 1.f, 1.f, 5.f, 1.f, make_vec3(0.f, 0.f, -1.f), shift);
+        float largest = 0.f;
+        for (size_t v = 0; v < own.size(); v++) {
+            largest = std::max(largest, (moved.at(v) - shift - own.at(v)).magnitude());
+        }
+        DOCTEST_CHECK(largest < 1e-5f);
+    }
+
+    DOCTEST_SUBCASE("A blade held at its middle droops alike either side") {
+        const std::vector<vec3> deformed = deformLeafLattice(shiftedBlade(-0.5f), Nx, Ny, 1.f, 1.f, 5.f);
+        const vec3 rear = deformed.at(index(0, Ny / 2));
+        const vec3 front = deformed.at(index(Nx, Ny / 2));
+        DOCTEST_CHECK(rear.z == doctest::Approx(front.z).epsilon(1e-3));
+        DOCTEST_CHECK(rear.x == doctest::Approx(-front.x).epsilon(1e-3));
+        DOCTEST_CHECK(deformed.at(index(Nx / 2, Ny / 2)).magnitude() < 1e-4f);
+    }
+}
+
 DOCTEST_TEST_CASE("PlantArchitecture leaf deflection follows the direction of gravity") {
 
     const uint Nx = 40;

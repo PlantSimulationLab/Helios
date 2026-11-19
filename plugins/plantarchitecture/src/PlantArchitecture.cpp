@@ -5268,6 +5268,7 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
         own_rest.appended_vertices = own_state->second.rest_appended_vertices;
         own_rest.subdivisions_x = own_state->second.shape.subdivisions_x;
         own_rest.subdivisions_y = own_state->second.shape.subdivisions_y;
+        own_rest.lattice_frame_offset = own_state->second.lattice_frame_offset;
         rest_ptr = &own_rest;
     } else {
         const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
@@ -5336,8 +5337,9 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
     const vec3 world_gravity = make_vec3(0.f, 0.f, -1.f);
     const vec3 prototype_gravity = make_vec3(cross(column_y, column_z) * world_gravity, cross(column_z, column_x) * world_gravity, cross(column_x, column_y) * world_gravity) / determinant;
 
+    // The blade is held where its petiole meets it, the origin it was built about, which in the leaf object's own frame is minus the frame offset (see LeafRestGeometry::lattice_frame_offset).
     std::vector<vec3> deformed_prototype_frame =
-            deformLeafLattice(rest.vertices, rest.subdivisions_x, rest.subdivisions_y, current_scale, mature_scale, flexibility, phytomer_parameters.leaf.prototype.flexibility_taper.val(), prototype_gravity);
+            deformLeafLattice(rest.vertices, rest.subdivisions_x, rest.subdivisions_y, current_scale, mature_scale, flexibility, phytomer_parameters.leaf.prototype.flexibility_taper.val(), prototype_gravity, -rest.lattice_frame_offset);
     for (vec3 &vertex: deformed_prototype_frame) {
         vertex = vertex / current_scale;
     }
