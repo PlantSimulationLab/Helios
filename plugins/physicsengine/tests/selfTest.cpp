@@ -1419,13 +1419,20 @@ DOCTEST_TEST_CASE("PlantPhysics - giving the box velocity and stiff contacts kee
         PlantArchitecture plantarchitecture(&context);
         uint plantID = buildTestPlant(context, plantarchitecture);
 
+        // Only stems and petioles collide here, so the box sweeps through them, three quarters of the way up the tallest, across the plant's base: the leaves of
+        // a bush bean rise well above its stems
         vec3 lower, upper;
         context.getObjectBoundingBox(plantarchitecture.getAllPlantObjectIDs(plantID), lower, upper);
-        vec3 center = 0.5f * (lower + upper);
-        float height = upper.z - lower.z;
+        float stem_top = lower.z;
+        for (const PlantArticulationLink &link: plantarchitecture.getPlantArticulation(plantID).links) {
+            if (link.type == ARTICULATION_LINK_INTERNODE || link.type == ARTICULATION_LINK_PETIOLE) {
+                stem_top = std::max(stem_top, link.position.z);
+            }
+        }
+        float height = stem_top - lower.z;
         float box_size = 0.2f * height;
-        vec3 box_start = make_vec3(lower.x - box_size, center.y, lower.z + 0.75f * height);
-        vec3 box_end = make_vec3(upper.x + box_size, center.y, box_start.z);
+        vec3 box_start = make_vec3(lower.x - box_size, 0, lower.z + 0.75f * height);
+        vec3 box_end = make_vec3(upper.x + box_size, 0, box_start.z);
 
         // Leaves are thin plates whose contact depth against a box is poorly defined, so only stems and petioles collide here
         PlantPhysicsParameters plant_params;
@@ -1582,32 +1589,40 @@ DOCTEST_TEST_CASE("PlantPhysics - plant self-collisions push overlapping organs 
 }
 
 DOCTEST_TEST_CASE("PlantPhysics - per-triangle leaf shapes push leaves out of stems") {
-    // A young apple tree, whose leaves have few triangles and whose blades cross the shoot above them as built
-    Context context;
-    context.seedRandomGenerator(7);
-    PlantArchitecture plantarchitecture(&context);
-    plantarchitecture.disableMessages();
-    plantarchitecture.loadPlantModelFromLibrary("apple");
-    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 165);
-    plantarchitecture.advanceTime(plantID, 5);
-
+    // A young apple tree, whose leaves have few triangles and some of whose blades cross the shoot above them as built. Not every tree has such a leaf, so the
+    // first of a few seeds that grows one is used: how a seed grows changes with the random number generator and the plant model.
     PlantPhysicsParameters plant_params;
     plant_params.rigid_internodes = true;
     plant_params.leaf_collision_shape = "triangles";
     PhysicsEngineParameters params;
     params.gravity = false;
     params.articulation_collisions = true;
-    PhysicsEngine engine(&context);
-    engine.disableMessages();
-    addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID, USDExportParameters(), plant_params);
-    engine.initialize(params);
-
     const float tolerance = 0.0005f;
-    uint overlaps_before = engine.getLinkOverlapCount(tolerance);
+
+    std::unique_ptr<Context> context;
+    std::unique_ptr<PlantArchitecture> plantarchitecture;
+    std::unique_ptr<PhysicsEngine> engine;
+    uint overlaps_before = 0;
+    for (uint seed = 7; seed < 17 && overlaps_before == 0; seed++) {
+        engine.reset();
+        plantarchitecture.reset();
+        context = std::make_unique<Context>();
+        context->seedRandomGenerator(seed);
+        plantarchitecture = std::make_unique<PlantArchitecture>(context.get());
+        plantarchitecture->disableMessages();
+        plantarchitecture->loadPlantModelFromLibrary("apple");
+        uint plantID = plantarchitecture->buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 165);
+        plantarchitecture->advanceTime(plantID, 5);
+        engine = std::make_unique<PhysicsEngine>(context.get());
+        engine->disableMessages();
+        addPlantToPhysicsEngine(*engine, *context, *plantarchitecture, plantID, USDExportParameters(), plant_params);
+        engine->initialize(params);
+        overlaps_before = engine->getLinkOverlapCount(tolerance);
+    }
     DOCTEST_REQUIRE(overlaps_before >= 1);
-    engine.step(200);
-    INFO("overlaps " << overlaps_before << " -> " << engine.getLinkOverlapCount(tolerance));
-    DOCTEST_CHECK(engine.getLinkOverlapCount(tolerance) < overlaps_before);
+    engine->step(200);
+    INFO("overlaps " << overlaps_before << " -> " << engine->getLinkOverlapCount(tolerance));
+    DOCTEST_CHECK(engine->getLinkOverlapCount(tolerance) < overlaps_before);
 }
 
 DOCTEST_TEST_CASE("PlantPhysics - rigid internodes hold the stems still") {

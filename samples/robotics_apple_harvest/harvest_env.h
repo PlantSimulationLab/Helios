@@ -1,5 +1,5 @@
 // Apple harvesting environment: a robot arm with a vacuum cup reaches a fruit on a fruiting-wall apple tree, grips it, and pulls until it detaches.
-// A C interface, so that it can be driven from Python (harvest_env.py) as well as from C++ (main.cpp).
+// A C interface to FruitHarvestTask of the robotics plug-in, so that it can be driven from Python (harvest_env.py) through ctypes as well as from C++ (main.cpp).
 
 #ifndef APPLE_HARVEST_ENV_H
 #define APPLE_HARVEST_ENV_H

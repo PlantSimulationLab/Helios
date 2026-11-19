@@ -15,11 +15,11 @@
    </tr>
    <tr>
      <th>Header File</th>
-     <td>#include "Robot.h"</td>
+     <td>#include "Robot.h", or "FruitHarvestTask.h" for the fruit harvest task</td>
    </tr>
    <tr>
      <th>Class</th>
-     <td>\ref Robot</td>
+     <td>\ref Robot, \ref FruitHarvestTask</td>
    </tr>
  </table>
 
@@ -118,7 +118,47 @@ ParallelRobotSimulations holds the scenes a task is trained on, such as several 
 actions of every copy in one array and runs a control step of each on a pool of threads kept for its life. ParallelRobotSimulations::forEachCopy() and ParallelRobotSimulations::gather() run anything else over all copies on
 the same threads, such as observations, rewards, and resets, so that a task's code for one copy is all it has to write. The scenes are built and owned by the task.
 
-<tt>samples/robotics_apple_harvest</tt> builds its task from these, with \ref NearestPlantOrgan for the wood near the cup.
+FruitHarvestTask builds its task from these, with \ref NearestPlantOrgan for the wood near the cup (see \ref RoboticsFruitHarvest).
+
+\section RoboticsFruitHarvest The fruit harvest task
+
+FruitHarvestTask (<tt>#include "FruitHarvestTask.h"</tt>) is a complete reinforcement learning task built from the parts above: a robot arm on a platform that drives along a row
+reaches a fruit on a tree, seals a vacuum cup on it, and pulls until the stem fails. It needs the plant architecture plug-in, which the physics engine loads with plants.
+It holds several trees, each grown from its own seed, and several parallel simulations (copies) of each, and resets, steps, observes and rewards all copies in one call through arrays with one row per copy,
+which is the shape of a Gymnasium vector environment. Everything is configured through FruitHarvestTaskParameters, whose defaults are the apple harvest of <tt>samples/robotics_apple_harvest</tt>:
+a mature tall-spindle apple wall ("apple_fruitingwall" at 2114 days) and the arm of <tt>plugins/robotics/assets/harvest_arm.urdf</tt>.
+
+\code{.cpp}
+    FruitHarvestTaskParameters parameters;   // the apple harvest
+    parameters.min_detach_force = 10.f;      // N
+    FruitHarvestTask task({301, 302}, 4, 8, 0, parameters);   // trees 301 and 302, 4 copies of each, 8 threads, episode seed 0
+
+    std::vector<float> observations, rewards, terminal_observations;
+    std::vector<int> outcomes;
+    task.reset(observations);                // task.getCopyCount() rows of FruitHarvestTask::observation_size values
+    std::vector<float> actions(task.getCopyCount() * FruitHarvestTask::action_size, 0.f);
+    for (int k = 0; k < 250; k++) {
+        // ... choose each copy's tool velocity (x, y, z in [-1, 1]) and grip command from its observations ...
+        task.step(actions, observations, rewards, outcomes, terminal_observations);
+        for (uint i = 0; i < task.getCopyCount(); i++) {
+            if (outcomes[i] != FRUIT_HARVEST_RUNNING) {
+                FruitHarvestEpisodeRecord record = task.getLastEpisode(i);   // the copy has already started its next episode
+            }
+        }
+    }
+\endcode
+
+Each episode picks one of the tree's candidate fruit (the reachable fruit nearest the robot), draws the force that detaches it, and starts the arm near it along the row.
+An episode ends as a success (the fruit detached while the cup held it), a slip (the seal broke), a fruit knocked off, a protective stop, or a timeout (FruitHarvestOutcome), and the copy
+starts its next episode at once. The class documentation lists the observations and the shaped reward; evaluate controllers by the outcomes and FruitHarvestEpisodeRecord, not the reward.
+
+Only the wood behind each candidate fruit is flexible, which keeps almost all the speed of rigid wood, and each tree settles under gravity once when it is built, so every episode starts at rest.
+Building a mature apple tree takes about as long as growing it; FruitHarvestTask::treeHasReachableFruit() tells whether a seed gives one with fruit in reach.
+
+With the visualizer plug-in, FruitHarvestTask::enableWristCamera() adds a camera behind the cup for image observations (FruitHarvestTask::renderWristCameras()), and FruitHarvestTask::measureWristCameraView() reports how
+much of the image shows the target fruit, other fruit, leaves and wood. For movies, FruitHarvestTask::getDisplayState() records the pose of a copy (every link of the tree and the robot's joints),
+which FruitHarvestTask::renderMovieFrame() draws again from any viewpoint, also for poses recorded by another simulator of the same tree. FruitHarvestTask::addMovieScenery() draws the rest of the row (neighboring trees and a
+trellis), and, with the radiation and leafoptics plug-ins, FruitHarvestTask::enableRadiationMovieCameras() draws the frames with radiation cameras in sunlight instead, optionally repeating the row and neighboring rows through periodic boundaries.
 
 \section RoboticsCamera Cameras
 

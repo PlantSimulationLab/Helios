@@ -39,8 +39,9 @@ with the fruit being picked, which it has to touch; pushing that fruit too hard 
 a `ContactSensor` on the robot with the picked fruit as its target, the protective stop is a `ProtectiveStop`, and the offset to the nearest wood
 comes from `NearestPlantOrgan` (robotics and physicsengine plug-ins). A `ControlLoop` runs the cup and the stop at every physics step, the stem fails
 through `PhysicsEngine::setDetachForce()`, episodes start from the settled tree through `PhysicsEngine::setResetPose()`, and
-`ParallelRobotSimulations` steps every simulation of every tree on its threads. The wrist and movie cameras are `RobotCamera`s. `harvest_env.cpp` keeps the task itself: choosing fruit, resets,
-observations, rewards and outcomes.
+`ParallelRobotSimulations` steps every simulation of every tree on its threads. The wrist and movie cameras are `RobotCamera`s. The task itself (choosing fruit,
+resets, observations, rewards, outcomes, cameras and movie scenery) is `FruitHarvestTask` of the robotics plug-in, whose default settings are this sample's, and
+the arm is the plug-in's `assets/harvest_arm.urdf`. `harvest_env.cpp` is a C interface to it for `harvest_env.py`, and writes trees for the IsaacSim comparison.
 
 **Start:** the arm tucked, with the robot up to 0.2 m along the row from the fruit. For training, `train.py --near-start 0.4` starts 40% of
 episodes with the cup instead 2-12 cm short of where the fruit would be seated and up to 3 cm out of line with it, so that the policy

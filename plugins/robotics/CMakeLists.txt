@@ -20,6 +20,31 @@ if("visualizer" IN_LIST PLUGINS)
     target_compile_definitions(robotics PUBLIC HELIOS_ROBOTICS_CAMERA)
 endif()
 
+# The fruit harvest task grows its trees with the plant architecture plug-in, which the physics engine loads in the same cases
+if("plantarchitecture" IN_LIST PLUGINS OR TARGET plantarchitecture OR BUILD_TESTS)
+    target_sources(robotics PRIVATE "src/FruitHarvestTask.cpp")
+    target_link_libraries(robotics PUBLIC plantarchitecture)
+endif()
+
+# The fruit harvest task can draw movies with radiation cameras when the radiation and leafoptics plug-ins are in use
+if("radiation" IN_LIST PLUGINS AND "leafoptics" IN_LIST PLUGINS)
+    target_link_libraries(robotics PUBLIC radiation leafoptics)
+    target_compile_definitions(robotics PUBLIC HELIOS_ROBOTICS_RADIATION)
+endif()
+
+# The robot models shipped with the plug-in (found with helios::resolvePluginAsset("robotics", "assets/..."))
+file(GLOB_RECURSE ROBOTICS_ASSET_FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/*")
+add_custom_command(
+        OUTPUT "${CMAKE_BINARY_DIR}/plugins/robotics/assets.stamp"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/plugins/robotics/assets"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/plugins/robotics/assets"
+        COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/plugins/robotics/assets.stamp"
+        DEPENDS ${ROBOTICS_ASSET_FILES}
+        COMMENT "Copy robotics assets"
+)
+add_custom_target(copy_robotics_assets DEPENDS "${CMAKE_BINARY_DIR}/plugins/robotics/assets.stamp")
+add_dependencies(robotics copy_robotics_assets)
+
 if(BUILD_TESTS)
     # The physics engine loads the plant adapter whenever tests are built
     target_compile_definitions(robotics PRIVATE HELIOS_ROBOTICS_PLANT_TESTS)

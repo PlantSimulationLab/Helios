@@ -3,7 +3,7 @@
 //
 // Usage: ./robotics_apple_harvest [episodes_per_slot=3] [threads=4]
 //        ./robotics_apple_harvest camera [directory for sample images]     (the speed of rendering images in the environment)
-// Run from the build directory, so that the robot model is found at ../harvest_arm.urdf.
+// Run from the build directory, so that the plug-ins find their assets (the robot model is plugins/robotics/assets/harvest_arm.urdf).
 
 #include "harvest_env.h"
 

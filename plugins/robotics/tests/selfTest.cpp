@@ -27,6 +27,7 @@
 #include "ToolVelocityAction.h"
 #include "VacuumCup.h"
 #ifdef HELIOS_ROBOTICS_PLANT_TESTS
+#include "FruitHarvestTask.h"
 #include "PlantPhysics.h"
 #endif
 #include <mujoco/mujoco.h>
@@ -433,6 +434,130 @@ DOCTEST_TEST_CASE("Robot - arm deflects a plant stem, senses the force, and the 
     DOCTEST_CHECK(std::abs(engine.getLinkPosition(plantBody, lower_link).z - lower_before.z) < 0.25f * settled.z);
     std::filesystem::remove(arm_file);
 }
+
+
+namespace {
+
+    // A small fruiting plant for the fruit harvest task, which builds in seconds where the default mature apple wall takes minutes. Episodes are two control steps long.
+    FruitHarvestTaskParameters smallHarvestParameters() {
+        FruitHarvestTaskParameters parameters;
+        parameters.plant_model = "tomato";
+        parameters.plant_age = 100.f;
+        parameters.min_fruit_height = 0.f;
+        parameters.max_fruit_height = 3.f;
+        parameters.candidates_per_tree = 3;
+        parameters.settling_physics_steps = 250;
+        parameters.max_control_steps = 2;
+        return parameters;
+    }
+
+    bool allFinite(const std::vector<float> &values) {
+        return std::all_of(values.begin(), values.end(), [](float value) { return std::isfinite(value); });
+    }
+
+} // namespace
+
+DOCTEST_TEST_CASE("FruitHarvestTask - settings are checked before any tree is built") {
+    const FruitHarvestTaskParameters good = smallHarvestParameters();
+    DOCTEST_CHECK_THROWS(FruitHarvestTask({}, 1, 1, 0, good));
+    DOCTEST_CHECK_THROWS(FruitHarvestTask({1}, 0, 1, 0, good));
+
+    FruitHarvestTaskParameters bad = good;
+    bad.start_pose = {0.f, 0.f, 110.f};
+    DOCTEST_CHECK_THROWS(FruitHarvestTask({1}, 1, 1, 0, bad));
+    bad = good;
+    bad.min_fruit_height = 2.f;
+    bad.max_fruit_height = 1.f;
+    DOCTEST_CHECK_THROWS(FruitHarvestTask({1}, 1, 1, 0, bad));
+    bad = good;
+    bad.min_detach_force = 30.f;
+    bad.max_detach_force = 20.f;
+    DOCTEST_CHECK_THROWS(FruitHarvestTask({1}, 1, 1, 0, bad));
+    bad = good;
+    bad.candidates_per_tree = 0;
+    DOCTEST_CHECK_THROWS(FruitHarvestTask({1}, 1, 1, 0, bad));
+    bad = good;
+    bad.plant_model = "";
+    DOCTEST_CHECK_THROWS(static_cast<void>(FruitHarvestTask::treeHasReachableFruit(1, bad)));
+
+    // A tree whose fruit are all out of reach is refused, with the reason
+    bad = good;
+    bad.min_fruit_height = 50.f;
+    bad.max_fruit_height = 51.f;
+    DOCTEST_CHECK_FALSE(FruitHarvestTask::treeHasReachableFruit(1, bad));
+    DOCTEST_CHECK_THROWS_WITH(FruitHarvestTask({1}, 1, 1, 0, bad), doctest::Contains("no fruit within reach"));
+    DOCTEST_CHECK(FruitHarvestTask::treeHasReachableFruit(1, good));
+
+    // The servo table and the cup face are those of harvest_arm.urdf's six joints and tool
+    DOCTEST_CHECK(FruitHarvestTask::getJointServos().size() == 6);
+    DOCTEST_CHECK(FruitHarvestTask::getJointServos().front().joint == "drive");
+    DOCTEST_CHECK(FruitHarvestTask::getCupFace() == make_vec3(0.32f, 0, 0));
+}
+
+DOCTEST_TEST_CASE("FruitHarvestTask - copies reset, step, and end their episodes together, the same way every time") {
+    const FruitHarvestTaskParameters parameters = smallHarvestParameters();
+    FruitHarvestTask task({1}, 2, 2, 7, parameters);
+    DOCTEST_REQUIRE(task.getCopyCount() == 2);
+    DOCTEST_CHECK(task.getMaxControlSteps() == 2);
+    const size_t observation_size = FruitHarvestTask::getObservationSize();
+    const size_t action_size = FruitHarvestTask::getActionSize();
+
+    std::vector<float> observations, rewards, terminal_observations;
+    std::vector<int> outcomes;
+    std::vector<float> actions(2 * action_size, 0.f);
+    // Stepping before a reset, or asking for an episode before one ends or of a copy that does not exist, is refused
+    DOCTEST_CHECK_THROWS(task.step(actions, observations, rewards, outcomes, terminal_observations));
+    DOCTEST_CHECK_THROWS(static_cast<void>(task.getLastEpisode(0)));
+    DOCTEST_CHECK_THROWS(static_cast<void>(task.getLastEpisode(2)));
+
+    task.reset(observations);
+    DOCTEST_REQUIRE(observations.size() == 2 * observation_size);
+    DOCTEST_CHECK(allFinite(observations));
+    const std::vector<float> first_observations = observations;
+    for (uint copy = 0; copy < 2; copy++) {
+        // The cup starts tucked, away from the fruit, not holding it, at the start of the episode
+        const vec3 to_fruit = make_vec3(observations[copy * observation_size], observations[copy * observation_size + 1], observations[copy * observation_size + 2]);
+        DOCTEST_CHECK(to_fruit.magnitude() > 0.05f);
+        DOCTEST_CHECK(observations[copy * observation_size + 16] == 0.f);
+        DOCTEST_CHECK(observations[copy * observation_size + 19] == 0.f);
+        DOCTEST_CHECK(std::isfinite(task.getTargetFruitPosition(copy).x));
+    }
+    // The wrong number of actions is refused
+    DOCTEST_CHECK_THROWS(task.step(std::vector<float>(3, 0.f), observations, rewards, outcomes, terminal_observations));
+
+    // Standing still, the episodes time out together after two control steps, and the copies start their next episodes
+    task.step(actions, observations, rewards, outcomes, terminal_observations);
+    DOCTEST_CHECK(outcomes == std::vector<int>{FRUIT_HARVEST_RUNNING, FRUIT_HARVEST_RUNNING});
+    DOCTEST_CHECK(allFinite(rewards));
+    DOCTEST_CHECK(observations[19] == doctest::Approx(0.5f));
+    task.step(actions, observations, rewards, outcomes, terminal_observations);
+    DOCTEST_CHECK(outcomes == std::vector<int>{FRUIT_HARVEST_TIMEOUT, FRUIT_HARVEST_TIMEOUT});
+    DOCTEST_CHECK(terminal_observations[19] == doctest::Approx(1.f));
+    DOCTEST_CHECK(observations[19] == 0.f);
+    const FruitHarvestEpisodeRecord record = task.getLastEpisode(0);
+    DOCTEST_CHECK(record.steps == 2);
+    DOCTEST_CHECK(record.steps_to_grip == -1);
+    DOCTEST_CHECK(record.detach_force >= parameters.min_detach_force);
+    DOCTEST_CHECK(record.detach_force <= parameters.max_detach_force);
+
+    // The pose of a copy as its episode ended, for showing it, covers every link of the tree and the robot's joints
+    std::vector<float> link_poses, robot_joints;
+    task.getDisplayState(0, true, link_poses, robot_joints);
+    DOCTEST_CHECK(link_poses.size() == 7 * size_t(task.getPlantLinkCount(0)));
+    DOCTEST_CHECK(robot_joints.size() == 6);
+    DOCTEST_CHECK(task.getRestLinkPoses(0).size() == link_poses.size());
+    DOCTEST_CHECK(task.getPlantLinkNames(0).size() == task.getPlantLinkCount(0));
+
+    // A second task with the same seeds, stepped on a different number of threads, starts the same first episodes; each copy's random draws continue from
+    // episode to episode, so the next episodes differ from the first
+    FruitHarvestTask again({1}, 2, 1, 7, parameters);
+    std::vector<float> observations_again;
+    again.reset(observations_again);
+    DOCTEST_CHECK(observations_again == first_observations);
+    task.reset(observations);
+    DOCTEST_CHECK(observations != first_observations);
+}
+
 
 #endif // HELIOS_ROBOTICS_PLANT_TESTS
 
@@ -1353,5 +1478,32 @@ DOCTEST_TEST_CASE("RobotCamera - draws each instance's scene in color, depth, an
     DOCTEST_CHECK_THROWS(RobotCamera(&engine, &context, 0, 10));
     DOCTEST_CHECK_THROWS(RobotCamera(nullptr, &context, 10, 10));
 }
+
+#ifdef HELIOS_ROBOTICS_PLANT_TESTS
+DOCTEST_TEST_CASE("FruitHarvestTask - the wrist camera renders every copy, and measures what it sees") {
+    if (!headlessContextAvailable()) {
+        return;
+    }
+    FruitHarvestTask task({1}, 2, 1, 0, smallHarvestParameters());
+    std::vector<float> observations;
+    task.reset(observations);
+    std::vector<unsigned char> images;
+    DOCTEST_CHECK_THROWS(task.renderWristCameras(images));
+    task.enableWristCamera(32, 24);
+    // One camera at a time
+    DOCTEST_CHECK_THROWS(task.enableMovieCamera(32, 24));
+    task.renderWristCameras(images);
+    DOCTEST_CHECK(images.size() == 2 * 32 * 24 * 3);
+    const FruitHarvestCameraView view = task.measureWristCameraView(0);
+    const float shown = view.target_fruit + view.other_fruit + view.leaves + view.wood;
+    DOCTEST_CHECK(shown >= 0.f);
+    DOCTEST_CHECK(shown <= 1.f);
+    // Movie frames need the movie camera
+    std::vector<float> link_poses, robot_joints;
+    task.getDisplayState(0, false, link_poses, robot_joints);
+    std::vector<unsigned char> frame;
+    DOCTEST_CHECK_THROWS(task.renderMovieFrame(0, link_poses, robot_joints, make_vec3(-3, 0, 1), make_vec3(0, 0, 1), frame));
+}
+#endif
 
 #endif // HELIOS_ROBOTICS_CAMERA
