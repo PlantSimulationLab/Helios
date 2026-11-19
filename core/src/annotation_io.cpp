@@ -530,12 +530,26 @@ std::pair<nlohmann::json, int> helios::annotation::initializeCOCOJson(const std:
     if (append) {
         std::ifstream existing_file(filename);
         if (existing_file.is_open()) {
-            try {
-                existing_file >> coco_json;
-            } catch (const std::exception &e) {
-                coco_json.clear();
-            }
+            std::stringstream existing_contents;
+            existing_contents << existing_file.rdbuf();
             existing_file.close();
+            const std::string existing_text = existing_contents.str();
+
+            // A file with nothing in it holds no annotations to keep, so it is treated the same as a file that does not exist yet.
+            const bool file_has_content = existing_text.find_first_not_of(" \t\r\n") != std::string::npos;
+            if (file_has_content) {
+                // The document returned here is written back over the file. A file that cannot be read must therefore stop the append rather than be treated as empty, which would discard every annotation it holds.
+                try {
+                    coco_json = nlohmann::json::parse(existing_text);
+                } catch (const std::exception &parse_error) {
+                    helios_runtime_error("ERROR (annotation::initializeCOCOJson): Cannot append to the COCO JSON file '" + filename + "' because it could not be parsed as JSON (" + parse_error.what() +
+                                         "). The file was left unchanged. Repair or delete it, or turn appending off to replace it.");
+                }
+                if (!coco_json.is_object()) {
+                    helios_runtime_error("ERROR (annotation::initializeCOCOJson): Cannot append to the COCO JSON file '" + filename +
+                                         "' because its top level is not a JSON object, so it is not a COCO document. The file was left unchanged. Repair or delete it, or turn appending off to replace it.");
+                }
+            }
         }
     }
 

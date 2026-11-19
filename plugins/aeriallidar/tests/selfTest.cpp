@@ -419,3 +419,84 @@ DOCTEST_TEST_CASE("AerialLiDARcloud getCellCoverFraction") {
     float val = lidar.getCellCoverFraction(make_int2(0, 0));
     DOCTEST_CHECK(fabs(val - 0.85f) < 1e-6);
 }
+
+namespace {
+    //! Write \p contents to a uniquely named XML file in the system temporary directory and return its path
+    std::string writeTemporaryXML(const std::string &name, const std::string &contents) {
+        const std::filesystem::path path = std::filesystem::temp_directory_path() / ("aeriallidar_selftest_" + name + ".xml");
+        std::ofstream file(path);
+        file << contents;
+        return path.string();
+    }
+
+    //! Run a callable that is expected to throw, and return the exception message (empty if it did not throw)
+    template<typename Callable>
+    std::string thrownMessage(Callable &&callable) {
+        try {
+            callable();
+        } catch (const std::exception &error) {
+            return error.what();
+        }
+        return "";
+    }
+} // namespace
+
+DOCTEST_TEST_CASE("AerialLiDARcloud getHitBoundingBox raises on an empty point cloud whatever the message setting") {
+    // With messages disabled, getHitBoundingBox() used to skip its early return and hand back the inverted +/-1e6 starting box
+    // of an empty cloud, which looks like a valid result. A point cloud with no hits has no bounding box.
+    for (const bool messages: {false, true}) {
+        AerialLiDARcloud pointcloud;
+        if (messages) {
+            pointcloud.enableMessages();
+        } else {
+            pointcloud.disableMessages();
+        }
+        vec3 boxmin, boxmax;
+        std::string message;
+        {
+            capture_cout capture;
+            message = thrownMessage([&] { pointcloud.getHitBoundingBox(boxmin, boxmax); });
+        }
+        DOCTEST_INFO("messages " << (messages ? "enabled" : "disabled"));
+        DOCTEST_CHECK(message.find("no hit points") != std::string::npos);
+    }
+}
+
+DOCTEST_TEST_CASE("AerialLiDARcloud loadXML rejects a cone angle over 90 degrees") {
+    // The cone angle was converted to radians before it was compared with 90, so no angle up to 5156 degrees was rejected.
+    const std::string filename = writeTemporaryXML("cone_angle", "<helios><scan><center>0 0 10</center><extent>10 10</extent><coneangle>120</coneangle></scan></helios>");
+    AerialLiDARcloud pointcloud;
+    pointcloud.disableMessages();
+    std::string message;
+    {
+        capture_cerr capture;
+        message = thrownMessage([&] { pointcloud.loadXML(filename.c_str()); });
+    }
+    std::filesystem::remove(filename);
+    DOCTEST_CHECK(message.find("cone angle cannot be greater than 90 degrees") != std::string::npos);
+
+    // An angle within range still loads, and is stored in radians
+    const std::string valid_filename = writeTemporaryXML("cone_angle_valid", "<helios><scan><center>0 0 10</center><extent>10 10</extent><coneangle>30</coneangle></scan></helios>");
+    AerialLiDARcloud valid_pointcloud;
+    valid_pointcloud.disableMessages();
+    valid_pointcloud.loadXML(valid_filename.c_str());
+    std::filesystem::remove(valid_filename);
+    DOCTEST_REQUIRE(valid_pointcloud.getScanCount() == 1);
+    DOCTEST_CHECK(valid_pointcloud.getScanConeAngle(0) == doctest::Approx(30.0 * M_PI / 180.0));
+}
+
+DOCTEST_TEST_CASE("AerialLiDARcloud loadXML raises instead of ending the program on a malformed file") {
+    // Errors in AerialLiDARcloud used to print to standard error and call exit(), ending the whole program. A file without the
+    // <helios> root tag must raise an error the caller can catch.
+    const std::string filename = writeTemporaryXML("no_root", "<scan><center>0 0 10</center></scan>");
+    AerialLiDARcloud pointcloud;
+    pointcloud.disableMessages();
+    std::string message;
+    {
+        capture_cout capture_out;
+        capture_cerr capture;
+        message = thrownMessage([&] { pointcloud.loadXML(filename.c_str()); });
+    }
+    std::filesystem::remove(filename);
+    DOCTEST_CHECK(message.find("<helios>") != std::string::npos);
+}

@@ -1912,18 +1912,18 @@ void CanopyGenerator::loadXML(const char *filename, bool build) {
         std::cout << "Reading XML file: " << filename << "..." << std::flush;
     }
 
-    // Check if file exists
-    std::ifstream f(filename);
-    if (!f.good()) {
+    // Check if file exists (relative to the working directory or the HELIOS_BUILD directory)
+    const std::filesystem::path resolved_filename = helios::tryResolveFilePath(filename);
+    if (resolved_filename.empty()) {
         std::cerr << "failed." << std::endl;
-        throw(std::runtime_error("XML file " + std::string(filename) + " does not exist."));
+        helios_runtime_error("ERROR (CanopyGenerator::loadXML): XML file " + std::string(filename) + " does not exist relative to the working directory or the HELIOS_BUILD directory.");
     }
 
     // Using "pugixml" parser.  See pugixml.org
     pugi::xml_document xmldoc;
 
     // load file
-    pugi::xml_parse_result result = xmldoc.load_file(filename);
+    pugi::xml_parse_result result = xmldoc.load_file(resolved_filename.string().c_str());
 
     // error checking
     if (!result) {
@@ -1939,7 +1939,7 @@ void CanopyGenerator::loadXML(const char *filename, bool build) {
     }
 
     // looping over any Canopy Generator blocks specified in XML file
-    for (pugi::xml_node cgen = helios.child("canopygenerator"); cgen; cgen = cgen.next_sibling("CanopyGenerator")) {
+    for (pugi::xml_node cgen = helios.child("canopygenerator"); cgen; cgen = cgen.next_sibling("canopygenerator")) {
 
         // looping over any canopy types specified
 
@@ -2162,9 +2162,15 @@ void CanopyGenerator::buildCanopy(const HomogeneousCanopyParameters &params) {
         std::cout << "Building homogeneous canopy..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
-    UUID_leaf.resize(1);
+    // The canopy is one plant, appended after the plants already built. All of the per-plant lists are kept the same length so
+    // that a plant ID indexes each of them.
+    const size_t canopy_plant_ID = UUID_leaf.size();
+    UUID_leaf.resize(canopy_plant_ID + 1);
+    UUID_trunk.resize(canopy_plant_ID + 1);
+    UUID_branch.resize(canopy_plant_ID + 1);
+    UUID_fruit.resize(canopy_plant_ID + 1);
 
     uint ID0;
     float solidFractionx = 1.f;
@@ -2209,7 +2215,7 @@ void CanopyGenerator::buildCanopy(const HomogeneousCanopyParameters &params) {
 
         std::vector<uint> UUID = context->getObjectPrimitiveUUIDs(ID);
 
-        UUID_leaf.front().push_back(UUID);
+        UUID_leaf.at(canopy_plant_ID).push_back(UUID);
     }
 
     context->deleteObject(ID0);
@@ -2228,7 +2234,7 @@ void CanopyGenerator::buildCanopy(const SphericalCrownsCanopyParameters &params)
         std::cout << "Building canopy of spherical crowns..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     vec3 r = params.crown_radius;
 
@@ -2238,7 +2244,14 @@ void CanopyGenerator::buildCanopy(const SphericalCrownsCanopyParameters &params)
         cconfig = "uniform";
     }
 
-    UUID_leaf.resize(params.plant_count.x * params.plant_count.y);
+    // The crowns are appended after the plants already built. All of the per-plant lists are kept the same length so that a
+    // plant ID indexes each of them.
+    const size_t first_plant_ID = UUID_leaf.size();
+    const size_t plant_total = first_plant_ID + size_t(params.plant_count.x) * size_t(params.plant_count.y);
+    UUID_leaf.resize(plant_total);
+    UUID_trunk.resize(plant_total);
+    UUID_branch.resize(plant_total);
+    UUID_fruit.resize(plant_total);
 
     uint ID0;
     float solidFractionx = 1.f;
@@ -2254,7 +2267,7 @@ void CanopyGenerator::buildCanopy(const SphericalCrownsCanopyParameters &params)
 
     vec2 canopy_extent(params.plant_spacing.x * float(params.plant_count.x), params.plant_spacing.y * float(params.plant_count.y));
 
-    uint plant_ID = 0;
+    uint plant_ID = uint(first_plant_ID);
     uint prim_count = 0;
     for (int j = 0; j < params.plant_count.y; j++) {
         for (int i = 0; i < params.plant_count.x; i++) {
@@ -2320,7 +2333,7 @@ void CanopyGenerator::buildCanopy(const ConicalCrownsCanopyParameters &params) {
         std::cout << "Building canopy of conical crowns..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     float r = params.crown_radius;
     float h = params.crown_height;
@@ -2331,7 +2344,14 @@ void CanopyGenerator::buildCanopy(const ConicalCrownsCanopyParameters &params) {
         cconfig = "uniform";
     }
 
-    UUID_leaf.resize(params.plant_count.x * params.plant_count.y);
+    // The crowns are appended after the plants already built. All of the per-plant lists are kept the same length so that a
+    // plant ID indexes each of them.
+    const size_t first_plant_ID = UUID_leaf.size();
+    const size_t plant_total = first_plant_ID + size_t(params.plant_count.x) * size_t(params.plant_count.y);
+    UUID_leaf.resize(plant_total);
+    UUID_trunk.resize(plant_total);
+    UUID_branch.resize(plant_total);
+    UUID_fruit.resize(plant_total);
 
     uint ID0;
     float solidFractionx = 1.f;
@@ -2347,7 +2367,7 @@ void CanopyGenerator::buildCanopy(const ConicalCrownsCanopyParameters &params) {
 
     vec2 canopy_extent(params.plant_spacing.x * float(params.plant_count.x), params.plant_spacing.y * float(params.plant_count.y));
 
-    uint plant_ID = 0;
+    uint plant_ID = uint(first_plant_ID);
     uint prim_count = 0;
     for (int j = 0; j < params.plant_count.y; j++) {
         for (int i = 0; i < params.plant_count.x; i++) {
@@ -2418,7 +2438,7 @@ void CanopyGenerator::buildCanopy(const VSPGrapevineParameters &params) {
         throw(std::runtime_error("ERROR (CanopyGenerator::buildCanopy)): Cannot build VSP grapevine canopy. Cordon height cannot be less than the trunk height."));
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     vec2 canopy_extent(params.plant_spacing * float(params.plant_count.x), params.row_spacing * float(params.plant_count.y));
 
@@ -2458,7 +2478,7 @@ void CanopyGenerator::buildCanopy(const SplitGrapevineParameters &params) {
         std::cout << "Building canopy of split trellis grapevine..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     vec2 canopy_extent(params.plant_spacing * float(params.plant_count.x), params.row_spacing * float(params.plant_count.y));
 
@@ -2498,7 +2518,7 @@ void CanopyGenerator::buildCanopy(const UnilateralGrapevineParameters &params) {
         std::cout << "Building canopy of unilateral trellis grapevine..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     vec2 canopy_extent(params.plant_spacing * float(params.plant_count.x), params.row_spacing * float(params.plant_count.y));
 
@@ -2538,7 +2558,7 @@ void CanopyGenerator::buildCanopy(const GobletGrapevineParameters &params) {
         std::cout << "Building canopy of goblet trellis grapevine..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     vec2 canopy_extent(params.plant_spacing * float(params.plant_count.x), params.row_spacing * float(params.plant_count.y));
 
@@ -2578,7 +2598,7 @@ void CanopyGenerator::buildCanopy(const WhiteSpruceCanopyParameters &params) {
         std::cout << "Building canopy of white spruce trees..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     vec2 canopy_extent(params.plant_spacing.x * float(params.plant_count.x), params.plant_spacing.y * float(params.plant_count.y));
 
@@ -2627,7 +2647,7 @@ void CanopyGenerator::buildCanopy(const TomatoParameters &params) {
         std::cout << "Building canopy of tomato plants..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     vec2 canopy_extent(params.plant_spacing * float(params.plant_count.x), params.row_spacing * float(params.plant_count.y));
 
@@ -2656,7 +2676,7 @@ void CanopyGenerator::buildCanopy(const StrawberryParameters &params) {
         std::cout << "Building canopy of strawberry plants..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     vec2 canopy_extent(params.plant_spacing * float(params.plant_count.x), params.row_spacing * float(params.plant_count.y));
 
@@ -2685,7 +2705,7 @@ void CanopyGenerator::buildCanopy(const WalnutCanopyParameters &params) {
         std::cout << "Building canopy of walnut trees..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     vec2 canopy_extent(params.plant_spacing * float(params.plant_count.x), params.row_spacing * float(params.plant_count.y));
 
@@ -2714,7 +2734,7 @@ void CanopyGenerator::buildCanopy(const SorghumCanopyParameters &params) {
         std::cout << "Building canopy of sorghum plants..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     vec2 canopy_extent(params.plant_spacing * float(params.plant_count.x), params.row_spacing * float(params.plant_count.y));
 
@@ -2743,7 +2763,7 @@ void CanopyGenerator::buildCanopy(const BeanParameters &params) {
         std::cout << "Building canopy of bean plants..." << std::flush;
     }
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     vec2 canopy_extent(params.plant_spacing * float(params.plant_count.x), params.row_spacing * float(params.plant_count.y));
 
@@ -2778,7 +2798,7 @@ void CanopyGenerator::buildCanopy(const BeanParameters &params) {
 
 float getVariation(float V, std::minstd_rand0 &generator, bool positive) {
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     if (positive) {
         return unif_distribution(generator) * V;
@@ -2790,17 +2810,17 @@ float getVariation(float V, std::minstd_rand0 &generator, bool positive) {
 int getVariation(int V, std::minstd_rand0 &generator, bool positive) {
 
     if (positive) {
-        std::uniform_int_distribution<> unif_distribution(-V, V);
+        helios::uniform_int_distribution<> unif_distribution(-V, V);
         return unif_distribution(generator);
     } else {
-        std::uniform_int_distribution<> unif_distribution(0, V);
+        helios::uniform_int_distribution<> unif_distribution(0, V);
         return unif_distribution(generator);
     }
 }
 
 uint getVariation(uint V, std::minstd_rand0 &generator) {
 
-    std::uniform_int_distribution<> unif_distribution(0, V);
+    helios::uniform_int_distribution<> unif_distribution(0, V);
 
     return static_cast<uint>(unif_distribution(generator));
 }
@@ -2837,7 +2857,7 @@ float CanopyGenerator::sampleLeafAngle(const std::vector<float> &leafAngleDist) 
     assert(fabs(tsum - 1.f) < 0.001);
 
     // draw from leaf angle PDF
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
     float rt = unif_distribution(generator);
 
     float theta = -1;
@@ -3109,7 +3129,7 @@ float CanopyGenerator::sampleLeafPDF(const char *distribution) {
 
     float thetaL;
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     float ru = unif_distribution(generator);
 

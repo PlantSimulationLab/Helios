@@ -635,7 +635,7 @@ namespace helios {
         size_t size;
         //! \brief Type of the data
         HeliosDataType type;
-        //! \brief Version number for change detection (incremented on every setGlobalData call)
+        //! \brief Version number for change detection (see Context::getGlobalDataVersion())
         uint64_t version = 0;
     };
 
@@ -3600,6 +3600,24 @@ namespace helios {
         //! Advanced whenever a material is added, deleted or renamed, or its properties or data change (see getMaterialRevision())
         RevisionCounter material_revision;
 
+        //! Advanced whenever a primitive is given a spectral texture or a different spectral palette, or has its spectral texture removed (see getSpectralTextureRevision())
+        RevisionCounter spectral_texture_revision;
+
+        //! For each primitive data label, a counter advanced whenever data with that label is set, changed or removed on any primitive (see getPrimitiveDataRevision())
+        std::unordered_map<std::string, RevisionCounter> primitive_data_revisions;
+
+        //! Record that primitive data with a label was set, changed or removed on some primitive, for getPrimitiveDataRevision()
+        /**
+         * Every Context method that changes primitive data must call this for each label it changes: plug-ins rely on
+         * getPrimitiveDataRevision() to know when a value they derived from primitive data is out of date. It is called from
+         * the serial part of the setters, before any parallel loop over primitives, since the first use of a label inserts
+         * into the map.
+         * \param[in] label Label of the primitive data that changed
+         */
+        void markPrimitiveDataModified(const std::string &label) {
+            primitive_data_revisions[label].markModified();
+        }
+
         //! Map containing a pointer to each compound object
         std::unordered_map<uint, CompoundObject *> objects;
 
@@ -3777,6 +3795,9 @@ namespace helios {
 
         std::map<std::string, GlobalData> globaldata;
 
+        //! Last version given to global data (see getGlobalDataVersion()). Taken from one counter for the whole Context, so that a label cleared or renamed and then set again never gets back a version it had before.
+        uint64_t global_data_version_counter = 0;
+
         std::unordered_map<std::string, size_t> primitive_data_label_counts;
         std::unordered_map<std::string, size_t> object_data_label_counts;
 
@@ -3809,6 +3830,16 @@ namespace helios {
          * \param[in] primitive_data_label The label of the primitive data whose count is to be incremented.
          */
         void incrementPrimitiveDataLabelCounter(const std::string &primitive_data_label);
+
+        //! Find the primitives named by a list of UUIDs, for a setter that then writes primitive data to all of them
+        /**
+         * Each primitive is looked up once, in parallel, so that the setter writes through the pointers returned rather than
+         * looking every primitive up again. Nothing is changed if a UUID names no primitive: an error naming the first such
+         * UUID is raised before the setter has written anything.
+         * \param[in] UUIDs UUIDs of the primitives to write to
+         * \return Pointer to the primitive of each UUID, in the order given
+         */
+        [[nodiscard]] std::vector<Primitive *> findPrimitivesToSetData(const std::vector<uint> &UUIDs) const;
 
         //! Decrements the count associated with a given primitive data label.
         /**
@@ -3856,10 +3887,10 @@ namespace helios {
         std::minstd_rand0 generator;
 
         //! Random uniform distribution
-        std::uniform_real_distribution<float> unif_distribution;
+        helios::uniform_real_distribution<float> unif_distribution;
 
         //! Random normal distribution (mean = zero, std dev = 1)
-        std::normal_distribution<float> norm_distribution;
+        helios::normal_distribution<float> norm_distribution;
 
         //---------- CONTEXT I/O ---------//
 
@@ -3892,6 +3923,15 @@ namespace helios {
         void loadOsubPData(pugi::xml_node p, uint ID, helios::WarningAggregator &warnings);
 
         void writeDataToXMLstream(const char *data_group, const std::vector<std::string> &data_labels, void *ptr, std::ofstream &outfile) const;
+
+        //! Write primitives and their data to an XML file, optionally with every named material in the Context
+        /**
+         * \param[in] filename name of XML file.
+         * \param[in] UUIDs Universal unique identifiers of primitives that should be written to XML file.
+         * \param[in] quiet output messages are disabled if quiet is set to 'true'.
+         * \param[in] write_all_named_materials If true, materials added with addMaterial() are written even when none of the primitives uses them.
+         */
+        void writeXML_private(const char *filename, const std::vector<uint> &UUIDs, bool quiet, bool write_all_named_materials) const;
 
 
         //---------- CONTEXT INITIALIZATION FLAGS ---------//
@@ -3995,16 +4035,44 @@ namespace helios {
          */
         [[nodiscard]] uint64_t getShapeRevision() const;
 
-        //! Get a counter that advances whenever a material is added, deleted or renamed, or its properties or data change
+        //! Get a counter that advances whenever a material is added, deleted or renamed, its properties or data change, or a primitive is given a material with other properties
         /**
          * Material properties are its color, texture, texture color override and two-sided flag; material data is anything set by
          * setMaterialData() or removed by clearMaterialData(). Setting material data does not mark the primitives using the
          * material dirty, so a plug-in that caches something derived from material data (e.g., the visualizer's table of Phong
-         * parameters) checks this counter instead. If two calls return the same value, no material changed in between. Assigning
-         * a material to a primitive changes the primitive, not the material: see getModifiedUUIDs().
+         * parameters) checks this counter instead. If two calls return the same value, no material changed in between, and no
+         * primitive was moved to a material with a different two-sided flag or normal map, or to or from one with material data.
+         * A primitive moved to a material that differs only in color or texture is marked dirty and does not advance the counter:
+         * see getModifiedUUIDs().
          * \return Current material revision
          */
         [[nodiscard]] uint64_t getMaterialRevision() const;
+
+        //! Get a counter that advances whenever primitive data with a given label is set, changed or removed on any primitive
+        /**
+         * getGeometryRevision() advances when any primitive data changes, including the data a plug-in writes as its own
+         * output, so it cannot tell a plug-in whether its inputs changed. This counter is kept per label instead: if two calls
+         * with the same label return the same value, no primitive had data with that label set (even to the value it already
+         * had), scaled, incremented, copied onto it, renamed, or removed in between, and no primitive with that data was
+         * deleted. A plug-in that derives something from primitive data (e.g., the radiation model's table of surface
+         * reflectivities) can therefore keep it until the counter of one of the labels it read advances. Creating a primitive
+         * by copying one that has the data is not guaranteed to advance the counter; compare getPrimitiveCount() as well to
+         * detect new primitives.
+         * \param[in] label Label of the primitive data
+         * \return Current revision of the primitive data with that label, which is 0 if no primitive has ever had data with that label
+         * \sa getGeometryRevision()
+         */
+        [[nodiscard]] uint64_t getPrimitiveDataRevision(const char *label) const;
+
+        //! Get a counter that advances whenever the spectral texture or spectral palette of a primitive changes
+        /**
+         * If two calls return the same value, no primitive was given a spectral texture (setPrimitiveSpectralTexture(), or as a copy
+         * of a primitive that has one by copyPrimitive()) or a different palette (setPrimitiveSpectralPalette()), and none had its
+         * spectral texture removed, in between. Palettes
+         * themselves cannot change once registered with addSpectralPalette().
+         * \return Current spectral texture revision
+         */
+        [[nodiscard]] uint64_t getSpectralTextureRevision() const;
 
         //! Mark a primitive as "dirty", meaning it has been modified since last set as clean
         /**
@@ -4576,6 +4644,8 @@ namespace helios {
             std::string label_str = std::string(label);
             bool had_cached_value = false;
 
+            markPrimitiveDataModified(label_str);
+
             // Handle caching only for supported types, and avoid character arrays
             if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
                 if (isPrimitiveDataValueCachingEnabled(label_str) && primitives.at(UUID)->doesPrimitiveDataExist(label)) {
@@ -4651,6 +4721,7 @@ namespace helios {
         //! Add vector data value associated with a primitive element
         /**
          * \tparam T Primitive data type
+         * \note If the label already holds data of another numeric type, the values are cast to that type with a warning.
          * \param[in] UUID Unique universal identifier of Primitive element
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (vector)
@@ -4665,6 +4736,7 @@ namespace helios {
             if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
                 incrementPrimitiveDataLabelCounter(label);
             }
+            markPrimitiveDataModified(label);
 
             // For vector data, register the base type (not vector type)
             HeliosDataType data_type;
@@ -4691,31 +4763,38 @@ namespace helios {
             } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                 data_type = HELIOS_TYPE_STRING;
             }
-            registerOrValidatePrimitiveDataType(label, data_type);
+            const HeliosDataType target_type = registerOrValidatePrimitiveDataType(label, data_type);
 
-            primitives.at(UUID)->setPrimitiveData(label, data);
+            // Cast to the type already registered for this label, as the scalar overload does
+            if (target_type != data_type && isTypeCastingSupported(data_type, target_type)) {
+                storePrimitiveDataVectorWithTypeCasting(UUID, label, data, target_type);
+            } else {
+                primitives.at(UUID)->setPrimitiveData(label, data);
+            }
         }
 
         //! Add data value associated with a vector of primitive elements. Each element in UUIDs maps to each element in data.
         /**
          * \tparam T Primitive data type
-         * \note the size of UUIDs and data must match
+         * \note The sizes of UUIDs and data must match, otherwise an error is raised.
+         * \note If the label already holds data of another numeric type, the values are cast to that type with a warning, as for a single primitive.
+         * \note If a UUID names a primitive that does not exist, an error is raised and no data is set.
          * \param[in] UUIDs Unique universal identifiers of Primitive elements
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (vector)
          */
         template<typename T>
         void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const std::vector<T> &data) {
-#ifdef HELIOS_DEBUG
             if (UUIDs.size() != data.size()) {
-                helios_runtime_error("ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
+                helios_runtime_error("ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size, but " + std::to_string(UUIDs.size()) + " UUIDs and " + std::to_string(data.size()) + " data values were given for primitive data '" +
+                                     std::string(label) + "'.");
             }
-#endif
+            const std::vector<Primitive *> targets = findPrimitivesToSetData(UUIDs);
 
             // Validate data type consistency and register/validate type (only once for all elements)
+            HeliosDataType data_type = HELIOS_TYPE_UNKNOWN;
             HeliosDataType target_type = HELIOS_TYPE_UNKNOWN;
             if (!UUIDs.empty()) {
-                HeliosDataType data_type;
                 if constexpr (std::is_same_v<T, int>) {
                     data_type = HELIOS_TYPE_INT;
                 } else if constexpr (std::is_same_v<T, uint>) {
@@ -4740,30 +4819,37 @@ namespace helios {
                     data_type = HELIOS_TYPE_STRING;
                 }
                 target_type = registerOrValidatePrimitiveDataType(label, data_type);
+                markPrimitiveDataModified(label);
             }
 
-            for (uint UUID: UUIDs) {
-#ifdef HELIOS_DEBUG
-                if (primitives.find(UUID) == primitives.end()) {
-                    helios_runtime_error("ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-                }
-#endif
-                if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
-                    incrementPrimitiveDataLabelCounter(label);
-                }
-            }
+            // Cast to the type already registered for this label, as the single-primitive overload does
+            const bool cast_to_registered_type = target_type != data_type && isTypeCastingSupported(data_type, target_type);
 
+            // The primitives that gain the data are counted in the loop that writes it. Counting them in a loop of its own
+            // beforehand, which was not parallel, took twice as long as writing the data.
+            size_t primitives_gaining_data = 0;
 #ifdef USE_OPENMP
-#pragma omp parallel for
+#pragma omp parallel for reduction(+ : primitives_gaining_data)
 #endif
             for (int i = 0; i < (int) UUIDs.size(); ++i) {
-                primitives.at(UUIDs[i])->setPrimitiveData(label, data[i]);
+                if (!targets[i]->doesPrimitiveDataExist(label)) {
+                    primitives_gaining_data++;
+                }
+                if (cast_to_registered_type) {
+                    storeDataWithTypeCasting(UUIDs[i], label, data[i], target_type);
+                } else {
+                    targets[i]->setPrimitiveData(label, data[i]);
+                }
+            }
+            if (primitives_gaining_data > 0) {
+                primitive_data_label_counts[label] += primitives_gaining_data;
             }
         }
 
         //! Add scalar data to multiple primitive elements
         /**
          * \tparam T Primitive data type
+         * \note If a UUID names a primitive that does not exist, an error is raised and no data is set.
          * \param[in] UUIDs Vector of unique universal identifiers of Primitive elements
          * \param[in] label Name/label associated with data
          * \param[in] data Primitive data value (scalar)
@@ -4771,9 +4857,12 @@ namespace helios {
         template<typename T>
         void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const T &data) {
 
+            const std::vector<Primitive *> targets = findPrimitivesToSetData(UUIDs);
+
             // Validate data type consistency and register/validate type
+            HeliosDataType data_type = HELIOS_TYPE_UNKNOWN;
+            HeliosDataType target_type = HELIOS_TYPE_UNKNOWN;
             if (!UUIDs.empty()) {
-                HeliosDataType data_type;
                 if constexpr (std::is_same_v<T, int>) {
                     data_type = HELIOS_TYPE_INT;
                 } else if constexpr (std::is_same_v<T, uint>) {
@@ -4797,25 +4886,30 @@ namespace helios {
                 } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                     data_type = HELIOS_TYPE_STRING;
                 }
-                registerOrValidatePrimitiveDataType(label, data_type);
+                target_type = registerOrValidatePrimitiveDataType(label, data_type);
+                markPrimitiveDataModified(label);
             }
 
-            for (uint UUID: UUIDs) {
-#ifdef HELIOS_DEBUG
-                if (primitives.find(UUID) == primitives.end()) {
-                    helios_runtime_error("ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-                }
-#endif
-                if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
-                    incrementPrimitiveDataLabelCounter(label);
-                }
-            }
+            // Cast to the type already registered for this label, as the single-primitive overload does
+            const bool cast_to_registered_type = target_type != data_type && isTypeCastingSupported(data_type, target_type);
 
+            // The primitives that gain the data are counted in the loop that writes it (see the overload above)
+            size_t primitives_gaining_data = 0;
 #ifdef USE_OPENMP
-#pragma omp parallel for
+#pragma omp parallel for reduction(+ : primitives_gaining_data)
 #endif
             for (int i = 0; i < (int) UUIDs.size(); ++i) {
-                primitives.at(UUIDs[i])->setPrimitiveData(label, data);
+                if (!targets[i]->doesPrimitiveDataExist(label)) {
+                    primitives_gaining_data++;
+                }
+                if (cast_to_registered_type) {
+                    storeDataWithTypeCasting(UUIDs[i], label, data, target_type);
+                } else {
+                    targets[i]->setPrimitiveData(label, data);
+                }
+            }
+            if (primitives_gaining_data > 0) {
+                primitive_data_label_counts[label] += primitives_gaining_data;
             }
         }
 
@@ -6019,6 +6113,7 @@ namespace helios {
         //! Add data value associated with a compound object
         /**
          * \tparam T Object data type
+         * \note If the label already holds data of another numeric type, the value is cast to that type with a warning.
          * \param[in] objID Unique identifier of compound object
          * \param[in] label Name/label associated with data
          * \param[in] data Object data value (scalar)
@@ -6059,7 +6154,7 @@ namespace helios {
             } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                 data_type = HELIOS_TYPE_STRING;
             }
-            registerOrValidateObjectDataType<T>(label, data_type);
+            const HeliosDataType target_type = registerOrValidateObjectDataType(label, data_type);
 
             // Check if this object already has cached data for registry maintenance
             std::string label_str = std::string(label);
@@ -6085,7 +6180,12 @@ namespace helios {
             if (!objects.at(objID)->doesObjectDataExist(label)) {
                 incrementObjectDataLabelCounter(label);
             }
-            objects.at(objID)->setObjectData(label, data);
+            // Cast to the type already registered for this label, as Context::setPrimitiveData() does
+            if (target_type != data_type && isTypeCastingSupported(data_type, target_type)) {
+                storeObjectDataWithTypeCasting(objID, label, data, target_type);
+            } else {
+                objects.at(objID)->setObjectData(label, data);
+            }
 
             // Update value registry if caching is enabled for this label (only for new data)
             if (isObjectDataValueCachingEnabled(label_str) && !had_cached_value) {
@@ -6107,6 +6207,7 @@ namespace helios {
         //! Add scalar data to multiple compound objects
         /**
          * \tparam T Object data type
+         * \note If the label already holds data of another numeric type, the value is cast to that type with a warning.
          * \param[in] objIDs Vector of unique identifiers of compound objects
          * \param[in] label Name/label associated with data
          * \param[in] data Object data value (scalar)
@@ -6118,8 +6219,9 @@ namespace helios {
                           "Context::setObjectData() was called with an unsupported type.");
 
             // Validate data type consistency and register/validate type
+            HeliosDataType data_type = HELIOS_TYPE_UNKNOWN;
+            HeliosDataType target_type = HELIOS_TYPE_UNKNOWN;
             if (!objIDs.empty()) {
-                HeliosDataType data_type;
                 if constexpr (std::is_same_v<T, int>) {
                     data_type = HELIOS_TYPE_INT;
                 } else if constexpr (std::is_same_v<T, uint>) {
@@ -6143,7 +6245,7 @@ namespace helios {
                 } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                     data_type = HELIOS_TYPE_STRING;
                 }
-                registerOrValidateObjectDataType<T>(label, data_type);
+                target_type = registerOrValidateObjectDataType(label, data_type);
             }
 
             // Check if caching is enabled for this label
@@ -6179,11 +6281,18 @@ namespace helios {
                 }
             }
 
+            // Cast to the type already registered for this label, as Context::setPrimitiveData() does
+            const bool cast_to_registered_type = target_type != data_type && isTypeCastingSupported(data_type, target_type);
+
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
             for (int i = 0; i < (int) objIDs.size(); ++i) {
-                objects.at(objIDs[i])->setObjectData(label, data);
+                if (cast_to_registered_type) {
+                    storeObjectDataWithTypeCasting(objIDs[i], label, data, target_type);
+                } else {
+                    objects.at(objIDs[i])->setObjectData(label, data);
+                }
             }
 
             // Update value registry if caching is enabled (increment the new value for all objects)
@@ -6205,6 +6314,7 @@ namespace helios {
         //! Add scalar data to multiple compound objects
         /**
          * \tparam T Object data type
+         * \note If the label already holds data of another numeric type, the value is cast to that type with a warning.
          * \param[in] objIDs Vector of unique identifiers of compound objects
          * \param[in] label Name/label associated with data
          * \param[in] data Object data value (scalar)
@@ -6216,8 +6326,9 @@ namespace helios {
                           "Context::setObjectData() was called with an unsupported type.");
 
             // Validate data type consistency and register/validate type
+            HeliosDataType data_type = HELIOS_TYPE_UNKNOWN;
+            HeliosDataType target_type = HELIOS_TYPE_UNKNOWN;
             if (!objIDs.empty() && !objIDs[0].empty()) {
-                HeliosDataType data_type;
                 if constexpr (std::is_same_v<T, int>) {
                     data_type = HELIOS_TYPE_INT;
                 } else if constexpr (std::is_same_v<T, uint>) {
@@ -6241,7 +6352,7 @@ namespace helios {
                 } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                     data_type = HELIOS_TYPE_STRING;
                 }
-                registerOrValidateObjectDataType<T>(label, data_type);
+                target_type = registerOrValidateObjectDataType(label, data_type);
             }
 
             // Check if caching is enabled for this label
@@ -6290,12 +6401,19 @@ namespace helios {
                 }
             }
 
+            // Cast to the type already registered for this label, as Context::setPrimitiveData() does
+            const bool cast_to_registered_type = target_type != data_type && isTypeCastingSupported(data_type, target_type);
+
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
             for (int j = 0; j < (int) objIDs.size(); ++j) {
                 for (size_t i = 0; i < objIDs[j].size(); ++i) {
-                    objects.at(objIDs[j][i])->setObjectData(label, data);
+                    if (cast_to_registered_type) {
+                        storeObjectDataWithTypeCasting(objIDs[j][i], label, data, target_type);
+                    } else {
+                        objects.at(objIDs[j][i])->setObjectData(label, data);
+                    }
                 }
             }
 
@@ -6318,6 +6436,7 @@ namespace helios {
         //! Add scalar data to multiple compound objects
         /**
          * \tparam T Object data type
+         * \note If the label already holds data of another numeric type, the value is cast to that type with a warning.
          * \param[in] objIDs Vector of unique identifiers of compound objects
          * \param[in] label Name/label associated with data
          * \param[in] data Object data value (scalar)
@@ -6329,8 +6448,9 @@ namespace helios {
                           "Context::setObjectData() was called with an unsupported type.");
 
             // Validate data type consistency and register/validate type
+            HeliosDataType data_type = HELIOS_TYPE_UNKNOWN;
+            HeliosDataType target_type = HELIOS_TYPE_UNKNOWN;
             if (!objIDs.empty() && !objIDs[0].empty() && !objIDs[0][0].empty()) {
-                HeliosDataType data_type;
                 if constexpr (std::is_same_v<T, int>) {
                     data_type = HELIOS_TYPE_INT;
                 } else if constexpr (std::is_same_v<T, uint>) {
@@ -6354,7 +6474,7 @@ namespace helios {
                 } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                     data_type = HELIOS_TYPE_STRING;
                 }
-                registerOrValidateObjectDataType<T>(label, data_type);
+                target_type = registerOrValidateObjectDataType(label, data_type);
             }
 
             // Check if caching is enabled for this label
@@ -6411,6 +6531,9 @@ namespace helios {
                 }
             }
 
+            // Cast to the type already registered for this label, as Context::setPrimitiveData() does
+            const bool cast_to_registered_type = target_type != data_type && isTypeCastingSupported(data_type, target_type);
+
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
@@ -6418,7 +6541,11 @@ namespace helios {
                 for (size_t j = 0; j < objIDs[k].size(); ++j) {
                     for (size_t i = 0; i < objIDs[k][j].size(); ++i) {
                         uint objID = objIDs[k][j][i];
-                        objects.at(objID)->setObjectData(label, data);
+                        if (cast_to_registered_type) {
+                            storeObjectDataWithTypeCasting(objID, label, data, target_type);
+                        } else {
+                            objects.at(objID)->setObjectData(label, data);
+                        }
                     }
                 }
             }
@@ -6442,6 +6569,7 @@ namespace helios {
         //! Add a vector of data for a compound object
         /**
          * \tparam T Object data type
+         * \note If the label already holds data of another numeric type, the values are cast to that type with a warning.
          * \note the size of objIDs and data must match
          * \param[in] objID Unique identifier of compound object
          * \param[in] label Name/label associated with data
@@ -6483,14 +6611,24 @@ namespace helios {
             } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                 data_type = HELIOS_TYPE_STRING;
             }
-            registerOrValidateObjectDataType<T>(label, data_type);
+            const HeliosDataType target_type = registerOrValidateObjectDataType(label, data_type);
 
-            objects.at(objID)->setObjectData(label, data);
+            if (!objects.at(objID)->doesObjectDataExist(label)) {
+                incrementObjectDataLabelCounter(label);
+            }
+
+            // Cast to the type already registered for this label, as Context::setPrimitiveData() does
+            if (target_type != data_type && isTypeCastingSupported(data_type, target_type)) {
+                storeObjectDataVectorWithTypeCasting(objID, label, data, target_type);
+            } else {
+                objects.at(objID)->setObjectData(label, data);
+            }
         }
 
         //! Add data value associated with a vector of compound objects. Each element in objIDs maps to each element in data.
         /**
          * \tparam T Object data type
+         * \note If the label already holds data of another numeric type, the values are cast to that type with a warning.
          * \note the size of objIDs and data must match
          * \param[in] objIDs Unique identifiers of compound object
          * \param[in] label Name/label associated with data
@@ -6498,18 +6636,18 @@ namespace helios {
          */
         template<typename T>
         void setObjectData(const std::vector<uint> &objIDs, const char *label, const std::vector<T> &data) {
-#ifdef HELIOS_DEBUG
             if (objIDs.size() != data.size()) {
-                helios_runtime_error("ERROR (Context::setObjectData): Object IDs and data vectors must be the same size.");
+                helios_runtime_error("ERROR (Context::setObjectData): Object IDs and data vectors must be the same size, but " + std::to_string(objIDs.size()) + " object IDs and " + std::to_string(data.size()) +
+                                     " values were given for object data '" + std::string(label) + "'.");
             }
-#endif
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
 
             // Validate data type consistency and register/validate type
+            HeliosDataType data_type = HELIOS_TYPE_UNKNOWN;
+            HeliosDataType target_type = HELIOS_TYPE_UNKNOWN;
             if (!objIDs.empty()) {
-                HeliosDataType data_type;
                 if constexpr (std::is_same_v<T, int>) {
                     data_type = HELIOS_TYPE_INT;
                 } else if constexpr (std::is_same_v<T, uint>) {
@@ -6533,7 +6671,7 @@ namespace helios {
                 } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                     data_type = HELIOS_TYPE_STRING;
                 }
-                registerOrValidateObjectDataType<T>(label, data_type);
+                target_type = registerOrValidateObjectDataType(label, data_type);
             }
 
             for (uint objID: objIDs) {
@@ -6542,11 +6680,18 @@ namespace helios {
                 }
             }
 
+            // Cast to the type already registered for this label, as Context::setPrimitiveData() does
+            const bool cast_to_registered_type = target_type != data_type && isTypeCastingSupported(data_type, target_type);
+
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
             for (int i = 0; i < (int) objIDs.size(); ++i) {
-                objects.at(objIDs[i])->setObjectData(label, data[i]);
+                if (cast_to_registered_type) {
+                    storeObjectDataWithTypeCasting(objIDs[i], label, data[i], target_type);
+                } else {
+                    objects.at(objIDs[i])->setObjectData(label, data[i]);
+                }
             }
         }
 
@@ -6739,7 +6884,7 @@ namespace helios {
                 globaldata[label].global_data_bool = {data};
                 globaldata[label].type = HELIOS_TYPE_BOOL;
             }
-            globaldata[label].version++;
+            globaldata[label].version = ++global_data_version_counter;
         }
 
         //! Add global data value (vector)
@@ -6791,7 +6936,7 @@ namespace helios {
                 globaldata[label].global_data_bool = data;
                 globaldata[label].type = HELIOS_TYPE_BOOL;
             }
-            globaldata[label].version++;
+            globaldata[label].version = ++global_data_version_counter;
         }
 
         //! Get global data value (scalar or vector)
@@ -7009,8 +7154,12 @@ namespace helios {
 
         //! Get the version number of global data (for change detection)
         /**
+         * The version changes whenever the data under the label changes: when it is set (setGlobalData(), and the data a
+         * renameGlobalData() or duplicateGlobalData() puts under it) or incremented (incrementGlobalData()). Versions are taken
+         * from one counter for the whole Context, so a label that is cleared or renamed and then set again never gets back a
+         * version it had before, and a plug-in that recorded a version can tell that the data changed by comparing it.
          * \param[in] label Name/label associated with data
-         * \return Version number of global data (incremented on every setGlobalData call)
+         * \return Version number of global data
          * \note Version is 0 if global data does not exist
          */
         uint64_t getGlobalDataVersion(const char *label) const;
@@ -8102,7 +8251,7 @@ namespace helios {
         uint addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const char *texturefile);
 
         //! Add a 3D tube compound object to the Context
-        /** A `tube' or `snake' compound object comprised of Triangle primitives
+        /** A 'tube' or 'snake' compound object comprised of Triangle primitives
          * \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
          * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
@@ -8117,7 +8266,7 @@ namespace helios {
         uint addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius);
 
         //! Add a 3D tube compound object to the Context and specify its diffuse color
-        /** A `tube' or `snake' compound object comprised of Triangle primitives
+        /** A 'tube' or 'snake' compound object comprised of Triangle primitives
          * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
          * \param[in] radius Radius of the tube at each node position.
@@ -8129,7 +8278,7 @@ namespace helios {
         uint addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const std::vector<RGBcolor> &color);
 
         //! Add a 3D tube compound object to the Context that is texture-mapped. Texture is mapped to span the entire tube.
-        /** A `tube' or `snake' compound object comprised of Triangle primitives
+        /** A 'tube' or 'snake' compound object comprised of Triangle primitives
          * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
          * \param[in] radius Radius of the tube at each node position.
@@ -8142,7 +8291,7 @@ namespace helios {
         uint addTubeObject(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const char *texturefile);
 
         //! Add a 3D tube compound object to the Context that is texture-mapped
-        /** A `tube' or `snake' compound object comprised of Triangle primitives
+        /** A 'tube' or 'snake' compound object comprised of Triangle primitives
          * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
          * \param[in] radius Radius of the tube at each node position.
@@ -8324,7 +8473,7 @@ namespace helios {
         uint addPolymeshObject(const std::vector<uint> &UUIDs);
 
         //! Add a 3D cone compound object to the Context
-        /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+        /** A 'cone' or 'cone frustum' or 'cylinder' compound object comprised of Triangle primitives
          * \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
          * \param[in] Ndivs Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] node0 (x,y,z) position defining the base of the cone
@@ -8338,7 +8487,7 @@ namespace helios {
         uint addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1);
 
         //! Add a 3D cone compound object to the Context and specify its diffuse color
-        /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+        /** A 'cone' or 'cone frustum' or 'cylinder' compound object comprised of Triangle primitives
          * \param[in] Ndivs Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] node0 (x,y,z) position defining the base of the cone
          * \param[in] node1 (x,y,z) position defining the end of the cone
@@ -8352,7 +8501,7 @@ namespace helios {
         uint addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, const RGBcolor &color);
 
         //! Add a 3D cone compound object to the Context that is texture-mapped
-        /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+        /** A 'cone' or 'cone frustum' or 'cylinder' compound object comprised of Triangle primitives
          * \param[in] Ndivs Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] node0 (x,y,z) position defining the base of the cone
          * \param[in] node1 (x,y,z) position defining the end of the cone
@@ -8448,7 +8597,7 @@ namespace helios {
         std::vector<uint> addTile(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv, const char *texturefile, const int2 &texture_repeat);
 
         //! Add a 3D tube compound object to the Context
-        /** A `tube' or `snake' compound object comprised of Triangle primitives
+        /** A 'tube' or 'snake' compound object comprised of Triangle primitives
          * \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
          * \param[in] Ndivs Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
@@ -8460,7 +8609,7 @@ namespace helios {
         std::vector<uint> addTube(uint Ndivs, const std::vector<vec3> &nodes, const std::vector<float> &radius);
 
         //! Add a 3D tube compound object to the Context and specify its diffuse color
-        /** A `tube' or `snake' compound object comprised of Triangle primitives
+        /** A 'tube' or 'snake' compound object comprised of Triangle primitives
          * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
          * \param[in] radius Radius of the tube at each node position.
@@ -8472,7 +8621,7 @@ namespace helios {
         std::vector<uint> addTube(uint radial_subdivisions, const std::vector<vec3> &nodes, const std::vector<float> &radius, const std::vector<RGBcolor> &color);
 
         //! Add a 3D tube compound object to the Context that is texture-mapped
-        /** A `tube' or `snake' compound object comprised of Triangle primitives
+        /** A 'tube' or 'snake' compound object comprised of Triangle primitives
          * \param[in] radial_subdivisions Number of radial divisions of the Tube. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] nodes Vector of (x,y,z) positions defining Tube segments.
          * \param[in] radius Radius of the tube at each node position.
@@ -8644,7 +8793,7 @@ namespace helios {
         std::vector<uint> addDisk(const int2 &Ndivs, const helios::vec3 &center, const helios::vec2 &size, const helios::SphericalCoord &rotation, const char *texturefile);
 
         //! Add a 3D cone to the Context
-        /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+        /** A 'cone' or 'cone frustum' or 'cylinder' compound object comprised of Triangle primitives
          * \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
          * \param[in] Ndivs Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] node0 (x,y,z) position defining the base of the cone
@@ -8657,7 +8806,7 @@ namespace helios {
         std::vector<uint> addCone(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1);
 
         //! Add a 3D cone to the Context and specify its diffuse color
-        /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+        /** A 'cone' or 'cone frustum' or 'cylinder' compound object comprised of Triangle primitives
          * \param[in] Ndivs Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] node0 (x,y,z) position defining the base of the cone
          * \param[in] node1 (x,y,z) position defining the end of the cone
@@ -8670,7 +8819,7 @@ namespace helios {
         std::vector<uint> addCone(uint Ndivs, const vec3 &node0, const vec3 &node1, float radius0, float radius1, RGBcolor &color);
 
         //! Add a 3D cone to the Context that is texture-mapped
-        /** A `cone' or `cone frustum' or 'cylinder' compound object comprised of Triangle primitives
+        /** A 'cone' or 'cone frustum' or 'cylinder' compound object comprised of Triangle primitives
          * \param[in] Ndivs Number of radial divisions of the Cone. E.g., Ndivs = 3 would be a triangular prism, Ndivs = 4 would be a rectangular prism, etc.
          * \param[in] node0 (x,y,z) position defining the base of the cone
          * \param[in] node1 (x,y,z) position defining the end of the cone
@@ -8686,8 +8835,8 @@ namespace helios {
         /**
          * \param[in] label Name of timeseries variable (e.g., temperature)
          * \param[in] value Value of timeseries data point
-         * \param[in] date Date vector corresponding to the time of `value' (see \ref helios::Date "Date")
-         * \param[in] time Time vector corresponding to the time of `value' (see \ref helios::Time "Time")
+         * \param[in] date Date vector corresponding to the time of 'value' (see \ref helios::Date "Date")
+         * \param[in] time Time vector corresponding to the time of 'value' (see \ref helios::Time "Time")
          * \ingroup timeseries
          */
         void addTimeseriesData(const char *label, float value, const Date &date, const Time &time);
@@ -8698,7 +8847,7 @@ namespace helios {
          * \param[in] date Date vector of the point to update (must match an existing entry exactly, see \ref helios::Date "Date")
          * \param[in] time Time vector of the point to update (must match an existing entry exactly, see \ref helios::Time "Time")
          * \param[in] new_value Replacement value for the specified timeseries data point
-         * \note Throws a runtime error if `label' does not exist or if no point with the exact (date, time) is found. To append a new point, use \ref addTimeseriesData() instead.
+         * \note Throws a runtime error if 'label' does not exist or if no point with the exact (date, time) is found. To append a new point, use \ref addTimeseriesData() instead.
          * \ingroup timeseries
          */
         void updateTimeseriesData(const char *label, const Date &date, const Time &time, float new_value);
@@ -8712,10 +8861,10 @@ namespace helios {
         void setCurrentTimeseriesPoint(const char *label, uint index);
 
         //! Get a timeseries data point by specifying a date and time vector.
-        /**This method interpolates the timeseries data to provide a value at exactly `date' and `time'.  Thus, `date' and `time' must be between the first and last timeseries values.
+        /**This method interpolates the timeseries data to provide a value at exactly 'date' and 'time'.  Thus, 'date' and 'time' must be between the first and last timeseries values.
          * \param[in] label Name of timeseries variable (e.g., temperature)
-         * \param[in] date Date vector corresponding to the time of `value' (see \ref helios::Date "Date")
-         * \param[in] time Time vector corresponding to the time of `value' (see \ref helios::Time "Time")
+         * \param[in] date Date vector corresponding to the time of 'value' (see \ref helios::Date "Date")
+         * \param[in] time Time vector corresponding to the time of 'value' (see \ref helios::Time "Time")
          * \return Value of timeseries data point
          * \ingroup timeseries
          */
@@ -8811,7 +8960,7 @@ namespace helios {
          *   - "year", "DOY"/"Jul": Specify date via year + day-of-year columns.
          *   - "date": Date string column (requires date_string_format).
          *   - "datetime": Combined date+time column (e.g., ISO-8601). Cannot be used with "date" or "hour".
-         *   - "hour": Integer hour column (supports 13 or 1300 formats).
+         *   - "hour": Integer hour column (supports 13 or 1300 formats; three or more digits are read as HHMM, so 0015 is 00:15).
          *   - "time": Time string column (auto-detects HH, HH:MM, or HH:MM:SS).
          *   - "minute", "second": Optional sub-hour precision with "hour" column.
          *   - Any other non-empty label: treated as a data variable.
@@ -8936,7 +9085,7 @@ namespace helios {
 
         //! Scan a Helios XML file to check if a tag exists
         /**
-         * \param[in] filename name of XML file.
+         * \param[in] filename name of XML file, resolved with helios::resolveFilePath().
          * \param[in] tag Tag to search for in XML file.
          * \param[in] label [optional] Label to search for within the tag.
          * \return True if tag exists in XML file, false otherwise.
@@ -8947,6 +9096,7 @@ namespace helios {
         /**
          * \param[in] filename name of XML file.
          * \param[in] quiet [optional] output messages are disabled if quiet is set to 'true' (default is quiet='false')
+         * \note Every material added with addMaterial() is written, including one that no primitive uses yet.
          */
         void writeXML(const char *filename, bool quiet = false) const;
 
@@ -8955,6 +9105,7 @@ namespace helios {
          * \param[in] filename name of XML file.
          * \param[in] UUIDs Universal unique identifiers of primitives that should be written to XML file.
          * \param[in] quiet [optional] output messages are disabled if quiet is set to 'true' (default is quiet='false').
+         * \note Only the materials used by the primitives being written are included.
          */
         void writeXML(const char *filename, const std::vector<uint> &UUIDs, bool quiet = false) const;
 
@@ -9759,6 +9910,56 @@ namespace helios {
             }
         }
 
+        //! Convert each element of a vector to another numeric type
+        template<typename TargetType, typename SourceType>
+        static std::vector<TargetType> castVectorElements(const std::vector<SourceType> &data) {
+            std::vector<TargetType> cast_data(data.size());
+            std::transform(data.begin(), data.end(), cast_data.begin(), [](const SourceType &value) { return static_cast<TargetType>(value); });
+            return cast_data;
+        }
+
+        //! Store a vector of primitive data on one primitive, casting each element to the type already registered for the label
+        template<typename T>
+        void storePrimitiveDataVectorWithTypeCasting(uint UUID, const char *label, const std::vector<T> &data, HeliosDataType target_type) {
+            // Only cast between numeric scalar types
+            if constexpr (std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double>) {
+                if (target_type == HELIOS_TYPE_INT) {
+                    primitives.at(UUID)->setPrimitiveData(label, castVectorElements<int>(data));
+                } else if (target_type == HELIOS_TYPE_UINT) {
+                    primitives.at(UUID)->setPrimitiveData(label, castVectorElements<uint>(data));
+                } else if (target_type == HELIOS_TYPE_FLOAT) {
+                    primitives.at(UUID)->setPrimitiveData(label, castVectorElements<float>(data));
+                } else if (target_type == HELIOS_TYPE_DOUBLE) {
+                    primitives.at(UUID)->setPrimitiveData(label, castVectorElements<double>(data));
+                } else {
+                    helios_runtime_error("ERROR (Context::setPrimitiveData): Cannot cast the values of data '" + std::string(label) + "' to its registered type " + dataTypeToString(target_type) + ".");
+                }
+            } else {
+                helios_runtime_error("ERROR (Context::setPrimitiveData): Data '" + std::string(label) + "' is not of a numeric type, so it cannot be cast to its registered type " + dataTypeToString(target_type) + ".");
+            }
+        }
+
+        //! Store a vector of object data on one object, casting each element to the type already registered for the label
+        template<typename T>
+        void storeObjectDataVectorWithTypeCasting(uint objID, const char *label, const std::vector<T> &data, HeliosDataType target_type) {
+            // Only cast between numeric scalar types
+            if constexpr (std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double>) {
+                if (target_type == HELIOS_TYPE_INT) {
+                    objects.at(objID)->setObjectData(label, castVectorElements<int>(data));
+                } else if (target_type == HELIOS_TYPE_UINT) {
+                    objects.at(objID)->setObjectData(label, castVectorElements<uint>(data));
+                } else if (target_type == HELIOS_TYPE_FLOAT) {
+                    objects.at(objID)->setObjectData(label, castVectorElements<float>(data));
+                } else if (target_type == HELIOS_TYPE_DOUBLE) {
+                    objects.at(objID)->setObjectData(label, castVectorElements<double>(data));
+                } else {
+                    helios_runtime_error("ERROR (Context::setObjectData): Cannot cast the values of data '" + std::string(label) + "' to its registered type " + dataTypeToString(target_type) + ".");
+                }
+            } else {
+                helios_runtime_error("ERROR (Context::setObjectData): Data '" + std::string(label) + "' is not of a numeric type, so it cannot be cast to its registered type " + dataTypeToString(target_type) + ".");
+            }
+        }
+
         HeliosDataType registerOrValidatePrimitiveDataType(const std::string &label, HeliosDataType data_type) {
             auto it = primitive_data_type_registry.find(label);
             if (it == primitive_data_type_registry.end()) {
@@ -9783,7 +9984,6 @@ namespace helios {
             }
         }
 
-        template<typename T>
         HeliosDataType registerOrValidateObjectDataType(const std::string &label, HeliosDataType data_type) {
             auto it = object_data_type_registry.find(label);
             if (it == object_data_type_registry.end()) {

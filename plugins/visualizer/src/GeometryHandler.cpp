@@ -1026,7 +1026,7 @@ void GeometryHandler::getDomainBoundingSphere(helios::vec3 &center, helios::vec3
 }
 
 size_t GeometryHandler::sampleUUID() {
-    std::uniform_int_distribution<size_t> dist(1, (std::numeric_limits<size_t>::max)());
+    helios::uniform_int_distribution<size_t> dist(1, (std::numeric_limits<size_t>::max)());
     size_t UUID = 0;
     while (UUID == 0 || UUID_map.find(UUID) != UUID_map.end()) {
         UUID = dist(random_generator);

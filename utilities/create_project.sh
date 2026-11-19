@@ -42,6 +42,50 @@ to_cmake_path() {
     esac
 }
 
+# Header that a project includes to use a plug-in. Kept as one name-to-header list: two parallel arrays of names and headers
+# fell out of step when a plug-in was added to one and not the other, and new projects then included the wrong header.
+plugin_header() {
+    case "${1}" in
+        aeriallidar) echo "AerialLiDAR.h" ;;
+        boundarylayerconductance) echo "BoundaryLayerConductanceModel.h" ;;
+        canopygenerator) echo "CanopyGenerator.h" ;;
+        collisiondetection) echo "CollisionDetection.h" ;;
+        energybalance) echo "EnergyBalanceModel.h" ;;
+        leafoptics) echo "LeafOptics.h" ;;
+        lidar) echo "LiDAR.h" ;;
+        parameteroptimization) echo "ParameterOptimization.h" ;;
+        photosynthesis) echo "PhotosynthesisModel.h" ;;
+        physicsengine) echo "PhysicsEngine.h" ;;
+        plantarchitecture) echo "PlantArchitecture.h" ;;
+        planthydraulics) echo "PlantHydraulicsModel.h" ;;
+        projectbuilder) echo "ProjectBuilder.h" ;;
+        radiation) echo "RadiationModel.h" ;;
+        robotics) echo "Robot.h" ;;
+        soiltransport) echo "SoilTransportModel.h" ;;
+        solarposition) echo "SolarPosition.h" ;;
+        stomatalconductance) echo "StomatalConductanceModel.h" ;;
+        syntheticannotation) echo "SyntheticAnnotation.h" ;;
+        topography) echo "Topography.h" ;;
+        visualizer) echo "Visualizer.h" ;;
+        voxelintersection) echo "VoxelIntersection.h" ;;
+        weberpenntree) echo "WeberPennTree.h" ;;
+        *) echo "" ;;
+    esac
+}
+
+# Check every requested plug-in before anything is written, so that a misspelled name stops the script instead of producing a project without it.
+for argin in "${@:2}"; do
+    header="$(plugin_header "${argin}")"
+    if [ -z "${header}" ]; then
+        echo "Error: Unknown plug-in '${argin}'."
+        exit 1
+    fi
+    if [ ! -e "${HELIOS_BASE_DIR}/plugins/${argin}/include/${header}" ]; then
+        echo "Error: Plug-in '${argin}' was not found: ${HELIOS_BASE_DIR}/plugins/${argin}/include/${header} does not exist."
+        exit 1
+    fi
+done
+
 if [ ! -e "${DIRPATH}" ]; then
     echo "Directory ""${DIRPATH}"" does not exist. Creating it...";
     if ! mkdir -p "${DIRPATH}"; then
@@ -58,9 +102,6 @@ fi
 if [ ! -e "build" ]; then
     mkdir build;
 fi
-
-PLUGINS=("energybalance" "lidar" "aeriallidar" "photosynthesis" "radiation" "solarposition" "stomatalconductance" "topography" "visualizer" "voxelintersection" "weberpenntree" "canopygenerator" "boundarylayerconductance" "leafoptics" "syntheticannotation" "plantarchitecture" "projectbuilder" "planthydraulics" "soiltransport" "parameteroptimization" "collisiondetection" "physicsengine" "robotics")
-HEADERS=("EnergyBalanceModel.h" "LiDAR.h" "AerialLiDAR.h" "PhotosynthesisModel.h" "RadiationModel.h" "SolarPosition.h" "StomatalConductanceModel.h" "Topography.h" "Visualizer.h" "VoxelIntersection.h" "WeberPennTree.h" "CanopyGenerator.h" "BoundaryLayerConductanceModel.h" "LeafOptics.h" "SyntheticAnnotation.h" "PlantArchitecture.h" "ProjectBuilder.h" "PlantHydraulicsModel.h" "ParameterOptimization.h" "CollisionDetection.h")
 
 FILEBASE=$(basename "${DIRPATH}")
 
@@ -128,17 +169,7 @@ else
     echo -ne '#specify which plug-ins to use (separate plug-in names with semicolon)\nset( PLUGINS "' >> CMakeLists.txt
 
     for argin in "${@:2}"; do
-	FOUND=0
-	for i in "${PLUGINS[@]}";do
-	    if [ "${i}" == "${argin}" ]; then
-		echo -ne "${argin};" >> CMakeLists.txt
-		FOUND=1
-		break;
-	    fi
-	done
-	if [ $FOUND == "0" ]; then
-	    echo "Unknown plug-in '${argin}'. Skipping..."
-	fi
+        echo -ne "${argin};" >> CMakeLists.txt
     done
     echo -e '" )\n\n' >> CMakeLists.txt
 fi
@@ -152,19 +183,7 @@ if [ "$#" == 1 ]; then
 fi
 
 for argin in "${@:2}"; do
-    FOUND=0
-    IND=0
-    for i in "${PLUGINS[@]}";do
-	if [ "${i}" == "${argin}" ]; then
-	    echo -e '#include "'${HEADERS[${IND}]}'"' >> main.cpp
-	    FOUND=1
-	    break;
-	fi
-	IND=$((IND+1))
-    done
-    if [ $FOUND == "0" ]; then
-	echo "Unknown plug-in '${argin}'. Skipping..."
-    fi
+    echo -e '#include "'"$(plugin_header "${argin}")"'"' >> main.cpp
 done
 
 echo -e '\nusing namespace helios;\n' >> main.cpp

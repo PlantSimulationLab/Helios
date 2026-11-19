@@ -150,6 +150,7 @@ float computeWaterPotential(float pressure_potential, float osmotic_potential);
  * \param[in] water_potential Water potential (MPa).
  * \param[in] temperature Primitive temperature (K).
  * \return Hydraulic conductance (mol/m²/s/MPa).
+ * \note Raises an error if the conductance is negative or NaN (e.g., a negative saturated conductance, or a NaN water potential).
  */
 float computeConductance(const HydraulicConductance &coeffs, float water_potential, float temperature);
 
@@ -611,6 +612,16 @@ public:
      * */
     void outputCapacitancePrimitiveData(bool toggle);
 
+    //! Toggle the writing out of optional primitive data - whole-plant hydraulic conductance and soil water potential
+    /**
+     * Writes "plant_hydraulic_conductance" (\f$K_{plant}\f$, the soil-to-leaf conductance of the root, stem, and leaf conductances in series, per unit leaf area, mol/m^2/s/MPa) and "soil_water_potential" (MPa, of the
+     * leaf's plant) to each leaf primitive. This differs from the optional output "hydraulic_conductance", which is the leaf conductance \f$K_{leaf}\f$ only. "soil_water_potential" is written only for plants whose
+     * soil water potential was set with setSoilWaterPotentialOfPlant(), so that a value set directly as primitive data is not replaced by the default placeholder.
+     * \param[in] toggle
+     * \note Both are also written automatically when the StomatalConductanceModel Buckley et al. (2026) model is in use (global data "buckley2026_stomatal_model_enabled" is 1), since that model uses them.
+     * */
+    void outputPlantConductancePrimitiveData(bool toggle);
+
     //! Group leaf primitives into a plant that share stem, root, and soil hydraulics
     /**
      * \param[in] UUIDs Leaf primitives
@@ -700,7 +711,7 @@ public:
     //! Run the model for a primitive based on its UUID for a given timespan and timestep for all UUIDs with primitive data "plantID"
     /**
      * \param[in] timespan Timespan in seconds of simulation run
-     * \param[in] timestep Timestep in seconds of simulation run
+     * \param[in] timestep First time step of the simulation run, in seconds. Later steps are adapted between 10 and 500 seconds according to how fast the water potentials change, and the last step is shortened so that the run ends at the timespan. Must be greater than zero when timespan is greater than zero.
      * \note A timespan of "0" will enact steady-state simulation, while a timespan > 0 will run the non-steady-state simulation.
      * \note All UUIDs in context with primitive data "plantID" will be assumed to be a collection of a single plant's leaves, with one shared stem, root, and soil water potential
      */
@@ -710,7 +721,7 @@ public:
     /**
      * \param[in] UUID Universal unique identifier for primitive to be set.
      * \param[in] timespan Timespan in seconds of simulation run
-     * \param[in] timestep Timestep in seconds of simulation run
+     * \param[in] timestep First time step of the simulation run, in seconds. Later steps are adapted between 10 and 500 seconds according to how fast the water potentials change, and the last step is shortened so that the run ends at the timespan. Must be greater than zero when timespan is greater than zero.
      * \note A timespan of "0" will enact steady-state simulation, while a timespan > 0 will run the non-steady-state simulation.
      * \note UUID is assumed to be a single leaf, with one stem, root, and soil water potential
      */
@@ -720,7 +731,7 @@ public:
     /**
      * \param[in] UUIDs Universal unique identifiers for primitives to be run the model on.
      * \param[in] timespan Timespan in seconds of simulation run
-     * \param[in] timestep Timestep in seconds of simulation run
+     * \param[in] timestep First time step of the simulation run, in seconds. Later steps are adapted between 10 and 500 seconds according to how fast the water potentials change, and the last step is shortened so that the run ends at the timespan. Must be greater than zero when timespan is greater than zero.
      * \note A timespan of "0" will enact steady-state simulation, while a timespan > 0 will run the non-steady-state simulation
      * \note UUIDs with the same primitive data "plantID" will be assumed to be a collection of a single plant's leaves, with one shared stem, root, and soil water potential
      * \note All plantIDs within given UUIDs will have the model separately run on them
@@ -736,11 +747,20 @@ private:
     std::map<uint, float> stemWaterPotentialsByPlantID;
     std::map<uint, float> rootWaterPotentialsByPlantID;
     std::map<uint, float> soilWaterPotentialsByPlantID;
+    //! Plants whose soil water potential was set with setSoilWaterPotentialOfPlant() (others use a placeholder value, which is not written as "soil_water_potential" primitive data)
+    std::set<uint> soilWaterPotentialSetByUser;
     std::vector<int> plantIDs;
     bool message_flag = false;
 
     bool OutputConductance = false;
     bool OutputCapacitance = false;
+    bool OutputPlantConductance = false;
+
+    //! True if "plant_hydraulic_conductance" and "soil_water_potential" should be written: requested with outputPlantConductancePrimitiveData(), or the Buckley et al. (2026) stomatal model is in use
+    bool plantConductanceOutputRequested() const;
+
+    //! Whole-plant (soil-to-leaf) hydraulic conductance K_plant per unit leaf area: the root, stem, and leaf conductances in series (mol/m^2/s/MPa); 0 if any of them is zero
+    static float computePlantConductance(float K_root, float K_stem, float K_leaf);
 
     void updateRootAndStemWaterPotentialsOfPlant(const std::vector<uint> &UUIDs, int timespan, int timestep);
 

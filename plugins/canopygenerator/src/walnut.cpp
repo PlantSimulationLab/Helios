@@ -28,7 +28,7 @@ std::vector<uint> leafPrototype(const WalnutCanopyParameters &params, std::minst
     float dx = 1.f / float(Nx);
     float dy = 0.5f / float(Ny);
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     std::vector<uint> UUIDs;
 
@@ -138,7 +138,7 @@ uint addBranch(const vec3 p_start, const vec3 tan_start, const float r_start, co
 void branchRecursion(const std::vector<vec3> position_parent, const std::vector<float> radius_parent, uint level, uint max_levels, const std::vector<uint> leaf_prototype, const std::vector<uint> nut_prototype, std::vector<uint> &UUID_branch_plant,
                      std::vector<std::vector<uint>> &UUID_leaf_plant, std::vector<std::vector<uint>> &UUID_fruit_plant, const WalnutCanopyParameters params, std::minstd_rand0 generator, Context *context) {
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     if (level > max_levels) { // leaves and nuts
 
@@ -341,7 +341,7 @@ uint CanopyGenerator::walnut(const WalnutCanopyParameters &params, const vec3 &o
     std::vector<std::vector<std::vector<uint>>> UUID_fruit_plant;
     UUID_fruit_plant.resize(1);
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     //------ trunk -------//
 

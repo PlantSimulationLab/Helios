@@ -225,3 +225,102 @@ DOCTEST_TEST_CASE("CanopyGenerator White Spruce canopy_configuration selects the
 int CanopyGenerator::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
+
+DOCTEST_TEST_CASE("CanopyGenerator keeps the plants of earlier canopies when another canopy is built") {
+    Context context_test;
+    CanopyGenerator canopygenerator(&context_test);
+    canopygenerator.disableMessages();
+
+    VSPGrapevineParameters vines;
+    vines.plant_count = make_int2(2, 1);
+    canopygenerator.buildCanopy(vines);
+    DOCTEST_REQUIRE(canopygenerator.getPlantCount() == 2);
+    const auto vine_leaves = canopygenerator.getLeafUUIDs(1);
+    const auto vine_trunk = canopygenerator.getTrunkUUIDs(1);
+    DOCTEST_REQUIRE(!vine_leaves.empty());
+    DOCTEST_REQUIRE(!vine_trunk.empty());
+
+    SphericalCrownsCanopyParameters spheres;
+    spheres.plant_count = make_int2(1, 1);
+    spheres.canopy_origin = make_vec3(20, 0, 0);
+    canopygenerator.buildCanopy(spheres);
+    DOCTEST_CHECK(canopygenerator.getPlantCount() == 3);
+    DOCTEST_CHECK(canopygenerator.getLeafUUIDs(1) == vine_leaves);
+    const auto sphere_leaves = canopygenerator.getLeafUUIDs(2);
+    DOCTEST_CHECK(!sphere_leaves.empty());
+
+    ConicalCrownsCanopyParameters cones;
+    cones.plant_count = make_int2(1, 1);
+    cones.canopy_origin = make_vec3(40, 0, 0);
+    canopygenerator.buildCanopy(cones);
+    DOCTEST_CHECK(canopygenerator.getPlantCount() == 4);
+    DOCTEST_CHECK(canopygenerator.getLeafUUIDs(2) == sphere_leaves);
+    const auto cone_leaves = canopygenerator.getLeafUUIDs(3);
+    DOCTEST_CHECK(!cone_leaves.empty());
+
+    HomogeneousCanopyParameters homogeneous;
+    homogeneous.canopy_origin = make_vec3(60, 0, 0);
+    canopygenerator.buildCanopy(homogeneous);
+    DOCTEST_CHECK(canopygenerator.getPlantCount() == 5);
+    DOCTEST_CHECK(canopygenerator.getLeafUUIDs(1) == vine_leaves);
+    DOCTEST_CHECK(canopygenerator.getLeafUUIDs(3) == cone_leaves);
+    DOCTEST_CHECK(!canopygenerator.getLeafUUIDs(4).empty());
+
+    // The vines' trunks are still found under the vines' plant IDs, and the canopies without trunks have none
+    DOCTEST_CHECK(canopygenerator.getTrunkUUIDs(1) == vine_trunk);
+    DOCTEST_CHECK(canopygenerator.getTrunkUUIDs(4).empty());
+
+    // A plant with no trunk built before one that has a trunk does not shift the trunk's plant ID
+    Context context_tomato;
+    CanopyGenerator tomato_then_vine(&context_tomato);
+    tomato_then_vine.disableMessages();
+    TomatoParameters tomatoes;
+    tomatoes.plant_count = make_int2(1, 1);
+    tomato_then_vine.buildCanopy(tomatoes);
+    VSPGrapevineParameters one_vine;
+    one_vine.plant_count = make_int2(1, 1);
+    one_vine.canopy_origin = make_vec3(20, 0, 0);
+    tomato_then_vine.buildCanopy(one_vine);
+    DOCTEST_REQUIRE(tomato_then_vine.getPlantCount() == 2);
+    DOCTEST_CHECK(tomato_then_vine.getTrunkUUIDs(0).empty());
+    DOCTEST_CHECK(!tomato_then_vine.getTrunkUUIDs(1).empty());
+}
+
+DOCTEST_TEST_CASE("CanopyGenerator loadXML reads every <canopygenerator> block") {
+    // The loop over <canopygenerator> blocks advanced with next_sibling("CanopyGenerator"), which XML matches case-sensitively,
+    // so only the first block of a file was read and the canopies in any later block were silently left out.
+    const std::filesystem::path directory = std::filesystem::temp_directory_path();
+    const std::string block = "  <canopygenerator>\n    <HomogeneousCanopyParameters>\n      <leaf_area_index>0.5</leaf_area_index>\n    </HomogeneousCanopyParameters>\n  </canopygenerator>\n";
+    const std::filesystem::path one_block_file = directory / "helios_canopygenerator_one_block.xml";
+    const std::filesystem::path two_block_file = directory / "helios_canopygenerator_two_blocks.xml";
+    {
+        std::ofstream one(one_block_file);
+        one << "<helios>\n" << block << "</helios>\n";
+        std::ofstream two(two_block_file);
+        two << "<helios>\n" << block << block << "</helios>\n";
+    }
+
+    size_t one_block_primitives = 0;
+    size_t two_block_primitives = 0;
+    {
+        Context context;
+        CanopyGenerator canopygenerator(&context);
+        canopygenerator.disableMessages();
+        capture_cout cout_buffer;
+        canopygenerator.loadXML(one_block_file.string().c_str(), true);
+        one_block_primitives = context.getPrimitiveCount();
+    }
+    {
+        Context context;
+        CanopyGenerator canopygenerator(&context);
+        canopygenerator.disableMessages();
+        capture_cout cout_buffer;
+        canopygenerator.loadXML(two_block_file.string().c_str(), true);
+        two_block_primitives = context.getPrimitiveCount();
+    }
+    std::filesystem::remove(one_block_file);
+    std::filesystem::remove(two_block_file);
+
+    DOCTEST_REQUIRE(one_block_primitives > 0);
+    DOCTEST_CHECK(two_block_primitives == 2 * one_block_primitives);
+}

@@ -2863,6 +2863,7 @@ public:
 
     //! Form an axis-aligned bounding box for all hit points in the point cloud
     /**
+     * \note An error is raised if the point cloud has no hit points.
      * \param[out] boxmin Coordinates of the bounding box vertex in the (-x,-y,-z) direction.
      * \param[out] boxmax Coordinates of the bounding box vertex in the (+x,+y,+z) direction.
      */
@@ -2870,6 +2871,7 @@ public:
 
     //! Form an axis-aligned bounding box for all grid cells in the point cloud
     /**
+     * \note An error is raised if the point cloud has no grid cells.
      * \param[out] boxmin Coordinates of the bounding box vertex in the (-x,-y,-z) direction.
      * \param[out] boxmax Coordinates of the bounding box vertex in the (+x,+y,+z) direction.
      */

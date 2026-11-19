@@ -1547,3 +1547,370 @@ TEST_CASE("Material normal and bump maps round-trip through XML") {
         std::filesystem::remove(file);
     }
 }
+
+TEST_CASE("Context XML round trip keeps full float and double precision") {
+    const std::string xml_file = (std::filesystem::temp_directory_path() / "helios_test_xml_precision.xml").string();
+    const double unix_time = 1767225600.0;
+    const double julian_date = 2460676.5;
+    const float large_count = 1234567.f;
+    const float fine_value = 1234.5678f;
+    const vec3 center = make_vec3(1234.5678f, -0.123456789f, 98765.4321f);
+    {
+        Context ctx;
+        uint UUID = ctx.addPatch(center, make_vec2(1, 1));
+        ctx.setPrimitiveData(UUID, "fine_value", fine_value);
+        ctx.setPrimitiveData(UUID, "julian_date", julian_date);
+        uint objID = ctx.addBoxObject(center, make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        ctx.setObjectData(objID, "unix_time", unix_time);
+        ctx.setPrimitiveData(ctx.getObjectPrimitiveUUIDs(objID), "member_time", unix_time);
+        ctx.setGlobalData("unix_time", unix_time);
+        ctx.setGlobalData("large_count", large_count);
+        ctx.writeXML(xml_file.c_str(), true);
+    }
+    Context loaded;
+    std::vector<uint> UUIDs = loaded.loadXML(xml_file.c_str(), true);
+    DOCTEST_REQUIRE(!UUIDs.empty());
+
+    double global_time = 0;
+    loaded.getGlobalData("unix_time", global_time);
+    DOCTEST_CHECK(global_time == unix_time);
+    float global_count = 0;
+    loaded.getGlobalData("large_count", global_count);
+    DOCTEST_CHECK(global_count == large_count);
+
+    bool found_patch = false;
+    bool found_member = false;
+    for (uint UUID: UUIDs) {
+        if (loaded.doesPrimitiveDataExist(UUID, "fine_value")) {
+            found_patch = true;
+            float loaded_fine_value = 0;
+            loaded.getPrimitiveData(UUID, "fine_value", loaded_fine_value);
+            DOCTEST_CHECK(loaded_fine_value == fine_value);
+            double loaded_julian_date = 0;
+            loaded.getPrimitiveData(UUID, "julian_date", loaded_julian_date);
+            DOCTEST_CHECK(loaded_julian_date == julian_date);
+            const std::vector<vec3> vertices = loaded.getPrimitiveVertices(UUID);
+            const vec3 loaded_center = 0.25f * (vertices.at(0) + vertices.at(1) + vertices.at(2) + vertices.at(3));
+            DOCTEST_CHECK(loaded_center.x == doctest::Approx(center.x).epsilon(1e-7));
+            DOCTEST_CHECK(loaded_center.z == doctest::Approx(center.z).epsilon(1e-7));
+        }
+        if (loaded.doesPrimitiveDataExist(UUID, "member_time")) {
+            found_member = true;
+            double loaded_member_time = 0;
+            loaded.getPrimitiveData(UUID, "member_time", loaded_member_time);
+            DOCTEST_CHECK(loaded_member_time == unix_time);
+        }
+    }
+    DOCTEST_CHECK(found_patch);
+    DOCTEST_CHECK(found_member);
+
+    std::vector<uint> objIDs = loaded.getAllObjectIDs();
+    DOCTEST_REQUIRE(objIDs.size() == 1);
+    double object_time = 0;
+    loaded.getObjectData(objIDs.front(), "unix_time", object_time);
+    DOCTEST_CHECK(object_time == unix_time);
+
+    std::filesystem::remove(xml_file);
+}
+
+TEST_CASE("Material labels and texture paths containing spaces round-trip through XML") {
+    const std::string texture_file = (std::filesystem::temp_directory_path() / "helios test texture with spaces.png").string();
+    const std::string xml_file = (std::filesystem::temp_directory_path() / "helios_test_xml_material_spaces.xml").string();
+    writePNG(texture_file, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.2f, 0.7f, 0.1f, 1.f)));
+    const RGBAcolor leaf_color = make_RGBAcolor(0.25f, 0.5f, 0.75f, 1.f);
+    {
+        Context ctx;
+        ctx.addMaterial("leaf surface");
+        ctx.setMaterialColor("leaf surface", leaf_color);
+        ctx.addMaterial("bark texture");
+        ctx.setMaterialTexture("bark texture", texture_file);
+        ctx.addMaterial("bumpy bark");
+        ctx.setMaterialNormalMap("bumpy bark", texture_file, 1.f, false);
+        uint p0 = ctx.addPatch();
+        uint p1 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+        ctx.assignMaterialToPrimitive(p0, "leaf surface");
+        ctx.assignMaterialToPrimitive(p1, "bark texture");
+        uint p2 = ctx.addPatch(make_vec3(4, 0, 0), make_vec2(1, 1));
+        ctx.assignMaterialToPrimitive(p2, "bumpy bark");
+        ctx.writeXML(xml_file.c_str(), true);
+    }
+    Context loaded;
+    std::vector<uint> UUIDs;
+    DOCTEST_REQUIRE_NOTHROW(UUIDs = loaded.loadXML(xml_file.c_str(), true));
+    DOCTEST_REQUIRE(UUIDs.size() == 3);
+    DOCTEST_CHECK(loaded.getPrimitiveMaterialLabel(UUIDs.at(0)) == "leaf surface");
+    DOCTEST_CHECK(loaded.getPrimitiveColorRGBA(UUIDs.at(0)).b == doctest::Approx(leaf_color.b));
+    DOCTEST_CHECK(loaded.getPrimitiveMaterialLabel(UUIDs.at(1)) == "bark texture");
+    DOCTEST_CHECK(loaded.getMaterialTexture("bark texture") == texture_file);
+    DOCTEST_CHECK(loaded.getMaterialNormalMapFile("bumpy bark") == texture_file);
+
+    std::filesystem::remove(texture_file);
+    std::filesystem::remove(xml_file);
+}
+
+TEST_CASE("String data with spaces, empty strings and markup characters round-trips through XML") {
+    const std::string xml_file = (std::filesystem::temp_directory_path() / "helios_test_xml_strings.xml").string();
+    const std::string species = "Vitis vinifera";
+    const std::vector<std::string> several = {"first value", "", "second", "a<b & c>d", "say \"hi\" \\ bye"};
+    {
+        Context ctx;
+        uint patch = ctx.addPatch();
+        ctx.setPrimitiveData(patch, "species", species);
+        ctx.setPrimitiveData(patch, "several", several);
+        ctx.setPrimitiveData(patch, "empty", std::string(""));
+        ctx.setPrimitiveData(patch, "markup", std::string("x<y&z"));
+        ctx.setPrimitiveData(patch, "plain", std::string("leaf"));
+        uint objID = ctx.addBoxObject(make_vec3(3, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        ctx.setObjectData(objID, "species", species);
+        ctx.setObjectData(objID, "several", several);
+        ctx.setPrimitiveData(ctx.getObjectPrimitiveUUIDs(objID), "member_species", species);
+        ctx.setGlobalData("species", species);
+        ctx.setGlobalData("several", several);
+        ctx.setGlobalData("empty", std::string(""));
+        ctx.writeXML(xml_file.c_str(), true);
+    }
+    Context loaded;
+    std::vector<uint> UUIDs;
+    DOCTEST_REQUIRE_NOTHROW(UUIDs = loaded.loadXML(xml_file.c_str(), true));
+
+    std::vector<std::string> global_values;
+    loaded.getGlobalData("species", global_values);
+    DOCTEST_CHECK(global_values == std::vector<std::string>{species});
+    loaded.getGlobalData("several", global_values);
+    DOCTEST_CHECK(global_values == several);
+    loaded.getGlobalData("empty", global_values);
+    DOCTEST_CHECK(global_values == std::vector<std::string>{""});
+
+    bool found_patch = false;
+    bool found_member = false;
+    for (uint UUID: UUIDs) {
+        std::vector<std::string> values;
+        if (loaded.doesPrimitiveDataExist(UUID, "species")) {
+            found_patch = true;
+            loaded.getPrimitiveData(UUID, "species", values);
+            DOCTEST_CHECK(values == std::vector<std::string>{species});
+            loaded.getPrimitiveData(UUID, "several", values);
+            DOCTEST_CHECK(values == several);
+            loaded.getPrimitiveData(UUID, "empty", values);
+            DOCTEST_CHECK(values == std::vector<std::string>{""});
+            loaded.getPrimitiveData(UUID, "markup", values);
+            DOCTEST_CHECK(values == std::vector<std::string>{"x<y&z"});
+            loaded.getPrimitiveData(UUID, "plain", values);
+            DOCTEST_CHECK(values == std::vector<std::string>{"leaf"});
+        }
+        if (loaded.doesPrimitiveDataExist(UUID, "member_species")) {
+            found_member = true;
+            loaded.getPrimitiveData(UUID, "member_species", values);
+            DOCTEST_CHECK(values == std::vector<std::string>{species});
+        }
+    }
+    DOCTEST_CHECK(found_patch);
+    DOCTEST_CHECK(found_member);
+
+    std::vector<uint> objIDs = loaded.getAllObjectIDs();
+    DOCTEST_REQUIRE(objIDs.size() == 1);
+    std::vector<std::string> object_values;
+    loaded.getObjectData(objIDs.front(), "species", object_values);
+    DOCTEST_CHECK(object_values == std::vector<std::string>{species});
+    loaded.getObjectData(objIDs.front(), "several", object_values);
+    DOCTEST_CHECK(object_values == several);
+
+    // Written by hand: unquoted text is split at whitespace, as Helios always read it, and a value with a space must be quoted
+    const std::string hand_file = (std::filesystem::temp_directory_path() / "helios_test_xml_strings_hand.xml").string();
+    {
+        std::ofstream out(hand_file);
+        out << "<helios>\n<globaldata_string label=\"unquoted\">two words</globaldata_string>\n<globaldata_string label=\"quoted\">\"two words\" \"three\"</globaldata_string>\n</helios>\n";
+    }
+    Context hand;
+    hand.loadXML(hand_file.c_str(), true);
+    std::vector<std::string> hand_values;
+    hand.getGlobalData("unquoted", hand_values);
+    DOCTEST_CHECK(hand_values == std::vector<std::string>{"two", "words"});
+    hand.getGlobalData("quoted", hand_values);
+    DOCTEST_CHECK(hand_values == std::vector<std::string>{"two words", "three"});
+
+    // A quoted value that is never closed is an error
+    {
+        std::ofstream out(hand_file);
+        out << "<helios>\n<globaldata_string label=\"broken\">\"two words</globaldata_string>\n</helios>\n";
+    }
+    Context broken;
+    DOCTEST_CHECK_THROWS(broken.loadXML(hand_file.c_str(), true));
+
+    std::filesystem::remove(xml_file);
+    std::filesystem::remove(hand_file);
+}
+
+TEST_CASE("Several string values written unquoted by Helios 1.3.97 and earlier load as separate values") {
+    // Earlier versions wrote each value of string data separated by a space, without quotes
+    const std::string xml_file = (std::filesystem::temp_directory_path() / "helios_test_xml_strings_v1397.xml").string();
+    {
+        std::ofstream out(xml_file);
+        out << "<?xml version=\"1.0\"?>\n<helios>\n";
+        out << "   <patch>\n";
+        out << "\t<data_string label=\"names\">alpha beta gamma</data_string>\n";
+        out << "   </patch>\n";
+        out << "   <globaldata_string label=\"names\">alpha beta gamma</globaldata_string>\n";
+        out << "</helios>\n";
+    }
+    const std::vector<std::string> expected = {"alpha", "beta", "gamma"};
+
+    Context loaded;
+    std::vector<uint> UUIDs;
+    DOCTEST_REQUIRE_NOTHROW(UUIDs = loaded.loadXML(xml_file.c_str(), true));
+    DOCTEST_REQUIRE(UUIDs.size() == 1);
+    std::vector<std::string> values;
+    loaded.getPrimitiveData(UUIDs.front(), "names", values);
+    DOCTEST_CHECK(values == expected);
+    loaded.getGlobalData("names", values);
+    DOCTEST_CHECK(values == expected);
+
+    std::filesystem::remove(xml_file);
+}
+
+TEST_CASE("Labels and file paths containing XML markup characters round-trip through XML") {
+    const std::string texture_file = (std::filesystem::temp_directory_path() / "helios_test_texture_&_co.png").string();
+    const std::string xml_file = (std::filesystem::temp_directory_path() / "helios_test_xml_markup_labels.xml").string();
+    writePNG(texture_file, 4, 4, std::vector<RGBAcolor>(16, make_RGBAcolor(0.2f, 0.7f, 0.1f, 1.f)));
+    const std::string material_label = "Leaf & Stem \"A\" <1>";
+    const std::string normal_map_material_label = "rough & 'bumpy'";
+    const std::string data_label = "temperature \"C\" & <x>";
+    const Date series_date = make_Date(1, 1, 2025);
+    const Time series_time = make_Time(12, 0, 0);
+    {
+        Context ctx;
+        ctx.addMaterial(material_label);
+        ctx.setMaterialTexture(material_label, texture_file);
+        ctx.addMaterial(normal_map_material_label);
+        ctx.setMaterialNormalMap(normal_map_material_label, texture_file);
+        uint textured_patch = ctx.addPatch();
+        ctx.assignMaterialToPrimitive(textured_patch, material_label);
+        uint normal_mapped_patch = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+        ctx.assignMaterialToPrimitive(normal_mapped_patch, normal_map_material_label);
+        ctx.setPrimitiveData(textured_patch, data_label.c_str(), 1.5f);
+        uint tile = ctx.addTileObject(make_vec3(4, 0, 0), make_vec2(1, 1), nullrotation, make_int2(1, 1), texture_file.c_str());
+        ctx.setObjectData(tile, data_label.c_str(), 2.5f);
+        ctx.setPrimitiveData(ctx.getObjectPrimitiveUUIDs(tile), data_label.c_str(), 3.5f);
+        ctx.setGlobalData(data_label.c_str(), 4.5f);
+        ctx.addTimeseriesData(data_label.c_str(), 5.5f, series_date, series_time);
+        ctx.writeXML(xml_file.c_str(), true);
+    }
+
+    Context loaded;
+    std::vector<uint> UUIDs;
+    DOCTEST_REQUIRE_NOTHROW(UUIDs = loaded.loadXML(xml_file.c_str(), true));
+
+    DOCTEST_CHECK(loaded.doesMaterialExist(material_label));
+    DOCTEST_CHECK(loaded.getMaterialTexture(material_label) == texture_file);
+    DOCTEST_CHECK(loaded.getMaterialNormalMapFile(normal_map_material_label) == texture_file);
+
+    bool found_textured_patch = false;
+    bool found_normal_mapped_patch = false;
+    for (uint UUID: UUIDs) {
+        const std::string label = loaded.getPrimitiveMaterialLabel(UUID);
+        if (label == material_label) {
+            found_textured_patch = true;
+            float value = 0;
+            loaded.getPrimitiveData(UUID, data_label.c_str(), value);
+            DOCTEST_CHECK(value == 1.5f);
+        } else if (label == normal_map_material_label) {
+            found_normal_mapped_patch = true;
+        }
+    }
+    DOCTEST_CHECK(found_textured_patch);
+    DOCTEST_CHECK(found_normal_mapped_patch);
+
+    std::vector<uint> objIDs = loaded.getAllObjectIDs();
+    DOCTEST_REQUIRE(objIDs.size() == 1);
+    DOCTEST_CHECK(loaded.getObjectTextureFile(objIDs.front()) == texture_file);
+    float object_value = 0;
+    loaded.getObjectData(objIDs.front(), data_label.c_str(), object_value);
+    DOCTEST_CHECK(object_value == 2.5f);
+    float member_value = 0;
+    loaded.getPrimitiveData(loaded.getObjectPrimitiveUUIDs(objIDs.front()).front(), data_label.c_str(), member_value);
+    DOCTEST_CHECK(member_value == 3.5f);
+
+    float global_value = 0;
+    loaded.getGlobalData(data_label.c_str(), global_value);
+    DOCTEST_CHECK(global_value == 4.5f);
+    DOCTEST_REQUIRE(loaded.doesTimeseriesVariableExist(data_label.c_str()));
+    DOCTEST_CHECK(loaded.queryTimeseriesData(data_label.c_str(), series_date, series_time) == doctest::Approx(5.5f));
+
+    std::filesystem::remove(texture_file);
+    std::filesystem::remove(xml_file);
+}
+
+TEST_CASE("writeXML raises an error when the file cannot be written") {
+    // A path under a regular file can never be created, whoever runs the test
+    const std::string blocker = (std::filesystem::temp_directory_path() / "helios_test_xml_blocker.txt").string();
+    {
+        std::ofstream out(blocker);
+        out << "not a directory\n";
+    }
+    Context ctx;
+    ctx.addPatch();
+    const std::string unwritable = blocker + "/scene.xml";
+    DOCTEST_CHECK_THROWS(ctx.writeXML(unwritable.c_str(), true));
+    std::filesystem::remove(blocker);
+}
+
+TEST_CASE("loadXML reports a truncated file with a clean error") {
+    const std::string xml_file = (std::filesystem::temp_directory_path() / "helios_test_xml_truncated.xml").string();
+    {
+        Context ctx;
+        for (int i = 0; i < 2000; i++) {
+            ctx.addPatch(make_vec3(float(i), 0, 0), make_vec2(1, 1));
+        }
+        ctx.writeXML(xml_file.c_str(), true);
+    }
+    std::filesystem::resize_file(xml_file, std::filesystem::file_size(xml_file) / 2);
+    Context loaded;
+    std::string message;
+    try {
+        loaded.loadXML(xml_file.c_str(), true);
+    } catch (const std::exception &e) {
+        message = e.what();
+    }
+    DOCTEST_CHECK(message.find("parsed with errors") != std::string::npos);
+    DOCTEST_CHECK(message.find("Error offset") != std::string::npos);
+    bool printable = true;
+    for (unsigned char c: message) {
+        if (c != '\n' && c != '\t' && (c < 32 || c > 126)) {
+            printable = false;
+        }
+    }
+    DOCTEST_CHECK(printable);
+    std::filesystem::remove(xml_file);
+}
+
+TEST_CASE("Writing the whole Context to XML keeps named materials that no primitive uses yet") {
+    const std::string xml_file = (std::filesystem::temp_directory_path() / "helios_test_xml_unused_material.xml").string();
+    const RGBAcolor library_color = make_RGBAcolor(0.1f, 0.6f, 0.3f, 1.f);
+    Context ctx;
+    ctx.addMaterial("in use");
+    ctx.addMaterial("library entry"); // defined ahead of time, not assigned to anything yet
+    ctx.setMaterialColor("library entry", library_color);
+    uint used_patch = ctx.addPatch();
+    ctx.assignMaterialToPrimitive(used_patch, "in use");
+    uint other_patch = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+
+    ctx.writeXML(xml_file.c_str(), true);
+    {
+        Context loaded;
+        loaded.loadXML(xml_file.c_str(), true);
+        DOCTEST_CHECK(loaded.doesMaterialExist("in use"));
+        DOCTEST_REQUIRE(loaded.doesMaterialExist("library entry"));
+        DOCTEST_CHECK(loaded.getMaterialColor("library entry").g == doctest::Approx(library_color.g));
+    }
+
+    // Writing chosen primitives writes only the materials those primitives use
+    ctx.writeXML(xml_file.c_str(), std::vector<uint>{other_patch}, true);
+    {
+        Context loaded;
+        loaded.loadXML(xml_file.c_str(), true);
+        DOCTEST_CHECK(!loaded.doesMaterialExist("in use"));
+        DOCTEST_CHECK(!loaded.doesMaterialExist("library entry"));
+    }
+
+    std::filesystem::remove(xml_file);
+}

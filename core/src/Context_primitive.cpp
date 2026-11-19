@@ -606,6 +606,7 @@ void Context::deletePrimitive(uint UUID) {
 
     for (const auto &[label, type]: prim->primitive_data_types) {
         decrementPrimitiveDataLabelCounter(label);
+        markPrimitiveDataModified(label);
     }
 
     if (prim->getParentObjectID() != 0) { // primitive belongs to an object
@@ -736,6 +737,9 @@ uint Context::copyPrimitive(uint UUID) {
     new_prim->color_texture_ID = primitives.at(UUID)->color_texture_ID;
     new_prim->spectral_class_map_ID = primitives.at(UUID)->spectral_class_map_ID;
     new_prim->spectral_palette_ID = primitives.at(UUID)->spectral_palette_ID;
+    if (new_prim->spectral_class_map_ID != 0) {
+        spectral_texture_revision.markModified(); // a primitive given a spectral texture (see getSpectralTextureRevision())
+    }
     // Increment material reference count (another primitive now uses this material)
     materials[new_prim->materialID].reference_count++;
 
@@ -775,103 +779,69 @@ bool Context::doesPrimitiveExist(const std::vector<uint> &UUIDs) const {
     return true;
 }
 
-Patch *Context::getPatchPointer_private(uint UUID) const {
-#ifdef HELIOS_DEBUG
-    if (primitives.find(UUID) == primitives.end()) {
-        helios_runtime_error("ERROR (Context::getPatchPointer_private): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    } else if (primitives.at(UUID)->getType() != PRIMITIVE_TYPE_PATCH) {
-        helios_runtime_error("ERROR (Context::getPatchPointer_private): UUID of " + std::to_string(UUID) + " is not a patch.");
+namespace {
+    //! Look up a primitive by UUID and confirm it is of the expected type before casting to that type
+    /**
+     * Both checks are made in every build type. They used to be made only in Debug builds, so a Release build given the UUID of a primitive of another type went on to dereference the null result of a
+     * failed dynamic_cast. The lookup is made once and its result reused, so the checks add no hash lookup to the one the cast already needed.
+     *
+     * \param[in] primitives Primitives of the Context, keyed by UUID.
+     * \param[in] UUID Unique universal identifier of the primitive.
+     * \param[in] expected_type Type the primitive must have.
+     * \param[in] method_name Name of the Context method to report in an error message.
+     * \param[in] type_description Description of the expected type with its article (e.g. "a patch"), for the error message.
+     * \return Pointer to the primitive as its concrete type.
+     */
+    template<typename PrimitiveClass>
+    PrimitiveClass *getTypedPrimitivePointer(const std::unordered_map<uint, Primitive *> &primitives, uint UUID, PrimitiveType expected_type, const char *method_name, const char *type_description) {
+        const auto primitive_iterator = primitives.find(UUID);
+        if (primitive_iterator == primitives.end()) {
+            helios_runtime_error("ERROR (Context::" + std::string(method_name) + "): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+        }
+        if (primitive_iterator->second->getType() != expected_type) {
+            helios_runtime_error("ERROR (Context::" + std::string(method_name) + "): UUID of " + std::to_string(UUID) + " is not " + std::string(type_description) + ".");
+        }
+        return dynamic_cast<PrimitiveClass *>(primitive_iterator->second);
     }
-#endif
-    return dynamic_cast<Patch *>(primitives.at(UUID));
+} // namespace
+
+Patch *Context::getPatchPointer_private(uint UUID) const {
+    return getTypedPrimitivePointer<Patch>(primitives, UUID, PRIMITIVE_TYPE_PATCH, "getPatchPointer_private", "a patch");
 }
 
 helios::vec2 Context::getPatchSize(uint UUID) const {
-#ifdef HELIOS_DEBUG
-    if (primitives.find(UUID) == primitives.end()) {
-        helios_runtime_error("ERROR (Context::getPatchSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    } else if (primitives.at(UUID)->getType() != PRIMITIVE_TYPE_PATCH) {
-        helios_runtime_error("ERROR (Context::getPatchSize): UUID of " + std::to_string(UUID) + " is not a patch.");
-    }
-#endif
-    return dynamic_cast<Patch *>(primitives.at(UUID))->getSize();
+    return getTypedPrimitivePointer<Patch>(primitives, UUID, PRIMITIVE_TYPE_PATCH, "getPatchSize", "a patch")->getSize();
 }
 
 helios::vec3 Context::getPatchCenter(uint UUID) const {
-#ifdef HELIOS_DEBUG
-    if (primitives.find(UUID) == primitives.end()) {
-        helios_runtime_error("ERROR (Context::getPatchCenter): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    } else if (primitives.at(UUID)->getType() != PRIMITIVE_TYPE_PATCH) {
-        helios_runtime_error("ERROR (Context::getPatchCenter): UUID of " + std::to_string(UUID) + " is not a patch.");
-    }
-#endif
-    return dynamic_cast<Patch *>(primitives.at(UUID))->getCenter();
+    return getTypedPrimitivePointer<Patch>(primitives, UUID, PRIMITIVE_TYPE_PATCH, "getPatchCenter", "a patch")->getCenter();
 }
 
 Triangle *Context::getTrianglePointer_private(uint UUID) const {
-#ifdef HELIOS_DEBUG
-    if (primitives.find(UUID) == primitives.end()) {
-        helios_runtime_error("ERROR (Context::getTrianglePointer_private): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    } else if (primitives.at(UUID)->getType() != PRIMITIVE_TYPE_TRIANGLE) {
-        helios_runtime_error("ERROR (Context::getTrianglePointer_private): UUID of " + std::to_string(UUID) + " is not a triangle.");
-    }
-#endif
-    return dynamic_cast<Triangle *>(primitives.at(UUID));
+    return getTypedPrimitivePointer<Triangle>(primitives, UUID, PRIMITIVE_TYPE_TRIANGLE, "getTrianglePointer_private", "a triangle");
 }
 
 helios::vec3 Context::getTriangleVertex(uint UUID, uint number) const {
-#ifdef HELIOS_DEBUG
-    if (primitives.find(UUID) == primitives.end()) {
-        helios_runtime_error("ERROR (Context::getTriangleVertex): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    } else if (primitives.at(UUID)->getType() != PRIMITIVE_TYPE_TRIANGLE) {
-        helios_runtime_error("ERROR (Context::getTriangleVertex): UUID of " + std::to_string(UUID) + " is not a triangle.");
-    } else if (number > 2) {
+    if (number > 2) {
         helios_runtime_error("ERROR (Context::getTriangleVertex): Vertex index must be one of 0, 1, or 2.");
     }
-#endif
-    return dynamic_cast<Triangle *>(primitives.at(UUID))->getVertex(number);
+    return getTypedPrimitivePointer<Triangle>(primitives, UUID, PRIMITIVE_TYPE_TRIANGLE, "getTriangleVertex", "a triangle")->getVertex(number);
 }
 
 void Context::setTriangleVertices(uint UUID, const helios::vec3 &vertex0, const helios::vec3 &vertex1, const helios::vec3 &vertex2) {
-#ifdef HELIOS_DEBUG
-    if (primitives.find(UUID) == primitives.end()) {
-        helios_runtime_error("ERROR (Context::setTriangleVertices): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    }
-#endif
-    dynamic_cast<Triangle *>(primitives.at(UUID))->setVertices(vertex0, vertex1, vertex2);
+    getTypedPrimitivePointer<Triangle>(primitives, UUID, PRIMITIVE_TYPE_TRIANGLE, "setTriangleVertices", "a triangle")->setVertices(vertex0, vertex1, vertex2);
 }
 
 Voxel *Context::getVoxelPointer_private(uint UUID) const {
-#ifdef HELIOS_DEBUG
-    if (primitives.find(UUID) == primitives.end()) {
-        helios_runtime_error("ERROR (Context::getVoxelPointer): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    } else if (primitives.at(UUID)->getType() != PRIMITIVE_TYPE_VOXEL) {
-        helios_runtime_error("ERROR (Context::getVoxelPointer): UUID of " + std::to_string(UUID) + " is not a voxel.");
-    }
-#endif
-    return dynamic_cast<Voxel *>(primitives.at(UUID));
+    return getTypedPrimitivePointer<Voxel>(primitives, UUID, PRIMITIVE_TYPE_VOXEL, "getVoxelPointer", "a voxel");
 }
 
 helios::vec3 Context::getVoxelSize(uint UUID) const {
-#ifdef HELIOS_DEBUG
-    if (primitives.find(UUID) == primitives.end()) {
-        helios_runtime_error("ERROR (Context::getVoxelSize): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    } else if (primitives.at(UUID)->getType() != PRIMITIVE_TYPE_VOXEL) {
-        helios_runtime_error("ERROR (Context::getVoxelSize): UUID of " + std::to_string(UUID) + " is not a patch.");
-    }
-#endif
-    return dynamic_cast<Voxel *>(primitives.at(UUID))->getSize();
+    return getTypedPrimitivePointer<Voxel>(primitives, UUID, PRIMITIVE_TYPE_VOXEL, "getVoxelSize", "a voxel")->getSize();
 }
 
 helios::vec3 Context::getVoxelCenter(uint UUID) const {
-#ifdef HELIOS_DEBUG
-    if (primitives.find(UUID) == primitives.end()) {
-        helios_runtime_error("ERROR (Context::getVoxelCenter): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
-    } else if (primitives.at(UUID)->getType() != PRIMITIVE_TYPE_VOXEL) {
-        helios_runtime_error("ERROR (Context::getVoxelCenter): UUID of " + std::to_string(UUID) + " is not a patch.");
-    }
-#endif
-    return dynamic_cast<Voxel *>(primitives.at(UUID))->getCenter();
+    return getTypedPrimitivePointer<Voxel>(primitives, UUID, PRIMITIVE_TYPE_VOXEL, "getVoxelCenter", "a voxel")->getCenter();
 }
 
 size_t Context::getPrimitiveCount(bool include_hidden_primitives) const {

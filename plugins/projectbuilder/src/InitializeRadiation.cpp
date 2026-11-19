@@ -125,7 +125,7 @@ void InitializeRadiation(const std::string &xml_input_file, SolarPosition *solar
             const char *xml_library_file_str = p.child_value();
             std::string xml_library_file = trim_whitespace(std::string(xml_library_file_str));
 
-            if (xml_library_file.empty() || !std::filesystem::exists(xml_library_file)) {
+            if (xml_library_file.empty() || helios::tryResolveFilePath(xml_library_file).empty()) {
                 std::cout << "WARNING: Could not find XML library file: " + xml_library_file << ". Skipping..." << std::endl;
                 continue;
             }

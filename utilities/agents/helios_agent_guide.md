@@ -81,6 +81,11 @@ to be missing something or to misbehave, stop and tell the user.
 - **Run the executable from `build/`** (or one directory below it), or set the `HELIOS_BUILD`
   environment variable to the build directory. Plugin assets are resolved relative to the working
   directory, so running from elsewhere fails with "Could not resolve asset file".
+- **An unseeded `Context` is different every run.** Its random generator is seeded from the wall
+  clock, and plugins that draw random values (e.g. plant architecture) use it, so an unseeded scene
+  changes from one run to the next. Call `Context::seedRandomGenerator()` right after constructing the
+  `Context` when results must be reproducible. Even seeded, results can differ across platforms and
+  compilers.
 - **Assign a material before setting a primitive's color.** The color is stored on the material, so
   setting it first and then assigning a new material leaves the primitive black.
 - **A polymesh's transformation-matrix translation is not its origin.** `Context::rotateObject()`

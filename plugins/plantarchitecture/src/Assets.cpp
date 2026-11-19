@@ -252,33 +252,11 @@ std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &res
 
     // ---- 4. Carry the lattice with the deflected midrib ----
 
-    // Each lattice row is rigidly attached to its midrib station: the offset from the midrib is rotated by how much that station's tangent turned. This keeps the blade's width and its cross-sectional shape
-    // (the midrib fold, the lateral curvature, the waves) intact while the leaf as a whole bends, which is what distinguishes bending from stretching.
-    std::vector<vec3> deformed(rest_vertices.size());
-    for (uint i = 0; i <= Nx; i++) {
-        const float turn = theta.at(i) - theta_rest.at(i);
-        const float cos_turn = cosf(turn);
-        const float sin_turn = sinf(turn);
-
-        // The rotation is about the local lateral axis - horizontally perpendicular to the midrib heading - so the blade tips forward and down rather than twisting about its own length.
-        const vec3 &heading = station_heading.at(i);
-
-        for (uint j = 0; j <= Ny; j++) {
-            const size_t index = latticeVertexIndex(i, j);
-            const vec3 offset = (rest_vertices.at(index) - midrib.at(i)) * scale;
-
-            // Split the offset into the component along the midrib heading and the vertical one; those are the two the bend rotates. The lateral component rides along unchanged.
-            const float along = offset.x * heading.x + offset.y * heading.y;
-            const vec3 lateral = offset - along * heading - make_vec3(0.f, 0.f, offset.z);
-
-            const float along_rotated = along * cos_turn - offset.z * sin_turn;
-            const float vertical_rotated = along * sin_turn + offset.z * cos_turn;
-
-            deformed.at(index) = deflected_midrib.at(i) + along_rotated * heading + lateral + make_vec3(0.f, 0.f, vertical_rotated);
-        }
-    }
-
-    return deformed;
+    // Each lattice row is rigidly attached to its midrib station and turned by how much that station's tangent turned, which keeps the blade's width and its cross-sectional shape (the midrib fold, the
+    // lateral curvature, the waves) intact while the leaf as a whole bends - the difference between bending and stretching. Each station turns in the vertical plane of its own rest heading, so the turn is
+    // about the horizontal axis perpendicular to the heading and the blade tips forward and down rather than twisting about its own length. That is the untwisted carry of layLeafLatticeAlongMidrib(), which
+    // is shared with a blade laid along a prescribed midrib so that a blade given a drooped blade's midrib takes the drooped blade's shape.
+    return layLeafLatticeAlongMidrib(rest_vertices, Nx, Ny, deflected_midrib, {}, scale);
 }
 
 std::vector<helios::vec3> bendPetioleCenterline(const std::vector<helios::vec3> &rest_offsets, const std::vector<float> &radii, const std::vector<float> &load_arclength_fractions, const std::vector<float> &load_weights,
@@ -635,6 +613,437 @@ std::vector<helios::vec3> buildLeafBladeLattice(const LeafShapeValues &shape) {
     }
 
     return lattice;
+}
+
+namespace {
+
+    //! 3x3 rotation in row-major order, in double precision so that composing one per midrib station does not drift
+    struct MidribRotation {
+        double m[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+
+        [[nodiscard]] vec3 apply(const vec3 &v) const {
+            return make_vec3(float(m[0] * v.x + m[1] * v.y + m[2] * v.z), float(m[3] * v.x + m[4] * v.y + m[5] * v.z), float(m[6] * v.x + m[7] * v.y + m[8] * v.z));
+        }
+
+        [[nodiscard]] MidribRotation after(const MidribRotation &first) const {
+            MidribRotation product;
+            for (int row = 0; row < 3; row++) {
+                for (int column = 0; column < 3; column++) {
+                    product.m[row * 3 + column] = m[row * 3] * first.m[column] + m[row * 3 + 1] * first.m[3 + column] + m[row * 3 + 2] * first.m[6 + column];
+                }
+            }
+            return product;
+        }
+    };
+
+    //! Rotation by an angle about a unit axis (Rodrigues' formula)
+    MidribRotation midribAxisRotation(const vec3 &axis, double angle) {
+        const double x = axis.x;
+        const double y = axis.y;
+        const double z = axis.z;
+        const double c = std::cos(angle);
+        const double s = std::sin(angle);
+        const double v = 1.0 - c;
+        MidribRotation r;
+        r.m[0] = c + x * x * v;
+        r.m[1] = x * y * v - z * s;
+        r.m[2] = x * z * v + y * s;
+        r.m[3] = y * x * v + z * s;
+        r.m[4] = c + y * y * v;
+        r.m[5] = y * z * v - x * s;
+        r.m[6] = z * x * v - y * s;
+        r.m[7] = z * y * v + x * s;
+        r.m[8] = c + z * z * v;
+        return r;
+    }
+
+    //! Least rotation that takes unit vector a to unit vector b: I + K + K^2 / (1 + a.b), with K the cross-product matrix of a x b
+    MidribRotation midribLeastRotation(const vec3 &a, const vec3 &b, const char *caller) {
+        const double ax = a.x, ay = a.y, az = a.z;
+        const double bx = b.x, by = b.y, bz = b.z;
+        const double c = ax * bx + ay * by + az * bz;
+        // Near a reversal the formula divides by almost nothing, and inputs normalized in single precision no longer give a rotation
+        if (c <= -1.0 + 1e-4) {
+            helios_runtime_error(std::string("ERROR (") + caller + "): The midrib turns back on itself between two neighbouring stations, so the blade cannot be carried along it.");
+        }
+        const double kx = ay * bz - az * by;
+        const double ky = az * bx - ax * bz;
+        const double kz = ax * by - ay * bx;
+        const double K[9] = {0, -kz, ky, kz, 0, -kx, -ky, kx, 0};
+        double K2[9];
+        for (int row = 0; row < 3; row++) {
+            for (int column = 0; column < 3; column++) {
+                K2[row * 3 + column] = K[row * 3] * K[column] + K[row * 3 + 1] * K[3 + column] + K[row * 3 + 2] * K[6 + column];
+            }
+        }
+        MidribRotation r;
+        for (int e = 0; e < 9; e++) {
+            r.m[e] += K[e] + K2[e] / (1.0 + c);
+        }
+        return r;
+    }
+
+    //! Check the dimensions of a lattice and a set of midrib stations
+    void checkMidribLattice(const std::vector<vec3> &rest_vertices, uint Nx, uint Ny, size_t station_count, const char *caller) {
+        if (Nx == 0 || Ny < 2 || Ny % 2 != 0) {
+            helios_runtime_error(std::string("ERROR (") + caller + "): A leaf blade lattice needs at least one subdivision along the blade and an even number of at least two across it, but " + std::to_string(Nx) + " x " +
+                                 std::to_string(Ny) + " was given.");
+        }
+        if (rest_vertices.size() != size_t(Nx + 1) * size_t(Ny + 1)) {
+            helios_runtime_error(std::string("ERROR (") + caller + "): Expected " + std::to_string(size_t(Nx + 1) * size_t(Ny + 1)) + " lattice vertices for a " + std::to_string(Nx) + " x " + std::to_string(Ny) +
+                                 " lattice, but " + std::to_string(rest_vertices.size()) + " were given.");
+        }
+        if (station_count != size_t(Nx) + 1) {
+            helios_runtime_error(std::string("ERROR (") + caller + "): Expected one midrib station per lattice column (" + std::to_string(Nx + 1) + "), but " + std::to_string(station_count) + " were given.");
+        }
+    }
+
+    //! Midrib row of a lattice
+    std::vector<vec3> latticeMidrib(const std::vector<vec3> &vertices, uint Nx, uint Ny) {
+        std::vector<vec3> midrib(Nx + 1);
+        for (uint i = 0; i <= Nx; i++) {
+            midrib.at(i) = vertices.at(size_t(Ny / 2) * (Nx + 1) + i);
+        }
+        return midrib;
+    }
+
+    //! Direction of the midrib at each station: that of the segment ending there, and for the base that of the first segment
+    std::vector<vec3> midribStationDirections(const std::vector<vec3> &stations, const char *caller) {
+        std::vector<vec3> directions(stations.size());
+        for (size_t i = 1; i < stations.size(); i++) {
+            const vec3 segment = stations.at(i) - stations.at(i - 1);
+            const float length = segment.magnitude();
+            if (!(length > 0.f) || !std::isfinite(length)) {
+                helios_runtime_error(std::string("ERROR (") + caller + "): Midrib stations " + std::to_string(i - 1) + " and " + std::to_string(i) + " coincide (or are not finite), so the midrib has no direction there.");
+            }
+            directions.at(i) = segment / length;
+        }
+        directions.at(0) = directions.at(1);
+        return directions;
+    }
+
+    //! Untwisted rotation of each station of a blade laid along a midrib (see layLeafLatticeAlongMidrib())
+    std::vector<MidribRotation> untwistedMidribRotations(const std::vector<vec3> &rest_directions, const std::vector<vec3> &new_directions, const char *caller) {
+        std::vector<MidribRotation> rotations(rest_directions.size());
+        for (size_t i = 1; i < rest_directions.size(); i++) {
+            const vec3 carried = rotations.at(i - 1).apply(rest_directions.at(i));
+            rotations.at(i) = midribLeastRotation(normalize(carried), new_directions.at(i), caller).after(rotations.at(i - 1));
+        }
+        return rotations;
+    }
+
+    //! Rotation of each station of a blade laid along a midrib, twisted by its roll (see layLeafLatticeAlongMidrib())
+    std::vector<MidribRotation> twistedMidribRotations(const std::vector<vec3> &rest_midrib, const std::vector<vec3> &station_positions, const std::vector<float> &station_rolls, const char *caller) {
+        const std::vector<vec3> new_directions = midribStationDirections(station_positions, caller);
+        std::vector<MidribRotation> rotations = untwistedMidribRotations(midribStationDirections(rest_midrib, caller), new_directions, caller);
+        if (!station_rolls.empty()) {
+            for (size_t i = 0; i < rotations.size(); i++) {
+                if (station_rolls.at(i) != 0.f) {
+                    rotations.at(i) = midribAxisRotation(new_directions.at(i), station_rolls.at(i)).after(rotations.at(i));
+                }
+            }
+        }
+        return rotations;
+    }
+
+    //! Signed angle from a to b about a unit axis, both taken perpendicular to it; NaN if either has no component perpendicular to it
+    float signedAngleAbout(const vec3 &a, const vec3 &b, const vec3 &axis) {
+        const vec3 a_perpendicular = a - (a * axis) * axis;
+        const vec3 b_perpendicular = b - (b * axis) * axis;
+        const float scale = std::max(a.magnitude(), b.magnitude());
+        if (a_perpendicular.magnitude() <= 1e-4f * scale || b_perpendicular.magnitude() <= 1e-4f * scale) {
+            return std::numeric_limits<float>::quiet_NaN();
+        }
+        return std::atan2(cross(a_perpendicular, b_perpendicular) * axis, a_perpendicular * b_perpendicular);
+    }
+
+    //! Check a vector of station rolls, which may be empty
+    void checkMidribRolls(const std::vector<float> &station_rolls, size_t station_count, const char *caller) {
+        if (!station_rolls.empty() && station_rolls.size() != station_count) {
+            helios_runtime_error(std::string("ERROR (") + caller + "): Expected one roll per midrib station (" + std::to_string(station_count) + ") or none, but " + std::to_string(station_rolls.size()) + " were given.");
+        }
+        for (const float roll: station_rolls) {
+            if (!std::isfinite(roll)) {
+                helios_runtime_error(std::string("ERROR (") + caller + "): The midrib rolls must be finite.");
+            }
+        }
+    }
+
+} // namespace
+
+std::vector<float> leafMidribStationFractions(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float *midrib_length) {
+    checkMidribLattice(rest_vertices, Nx, Ny, size_t(Nx) + 1, "leafMidribStationFractions");
+    const std::vector<vec3> midrib = latticeMidrib(rest_vertices, Nx, Ny);
+    std::vector<float> fractions(Nx + 1, 0.f);
+    for (uint i = 1; i <= Nx; i++) {
+        fractions.at(i) = fractions.at(i - 1) + (midrib.at(i) - midrib.at(i - 1)).magnitude();
+    }
+    const float length = fractions.back();
+    if (!(length > 0.f)) {
+        helios_runtime_error("ERROR (leafMidribStationFractions): The midrib of the lattice has no length.");
+    }
+    for (float &fraction: fractions) {
+        fraction /= length;
+    }
+    fractions.back() = 1.f;
+    if (midrib_length != nullptr) {
+        *midrib_length = length;
+    }
+    return fractions;
+}
+
+namespace {
+    //! Cumulative arclength of a polyline, with its points checked
+    std::vector<float> checkedPolylineArclengths(const std::vector<vec3> &polyline, const char *caller) {
+        if (polyline.size() < 2) {
+            helios_runtime_error(std::string("ERROR (") + caller + "): A polyline needs at least two points, but " + std::to_string(polyline.size()) + " were given.");
+        }
+        std::vector<float> arclength(polyline.size(), 0.f);
+        for (size_t node = 1; node < polyline.size(); node++) {
+            const float segment = (polyline.at(node) - polyline.at(node - 1)).magnitude();
+            if (!(segment > 0.f) || !std::isfinite(segment)) {
+                helios_runtime_error(std::string("ERROR (") + caller + "): Points " + std::to_string(node - 1) + " and " + std::to_string(node) + " of the polyline coincide or are not finite.");
+            }
+            arclength.at(node) = arclength.at(node - 1) + segment;
+        }
+        return arclength;
+    }
+
+    //! Segment of a polyline containing a given arclength, and the fraction of the way along it
+    std::pair<size_t, float> polylineSegmentAt(const std::vector<float> &arclength, float s) {
+        size_t segment = 0;
+        while (segment + 2 < arclength.size() && s > arclength.at(segment + 1)) {
+            segment++;
+        }
+        const float t = std::clamp((s - arclength.at(segment)) / (arclength.at(segment + 1) - arclength.at(segment)), 0.f, 1.f);
+        return {segment, t};
+    }
+} // namespace
+
+std::vector<helios::vec3> placeMidribStationsAlongPolyline(const std::vector<helios::vec3> &polyline, const std::vector<float> &rest_segment_lengths, float &length_scale, std::vector<float> *station_fractions) {
+    const std::vector<float> arclength = checkedPolylineArclengths(polyline, "placeMidribStationsAlongPolyline");
+    if (rest_segment_lengths.empty()) {
+        helios_runtime_error("ERROR (placeMidribStationsAlongPolyline): A midrib needs at least one segment.");
+    }
+    double rest_length = 0;
+    for (const float segment_length: rest_segment_lengths) {
+        if (!(segment_length > 0.f) || !std::isfinite(segment_length)) {
+            helios_runtime_error("ERROR (placeMidribStationsAlongPolyline): Every rest segment length of the midrib must be positive and finite.");
+        }
+        rest_length += segment_length;
+    }
+    const double polyline_length = arclength.back();
+
+    struct Walk {
+        bool reached_every_station = false;
+        std::vector<vec3> stations;
+        std::vector<double> station_arclength;
+    };
+
+    // Walk the stations out along the polyline for one scale. Every point of the polyline between a station and the next lies within the sphere about the station whose radius is the next segment's
+    // length, so the next station is where the polyline first leaves that sphere: the larger root of the quadratic on the segment it leaves from.
+    auto walk = [&](double scale) {
+        Walk result;
+        result.stations.push_back(polyline.front());
+        result.station_arclength.push_back(0.0);
+        size_t segment = 0;
+        double t_start = 0;
+        for (const float segment_length: rest_segment_lengths) {
+            const double radius = scale * double(segment_length);
+            const vec3 &center = result.stations.back();
+            bool found = false;
+            while (segment + 1 < polyline.size()) {
+                const vec3 &a = polyline.at(segment);
+                const vec3 &b = polyline.at(segment + 1);
+                const double dx = double(b.x) - a.x, dy = double(b.y) - a.y, dz = double(b.z) - a.z;
+                const double ox = double(a.x) - center.x, oy = double(a.y) - center.y, oz = double(a.z) - center.z;
+                const double qa = dx * dx + dy * dy + dz * dz;
+                const double qb = 2.0 * (dx * ox + dy * oy + dz * oz);
+                const double qc = ox * ox + oy * oy + oz * oz - radius * radius;
+                const double discriminant = qb * qb - 4.0 * qa * qc;
+                if (discriminant >= 0.0) {
+                    const double t_exit = (-qb + std::sqrt(discriminant)) / (2.0 * qa);
+                    if (t_exit >= t_start && t_exit <= 1.0) {
+                        result.stations.push_back(make_vec3(float(a.x + t_exit * dx), float(a.y + t_exit * dy), float(a.z + t_exit * dz)));
+                        result.station_arclength.push_back(arclength.at(segment) + t_exit * (double(arclength.at(segment + 1)) - arclength.at(segment)));
+                        t_start = t_exit;
+                        found = true;
+                        break;
+                    }
+                }
+                segment++;
+                t_start = 0;
+            }
+            if (!found) {
+                return result;
+            }
+        }
+        result.reached_every_station = true;
+        return result;
+    };
+
+    // The last station's position along the polyline grows with the scale, so the scale that puts it on the polyline's end is found by bisection. Chords are no longer than the arcs they span, so the
+    // midrib's rest length stretched to the polyline's length reaches its end or beyond.
+    double scale_short = 0;
+    double scale_long = polyline_length / rest_length;
+    for (int iteration = 0; iteration < 200 && scale_long - scale_short > 1e-15 * scale_long; iteration++) {
+        const double scale = 0.5 * (scale_short + scale_long);
+        const Walk trial = walk(scale);
+        if (trial.reached_every_station && trial.station_arclength.back() < polyline_length) {
+            scale_short = scale;
+        } else {
+            scale_long = scale;
+        }
+    }
+    Walk placed = walk(scale_long);
+    if (!placed.reached_every_station) {
+        placed = walk(scale_short);
+    }
+    if (!placed.reached_every_station || polyline_length - placed.station_arclength.back() > 1e-5 * polyline_length) {
+        helios_runtime_error("ERROR (placeMidribStationsAlongPolyline): The blade's midrib could not be laid along the polyline from its first point to its end. The polyline may double back on itself more "
+                             "sharply than the blade's lattice can follow; give it fewer, smoother turns or a lattice with more subdivisions along the blade.");
+    }
+    // The end is where the bisection put the last station to within rounding; it is placed there exactly.
+    placed.stations.back() = polyline.back();
+    placed.station_arclength.back() = polyline_length;
+
+    length_scale = float(scale_long);
+    if (station_fractions != nullptr) {
+        station_fractions->resize(placed.station_arclength.size());
+        for (size_t station = 0; station < placed.station_arclength.size(); station++) {
+            station_fractions->at(station) = float(placed.station_arclength.at(station) / polyline_length);
+        }
+    }
+    return placed.stations;
+}
+
+std::vector<float> resamplePolylineValuesAtFractions(const std::vector<helios::vec3> &polyline, const std::vector<float> &values, const std::vector<float> &fractions) {
+    const std::vector<float> arclength = checkedPolylineArclengths(polyline, "resamplePolylineValuesAtFractions");
+    if (values.size() != polyline.size()) {
+        helios_runtime_error("ERROR (resamplePolylineValuesAtFractions): Expected one value per polyline point (" + std::to_string(polyline.size()) + "), but " + std::to_string(values.size()) + " were given.");
+    }
+    std::vector<float> resampled(fractions.size());
+    for (size_t k = 0; k < fractions.size(); k++) {
+        if (fractions.at(k) <= 0.f) {
+            resampled.at(k) = values.front();
+        } else if (fractions.at(k) >= 1.f) {
+            resampled.at(k) = values.back();
+        } else {
+            const auto [segment, t] = polylineSegmentAt(arclength, fractions.at(k) * arclength.back());
+            resampled.at(k) = values.at(segment) + t * (values.at(segment + 1) - values.at(segment));
+        }
+    }
+    return resampled;
+}
+
+std::vector<helios::vec3> layLeafLatticeAlongMidrib(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, const std::vector<helios::vec3> &station_positions, const std::vector<float> &station_rolls,
+                                                    float scale) {
+    constexpr const char *caller = "layLeafLatticeAlongMidrib";
+    checkMidribLattice(rest_vertices, Nx, Ny, station_positions.size(), caller);
+    checkMidribRolls(station_rolls, station_positions.size(), caller);
+
+    const std::vector<vec3> rest_midrib = latticeMidrib(rest_vertices, Nx, Ny);
+    const std::vector<MidribRotation> rotations = twistedMidribRotations(rest_midrib, station_positions, station_rolls, caller);
+
+    std::vector<vec3> laid(rest_vertices.size());
+    for (uint j = 0; j <= Ny; j++) {
+        for (uint i = 0; i <= Nx; i++) {
+            const size_t index = size_t(j) * (Nx + 1) + i;
+            laid.at(index) = station_positions.at(i) + rotations.at(i).apply((rest_vertices.at(index) - rest_midrib.at(i)) * scale);
+        }
+    }
+    return laid;
+}
+
+std::vector<helios::vec3> carryPointsAlongMidrib(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, const std::vector<helios::vec3> &station_positions, const std::vector<float> &station_rolls, float scale,
+                                                 const std::vector<helios::vec3> &points) {
+    constexpr const char *caller = "carryPointsAlongMidrib";
+    checkMidribLattice(rest_vertices, Nx, Ny, station_positions.size(), caller);
+    checkMidribRolls(station_rolls, station_positions.size(), caller);
+
+    const std::vector<vec3> rest_midrib = latticeMidrib(rest_vertices, Nx, Ny);
+    const std::vector<MidribRotation> rotations = twistedMidribRotations(rest_midrib, station_positions, station_rolls, caller);
+    auto carryWithStation = [&](uint station, const vec3 &point) { return station_positions.at(station) + rotations.at(station).apply((point - rest_midrib.at(station)) * scale); };
+
+    std::vector<vec3> carried(points.size());
+    for (size_t p = 0; p < points.size(); p++) {
+        const vec3 &point = points.at(p);
+        if (point.x <= rest_midrib.front().x) {
+            // Behind the blade's base, where nothing bends
+            carried.at(p) = point;
+            continue;
+        }
+        uint station = 1;
+        while (station < Nx && rest_midrib.at(station).x < point.x) {
+            station++;
+        }
+        const float x_inner = rest_midrib.at(station - 1).x;
+        const float x_outer = rest_midrib.at(station).x;
+        const float t = x_outer > x_inner ? std::clamp((point.x - x_inner) / (x_outer - x_inner), 0.f, 1.f) : 1.f;
+        carried.at(p) = (1.f - t) * carryWithStation(station - 1, point) + t * carryWithStation(station, point);
+    }
+    return carried;
+}
+
+std::vector<helios::vec3> leafMidribStationNormals(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, const std::vector<helios::vec3> &station_positions, const std::vector<float> &station_rolls) {
+    constexpr const char *caller = "leafMidribStationNormals";
+    checkMidribLattice(rest_vertices, Nx, Ny, station_positions.size(), caller);
+    checkMidribRolls(station_rolls, station_positions.size(), caller);
+
+    const std::vector<vec3> new_directions = midribStationDirections(station_positions, caller);
+    const std::vector<MidribRotation> rotations = twistedMidribRotations(latticeMidrib(rest_vertices, Nx, Ny), station_positions, station_rolls, caller);
+    std::vector<vec3> normals(Nx + 1);
+    for (uint i = 0; i <= Nx; i++) {
+        // The twist is about the midrib, so the twisted lateral axis stays perpendicular to it
+        normals.at(i) = normalize(cross(new_directions.at(i), rotations.at(i).apply(make_vec3(0, 1, 0))));
+    }
+    return normals;
+}
+
+std::vector<float> leafMidribRollsFromNormals(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, const std::vector<helios::vec3> &station_positions, const std::vector<helios::vec3> &station_normals) {
+    constexpr const char *caller = "leafMidribRollsFromNormals";
+    checkMidribLattice(rest_vertices, Nx, Ny, station_positions.size(), caller);
+    if (station_normals.size() != station_positions.size()) {
+        helios_runtime_error("ERROR (leafMidribRollsFromNormals): Expected one normal per midrib station (" + std::to_string(station_positions.size()) + "), but " + std::to_string(station_normals.size()) + " were given.");
+    }
+    const std::vector<vec3> untwisted = leafMidribStationNormals(rest_vertices, Nx, Ny, station_positions, {});
+    const std::vector<vec3> new_directions = midribStationDirections(station_positions, caller);
+    std::vector<float> rolls(Nx + 1);
+    for (uint i = 0; i <= Nx; i++) {
+        const vec3 &normal = station_normals.at(i);
+        if (!std::isfinite(normal.x) || !std::isfinite(normal.y) || !std::isfinite(normal.z) || normal.magnitude() == 0.f) {
+            helios_runtime_error("ERROR (leafMidribRollsFromNormals): The blade normal at midrib station " + std::to_string(i) + " is zero or not finite.");
+        }
+        rolls.at(i) = signedAngleAbout(untwisted.at(i), normal, new_directions.at(i));
+        if (std::isnan(rolls.at(i))) {
+            helios_runtime_error("ERROR (leafMidribRollsFromNormals): The blade normal given at midrib station " + std::to_string(i) +
+                                 " is (nearly) parallel to the midrib there, so it does not fix how the blade is turned about the midrib. A blade's normal is perpendicular to its midrib.");
+        }
+    }
+    return rolls;
+}
+
+std::vector<float> measureLeafMidribRolls(const std::vector<helios::vec3> &rest_vertices, const std::vector<helios::vec3> &current_vertices, uint Nx, uint Ny) {
+    constexpr const char *caller = "measureLeafMidribRolls";
+    checkMidribLattice(rest_vertices, Nx, Ny, size_t(Nx) + 1, caller);
+    if (current_vertices.size() != rest_vertices.size()) {
+        helios_runtime_error("ERROR (measureLeafMidribRolls): The current lattice has " + std::to_string(current_vertices.size()) + " vertices and the rest lattice " + std::to_string(rest_vertices.size()) + ".");
+    }
+    const std::vector<vec3> rest_directions = midribStationDirections(latticeMidrib(rest_vertices, Nx, Ny), caller);
+    const std::vector<vec3> new_directions = midribStationDirections(latticeMidrib(current_vertices, Nx, Ny), caller);
+    const std::vector<MidribRotation> rotations = untwistedMidribRotations(rest_directions, new_directions, caller);
+    const size_t last_row = size_t(Ny) * (Nx + 1);
+    std::vector<float> rolls(Nx + 1, 0.f);
+    for (uint i = 0; i <= Nx; i++) {
+        const vec3 rest_across = rotations.at(i).apply(rest_vertices.at(last_row + i) - rest_vertices.at(i));
+        const vec3 current_across = current_vertices.at(last_row + i) - current_vertices.at(i);
+        const float roll = signedAngleAbout(rest_across, current_across, new_directions.at(i));
+        if (std::isnan(roll)) {
+            helios_runtime_error("ERROR (measureLeafMidribRolls): The row across the blade at midrib station " + std::to_string(i) + " lies along the midrib, so its twist about the midrib cannot be measured.");
+        }
+        rolls.at(i) = roll;
+    }
+    return rolls;
 }
 
 uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
@@ -1538,7 +1947,7 @@ uint AsparagusLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototy
     if (generator == nullptr) {
         helios_runtime_error("ERROR (AsparagusLeafPrototype): Leaf prototype has no random number generator. Construct LeafPrototype with the Context's generator, which can be retrieved with Context::getRandomGenerator().");
     }
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
     auto randu = [&](float minval, float maxval) { return minval + unif_distribution(*generator) * (maxval - minval); };
 
     float curve_magnitude = randu(0.f, 0.2f);
@@ -4259,6 +4668,24 @@ void WheatPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
     }
 }
 
+// The species' palettes: the spectra of each tissue class of an organ's class map, as
+// Heliades' radiation camera gives them. The spectra are in the radiation plug-in's
+// surface spectral libraries.
+static void CucumberSpectralPalettes(helios::Context *context) {
+    if (!context->doesSpectralPaletteExist("cucumber_fruit")) {  // the fruit's classes
+        context->addSpectralPalette("cucumber_fruit", {
+            {"cucumber_fruit_reflectivity", "cucumber_fruit_transmissivity", "skin: the organ's own spectra"},
+            {"cucumber_petal_reflectivity", "cucumber_petal_transmissivity", "withered_corolla: judged, the petal layer standing in for the dried corolla at the blossom end"}
+        });
+    }
+    if (!context->doesSpectralPaletteExist("cucumber_flower")) {  // the flower's classes
+        context->addSpectralPalette("cucumber_flower", {
+            {"cucumber_stem_reflectivity", "cucumber_stem_transmissivity", "ovary: the organ's own spectra"},
+            {"cucumber_petal_reflectivity", "cucumber_petal_transmissivity", "corolla: judged: a carotenoid layer (30 ug/cm2 carotenoids, 1 ug/cm2 chlorophyll) for the yellow corolla; no cucumber petal spectrum was found"}
+        });
+    }
+}
+
 // Baked by Heliades from the species' procedural fruit: each file is one
 // prototype, its parameters sampled about their means by their coefficients of
 // variation.
@@ -4267,6 +4694,13 @@ uint CucumberFruitPrototype(helios::Context *context_ptr, uint subdivisions, con
     const int pick = context_ptr->randu(0, int(variants.size()) - 1);
     const std::string &file = variants.at(pick);
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/Cucumber/" + file).string().c_str(), make_vec3(0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    // its spectra, and its tissue classes' through the class map baked with it;
+    // every copy made of this prototype carries them
+    helios::Context *context = context_ptr;
+    context->setPrimitiveData(UUIDs, "reflectivity_spectrum", std::string("cucumber_fruit_reflectivity"));
+    context->setPrimitiveData(UUIDs, "transmissivity_spectrum", std::string("cucumber_fruit_transmissivity"));
+    CucumberSpectralPalettes(context);
+    context->setPrimitiveSpectralTexture(UUIDs, helios::resolvePluginAsset("plantarchitecture", "assets/obj/Cucumber/" + file.substr(0, file.size() - 4) + "_classes.png").string(), "cucumber_fruit");
     return context_ptr->addPolymeshObject(UUIDs);
 }
 
@@ -4280,6 +4714,13 @@ uint CucumberFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bo
     const int pick = context_ptr->randu(0, int(variants.size()) - 1);
     const std::string &file = variants.at(pick);
     std::vector<uint> UUIDs = context_ptr->loadOBJ(helios::resolvePluginAsset("plantarchitecture", "assets/obj/Cucumber/" + file).string().c_str(), make_vec3(0, 0, 0), 0, nullrotation, RGB::black, "ZUP", true);
+    // its spectra, and its tissue classes' through the class map baked with it;
+    // every copy made of this prototype carries them
+    helios::Context *context = context_ptr;
+    context->setPrimitiveData(UUIDs, "reflectivity_spectrum", std::string("cucumber_stem_reflectivity"));
+    context->setPrimitiveData(UUIDs, "transmissivity_spectrum", std::string("cucumber_stem_transmissivity"));
+    CucumberSpectralPalettes(context);
+    context->setPrimitiveSpectralTexture(UUIDs, helios::resolvePluginAsset("plantarchitecture", "assets/obj/Cucumber/" + file.substr(0, file.size() - 4) + "_classes.png").string(), "cucumber_flower");
     return context_ptr->addPolymeshObject(UUIDs);
 }
 

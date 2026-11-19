@@ -25,7 +25,7 @@ uint CanopyGenerator::whitespruce(const WhiteSpruceCanopyParameters &params, con
     std::vector<uint> UUID_trunk_plant, UUID_branch_plant;
     std::vector<std::vector<uint>> UUID_leaf_plant;
 
-    std::uniform_real_distribution<float> unif_distribution;
+    helios::uniform_real_distribution<float> unif_distribution;
 
     //------ trunk -------//
 

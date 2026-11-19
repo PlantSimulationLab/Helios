@@ -22,6 +22,7 @@
 #include <array>
 #include <cassert>
 #include <limits>
+#include <tuple>
 #include <cstring>
 #include <iostream>
 

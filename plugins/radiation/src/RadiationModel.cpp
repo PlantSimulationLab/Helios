@@ -191,6 +191,7 @@ void RadiationModel::setDiffuseRadiationFlux(const std::string &label, float flu
         helios_runtime_error("ERROR (RadiationModel::setDiffuseRadiationFlux): Cannot set flux value for band '" + label + "' because it is not a valid band.");
     }
     radiation_bands.at(label).diffuseFlux = flux;
+    invalidateExcitationSets();
 }
 
 void RadiationModel::setDiffuseRadiationExtinctionCoeff(const std::string &label, float K, const SphericalCoord &peak_dir) {
@@ -851,6 +852,25 @@ void RadiationModel::populateExcitationSet(ExcitationSet &exc, const std::vector
     exc.populated = true;
 }
 
+void RadiationModel::invalidateExcitationSets() {
+    for (auto &excitation_set: excitation_sets) {
+        excitation_set.second.populated = false;
+    }
+}
+
+void RadiationModel::updateExcitationBandSourceFluxes() {
+    for (const auto &excitation_set: excitation_sets) {
+        const ExcitationSet &exc = excitation_set.second;
+        for (size_t band = 0; band < exc.band_labels.size(); band++) {
+            for (RadiationSource &source: radiation_sources) {
+                if (!source.source_spectrum.empty()) {
+                    source.source_fluxes[exc.band_labels.at(band)] = integrateSpectrum(source.source_spectrum, exc.band_min_nm.at(band), exc.band_max_nm.at(band)) * source.source_flux_scaling_factor;
+                }
+            }
+        }
+    }
+}
+
 void RadiationModel::runExcitationBands() {
     // Run any excitation set that isn't already populated. All internal bands for a set are launched together via runBand(vector),
     // which fills the set's per-leaf emission at the end of the launch (populateExcitationSet).
@@ -1342,6 +1362,7 @@ void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_inte
     for (vec2 &wavelength: radiation_sources.at(source_ID).source_spectrum) {
         wavelength.y *= source_integral / current_integral;
     }
+    invalidateExcitationSets();
 }
 
 void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_integral, float wavelength1, float wavelength2) {
@@ -1362,6 +1383,7 @@ void RadiationModel::setSourceSpectrumIntegral(uint source_ID, float source_inte
     for (vec2 &wavelength: source.source_spectrum) {
         wavelength.y *= source_integral / old_integral;
     }
+    invalidateExcitationSets();
 }
 
 void RadiationModel::setSourceFlux(uint source_ID, const std::string &label, float flux) {
@@ -1375,6 +1397,7 @@ void RadiationModel::setSourceFlux(uint source_ID, const std::string &label, flo
     }
 
     radiation_sources.at(source_ID).source_fluxes[label] = flux * radiation_sources.at(source_ID).source_flux_scaling_factor;
+    invalidateExcitationSets();
 }
 
 void RadiationModel::setSourceFlux(const std::vector<uint> &source_ID, const std::string &band_label, float flux) {
@@ -2125,6 +2148,9 @@ void RadiationModel::setSourcePosition(uint source_ID, const vec3 &position) {
     if (islightvisualizationenabled) {
         updateLightModelPosition(source_ID, radiation_sources.at(source_ID).source_position - old_position);
     }
+
+    // SIF excitation traced with the source at its old position is stale
+    invalidateExcitationSets();
 }
 
 void RadiationModel::setSourcePosition(uint source_ID, const SphericalCoord &position) {
@@ -2915,6 +2941,10 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
     backend->updateGeometry(geometry_data);
     backend->buildAccelerationStructure();
 
+    // SIF excitation traced against the old geometry is stale. Done here and not only through radiativepropertiesneedupdate, because
+    // runBand() rebuilds the geometry after it has already checked that flag for this purpose.
+    invalidateExcitationSets();
+
     radiativepropertiesneedupdate = true;
     isgeometryinitialized = true;
 
@@ -2930,6 +2960,197 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
     }
 }
 
+namespace {
+    //! Labels of the primitive data that give a primitive its radiative properties in one band
+    /**
+     * updateRadiativeProperties() and updateSurfaceLayers() take the labels they read from here, and
+     * RadiationModel::radiativePropertyDataLabels() lists them, so that runBand() rebuilds the properties when data with one of
+     * these labels changes. A label read in a band must be added here.
+     */
+    struct BandPropertyLabels {
+        std::string reflectivity, transmissivity, emissivity, glass_n, glass_KL, specular_n;
+
+        explicit BandPropertyLabels(const std::string &band) :
+            reflectivity("reflectivity_" + band), transmissivity("transmissivity_" + band), emissivity("emissivity_" + band), glass_n("glass_n_" + band), glass_KL("glass_KL_" + band), specular_n("specular_n_" + band) {
+        }
+    };
+
+    //! Labels of the primitive data that give a primitive its radiative properties in every band. A label read by updateRadiativeProperties() or updateSurfaceLayers() for all bands must be added here,
+    //! as must one whose change updateRadiativeProperties() checks the geometry for (the two-sided and invisibility flags, see checkTwosidedFlagsCurrent()).
+    const std::vector<std::string> band_independent_property_labels = {"reflectivity_spectrum", "transmissivity_spectrum", "specular_roughness", "specular_n", "specular_exponent", "specular_scale", "twosided_flag", "invisibility_flag"};
+
+    //! Weight of each weighting contributor in a band's diffuse slot: its share of the band's flux, or all of it on the spectrally flat weighting (the last entry) in a band without any flux
+    std::vector<float> diffuseSlotWeights(const std::vector<float> &contributor_fluxes) {
+        std::vector<float> weights(contributor_fluxes.size() + 1, 0.f);
+        float total_flux = 0.f;
+        for (float flux: contributor_fluxes) {
+            if (flux > 0.f) {
+                total_flux += flux;
+            }
+        }
+        if (total_flux > 0.f) {
+            for (size_t c = 0; c < contributor_fluxes.size(); c++) {
+                if (contributor_fluxes.at(c) > 0.f) {
+                    weights.at(c) = contributor_fluxes.at(c) / total_flux;
+                }
+            }
+        } else {
+            // No source or sky radiation in the band: its diffuse slot carries only emission, and ρ/τ are the unweighted band averages
+            weights.back() = 1.f;
+        }
+        return weights;
+    }
+} // namespace
+
+const std::vector<helios::vec2> &RadiationModel::weightingSpectrum(uint contributor, const RadiationBand &band) const {
+    static const std::vector<helios::vec2> flat_weighting;
+    if (contributor < radiation_sources.size()) {
+        return radiation_sources.at(contributor).source_spectrum;
+    } else if (contributor == radiation_sources.size() && !band.emissionFlag) {
+        // In an emitting (thermal) band the diffuse spectrum does not describe the sky radiation (see getDiffuseFlux()), so it is flat there
+        return band.diffuse_spectrum;
+    }
+    return flat_weighting;
+}
+
+std::vector<float> RadiationModel::weightingContributorFluxes(const std::string &band_label) const {
+    const uint Nsources = radiation_sources.size();
+    std::vector<float> fluxes(Nsources + 1);
+    for (uint c = 0; c <= Nsources; c++) {
+        fluxes.at(c) = c < Nsources ? getSourceFlux(c, band_label) : getDiffuseFlux(band_label);
+    }
+    return fluxes;
+}
+
+std::vector<std::string> RadiationModel::radiativePropertyDataLabels() const {
+    std::vector<std::string> labels = band_independent_property_labels;
+    for (const auto &band: radiation_bands) {
+        const BandPropertyLabels band_labels(band.first);
+        for (const std::string *label: {&band_labels.reflectivity, &band_labels.transmissivity, &band_labels.emissivity, &band_labels.glass_n, &band_labels.glass_KL, &band_labels.specular_n}) {
+            labels.push_back(*label);
+        }
+    }
+    return labels;
+}
+
+std::string RadiationModel::radiativePropertyModelState() const {
+    std::string state;
+    auto appendBytes = [&state](const void *data, size_t bytes) { state.append(static_cast<const char *>(data), bytes); };
+    auto appendFloat = [&](float value) { appendBytes(&value, sizeof(value)); };
+    auto appendCount = [&](uint64_t value) { appendBytes(&value, sizeof(value)); };
+    auto appendString = [&](const std::string &value) {
+        appendCount(value.size());
+        state.append(value);
+    };
+    auto appendSpectrum = [&](const std::vector<helios::vec2> &spectrum) {
+        appendCount(spectrum.size());
+        for (const helios::vec2 &point: spectrum) {
+            appendFloat(point.x);
+            appendFloat(point.y);
+        }
+    };
+
+    appendFloat(rho_default);
+    appendFloat(tau_default);
+    appendFloat(eps_default);
+    appendCount(cameraflux_smoothing_enabled ? 1 : 0);
+    appendCount(smoothing_vertex_count);
+    appendCount(material_data.surface_layer_table_size);
+    appendCount(output_prim_data.size());
+    for (const std::string &output: output_prim_data) {
+        appendString(output);
+    }
+
+    const uint Nsources = radiation_sources.size();
+    appendCount(Nsources);
+    for (const RadiationSource &source: radiation_sources) {
+        appendSpectrum(source.source_spectrum);
+    }
+
+    appendCount(radiation_bands.size());
+    for (const auto &[label, band]: radiation_bands) {
+        appendString(label);
+        appendFloat(band.wavebandBounds.x);
+        appendFloat(band.wavebandBounds.y);
+        appendCount(band.hasWavebandBounds() ? 1 : 0);
+        appendCount(band.emissionFlag ? 1 : 0);
+        appendCount(band.scatteringDepth);
+        appendCount(isSIFExcitationBand(label) ? 1 : 0);
+        appendCount(sif_emission_bands.count(label));
+        appendSpectrum(band.diffuse_spectrum);
+
+        // The sources and the sky with flux in the band, and whether their spectra differ. Only then do their shares of the flux matter:
+        // the diffuse slot holds the flux-weighted mean of what each of them alone would give, which is the same for equal spectra.
+        const std::vector<float> fluxes = weightingContributorFluxes(label);
+        const std::vector<helios::vec2> *first_spectrum = nullptr;
+        bool spectra_differ = false;
+        for (uint c = 0; c < fluxes.size(); c++) {
+            appendCount(fluxes.at(c) > 0.f ? 1 : 0);
+            if (fluxes.at(c) > 0.f) {
+                const std::vector<helios::vec2> &spectrum = weightingSpectrum(c, band);
+                if (first_spectrum == nullptr) {
+                    first_spectrum = &spectrum;
+                } else if (spectrum != *first_spectrum) {
+                    spectra_differ = true;
+                }
+            }
+        }
+        appendCount(spectra_differ ? 1 : 0);
+        if (spectra_differ) {
+            for (float weight: diffuseSlotWeights(fluxes)) {
+                appendFloat(weight);
+            }
+        }
+    }
+
+    appendCount(cameras.size());
+    for (const auto &[label, camera]: cameras) {
+        appendString(label);
+        appendCount(camera.band_spectral_response.size());
+        for (const auto &[band_label, response]: camera.band_spectral_response) {
+            appendString(band_label);
+            appendString(response);
+        }
+    }
+
+    return state;
+}
+
+bool RadiationModel::radiativePropertiesAreCurrent() const {
+    // Spectrum interpolation selects spectra from object and primitive data and writes the selection as primitive data, on every call
+    if (radiativepropertiesneedupdate || !spectrum_interpolation_configs.empty()) {
+        return false;
+    }
+    if (context->getMaterialRevision() != radiative_property_material_revision || context->getSpectralTextureRevision() != radiative_property_spectral_texture_revision) {
+        return false;
+    }
+    for (const auto &[label, revision]: radiative_property_data_revisions) {
+        if (context->getPrimitiveDataRevision(label.c_str()) != revision) {
+            return false;
+        }
+    }
+    for (const auto &[label, version]: radiative_property_global_data_versions) {
+        if (context->getGlobalDataVersion(label.c_str()) != version) {
+            return false;
+        }
+    }
+    return radiativePropertyModelState() == radiative_property_model_state;
+}
+
+void RadiationModel::recordRadiativePropertyInputs() {
+    radiative_property_model_state = radiativePropertyModelState();
+    radiative_property_material_revision = context->getMaterialRevision();
+    radiative_property_spectral_texture_revision = context->getSpectralTextureRevision();
+    radiative_property_data_revisions.clear();
+    for (const std::string &label: radiativePropertyDataLabels()) {
+        radiative_property_data_revisions[label] = context->getPrimitiveDataRevision(label.c_str());
+    }
+    // The labels were collected as the properties were built
+    for (auto &[label, version]: radiative_property_global_data_versions) {
+        version = context->getGlobalDataVersion(label.c_str());
+    }
+}
+
 void RadiationModel::updateRadiativeProperties() {
 
     // Possible scenarios for specifying a primitive's radiative properties
@@ -2937,6 +3158,12 @@ void RadiationModel::updateRadiativeProperties() {
     // 2. If primitive data of form reflectivity_spectrum/transmissivity_spectrum is given that references global data containing spectral reflectivity/transmissivity:
     //    2a. If radiation source spectrum was not given, assume source spectral intensity is constant over band and calculate using primitive spectrum
     //    2b. If radiation source spectrum was given, calculate using both source and primitive spectrum.
+
+    radiative_property_build_count++;
+
+    // Out of date until this build has finished, so that one that raises an error part of the way through is repeated by the next runBand()
+    radiativepropertiesneedupdate = true;
+    radiative_property_global_data_versions.clear();
 
     // Create warning aggregator
     helios::WarningAggregator warnings;
@@ -2962,8 +3189,10 @@ void RadiationModel::updateRadiativeProperties() {
 
     std::string prop;
     std::vector<std::string> band_labels;
+    std::vector<BandPropertyLabels> property_labels; // of the primitive data read in each band
     for (auto &band: radiation_bands) {
         band_labels.push_back(band.first);
+        property_labels.emplace_back(band.first);
     }
 
     // Allocate flat arrays directly in material_data to avoid nested vector overhead and redundant copies. There is one
@@ -3019,6 +3248,7 @@ void RadiationModel::updateRadiativeProperties() {
                 // spectral libraries if it is not already in the Context, and raises an error naming it if it is found nowhere or is not a valid spectrum.
                 if (!camera_response.empty() && camera_response != "uniform") {
                     camera_response_unique.at(cam).at(b) = loadSpectralData(camera_response);
+                    radiative_property_global_data_versions[camera_response];
                 }
             }
             cam++;
@@ -3046,19 +3276,9 @@ void RadiationModel::updateRadiativeProperties() {
     // incident spectrum W(λ) = Σ_c F_c Ŝ_c(λ), where F_c is contributor c's band flux and Ŝ_c its spectrum normalized to integrate to 1 over the
     // band. Since ∫ρW / ∫W = Σ_c F_c ρ_c / Σ_c F_c, with ρ_c the value weighted by contributor c alone, the diffuse slot is the flux-weighted mean of
     // the per-contributor values. This is uniform over the scene: a shaded surface gets the same diffuse-slot value as a sunlit one.
-    const uint sky_contributor = Nsources;
     const uint flat_contributor = Nsources + 1;
     const uint Ncontributors = Nsources + 2;
-    const std::vector<helios::vec2> flat_weighting;
-    auto contributorSpectrum = [&](uint contributor, uint b) -> const std::vector<helios::vec2> & {
-        if (contributor < Nsources) {
-            return radiation_sources.at(contributor).source_spectrum;
-        } else if (contributor == sky_contributor && !radiation_bands.at(band_labels.at(b)).emissionFlag) {
-            // In an emitting (thermal) band the diffuse spectrum does not describe the sky radiation (see getDiffuseFlux()), so it is flat there
-            return radiation_bands.at(band_labels.at(b)).diffuse_spectrum;
-        }
-        return flat_weighting;
-    };
+    auto contributorSpectrum = [&](uint contributor, uint b) -> const std::vector<helios::vec2> & { return weightingSpectrum(contributor, radiation_bands.at(band_labels.at(b))); };
     // Contributors with the same spectrum (e.g. every source without one) share their integrals through the cache below
     auto contributorSpectrumID = [&](uint contributor, uint b) -> std::string {
         if (contributorSpectrum(contributor, b).empty()) {
@@ -3085,10 +3305,7 @@ void RadiationModel::updateRadiativeProperties() {
         band_has_bounds.at(b) = radiation_bands.at(band).hasWavebandBounds();
         const std::string band_description = "band '" + band + "'" + (band_has_bounds.at(b) ? " (" + wavelengthRangeString(band_bounds.at(b).x, band_bounds.at(b).y) + ")" : "");
 
-        std::vector<float> band_flux(flat_contributor);
-        for (uint c = 0; c < flat_contributor; c++) {
-            band_flux.at(c) = c < Nsources ? getSourceFlux(c, band) : getDiffuseFlux(band);
-        }
+        const std::vector<float> band_flux = weightingContributorFluxes(band);
 
         if (band_has_bounds.at(b)) {
             for (uint c = 0; c < flat_contributor; c++) {
@@ -3115,36 +3332,34 @@ void RadiationModel::updateRadiativeProperties() {
             }
         }
 
-        float total_flux = 0.f;
         for (uint c = 0; c < flat_contributor; c++) {
-            if (band_flux.at(c) > 0.f) {
-                total_flux += band_flux.at(c);
-                if (!contributorSpectrum(c, b).empty()) {
-                    band_has_spectral_flux.at(b) = true;
-                }
+            if (band_flux.at(c) > 0.f && !contributorSpectrum(c, b).empty()) {
+                band_has_spectral_flux.at(b) = true;
             }
         }
-        if (total_flux > 0.f) {
-            for (uint c = 0; c < flat_contributor; c++) {
-                if (band_flux.at(c) > 0.f) {
-                    diffuse_slot_weight.at(b).at(c) = band_flux.at(c) / total_flux;
-                }
-            }
-        } else {
-            // No source or sky radiation in the band: its diffuse slot carries only emission, and ρ/τ are the unweighted band averages
-            diffuse_slot_weight.at(b).at(flat_contributor) = 1.f;
-        }
+        diffuse_slot_weight.at(b) = diffuseSlotWeights(band_flux);
     }
 
-    // Flux-weighted mean of per-contributor values for a band's diffuse slot
+    // Flux-weighted mean of per-contributor values for a band's diffuse slot. Where the contributors all give the same value, as those with the same
+    // spectrum do, that value is returned as it is, so that it does not depend on their shares of the flux (see radiativePropertyModelState()).
     auto diffuseSlotValue = [&](uint b, const std::function<float(uint)> &contributor_value) -> float {
         float value = 0.f;
+        float common_value = 0.f;
+        bool any_contributor = false;
+        bool values_differ = false;
         for (uint c = 0; c < Ncontributors; c++) {
             if (diffuse_slot_weight.at(b).at(c) > 0.f) {
-                value += diffuse_slot_weight.at(b).at(c) * contributor_value(c);
+                const float contributor = contributor_value(c);
+                if (!any_contributor) {
+                    common_value = contributor;
+                    any_contributor = true;
+                } else if (contributor != common_value) {
+                    values_differ = true;
+                }
+                value += diffuse_slot_weight.at(b).at(c) * contributor;
             }
         }
-        return value;
+        return values_differ ? value : common_value;
     };
 
     // Weighted value of a reflectivity/transmissivity spectrum in a band with wavelength bounds, for one contributor: ∫ρ·W / ∫W over the band,
@@ -3411,6 +3626,14 @@ void RadiationModel::updateRadiativeProperties() {
     }
 
     checkNormalMapsCurrent(context_UUIDs);
+    checkTwosidedFlagsCurrent(context_UUIDs);
+
+    // The properties hold until the global data of one of these spectra changes (see radiativePropertiesAreCurrent())
+    for (const auto *spectra: {&surface_spectra_rho, &surface_spectra_tau}) {
+        for (const auto &spectrum: *spectra) {
+            radiative_property_global_data_versions[spectrum.first];
+        }
+    }
 
     // second, calculate unique values of rho and tau for every band and weighting contributor: rho_unique[label][band][contributor] and
     // rho_cam_unique[label][band][contributor][camera]. The entry after the last contributor holds the band's diffuse-slot value.
@@ -3631,7 +3854,7 @@ void RadiationModel::updateRadiativeProperties() {
             for (const auto &band: band_labels) {
 
                 // check for primitive data of form "reflectivity_bandname"
-                prop = "reflectivity_" + band;
+                prop = property_labels.at(b).reflectivity;
 
                 float rho_s = rho_default;
                 const bool has_band_rho = context->doesPrimitiveDataExist(UUID, prop.c_str());
@@ -3717,7 +3940,7 @@ void RadiationModel::updateRadiativeProperties() {
             for (const auto &band: band_labels) {
 
                 // check for primitive data of form "transmissivity_bandname"
-                prop = "transmissivity_" + band;
+                prop = property_labels.at(b).transmissivity;
 
                 float tau_s = tau_default;
                 const bool has_band_tau = context->doesPrimitiveDataExist(UUID, prop.c_str());
@@ -3794,7 +4017,7 @@ void RadiationModel::updateRadiativeProperties() {
             b = 0;
             for (const auto &band: band_labels) {
 
-                prop = "glass_n_" + band;
+                prop = property_labels.at(b).glass_n;
                 if (!context->doesPrimitiveDataExist(UUID, prop.c_str()) || context->getPrimitiveDataType(prop.c_str()) != HELIOS_TYPE_FLOAT) {
                     b++;
                     continue;
@@ -3813,7 +4036,7 @@ void RadiationModel::updateRadiativeProperties() {
                 }
 
                 float KL_s = 0.f;
-                std::string KL_prop = "glass_KL_" + band;
+                const std::string &KL_prop = property_labels.at(b).glass_KL;
                 if (context->doesPrimitiveDataExist(UUID, KL_prop.c_str()) && context->getPrimitiveDataType(KL_prop.c_str()) == HELIOS_TYPE_FLOAT) {
                     context->getPrimitiveData(UUID, KL_prop.c_str(), KL_s);
                     if (KL_s < 0.f) {
@@ -3823,7 +4046,7 @@ void RadiationModel::updateRadiativeProperties() {
                 }
 
                 // Warn (once) if a constant reflectivity/transmissivity was also set for this band: glass wins.
-                if (context->doesPrimitiveDataExist(UUID, ("reflectivity_" + band).c_str()) || context->doesPrimitiveDataExist(UUID, ("transmissivity_" + band).c_str())) {
+                if (context->doesPrimitiveDataExist(UUID, property_labels.at(b).reflectivity.c_str()) || context->doesPrimitiveDataExist(UUID, property_labels.at(b).transmissivity.c_str())) {
                     warnings.addWarning("glass_overrides_constant", "Primitive has both glass_n_" + band + " and a constant reflectivity/transmissivity for band " + band +
                                                                             ". The glass (Fresnel+Bouguer) model takes precedence; the constant value is ignored.");
                 }
@@ -3850,7 +4073,7 @@ void RadiationModel::updateRadiativeProperties() {
             b = 0;
             for (const auto &band: band_labels) {
 
-                prop = "emissivity_" + band;
+                prop = property_labels.at(b).emissivity;
 
                 if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
                     context->getPrimitiveData(UUID, prop.c_str(), eps);
@@ -3877,8 +4100,8 @@ void RadiationModel::updateRadiativeProperties() {
                     const std::vector<std::pair<uint16_t, float>> &fractions = spectral_class_fractions.at(u);
                     const size_t first_entry = primitive_palette_offset.at(u) + fractions.front().first - 1;
                     const bool palette_applies = material_data.palette_band_active.at(b) != 0;
-                    const bool rho_from_palette = !context->doesPrimitiveDataExist(UUID, ("reflectivity_" + band).c_str());
-                    const bool tau_from_palette = !context->doesPrimitiveDataExist(UUID, ("transmissivity_" + band).c_str());
+                    const bool rho_from_palette = !context->doesPrimitiveDataExist(UUID, property_labels.at(b).reflectivity.c_str());
+                    const bool tau_from_palette = !context->doesPrimitiveDataExist(UUID, property_labels.at(b).transmissivity.c_str());
                     for (const auto &fraction: fractions) {
                         const size_t entry = primitive_palette_offset.at(u) + fraction.first - 1;
                         for (uint slot = 0; slot < Nslots; slot++) {
@@ -3986,6 +4209,7 @@ void RadiationModel::updateRadiativeProperties() {
 
     backend->updateMaterials(material_data);
 
+    recordRadiativePropertyInputs();
     radiativepropertiesneedupdate = false;
 
     if (message_flag) {
@@ -4033,8 +4257,10 @@ void RadiationModel::updateSurfaceLayers(helios::WarningAggregator &warnings) {
     const uint Ncameras = cameras.size();
     const uint32_t table_size = material_data.surface_layer_table_size;
     std::vector<std::string> band_labels;
+    std::vector<BandPropertyLabels> property_labels; // of the primitive and material data read in each band
     for (const auto &band: radiation_bands) {
         band_labels.push_back(band.first);
+        property_labels.emplace_back(band.first);
     }
 
     material_data.surface_model.assign(Nprimitives, 0);
@@ -4110,7 +4336,7 @@ void RadiationModel::updateSurfaceLayers(helios::WarningAggregator &warnings) {
         std::vector<float> model_key{roughness};
         for (uint b = 0; b < Nbands; b++) {
             float refractive_index = refractive_index_all;
-            readParameter(UUID, "specular_n_" + band_labels.at(b), refractive_index);
+            readParameter(UUID, property_labels.at(b).specular_n, refractive_index);
             if (!(refractive_index >= 1.f && refractive_index <= 3.f)) {
                 helios_runtime_error("ERROR (RadiationModel): The refractive index of the surface layer of primitive #" + std::to_string(UUID) + " in band '" + band_labels.at(b) + "' is " + std::to_string(refractive_index) +
                                      ", but it must be between 1 (no layer) and 3 (specular_n or specular_n_" + band_labels.at(b) + ").");
@@ -4182,6 +4408,7 @@ void RadiationModel::updateSurfaceLayers(helios::WarningAggregator &warnings) {
         if (albedo_it == body_palette_albedo.end()) {
             float recorded = -1.f;
             const std::string albedo_label = palette_label + "_layer_albedo";
+            radiative_property_global_data_versions[albedo_label]; // the properties hold until this global data changes (see radiativePropertiesAreCurrent())
             if (context->doesGlobalDataExist(albedo_label.c_str()) && context->getGlobalDataType(albedo_label.c_str()) == HELIOS_TYPE_FLOAT) {
                 context->getGlobalData(albedo_label.c_str(), recorded);
             }
@@ -4998,10 +5225,11 @@ void RadiationModel::applySpectralClassMaps(const std::vector<uint> &UUIDs) {
     for (const auto &[class_map_file, map_UUIDs]: UUIDs_by_class_map) {
 
         // ---- The class definitions ---- //
-        if (!std::filesystem::exists(class_map_file)) {
-            helios_runtime_error("ERROR (RadiationModel::applySpectralClassMaps): The class map '" + class_map_file + "' given by the primitive data \"spectral_class_map\" does not exist.");
+        const std::filesystem::path resolved_class_map_file = helios::tryResolveFilePath(class_map_file);
+        if (resolved_class_map_file.empty()) {
+            helios_runtime_error("ERROR (RadiationModel::applySpectralClassMaps): The class map '" + class_map_file + "' given by the primitive data \"spectral_class_map\" does not exist relative to the working directory or the HELIOS_BUILD directory.");
         }
-        const std::string definitions_file = std::filesystem::path(class_map_file).replace_extension(".xml").string();
+        const std::string definitions_file = std::filesystem::path(resolved_class_map_file).replace_extension(".xml").string();
         if (!std::filesystem::exists(definitions_file)) {
             helios_runtime_error("ERROR (RadiationModel::applySpectralClassMaps): The class map '" + class_map_file + "' has no class definitions. They must be in the XML file '" + definitions_file +
                                  "' (see the radiation plugin documentation, \"Spectral Textures\").");
@@ -5260,14 +5488,46 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
     //----- VERIFICATIONS -----//
 
-    // Invalidate cached excitation APAR if radiative properties have changed since the
-    // last populate (e.g., user changed source spectrum, source flux, geometry, etc.).
-    // When `radiativepropertiesneedupdate` is true, `updateRadiativeProperties()` will
-    // be rerun during this dispatch, so any previously-cached APAR is stale.
-    if (radiativepropertiesneedupdate) {
-        for (auto &kv : excitation_sets) {
-            kv.second.populated = false;
+    // A launch of only SIF excitation bands is the model running them for a SIF band (runExcitationBands()), within a dispatch that has
+    // already decided which excitation is out of date
+    const bool internal_excitation_launch = !label.empty() && std::all_of(label.begin(), label.end(), [](const std::string &band) { return isSIFExcitationBand(band); });
+
+    // Reload source and sky spectra whose global data has changed since they were read, before the excitation cache is checked below
+    for (auto &source: radiation_sources) {
+        if (!source.source_spectrum_label.empty() && source.source_spectrum_label != "none") {
+            uint64_t current_version = context->getGlobalDataVersion(source.source_spectrum_label.c_str());
+            if (current_version != source.source_spectrum_version) {
+                source.source_spectrum = loadSpectralData(source.source_spectrum_label);
+                source.source_spectrum_version = current_version;
+                radiativepropertiesneedupdate = true;
+            }
         }
+    }
+
+    // The SIF excitation bands take their source flux from the source spectra as they are now
+    updateExcitationBandSourceFluxes();
+
+    if (!global_diffuse_spectrum_label.empty() && global_diffuse_spectrum_label != "none") {
+        uint64_t current_version = context->getGlobalDataVersion(global_diffuse_spectrum_label.c_str());
+        if (current_version != global_diffuse_spectrum_version) {
+            global_diffuse_spectrum = loadSpectralData(global_diffuse_spectrum_label);
+            global_diffuse_spectrum_version = current_version;
+            // Every band takes its diffuse spectrum from the global one, the SIF excitation bands included
+            for (auto &band_pair: radiation_bands) {
+                band_pair.second.diffuse_spectrum = global_diffuse_spectrum;
+            }
+            radiativepropertiesneedupdate = true;
+        }
+    }
+
+    // The SIF excitation was traced with the radiative properties of its time, so it is out of date whenever they are: the same check that
+    // decides whether they are rebuilt below (flagged model changes, and primitive data, materials, spectral textures and spectra changed in
+    // the Context) decides it, before the excitation bands are run or piggy-backed. Changes the properties do not depend on -- a source moved
+    // or changed strength, or the geometry rebuilt -- invalidate the excitation where they are made. A launch of the excitation bands
+    // themselves leaves the decision to the dispatch that started it: with spectrum interpolation the properties are never current, and each
+    // excitation launch would invalidate the excitation another had just computed.
+    if (!internal_excitation_launch && !radiativePropertiesAreCurrent()) {
+        invalidateExcitationSets();
     }
 
     // Optimisation: if the user dispatches one or more regular bands and has at least one
@@ -5420,39 +5680,19 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         }
     }
 
-    // Check if any source spectra have changed in global data and reload if necessary
-    for (auto &source: radiation_sources) {
-        if (!source.source_spectrum_label.empty() && source.source_spectrum_label != "none") {
-            uint64_t current_version = context->getGlobalDataVersion(source.source_spectrum_label.c_str());
-            if (current_version != source.source_spectrum_version) {
-                // Reload spectrum from global data
-                source.source_spectrum = loadSpectralData(source.source_spectrum_label);
-                source.source_spectrum_version = current_version;
-                radiativepropertiesneedupdate = true;
-            }
+    // Rebuild the material properties from the Context if anything they are computed from has changed, so that primitive
+    // data edited between calls (reflectivity_<band>, *_spectrum, glass_*, specular_*) is picked up without an explicit
+    // call. Rebuilding reads the data of every primitive, so it is skipped when nothing has changed. This is the only
+    // material builder: it caches the spectral integrations per unique spectrum and applies the documented precedence
+    // (a per-band value overrides a spectrum), and it uploads the result to the backend itself.
+    if (!radiativePropertiesAreCurrent()) {
+        updateRadiativeProperties();
+        // Excitation computed earlier in this dispatch, before this rebuild, used the old properties. A launch that includes excitation bands
+        // traces them with the new ones and marks them computed after the trace.
+        if (!internal_excitation_launch) {
+            invalidateExcitationSets();
         }
     }
-
-    // Check if global diffuse spectrum has changed and reload if necessary
-    if (!global_diffuse_spectrum_label.empty() && global_diffuse_spectrum_label != "none") {
-        uint64_t current_version = context->getGlobalDataVersion(global_diffuse_spectrum_label.c_str());
-        if (current_version != global_diffuse_spectrum_version) {
-            // Reload diffuse spectrum from global data
-            global_diffuse_spectrum = loadSpectralData(global_diffuse_spectrum_label);
-            global_diffuse_spectrum_version = current_version;
-            // Also update all band diffuse spectra
-            for (auto &band_pair: radiation_bands) {
-                band_pair.second.diffuse_spectrum = global_diffuse_spectrum;
-            }
-            radiativepropertiesneedupdate = true;
-        }
-    }
-
-    // Rebuild the material properties from the Context on every dispatch, so that primitive data edited between
-    // calls (reflectivity_<band>, *_spectrum, glass_*, specular_*) is picked up without an explicit call. This is
-    // the only material builder: it caches the spectral integrations per unique spectrum and applies the documented
-    // precedence (a per-band value overrides a spectrum), and it uploads the result to the backend itself.
-    updateRadiativeProperties();
 
     // Surface spectra that could not be weighted in a band are an error only if that band is being run
     for (const std::string &band: band_labels) {
@@ -5654,7 +5894,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
     std::map<std::string, std::vector<std::vector<float>>> radiation_in_camera;
 
-    size_t maxRays = 1024 * 1024 * 1024; // maximum number of total rays in a launch
+    // Largest number of rays in one camera or pixel-label launch; larger cameras are rendered in tiles
+    const size_t maxRays = backend->maxRaysPerLaunch();
 
     // ***** DIRECT LAUNCH FROM ALL RADIATION SOURCES ***** //
 
@@ -6334,8 +6575,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         }
 
         // Build launch parameters for diffuse rays
-        // Note: OptiX 6.5-specific batching (maxRays limit) should be handled inside the OptiX backend,
-        // not here in RadiationModel. Vulkan and other backends can launch all primitives at once.
+        // Every primitive is passed in one call; each backend splits it into launches within its own ray budget.
         helios::RayTracingLaunchParams params;
         params.launch_offset = 0;
         params.launch_count = Nprimitives; // Launch all primitives at once (backend handles batching if needed)
@@ -6921,8 +7161,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
                 // Validate antialiasing samples don't exceed maximum
                 if (camera.second.antialiasing_samples > maxRays) {
-                    helios_runtime_error("ERROR (runBand): Camera '" + camera.second.label + "' antialiasing samples (" + std::to_string(camera.second.antialiasing_samples) + ") exceeds OptiX maximum launch size (" + std::to_string(maxRays) +
-                                         "). Reduce antialiasing samples.");
+                    helios_runtime_error("ERROR (runBand): Camera '" + camera.second.label + "' antialiasing samples (" + std::to_string(camera.second.antialiasing_samples) + ") exceeds the maximum launch size of the ray-tracing backend (" +
+                                         std::to_string(maxRays) + "). Reduce antialiasing samples.");
                 }
 
                 // Compute tiling if needed
@@ -7381,9 +7621,13 @@ std::string RadiationModel::getCurrentDateTime() {
 
 std::vector<std::vector<float>> RadiationModel::loadColorCorrectionMatrixXML(const std::string &file_path, std::string &camera_label_out) {
 
-    std::ifstream file(file_path);
+    const std::filesystem::path resolved_file_path = helios::tryResolveFilePath(file_path);
+    if (resolved_file_path.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::loadColorCorrectionMatrixXML): Failed to open file for reading: " + file_path + " does not exist relative to the working directory or the HELIOS_BUILD directory.");
+    }
+    std::ifstream file(resolved_file_path);
     if (!file.is_open()) {
-        helios_runtime_error("ERROR (RadiationModel::loadColorCorrectionMatrixXML): Failed to open file for reading: " + file_path);
+        helios_runtime_error("ERROR (RadiationModel::loadColorCorrectionMatrixXML): Failed to open file for reading: " + resolved_file_path.string());
     }
 
     std::vector<std::vector<float>> matrix;
@@ -8674,21 +8918,8 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
         // Solid fraction
         geometry_data.solid_fractions[prim_idx] = context->getPrimitiveSolidFraction(UUID);
 
-        // Two-sided flag. Store the raw value (0=one-sided, 1=two-sided, 2=transparent, 3=invisible) rather than collapsing to a
-        // boolean, so the backends receive the full semantics. "invisibility_flag" primitive data = 1 is stored as 3 and takes
-        // precedence over both the material and primitive-data twosided_flag.
-        uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
-        if (context->doesPrimitiveDataExist(UUID, "invisibility_flag")) {
-            uint invisibility_flag;
-            context->getPrimitiveData(UUID, "invisibility_flag", invisibility_flag);
-            if (invisibility_flag == 1) {
-                twosided_flag = 3;
-            } else if (invisibility_flag != 0) {
-                helios_runtime_error("ERROR (RadiationModel::buildGeometryData): Primitive " + std::to_string(UUID) + " has \"invisibility_flag\" primitive data set to " + std::to_string(invisibility_flag) +
-                                     ". Valid values are 0 (visible) or 1 (invisible to the radiation model).");
-            }
-        }
-        geometry_data.twosided_flags[prim_idx] = static_cast<char>(twosided_flag);
+        // Two-sided flag, with its full range of values for the backends (see geometryTwosidedFlag())
+        geometry_data.twosided_flags[prim_idx] = geometryTwosidedFlag(UUID);
 
         if (parentID > 0 && context->getObjectType(parentID) == helios::OBJECT_TYPE_TILE) {
             // Tile subpatch: treat as individual patch for both OptiX and Vulkan backends.
@@ -9228,6 +9459,33 @@ void RadiationModel::buildTextureData() {
     if (!degenerate_normal_map_UUIDs.empty()) {
         std::cerr << "WARNING (RadiationModel::updateGeometry): " << degenerate_normal_map_UUIDs.size() << " primitive(s) with a normal or bump map, the first UUID " << degenerate_normal_map_UUIDs.front()
                   << ", have collinear texture (u,v) coordinates, so the map has no orientation on them and is not applied to them." << std::endl;
+    }
+}
+
+char RadiationModel::geometryTwosidedFlag(uint UUID) const {
+    // The raw value (0=one-sided, 1=two-sided, 2=transparent, 3=invisible) rather than a boolean, so the backends receive the full semantics.
+    // "invisibility_flag" primitive data = 1 is stored as 3 and takes precedence over both the material and primitive-data twosided_flag.
+    uint twosided_flag = context->getPrimitiveTwosidedFlag(UUID, 1);
+    if (context->doesPrimitiveDataExist(UUID, "invisibility_flag")) {
+        uint invisibility_flag;
+        context->getPrimitiveData(UUID, "invisibility_flag", invisibility_flag);
+        if (invisibility_flag == 1) {
+            twosided_flag = 3;
+        } else if (invisibility_flag != 0) {
+            helios_runtime_error("ERROR (RadiationModel): Primitive " + std::to_string(UUID) + " has \"invisibility_flag\" primitive data set to " + std::to_string(invisibility_flag) +
+                                 ". Valid values are 0 (visible) or 1 (invisible to the radiation model).");
+        }
+    }
+    return static_cast<char>(twosided_flag);
+}
+
+void RadiationModel::checkTwosidedFlagsCurrent(const std::vector<uint> &UUIDs) const {
+    // The flags are part of the geometry, which is rebuilt automatically only when primitives are added, deleted or reshaped
+    for (size_t u = 0; u < UUIDs.size(); u++) {
+        if (geometryTwosidedFlag(UUIDs[u]) != geometry_data.twosided_flags.at(u)) {
+            helios_runtime_error("ERROR (RadiationModel::runBand): The two-sided flag or \"invisibility_flag\" of primitive UUID " + std::to_string(UUIDs[u]) +
+                                 " (from its material or its primitive data) has changed since the radiation model's geometry was built. Call RadiationModel::updateGeometry() again after changing them.");
+        }
     }
 }
 

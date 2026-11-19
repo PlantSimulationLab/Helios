@@ -128,16 +128,53 @@ int XMLparser::parse_data_uint(const pugi::xml_node &node_data, std::vector<uint
 }
 
 int XMLparser::parse_data_string(const pugi::xml_node &node_data, std::vector<std::string> &data) {
-    std::string data_str = node_data.child_value();
+    // Text that starts with a double quote is a list of quoted values separated by whitespace, in which a backslash escapes a double quote or
+    // another backslash; Context::writeXML() writes it this way. Unquoted text is a list of values separated by whitespace, which is how Helios
+    // 1.3.97 and earlier wrote string data, so a value containing a space must be quoted.
+    const std::string data_str = trim_whitespace(node_data.child_value());
     data.resize(0);
-    if (!data_str.empty()) {
-        std::istringstream data_stream(data_str);
-        std::string tmp_s;
-        while (data_stream >> tmp_s) {
-            data.push_back(tmp_s);
-        }
-    } else {
+    if (data_str.empty()) {
         return 1;
+    }
+
+    if (data_str.front() != '"') {
+        std::istringstream data_stream(data_str);
+        std::string value;
+        while (data_stream >> value) {
+            data.push_back(value);
+        }
+        return 0;
+    }
+
+    size_t position = 0;
+    while (position < data_str.size()) {
+        if (std::isspace(static_cast<unsigned char>(data_str[position]))) {
+            position++;
+            continue;
+        }
+        if (data_str[position] != '"') {
+            data.resize(0);
+            return 2; // text outside of quotes
+        }
+        position++;
+        std::string value;
+        bool closed = false;
+        while (position < data_str.size()) {
+            const char c = data_str[position++];
+            if (c == '\\' && position < data_str.size()) {
+                value += data_str[position++];
+            } else if (c == '"') {
+                closed = true;
+                break;
+            } else {
+                value += c;
+            }
+        }
+        if (!closed) {
+            data.resize(0);
+            return 2; // a quoted value that is never closed
+        }
+        data.push_back(value);
     }
 
     return 0;
@@ -1378,7 +1415,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
     // error checking
     if (!load_result) {
         helios_runtime_error("failed.\n XML [" + std::string(filename) + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + load_result.description() +
-                             "\nError offset: " + std::to_string(load_result.offset) + " (error at [..." + (filename + load_result.offset) + "]\n");
+                             "\nError offset: " + std::to_string(load_result.offset) + " characters into the file.\n");
     }
 
     pugi::xml_node helios = xmldoc.child("helios");
@@ -1520,7 +1557,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             // Texture
             pugi::xml_node texture_node = mat.child("texture");
             if (!texture_node.empty()) {
-                texture_file = deblank(texture_node.child_value());
+                texture_file = trim_whitespace(texture_node.child_value()); // a path may contain spaces, so strip only the ends
                 if (!texture_file.empty()) {
                     addTexture(texture_file.c_str());
                 }
@@ -1573,7 +1610,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             }
             clearMaterialNormalMap_internal(material_label);
             if (!normal_map_node.empty()) {
-                const std::string normal_map_file = deblank(normal_map_node.child_value());
+                const std::string normal_map_file = trim_whitespace(normal_map_node.child_value());
                 float strength = 1.f;
                 pugi::xml_node strength_node = mat.child("normal_map_strength");
                 if (!strength_node.empty() && !parse_float(strength_node.child_value(), strength)) {
@@ -1590,7 +1627,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
                 }
                 setMaterialNormalMap_internal(material_label, NORMAL_MAP_TANGENT_SPACE, normal_map_file, strength, flip_green);
             } else if (!bump_map_node.empty()) {
-                const std::string bump_map_file = deblank(bump_map_node.child_value());
+                const std::string bump_map_file = trim_whitespace(bump_map_node.child_value());
                 pugi::xml_node strength_node = mat.child("bump_map_strength");
                 float strength;
                 if (strength_node.empty() || !parse_float(strength_node.child_value(), strength)) {
@@ -1662,7 +1699,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         if (!material_node.empty()) {
             // v3 format: <material>label</material>
-            material_label_from_xml = deblank(material_node.child_value());
+            material_label_from_xml = trim_whitespace(material_node.child_value()); // a label may contain spaces, so strip only the ends
             if (!material_label_from_xml.empty() && doesMaterialExist(material_label_from_xml)) {
                 has_material = true;
                 ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBAcolor(0, 0, 0, 1));
@@ -1795,7 +1832,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         if (!material_node_tri.empty()) {
             // v3 format: <material>label</material>
-            material_label_from_xml_tri = deblank(material_node_tri.child_value());
+            material_label_from_xml_tri = trim_whitespace(material_node_tri.child_value()); // a label may contain spaces, so strip only the ends
             if (!material_label_from_xml_tri.empty() && doesMaterialExist(material_label_from_xml_tri)) {
                 has_material_tri = true;
             }
@@ -1919,7 +1956,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
 
         if (!material_node_vox.empty()) {
             // v3 format: <material>label</material>
-            material_label_from_xml_vox = deblank(material_node_vox.child_value());
+            material_label_from_xml_vox = trim_whitespace(material_node_vox.child_value()); // a label may contain spaces, so strip only the ends
             if (!material_label_from_xml_vox.empty() && doesMaterialExist(material_label_from_xml_vox)) {
                 has_material_vox = true;
             }
@@ -3020,12 +3057,13 @@ bool Context::scanXMLForTag(const std::string &filename, const std::string &tag,
     pugi::xml_document xmldoc;
 
     // load file
-    pugi::xml_parse_result load_result = xmldoc.load_file(filename.c_str());
+    const std::string resolved_path = helios::resolveFilePath(filename).string();
+    pugi::xml_parse_result load_result = xmldoc.load_file(resolved_path.c_str());
 
     // error checking
     if (!load_result) {
         helios_runtime_error("failed.\n XML [" + filename + "] parsed with errors, attr value: [" + xmldoc.child("node").attribute("attr").value() + "]\nError description: " + load_result.description() +
-                             "\nError offset: " + std::to_string(load_result.offset) + " (error at [..." + (filename.c_str() + load_result.offset) + "]\n");
+                             "\nError offset: " + std::to_string(load_result.offset) + " characters into the file.\n");
     }
 
     pugi::xml_node helios = xmldoc.child("helios");
@@ -3045,6 +3083,64 @@ bool Context::scanXMLForTag(const std::string &filename, const std::string &tag,
     return false;
 }
 
+namespace {
+    //! Escape text written into an XML file so that a parser reads back the same characters
+    /**
+     * \param[in] text Text to escape.
+     * \param[in] attribute_value True if the text is written as a double-quoted attribute value, where a double quote must also be escaped and a parser would
+     * replace a tab or line break with a space unless it is written as a character reference.
+     * \return The escaped text.
+     */
+    std::string escapeXML(const std::string &text, bool attribute_value) {
+        std::string escaped;
+        escaped.reserve(text.size());
+        for (char c: text) {
+            if (c == '&') {
+                escaped += "&amp;";
+            } else if (c == '<') {
+                escaped += "&lt;";
+            } else if (c == '>') {
+                escaped += "&gt;";
+            } else if (c == '\r') {
+                escaped += "&#13;"; // a parser turns a raw carriage return into a line feed, in element text as well
+            } else if (attribute_value && c == '"') {
+                escaped += "&quot;";
+            } else if (attribute_value && c == '\t') {
+                escaped += "&#9;";
+            } else if (attribute_value && c == '\n') {
+                escaped += "&#10;";
+            } else {
+                escaped += c;
+            }
+        }
+        return escaped;
+    }
+
+    //! Text of a string data tag, read back by XMLparser::parse_data_string()
+    /**
+     * Each value is written in double quotes, with a backslash before any double quote or backslash, and separated from the next by a space.
+     * Every value is quoted, a single one included, because unquoted text is read as values separated by whitespace, as Helios 1.3.97 and earlier wrote it.
+     * Characters that are markup in XML are written as entities.
+     */
+    std::string formatXMLStringData(const std::vector<std::string> &values) {
+        std::string text;
+        for (size_t i = 0; i < values.size(); i++) {
+            if (i > 0) {
+                text += ' ';
+            }
+            text += '"';
+            for (char c: values.at(i)) {
+                if (c == '"' || c == '\\') {
+                    text += '\\';
+                }
+                text += c;
+            }
+            text += '"';
+        }
+        return escapeXML(text, false);
+    }
+} // namespace
+
 void Context::writeDataToXMLstream(const char *data_group, const std::vector<std::string> &data_labels, void *ptr, std::ofstream &outfile) const {
     for (const auto &label: data_labels) {
         HeliosDataType dtype = HELIOS_TYPE_INT;
@@ -3062,7 +3158,7 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
         }
 
         if (dtype == HELIOS_TYPE_UINT) {
-            outfile << "\t<data_uint label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_uint label=\"" << escapeXML(label, true) << "\">";
             std::vector<uint> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -3074,14 +3170,14 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 getGlobalData(label.c_str(), data);
             }
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j) << std::flush;
+                outfile << data.at(j);
                 if (j != data.size() - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</data_uint>" << std::endl;
+            outfile << "</data_uint>" << "\n";
         } else if (dtype == HELIOS_TYPE_INT) {
-            outfile << "\t<data_int label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_int label=\"" << escapeXML(label, true) << "\">";
             std::vector<int> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -3093,14 +3189,14 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 getGlobalData(label.c_str(), data);
             }
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j) << std::flush;
+                outfile << data.at(j);
                 if (j != data.size() - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</data_int>" << std::endl;
+            outfile << "</data_int>" << "\n";
         } else if (dtype == HELIOS_TYPE_FLOAT) {
-            outfile << "\t<data_float label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_float label=\"" << escapeXML(label, true) << "\">";
             std::vector<float> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -3112,14 +3208,14 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 getGlobalData(label.c_str(), data);
             }
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j) << std::flush;
+                outfile << data.at(j);
                 if (j != data.size() - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</data_float>" << std::endl;
+            outfile << "</data_float>" << "\n";
         } else if (dtype == HELIOS_TYPE_DOUBLE) {
-            outfile << "\t<data_double label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_double label=\"" << escapeXML(label, true) << "\">";
             std::vector<double> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -3130,15 +3226,17 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
             } else {
                 getGlobalData(label.c_str(), data);
             }
+            const std::streamsize float_precision = outfile.precision(std::numeric_limits<double>::max_digits10);
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j) << std::flush;
+                outfile << data.at(j);
                 if (j != data.size() - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</data_double>" << std::endl;
+            outfile.precision(float_precision);
+            outfile << "</data_double>" << "\n";
         } else if (dtype == HELIOS_TYPE_VEC2) {
-            outfile << "\t<data_vec2 label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_vec2 label=\"" << escapeXML(label, true) << "\">";
             std::vector<vec2> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -3150,14 +3248,14 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 getGlobalData(label.c_str(), data);
             }
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j).x << " " << data.at(j).y << std::flush;
+                outfile << data.at(j).x << " " << data.at(j).y;
                 if (j != data.size() - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</data_vec2>" << std::endl;
+            outfile << "</data_vec2>" << "\n";
         } else if (dtype == HELIOS_TYPE_VEC3) {
-            outfile << "\t<data_vec3 label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_vec3 label=\"" << escapeXML(label, true) << "\">";
             std::vector<vec3> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -3169,14 +3267,14 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 getGlobalData(label.c_str(), data);
             }
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << std::flush;
+                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z;
                 if (j != data.size() - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</data_vec3>" << std::endl;
+            outfile << "</data_vec3>" << "\n";
         } else if (dtype == HELIOS_TYPE_VEC4) {
-            outfile << "\t<data_vec4 label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_vec4 label=\"" << escapeXML(label, true) << "\">";
             std::vector<vec4> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -3188,14 +3286,14 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 getGlobalData(label.c_str(), data);
             }
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w << std::flush;
+                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w;
                 if (j != data.size() - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</data_vec4>" << std::endl;
+            outfile << "</data_vec4>" << "\n";
         } else if (dtype == HELIOS_TYPE_INT2) {
-            outfile << "\t<data_int2 label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_int2 label=\"" << escapeXML(label, true) << "\">";
             std::vector<int2> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -3207,14 +3305,14 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 getGlobalData(label.c_str(), data);
             }
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j).x << " " << data.at(j).y << std::flush;
+                outfile << data.at(j).x << " " << data.at(j).y;
                 if (j != data.size() - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</data_int2>" << std::endl;
+            outfile << "</data_int2>" << "\n";
         } else if (dtype == HELIOS_TYPE_INT3) {
-            outfile << "\t<data_int3 label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_int3 label=\"" << escapeXML(label, true) << "\">";
             std::vector<int3> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -3226,14 +3324,14 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 getGlobalData(label.c_str(), data);
             }
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << std::flush;
+                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z;
                 if (j != data.size() - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</data_int3>" << std::endl;
+            outfile << "</data_int3>" << "\n";
         } else if (dtype == HELIOS_TYPE_INT4) {
-            outfile << "\t<data_int4 label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_int4 label=\"" << escapeXML(label, true) << "\">";
             std::vector<int4> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -3245,14 +3343,14 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 getGlobalData(label.c_str(), data);
             }
             for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w << std::flush;
+                outfile << data.at(j).x << " " << data.at(j).y << " " << data.at(j).z << " " << data.at(j).w;
                 if (j != data.size() - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</data_int4>" << std::endl;
+            outfile << "</data_int4>" << "\n";
         } else if (dtype == HELIOS_TYPE_STRING) {
-            outfile << "\t<data_string label=\"" << label << "\">" << std::flush;
+            outfile << "\t<data_string label=\"" << escapeXML(label, true) << "\">";
             std::vector<std::string> data;
             if (strcmp(data_group, "primitive") == 0) {
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
@@ -3263,19 +3361,15 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
             } else {
                 getGlobalData(label.c_str(), data);
             }
-            for (int j = 0; j < data.size(); j++) {
-                outfile << data.at(j) << std::flush;
-                if (j != data.size() - 1) {
-                    outfile << " " << std::flush;
-                }
-            }
-            outfile << "</data_string>" << std::endl;
+            outfile << formatXMLStringData(data);
+            outfile << "</data_string>" << "\n";
         }
     }
 }
 
 void Context::writeXML(const char *filename, bool quiet) const {
-    writeXML(filename, getAllUUIDs(), quiet);
+    // The whole Context: a material that was defined but is not assigned to anything yet is part of it too
+    writeXML_private(filename, getAllUUIDs(), quiet, true);
 }
 
 void Context::writeXML_byobject(const char *filename, const std::vector<uint> &objIDs, bool quiet) const {
@@ -3288,6 +3382,10 @@ void Context::writeXML_byobject(const char *filename, const std::vector<uint> &o
 }
 
 void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, bool quiet) const {
+    writeXML_private(filename, UUIDs, quiet, false);
+}
+
+void Context::writeXML_private(const char *filename, const std::vector<uint> &UUIDs, bool quiet, bool write_all_named_materials) const {
     if (!quiet) {
         std::cout << "Writing XML file " << filename << "..." << std::flush;
     }
@@ -3311,6 +3409,13 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
     std::ofstream outfile;
     outfile.open(xmlfilename);
+    if (!outfile.is_open()) {
+        helios_runtime_error("ERROR (Context::writeXML): Could not open file " + xmlfilename + " for writing. Check that its directory exists and is writable.");
+    }
+
+    // Write enough significant digits that every float reads back to the same value. Double-precision data raises this to
+    // the digits a double needs where it is written, then restores it.
+    outfile.precision(std::numeric_limits<float>::max_digits10);
 
     outfile << "<?xml version=\"1.0\"?>\n\n";
 
@@ -3328,39 +3433,48 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             }
         }
     }
+    if (write_all_named_materials) {
+        // Materials the user added by name; the default and the automatically created ones exist only through the primitives using them
+        for (const auto &material: materials) {
+            const std::string &label = material.second.label;
+            if (label != DEFAULT_MATERIAL_LABEL && label.rfind("__auto_", 0) != 0) {
+                material_labels_used.insert(label);
+            }
+        }
+    }
 
     if (!material_labels_used.empty()) {
-        outfile << "   <materials>" << std::endl;
+        outfile << "   <materials>" << "\n";
         for (const std::string &label: material_labels_used) {
             if (doesMaterialExist(label)) {
                 uint matID = getMaterialIDFromLabel(label);
                 const Material &mat = materials.at(matID);
-                outfile << "\t<material label=\"" << mat.label << "\">" << std::endl;
-                outfile << "\t\t<color>" << mat.color.r << " " << mat.color.g << " " << mat.color.b << " " << mat.color.a << "</color>" << std::endl;
+                outfile << "\t<material label=\"" << escapeXML(mat.label, true) << "\">" << "\n";
+                outfile << "\t\t<color>" << mat.color.r << " " << mat.color.g << " " << mat.color.b << " " << mat.color.a << "</color>" << "\n";
                 if (!mat.texture_file.empty()) {
-                    outfile << "\t\t<texture>" << mat.texture_file << "</texture>" << std::endl;
+                    outfile << "\t\t<texture>" << escapeXML(mat.texture_file, false) << "</texture>" << "\n";
                 }
                 if (mat.texture_color_overridden) {
-                    outfile << "\t\t<texture_override>1</texture_override>" << std::endl;
+                    outfile << "\t\t<texture_override>1</texture_override>" << "\n";
                 }
                 if (mat.twosided_flag != 1) { // Only write if non-default
-                    outfile << "\t\t<twosided_flag>" << mat.twosided_flag << "</twosided_flag>" << std::endl;
+                    outfile << "\t\t<twosided_flag>" << mat.twosided_flag << "</twosided_flag>" << "\n";
                 }
                 if (mat.normal_map_kind != NORMAL_MAP_NONE) {
                     // Nine significant digits, so that the strength reads back as the same float
                     std::ostringstream strength;
                     strength << std::setprecision(9) << mat.normal_map_strength;
                     if (mat.normal_map_kind == NORMAL_MAP_TANGENT_SPACE) {
-                        outfile << "\t\t<normal_map>" << mat.normal_map_file << "</normal_map>" << std::endl;
+                        outfile << "\t\t<normal_map>" << escapeXML(mat.normal_map_file, false) << "</normal_map>" << "\n";
                         if (mat.normal_map_strength != 1.f) {
-                            outfile << "\t\t<normal_map_strength>" << strength.str() << "</normal_map_strength>" << std::endl;
+                            outfile << "\t\t<normal_map_strength>" << strength.str() << "</normal_map_strength>" << "\n";
                         }
                         if (mat.normal_map_flip_green) {
-                            outfile << "\t\t<normal_map_flip_green>1</normal_map_flip_green>" << std::endl;
+                            outfile << "\t\t<normal_map_flip_green>1</normal_map_flip_green>" << "\n";
                         }
                     } else {
-                        outfile << "\t\t<bump_map>" << mat.normal_map_file << "</bump_map>" << std::endl;
-                        outfile << "\t\t<bump_map_strength>" << strength.str() << "</bump_map_strength>" << std::endl;
+                        outfile << "\t\t<bump_map>" << escapeXML(mat.normal_map_file, false) << "</bump_map>" << "\n";
+                        outfile << "\t\t<bump_map_strength>" << strength.str() << "</bump_map_strength>" << "\n";
                     }
                 }
                 // Write material data
@@ -3368,47 +3482,15 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                 if (!mdata.empty()) {
                     writeDataToXMLstream("material", mdata, const_cast<Material *>(&mat), outfile);
                 }
-                outfile << "\t</material>" << std::endl;
+                outfile << "\t</material>" << "\n";
             }
         }
-        outfile << "   </materials>\n" << std::endl;
+        outfile << "   </materials>\n" << "\n";
     }
 
     // -- spectral palettes -- //
 
     // Only the palettes of the primitives being written, as for materials
-    auto escapeXML = [](const std::string &text) {
-        std::string escaped;
-        for (char c: text) {
-            switch (c) {
-                case '&':
-                    escaped += "&amp;";
-                    break;
-                case '<':
-                    escaped += "&lt;";
-                    break;
-                case '>':
-                    escaped += "&gt;";
-                    break;
-                case '"':
-                    escaped += "&quot;";
-                    break;
-                // An XML parser replaces these with spaces in an attribute value unless they are written as character references
-                case '\t':
-                    escaped += "&#9;";
-                    break;
-                case '\n':
-                    escaped += "&#10;";
-                    break;
-                case '\r':
-                    escaped += "&#13;";
-                    break;
-                default:
-                    escaped += c;
-            }
-        }
-        return escaped;
-    };
     std::set<uint> spectral_palette_IDs_used;
     for (uint UUID: UUIDs) {
         if (doesPrimitiveExist(UUID) && getPrimitivePointer_private(UUID)->spectral_palette_ID != 0) {
@@ -3417,36 +3499,36 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
     }
     for (uint palette_ID: spectral_palette_IDs_used) {
         const SpectralPalette &palette = spectral_palettes.at(palette_ID);
-        outfile << "   <spectral_palette label=\"" << escapeXML(palette.label) << "\">" << std::endl;
+        outfile << "   <spectral_palette label=\"" << escapeXML(palette.label, true) << "\">" << "\n";
         for (size_t i = 0; i < palette.classes.size(); i++) {
             const SpectralTextureClass &spectral_class = palette.classes.at(i);
-            outfile << "\t<class id=\"" << i + 1 << "\" reflectivity=\"" << escapeXML(spectral_class.reflectivity_spectrum) << "\" transmissivity=\"" << escapeXML(spectral_class.transmissivity_spectrum) << "\" provenance=\""
-                    << escapeXML(spectral_class.provenance) << "\"/>" << std::endl;
+            outfile << "\t<class id=\"" << i + 1 << "\" reflectivity=\"" << escapeXML(spectral_class.reflectivity_spectrum, true) << "\" transmissivity=\"" << escapeXML(spectral_class.transmissivity_spectrum, true) << "\" provenance=\""
+                    << escapeXML(spectral_class.provenance, true) << "\"/>" << "\n";
         }
-        outfile << "   </spectral_palette>\n" << std::endl;
+        outfile << "   </spectral_palette>\n" << "\n";
     }
 
     // -- time/date -- //
 
     Date date = getDate();
 
-    outfile << "   <date>" << std::endl;
+    outfile << "   <date>" << "\n";
 
-    outfile << "\t<day>" << date.day << "</day>" << std::endl;
-    outfile << "\t<month>" << date.month << "</month>" << std::endl;
-    outfile << "\t<year>" << date.year << "</year>" << std::endl;
+    outfile << "\t<day>" << date.day << "</day>" << "\n";
+    outfile << "\t<month>" << date.month << "</month>" << "\n";
+    outfile << "\t<year>" << date.year << "</year>" << "\n";
 
-    outfile << "   </date>" << std::endl;
+    outfile << "   </date>" << "\n";
 
     Time time = getTime();
 
-    outfile << "   <time>" << std::endl;
+    outfile << "   <time>" << "\n";
 
-    outfile << "\t<hour>" << time.hour << "</hour>" << std::endl;
-    outfile << "\t<minute>" << time.minute << "</minute>" << std::endl;
-    outfile << "\t<second>" << time.second << "</second>" << std::endl;
+    outfile << "\t<hour>" << time.hour << "</hour>" << "\n";
+    outfile << "\t<minute>" << time.minute << "</minute>" << "\n";
+    outfile << "\t<second>" << time.second << "</second>" << "\n";
 
-    outfile << "   </time>" << std::endl;
+    outfile << "   </time>" << "\n";
 
     // -- primitives -- //
 
@@ -3485,30 +3567,30 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
         //     }
 
         if (prim->getType() == PRIMITIVE_TYPE_PATCH) {
-            outfile << "   <patch>" << std::endl;
+            outfile << "   <patch>" << "\n";
         } else if (prim->getType() == PRIMITIVE_TYPE_TRIANGLE) {
-            outfile << "   <triangle>" << std::endl;
+            outfile << "   <triangle>" << "\n";
         } else if (prim->getType() == PRIMITIVE_TYPE_VOXEL) {
-            outfile << "   <voxel>" << std::endl;
+            outfile << "   <voxel>" << "\n";
         }
 
-        outfile << "\t<UUID>" << p << "</UUID>" << std::endl;
+        outfile << "\t<UUID>" << p << "</UUID>" << "\n";
 
         if (parent_objID > 0) {
-            outfile << "\t<objID>" << parent_objID << "</objID>" << std::endl;
+            outfile << "\t<objID>" << parent_objID << "</objID>" << "\n";
         }
 
         // Write material label (v3 format)
         if (materials.find(prim->materialID) != materials.end()) {
-            outfile << "\t<material>" << materials.at(prim->materialID).label << "</material>" << std::endl;
+            outfile << "\t<material>" << escapeXML(materials.at(prim->materialID).label, false) << "</material>" << "\n";
         }
 
         if (prim->color_texture_ID != 0) {
-            outfile << "\t<color_texture>" << color_texture_files.at(prim->color_texture_ID) << "</color_texture>" << std::endl;
+            outfile << "\t<color_texture>" << escapeXML(color_texture_files.at(prim->color_texture_ID), false) << "</color_texture>" << "\n";
         }
 
         if (prim->spectral_class_map_ID != 0) {
-            outfile << "\t<spectral_texture palette=\"" << escapeXML(spectral_palettes.at(prim->spectral_palette_ID).label) << "\">" << escapeXML(spectral_texture_class_maps.at(prim->spectral_class_map_ID).file) << "</spectral_texture>" << std::endl;
+            outfile << "\t<spectral_texture palette=\"" << escapeXML(spectral_palettes.at(prim->spectral_palette_ID).label, true) << "\">" << escapeXML(spectral_texture_class_maps.at(prim->spectral_class_map_ID).file, false) << "</spectral_texture>" << "\n";
         }
 
         if (!pdata.empty()) {
@@ -3525,22 +3607,22 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (float i: transform) {
                 outfile << i << " ";
             }
-            outfile << "</transform>" << std::endl;
+            outfile << "</transform>" << "\n";
             std::vector<vec2> uv = patch->getTextureUV();
             if (!uv.empty()) {
-                outfile << "\t<textureUV>" << std::flush;
+                outfile << "\t<textureUV>";
                 for (int i = 0; i < uv.size(); i++) {
-                    outfile << uv.at(i).x << " " << uv.at(i).y << std::flush;
+                    outfile << uv.at(i).x << " " << uv.at(i).y;
                     if (i != uv.size() - 1) {
-                        outfile << " " << std::flush;
+                        outfile << " ";
                     }
                 }
-                outfile << "</textureUV>" << std::endl;
+                outfile << "</textureUV>" << "\n";
             }
             if (primitiveTextureHasTransparencyChannel(p)) {
                 outfile << "\t<solid_fraction>" << getPrimitiveSolidFraction(p) << "</solid_fraction>\n";
             }
-            outfile << "   </patch>" << std::endl;
+            outfile << "   </patch>" << "\n";
 
             // Triangles
         } else if (prim->getType() == PRIMITIVE_TYPE_TRIANGLE) {
@@ -3551,23 +3633,23 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (float i: transform) {
                 outfile << i << " ";
             }
-            outfile << "</transform>" << std::endl;
+            outfile << "</transform>" << "\n";
 
             std::vector<vec2> uv = getTrianglePointer_private(p)->getTextureUV();
             if (!uv.empty()) {
-                outfile << "\t<textureUV>" << std::flush;
+                outfile << "\t<textureUV>";
                 for (int i = 0; i < uv.size(); i++) {
-                    outfile << uv.at(i).x << " " << uv.at(i).y << std::flush;
+                    outfile << uv.at(i).x << " " << uv.at(i).y;
                     if (i != uv.size() - 1) {
-                        outfile << " " << std::flush;
+                        outfile << " ";
                     }
                 }
-                outfile << "</textureUV>" << std::endl;
+                outfile << "</textureUV>" << "\n";
             }
             if (primitiveTextureHasTransparencyChannel(p)) {
                 outfile << "\t<solid_fraction>" << getPrimitiveSolidFraction(p) << "</solid_fraction>\n";
             }
-            outfile << "   </triangle>" << std::endl;
+            outfile << "   </triangle>" << "\n";
 
             // Voxels
         } else if (prim->getType() == PRIMITIVE_TYPE_VOXEL) {
@@ -3578,12 +3660,12 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (float i: transform) {
                 outfile << i << " ";
             }
-            outfile << "</transform>" << std::endl;
+            outfile << "</transform>" << "\n";
             if (primitiveTextureHasTransparencyChannel(p)) {
                 outfile << "\t<solid_fraction>" << getPrimitiveSolidFraction(p) << "</solid_fraction>\n";
             }
 
-            outfile << "   </voxel>" << std::endl;
+            outfile << "   </voxel>" << "\n";
         }
     }
 
@@ -3604,26 +3686,26 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
         std::vector<std::string> odata = obj->listObjectData();
 
         if (obj->getObjectType() == OBJECT_TYPE_TILE) {
-            outfile << "   <tile>" << std::endl;
+            outfile << "   <tile>" << "\n";
         } else if (obj->getObjectType() == OBJECT_TYPE_ADAPTIVE_TILE) {
-            outfile << "   <adaptive_tile>" << std::endl;
+            outfile << "   <adaptive_tile>" << "\n";
         } else if (obj->getObjectType() == OBJECT_TYPE_BOX) {
-            outfile << "   <box>" << std::endl;
+            outfile << "   <box>" << "\n";
         } else if (obj->getObjectType() == OBJECT_TYPE_CONE) {
-            outfile << "   <cone>" << std::endl;
+            outfile << "   <cone>" << "\n";
         } else if (obj->getObjectType() == OBJECT_TYPE_DISK) {
-            outfile << "   <disk>" << std::endl;
+            outfile << "   <disk>" << "\n";
         } else if (obj->getObjectType() == OBJECT_TYPE_SPHERE) {
-            outfile << "   <sphere>" << std::endl;
+            outfile << "   <sphere>" << "\n";
         } else if (obj->getObjectType() == OBJECT_TYPE_TUBE) {
-            outfile << "   <tube>" << std::endl;
+            outfile << "   <tube>" << "\n";
         } else if (obj->getObjectType() == OBJECT_TYPE_POLYMESH) {
-            outfile << "   <polymesh>" << std::endl;
+            outfile << "   <polymesh>" << "\n";
         }
 
-        outfile << "\t<objID>" << o << "</objID>" << std::endl;
+        outfile << "\t<objID>" << o << "</objID>" << "\n";
         if (obj->hasTexture()) {
-            outfile << "\t<texture>" << texture_file << "</texture>" << std::endl;
+            outfile << "\t<texture>" << escapeXML(texture_file, false) << "</texture>" << "\n";
         }
 
         if (!odata.empty()) {
@@ -3653,159 +3735,157 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
         }
         for (size_t l = 0; l < pdata_labels.size(); l++) {
             if (pdata_types.at(l) == HELIOS_TYPE_FLOAT) {
-                outfile << "\t<primitive_data_float " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                outfile << "\t<primitive_data_float " << "label=\"" << escapeXML(pdata_labels.at(l), true) << "\">" << "\n";
                 for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
                     if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
                         std::vector<float> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
-                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        outfile << "\t\t<data label=\"" << p << "\"> ";
                         for (float i: data) {
-                            outfile << i << " " << std::flush;
+                            outfile << i << " ";
                         }
-                        outfile << " </data>" << std::endl;
+                        outfile << " </data>" << "\n";
                     }
                 }
-                outfile << "\t</primitive_data_float>" << std::endl;
+                outfile << "\t</primitive_data_float>" << "\n";
             } else if (pdata_types.at(l) == HELIOS_TYPE_DOUBLE) {
-                outfile << "\t<primitive_data_double " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                outfile << "\t<primitive_data_double " << "label=\"" << escapeXML(pdata_labels.at(l), true) << "\">" << "\n";
                 for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
                     if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
                         std::vector<double> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
-                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        outfile << "\t\t<data label=\"" << p << "\"> ";
+                        const std::streamsize float_precision = outfile.precision(std::numeric_limits<double>::max_digits10);
                         for (double i: data) {
-                            outfile << i << " " << std::flush;
+                            outfile << i << " ";
                         }
-                        outfile << " </data>" << std::endl;
+                        outfile.precision(float_precision);
+                        outfile << " </data>" << "\n";
                     }
                 }
-                outfile << "\t</primitive_data_double>" << std::endl;
+                outfile << "\t</primitive_data_double>" << "\n";
             } else if (pdata_types.at(l) == HELIOS_TYPE_UINT) {
-                outfile << "\t<primitive_data_uint " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                outfile << "\t<primitive_data_uint " << "label=\"" << escapeXML(pdata_labels.at(l), true) << "\">" << "\n";
                 for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
                     if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
                         std::vector<uint> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
-                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        outfile << "\t\t<data label=\"" << p << "\"> ";
                         for (unsigned int i: data) {
-                            outfile << i << " " << std::flush;
+                            outfile << i << " ";
                         }
-                        outfile << " </data>" << std::endl;
+                        outfile << " </data>" << "\n";
                     }
                 }
-                outfile << "\t</primitive_data_uint>" << std::endl;
+                outfile << "\t</primitive_data_uint>" << "\n";
             } else if (pdata_types.at(l) == HELIOS_TYPE_INT) {
-                outfile << "\t<primitive_data_int " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                outfile << "\t<primitive_data_int " << "label=\"" << escapeXML(pdata_labels.at(l), true) << "\">" << "\n";
                 for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
                     if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
                         std::vector<int> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
-                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        outfile << "\t\t<data label=\"" << p << "\"> ";
                         for (int i: data) {
-                            outfile << i << " " << std::flush;
+                            outfile << i << " ";
                         }
-                        outfile << " </data>" << std::endl;
+                        outfile << " </data>" << "\n";
                     }
                 }
-                outfile << "\t</primitive_data_int>" << std::endl;
+                outfile << "\t</primitive_data_int>" << "\n";
             } else if (pdata_types.at(l) == HELIOS_TYPE_INT2) {
-                outfile << "\t<primitive_data_int2 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                outfile << "\t<primitive_data_int2 " << "label=\"" << escapeXML(pdata_labels.at(l), true) << "\">" << "\n";
                 for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
                     if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
                         std::vector<int2> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
-                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        outfile << "\t\t<data label=\"" << p << "\"> ";
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << " " << std::flush;
+                            outfile << i.x << " " << i.y << " ";
                         }
-                        outfile << " </data>" << std::endl;
+                        outfile << " </data>" << "\n";
                     }
                 }
-                outfile << "\t</primitive_data_int2>" << std::endl;
+                outfile << "\t</primitive_data_int2>" << "\n";
             } else if (pdata_types.at(l) == HELIOS_TYPE_INT3) {
-                outfile << "\t<primitive_data_int3 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                outfile << "\t<primitive_data_int3 " << "label=\"" << escapeXML(pdata_labels.at(l), true) << "\">" << "\n";
                 for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
                     if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
                         std::vector<int3> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
-                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        outfile << "\t\t<data label=\"" << p << "\"> ";
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << " " << i.z << " " << std::flush;
+                            outfile << i.x << " " << i.y << " " << i.z << " ";
                         }
-                        outfile << " </data>" << std::endl;
+                        outfile << " </data>" << "\n";
                     }
                 }
-                outfile << "\t</primitive_data_int3>" << std::endl;
+                outfile << "\t</primitive_data_int3>" << "\n";
             } else if (pdata_types.at(l) == HELIOS_TYPE_INT4) {
-                outfile << "\t<primitive_data_int4 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                outfile << "\t<primitive_data_int4 " << "label=\"" << escapeXML(pdata_labels.at(l), true) << "\">" << "\n";
                 for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
                     if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
                         std::vector<int4> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
-                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        outfile << "\t\t<data label=\"" << p << "\"> ";
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << " " << i.z << " " << i.w << " " << std::flush;
+                            outfile << i.x << " " << i.y << " " << i.z << " " << i.w << " ";
                         }
-                        outfile << " </data>" << std::endl;
+                        outfile << " </data>" << "\n";
                     }
                 }
-                outfile << "\t</primitive_data_int4>" << std::endl;
+                outfile << "\t</primitive_data_int4>" << "\n";
             } else if (pdata_types.at(l) == HELIOS_TYPE_VEC2) {
-                outfile << "\t<primitive_data_vec2 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                outfile << "\t<primitive_data_vec2 " << "label=\"" << escapeXML(pdata_labels.at(l), true) << "\">" << "\n";
                 for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
                     if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
                         std::vector<vec2> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
-                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        outfile << "\t\t<data label=\"" << p << "\"> ";
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << " " << std::flush;
+                            outfile << i.x << " " << i.y << " ";
                         }
-                        outfile << " </data>" << std::endl;
+                        outfile << " </data>" << "\n";
                     }
                 }
-                outfile << "\t</primitive_data_vec2>" << std::endl;
+                outfile << "\t</primitive_data_vec2>" << "\n";
             } else if (pdata_types.at(l) == HELIOS_TYPE_VEC3) {
-                outfile << "\t<primitive_data_vec3 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                outfile << "\t<primitive_data_vec3 " << "label=\"" << escapeXML(pdata_labels.at(l), true) << "\">" << "\n";
                 for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
                     if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
                         std::vector<vec3> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
-                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        outfile << "\t\t<data label=\"" << p << "\"> ";
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << " " << i.z << " " << std::flush;
+                            outfile << i.x << " " << i.y << " " << i.z << " ";
                         }
-                        outfile << " </data>" << std::endl;
+                        outfile << " </data>" << "\n";
                     }
                 }
-                outfile << "\t</primitive_data_vec3>" << std::endl;
+                outfile << "\t</primitive_data_vec3>" << "\n";
             } else if (pdata_types.at(l) == HELIOS_TYPE_VEC4) {
-                outfile << "\t<primitive_data_vec4 " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                outfile << "\t<primitive_data_vec4 " << "label=\"" << escapeXML(pdata_labels.at(l), true) << "\">" << "\n";
                 for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
                     if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
                         std::vector<vec4> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
-                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
+                        outfile << "\t\t<data label=\"" << p << "\"> ";
                         for (auto &i: data) {
-                            outfile << i.x << " " << i.y << " " << i.z << " " << i.w << " " << std::flush;
+                            outfile << i.x << " " << i.y << " " << i.z << " " << i.w << " ";
                         }
-                        outfile << " </data>" << std::endl;
+                        outfile << " </data>" << "\n";
                     }
                 }
-                outfile << "\t</primitive_data_vec4>" << std::endl;
+                outfile << "\t</primitive_data_vec4>" << "\n";
             } else if (pdata_types.at(l) == HELIOS_TYPE_STRING) {
-                outfile << "\t<primitive_data_string " << "label=\"" << pdata_labels.at(l) << "\">" << std::endl;
+                outfile << "\t<primitive_data_string " << "label=\"" << escapeXML(pdata_labels.at(l), true) << "\">" << "\n";
                 for (size_t p = 0; p < primitiveUUIDs.size(); p++) {
                     if (doesPrimitiveDataExist(primitiveUUIDs.at(p), pdata_labels.at(l).c_str())) {
                         std::vector<std::string> data;
                         getPrimitiveData(primitiveUUIDs.at(p), pdata_labels.at(l).c_str(), data);
-                        outfile << "\t\t<data label=\"" << p << "\"> " << std::flush;
-                        for (const auto &i: data) {
-                            outfile << i << " " << std::flush;
-                        }
-                        outfile << " </data>" << std::endl;
+                        outfile << "\t\t<data label=\"" << p << "\"> " << formatXMLStringData(data) << " </data>" << "\n";
                     }
                 }
-                outfile << "\t</primitive_data_string>" << std::endl;
+                outfile << "\t</primitive_data_string>" << "\n";
             }
         }
 
@@ -3817,22 +3897,22 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             tile->getTransformationMatrix(transform);
 
             int2 subdiv = tile->getSubdivisionCount();
-            outfile << "\t<subdivisions>" << subdiv.x << " " << subdiv.y << "</subdivisions>" << std::endl;
+            outfile << "\t<subdivisions>" << subdiv.x << " " << subdiv.y << "</subdivisions>" << "\n";
 
             // Written only when it differs from the default, so that files containing no tiled textures are
             // unchanged by the introduction of this tag.
             int2 texture_repeat = tile->getTextureRepeat();
             if (tile->hasTexture() && texture_repeat != make_int2(1, 1)) {
-                outfile << "\t<texture_repeat>" << texture_repeat.x << " " << texture_repeat.y << "</texture_repeat>" << std::endl;
+                outfile << "\t<texture_repeat>" << texture_repeat.x << " " << texture_repeat.y << "</texture_repeat>" << "\n";
             }
 
             outfile << "\t<transform> ";
             for (float i: transform) {
                 outfile << i << " ";
             }
-            outfile << "</transform>" << std::endl;
+            outfile << "</transform>" << "\n";
 
-            outfile << "   </tile>" << std::endl;
+            outfile << "   </tile>" << "\n";
 
             // Adaptive tiles
         } else if (obj->getObjectType() == OBJECT_TYPE_ADAPTIVE_TILE) {
@@ -3843,30 +3923,30 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             const AdaptiveTileRefinement refinement = tile->getRefinement();
             outfile << "\t<adaptive_refinement>" << refinement.target.x << " " << refinement.target.y << " " << refinement.subpatch_size_min << " " << refinement.subpatch_size_max << " "
-                    << refinement.transition_exponent << "</adaptive_refinement>" << std::endl;
+                    << refinement.transition_exponent << "</adaptive_refinement>" << "\n";
 
             // The base grid, maximum level and achieved size range are all derived from the refinement parameters when the object is built, but they are written out rather than re-derived on load so that a later change
             // to the sizing heuristic cannot silently reinterpret an existing file.
             int2 base_subdiv = tile->getBaseSubdivisionCount();
-            outfile << "\t<subdivisions>" << base_subdiv.x << " " << base_subdiv.y << "</subdivisions>" << std::endl;
+            outfile << "\t<subdivisions>" << base_subdiv.x << " " << base_subdiv.y << "</subdivisions>" << "\n";
 
-            outfile << "\t<max_refinement_level>" << tile->getMaxRefinementLevel() << "</max_refinement_level>" << std::endl;
+            outfile << "\t<max_refinement_level>" << tile->getMaxRefinementLevel() << "</max_refinement_level>" << "\n";
 
             vec2 size_range = tile->getSubpatchSizeRange();
-            outfile << "\t<subpatch_size_range>" << size_range.x << " " << size_range.y << "</subpatch_size_range>" << std::endl;
+            outfile << "\t<subpatch_size_range>" << size_range.x << " " << size_range.y << "</subpatch_size_range>" << "\n";
 
             int2 texture_repeat = tile->getTextureRepeat();
             if (tile->hasTexture() && texture_repeat != make_int2(1, 1)) {
-                outfile << "\t<texture_repeat>" << texture_repeat.x << " " << texture_repeat.y << "</texture_repeat>" << std::endl;
+                outfile << "\t<texture_repeat>" << texture_repeat.x << " " << texture_repeat.y << "</texture_repeat>" << "\n";
             }
 
             outfile << "\t<transform> ";
             for (float i: transform) {
                 outfile << i << " ";
             }
-            outfile << "</transform>" << std::endl;
+            outfile << "</transform>" << "\n";
 
-            outfile << "   </adaptive_tile>" << std::endl;
+            outfile << "   </adaptive_tile>" << "\n";
 
             // Spheres
         } else if (obj->getObjectType() == OBJECT_TYPE_SPHERE) {
@@ -3879,12 +3959,12 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (float i: transform) {
                 outfile << i << " ";
             }
-            outfile << "</transform>" << std::endl;
+            outfile << "</transform>" << "\n";
 
             uint subdiv = sphere->getSubdivisionCount();
-            outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
+            outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << "\n";
 
-            outfile << "   </sphere>" << std::endl;
+            outfile << "   </sphere>" << "\n";
 
             // Tubes
         } else if (obj->getObjectType() == OBJECT_TYPE_TUBE) {
@@ -3897,10 +3977,10 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (float i: transform) {
                 outfile << i << " ";
             }
-            outfile << "</transform>" << std::endl;
+            outfile << "</transform>" << "\n";
 
             uint subdiv = tube->getSubdivisionCount();
-            outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
+            outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << "\n";
 
             // The transformation matrix is written separately above, and loadXML() rebuilds the tube from these nodes and radii before applying it. They must therefore be written in the object's local frame:
             // writing the values reported by getNodes() and getNodeRadii(), which already have the transformation applied, would make loading apply it a second time.
@@ -3908,28 +3988,28 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             const std::vector<float> &radius = tube->radius;
 
             assert(nodes.size() == radius.size());
-            outfile << "\t<nodes> " << std::endl;
+            outfile << "\t<nodes> " << "\n";
             for (auto &node: nodes) {
-                outfile << "\t\t" << node.x << " " << node.y << " " << node.z << std::endl;
+                outfile << "\t\t" << node.x << " " << node.y << " " << node.z << "\n";
             }
-            outfile << "\t</nodes> " << std::endl;
-            outfile << "\t<radius> " << std::endl;
+            outfile << "\t</nodes> " << "\n";
+            outfile << "\t<radius> " << "\n";
             for (float radiu: radius) {
-                outfile << "\t\t" << radiu << std::endl;
+                outfile << "\t\t" << radiu << "\n";
             }
-            outfile << "\t</radius> " << std::endl;
+            outfile << "\t</radius> " << "\n";
 
             if (texture_file.empty()) {
                 std::vector<RGBcolor> colors = tube->getNodeColors();
 
-                outfile << "\t<color> " << std::endl;
+                outfile << "\t<color> " << "\n";
                 for (auto &color: colors) {
-                    outfile << "\t\t" << color.r << " " << color.g << " " << color.b << std::endl;
+                    outfile << "\t\t" << color.r << " " << color.g << " " << color.b << "\n";
                 }
-                outfile << "\t</color> " << std::endl;
+                outfile << "\t</color> " << "\n";
             }
 
-            outfile << "   </tube>" << std::endl;
+            outfile << "   </tube>" << "\n";
 
             // Boxes
         } else if (obj->getObjectType() == OBJECT_TYPE_BOX) {
@@ -3942,12 +4022,12 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (float i: transform) {
                 outfile << i << " ";
             }
-            outfile << "</transform>" << std::endl;
+            outfile << "</transform>" << "\n";
 
             int3 subdiv = box->getSubdivisionCount();
-            outfile << "\t<subdivisions> " << subdiv.x << " " << subdiv.y << " " << subdiv.z << " </subdivisions>" << std::endl;
+            outfile << "\t<subdivisions> " << subdiv.x << " " << subdiv.y << " " << subdiv.z << " </subdivisions>" << "\n";
 
-            outfile << "   </box>" << std::endl;
+            outfile << "   </box>" << "\n";
 
             // Disks
         } else if (obj->getObjectType() == OBJECT_TYPE_DISK) {
@@ -3960,12 +4040,12 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (float i: transform) {
                 outfile << i << " ";
             }
-            outfile << "</transform>" << std::endl;
+            outfile << "</transform>" << "\n";
 
             int2 subdiv = disk->getSubdivisionCount();
-            outfile << "\t<subdivisions> " << subdiv.x << " " << subdiv.y << " </subdivisions>" << std::endl;
+            outfile << "\t<subdivisions> " << subdiv.x << " " << subdiv.y << " </subdivisions>" << "\n";
 
-            outfile << "   </disk>" << std::endl;
+            outfile << "   </disk>" << "\n";
 
             // Cones
         } else if (obj->getObjectType() == OBJECT_TYPE_CONE) {
@@ -3978,28 +4058,28 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (float i: transform) {
                 outfile << i << " ";
             }
-            outfile << "</transform>" << std::endl;
+            outfile << "</transform>" << "\n";
 
             uint subdiv = cone->getSubdivisionCount();
-            outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << std::endl;
+            outfile << "\t<subdivisions> " << subdiv << " </subdivisions>" << "\n";
 
             // As for the tube above, these are written in the object's local frame because loadXML() applies the transformation matrix on top of them.
             const std::vector<vec3> &nodes = cone->nodes;
             const std::vector<float> &radius = cone->radii;
 
             assert(nodes.size() == radius.size());
-            outfile << "\t<nodes> " << std::endl;
+            outfile << "\t<nodes> " << "\n";
             for (auto &node: nodes) {
-                outfile << "\t\t" << node.x << " " << node.y << " " << node.z << std::endl;
+                outfile << "\t\t" << node.x << " " << node.y << " " << node.z << "\n";
             }
-            outfile << "\t</nodes> " << std::endl;
-            outfile << "\t<radius> " << std::endl;
+            outfile << "\t</nodes> " << "\n";
+            outfile << "\t<radius> " << "\n";
             for (float radiu: radius) {
-                outfile << "\t\t" << radiu << std::endl;
+                outfile << "\t\t" << radiu << "\n";
             }
-            outfile << "\t</radius> " << std::endl;
+            outfile << "\t</radius> " << "\n";
 
-            outfile << "   </cone>" << std::endl;
+            outfile << "   </cone>" << "\n";
 
             // Polymesh
         } else if (obj->getObjectType() == OBJECT_TYPE_POLYMESH) {
@@ -4009,7 +4089,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (float i: transform) {
                 outfile << i << " ";
             }
-            outfile << "</transform>" << std::endl;
+            outfile << "</transform>" << "\n";
 
             // A polymesh is rebuilt from its member primitives, which carry the geometry, but the indexed face set that records which of those primitives share which vertices is not recoverable from them --
             // reloading without it degrades a closed mesh to a triangle soup whose every edge is a boundary edge. Faces reference member primitives by their position in the written sub-primitive list rather
@@ -4036,46 +4116,46 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                 }
 
                 if (faces_complete) {
-                    outfile << "\t<vertices>" << std::endl;
+                    outfile << "\t<vertices>" << "\n";
                     for (const vec3 &vertex: mesh_vertices) {
-                        outfile << "\t\t" << vertex.x << " " << vertex.y << " " << vertex.z << std::endl;
+                        outfile << "\t\t" << vertex.x << " " << vertex.y << " " << vertex.z << "\n";
                     }
-                    outfile << "\t</vertices>" << std::endl;
+                    outfile << "\t</vertices>" << "\n";
 
-                    outfile << "\t<faces>" << std::endl;
+                    outfile << "\t<faces>" << "\n";
                     for (const int3 &face: mesh_faces) {
-                        outfile << "\t\t" << face.x << " " << face.y << " " << face.z << std::endl;
+                        outfile << "\t\t" << face.x << " " << face.y << " " << face.z << "\n";
                     }
-                    outfile << "\t</faces>" << std::endl;
+                    outfile << "\t</faces>" << "\n";
 
                     outfile << "\t<face_primitives> ";
                     for (size_t index: face_primitive_indices) {
                         outfile << index << " ";
                     }
-                    outfile << "</face_primitives>" << std::endl;
+                    outfile << "</face_primitives>" << "\n";
 
                     std::vector<vec3> mesh_normals = getPolymeshObjectVertexNormals(o);
                     if (!mesh_normals.empty()) {
-                        outfile << "\t<vertex_normals>" << std::endl;
+                        outfile << "\t<vertex_normals>" << "\n";
                         for (const vec3 &normal: mesh_normals) {
-                            outfile << "\t\t" << normal.x << " " << normal.y << " " << normal.z << std::endl;
+                            outfile << "\t\t" << normal.x << " " << normal.y << " " << normal.z << "\n";
                         }
-                        outfile << "\t</vertex_normals>" << std::endl;
-                        outfile << "\t<vertex_normal_source>" << static_cast<int>(getPolymeshObjectVertexNormalSource(o)) << "</vertex_normal_source>" << std::endl;
+                        outfile << "\t</vertex_normals>" << "\n";
+                        outfile << "\t<vertex_normal_source>" << static_cast<int>(getPolymeshObjectVertexNormalSource(o)) << "</vertex_normal_source>" << "\n";
                     }
 
                     std::vector<vec2> mesh_uv = getPolymeshObjectVertexUV(o);
                     if (!mesh_uv.empty()) {
-                        outfile << "\t<vertex_uv>" << std::endl;
+                        outfile << "\t<vertex_uv>" << "\n";
                         for (const vec2 &uv: mesh_uv) {
-                            outfile << "\t\t" << uv.x << " " << uv.y << std::endl;
+                            outfile << "\t\t" << uv.x << " " << uv.y << "\n";
                         }
-                        outfile << "\t</vertex_uv>" << std::endl;
+                        outfile << "\t</vertex_uv>" << "\n";
                     }
                 }
             }
 
-            outfile << "   </polymesh>" << std::endl;
+            outfile << "   </polymesh>" << "\n";
         }
     }
 
@@ -4087,86 +4167,83 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
         GlobalData data = iter.second;
         HeliosDataType type = data.type;
         if (type == HELIOS_TYPE_UINT) {
-            outfile << "   <globaldata_uint label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_uint label=\"" << escapeXML(label, true) << "\">";
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_uint.at(i) << std::flush;
+                outfile << data.global_data_uint.at(i);
                 if (i != data.size - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</globaldata_uint>" << std::endl;
+            outfile << "</globaldata_uint>" << "\n";
         } else if (type == HELIOS_TYPE_INT) {
-            outfile << "   <globaldata_int label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_int label=\"" << escapeXML(label, true) << "\">";
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_int.at(i) << std::flush;
+                outfile << data.global_data_int.at(i);
                 if (i != data.size - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</globaldata_int>" << std::endl;
+            outfile << "</globaldata_int>" << "\n";
         } else if (type == HELIOS_TYPE_FLOAT) {
-            outfile << "   <globaldata_float label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_float label=\"" << escapeXML(label, true) << "\">";
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_float.at(i) << std::flush;
+                outfile << data.global_data_float.at(i);
                 if (i != data.size - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</globaldata_float>" << std::endl;
+            outfile << "</globaldata_float>" << "\n";
         } else if (type == HELIOS_TYPE_DOUBLE) {
-            outfile << "   <globaldata_double label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_double label=\"" << escapeXML(label, true) << "\">";
+            const std::streamsize float_precision = outfile.precision(std::numeric_limits<double>::max_digits10);
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_double.at(i) << std::flush;
+                outfile << data.global_data_double.at(i);
                 if (i != data.size - 1) {
-                    outfile << " " << std::flush;
+                    outfile << " ";
                 }
             }
-            outfile << "</globaldata_double>" << std::endl;
+            outfile.precision(float_precision);
+            outfile << "</globaldata_double>" << "\n";
         } else if (type == HELIOS_TYPE_VEC2) {
-            outfile << "   <globaldata_vec2 label=\"" << label << "\">" << std::endl;
+            outfile << "   <globaldata_vec2 label=\"" << escapeXML(label, true) << "\">" << "\n";
             for (size_t i = 0; i < data.size; i++) {
-                outfile << "      " << data.global_data_vec2.at(i).x << " " << data.global_data_vec2.at(i).y << std::endl;
+                outfile << "      " << data.global_data_vec2.at(i).x << " " << data.global_data_vec2.at(i).y << "\n";
             }
-            outfile << "   </globaldata_vec2>" << std::endl;
+            outfile << "   </globaldata_vec2>" << "\n";
         } else if (type == HELIOS_TYPE_VEC3) {
-            outfile << "   <globaldata_vec3 label=\"" << label << "\">" << std::endl;
+            outfile << "   <globaldata_vec3 label=\"" << escapeXML(label, true) << "\">" << "\n";
             for (size_t i = 0; i < data.size; i++) {
-                outfile << "      " << data.global_data_vec3.at(i).x << " " << data.global_data_vec3.at(i).y << " " << data.global_data_vec3.at(i).z << std::endl;
+                outfile << "      " << data.global_data_vec3.at(i).x << " " << data.global_data_vec3.at(i).y << " " << data.global_data_vec3.at(i).z << "\n";
             }
-            outfile << "   </globaldata_vec3>" << std::endl;
+            outfile << "   </globaldata_vec3>" << "\n";
         } else if (type == HELIOS_TYPE_VEC4) {
-            outfile << "   <globaldata_vec4 label=\"" << label << "\">" << std::endl;
+            outfile << "   <globaldata_vec4 label=\"" << escapeXML(label, true) << "\">" << "\n";
             for (size_t i = 0; i < data.size; i++) {
-                outfile << "      " << data.global_data_vec4.at(i).x << " " << data.global_data_vec4.at(i).y << " " << data.global_data_vec4.at(i).z << " " << data.global_data_vec4.at(i).w << std::endl;
+                outfile << "      " << data.global_data_vec4.at(i).x << " " << data.global_data_vec4.at(i).y << " " << data.global_data_vec4.at(i).z << " " << data.global_data_vec4.at(i).w << "\n";
             }
-            outfile << "   </globaldata_vec4>" << std::endl;
+            outfile << "   </globaldata_vec4>" << "\n";
         } else if (type == HELIOS_TYPE_INT2) {
-            outfile << "   <globaldata_int2 label=\"" << label << "\">" << std::endl;
+            outfile << "   <globaldata_int2 label=\"" << escapeXML(label, true) << "\">" << "\n";
             for (size_t i = 0; i < data.size; i++) {
-                outfile << "      " << data.global_data_int2.at(i).x << " " << data.global_data_int2.at(i).y << std::endl;
+                outfile << "      " << data.global_data_int2.at(i).x << " " << data.global_data_int2.at(i).y << "\n";
             }
-            outfile << "   </globaldata_int2>" << std::endl;
+            outfile << "   </globaldata_int2>" << "\n";
         } else if (type == HELIOS_TYPE_INT3) {
-            outfile << "   <globaldata_int3 label=\"" << label << "\">" << std::endl;
+            outfile << "   <globaldata_int3 label=\"" << escapeXML(label, true) << "\">" << "\n";
             for (size_t i = 0; i < data.size; i++) {
-                outfile << "      " << data.global_data_int3.at(i).x << " " << data.global_data_int3.at(i).y << " " << data.global_data_int3.at(i).z << std::endl;
+                outfile << "      " << data.global_data_int3.at(i).x << " " << data.global_data_int3.at(i).y << " " << data.global_data_int3.at(i).z << "\n";
             }
-            outfile << "   </globaldata_int3>" << std::endl;
+            outfile << "   </globaldata_int3>" << "\n";
         } else if (type == HELIOS_TYPE_INT4) {
-            outfile << "   <globaldata_int4 label=\"" << label << "\">" << std::endl;
+            outfile << "   <globaldata_int4 label=\"" << escapeXML(label, true) << "\">" << "\n";
             for (size_t i = 0; i < data.size; i++) {
-                outfile << "      " << data.global_data_int4.at(i).x << " " << data.global_data_int4.at(i).y << " " << data.global_data_int4.at(i).z << " " << data.global_data_int4.at(i).w << std::endl;
+                outfile << "      " << data.global_data_int4.at(i).x << " " << data.global_data_int4.at(i).y << " " << data.global_data_int4.at(i).z << " " << data.global_data_int4.at(i).w << "\n";
             }
-            outfile << "   </globaldata_int4>" << std::endl;
+            outfile << "   </globaldata_int4>" << "\n";
         } else if (type == HELIOS_TYPE_STRING) {
-            outfile << "   <globaldata_string label=\"" << label << "\">" << std::flush;
-            for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_string.at(i) << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
-            }
-            outfile << "</globaldata_string>" << std::endl;
+            outfile << "   <globaldata_string label=\"" << escapeXML(label, true) << "\">";
+            outfile << formatXMLStringData(data.global_data_string);
+            outfile << "</globaldata_string>" << "\n";
         }
     }
 
@@ -4180,24 +4257,24 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
         assert(data.size() == dateval.size());
 
-        outfile << "   <timeseries label=\"" << label << "\">" << std::endl;
+        outfile << "   <timeseries label=\"" << escapeXML(label, true) << "\">" << "\n";
 
         for (size_t i = 0; i < data.size(); i++) {
             Date a_date = queryTimeseriesDate(label.c_str(), i);
             Time a_time = queryTimeseriesTime(label.c_str(), i);
 
-            outfile << "\t<datapoint>" << std::endl;
+            outfile << "\t<datapoint>" << "\n";
 
-            outfile << "\t   <date>" << a_date.day << " " << a_date.month << " " << a_date.year << "</date>" << std::endl;
+            outfile << "\t   <date>" << a_date.day << " " << a_date.month << " " << a_date.year << "</date>" << "\n";
 
-            outfile << "\t   <time>" << a_time.hour << " " << a_time.minute << " " << a_time.second << "</time>" << std::endl;
+            outfile << "\t   <time>" << a_time.hour << " " << a_time.minute << " " << a_time.second << "</time>" << "\n";
 
-            outfile << "\t   <value>" << data.at(i) << "</value>" << std::endl;
+            outfile << "\t   <value>" << data.at(i) << "</value>" << "\n";
 
-            outfile << "\t</datapoint>" << std::endl;
+            outfile << "\t</datapoint>" << "\n";
         }
 
-        outfile << "   </timeseries>" << std::endl;
+        outfile << "   </timeseries>" << "\n";
     }
 
     // ----------------- //
@@ -4205,6 +4282,9 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
     outfile << "\n</helios>\n";
 
     outfile.close();
+    if (outfile.fail()) {
+        helios_runtime_error("ERROR (Context::writeXML): Writing file " + xmlfilename + " failed before it was complete (the disk may be full).");
+    }
 
     if (!quiet) {
         std::cout << "done." << std::endl;
@@ -6492,6 +6572,20 @@ namespace {
         return make_Date(day, month, year);
     }
 
+    // Whether an hour token is in HHMM form: three or more characters, all digits (e.g., 0015, 130, 1300)
+    bool isHHMMToken(const std::string &token) {
+        const std::string trimmed = trim_whitespace(token);
+        if (trimmed.size() < 3) {
+            return false;
+        }
+        for (char c: trimmed) {
+            if (!std::isdigit(static_cast<unsigned char>(c))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // Parse a time string: "HH", "HH:MM", or "HH:MM:SS"
     // Note: may return hour=24 (via direct struct assignment) for midnight rollover; caller must handle.
     Time parseTimeString(const std::string &timestr, size_t row, const std::string &data_file) {
@@ -6505,8 +6599,8 @@ namespace {
             if (!parse_int(parts.at(0), hour)) {
                 helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse time string '" + timestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
             }
-            // Handle HHMM format (e.g., 1300)
-            if (hour > 24) {
+            // Handle HHMM format (e.g., 1300). Three or more digits are HHMM whatever their value, so that 0015 is 00:15 and not 15:00.
+            if (isHHMMToken(parts.at(0)) || hour > 24) {
                 int hr_min = hour;
                 hour = hr_min / 100;
                 minute = hr_min - hour * 100;
@@ -6854,8 +6948,9 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
     while (std::getline(datafile, line)) { // loop through file to read data
         row++;
 
-        if (trim_whitespace(line).empty() && row > 1) {
-            break;
+        // Skip blank lines wherever they are; a blank line does not end the data
+        if (trim_whitespace(line).empty()) {
+            continue;
         }
 
         // separate the line by delimiter
@@ -6884,13 +6979,17 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
         } else {
             // Separate date + time columns
             if (yearcol >= 0 && DOYcol >= 0) {
-                int DOY;
-                parse_int(line_separated.at(DOYcol), DOY);
+                int DOY = 0;
+                if (!parse_int(line_separated.at(DOYcol), DOY)) {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse day of year '" + line_separated.at(DOYcol) + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+                }
                 if (DOY < 1 || DOY > 366) {
                     helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date specified on line " + std::to_string(row) + ".");
                 }
-                int year;
-                parse_int(line_separated.at(yearcol), year);
+                int year = 0;
+                if (!parse_int(line_separated.at(yearcol), year)) {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse year '" + line_separated.at(yearcol) + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+                }
                 if (year < 1000) {
                     helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid year specified on line " + std::to_string(row) + ".");
                 }
@@ -6909,7 +7008,7 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
                 if (!parse_int(line_separated.at(hourcol), hour)) {
                     helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse hour string on line " + std::to_string(row) + " of file " + data_file + ".");
                 }
-                if (hour > 24 && minutecol < 0 && secondcol < 0) {
+                if ((isHHMMToken(line_separated.at(hourcol)) || hour > 24) && minutecol < 0 && secondcol < 0) {
                     int hr_min = hour;
                     hour = hr_min / 100;
                     minute = hr_min - hour * 100;

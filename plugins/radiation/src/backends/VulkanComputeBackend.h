@@ -132,6 +132,10 @@ namespace helios {
         std::string getBackendName() const override {
             return "Vulkan Compute (software BVH)";
         }
+        //! The same budget as each batch of a direct or diffuse launch, so that no camera dispatch runs longer than they do
+        [[nodiscard]] size_t maxRaysPerLaunch() const override {
+            return max_rays_per_launch;
+        }
 
     private:
         //! Maximum number of rays (primitives * rays_per_primitive) submitted in a single
@@ -437,6 +441,22 @@ namespace helios {
          * @brief Destroy Vulkan buffer
          */
         void destroyBuffer(Buffer &buffer);
+
+        //! Submit work to the compute queue and wait for its fence to signal
+        /**
+         * \param[in] submit_info Work to submit.
+         * \param[in] fence Fence to reset, signal on completion and wait for.
+         * \param[in] caller Name of the calling method, for the error raised if the submission or the wait fails.
+         * \param[in] time_limit_seconds Seconds after which the work is treated as hung and an error is raised; 0 waits without limit.
+         */
+        void submitAndWait(const VkSubmitInfo &submit_info, VkFence fence, const char *caller, uint32_t time_limit_seconds = 0);
+
+        //! Time limit for a buffer upload, download or clear (see submitAndWait())
+        /**
+         * Far longer than any transfer takes, even of a large buffer on a software Vulkan device, so that it only catches a GPU that has stopped responding without
+         * reporting a lost device. Ray launches are not limited: one batch on a software device can legitimately take many minutes.
+         */
+        static constexpr uint32_t transfer_time_limit_seconds = 600;
 
         /**
          * @brief Upload data to buffer

@@ -20,8 +20,74 @@
 
 using namespace helios;
 
+namespace {
+    //! Running sum of up to four components, accumulated in double precision.
+    /**
+     * A single-precision running sum stops absorbing addends once it is about 2^24 times larger than them, which biases
+     * sums, means and areas taken over millions of primitives. The scene-wide reductions accumulate here and convert to
+     * single precision once at the end.
+     */
+    struct ComponentSum {
+        double x = 0.0;
+        double y = 0.0;
+        double z = 0.0;
+        double w = 0.0;
+
+        void add(const vec2 &value, double weight = 1.0) {
+            x += double(value.x) * weight;
+            y += double(value.y) * weight;
+        }
+        void add(const vec3 &value, double weight = 1.0) {
+            x += double(value.x) * weight;
+            y += double(value.y) * weight;
+            z += double(value.z) * weight;
+        }
+        void add(const vec4 &value, double weight = 1.0) {
+            x += double(value.x) * weight;
+            y += double(value.y) * weight;
+            z += double(value.z) * weight;
+            w += double(value.w) * weight;
+        }
+
+        [[nodiscard]] vec2 toVec2(double divisor = 1.0) const {
+            return make_vec2(float(x / divisor), float(y / divisor));
+        }
+        [[nodiscard]] vec3 toVec3(double divisor = 1.0) const {
+            return make_vec3(float(x / divisor), float(y / divisor), float(z / divisor));
+        }
+        [[nodiscard]] vec4 toVec4(double divisor = 1.0) const {
+            return make_vec4(float(x / divisor), float(y / divisor), float(z / divisor), float(w / divisor));
+        }
+    };
+} // namespace
+
 void Context::incrementPrimitiveDataLabelCounter(const std::string &primitive_data_label) {
     primitive_data_label_counts[primitive_data_label]++;
+}
+
+std::vector<Primitive *> Context::findPrimitivesToSetData(const std::vector<uint> &UUIDs) const {
+    std::vector<Primitive *> targets(UUIDs.size(), nullptr);
+    bool primitive_missing = false;
+#ifdef USE_OPENMP
+#pragma omp parallel for reduction(|| : primitive_missing)
+#endif
+    for (int i = 0; i < (int) UUIDs.size(); ++i) {
+        const auto primitive = primitives.find(UUIDs[i]);
+        if (primitive == primitives.end()) {
+            primitive_missing = true;
+        } else {
+            targets[i] = primitive->second;
+        }
+    }
+    if (primitive_missing) {
+        // An error cannot be raised from inside the parallel loop, and the first missing primitive in the order given is the one to name
+        for (size_t i = 0; i < UUIDs.size(); i++) {
+            if (targets[i] == nullptr) {
+                helios_runtime_error("ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUIDs[i]) + " does not exist in the Context. No primitive data was set.");
+            }
+        }
+    }
+    return targets;
 }
 
 void Context::decrementPrimitiveDataLabelCounter(const std::string &primitive_data_label) {
@@ -270,6 +336,7 @@ void Context::clearPrimitiveData(uint UUID, const char *label) {
 
     if (primitives.at(UUID)->doesPrimitiveDataExist(label)) {
         decrementPrimitiveDataLabelCounter(label);
+        markPrimitiveDataModified(label_str);
     }
     primitives.at(UUID)->clearPrimitiveData(label);
 }
@@ -302,6 +369,7 @@ void Context::clearPrimitiveData(const std::vector<uint> &UUIDs, const char *lab
 
         if (primitives.at(UUID)->doesPrimitiveDataExist(label)) {
             decrementPrimitiveDataLabelCounter(label);
+            markPrimitiveDataModified(label_str);
         }
         primitives.at(UUID)->clearPrimitiveData(label);
     }
@@ -333,6 +401,7 @@ void Context::clearPrimitiveData(const char *label) {
             }
         }
         decrementPrimitiveDataLabelCounter(label);
+        markPrimitiveDataModified(label_str);
         primitive->clearPrimitiveData(label);
     }
     // Guard against any reference-count drift: the label is gone after this call,
@@ -359,6 +428,7 @@ void Context::copyPrimitiveData(uint sourceUUID, uint destinationUUID) {
 
     for (const auto &[label, type]: destination->primitive_data_types) {
         decrementPrimitiveDataLabelCounter(label);
+        markPrimitiveDataModified(label);
     }
 
     destination->primitive_data_types = source->primitive_data_types;
@@ -377,6 +447,7 @@ void Context::copyPrimitiveData(uint sourceUUID, uint destinationUUID) {
 
     for (const auto &[label, type]: destination->primitive_data_types) {
         incrementPrimitiveDataLabelCounter(label);
+        markPrimitiveDataModified(label);
     }
 
     destination->markDirty();
@@ -415,6 +486,7 @@ void Context::duplicatePrimitiveData(uint UUID, const char *old_label, const cha
     // The label-only Context::getPrimitiveDataType() answers from the Context-wide registry, not from the primitive, so a label introduced here has to be registered there too. Without it the data exists on
     // the primitive while the Context reports the label does not exist, which breaks every caller that resolves a type by label -- writeXML() among them.
     registerOrValidatePrimitiveDataType(new_label, type);
+    markPrimitiveDataModified(new_label);
     primitives.at(UUID)->primitive_data_types[new_label] = type;
     if (type == HELIOS_TYPE_INT) {
         primitives.at(UUID)->primitive_data_int[new_label] = primitives.at(UUID)->primitive_data_int.at(old_label);
@@ -457,6 +529,7 @@ void Context::duplicatePrimitiveData(const char *existing_data_label, const char
                 incrementPrimitiveDataLabelCounter(copy_data_label);
             }
             registerOrValidatePrimitiveDataType(copy_data_label, type);
+            markPrimitiveDataModified(copy_data_label);
             primitive->primitive_data_types[copy_data_label] = type;
             if (type == HELIOS_TYPE_FLOAT) {
                 primitive->primitive_data_float[copy_data_label] = primitive->primitive_data_float.at(existing_data_label);
@@ -490,7 +563,7 @@ void Context::duplicatePrimitiveData(const char *existing_data_label, const char
 
 void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const std::string &label, float &mean) const {
     float value;
-    float sum = 0.f;
+    double sum = 0.0; // double precision: a float running sum drops addends once it is ~2^24 times larger than them
     size_t count = 0;
     for (uint UUID: UUIDs) {
 
@@ -505,7 +578,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
         std::cerr << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         mean = 0;
     } else {
-        mean = sum / float(count);
+        mean = float(sum / double(count));
     }
 }
 
@@ -532,13 +605,13 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
 
 void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &mean) const {
     vec2 value;
-    vec2 sum(0.f, 0.f);
+    ComponentSum sum;
     size_t count = 0;
     for (uint UUID: UUIDs) {
 
         if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC2) {
             getPrimitiveData(UUID, label.c_str(), value);
-            sum = sum + value;
+            sum.add(value);
             count++;
         }
     }
@@ -547,19 +620,19 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
         std::cerr << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         mean = make_vec2(0, 0);
     } else {
-        mean = sum / float(count);
+        mean = sum.toVec2(double(count));
     }
 }
 
 void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &mean) const {
     vec3 value;
-    vec3 sum(0.f, 0.f, 0.f);
+    ComponentSum sum;
     size_t count = 0;
     for (uint UUID: UUIDs) {
 
         if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC3) {
             getPrimitiveData(UUID, label.c_str(), value);
-            sum = sum + value;
+            sum.add(value);
             count++;
         }
     }
@@ -568,19 +641,19 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
         std::cerr << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         mean = make_vec3(0, 0, 0);
     } else {
-        mean = sum / float(count);
+        mean = sum.toVec3(double(count));
     }
 }
 
 void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &mean) const {
     vec4 value;
-    vec4 sum(0.f, 0.f, 0.f, 0.f);
+    ComponentSum sum;
     size_t count = 0;
     for (uint UUID: UUIDs) {
 
         if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC4) {
             getPrimitiveData(UUID, label.c_str(), value);
-            sum = sum + value;
+            sum.add(value);
             count++;
         }
     }
@@ -589,7 +662,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
         std::cerr << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         mean = make_vec4(0, 0, 0, 0);
     } else {
-        mean = sum / float(count);
+        mean = sum.toVec4(double(count));
     }
 }
 
@@ -628,7 +701,7 @@ void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &
     // Calculate mean based on data type
     if (data_type == HELIOS_TYPE_FLOAT) {
         float value;
-        float sum = 0.f;
+        double sum = 0.0;
         size_t count = 0;
         for (uint UUID: UUIDs) {
             if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
@@ -640,7 +713,7 @@ void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &
         if (count == 0) {
             helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
         }
-        float mean = sum / float(count);
+        float mean = float(sum / double(count));
         setObjectData(objID, label.c_str(), mean);
 
     } else if (data_type == HELIOS_TYPE_DOUBLE) {
@@ -662,61 +735,61 @@ void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &
 
     } else if (data_type == HELIOS_TYPE_VEC2) {
         vec2 value;
-        vec2 sum(0.f, 0.f);
+        ComponentSum sum;
         size_t count = 0;
         for (uint UUID: UUIDs) {
             if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
                 getPrimitiveData(UUID, label.c_str(), value);
-                sum = sum + value;
+                sum.add(value);
                 count++;
             }
         }
         if (count == 0) {
             helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
         }
-        vec2 mean = sum / float(count);
+        vec2 mean = sum.toVec2(double(count));
         setObjectData(objID, label.c_str(), mean);
 
     } else if (data_type == HELIOS_TYPE_VEC3) {
         vec3 value;
-        vec3 sum(0.f, 0.f, 0.f);
+        ComponentSum sum;
         size_t count = 0;
         for (uint UUID: UUIDs) {
             if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
                 getPrimitiveData(UUID, label.c_str(), value);
-                sum = sum + value;
+                sum.add(value);
                 count++;
             }
         }
         if (count == 0) {
             helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
         }
-        vec3 mean = sum / float(count);
+        vec3 mean = sum.toVec3(double(count));
         setObjectData(objID, label.c_str(), mean);
 
     } else if (data_type == HELIOS_TYPE_VEC4) {
         vec4 value;
-        vec4 sum(0.f, 0.f, 0.f, 0.f);
+        ComponentSum sum;
         size_t count = 0;
         for (uint UUID: UUIDs) {
             if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
                 getPrimitiveData(UUID, label.c_str(), value);
-                sum = sum + value;
+                sum.add(value);
                 count++;
             }
         }
         if (count == 0) {
             helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
         }
-        vec4 mean = sum / float(count);
+        vec4 mean = sum.toVec4(double(count));
         setObjectData(objID, label.c_str(), mean);
     }
 }
 
 void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UUIDs, const std::string &label, float &awt_mean) const {
     float value, A;
-    float sum = 0.f;
-    float area = 0;
+    double sum = 0.0;
+    double area = 0.0;
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
@@ -727,7 +800,7 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
                 nan_warning = true;
                 continue;
             }
-            sum += value * A;
+            sum += double(value) * double(A);
             area += A;
         }
     }
@@ -739,7 +812,7 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = 0;
     } else {
-        awt_mean = sum / area;
+        awt_mean = float(sum / area);
     }
 }
 
@@ -776,8 +849,8 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
 
 void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &awt_mean) const {
     vec2 value;
-    vec2 sum(0.f, 0.f);
-    float area = 0;
+    ComponentSum sum;
+    double area = 0.0;
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
@@ -788,7 +861,7 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
                 nan_warning = true;
                 continue;
             }
-            sum = sum + (value * A);
+            sum.add(value, A);
             area += A;
         }
     }
@@ -800,14 +873,14 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec2(0, 0);
     } else {
-        awt_mean = sum / area;
+        awt_mean = sum.toVec2(area);
     }
 }
 
 void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &awt_mean) const {
     vec3 value;
-    vec3 sum(0.f, 0.f, 0.f);
-    float area = 0;
+    ComponentSum sum;
+    double area = 0.0;
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
@@ -818,7 +891,7 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
                 nan_warning = true;
                 continue;
             }
-            sum = sum + (value * A);
+            sum.add(value, A);
             area += A;
         }
     }
@@ -830,14 +903,14 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec3(0, 0, 0);
     } else {
-        awt_mean = sum / area;
+        awt_mean = sum.toVec3(area);
     }
 }
 
 void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &awt_mean) const {
     vec4 value;
-    vec4 sum(0.f, 0.f, 0.f, 0.f);
-    float area = 0;
+    ComponentSum sum;
+    double area = 0.0;
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
@@ -848,7 +921,7 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
                 nan_warning = true;
                 continue;
             }
-            sum = sum + (value * A);
+            sum.add(value, A);
             area += A;
         }
     }
@@ -860,23 +933,25 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec4(0, 0, 0, 0);
     } else {
-        awt_mean = sum / area;
+        awt_mean = sum.toVec4(area);
     }
 }
 
 void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const std::string &label, float &sum) const {
 
     float value;
-    sum = 0.f;
+    double total = 0.0;
     bool added_to_sum = false;
     for (uint UUID: UUIDs) {
 
         if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_FLOAT) {
             getPrimitiveData(UUID, label.c_str(), value);
-            sum += value;
+            total += value;
             added_to_sum = true;
         }
     }
+
+    sum = float(total);
 
     if (!added_to_sum) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
@@ -905,16 +980,18 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
 void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &sum) const {
 
     vec2 value;
-    sum = make_vec2(0.f, 0.f);
+    ComponentSum total;
     bool added_to_sum = false;
     for (uint UUID: UUIDs) {
 
         if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC2) {
             getPrimitiveData(UUID, label.c_str(), value);
-            sum = sum + value;
+            total.add(value);
             added_to_sum = true;
         }
     }
+
+    sum = total.toVec2();
 
     if (!added_to_sum) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
@@ -924,16 +1001,18 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
 void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &sum) const {
 
     vec3 value;
-    sum = make_vec3(0.f, 0.f, 0.f);
+    ComponentSum total;
     bool added_to_sum = false;
     for (uint UUID: UUIDs) {
 
         if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC3) {
             getPrimitiveData(UUID, label.c_str(), value);
-            sum = sum + value;
+            total.add(value);
             added_to_sum = true;
         }
     }
+
+    sum = total.toVec3();
 
     if (!added_to_sum) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
@@ -943,16 +1022,18 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
 void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &sum) const {
 
     vec4 value;
-    sum = make_vec4(0.f, 0.f, 0.f, 0.f);
+    ComponentSum total;
     bool added_to_sum = false;
     for (uint UUID: UUIDs) {
 
         if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC4) {
             getPrimitiveData(UUID, label.c_str(), value);
-            sum = sum + value;
+            total.add(value);
             added_to_sum = true;
         }
     }
+
+    sum = total.toVec4();
 
     if (!added_to_sum) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
@@ -962,7 +1043,7 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
 void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUIDs, const std::string &label, float &awt_sum) const {
 
     float value;
-    awt_sum = 0.f;
+    double total = 0.0;
     bool added_to_sum = false;
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
@@ -974,10 +1055,12 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
                 continue;
             }
             getPrimitiveData(UUID, label.c_str(), value);
-            awt_sum += value * area;
+            total += double(value) * double(area);
             added_to_sum = true;
         }
     }
+
+    awt_sum = float(total);
 
     if (!added_to_sum) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
@@ -1016,7 +1099,7 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
 void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUIDs, const std::string &label, helios::vec2 &awt_sum) const {
 
     vec2 value;
-    awt_sum = make_vec2(0.f, 0.f);
+    ComponentSum total;
     bool added_to_sum = false;
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
@@ -1028,10 +1111,12 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
                 continue;
             }
             getPrimitiveData(UUID, label.c_str(), value);
-            awt_sum = awt_sum + value * area;
+            total.add(value, area);
             added_to_sum = true;
         }
     }
+
+    awt_sum = total.toVec2();
 
     if (!added_to_sum) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
@@ -1043,7 +1128,7 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
 void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUIDs, const std::string &label, helios::vec3 &awt_sum) const {
 
     vec3 value;
-    awt_sum = make_vec3(0.f, 0.f, 0.f);
+    ComponentSum total;
     bool added_to_sum = false;
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
@@ -1055,10 +1140,12 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
                 continue;
             }
             getPrimitiveData(UUID, label.c_str(), value);
-            awt_sum = awt_sum + value * area;
+            total.add(value, area);
             added_to_sum = true;
         }
     }
+
+    awt_sum = total.toVec3();
 
     if (!added_to_sum) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
@@ -1070,7 +1157,7 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
 void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUIDs, const std::string &label, helios::vec4 &awt_sum) const {
 
     vec4 value;
-    awt_sum = make_vec4(0.f, 0.f, 0.f, 0.F);
+    ComponentSum total;
     bool added_to_sum = false;
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
@@ -1082,10 +1169,12 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
                 continue;
             }
             getPrimitiveData(UUID, label.c_str(), value);
-            awt_sum = awt_sum + value * area;
+            total.add(value, area);
             added_to_sum = true;
         }
     }
+
+    awt_sum = total.toVec4();
 
     if (!added_to_sum) {
         std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
@@ -1095,6 +1184,8 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
 }
 
 void Context::scalePrimitiveData(const std::vector<uint> &UUIDs, const std::string &label, float scaling_factor) {
+
+    markPrimitiveDataModified(label);
 
     uint primitives_not_exist = 0;
     uint primitive_data_not_exist = 0;
@@ -1154,6 +1245,8 @@ void Context::scalePrimitiveData(const std::string &label, float scaling_factor)
 
 void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char *label, int increment) {
 
+    markPrimitiveDataModified(label);
+
     WarningAggregator warnings;
 
     for (uint UUID: UUIDs) {
@@ -1178,6 +1271,8 @@ void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char 
 }
 
 void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char *label, uint increment) {
+
+    markPrimitiveDataModified(label);
 
     WarningAggregator warnings;
 
@@ -1204,6 +1299,8 @@ void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char 
 
 void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char *label, float increment) {
 
+    markPrimitiveDataModified(label);
+
     WarningAggregator warnings;
 
     for (uint UUID: UUIDs) {
@@ -1228,6 +1325,8 @@ void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char 
 }
 
 void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char *label, double increment) {
+
+    markPrimitiveDataModified(label);
 
     WarningAggregator warnings;
 
@@ -1563,7 +1662,7 @@ float Context::sumPrimitiveSurfaceArea(const std::vector<uint> &UUIDs) const {
 
     bool primitive_warning = false;
     bool nan_warning = false;
-    float area = 0;
+    double area = 0.0; // double precision so that small primitives are not lost beside a large running total
     for (uint UUID: UUIDs) {
 
         float A = getPrimitiveArea(UUID);
@@ -1586,7 +1685,7 @@ float Context::sumPrimitiveSurfaceArea(const std::vector<uint> &UUIDs) const {
         std::cerr << "WARNING (Context::sumPrimitiveSurfaceArea): One or more primitives had an area of NaN." << std::endl;
     }
 
-    return area;
+    return float(area);
 }
 
 float Context::sumAreaIndexPrimitives_private(const std::vector<uint> &UUIDs, const std::string &argument_name) const {
@@ -1930,6 +2029,9 @@ void Context::duplicateObjectData(uint objID, const char *old_label, const char 
     if (!objects.at(objID)->doesObjectDataExist(new_label)) {
         incrementObjectDataLabelCounter(new_label);
     }
+    // The label-only Context::getObjectDataType() answers from the Context-wide registry, not from the object, so a label introduced here has to be registered there too, as duplicatePrimitiveData() does.
+    // Without it the data exists on the object while the Context reports the label does not exist, and the label is free to take a value of another type on a different object.
+    registerOrValidateObjectDataType(new_label, type);
     objects.at(objID)->object_data_types[new_label] = type;
     if (type == HELIOS_TYPE_INT) {
         objects.at(objID)->object_data_int[new_label] = objects.at(objID)->object_data_int.at(old_label);
@@ -2504,6 +2606,7 @@ void Context::incrementGlobalData(const char *label, int increment) {
         for (uint i = 0; i < size; i++) {
             globaldata.at(label).global_data_int.at(i) += increment;
         }
+        globaldata.at(label).version = ++global_data_version_counter;
     } else {
         std::cerr << "WARNING (Context::incrementGlobalData): Attempted to increment global data for type int, but data '" << label << "' does not have type int." << std::endl;
     }
@@ -2521,6 +2624,7 @@ void Context::incrementGlobalData(const char *label, uint increment) {
         for (uint i = 0; i < size; i++) {
             globaldata.at(label).global_data_uint.at(i) += increment;
         }
+        globaldata.at(label).version = ++global_data_version_counter;
     } else {
         std::cerr << "WARNING (Context::incrementGlobalData): Attempted to increment global data for type uint, but data '" << label << "' does not have type uint." << std::endl;
     }
@@ -2538,6 +2642,7 @@ void Context::incrementGlobalData(const char *label, float increment) {
         for (uint i = 0; i < size; i++) {
             globaldata.at(label).global_data_float.at(i) += increment;
         }
+        globaldata.at(label).version = ++global_data_version_counter;
     } else {
         std::cerr << "WARNING (Context::incrementGlobalData): Attempted to increment global data for type float, but data '" << label << "' does not have type float." << std::endl;
     }
@@ -2555,6 +2660,7 @@ void Context::incrementGlobalData(const char *label, double increment) {
         for (uint i = 0; i < size; i++) {
             globaldata.at(label).global_data_double.at(i) += increment;
         }
+        globaldata.at(label).version = ++global_data_version_counter;
     } else {
         std::cerr << "WARNING (Context::incrementGlobalData): Attempted to increment global data for type double, but data '" << label << "' does not have type double." << std::endl;
     }

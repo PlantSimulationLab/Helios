@@ -21,6 +21,216 @@
 
 #include "PlantArchitecture.h"
 
+//! Operation applied to every position and direction a plant stores, one value at a time
+/**
+ * Everything that has to treat all of a plant's stored geometry alike -- recording it, putting it back, turning it -- is written as one of these and handed to the visit functions of \ref Phytomer and
+ * \ref Shoot, so that the list of members holding geometry is written down exactly once, in those functions. A visit function calls point() or direction() once for each stored value, always in the same order.
+ */
+struct PlantSpatialStateVisitor {
+    virtual ~PlantSpatialStateVisitor() = default;
+    //! Visit a stored position in world coordinates
+    virtual void point(helios::vec3 &position) = 0;
+    //! Visit a stored direction in world coordinates, which turns with the organ but keeps its length
+    virtual void direction(helios::vec3 &direction) = 0;
+    //! Visit a stored offset between two positions on an organ, in world coordinates, which turns with the organ and stretches with it
+    virtual void offset(helios::vec3 &offset) = 0;
+    //! Visit a stored length of an organ in meters, which stretches with it
+    virtual void length(float &length) = 0;
+};
+
+//! Motion of part of a plant away from where it grew: a rotation followed by a translation, with a uniform stretch for an organ whose own length has been changed
+/**
+ * A position p goes to scale * rotation * p + translation. Only the centerline of an internode or petiole whose length is posed has a scale other than 1; everything it carries is moved rigidly.
+ * Held in double precision because the motion of an organ far out on the plant is the product of the motions of every joint between it and the base.
+ */
+struct PoseRigidTransform {
+    //! Rotation matrix in row-major order
+    double rotation[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+    //! Translation applied after the rotation and the stretch
+    double translation[3] = {0, 0, 0};
+    //! Uniform stretch of positions about the origin
+    double scale = 1;
+
+    //! Whether the transform leaves everything exactly where it is
+    [[nodiscard]] bool isIdentity() const;
+    //! Whether the transform turns nothing, i.e. is at most a translation
+    [[nodiscard]] bool isRotationIdentity() const;
+    bool operator==(const PoseRigidTransform &other) const;
+    //! Move a position
+    [[nodiscard]] helios::vec3 applyToPoint(const helios::vec3 &position) const;
+    //! Turn a direction, without stretching it
+    [[nodiscard]] helios::vec3 applyToDirection(const helios::vec3 &direction) const;
+    //! Turn and stretch an offset between two positions
+    [[nodiscard]] helios::vec3 applyToOffset(const helios::vec3 &offset) const;
+    //! Turn a direction back, by the inverse of the rotation
+    [[nodiscard]] helios::vec3 applyInverseToDirection(const helios::vec3 &direction) const;
+    //! The rigid motion that carries a body attached to the stretched organ at \p anchor: the body is turned, not stretched, and goes where its anchor goes
+    [[nodiscard]] PoseRigidTransform rigidMotionOfBodyAt(const helios::vec3 &anchor) const;
+    //! The transform that applies \p inner first and then this one
+    [[nodiscard]] PoseRigidTransform composedWith(const PoseRigidTransform &inner) const;
+};
+
+//! Bend of a petiole along its length set by a joint pose (PlantJointPose::bend_degrees, PlantJointPose::bend_lateral_degrees), in the frame of the plant as it grew
+/**
+ * Each segment of the petiole's centerline is turned about \ref axis by the share of \ref angle that lies before it along the centerline's arclength.
+ */
+struct PosePetioleBend {
+    //! Unit axis of the bend, in world coordinates of the plant as it grew
+    double axis[3] = {1, 0, 0};
+    //! Turn accumulated from the base of the petiole to its tip, in radians; zero for a petiole that is not bent
+    double angle = 0;
+
+    bool operator==(const PosePetioleBend &other) const {
+        return angle == other.angle && (angle == 0 || (axis[0] == other.axis[0] && axis[1] == other.axis[1] && axis[2] == other.axis[2]));
+    }
+};
+
+//! What a pose remembers about one Context object of a plant
+struct PoseObjectState {
+    uint objID = 0;
+    //! Transformation matrix of the object as the plant grew
+    std::array<float, 16> rest_object_matrix{};
+    //! Transformation matrix of each of the object's primitives as the plant grew, in the order of Context::getObjectPrimitiveUUIDs()
+    std::vector<std::array<float, 16>> rest_primitive_matrices;
+    //! Transformation matrix of the object as the pose last left it
+    std::array<float, 16> posed_object_matrix{};
+    //! Hash of the primitives' transformation matrices as the pose last left them, by which a change made by anything else is recognized
+    uint64_t posed_primitive_hash = 0;
+    //! Shared vertices of a leaf mesh that can droop, in world coordinates, as the plant grew. Empty for any other object.
+    /**
+     * A drooping blade is written through the mesh's shared vertex array, which is separate from its primitives and is what the next droop or reshaping of the leaf starts from. Moving the primitives
+     * alone would leave that array holding the droop of whatever orientation the leaf last settled in.
+     */
+    std::vector<helios::vec3> rest_shared_vertices;
+};
+
+//! What a pose remembers about one part of a plant that moves as a rigid body
+struct PoseGroupState {
+    //! Stored positions and directions of the part as the plant grew, in the order its visit function produces them
+    std::vector<helios::vec3> rest;
+    //! The same values as the pose last left them
+    std::vector<helios::vec3> posed;
+    //! Context objects that move with the part
+    std::vector<PoseObjectState> objects;
+    //! Motion of the part from where it grew, as last applied
+    PoseRigidTransform transform;
+    //! Motion of the part from where it grew under the joint poses now being applied
+    PoseRigidTransform pending_transform;
+    //! Bend of a petiole along its length, as last applied, before its motion (only a petiole is ever bent)
+    PosePetioleBend bend;
+    //! Bend of a petiole along its length under the joint poses now being applied
+    PosePetioleBend pending_bend;
+    //! Whether the part has to be left to settle under gravity even where it stands as it grew
+    /**
+     * Set when something other than the pose has changed a leaf of the part while it was posed. What was recorded for the unposed plant is then the changed leaf with the droop of its posed orientation
+     * taken back out rigidly, which is not how it would hang unposed.
+     */
+    bool resettle_at_rest = false;
+};
+
+//! What a pose remembers about one shoot. The vectors are indexed as the shoot's phytomers, and within a phytomer as its petioles and floral buds.
+struct PoseShootState {
+    //! How the shoot sits on its parent, which turns with the parent rather than with the shoot
+    PoseGroupState attachment;
+    //! Geometry belonging to the shoot as a whole
+    PoseGroupState shoot;
+    std::vector<PoseGroupState> internodes;
+    std::vector<PoseGroupState> nodes;
+    std::vector<std::vector<PoseGroupState>> petioles;
+    std::vector<std::vector<std::vector<PoseGroupState>>> floral_buds;
+    //! Whether the shoot had an internode tube in the Context when the pose was recorded
+    bool has_internode_tube = false;
+    //! The shoot's internode tube, which is bent rather than moved rigidly because it spans every internode joint of the shoot
+    PoseObjectState internode_tube;
+};
+
+//! Pose of a plant: the offsets set at its joints, and the plant as it grew, which they are measured from
+struct PlantPoseState {
+    //! Offsets that have been set and are not zero
+    std::map<PlantJointID, PlantJointPose> joint_poses;
+    //! Indexed by shoot ID
+    std::vector<PoseShootState> shoots;
+    //! Shoot::base_offset_pinned of each shoot before the plant was posed, indexed by shoot ID, which is put back if the pose is undone
+    std::vector<bool> base_offset_pinned_before;
+};
+
+//! One rigid part of a plant, handed to the callback of PlantArchitecture::forEachPoseGroup()
+struct PoseGroupReference {
+    enum Kind { SHOOT_ATTACHMENT, SHOOT, INTERNODE, NODE, PETIOLE, FLORAL_BUD };
+    Kind kind = SHOOT;
+    PoseGroupState *state = nullptr;
+    Shoot *shoot = nullptr;
+    //! Null for SHOOT_ATTACHMENT and SHOOT
+    Phytomer *phytomer = nullptr;
+    uint node_index = 0;
+    uint petiole_index = 0;
+    uint bud_index = 0;
+};
+
+// ---- Polylines (petiole and peduncle centerlines) ---- //
+
+//! Cumulative arclength at each node of a polyline
+inline std::vector<float> polylineNodeArclengths(const std::vector<helios::vec3> &polyline) {
+    std::vector<float> arclength(polyline.size(), 0.f);
+    for (size_t node = 1; node < polyline.size(); node++) {
+        arclength.at(node) = arclength.at(node - 1) + (polyline.at(node) - polyline.at(node - 1)).magnitude();
+    }
+    return arclength;
+}
+
+//! Index of the segment of a polyline containing a given arclength, for a polyline of at least two nodes
+inline size_t polylineSegmentAtArclength(const std::vector<float> &node_arclength, float arclength) {
+    size_t segment = 0;
+    while (segment + 2 < node_arclength.size() && arclength > node_arclength.at(segment + 1)) {
+        segment++;
+    }
+    return segment;
+}
+
+//! Point at a given arclength along a polyline, for a polyline of at least two nodes
+inline helios::vec3 polylinePointAtArclength(const std::vector<helios::vec3> &polyline, const std::vector<float> &node_arclength, float arclength) {
+    const size_t segment = polylineSegmentAtArclength(node_arclength, arclength);
+    const float segment_length = node_arclength.at(segment + 1) - node_arclength.at(segment);
+    const float t = segment_length > 0.f ? std::clamp((arclength - node_arclength.at(segment)) / segment_length, 0.f, 1.f) : 0.f;
+    return polyline.at(segment) + t * (polyline.at(segment + 1) - polyline.at(segment));
+}
+
+//! Unit tangent at a given arclength along a polyline, blended linearly between the tangents at its nodes so that it turns continuously along the curve rather than jumping at each node
+inline helios::vec3 polylineTangentAtArclength(const std::vector<helios::vec3> &polyline, const std::vector<float> &node_arclength, float arclength) {
+    const size_t segment = polylineSegmentAtArclength(node_arclength, arclength);
+    auto segmentDirection = [&polyline](size_t s) { return normalize(polyline.at(s + 1) - polyline.at(s)); };
+    auto nodeTangent = [&](size_t node) {
+        if (node == 0) {
+            return segmentDirection(0);
+        } else if (node + 1 == polyline.size()) {
+            return segmentDirection(node - 1);
+        }
+        const helios::vec3 sum = segmentDirection(node - 1) + segmentDirection(node);
+        return sum.magnitude() > 1e-6f ? normalize(sum) : segmentDirection(node);
+    };
+    const float segment_length = node_arclength.at(segment + 1) - node_arclength.at(segment);
+    const float t = segment_length > 0.f ? std::clamp((arclength - node_arclength.at(segment)) / segment_length, 0.f, 1.f) : 0.f;
+    const helios::vec3 blended = (1.f - t) * nodeTangent(segment) + t * nodeTangent(segment + 1);
+    return blended.magnitude() > 1e-6f ? normalize(blended) : segmentDirection(segment);
+}
+
+//! Arclength along a polyline of the point on it closest to a given point, for a polyline of at least two nodes
+inline float polylineArclengthOfClosestPoint(const std::vector<helios::vec3> &polyline, const std::vector<float> &node_arclength, const helios::vec3 &point) {
+    float nearest_distance = std::numeric_limits<float>::max();
+    float nearest_arclength = 0.f;
+    for (size_t segment = 0; segment + 1 < polyline.size(); segment++) {
+        const helios::vec3 span = polyline.at(segment + 1) - polyline.at(segment);
+        const float span_squared = span * span;
+        const float t = span_squared > 0.f ? std::clamp(((point - polyline.at(segment)) * span) / span_squared, 0.f, 1.f) : 0.f;
+        const float distance = (point - (polyline.at(segment) + t * span)).magnitude();
+        if (distance < nearest_distance) {
+            nearest_distance = distance;
+            nearest_arclength = node_arclength.at(segment) + t * (node_arclength.at(segment + 1) - node_arclength.at(segment));
+        }
+    }
+    return nearest_arclength;
+}
+
 //! Look up a build parameter, falling back to a default if it was not given
 /**
  * Used by the library plant builders and by flower/fruit prototype functions to read the build parameters passed to \ref PlantArchitecture::buildPlantInstanceFromLibrary().

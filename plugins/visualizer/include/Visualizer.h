@@ -47,7 +47,7 @@ class Visualizer;
  * This function checks whether the provided texture file can be used for loading a texture.
  * If the pngonly flag is set to true, the function specifically validates for PNG file formats.
  *
- * \param[in] texture_file The path to the texture file to validate.
+ * \param[in] texture_file The path to the texture file to validate, resolved with helios::tryResolveFilePath().
  * \param[in] pngonly [optional] If true, only validates the file for PNG format. Defaults to false.
  * \return True if the texture file is valid, false otherwise.
  */
@@ -2603,6 +2603,13 @@ private:
     size_t point_culling_threshold;
     float point_max_render_distance;
     float point_lod_factor;
+
+    //! Size each point was added with, before any enlargement of distant points. Keyed by geometry ID.
+    /**
+     * Distant points are drawn larger than they were added. The enlarged size is written over the stored size, so the size the point
+     * was added with is kept here and each update enlarges from it; enlarging the stored size made far points grow on every update.
+     */
+    std::unordered_map<size_t, float> point_base_sizes;
 
     //! Point cloud performance metrics
     mutable size_t points_total_count;

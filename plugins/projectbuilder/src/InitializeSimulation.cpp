@@ -171,7 +171,7 @@ void InitializeSimulation(const std::string &xml_input_file, helios::Context *co
 
         if (weather_data_file.empty()) {
             helios_runtime_error("ERROR: Value given for 'weather_data_file' is empty.");
-        } else if (!std::filesystem::exists(weather_data_file)) {
+        } else if (helios::tryResolveFilePath(weather_data_file).empty()) {
             helios_runtime_error("ERROR: File given for 'weather_data_file' does not exist.");
         }
 
@@ -191,7 +191,7 @@ void InitializeSimulation(const std::string &xml_input_file, helios::Context *co
 
             if (cimis_data_file.empty()) {
                 helios_runtime_error("ERROR: Value given for 'cimis_data_file' is empty.");
-            } else if (!std::filesystem::exists(cimis_data_file)) {
+            } else if (helios::tryResolveFilePath(cimis_data_file).empty()) {
                 helios_runtime_error("ERROR: File given for 'cimis_data_file' does not exist.");
             }
 
