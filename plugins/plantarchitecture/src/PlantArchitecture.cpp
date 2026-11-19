@@ -2156,6 +2156,7 @@ int Shoot::appendPhytomerInternal(float internode_radius, float internode_length
 
     // Set output object data 'age'
     phytomer->age = 0;
+    phytomer->calendar_age = 0;
     if (plantarchitecture_ptr->build_context_geometry_internode && context_ptr->doesObjectExist(internode_tube_objID)) {
         //\todo This really only needs to be done once when the shoot is first created.
         if (plantarchitecture_ptr->output_object_data.at("age")) {
@@ -12231,6 +12232,7 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
             const Phytomer &source_phytomer = *source_shoot.phytomers.at(node);
             Phytomer &new_phytomer = *new_shoot.phytomers.at(node);
             new_phytomer.age = source_phytomer.age;
+            new_phytomer.calendar_age = source_phytomer.calendar_age;
             new_phytomer.isdormant = source_phytomer.isdormant;
             // Leaves that have fallen, to dormancy or to age, are not regrown on the copy
             if (!source_phytomer.hasLeaf() && new_phytomer.hasLeaf()) {
@@ -12745,6 +12747,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                 for (auto &phytomer: shoot->phytomers) {
                     phytomer->age += dt_dev;
+                    phytomer->calendar_age += dt_max_days;
                     // Advanced alongside the phytomer's age, so that a bud active since its node was created keeps a clock equal to the node's age
                     for (auto &petiole: phytomer->axillary_vegetative_buds) {
                         for (auto &vbud: petiole) {

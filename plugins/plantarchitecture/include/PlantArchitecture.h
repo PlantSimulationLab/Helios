@@ -3287,8 +3287,11 @@ public:
     uint parent_shoot_ID;
     Shoot *parent_shoot_ptr;
 
-    //! Time since the phytomer was created
+    //! Time since the phytomer was created. Under the carbohydrate model it advances in developmental days (see CarbonDevelopmentParameters), otherwise in calendar days.
     float age = 0;
+    //! Calendar days since the phytomer was created, whatever the clock its development runs on. Wood age classes that are a matter of calendar time -- the respiration rate of
+    //! current-year wood and the decline of the pipe-model factor with wood age under the carbohydrate model -- are judged on this rather than on age.
+    float calendar_age = 0;
     bool isdormant = false;
 
     float current_internode_scale_factor = 1;

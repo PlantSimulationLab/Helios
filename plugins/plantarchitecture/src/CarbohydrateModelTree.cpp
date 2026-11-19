@@ -419,7 +419,8 @@ void PlantArchitecture::incrementPhytomerInternodeGirth_carb(uint plantID, uint 
         context_ptr->setObjectData(shoot->internode_tube_objID, "leaf_area", leaf_area);
     }
 
-    float phytomer_age = phytomer->age;
+    // The decline with wood age is in calendar years, whichever clock development runs on
+    float phytomer_age = phytomer->calendar_age;
     float girth_area_factor = shoot->shoot_parameters.girth_area_factor.val();
     if (phytomer_age > 365) {
         girth_area_factor = shoot->shoot_parameters.girth_area_factor.val() * 365 / phytomer_age;

@@ -3307,6 +3307,48 @@ DOCTEST_TEST_CASE("PlantArchitecture carbohydrate maintenance respiration follow
     DOCTEST_CHECK(oneDayOfRespiration(30.f, 2.5f) == doctest::Approx(2.5f * respiration_20C).epsilon(1e-4));
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture wood counts as current-year by its calendar age rather than its developmental age") {
+    // Under the carbohydrate model a phytomer's age advances in developmental days, but the respiration class of its wood
+    // (current-year wood under one year old) is a matter of calendar time. Held below the base temperature, a plant does not
+    // develop, so its wood keeps its developmental age while the calendar runs on: after 400 days it is more than a year old and
+    // must respire at the older-wood rate. Counting the year in developmental days kept it at the current-year rate.
+    Context context;
+    context.seedRandomGenerator(12345);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 20);
+    plantarchitecture.setPlantMaxAge(plantID, 1e6); // the library bean stops at 365 days, and a plant past its maximum age skips the carbohydrate model
+    CarbohydrateParameters params;
+    params.r_m_w_current_20 = 1e-2f;
+    params.r_m_w_branch_20 = 1e-3f;
+    params.r_m_w_20 = 1e-3f;
+    params.r_m_r_20 = 0.f;
+    params.wood.radial_growth_rate = 0.f;
+    params.storage_capacity = 1e9f;
+    plantarchitecture.setPlantCarbohydrateModelParameters(plantID, params);
+    plantarchitecture.adjustPlantMaintenanceRespiration(293.15f);
+    plantarchitecture.initializePlantCarbohydratePool(plantID, 1e7f);
+    plantarchitecture.enableCarbohydrateModel();
+
+    // Days at 0 C, below the 4.5 C base temperature: no development
+    auto advanceInTheCold = [&](float days) {
+        capture_cerr capture;
+        plantarchitecture.accumulateThermalTime({plantID}, 0.f, 24.f * days);
+        plantarchitecture.advanceTime(plantID, days);
+    };
+    advanceInTheCold(1);
+    const float respiration_young = plantarchitecture.getPlantCarbonBudget(plantID).wood_maintenance_respiration;
+    for (int block = 0; block < 8; block++) {
+        advanceInTheCold(50);
+    }
+    advanceInTheCold(1);
+    const float respiration_after_a_year = plantarchitecture.getPlantCarbonBudget(plantID).wood_maintenance_respiration;
+
+    DOCTEST_REQUIRE(respiration_young > 0.f);
+    DOCTEST_CHECK(respiration_after_a_year / respiration_young == doctest::Approx(0.1f).epsilon(0.05));
+}
+
 // ---------------- Grass sub-model (CARBON_SUBMODEL_GRASS) ---------------- //
 
 //! The library sorghum's phenological thresholds, which time its grain under the grass sub-model as panicle ages (developmental days from flag leaf): anthesis (time to fruit set) and

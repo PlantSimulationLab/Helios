@@ -813,6 +813,7 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
             // follows its age (LeafPrototype::flexibility_aging), so a reloaded plant whose phytomers all
             // started again from age zero gave its oldest leaves the stiffness of newly emerged ones.
             output_xml << "\t\t\t\t<phytomer_age>" << phytomer->age << "</phytomer_age>" << std::endl;
+            output_xml << "\t\t\t\t<phytomer_calendar_age>" << phytomer->calendar_age << "</phytomer_calendar_age>" << std::endl;
             // Phenological state of the phytomer and of its vegetative buds (see <time_since_dormancy> above). The bud states are
             // listed petiole by petiole, with a semicolon after each petiole's buds.
             output_xml << "\t\t\t\t<phytomer_is_dormant>" << (phytomer->isdormant ? 1 : 0) << "</phytomer_is_dormant>" << std::endl;
@@ -1590,6 +1591,11 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                 float phytomer_age = 0.f;
                 if (phytomer.child("phytomer_age")) {
                     phytomer_age = parse_xml_tag_float(phytomer.child("phytomer_age"), "phytomer_age", "PlantArchitecture::readPlantStructureXML");
+                }
+                // Optional: files written before this tag existed take the calendar age to be the age, as it was for every plant developing on calendar days.
+                float phytomer_calendar_age = phytomer_age;
+                if (phytomer.child("phytomer_calendar_age")) {
+                    phytomer_calendar_age = parse_xml_tag_float(phytomer.child("phytomer_calendar_age"), "phytomer_calendar_age", "PlantArchitecture::readPlantStructureXML");
                 }
 
                 // Optional: files written before this tag existed keep the compliance drawn when the phytomer is rebuilt.
@@ -2394,6 +2400,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                     phytomer_ptr->current_internode_scale_factor = fmin(1.f, internode_length / internode_length_max);
                 }
                 phytomer_ptr->age = phytomer_age;
+                phytomer_ptr->calendar_age = phytomer_calendar_age;
                 if (leaf_flexibility >= 0.f) {
                     phytomer_ptr->leaf_flexibility = leaf_flexibility;
                 }

@@ -398,7 +398,8 @@ void PlantArchitecture::subtractShootMaintenanceCarbon(uint plantID, float dt) {
         for (uint p = 0; p < shoot->phytomers.size(); p++) {
             const auto &phytomer = shoot->phytomers.at(p);
             float rate_20C;
-            if (phytomer->age < 365.f) {
+            // Current-year wood is a matter of calendar time, whichever clock development runs on
+            if (phytomer->calendar_age < 365.f) {
                 rate_20C = carbohydrate_params.r_m_w_current_20;
             } else if (meanInternodeRadius(*shoot, p) < carbohydrate_params.branch_radius_threshold) {
                 rate_20C = carbohydrate_params.r_m_w_branch_20;
