@@ -647,9 +647,11 @@ void main() {
 
             // Cosine-weighted hemisphere sampling
             // Theta in [0, π/2], Phi in [0, 2π]
-            // Rt is < 1 by construction, but clamp before asin(): a value even one ulp above 1
-            // would make theta NaN and poison every ray direction launched from this primitive.
-            float theta = asin(sqrt(clamp(Rt, 0.0, 1.0)));
+            // Rt (sin^2 of theta) is kept below 1: in the last stratum the sum rounds to exactly 1 for a random
+            // number close to 1, which would launch the ray in the plane of the primitive (from flat periodic ground,
+            // a ray that never hits anything or leaves the domain), and a value above 1 would make theta NaN. The ray
+            // then rises at least 1 mm per metre. Must match the OptiX backends.
+            float theta = asin(sqrt(clamp(Rt, 0.0, 1.0 - 1e-6)));
             float phi = 2.0 * 3.14159265359 * Rp;
 
             // Cartesian direction in local hemisphere frame (+Z up)

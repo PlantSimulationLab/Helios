@@ -501,7 +501,7 @@ RT_PROGRAM void closest_hit_direct() {
     }
 
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[hit_position] == 5) { // periodic boundary condition
-        d_handlePeriodicBoundaryHit(prd, ray.origin, ray.direction, periodic_face_t);
+        d_handlePeriodicBoundaryHit(prd, ray.origin, ray.direction, periodic_face_t, UUID);
     }
 };
 
@@ -520,7 +520,7 @@ RT_PROGRAM void closest_hit_direct_dual() {
         if (prd.dual_ray && prd.recorded_t < periodic_face_t) {
             prd.excluded_resolved = true;
         }
-        d_handlePeriodicBoundaryHit(prd, ray.origin, ray.direction, periodic_face_t);
+        d_handlePeriodicBoundaryHit(prd, ray.origin, ray.direction, periodic_face_t, UUID);
     }
 };
 
@@ -786,7 +786,7 @@ static __device__ __forceinline__ void closestHitDiffuse(const bool dual) {
             // The face is reported no nearer than the ray's minimum distance; periodic_face_t is its true distance
             resolveRecordedHit(origin_position, periodic_face_t);
         }
-        d_handlePeriodicBoundaryHit(prd, ray.origin, ray.direction, periodic_face_t);
+        d_handlePeriodicBoundaryHit(prd, ray.origin, ray.direction, periodic_face_t, UUID);
 
     } else {
 
@@ -972,7 +972,7 @@ RT_PROGRAM void closest_hit_camera() {
 
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[hit_position] == 5) { // periodic boundary condition
 
-        d_handlePeriodicBoundaryHit(prd, ray.origin, ray.direction, periodic_face_t);
+        d_handlePeriodicBoundaryHit(prd, ray.origin, ray.direction, periodic_face_t, UUID);
 
     } else {
 
@@ -1332,7 +1332,7 @@ RT_PROGRAM void closest_hit_pixel_label() {
 
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[hit_position] == 5) { // periodic boundary condition
 
-        d_handlePeriodicBoundaryHit(prd, ray.origin, ray.direction, periodic_face_t);
+        d_handlePeriodicBoundaryHit(prd, ray.origin, ray.direction, periodic_face_t, UUID);
         prd.strength += prd.periodic_hit_t; // the distance travelled to the boundary counts toward the depth
 
     } else {

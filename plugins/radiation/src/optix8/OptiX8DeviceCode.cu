@@ -2987,8 +2987,11 @@ static __forceinline__ __device__ void raygenDiffuse() {
     const uint32_t linear_idx = theta_idx + dim_x * phi_idx;
     uint32_t seed = tea<16>(linear_idx + dimxy * prim_pos, params.random_seed);
 
-    // Stratified cosine-weighted hemisphere sampling
-    const float Rt = (theta_idx + rnd(seed)) / float(dim_x);
+    // Stratified cosine-weighted hemisphere sampling. Rt (sin^2 of the angle from the normal) is kept below 1: in the last stratum
+    // the sum rounds to exactly 1 for a random number close to 1, which would launch the ray in the plane of the primitive (from
+    // flat periodic ground, a ray that never hits anything or leaves the domain). The ray then rises at least 1 mm per metre. Must
+    // match the other backends.
+    const float Rt = fminf((theta_idx + rnd(seed)) / float(dim_x), 1.f - 1e-6f);
     const float Rp = (phi_idx   + rnd(seed)) / float(dim_y);
     const float t  = asin_safe(sqrtf(Rt));
     const float p  = 2.f * M_PI * Rp;

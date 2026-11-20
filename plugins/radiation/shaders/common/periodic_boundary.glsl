@@ -150,10 +150,10 @@ bool intersect_bbox_face(vec3 ray_origin, vec3 ray_dir, uint face_idx, out float
  * the closest real geometry hit (bvh_closest_t), computes the wrapped ray origin
  * by translating the hit point across the domain.
  *
- * Wrapping logic matches OptiX rayHit.cu:41-65:
- * - Hit at -x boundary → wrap to +x (add width_x)
- * - Hit at +x boundary → wrap to -x (subtract width_x)
- * - Same for Y boundaries
+ * Wrapping logic matches the OptiX backends:
+ * - Hit on the -x face → wrap to +x (add width_x)
+ * - Hit on the +x face → wrap to -x (subtract width_x)
+ * - Same for Y faces
  *
  * Returns true if a periodic boundary was hit (caller should re-trace from wrapped_origin), and sets boundary_t to the
  * distance along the ray to the boundary.
@@ -181,28 +181,29 @@ bool check_periodic_boundary(
     boundary_t = bbox_t;
     vec3 hit_pos = ray_origin + ray_dir * bbox_t;
 
-    // Compute wrapped position (matches OptiX rayHit.cu:41-65)
-    // Tolerance for identifying the face that was hit. The ray continues from exactly one period away, the same point on the
-    // opposite face: moving it any further would shift it off its straight path by that much at every wrap.
-    float eps = 1e-5;
     float width_x = domain_xmax - domain_xmin;
     float width_y = domain_ymax - domain_ymin;
+
+    // The ray continues from exactly one period away, the same point on the opposite face: moving it any further would shift it off
+    // its straight path by that much at every wrap. The axis comes from the face that was hit, not from where the ray reached it: at a
+    // corner the hit point is on both an x and a y face, and wrapping along the other axis would leave the ray on the face it hit, to
+    // be wrapped back and forth until the wrap limit. Faces come in (min, max) pairs, and vertex 0 of a face minus vertex 0 of the
+    // other face of its pair points out of the domain (matches handlePeriodicBoundaryHit() in the OptiX backends).
+    uint face_base = uint(closest_face) * 12;
+    uint opposite_base = (uint(closest_face) ^ 1u) * 12;
+    vec3 face_v0 = vec3(bbox_verts_buf.vertices[face_base + 0], bbox_verts_buf.vertices[face_base + 1], bbox_verts_buf.vertices[face_base + 2]);
+    vec3 opposite_v0 = vec3(bbox_verts_buf.vertices[opposite_base + 0], bbox_verts_buf.vertices[opposite_base + 1], bbox_verts_buf.vertices[opposite_base + 2]);
+    vec3 outward = face_v0 - opposite_v0;
 
     // Leaving through a low face moves the ray into the next periodic copy toward -x (or -y), and through a high face toward +x (or +y)
     ivec2 step = ivec2(0);
     wrapped_origin = hit_pos;
-    if (periodic_flag_x == 1 && abs(hit_pos.x - domain_xmin) <= eps) {
-        wrapped_origin.x += width_x; // -x boundary → wrap to +x
-        step.x = -1;
-    } else if (periodic_flag_x == 1 && abs(hit_pos.x - domain_xmax) <= eps) {
-        wrapped_origin.x -= width_x; // +x boundary → wrap to -x
-        step.x = 1;
-    } else if (periodic_flag_y == 1 && abs(hit_pos.y - domain_ymin) <= eps) {
-        wrapped_origin.y += width_y; // -y boundary → wrap to +y
-        step.y = -1;
-    } else if (periodic_flag_y == 1 && abs(hit_pos.y - domain_ymax) <= eps) {
-        wrapped_origin.y -= width_y; // +y boundary → wrap to -y
-        step.y = 1;
+    if (abs(outward.x) > abs(outward.y)) {
+        step.x = outward.x < 0.0 ? -1 : 1;
+        wrapped_origin.x -= float(step.x) * width_x; // -x face → wrap to +x, +x face → wrap to -x
+    } else {
+        step.y = outward.y < 0.0 ? -1 : 1;
+        wrapped_origin.y -= float(step.y) * width_y; // -y face → wrap to +y, +y face → wrap to -y
     }
 
     if (periodic_info_buf.tile_tracking == 0u) {

@@ -123,6 +123,10 @@ namespace helios {
         static size_t getRadiationInTopBufferSize(const RadiationModel &model) {
             return model.backend->getRadiationInTopBufferSize();
         }
+        //! Number of direct and diffuse rays the last runBand() call abandoned at the periodic wrap limit
+        static size_t getAbandonedRayCount(RadiationModel &model) {
+            return model.backend->getAbandonedRayCount();
+        }
         //! Host-side material arrays last handed to the backend, laid out [source slot][primitive][band]
         static const RayTracingMaterial &getMaterialData(RadiationModel &model) {
             return model.getMaterialData();
@@ -19841,6 +19845,85 @@ GPU_TEST_CASE("RadiationModel - a ray that reaches the periodic wrap limit is tr
     DOCTEST_CAPTURE(beyond_limit.warnings);
     DOCTEST_CHECK(beyond_limit.flux < 0.01f * unshadedFlux(0.002f));
     DOCTEST_CHECK(beyond_limit.warnings.find("periodic boundary") != std::string::npos);
+}
+
+GPU_TEST_CASE("RadiationModel - no diffuse ray is launched parallel to its primitive") {
+    // Regression test. The stratified cosine-weighted sampling of diffuse ray directions computed sin^2 of the angle from the
+    // normal as (theta stratum + random number) / number of strata, which rounds to exactly 1 in single precision for a random
+    // number within about one part in 10^4 of 1 in the last stratum. The ray then lay in the plane of its primitive: from flat
+    // ground in a periodic domain it never hit anything or left the domain, so it was traced through all MAX_PERIODIC_WRAPS
+    // boundary crossings one after another, and every launch waited for it. A few such rays per launch made a periodic canopy's
+    // diffuse launches up to 40% slower, while depositing nothing.
+    //
+    // Flat ground patches in an xy-periodic domain made 0.1 m tall by a small patch above them launch 4096^2 diffuse rays each,
+    // enough for about ten rays to round to the ground plane. A ray rising at least 1 mm per metre climbs out of the domain within
+    // about 100 crossings of its 1 m width, so no ray may reach the wrap limit.
+    Context context;
+    std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(4, 4));
+    context.addPatch(make_vec3(0.45f, 0.45f, 0.1f), make_vec2(0.01f, 0.01f));
+    context.setPrimitiveData(context.getAllUUIDs(), "reflectivity_SW", 0.f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.disableEmission("SW");
+    model.setScatteringDepth("SW", 0);
+    model.setDirectRayCount("SW", 1);
+    model.setDiffuseRayCount("SW", 4096 * 4096);
+    model.setDiffuseRadiationFlux("SW", 1.f);
+    model.enforcePeriodicBoundary("xy");
+    model.updateGeometry();
+    model.runBand("SW");
+
+    const size_t abandoned_rays = RadiationModelTestHelper::getAbandonedRayCount(model);
+    DOCTEST_CAPTURE(ground.size());
+    DOCTEST_CHECK(abandoned_rays == 0);
+}
+
+GPU_TEST_CASE("RadiationModel - a ray reaching a periodic boundary at a domain corner is wrapped across the face it hit") {
+    // Regression test. The OptiX 6 and Vulkan backends chose the axis to wrap a ray along from where it reached the boundary,
+    // testing x first. A ray reaching a corner of the domain was wrapped in x and then sat on the y face within 1e-5 m of the
+    // opposite x face, so every following wrap was in x again: it stayed on the y face until it reached the wrap limit, and was
+    // treated as blocked.
+    //
+    // A 10 micrometre probe patch at the centre of a 1 cm wide xy-periodic domain, 1 cm tall, is lit along the domain's diagonal
+    // at a low angle, so every ray from it reaches the boundary within 1e-5 m of a corner, about 250 times before it climbs out
+    // of the top. Nothing shades it: the patch that makes the domain tall is off the probe's diagonal.
+    Context context;
+    context.addPatch(make_vec3(0, 0, 0), make_vec2(0.01f, 0.01f));
+    uint probe = context.addPatch(make_vec3(0, 0, 0.005f), make_vec2(1e-5f, 1e-5f));
+    context.addPatch(make_vec3(0.003f, -0.003f, 0.01f), make_vec2(1e-4f, 1e-4f));
+    context.setPrimitiveData(context.getAllUUIDs(), "reflectivity_SW", 0.f);
+
+    RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+    model.disableMessages();
+    model.addRadiationBand("SW");
+    model.disableEmission("SW");
+    model.setScatteringDepth("SW", 0);
+    model.setDirectRayCount("SW", 100);
+    model.setDiffuseRadiationFlux("SW", 0.f);
+    const vec3 sun_direction = make_vec3(1, 1, 0.004f);
+    uint sun = model.addCollimatedRadiationSource(sun_direction);
+    model.setSourceFlux(sun, "SW", 1000.f);
+    model.enforcePeriodicBoundary("xy");
+    model.updateGeometry();
+
+    std::string warnings;
+    {
+        capture_cerr capture;
+        model.runBand("SW");
+        warnings = capture.get_captured_output();
+    }
+    float flux;
+    context.getPrimitiveData(probe, "radiation_flux_SW", flux);
+
+    const float unshaded_flux = 1000.f * sun_direction.z / sun_direction.magnitude(); // 1000*sin(elevation)
+    DOCTEST_CAPTURE(flux);
+    DOCTEST_CAPTURE(unshaded_flux);
+    DOCTEST_CAPTURE(warnings);
+    DOCTEST_CHECK(flux > 0.97f * unshaded_flux);
+    DOCTEST_CHECK(flux < 1.03f * unshaded_flux);
+    DOCTEST_CHECK(RadiationModelTestHelper::getAbandonedRayCount(model) == 0);
 }
 
 GPU_TEST_CASE("RadiationModel - a camera above a periodic domain does not change the radiation fluxes") {
