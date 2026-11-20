@@ -372,7 +372,10 @@ static __device__ __forceinline__ void raygenDiffuse(const bool dual_scene) {
             float Rt;
             float Rp;
 
-            Rt = (launch_index.x + rnd(prd.seed)) / float(launch_dim.x);
+            // Rt (sin^2 of the angle from the normal) is kept below 1: in the last stratum the sum rounds to exactly 1 for a random
+            // number close to 1, which would launch the ray in the plane of the primitive (from flat periodic ground, a ray that never
+            // hits anything or leaves the domain). The ray then rises at least 1 mm per metre. Must match the other backends.
+            Rt = fminf((launch_index.x + rnd(prd.seed)) / float(launch_dim.x), 1.f - 1e-6f);
             Rp = (launch_index.y + rnd(prd.seed)) / float(launch_dim.y);
 
             float t = asin_safe(sqrtf(Rt));
