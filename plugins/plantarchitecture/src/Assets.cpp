@@ -34,7 +34,191 @@ uint petioluleVertexCount() {
     return uint((2 + petiolule_join_rings - 1) * petiolule_radial_subdivisions + 1);
 }
 
-std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float scale, float mature_scale, float flexibility, float taper, const helios::vec3 &gravity) {
+namespace {
+
+    //! Deflect one cantilever of a leaf's midrib under its own weight
+    /**
+     * The moment balance of \ref deformLeafLattice(), on one run of midrib stations held at its first: \p points[0] is where the blade is clamped and the rest run outward from it. A blade attached at
+     * its rear edge is one such run, from its base to its tip; one whose petiole meets it inside its outline is two, the blade ahead of the joint and the basal lobes behind it.
+     * \param[in] points Rest midrib stations, from the clamp outward, in the lattice's unit-length frame.
+     * \param[in] widths Blade width at each station, which sets the mass each carries.
+     * \return The deflected stations, scaled by \p scale, the first held where the rest shape put it.
+     */
+    std::vector<vec3> deflectLeafCantilever(const std::vector<vec3> &points, const std::vector<float> &widths, float scale, float compliance, float flexibility, float taper, const vec3 &gravity) {
+
+        const uint n = uint(points.size()) - 1;
+
+        // Arclength between successive stations along the rest midrib.
+        std::vector<float> ds(n + 1, 0.f);
+        for (uint i = 1; i <= n; i++) {
+            ds.at(i) = (points.at(i) - points.at(i - 1)).magnitude();
+        }
+
+        // ---- 2. Rest tangent angles ----
+
+        // The rest shape already carries the turgor curvature the prototype was built with; the deflection is added on top of it rather than replacing it, so a leaf that is curved at rest stays curved and simply
+        // droops further.
+        std::vector<float> theta_rest(n + 1, 0.f);
+        for (uint i = 1; i <= n; i++) {
+            const vec3 segment = points.at(i) - points.at(i - 1);
+            const float horizontal = sqrtf(segment.x * segment.x + segment.y * segment.y);
+            theta_rest.at(i) = std::atan2(segment.z, horizontal);
+        }
+        theta_rest.at(0) = theta_rest.at(1);
+
+        // ---- 2b. Gravity in each station's bending plane ----
+
+        // Each station bends in the vertical plane of its own rest heading: tangent cos(theta)*heading + sin(theta)*z, rotating about the horizontal axis perpendicular to the heading. Gravity only bends the
+        // blade through its component in that plane. Its direction there gives the angle at which a station hangs straight along gravity - the frame's -z gives -90 degrees, which is where the bend has always
+        // stopped - and the side of it the rest shape starts on fixes which way the station may turn up to that point.
+        const vec3 gravity_direction = gravity / gravity.magnitude();
+        std::vector<vec3> station_heading(n + 1);
+        std::vector<vec3> station_axis(n + 1);
+        std::vector<float> turn_floor(n + 1, -0.5f * PI_F + 1e-3f);
+        std::vector<float> turn_ceiling(n + 1, 0.5f * PI_F);
+        for (uint i = 0; i <= n; i++) {
+            const vec3 rest_segment = (i > 0) ? (points.at(i) - points.at(i - 1)) : (points.at(1) - points.at(0));
+            const float rest_horizontal = sqrtf(rest_segment.x * rest_segment.x + rest_segment.y * rest_segment.y);
+            station_heading.at(i) = (rest_horizontal > 1e-9f) ? make_vec3(rest_segment.x / rest_horizontal, rest_segment.y / rest_horizontal, 0.f) : make_vec3(1.f, 0.f, 0.f);
+            station_axis.at(i) = make_vec3(-station_heading.at(i).y, station_heading.at(i).x, 0.f);
+
+            const float gravity_along = gravity_direction * station_heading.at(i);
+            const float gravity_vertical = gravity_direction.z;
+            if (std::hypot(gravity_along, gravity_vertical) < 1e-6f) {
+                // Gravity lies across this station's bending plane, so it exerts no bending moment here and there is no hanging direction to stop at.
+                turn_floor.at(i) = -std::numeric_limits<float>::max();
+                turn_ceiling.at(i) = std::numeric_limits<float>::max();
+                continue;
+            }
+            const float hanging_angle = std::atan2(gravity_vertical, gravity_along);
+            const float rest_from_hanging = std::remainder(theta_rest.at(i) - hanging_angle, 2.f * PI_F);
+            const float hanging_branch = theta_rest.at(i) - rest_from_hanging;
+            if (rest_from_hanging >= 0.f) {
+                turn_floor.at(i) = hanging_branch + 1e-3f;
+                turn_ceiling.at(i) = hanging_branch + PI_F;
+            } else {
+                turn_floor.at(i) = hanging_branch - PI_F;
+                turn_ceiling.at(i) = hanging_branch - 1e-3f;
+            }
+        }
+
+        // ---- 3. Iterate the moment balance ----
+
+        // The bending moment at a station is the weight of everything distal to it acting through its lever arm. That lever arm depends on the DEFLECTED shape, not the rest shape, so the balance is solved by
+        // iteration: deflect using the current lever arms, recompute them, repeat.
+        //
+        // Each pass moves the angles only part of the way to the ones the current lever arms call for. Taking the full step a fixed four times was enough for a blade that only sags a little, but a very flexible
+        // one, or one that leaves its base steeply and arches over, overshoots the equilibrium and swings about it: four full passes left such a blade as much as a third of its length from where it settles,
+        // and even a half step cycles indefinitely once the blade is floppy enough. How far a pass can safely go falls with how strongly the bend feeds back on itself, measured here by the blade's load: the
+        // bend, in radians, its own weight would put into it if it were held straight and horizontal. The step is the reciprocal of that load, capped at a half. Across flexibilities up to a thousand, tapers up
+        // to 150 and blades pitched up to 80 degrees from horizontal this reached equilibrium to within a thousandth of a radian in a median of nineteen passes; steps three times as large failed to settle.
+        //
+        // Everything is computed in units of the SCALED leaf. Scale enters twice - once through the lever arm and once through the distal mass - so the moment grows with the cube of leaf length at fixed shape,
+        // which is what makes a leaf that doubles in length droop roughly eight times as much with no age term anywhere in the model.
+        float load = 0.f;
+        {
+            float straight_moment = 0.f;
+            float distal_mass = 0.f;
+            for (int i = int(n) - 1; i >= 1; i--) {
+                const uint i_outer = uint(i) + 1;
+                const float segment_mass = widths.at(i_outer) * ds.at(i_outer) * scale * scale;
+                const float lever_arm = ds.at(i_outer) * scale;
+                straight_moment += distal_mass * lever_arm + segment_mass * 0.5f * lever_arm;
+                distal_mass += segment_mass;
+                load += compliance * powf(std::max(taper, 1e-3f), float(i) / float(n)) * straight_moment * ds.at(uint(i)) * scale;
+            }
+        }
+        const float step = std::min(0.5f, 1.f / std::max(load, 1e-12f));
+        constexpr int maximum_moment_iterations = 5000;
+        // Stop once no station is more than this fraction of the blade's largest bend away from balance.
+        constexpr float converged_fraction = 1e-4f;
+        // A blade still further than this from balance when the passes run out is reported rather than returned.
+        constexpr float unconverged_limit = 0.01f;
+
+        std::vector<float> theta(theta_rest);
+        std::vector<vec3> deflected_midrib(n + 1);
+        std::vector<float> moment(n + 1, 0.f);
+        std::vector<float> theta_balanced(theta_rest);
+        float unbalanced = 0.f;
+
+        // Integrate the current tangent angles into a centreline. The base station is clamped: it stays where the rest shape put it, which is what makes this a cantilever rather than a free body. The heading
+        // of each rest segment is preserved and only its inclination changes, so the leaf bends in its own vertical plane instead of swinging sideways.
+        auto integrateMidrib = [&]() {
+            deflected_midrib.at(0) = points.at(0) * scale;
+            for (uint i = 1; i <= n; i++) {
+                deflected_midrib.at(i) = deflected_midrib.at(i - 1) + ds.at(i) * scale * (cosf(theta.at(i)) * station_heading.at(i) + make_vec3(0.f, 0.f, sinf(theta.at(i))));
+            }
+        };
+
+        for (int iteration = 0; iteration < maximum_moment_iterations; iteration++) {
+
+            integrateMidrib();
+
+            // Accumulate the moment from the tip inward in a single pass. Stepping inward by one segment adds that segment's own weight (acting through half its length) and swings all the mass already counted
+            // further out through the extra lever arm, so the running distal mass is carried along rather than re-summed at each station - the difference between an O(n) sweep and an O(n^2) one.
+            moment.assign(n + 1, 0.f);
+            float distal_mass = 0.f;
+            for (int i = int(n) - 1; i >= 0; i--) {
+                const uint i_outer = uint(i) + 1;
+                const float segment_mass = widths.at(i_outer) * ds.at(i_outer) * scale * scale;
+                const vec3 lever = deflected_midrib.at(i_outer) - deflected_midrib.at(uint(i));
+                // The weight's moment about the station's bending axis, signed so that a positive arm bends the blade toward gravity. Under the frame's -z this is the horizontal lever arm along the heading.
+                const float lever_arm = cross(lever, gravity_direction) * station_axis.at(uint(i));
+
+                // Everything already counted acts through this segment's full lever arm; this segment's own weight acts through half of it, being distributed along the segment rather than concentrated at its end.
+                moment.at(uint(i)) = moment.at(i_outer) + distal_mass * lever_arm + segment_mass * 0.5f * lever_arm;
+                distal_mass += segment_mass;
+            }
+
+            // Curvature is proportional to moment; integrating it along the arc gives how far the blade has bent. Integrating curvature along arclength (rather than solving the linear beam equation for a vertical
+            // deflection field) is what keeps the tip well-behaved once it droops past the small-angle regime - the leaf curls over instead of running off to infinity.
+            //
+            // The bending is accumulated on its own and then ADDED to the rest angle, rather than integrated into the tangent angle directly. The prototype already carries the blade's turgor shape - its
+            // longitudinal curvature, and the arc a grass leaf holds even when rigid - in theta_rest, and building the tangent angle purely from the bending would discard all of it and straighten the leaf out
+            // into a flat board. A leaf that is curved at rest must stay curved and simply droop further.
+            float accumulated_bend = 0.f;
+            float residual = 0.f;
+            float largest_bend = 0.f;
+            for (uint i = 1; i <= n; i++) {
+                // Compliance rises along the blade rather than being constant, because the points that carries the bending thins out toward the tip. Without this the blade hinges at its base and runs straight
+                // from there, since that is where the moment is greatest; with it, the stiffness falls off faster than the moment does and the blade curves hardest where a real leaf does, near the tip.
+                const float station = float(i) / float(n);
+                const float local_compliance = compliance * powf(std::max(taper, 1e-3f), station);
+                const float curvature = -local_compliance * moment.at(i);
+                accumulated_bend += curvature * ds.at(i) * scale;
+                // Clamp to just short of hanging straight along gravity. A station hanging along gravity carries no further lever arm, so this is a physical limit rather than an arbitrary cutoff, and it stops a
+                // very flexible leaf from curling back underneath itself. Under the frame's -z the limits are -90 and +90 degrees.
+                //
+                // The accumulator is clamped along with the angle, not just the angle it produces. Letting it run past vertical while only the angle was limited pinned every station beyond that point at the
+                // clamp, which drew the blade as a sharp hinge near the base followed by a dead-straight remainder - and no amount of stiffness taper could relieve it, because the excess bend had already been
+                // banked into the accumulator further in.
+                const float balanced = std::clamp(theta_rest.at(i) + accumulated_bend, turn_floor.at(i), turn_ceiling.at(i));
+                accumulated_bend = balanced - theta_rest.at(i);
+                residual = std::max(residual, std::fabs(balanced - theta.at(i)));
+                largest_bend = std::max(largest_bend, std::fabs(accumulated_bend));
+                theta_balanced.at(i) = balanced;
+            }
+            unbalanced = residual;
+            if (residual <= converged_fraction * largest_bend) {
+                break;
+            }
+            for (uint i = 1; i <= n; i++) {
+                theta.at(i) += step * (theta_balanced.at(i) - theta.at(i));
+            }
+            theta.at(0) = theta_rest.at(0);
+        }
+        if (unbalanced > unconverged_limit) {
+            helios_runtime_error("ERROR (deformLeafLattice): The blade did not settle under its own weight within " + std::to_string(maximum_moment_iterations) + " passes; it was still " + std::to_string(unbalanced) +
+                                 " rad from balance at flexibility " + std::to_string(flexibility) + " and taper " + std::to_string(taper) + ". This is far outside the flexibility a real leaf has.");
+        }
+        // The lattice is carried along the centreline of the final angles, not the one the last moments were computed from.
+        integrateMidrib();
+        return deflected_midrib;
+    }
+
+} // namespace
+
+std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &rest_vertices, uint Nx, uint Ny, float scale, float mature_scale, float flexibility, float taper, const helios::vec3 &gravity, const helios::vec3 &attachment) {
 
     const size_t vertex_count = (size_t(Nx) + 1) * (size_t(Ny) + 1);
     if (rest_vertices.size() != vertex_count) {
@@ -72,183 +256,53 @@ std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &res
     // The midrib is the lattice column at the mid-span row. The blade is built symmetric about y=0, so this row is the leaf's structural axis and the one the bending moment acts along.
     const uint j_mid = Ny / 2;
 
+    // The local blade width sets how much mass each station carries. It is measured across the full lattice row rather than assumed, so a tapered or lobed blade loads the cantilever correctly without
+    // needing its profile described separately.
     std::vector<vec3> midrib(Nx + 1);
-    for (uint i = 0; i <= Nx; i++) {
-        midrib.at(i) = rest_vertices.at(latticeVertexIndex(i, j_mid));
-    }
-
-    // Arclength along the rest midrib, and the local blade width, which sets how much mass each station carries. Width is measured across the full lattice row rather than assumed, so a tapered or lobed
-    // blade loads the cantilever correctly without needing its profile described separately.
-    std::vector<float> ds(Nx + 1, 0.f);
     std::vector<float> width(Nx + 1, 0.f);
     for (uint i = 0; i <= Nx; i++) {
-        if (i > 0) {
-            ds.at(i) = (midrib.at(i) - midrib.at(i - 1)).magnitude();
-        }
+        midrib.at(i) = rest_vertices.at(latticeVertexIndex(i, j_mid));
         const vec3 &edge_low = rest_vertices.at(latticeVertexIndex(i, 0));
         const vec3 &edge_high = rest_vertices.at(latticeVertexIndex(i, Ny));
         width.at(i) = (edge_high - edge_low).magnitude();
     }
 
-    // ---- 2. Rest tangent angles ----
+    // ---- 2. Where the blade is held ----
 
-    // The rest shape already carries the turgor curvature the prototype was built with; the deflection is added on top of it rather than replacing it, so a leaf that is curved at rest stays curved and simply
-    // droops further.
-    std::vector<float> theta_rest(Nx + 1, 0.f);
+    // The blade is held where its petiole meets it. Most blades are attached at their rear edge, the first station. A cordate blade's basal lobes reach behind the joint (a negative leaf_offset x), so it
+    // is held at the station nearest the joint: the blade ahead of it is one cantilever and the lobes behind it another, each loaded by its own weight. Clamped at the rear of its lobes instead, such a
+    // blade swung down about the wrong point and left its petiole tip floating off it. The attachment is given rather than taken to be the frame's origin, because a leaf object's frame has its origin
+    // at its first kept vertex: on a blade whose texture tapers to nothing at its base, a sorghum leaf's, that is several stations in and to one side.
+    uint clamp = 0;
+    float nearest = (midrib.front() - attachment).magnitude();
     for (uint i = 1; i <= Nx; i++) {
-        const vec3 segment = midrib.at(i) - midrib.at(i - 1);
-        const float horizontal = sqrtf(segment.x * segment.x + segment.y * segment.y);
-        theta_rest.at(i) = std::atan2(segment.z, horizontal);
-    }
-    theta_rest.at(0) = theta_rest.at(1);
-
-    // ---- 2b. Gravity in each station's bending plane ----
-
-    // Each station bends in the vertical plane of its own rest heading: tangent cos(theta)*heading + sin(theta)*z, rotating about the horizontal axis perpendicular to the heading. Gravity only bends the
-    // blade through its component in that plane. Its direction there gives the angle at which a station hangs straight along gravity - the frame's -z gives -90 degrees, which is where the bend has always
-    // stopped - and the side of it the rest shape starts on fixes which way the station may turn up to that point.
-    const vec3 gravity_direction = gravity / gravity.magnitude();
-    std::vector<vec3> station_heading(Nx + 1);
-    std::vector<vec3> station_axis(Nx + 1);
-    std::vector<float> turn_floor(Nx + 1, -0.5f * PI_F + 1e-3f);
-    std::vector<float> turn_ceiling(Nx + 1, 0.5f * PI_F);
-    for (uint i = 0; i <= Nx; i++) {
-        const vec3 rest_segment = (i > 0) ? (midrib.at(i) - midrib.at(i - 1)) : (midrib.at(1) - midrib.at(0));
-        const float rest_horizontal = sqrtf(rest_segment.x * rest_segment.x + rest_segment.y * rest_segment.y);
-        station_heading.at(i) = (rest_horizontal > 1e-9f) ? make_vec3(rest_segment.x / rest_horizontal, rest_segment.y / rest_horizontal, 0.f) : make_vec3(1.f, 0.f, 0.f);
-        station_axis.at(i) = make_vec3(-station_heading.at(i).y, station_heading.at(i).x, 0.f);
-
-        const float gravity_along = gravity_direction * station_heading.at(i);
-        const float gravity_vertical = gravity_direction.z;
-        if (std::hypot(gravity_along, gravity_vertical) < 1e-6f) {
-            // Gravity lies across this station's bending plane, so it exerts no bending moment here and there is no hanging direction to stop at.
-            turn_floor.at(i) = -std::numeric_limits<float>::max();
-            turn_ceiling.at(i) = std::numeric_limits<float>::max();
-            continue;
-        }
-        const float hanging_angle = std::atan2(gravity_vertical, gravity_along);
-        const float rest_from_hanging = std::remainder(theta_rest.at(i) - hanging_angle, 2.f * PI_F);
-        const float hanging_branch = theta_rest.at(i) - rest_from_hanging;
-        if (rest_from_hanging >= 0.f) {
-            turn_floor.at(i) = hanging_branch + 1e-3f;
-            turn_ceiling.at(i) = hanging_branch + PI_F;
-        } else {
-            turn_floor.at(i) = hanging_branch - PI_F;
-            turn_ceiling.at(i) = hanging_branch - 1e-3f;
+        const float distance = (midrib.at(i) - attachment).magnitude();
+        if (distance < nearest) {
+            nearest = distance;
+            clamp = i;
         }
     }
 
-    // ---- 3. Iterate the moment balance ----
+    // ---- 3. Deflect each cantilever from the clamp outward ----
 
-    // The bending moment at a station is the weight of everything distal to it acting through its lever arm. That lever arm depends on the DEFLECTED shape, not the rest shape, so the balance is solved by
-    // iteration: deflect using the current lever arms, recompute them, repeat.
-    //
-    // Each pass moves the angles only part of the way to the ones the current lever arms call for. Taking the full step a fixed four times was enough for a blade that only sags a little, but a very flexible
-    // one, or one that leaves its base steeply and arches over, overshoots the equilibrium and swings about it: four full passes left such a blade as much as a third of its length from where it settles,
-    // and even a half step cycles indefinitely once the blade is floppy enough. How far a pass can safely go falls with how strongly the bend feeds back on itself, measured here by the blade's load: the
-    // bend, in radians, its own weight would put into it if it were held straight and horizontal. The step is the reciprocal of that load, capped at a half. Across flexibilities up to a thousand, tapers up
-    // to 150 and blades pitched up to 80 degrees from horizontal this reached equilibrium to within a thousandth of a radian in a median of nineteen passes; steps three times as large failed to settle.
-    //
-    // Everything is computed in units of the SCALED leaf. Scale enters twice - once through the lever arm and once through the distal mass - so the moment grows with the cube of leaf length at fixed shape,
-    // which is what makes a leaf that doubles in length droop roughly eight times as much with no age term anywhere in the model.
-    float load = 0.f;
-    {
-        float straight_moment = 0.f;
-        float distal_mass = 0.f;
-        for (int i = int(Nx) - 1; i >= 1; i--) {
-            const uint i_outer = uint(i) + 1;
-            const float segment_mass = width.at(i_outer) * ds.at(i_outer) * scale * scale;
-            const float lever_arm = ds.at(i_outer) * scale;
-            straight_moment += distal_mass * lever_arm + segment_mass * 0.5f * lever_arm;
-            distal_mass += segment_mass;
-            load += compliance * powf(std::max(taper, 1e-3f), float(i) / float(Nx)) * straight_moment * ds.at(uint(i)) * scale;
+    std::vector<vec3> deflected_midrib;
+    if (clamp == 0) {
+        deflected_midrib = deflectLeafCantilever(midrib, width, scale, compliance, flexibility, taper, gravity);
+    } else {
+        deflected_midrib.assign(Nx + 1, midrib.at(clamp) * scale);
+        const std::vector<vec3> ahead_points(midrib.begin() + clamp, midrib.end());
+        const std::vector<float> ahead_widths(width.begin() + clamp, width.end());
+        if (ahead_points.size() >= 2) {
+            const std::vector<vec3> ahead = deflectLeafCantilever(ahead_points, ahead_widths, scale, compliance, flexibility, taper, gravity);
+            std::copy(ahead.begin(), ahead.end(), deflected_midrib.begin() + clamp);
+        }
+        const std::vector<vec3> behind_points(midrib.rend() - clamp - 1, midrib.rend());
+        const std::vector<float> behind_widths(width.rend() - clamp - 1, width.rend());
+        const std::vector<vec3> behind = deflectLeafCantilever(behind_points, behind_widths, scale, compliance, flexibility, taper, gravity);
+        for (uint k = 1; k <= clamp; k++) {
+            deflected_midrib.at(clamp - k) = behind.at(k);
         }
     }
-    const float step = std::min(0.5f, 1.f / std::max(load, 1e-12f));
-    constexpr int maximum_moment_iterations = 5000;
-    // Stop once no station is more than this fraction of the blade's largest bend away from balance.
-    constexpr float converged_fraction = 1e-4f;
-    // A blade still further than this from balance when the passes run out is reported rather than returned.
-    constexpr float unconverged_limit = 0.01f;
-
-    std::vector<float> theta(theta_rest);
-    std::vector<vec3> deflected_midrib(Nx + 1);
-    std::vector<float> moment(Nx + 1, 0.f);
-    std::vector<float> theta_balanced(theta_rest);
-    float unbalanced = 0.f;
-
-    // Integrate the current tangent angles into a centreline. The base station is clamped: it stays where the rest shape put it, which is what makes this a cantilever rather than a free body. The heading
-    // of each rest segment is preserved and only its inclination changes, so the leaf bends in its own vertical plane instead of swinging sideways.
-    auto integrateMidrib = [&]() {
-        deflected_midrib.at(0) = midrib.at(0) * scale;
-        for (uint i = 1; i <= Nx; i++) {
-            deflected_midrib.at(i) = deflected_midrib.at(i - 1) + ds.at(i) * scale * (cosf(theta.at(i)) * station_heading.at(i) + make_vec3(0.f, 0.f, sinf(theta.at(i))));
-        }
-    };
-
-    for (int iteration = 0; iteration < maximum_moment_iterations; iteration++) {
-
-        integrateMidrib();
-
-        // Accumulate the moment from the tip inward in a single pass. Stepping inward by one segment adds that segment's own weight (acting through half its length) and swings all the mass already counted
-        // further out through the extra lever arm, so the running distal mass is carried along rather than re-summed at each station - the difference between an O(Nx) sweep and an O(Nx^2) one.
-        moment.assign(Nx + 1, 0.f);
-        float distal_mass = 0.f;
-        for (int i = int(Nx) - 1; i >= 0; i--) {
-            const uint i_outer = uint(i) + 1;
-            const float segment_mass = width.at(i_outer) * ds.at(i_outer) * scale * scale;
-            const vec3 lever = deflected_midrib.at(i_outer) - deflected_midrib.at(uint(i));
-            // The weight's moment about the station's bending axis, signed so that a positive arm bends the blade toward gravity. Under the frame's -z this is the horizontal lever arm along the heading.
-            const float lever_arm = cross(lever, gravity_direction) * station_axis.at(uint(i));
-
-            // Everything already counted acts through this segment's full lever arm; this segment's own weight acts through half of it, being distributed along the segment rather than concentrated at its end.
-            moment.at(uint(i)) = moment.at(i_outer) + distal_mass * lever_arm + segment_mass * 0.5f * lever_arm;
-            distal_mass += segment_mass;
-        }
-
-        // Curvature is proportional to moment; integrating it along the arc gives how far the blade has bent. Integrating curvature along arclength (rather than solving the linear beam equation for a vertical
-        // deflection field) is what keeps the tip well-behaved once it droops past the small-angle regime - the leaf curls over instead of running off to infinity.
-        //
-        // The bending is accumulated on its own and then ADDED to the rest angle, rather than integrated into the tangent angle directly. The prototype already carries the blade's turgor shape - its
-        // longitudinal curvature, and the arc a grass leaf holds even when rigid - in theta_rest, and building the tangent angle purely from the bending would discard all of it and straighten the leaf out
-        // into a flat board. A leaf that is curved at rest must stay curved and simply droop further.
-        float accumulated_bend = 0.f;
-        float residual = 0.f;
-        float largest_bend = 0.f;
-        for (uint i = 1; i <= Nx; i++) {
-            // Compliance rises along the blade rather than being constant, because the midrib that carries the bending thins out toward the tip. Without this the blade hinges at its base and runs straight
-            // from there, since that is where the moment is greatest; with it, the stiffness falls off faster than the moment does and the blade curves hardest where a real leaf does, near the tip.
-            const float station = float(i) / float(Nx);
-            const float local_compliance = compliance * powf(std::max(taper, 1e-3f), station);
-            const float curvature = -local_compliance * moment.at(i);
-            accumulated_bend += curvature * ds.at(i) * scale;
-            // Clamp to just short of hanging straight along gravity. A station hanging along gravity carries no further lever arm, so this is a physical limit rather than an arbitrary cutoff, and it stops a
-            // very flexible leaf from curling back underneath itself. Under the frame's -z the limits are -90 and +90 degrees.
-            //
-            // The accumulator is clamped along with the angle, not just the angle it produces. Letting it run past vertical while only the angle was limited pinned every station beyond that point at the
-            // clamp, which drew the blade as a sharp hinge near the base followed by a dead-straight remainder - and no amount of stiffness taper could relieve it, because the excess bend had already been
-            // banked into the accumulator further in.
-            const float balanced = std::clamp(theta_rest.at(i) + accumulated_bend, turn_floor.at(i), turn_ceiling.at(i));
-            accumulated_bend = balanced - theta_rest.at(i);
-            residual = std::max(residual, std::fabs(balanced - theta.at(i)));
-            largest_bend = std::max(largest_bend, std::fabs(accumulated_bend));
-            theta_balanced.at(i) = balanced;
-        }
-        unbalanced = residual;
-        if (residual <= converged_fraction * largest_bend) {
-            break;
-        }
-        for (uint i = 1; i <= Nx; i++) {
-            theta.at(i) += step * (theta_balanced.at(i) - theta.at(i));
-        }
-        theta.at(0) = theta_rest.at(0);
-    }
-    if (unbalanced > unconverged_limit) {
-        helios_runtime_error("ERROR (deformLeafLattice): The blade did not settle under its own weight within " + std::to_string(maximum_moment_iterations) + " passes; it was still " +
-                             std::to_string(unbalanced) + " rad from balance at flexibility " + std::to_string(flexibility) + " and taper " + std::to_string(taper) + ". This is far outside the flexibility a real leaf has.");
-    }
-    // The lattice is carried along the centreline of the final angles, not the one the last moments were computed from.
-    integrateMidrib();
 
     // ---- 4. Carry the lattice with the deflected midrib ----
 
