@@ -18231,8 +18231,14 @@ static std::vector<helios::vec3> makeFlatBladeLattice(uint Nx, uint Ny, float as
 
 DOCTEST_TEST_CASE("PlantArchitecture leaf curvature exponent redistributes bending along the blade") {
 
-    // The exponent controls WHERE along the blade the longitudinal curvature acts, not how much of it there is. Both halves of that statement need checking: raising the curvature parameter alone can only
-    // ever steepen the tip, so a species whose blade arcs along its whole length cannot be described by the curvature parameter by itself however it is set.
+    // The exponent controls WHERE along the blade the longitudinal curvature acts, not how much of it there is: the blade's tangent turns through the curvature angle from base to tip whatever the exponent.
+    // Both halves of that statement need checking: raising the curvature parameter alone can only ever steepen the tip, so a species whose blade arcs along its whole length cannot be described by the
+    // curvature parameter by itself however it is set.
+    struct BladeProfile {
+        float midpoint_height;
+        float tip_height;
+        float tip_angle;
+    };
     auto bladeProfile = [](float exponent) {
         Context ctx;
         PlantArchitecture pa(&ctx);
@@ -18254,21 +18260,24 @@ DOCTEST_TEST_CASE("PlantArchitecture leaf curvature exponent redistributes bendi
         DOCTEST_REQUIRE(vertices.size() % row_length == 0);
         const size_t midrib = (vertices.size() / row_length / 2) * row_length;
 
-        // Height of the midrib at the blade's midpoint and at its tip, relative to its base.
-        const float base_z = vertices.at(midrib).z;
-        return std::make_pair(vertices.at(midrib + row_length / 2).z - base_z, vertices.at(midrib + row_length - 1).z - base_z);
+        // Height of the midrib at the blade's midpoint and at its tip, relative to its base, and the direction of its last segment in the plane it bends in.
+        const vec3 base = vertices.at(midrib);
+        const vec3 last_segment = vertices.at(midrib + row_length - 1) - vertices.at(midrib + row_length - 2);
+        return BladeProfile{vertices.at(midrib + row_length / 2).z - base.z, vertices.at(midrib + row_length - 1).z - base.z, std::atan2(last_segment.z, last_segment.x)};
     };
 
-    const auto quartic = bladeProfile(4.f);
-    const auto quadratic = bladeProfile(2.f);
+    const BladeProfile quartic = bladeProfile(4.f);
+    const BladeProfile quadratic = bladeProfile(2.f);
 
-    // The tip deflection is set by the curvature parameter and must not depend on the exponent.
-    DOCTEST_CHECK_MESSAGE(quadratic.second == doctest::Approx(quartic.second).epsilon(0.05), "tip deflection quartic=" << quartic.second << " quadratic=" << quadratic.second);
+    // The tip tangent is set by the curvature parameter and must not depend on the exponent. The last segment runs along the mean of the tangents at its two ends, so it falls short of the tip tangent by
+    // half of the last station's turn: 0.01 rad for the quadratic blade and 0.02 rad for the quartic one at 40 subdivisions.
+    DOCTEST_CHECK_MESSAGE(std::fabs(quartic.tip_angle + 0.4f) < 0.03f, "tip angle quartic=" << quartic.tip_angle);
+    DOCTEST_CHECK_MESSAGE(std::fabs(quadratic.tip_angle + 0.4f) < 0.03f, "tip angle quadratic=" << quadratic.tip_angle);
 
-    // A quartic blade is still nearly flat at its own midpoint - it reaches only about a sixteenth of its tip deflection there - while a quadratic one has already bent a quarter of the way. Without this,
-    // a blade that arcs continuously along its length cannot be represented at all.
-    DOCTEST_REQUIRE(quartic.second < 0.f);
-    DOCTEST_CHECK_MESSAGE(std::fabs(quadratic.first) > 2.5f * std::fabs(quartic.first), "midpoint deflection quartic=" << quartic.first << " quadratic=" << quadratic.first);
+    // A quartic blade is still nearly flat at its own midpoint while a quadratic one has already turned a quarter of the way. Without this, a blade that arcs continuously along its length cannot be
+    // represented at all.
+    DOCTEST_REQUIRE(quartic.tip_height < 0.f);
+    DOCTEST_CHECK_MESSAGE(std::fabs(quadratic.midpoint_height) > 2.5f * std::fabs(quartic.midpoint_height), "midpoint deflection quartic=" << quartic.midpoint_height << " quadratic=" << quadratic.midpoint_height);
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture leaf deflection reproduces cantilever beam theory") {
@@ -26060,6 +26069,139 @@ DOCTEST_TEST_CASE("PlantArchitecture blade lattice cross-section: lateral curvat
     shape.roll_fraction = 0.f;
     shape.subdivisions_y = 3;
     DOCTEST_CHECK_THROWS(static_cast<void>(buildLeafBladeLattice(shape)));
+}
+
+//! The midrib row (subdivisions_y / 2) of a blade lattice built by buildLeafBladeLattice(), from the base to the tip
+static std::vector<vec3> bladeLatticeMidrib(const std::vector<vec3> &lattice, const LeafShapeValues &shape) {
+    const size_t row_length = size_t(shape.subdivisions_x) + 1;
+    const size_t first = size_t(shape.subdivisions_y / 2) * row_length;
+    return {lattice.begin() + long(first), lattice.begin() + long(first + row_length)};
+}
+
+//! Length of a polyline between two of its points
+static float polylineLengthBetween(const std::vector<vec3> &points, size_t first, size_t last) {
+    float length = 0.f;
+    for (size_t p = first; p < last; p++) {
+        length += (points.at(p + 1) - points.at(p)).magnitude();
+    }
+    return length;
+}
+
+//! A blade lattice shape with nothing but a longitudinal curvature, finely subdivided along the blade
+static LeafShapeValues longitudinallyCurledShape(float curvature, float exponent) {
+    LeafShapeValues shape;
+    shape.aspect_ratio = 0.3f;
+    shape.longitudinal_curvature = curvature;
+    shape.longitudinal_curvature_exponent = exponent;
+    shape.subdivisions_x = 200;
+    shape.subdivisions_y = 4;
+    return shape;
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture blade lattice longitudinal curvature keeps the midrib's length") {
+    // The blade's outline is a texture on its lattice, so a midrib longer than the blade draws the outline stretched. A bend must leave the midrib exactly as long as the flat blade, whatever the
+    // curvature and however it is distributed along the blade.
+    for (float curvature: {-1.5f, -1.f, -0.5f, 0.5f, 1.f, 1.5f}) {
+        for (float exponent: {1.f, 2.f, 4.f, 8.f}) {
+            const LeafShapeValues shape = longitudinallyCurledShape(curvature, exponent);
+            const std::vector<vec3> midrib = bladeLatticeMidrib(buildLeafBladeLattice(shape), shape);
+            const float length = polylineLengthBetween(midrib, 0, midrib.size() - 1);
+            DOCTEST_INFO("longitudinal curvature " << curvature << ", exponent " << exponent << ": midrib length " << length);
+            DOCTEST_CHECK(std::fabs(length - 1.f) < 0.005f);
+        }
+    }
+
+    // The same with the cross-section terms switched on, which take the other path through the lattice builder.
+    LeafShapeValues shape = longitudinallyCurledShape(-1.f, 4.f);
+    shape.midrib_fold_fraction = 0.3f;
+    shape.lateral_curvature = 0.5f;
+    shape.wave_period = 0.2f;
+    shape.wave_amplitude = 0.05f;
+    const std::vector<vec3> midrib = bladeLatticeMidrib(buildLeafBladeLattice(shape), shape);
+    const float length = polylineLengthBetween(midrib, 0, midrib.size() - 1);
+    DOCTEST_CHECK_MESSAGE(std::fabs(length - 1.f) < 0.005f, "midrib length with fold, lateral curvature and waves: " << length);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture blade lattice longitudinal curvature bends the blade evenly along its length") {
+    // Keeping the total length is not enough: the texture is drawn evenly only if every part of the midrib keeps its own length, so the inner and outer halves of the blade must each stay half of it.
+    const LeafShapeValues shape = longitudinallyCurledShape(-1.f, 4.f);
+    const std::vector<vec3> midrib = bladeLatticeMidrib(buildLeafBladeLattice(shape), shape);
+    const size_t half = midrib.size() / 2;
+    const float total = polylineLengthBetween(midrib, 0, midrib.size() - 1);
+    const float inner = polylineLengthBetween(midrib, 0, half);
+    const float outer = polylineLengthBetween(midrib, half, midrib.size() - 1);
+    DOCTEST_INFO("inner half " << inner << ", outer half " << outer << " of a midrib " << total << " long");
+    DOCTEST_CHECK(std::fabs(inner / total - 0.5f) < 0.01f);
+    DOCTEST_CHECK(std::fabs(outer / total - 0.5f) < 0.01f);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture blade lattice longitudinal curvature turns the midrib's tangent by the curvature angle") {
+    // The parameter is the angle the midrib's tangent turns through from the base to the tip, accumulated station by station as the lattice builder does. The midrib's last segment runs along the mean of
+    // the tangents at its two ends, so it may differ from the tip tangent by half of that last station's turn.
+    for (float curvature: {-1.5f, -0.5f, 0.5f, 1.5f}) {
+        for (float exponent: {2.f, 4.f}) {
+            const LeafShapeValues shape = longitudinallyCurledShape(curvature, exponent);
+            const std::vector<vec3> midrib = bladeLatticeMidrib(buildLeafBladeLattice(shape), shape);
+
+            const double dx = 1.0 / double(shape.subdivisions_x);
+            double tip_angle = 0.0;
+            double last_turn = 0.0;
+            for (uint i = 1; i <= shape.subdivisions_x; i++) {
+                last_turn = std::atan(double(exponent) * double(curvature) * std::pow(double(i) * dx, double(exponent) - 1.0) * dx);
+                tip_angle += last_turn;
+            }
+
+            const vec3 last_segment = midrib.back() - midrib.at(midrib.size() - 2);
+            const double segment_angle = std::atan2(double(last_segment.z), double(last_segment.x));
+            DOCTEST_INFO("longitudinal curvature " << curvature << ", exponent " << exponent << ": tip segment at " << segment_angle << " rad, expected " << tip_angle << " rad");
+            DOCTEST_CHECK(std::fabs(segment_angle - tip_angle) < 0.5 * std::fabs(last_turn) + 1e-3);
+            // A positive curvature curls the blade up, toward its adaxial side.
+            DOCTEST_CHECK((midrib.back().z > 0.f) == (curvature > 0.f));
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture blade lattice longitudinal curvature leaves the other shape terms alone") {
+    // With no longitudinal curvature the midrib lies straight along +x at its even stations, shifted only by the lattice offset, and a blade with only a fold is the closed form it has always been.
+    LeafShapeValues shape;
+    shape.aspect_ratio = 0.4f;
+    shape.midrib_fold_fraction = 0.3f;
+    shape.subdivisions_x = 17;
+    shape.subdivisions_y = 8;
+    shape.lattice_offset = make_vec3(0.013f, -0.02f, 0.007f);
+    const std::vector<vec3> folded = buildLeafBladeLattice(shape);
+    const float dx = 1.f / float(shape.subdivisions_x);
+    const float dy = shape.aspect_ratio / float(shape.subdivisions_y);
+    float largest_offset = 0.f;
+    for (uint j = 0; j <= shape.subdivisions_y; j++) {
+        for (uint i = 0; i <= shape.subdivisions_x; i++) {
+            const float x = float(i) * dx;
+            const float y = float(j) * dy - 0.5f * shape.aspect_ratio;
+            const float local_fold = shape.midrib_fold_fraction * 1.5f * (1.f - x * x);
+            const vec3 expected = make_vec3(x, cosf(0.5f * local_fold * float(M_PI)) * y, sinf(0.5f * local_fold * float(M_PI)) * std::fabs(y)) + shape.lattice_offset;
+            largest_offset = std::max(largest_offset, (folded.at(size_t(j) * (shape.subdivisions_x + 1) + i) - expected).magnitude());
+        }
+    }
+    DOCTEST_CHECK_MESSAGE(largest_offset < 1e-6f, "largest offset of a folded blade from the closed form: " << largest_offset);
+
+    // The lateral curvature bends the cross-section without stretching it, and the longitudinal curvature carries each cross-section along the midrib rigidly, so the arc across the blade stays its flat
+    // width at every station even on a blade curled along its length.
+    for (float lateral_curvature: {-1.f, 1.f}) {
+        LeafShapeValues curled = longitudinallyCurledShape(-0.8f, 4.f);
+        curled.lateral_curvature = lateral_curvature;
+        curled.subdivisions_x = 20;
+        curled.subdivisions_y = 16;
+        const std::vector<vec3> lattice = buildLeafBladeLattice(curled);
+        float largest_width_error = 0.f;
+        for (uint i = 0; i <= curled.subdivisions_x; i++) {
+            float width = 0.f;
+            for (uint j = 0; j < curled.subdivisions_y; j++) {
+                width += (lattice.at(size_t(j + 1) * (curled.subdivisions_x + 1) + i) - lattice.at(size_t(j) * (curled.subdivisions_x + 1) + i)).magnitude();
+            }
+            largest_width_error = std::max(largest_width_error, std::fabs(width / curled.aspect_ratio - 1.f));
+        }
+        DOCTEST_CHECK_MESSAGE(largest_width_error < 0.001f, "lateral curvature " << lateral_curvature << ": largest relative error of the arc across the blade " << largest_width_error);
+    }
 }
 
 //! Build a library wheat plant whose blades are flat strips: no droop, curvature, fold or waves, so that rolling is the only thing turning their facets

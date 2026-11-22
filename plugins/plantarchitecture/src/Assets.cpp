@@ -597,10 +597,32 @@ std::vector<helios::vec3> buildLeafBladeLattice(const LeafShapeValues &shape) {
         }
     }
 
+    // Longitudinal curvature bends the blade along its midrib without stretching it. midrib_angle[i] is the angle the midrib's tangent has turned through by station i, and the midrib is laid by walking
+    // out from the base one station at a time, each segment dx long along the mean of the tangents at its two ends, so the midrib keeps the blade's length and every part of it keeps its own. Each
+    // cross-section is then carried rigidly along the midrib, turned with its tangent, so the fold, lateral curvature and petiole roll ride on the bent midrib unchanged.
+    //
+    // The tangent turns through longitudinal_curvature radians in all from base to tip; the exponent sets how that turn is distributed along the blade rather than how much of it there is - see
+    // LeafPrototype::longitudinal_curvature_exponent - and is clamped to at least 1 because a smaller value would put a cusp at the leaf base.
+    const bool longitudinally_curved = shape.longitudinal_curvature != 0.f;
+    std::vector<float> midrib_angle(Nx + 1, 0.f);
+    std::vector<vec3> midrib_station(Nx + 1, nullorigin);
+    if (longitudinally_curved) {
+        const float curvature_exponent = fmaxf(1.f, shape.longitudinal_curvature_exponent);
+        double station_x = 0.0;
+        double station_z = 0.0;
+        for (uint i = 1; i <= Nx; i++) {
+            const float x = float(i) * dx;
+            midrib_angle.at(i) = midrib_angle.at(i - 1) - atanf(curvature_exponent * shape.longitudinal_curvature * powf(x, curvature_exponent - 1.f) * dx);
+            const vec3 segment = rotatePointAboutLine(make_vec3(dx, 0, 0), nullorigin, make_vec3(0, 1, 0), 0.5f * (midrib_angle.at(i - 1) + midrib_angle.at(i)));
+            station_x += segment.x;
+            station_z += segment.z;
+            midrib_station.at(i) = make_vec3(float(station_x), 0.f, float(station_z));
+        }
+    }
+
     std::vector<vec3> lattice(size_t(Nx + 1) * size_t(Ny + 1));
 
     for (int j = 0; j <= int(Ny); j++) {
-        float dtheta = 0;
         for (int i = 0; i <= int(Nx); i++) {
 
             const float x = float(i) * dx; // x-coordinate of leaf subdivision
@@ -625,10 +647,6 @@ std::vector<helios::vec3> buildLeafBladeLattice(const LeafShapeValues &shape) {
                 z_section = cross_section.at(i).at(cells_out).y;
             }
 
-            // x-curvature. The exponent sets how the bending is distributed along the blade rather than how much of it there is - see LeafPrototype::longitudinal_curvature_exponent - so the tip
-            // deflection is the same whatever it is, and it is clamped to at least 1 because a smaller value would put a cusp at the leaf base.
-            const float curvature_exponent = fmaxf(1.f, shape.longitudinal_curvature_exponent);
-
             // petiole roll
             float z_petiole = 0;
             if (shape.petiole_roll != 0.0f) {
@@ -649,11 +667,10 @@ std::vector<helios::vec3> buildLeafBladeLattice(const LeafShapeValues &shape) {
 
             float rot_angle = 0.f;
 
-            if (shape.longitudinal_curvature != 0.0f && i > 0) {
-                // Derivative of the curvature term above, which must track its exponent: this is what orients the wave displacement along the leaf surface.
-                dtheta -= atan(curvature_exponent * shape.longitudinal_curvature * powf(x, curvature_exponent - 1.f) * dx);
-                vertex = rotatePointAboutLine(vertex, nullorigin, make_vec3(0, 1, 0), dtheta);
-                rot_angle += dtheta;
+            if (longitudinally_curved) {
+                // The cross-section offset from the midrib, turned with the midrib's tangent at this station; rot_angle then orients the wave displacement along the bent blade's normal.
+                rot_angle = midrib_angle.at(i);
+                vertex = midrib_station.at(i) + rotatePointAboutLine(make_vec3(0.f, y_section, z_section + z_petiole), nullorigin, make_vec3(0, 1, 0), rot_angle);
             }
 
             // apply wave displacement along the rotated leaf-surface normal

@@ -60,7 +60,7 @@ std::vector<helios::vec3> deformLeafLattice(const std::vector<helios::vec3> &res
  *  1. the cross-section: the midrib fold, the lateral curvature and the roll together give the tangent angle of the cross-section as a function of arc length from the midrib, and each lattice cell is laid
  *     along that curve at its own width, so the cross-section bends without stretching;
  *  2. the petiole roll near the blade base;
- *  3. the longitudinal curvature, which bends the blade along its length;
+ *  3. the longitudinal curvature, which bends the midrib along its length without stretching it and carries each cross-section along it, turned with the midrib's tangent;
  *  4. the waves, displaced along the bent blade's normal;
  *  5. the translation by \ref LeafShapeValues::lattice_offset.
  * The deflection under the blade's own weight is applied later, to the leaf in the canopy (see \ref deformLeafLattice()).
@@ -71,7 +71,7 @@ std::vector<helios::vec3> buildLeafBladeLattice(const LeafShapeValues &shape);
 
 //! Arclength along the midrib of a leaf blade lattice at each of its stations, as a fraction of the midrib's whole length
 /**
- * The midrib is the lattice row subdivisions_y / 2. Its stations are not evenly spaced along its arc in general: the longitudinal curvature of buildLeafBladeLattice() turns each station about the blade's base.
+ * The midrib is the lattice row subdivisions_y / 2. buildLeafBladeLattice() lays its stations evenly along its arc, but a lattice that has been deformed since, or one built some other way, need not.
  * \param[in] rest_vertices Lattice vertices, row-major over (Ny+1) rows of (Nx+1) vertices.
  * \param[in] Nx Number of subdivisions along the blade.
  * \param[in] Ny Number of subdivisions across the blade (even).
