@@ -26111,7 +26111,8 @@ DOCTEST_TEST_CASE("PlantArchitecture blade lattice longitudinal curvature keeps 
         }
     }
 
-    // The same with the cross-section terms switched on, which take the other path through the lattice builder.
+    // The same with the cross-section terms switched on, which take the lattice builder's general cross-section path rather than the closed-form fold. Those terms are all zero on the midrib itself, so
+    // this checks only that the midrib is unaffected by them; how they ride on the bent midrib is checked by the perpendicularity test below.
     LeafShapeValues shape = longitudinallyCurledShape(-1.f, 4.f);
     shape.midrib_fold_fraction = 0.3f;
     shape.lateral_curvature = 0.5f;
@@ -26185,7 +26186,8 @@ DOCTEST_TEST_CASE("PlantArchitecture blade lattice longitudinal curvature leaves
     DOCTEST_CHECK_MESSAGE(largest_offset < 1e-6f, "largest offset of a folded blade from the closed form: " << largest_offset);
 
     // The lateral curvature bends the cross-section without stretching it, and the longitudinal curvature carries each cross-section along the midrib rigidly, so the arc across the blade stays its flat
-    // width at every station even on a blade curled along its length.
+    // width at every station even on a blade curled along its length. A distance across the blade is unchanged by any rotation of the cross-section, so this does not check which way the cross-section is
+    // turned; the perpendicularity test below does.
     for (float lateral_curvature: {-1.f, 1.f}) {
         LeafShapeValues curled = longitudinallyCurledShape(-0.8f, 4.f);
         curled.lateral_curvature = lateral_curvature;
@@ -26201,6 +26203,94 @@ DOCTEST_TEST_CASE("PlantArchitecture blade lattice longitudinal curvature leaves
             largest_width_error = std::max(largest_width_error, std::fabs(width / curled.aspect_ratio - 1.f));
         }
         DOCTEST_CHECK_MESSAGE(largest_width_error < 0.001f, "lateral curvature " << lateral_curvature << ": largest relative error of the arc across the blade " << largest_width_error);
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture blade lattice longitudinal curvature keeps each cross-section perpendicular to the bent midrib") {
+    // The fold, lateral curvature, petiole roll and waves all offset a vertex from the midrib within the blade's cross-section, so on a blade bent along its length each of those offsets must stay
+    // perpendicular to the midrib's actual tangent at its station. The tangent is measured from the lattice itself, as the direction between the neighbouring midrib stations, so that a cross-section
+    // turned by any angle other than the midrib's own is caught. Only the part of each offset in the plane of the bend is tested: the part across the blade (along y) is perpendicular to any tangent in
+    // that plane, and would only dilute the check.
+    struct CrossSectionTerms {
+        const char *name;
+        float fold;
+        float lateral;
+        float petiole_roll;
+        float wave_amplitude;
+    };
+    const CrossSectionTerms term_sets[] = {{"waves only", 0.f, 0.f, 0.f, 0.1f}, {"fold, lateral curvature, petiole roll and waves", 0.3f, 0.5f, 0.5f, 0.1f}};
+
+    for (const CrossSectionTerms &terms: term_sets) {
+        for (float curvature: {-1.f, 1.f}) {
+            LeafShapeValues shape = longitudinallyCurledShape(curvature, 4.f);
+            shape.subdivisions_x = 40;
+            shape.subdivisions_y = 8;
+            shape.midrib_fold_fraction = terms.fold;
+            shape.lateral_curvature = terms.lateral;
+            shape.petiole_roll = terms.petiole_roll;
+            shape.wave_amplitude = terms.wave_amplitude;
+            shape.wave_period = 0.3f;
+            const std::vector<vec3> lattice = buildLeafBladeLattice(shape);
+            const std::vector<vec3> midrib = bladeLatticeMidrib(lattice, shape);
+            const size_t row_length = size_t(shape.subdivisions_x) + 1;
+
+            float largest_cosine = 0.f;
+            float largest_in_plane_offset = 0.f;
+            for (size_t i = 1; i + 1 < row_length; i++) {
+                const vec3 tangent = (midrib.at(i + 1) - midrib.at(i - 1)).normalize();
+                for (uint j = 0; j <= shape.subdivisions_y; j++) {
+                    if (j == shape.subdivisions_y / 2) {
+                        continue;
+                    }
+                    const vec3 offset = lattice.at(size_t(j) * row_length + i) - midrib.at(i);
+                    const vec3 in_plane_offset = make_vec3(offset.x, 0.f, offset.z);
+                    const float magnitude = in_plane_offset.magnitude();
+                    largest_in_plane_offset = std::max(largest_in_plane_offset, magnitude);
+                    if (magnitude > 1e-4f) {
+                        largest_cosine = std::max(largest_cosine, std::fabs(in_plane_offset * tangent) / magnitude);
+                    }
+                }
+            }
+            DOCTEST_INFO(std::string(terms.name) << ", longitudinal curvature " << curvature << ": largest in-plane offset " << largest_in_plane_offset << ", largest cosine with the midrib tangent " << largest_cosine);
+            // The offsets must be there for the check to mean anything.
+            DOCTEST_CHECK(largest_in_plane_offset > 0.01f);
+            // The measured tangent lags the station's own by a quarter of the change in turn between neighbouring segments, about 0.002 rad here.
+            DOCTEST_CHECK(largest_cosine < 0.01f);
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture blade lattice rejects shape values that are not finite") {
+    // A shape value that is not a finite number would otherwise build a blade of NaN vertices without complaint, or for the exponent be silently clamped to 1.
+    const std::vector<std::pair<const char *, float LeafShapeValues::*>> shape_terms = {{"longitudinal_curvature", &LeafShapeValues::longitudinal_curvature},
+                                                                                        {"longitudinal_curvature_exponent", &LeafShapeValues::longitudinal_curvature_exponent},
+                                                                                        {"lateral_curvature", &LeafShapeValues::lateral_curvature},
+                                                                                        {"midrib_fold_fraction", &LeafShapeValues::midrib_fold_fraction},
+                                                                                        {"petiole_roll", &LeafShapeValues::petiole_roll},
+                                                                                        {"wave_period", &LeafShapeValues::wave_period},
+                                                                                        {"wave_amplitude", &LeafShapeValues::wave_amplitude}};
+    for (const auto &term: shape_terms) {
+        for (float bad_value: {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity()}) {
+            LeafShapeValues shape;
+            shape.aspect_ratio = 0.3f;
+            shape.subdivisions_x = 10;
+            shape.subdivisions_y = 4;
+            shape.*(term.second) = bad_value;
+            bool threw = false;
+            std::string message;
+            {
+                capture_cerr cerr_buffer;
+                try {
+                    static_cast<void>(buildLeafBladeLattice(shape));
+                } catch (const std::runtime_error &error) {
+                    threw = true;
+                    message = error.what();
+                }
+            }
+            DOCTEST_INFO(std::string(term.first) << " = " << bad_value);
+            DOCTEST_CHECK(threw);
+            DOCTEST_CHECK(message.find(term.first) != std::string::npos);
+        }
     }
 }
 

@@ -560,6 +560,19 @@ std::vector<helios::vec3> buildLeafBladeLattice(const LeafShapeValues &shape) {
     if (!std::isfinite(shape.roll_fraction) || shape.roll_fraction < 0.f || shape.roll_fraction > 1.f) {
         helios_runtime_error("ERROR (buildLeafBladeLattice): The roll fraction must be between 0 (flat) and 1 (rolled into a closed tube), but " + std::to_string(shape.roll_fraction) + " was given.");
     }
+    const std::pair<const char *, float> shape_terms[] = {{"longitudinal_curvature", shape.longitudinal_curvature},
+                                                          {"longitudinal_curvature_exponent", shape.longitudinal_curvature_exponent},
+                                                          {"lateral_curvature", shape.lateral_curvature},
+                                                          {"midrib_fold_fraction", shape.midrib_fold_fraction},
+                                                          {"petiole_roll", shape.petiole_roll},
+                                                          {"wave_period", shape.wave_period},
+                                                          {"wave_amplitude", shape.wave_amplitude}};
+    for (const auto &term: shape_terms) {
+        if (!std::isfinite(term.second)) {
+            helios_runtime_error(std::string("ERROR (buildLeafBladeLattice): The leaf shape value ") + term.first + " must be a finite number, but " + std::to_string(term.second) +
+                                 " was given. Check the leaf prototype's parameter of that name, or the distribution it was sampled from.");
+        }
+    }
 
     const float aspect_ratio = shape.aspect_ratio;
     const float dx = 1.f / float(Nx); // length of leaf subdivision in the x-direction
