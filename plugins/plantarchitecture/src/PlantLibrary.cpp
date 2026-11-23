@@ -929,7 +929,7 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
     leaf_prototype.leaf_texture_file[0] = "AlmondLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.33f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
-    leaf_prototype.longitudinal_curvature = 0.05;
+    leaf_prototype.longitudinal_curvature = 0.25f;
     leaf_prototype.lateral_curvature = 0.1f;
     leaf_prototype.subdivisions = 1;
     leaf_prototype.unique_prototypes = 1;
@@ -1240,7 +1240,7 @@ void PlantArchitecture::initializeAlmondTreeAldrichShoots() {
     leaf_prototype.leaf_texture_file[0] = "AlmondLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.33f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
-    leaf_prototype.longitudinal_curvature = 0.05;
+    leaf_prototype.longitudinal_curvature = 0.25f;
     leaf_prototype.lateral_curvature = 0.1f;
     leaf_prototype.subdivisions = 1;
     leaf_prototype.unique_prototypes = 1;
@@ -1666,7 +1666,7 @@ void PlantArchitecture::initializeAlmondTreeIndependenceShoots() {
     leaf_prototype.leaf_texture_file[0] = "AlmondLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.33f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
-    leaf_prototype.longitudinal_curvature = 0.05;
+    leaf_prototype.longitudinal_curvature = 0.25f;
     leaf_prototype.lateral_curvature = 0.1f;
     leaf_prototype.subdivisions = 1;
     leaf_prototype.unique_prototypes = 1;
@@ -1962,7 +1962,7 @@ void PlantArchitecture::initializeAlmondTreeWoodColonyShoots() {
     leaf_prototype.leaf_texture_file[0] = "AlmondLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.33f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
-    leaf_prototype.longitudinal_curvature = 0.05;
+    leaf_prototype.longitudinal_curvature = 0.25f;
     leaf_prototype.lateral_curvature = 0.1f;
     leaf_prototype.subdivisions = 1;
     leaf_prototype.unique_prototypes = 1;
@@ -2149,7 +2149,7 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     leaf_prototype.leaf_class_map_file[0] = "AppleLeaf_classes.png"; // its veins and blade, fitted from the texture (utilities/leaf_class_maps)
     leaf_prototype.leaf_aspect_ratio = 0.6f;
     leaf_prototype.midrib_fold_fraction = 0.4f;
-    leaf_prototype.longitudinal_curvature = -0.3f;
+    leaf_prototype.longitudinal_curvature = -1.5f;
     leaf_prototype.lateral_curvature = 0.1f;
     leaf_prototype.subdivisions = 6;
     leaf_prototype.unique_prototypes = 1;
@@ -2355,7 +2355,7 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     leaf_prototype.leaf_class_map_file[0] = "AppleLeaf_classes.png"; // its veins and blade, fitted from the texture (utilities/leaf_class_maps)
     leaf_prototype.leaf_aspect_ratio = 0.6f;
     leaf_prototype.midrib_fold_fraction = 0.4f;
-    leaf_prototype.longitudinal_curvature = -0.3f;
+    leaf_prototype.longitudinal_curvature = -1.5f;
     leaf_prototype.lateral_curvature = 0.1f;
     leaf_prototype.subdivisions = 6;
     leaf_prototype.unique_prototypes = 1;
@@ -2936,7 +2936,7 @@ void PlantArchitecture::initializeBeanShoots() {
     leaf_prototype_trifoliate.leaf_texture_file[1] = "BeanLeaf_left_centered.png";
     leaf_prototype_trifoliate.leaf_aspect_ratio = 1.f;
     leaf_prototype_trifoliate.midrib_fold_fraction = 0.2;
-    leaf_prototype_trifoliate.longitudinal_curvature.uniformDistribution(-0.3f, -0.2f);
+    leaf_prototype_trifoliate.longitudinal_curvature.uniformDistribution(-1.5f, -1.f);
     leaf_prototype_trifoliate.lateral_curvature = -1.f;
     leaf_prototype_trifoliate.subdivisions = 6;
     leaf_prototype_trifoliate.unique_prototypes = 5;
@@ -3093,7 +3093,7 @@ void PlantArchitecture::initializeBougainvilleaShoots() {
     leaf_prototype.leaf_texture_file[0] = "CapsicumLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.8f;
     leaf_prototype.midrib_fold_fraction = 0.2f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.15, -0.05f);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.75f, -0.25f);
     leaf_prototype.lateral_curvature = -0.25f;
     leaf_prototype.wave_period = 0.35f;
     leaf_prototype.wave_amplitude = 0.1f;
@@ -3228,7 +3228,7 @@ void PlantArchitecture::initializeCapsicumShoots() {
     leaf_prototype.leaf_texture_file[0] = "CapsicumLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.45f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.15, -0.05f);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.75f, -0.25f);
     leaf_prototype.lateral_curvature = -0.15f;
     leaf_prototype.wave_period = 0.35f;
     leaf_prototype.wave_amplitude = 0.0f;
@@ -3434,7 +3434,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
     leaf_prototype_trifoliate.leaf_texture_file[1] = "CowpeaLeaf_left_centered.png";
     leaf_prototype_trifoliate.leaf_aspect_ratio = 0.7f;
     leaf_prototype_trifoliate.midrib_fold_fraction = 0.2;
-    leaf_prototype_trifoliate.longitudinal_curvature.uniformDistribution(-0.3f, -0.1f);
+    leaf_prototype_trifoliate.longitudinal_curvature.uniformDistribution(-1.5f, -0.5f);
     leaf_prototype_trifoliate.lateral_curvature = -0.4f;
     leaf_prototype_trifoliate.subdivisions = 6;
     leaf_prototype_trifoliate.unique_prototypes = 5;
@@ -3589,7 +3589,7 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     leaf_prototype.leaf_texture_file[0] = "GrapeLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 1.f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.4, 0.4);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-2.f, 2.f);
     leaf_prototype.lateral_curvature = 0;
     leaf_prototype.wave_period = 0.3f;
     leaf_prototype.wave_amplitude = 0.1f;
@@ -4057,7 +4057,7 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     leaf_prototype.leaf_texture_file[0] = "GrapeLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 1.f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.4, 0.4);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-2.f, 2.f);
     leaf_prototype.lateral_curvature = 0;
     leaf_prototype.wave_period = 0.3f;
     leaf_prototype.wave_amplitude = 0.1f;
@@ -4486,7 +4486,7 @@ void PlantArchitecture::initializeGroundCherryWeedShoots() {
     leaf_prototype.leaf_texture_file[0] = "GroundCherryLeaf.png";
     leaf_prototype.leaf_aspect_ratio.uniformDistribution(0.3, 0.5);
     leaf_prototype.midrib_fold_fraction = 0.2f;
-    leaf_prototype.longitudinal_curvature = 0.1f;
+    leaf_prototype.longitudinal_curvature = 0.5f;
     ;
     leaf_prototype.lateral_curvature = -0.3f;
     leaf_prototype.wave_period = 0.35f;
@@ -4602,7 +4602,7 @@ void PlantArchitecture::initializeMaizeShoots() {
     leaf_prototype.leaf_class_map_file[0] = "SorghumLeaf_classes.png"; // the midrib, traced from the texture (utilities/leaf_class_maps)
     leaf_prototype.leaf_aspect_ratio = 0.15f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.07, -0.04);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.28f, -0.16f);
     leaf_prototype.longitudinal_curvature_exponent = 3.f;
     leaf_prototype.flexibility_taper = 150.f;
     leaf_prototype.flexibility_aging = 11.f;
@@ -4883,7 +4883,7 @@ void PlantArchitecture::initializePistachioTreeShoots() {
     // Pistachio leaflets are broadly ovate.
     leaf_prototype.leaf_aspect_ratio = 0.65f;
     leaf_prototype.midrib_fold_fraction = 0.;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.4, 0.4);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-2.f, 2.f);
     leaf_prototype.lateral_curvature = 0.;
     leaf_prototype.wave_period = 0.3f;
     leaf_prototype.wave_amplitude = 0.1f;
@@ -5136,7 +5136,7 @@ void PlantArchitecture::initializePuncturevineShoots() {
     leaf_prototype.leaf_texture_file[0] = "PuncturevineLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.4f;
     leaf_prototype.midrib_fold_fraction = 0.2f;
-    leaf_prototype.longitudinal_curvature = -0.1f;
+    leaf_prototype.longitudinal_curvature = -0.5f;
     leaf_prototype.lateral_curvature = 0.4f;
     leaf_prototype.subdivisions = 1;
     leaf_prototype.unique_prototypes = 1;
@@ -5260,7 +5260,7 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     leaf_prototype.leaf_texture_file[0] = "RedbudLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 1.f;
     leaf_prototype.midrib_fold_fraction = 0.2f;
-    leaf_prototype.longitudinal_curvature = -0.15f;
+    leaf_prototype.longitudinal_curvature = -0.75f;
     leaf_prototype.lateral_curvature = -0.1f;
     leaf_prototype.wave_period = 0.3f;
     leaf_prototype.wave_amplitude = 0.025f;
@@ -5398,7 +5398,7 @@ void PlantArchitecture::initializeRiceShoots() {
     // The longest blade is 1.7 cm wide on 43 cm, and the flag leaf comes out 1.3 cm by 33 cm, within the flag leaf widths of 1.24 cm in Nipponbare and 1.82 cm in 93-11 (PMC4115278).
     leaf_prototype.leaf_aspect_ratio = 0.04f;
     leaf_prototype.midrib_fold_fraction = 0.15f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.06, -0.02);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.24f, -0.08f);
     leaf_prototype.longitudinal_curvature_exponent = 3.f;
     leaf_prototype.flexibility_taper = 150.f;
     leaf_prototype.flexibility_aging = 11.f;
@@ -5537,7 +5537,7 @@ void PlantArchitecture::initializeButterLettuceShoots() {
     leaf_prototype.leaf_texture_file[0] = "RomaineLettuceLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.85f;
     leaf_prototype.midrib_fold_fraction = 0.2f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.2, 0.05);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-1.f, 0.25f);
     leaf_prototype.lateral_curvature = -0.4f;
     leaf_prototype.wave_period.uniformDistribution(0.15, 0.25);
     leaf_prototype.wave_amplitude.uniformDistribution(0.05, 0.1);
@@ -5620,7 +5620,7 @@ void PlantArchitecture::initializeSorghumShoots() {
     leaf_prototype.leaf_class_map_file[0] = "SorghumLeaf_classes.png"; // the midrib, traced from the texture (utilities/leaf_class_maps)
     leaf_prototype.leaf_aspect_ratio = 0.15f;
     leaf_prototype.midrib_fold_fraction = 0.45f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.07, -0.04);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.28f, -0.16f);
     leaf_prototype.longitudinal_curvature_exponent = 3.f;
     leaf_prototype.flexibility_taper = 150.f;
     leaf_prototype.flexibility_aging = 11.f;
@@ -5774,7 +5774,7 @@ void PlantArchitecture::initializeSoybeanShoots() {
     leaf_prototype.leaf_texture_file[0] = "SoybeanLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 1.f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(0.1, 0.2);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(0.5f, 1.f);
     leaf_prototype.lateral_curvature = 0.45;
     leaf_prototype.subdivisions = 8;
     leaf_prototype.unique_prototypes = 5;
@@ -5929,7 +5929,7 @@ void PlantArchitecture::initializeStrawberryShoots() {
     leaf_prototype.leaf_texture_file[0] = "StrawberryLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 1.f;
     leaf_prototype.midrib_fold_fraction = 0.2f;
-    leaf_prototype.longitudinal_curvature = 0.15f;
+    leaf_prototype.longitudinal_curvature = 0.75f;
     leaf_prototype.lateral_curvature = -0.35f;
     leaf_prototype.wave_period = 0.4f;
     leaf_prototype.wave_amplitude = 0.03f;
@@ -6046,7 +6046,7 @@ void PlantArchitecture::initializeSugarbeetShoots() {
     leaf_prototype.leaf_texture_file[0] = "SugarbeetLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.4f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
-    leaf_prototype.longitudinal_curvature = -0.2f;
+    leaf_prototype.longitudinal_curvature = -1.f;
     leaf_prototype.lateral_curvature = -0.4f;
     leaf_prototype.petiole_roll = 0.75f;
     leaf_prototype.wave_period.uniformDistribution(0.08f, 0.15f);
@@ -6132,7 +6132,7 @@ void PlantArchitecture::initializeTomatoShoots() {
     leaf_prototype.leaf_texture_file[0] = "TomatoLeaf_blade.png";
     leaf_prototype.leaf_aspect_ratio = 0.5f / 0.9031f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.45, -0.2f);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-2.25f, -1.f);
     leaf_prototype.lateral_curvature = -0.3f;
     leaf_prototype.wave_period = 0.35f;
     leaf_prototype.wave_amplitude = 0.08f;
@@ -6256,7 +6256,7 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     leaf_prototype.leaf_texture_file[0] = "TomatoLeaf_blade.png";
     leaf_prototype.leaf_aspect_ratio = 0.6f / 0.9031f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.3, -0.15f);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-1.5f, -0.75f);
     leaf_prototype.lateral_curvature = -0.8f;
     leaf_prototype.wave_period = 0.35f;
     leaf_prototype.wave_amplitude = 0.08f;
@@ -6391,7 +6391,7 @@ void PlantArchitecture::initializeWalnutTreeShoots() {
     leaf_prototype.leaf_texture_file[0] = "WalnutLeaf.png";
     leaf_prototype.leaf_aspect_ratio = 0.5f;
     leaf_prototype.midrib_fold_fraction = 0.15f;
-    leaf_prototype.longitudinal_curvature = -0.2f;
+    leaf_prototype.longitudinal_curvature = -1.f;
     leaf_prototype.lateral_curvature = 0.1f;
     leaf_prototype.wave_period.uniformDistribution(0.08, 0.15);
     leaf_prototype.wave_amplitude.uniformDistribution(0.02, 0.04);
@@ -6574,7 +6574,7 @@ void PlantArchitecture::initializeWheatShoots() {
     // its nominal width.
     leaf_prototype.leaf_aspect_ratio = 0.065f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
-    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.07, -0.04);
+    leaf_prototype.longitudinal_curvature.uniformDistribution(-0.28f, -0.16f);
     leaf_prototype.longitudinal_curvature_exponent = 3.f;
     leaf_prototype.flexibility_taper = 150.f;
     leaf_prototype.flexibility_aging = 11.f;
@@ -6726,7 +6726,7 @@ void PlantArchitecture::initializeCucumberShoots() {
         leaf_prototype.leaf_aspect_ratio = 0.8917609;
         leaf_prototype.leaf_offset = make_vec3(-0.2771165, 0.0, 0.0);
         leaf_prototype.leaf_texture_file[0] = "CucumberLeaf_0.png";
-        leaf_prototype.longitudinal_curvature.uniformDistribution(-0.25, 0.0);  // set by the species, judged
+        leaf_prototype.longitudinal_curvature.uniformDistribution(-1.25f, 0.f);  // set by the species, judged
         leaf_prototype.longitudinal_curvature_exponent = 4.0;
         leaf_prototype.midrib_fold_fraction.uniformDistribution(0.0, 0.15);  // set by the species, judged
         leaf_prototype.petiole_roll = 0.0;

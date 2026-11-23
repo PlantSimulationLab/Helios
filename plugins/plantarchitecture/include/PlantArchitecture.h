@@ -821,15 +821,22 @@ public:
     RandomParameter_float midrib_fold_fraction;
 
     // Parameters for leaf curvature
-    //! Leaf curvature factor along the longitudinal/length (x-direction). (+curves upward, -curved downward)
+    //! Angle in radians through which the blade bends along its length, from its base to its tip
+    /**
+     * The blade is bent along its midrib without being stretched: the midrib's tangent turns through this angle in all between the base and the tip, upward toward the blade's upper side when positive
+     * and downward when negative, and the midrib keeps the blade's length. How the turn is distributed along the blade is set by \ref longitudinal_curvature_exponent.
+     * \note Before v1.3.99 the blade was turned about its base rather than bent, which stretched it toward the tip, and a value gave roughly (exponent + 1) times the turn it gives now. Multiply a value
+     * set for an earlier version by longitudinal_curvature_exponent + 1 to keep the look of a gently curved blade; the library models were rescaled this way.
+     */
     RandomParameter_float longitudinal_curvature;
 
     //! How the longitudinal curvature is distributed along the blade, as the exponent of a power law in distance from the leaf base
     /**
-     * The deflection at a fraction \c x along the blade is <code>longitudinal_curvature * x^longitudinal_curvature_exponent</code>, so a larger exponent keeps the inner blade straight and concentrates
-     * the bending near the tip, while a smaller one spreads it evenly along the leaf. At the default of 4 the blade has reached only 6% of its tip deflection by its own midpoint, which suits a leaf that
-     * stays straight and then turns over at the end; a grass blade that arcs continuously along its whole length is better described by an exponent near 2.
-     * \note This changes where the curvature acts, not how much there is: the deflection at the tip is <code>longitudinal_curvature</code> whatever the exponent.
+     * The midrib's tangent has turned through <code>longitudinal_curvature * x^longitudinal_curvature_exponent</code> at a fraction \c x along the blade, so a larger exponent keeps the inner blade
+     * straight and concentrates the bending near the tip, while a smaller one spreads it evenly along the leaf. At the default of 4 the blade has turned through only 6% of its total angle by its own
+     * midpoint, which suits a leaf that stays straight and then turns over at the end; a grass blade that arcs continuously along its whole length is better described by an exponent near 2.
+     * \note This changes where the curvature acts, not how much there is: the tangent at the tip makes the angle <code>longitudinal_curvature</code> with the base whatever the exponent. The height
+     * of the tip does depend on the exponent, because a blade that bends late rises less: for a small curvature it is about longitudinal_curvature / (exponent + 1) of the blade's length.
      */
     RandomParameter_float longitudinal_curvature_exponent;
     //! Leaf curvature factor along the lateral/width (y-direction). (+curves upward, -curved downward)
@@ -2119,7 +2126,7 @@ public:
      * PlantArchitecture::writePlantStructureXML().
      * \param[in] petiole_index Index of the petiole within the internode.
      * \param[in] aspect_ratio Ratio of blade width to length; greater than zero.
-     * \param[in] longitudinal_curvature Curvature along the blade's length (+ up, - down).
+     * \param[in] longitudinal_curvature Angle in radians through which the blade bends along its length, from base to tip (+ up, - down); see LeafPrototype::longitudinal_curvature.
      * \param[in] lateral_curvature Curvature across the blade's width (+ up, - down).
      * \param[in] midrib_fold_fraction Fold along the midrib, from -1 (halves folded down shut) through 0 (flat) to 1 (halves folded up shut).
      */
@@ -5125,7 +5132,7 @@ public:
      * \param[in] node_index Index of the phytomer along the shoot.
      * \param[in] petiole_index Index of the petiole within the phytomer.
      * \param[in] aspect_ratio Ratio of blade width to length; greater than zero.
-     * \param[in] longitudinal_curvature Curvature along the blade's length (+ up, - down).
+     * \param[in] longitudinal_curvature Angle in radians through which the blade bends along its length, from base to tip (+ up, - down); see LeafPrototype::longitudinal_curvature.
      * \param[in] lateral_curvature Curvature across the blade's width (+ up, - down).
      * \param[in] midrib_fold_fraction Fold along the midrib, from -1 (halves folded down shut) through 0 (flat) to 1 (halves folded up shut).
      */
