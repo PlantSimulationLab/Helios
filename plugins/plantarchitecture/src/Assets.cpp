@@ -4810,18 +4810,30 @@ uint CucumberFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bo
 
 void CucumberMainPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
     TomatoPhytomerCreationFunction(phytomer, shoot_node_index, parent_shoot_node_index, shoot_max_nodes, plant_age);  // tomato's own, kept
-    // the drawn blade's relief - veins, blisters - as its bump map on every leaf of
-    // the phytomer, at the strength Heliades applies
+    // Each leaf is cut from one of the four photographed texture variants (initializeCucumberShoots()). A texture series cannot carry a class map
+    // (LeafPrototype::leaf_class_map_file), so each leaf is given its own variant's here: the class map of the photograph's tones, for LeafOptics
+    // (CucumberLeaf_<k>_classes.xml), and the bump map of its veins and blisters, at a strength of 0.6% of the texture's width.
     helios::Context *context = phytomer->parent_shoot_ptr->context_ptr;
-    std::vector<uint> leaf_UUIDs;
+    std::map<std::string, std::vector<uint>> leaf_UUIDs_by_texture;
     for (const auto &petiole: phytomer->leaf_objIDs) {
         for (uint objID: petiole) {
-            const std::vector<uint> UUIDs = context->getObjectPrimitiveUUIDs(objID);
-            leaf_UUIDs.insert(leaf_UUIDs.end(), UUIDs.begin(), UUIDs.end());
+            for (uint UUID: context->getObjectPrimitiveUUIDs(objID)) {
+                const std::string texture = context->getPrimitiveTextureFile(UUID);
+                if (!texture.empty()) {
+                    leaf_UUIDs_by_texture[texture].push_back(UUID);
+                }
+            }
         }
     }
-    if (!leaf_UUIDs.empty()) {
-        context->setPrimitiveBumpMap(leaf_UUIDs, helios::resolvePluginAsset("plantarchitecture", "assets/textures/CucumberLeaf_0_bump.png").string(), 12.58861f);
+    const std::string remedy = " The cucumber's leaf textures and their class maps are made together (Heliades heliades.plant.photo_blade); replace them together.";
+    for (const auto &[texture, UUIDs]: leaf_UUIDs_by_texture) {
+        const std::string stem = std::filesystem::path(texture).stem().string();
+        if (stem.rfind("CucumberLeaf_", 0) != 0) {
+            helios_runtime_error("ERROR (CucumberMainPhytomerCreationFunction): A cucumber leaf has the texture " + texture + ", which is not one of the CucumberLeaf_<k>.png variants whose class and bump maps this function gives." + remedy);
+        }
+        const std::string class_map = helios::resolvePluginAsset("plantarchitecture", "assets/textures/" + stem + "_classes.png").string();
+        PlantArchitecture::recordSpectralClassMap(context, UUIDs, texture, class_map, "leaf", remedy);
+        context->setPrimitiveBumpMap(UUIDs, helios::resolvePluginAsset("plantarchitecture", "assets/textures/" + stem + "_bump.png").string(), 6.144f);
     }
 }
 

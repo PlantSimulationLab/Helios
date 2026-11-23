@@ -636,3 +636,7 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+ab. Cucumber leaf photograph
+
+The cucumber leaf textures of the plant architecture plug-in (plugins/plantarchitecture/assets/textures/CucumberLeaf_0.png to CucumberLeaf_3.png, and the class maps CucumberLeaf_<k>_classes.png, their class definitions CucumberLeaf_<k>_classes.xml and the bump maps CucumberLeaf_<k>_bump.png made from them) are adapted from the photograph "Ruhland, Grenzstr. 3, Gurke am Spalier, Blatt, Sommer, 02.jpg" by Wilhelm Zimmerling (https://commons.wikimedia.org/wiki/File:Ruhland,_Grenzstr._3,_Gurke_am_Spalier,_Blatt,_Sommer,_02.jpg), licensed under the Creative Commons Attribution-ShareAlike 4.0 International license (https://creativecommons.org/licenses/by-sa/4.0/legalcode). The photograph was modified: the leaf was cut from its background, its lighting was removed, it was warped onto the model's blade outline in four symmetric variations (one of them mirrored about the midrib from each half), and the class maps and bump maps were computed from it (Heliades, heliades.plant.photo_blade). These files are licensed under the same Creative Commons Attribution-ShareAlike 4.0 International license, and any adaptation of them must be too. They are not covered by the Helios license.

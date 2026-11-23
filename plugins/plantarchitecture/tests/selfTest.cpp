@@ -638,6 +638,46 @@ DOCTEST_TEST_CASE("Plant Library - cucumber fruit and flowers carry their spectr
     DOCTEST_CHECK(context.getSpectralPalette("cucumber_flower").at(1).reflectivity_spectrum == "cucumber_petal_reflectivity");
 }
 
+DOCTEST_TEST_CASE("Plant Library - cucumber leaves are four photographed variants, each with its own tone classes and relief") {
+    // The leaf prototype draws from four texture variants of one photographed leaf, and a texture series cannot carry a class map, so the
+    // cucumber's phytomer creation function gives each leaf its own variant's: the class map of its tones (for LeafOptics) on every triangle
+    // that covers a class, and its bump map. A plant's leaves must use all four, and no leaf may carry another variant's maps.
+    Context context;
+    context.seedRandomGenerator(1);
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("cucumber");
+    const uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 60.f);
+    const std::vector<uint> leaf_objects = plantarchitecture.getPlantLeafObjectIDs(plantID);
+    DOCTEST_REQUIRE(!leaf_objects.empty());
+
+    std::set<std::string> variants;
+    size_t textured = 0;
+    size_t with_map = 0;
+    for (uint UUID: context.getObjectPrimitiveUUIDs(leaf_objects)) {
+        const std::string texture = context.getPrimitiveTextureFile(UUID);
+        if (texture.empty()) {
+            continue; // the petiolule has no texture
+        }
+        textured++;
+        const std::string stem = std::filesystem::path(texture).stem().string();
+        DOCTEST_REQUIRE(stem.rfind("CucumberLeaf_", 0) == 0);
+        variants.insert(stem);
+        DOCTEST_CHECK(std::filesystem::path(context.getPrimitiveNormalMapFile(UUID)).filename() == stem + "_bump.png");
+        DOCTEST_CHECK(context.getPrimitiveNormalMapKind(UUID) == NORMAL_MAP_BUMP);
+        if (context.doesPrimitiveDataExist(UUID, "spectral_class_map")) {
+            with_map++;
+            std::string class_map;
+            context.getPrimitiveData(UUID, "spectral_class_map", class_map);
+            DOCTEST_CHECK(std::filesystem::path(class_map).filename() == stem + "_classes.png");
+            DOCTEST_CHECK(std::filesystem::exists(std::filesystem::path(class_map).replace_extension(".xml")));
+        }
+    }
+    DOCTEST_CHECK(variants == std::set<std::string>{"CucumberLeaf_0", "CucumberLeaf_1", "CucumberLeaf_2", "CucumberLeaf_3"});
+    // only triangles at the margin that touch no class lack a class map
+    DOCTEST_CHECK(with_map >= 0.95 * double(textured));
+}
+
 DOCTEST_TEST_CASE("Plant Library - cucumber is lowered and leaned once its head reaches the wire") {
     // In high-wire cucumber the head is held at the wire, 3.5-4 m up, for the whole season: each time it reaches the wire the grower lowers the
     // stem and slides its hook along the wire, so the older, leafless stem comes to lie along the row near the floor while the stem as a whole

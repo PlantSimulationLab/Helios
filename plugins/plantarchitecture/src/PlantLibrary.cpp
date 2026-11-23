@@ -6723,9 +6723,13 @@ void PlantArchitecture::initializeCucumberShoots() {
         leaf_prototype.flexibility_aging_max = 4.0;
         leaf_prototype.flexibility_taper = 1.0;
         leaf_prototype.lateral_curvature.uniformDistribution(-0.15, 0.05);  // set by the species, judged
-        leaf_prototype.leaf_aspect_ratio = 0.8917609;
+        leaf_prototype.leaf_aspect_ratio = 0.8916016;
         leaf_prototype.leaf_offset = make_vec3(-0.2771165, 0.0, 0.0);
+        // Four variants of one photographed leaf (Wilhelm Zimmerling, Wikimedia Commons, CC BY-SA 4.0; see doc/Helios_ThirdPartyLicenses.txt), each warped
+        // onto the blade outline in its own symmetric variation of the same area: the leaf as photographed, each half mirrored, and the halves swapped
+        // (Heliades heliades.plant.photo_blade). Each has its class map of tones and its bump map, which CucumberMainPhytomerCreationFunction() gives its leaves.
         leaf_prototype.leaf_texture_file[0] = "CucumberLeaf_0.png";
+        leaf_prototype.leaf_texture_series[0] = {{"CucumberLeaf_0.png"}, {"CucumberLeaf_1.png"}, {"CucumberLeaf_2.png"}, {"CucumberLeaf_3.png"}};
         leaf_prototype.longitudinal_curvature.uniformDistribution(-1.25f, 0.f);  // set by the species, judged
         leaf_prototype.longitudinal_curvature_exponent = 4.0;
         leaf_prototype.midrib_fold_fraction.uniformDistribution(0.0, 0.15);  // set by the species, judged
@@ -6733,7 +6737,7 @@ void PlantArchitecture::initializeCucumberShoots() {
         leaf_prototype.petiolule_length = {{0, 0.085}};
         leaf_prototype.roll_fraction = 0.0;
         leaf_prototype.subdivisions = 10;  // set by the species, judged
-        leaf_prototype.unique_prototypes = 10;  // set by the species, judged
+        leaf_prototype.unique_prototypes = 12;  // set by the species, judged (10), raised to a whole number of the four texture variants
         leaf_prototype.wave_amplitude.uniformDistribution(0.0, 0.04);  // set by the species, judged
         leaf_prototype.wave_period = 0.3;  // set by the species, judged
 
