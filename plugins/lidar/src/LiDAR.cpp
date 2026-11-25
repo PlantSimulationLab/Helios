@@ -2348,8 +2348,10 @@ void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize) con
 
 void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize, const RGBcolor &point_color) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (LiDARcloud::addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (LiDARcloud::addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -2362,8 +2364,10 @@ void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize, con
 
 void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize, const char *color_value) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (LiDARcloud::addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (LiDARcloud::addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -2420,8 +2424,10 @@ void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize, con
 
 void LiDARcloud::addGridToVisualizer(Visualizer *visualizer) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (LiDARcloud::addGridToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (LiDARcloud::addGridToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -2442,7 +2448,6 @@ void LiDARcloud::addGridToVisualizer(Visualizer *visualizer) const {
         cmap.setRange(minval, maxval);
     }
 
-    vec3 origin;
     for (uint i = 0; i < getGridCellCount(); i++) {
 
         if (getCellLeafAreaDensity(i) == 0) {
@@ -2461,20 +2466,15 @@ void LiDARcloud::addGridToVisualizer(Visualizer *visualizer) const {
         RGBAcolor color = make_RGBAcolor(cmap.query(getCellLeafAreaDensity(i)), 0.5);
 
         visualizer->addVoxelByCenter(center, size, rotation, color, Visualizer::COORDINATES_CARTESIAN);
-
-        origin = origin + center / float(getGridCellCount());
     }
-
-    vec3 boxmin, boxmax;
-    getHitBoundingBox(boxmin, boxmax);
-
-    float R = 2.f * sqrt(pow(boxmax.x - boxmin.x, 2) + pow(boxmax.y - boxmin.y, 2) + pow(boxmax.z - boxmin.z, 2));
 }
 
 void LiDARcloud::addTrianglesToVisualizer(Visualizer *visualizer) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (LiDARcloud::addGeometryToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (LiDARcloud::addGeometryToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -2488,8 +2488,10 @@ void LiDARcloud::addTrianglesToVisualizer(Visualizer *visualizer) const {
 
 void LiDARcloud::addTrianglesToVisualizer(Visualizer *visualizer, uint gridcell) const {
 
-    if (printmessages && scans.size() == 0) {
-        std::cout << "WARNING (LiDARcloud::addTrianglesToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+    if (scans.size() == 0) {
+        if (printmessages) {
+            std::cout << "WARNING (LiDARcloud::addTrianglesToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        }
         return;
     }
 
@@ -2785,9 +2787,8 @@ std::vector<uint> LiDARcloud::addTrunkReconstructionToContext(Context *context) 
 
 void LiDARcloud::getHitBoundingBox(helios::vec3 &boxmin, helios::vec3 &boxmax) const {
 
-    if (printmessages && hits.size() == 0) {
-        std::cout << "WARNING (getHitBoundingBox): There are no hit points in the point cloud, cannot determine bounding box...skipping." << std::endl;
-        return;
+    if (hits.empty()) {
+        helios_runtime_error("ERROR (LiDARcloud::getHitBoundingBox): There are no hit points in the point cloud, so it has no bounding box.");
     }
 
     boxmin = make_vec3(1e6, 1e6, 1e6);
@@ -2820,9 +2821,8 @@ void LiDARcloud::getHitBoundingBox(helios::vec3 &boxmin, helios::vec3 &boxmax) c
 
 void LiDARcloud::getGridBoundingBox(helios::vec3 &boxmin, helios::vec3 &boxmax) const {
 
-    if (printmessages && getGridCellCount() == 0) {
-        std::cout << "WARNING (getGridBoundingBox): There are no grid cells in the point cloud, cannot determine bounding box...skipping." << std::endl;
-        return;
+    if (getGridCellCount() == 0) {
+        helios_runtime_error("ERROR (LiDARcloud::getGridBoundingBox): There are no grid cells in the point cloud, so the grid has no bounding box. Add a grid with addGrid() or addGridCell(), or load one from XML.");
     }
 
     boxmin = make_vec3(1e6, 1e6, 1e6);
@@ -5958,11 +5958,15 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio) {
                              "moving scan, call the calculateLeafArea overload that takes a G(theta) argument (it does not require triangulation).");
     }
 
-    if (printmessages && getScanCount() == 0) {
-        cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
+    if (getScanCount() == 0) {
+        if (printmessages) {
+            cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
+        }
         return;
-    } else if (printmessages && getHitCount() == 0) {
-        cout << "WARNING (triangulateHitPoints): No hit points have been added to the point cloud.  Skipping triangulation..." << endl;
+    } else if (getHitCount() == 0) {
+        if (printmessages) {
+            cout << "WARNING (triangulateHitPoints): No hit points have been added to the point cloud.  Skipping triangulation..." << endl;
+        }
         return;
     }
 
@@ -6212,11 +6216,15 @@ void LiDARcloud::triangulateHitPoints(float Lmax, float max_aspect_ratio, const 
                              "moving scan, call the calculateLeafArea overload that takes a G(theta) argument (it does not require triangulation).");
     }
 
-    if (printmessages && getScanCount() == 0) {
-        cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
+    if (getScanCount() == 0) {
+        if (printmessages) {
+            cout << "WARNING (triangulateHitPoints): No scans have been added to the point cloud.  Skipping triangulation..." << endl;
+        }
         return;
-    } else if (printmessages && getHitCount() == 0) {
-        cout << "WARNING (triangulateHitPoints): No hit points have been added to the point cloud.  Skipping triangulation..." << endl;
+    } else if (getHitCount() == 0) {
+        if (printmessages) {
+            cout << "WARNING (triangulateHitPoints): No hit points have been added to the point cloud.  Skipping triangulation..." << endl;
+        }
         return;
     }
 
@@ -9883,6 +9891,16 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         // completed) keeps the callback firing on every code path through the loop body, including the early
         // "no rays hit the bounding box" continue below; finish() after the loop clamps the bar to 100%.
         progress_bar.update(static_cast<size_t>(s));
+
+        // RETURN_MODE_MULTI reports every detected return, so a return cap stored on a MULTI scan has no effect. Say so
+        // rather than silently producing an unlimited-return cloud for a caller who set the cap expecting an N-echo
+        // instrument (which is RETURN_MODE_SINGLE + maxReturns N + SINGLE_RETURN_FIRST). Checked here, at scan time, so it
+        // sees the effective mode (including a per-call return-mode override) whatever order the setters were called in.
+        if (Npulse > 1 && scans.at(s).returnMode == RETURN_MODE_MULTI && scans.at(s).maxReturns != 1) {
+            scan_warnings.addWarning("multi_return_cap_ignored", "Scan #" + std::to_string(s) + " has maxReturns = " + std::to_string(scans.at(s).maxReturns) +
+                                                                     ", which is ignored because its return mode is RETURN_MODE_MULTI (every detected return is reported). To model an N-echo instrument, "
+                                                                     "use setScanReturnMode(RETURN_MODE_SINGLE) with setScanMaxReturns(N) and setScanSingleReturnSelection(SINGLE_RETURN_FIRST).");
+        }
 
         helios::vec3 scan_origin = getScanOrigin(s);
 

@@ -1295,41 +1295,40 @@ static __device__ __inline__ bool periodicHidden(const PerRayData &ray_data, uin
     return periodic_excluded_present != 0u && periodic_excluded[position] != 0 && (ray_data.tile_x != 0 || ray_data.tile_y != 0);
 }
 
-// A ray hit a periodic boundary face at distance face_t along it: set where it continues (periodic_hit, at periodic_hit_t from its
-// origin), wrapped to the opposite face. When rays track the periodic copy they are in, this also updates the copy, moves a ray that
-// is above (below) all repeated geometry and heading down (up), and can no longer return to the central copy, down (up) to it in one
-// step, and lets a ray that can hit nothing more continue from just beyond the face it left through, where it hits no face again and
-// leaves the scene as a ray that missed everything. Must match handlePeriodicBoundaryHit() in the OptiX 8 device code and
-// check_periodic_boundary() in the Vulkan shaders.
-static __device__ __inline__ void d_handlePeriodicBoundaryHit(PerRayData &ray_data, const optix::float3 &ray_origin, const optix::float3 &ray_direction, float face_t) {
+// A ray hit the periodic boundary face with UUID face_UUID at distance face_t along it: set where it continues (periodic_hit, at
+// periodic_hit_t from its origin), wrapped to the opposite face. When rays track the periodic copy they are in, this also updates the
+// copy, moves a ray that is above (below) all repeated geometry and heading down (up), and can no longer return to the central copy,
+// down (up) to it in one step, and lets a ray that can hit nothing more continue from just beyond the face it left through, where it
+// hits no face again and leaves the scene as a ray that missed everything. Must match handlePeriodicBoundaryHit() in the OptiX 8
+// device code and check_periodic_boundary() in the Vulkan shaders.
+static __device__ __inline__ void d_handlePeriodicBoundaryHit(PerRayData &ray_data, const optix::float3 &ray_origin, const optix::float3 &ray_direction, float face_t, uint face_UUID) {
     ray_data.hit_periodic_boundary = true;
     ray_data.periodic_hit_t = face_t;
     const optix::float3 hit_pos = ray_origin + face_t * ray_direction;
 
-    // Tolerance for identifying the face that was hit. The ray continues from exactly one period away, the same point on the
-    // opposite face: moving it any further would shift it off its straight path by that much at every wrap.
-    const float eps = 1e-5f;
     const optix::float2 xbounds = periodicXBounds();
     const optix::float2 ybounds = periodicYBounds();
     const float width_x = xbounds.y - xbounds.x;
     const float width_y = ybounds.y - ybounds.x;
 
+    // The ray continues from exactly one period away, the same point on the opposite face: moving it any further would shift it off
+    // its straight path by that much at every wrap. The axis comes from the face that was hit, not from where the ray reached it: at a
+    // corner the hit point is on both an x and a y face, and wrapping along the other axis would leave the ray on the face it hit, to
+    // be wrapped back and forth until the wrap limit. Faces come in (min, max) pairs numbered from bbox_UUID_base, and vertex 0 of a
+    // face minus vertex 0 of the other face of its pair points out of the domain.
+    const uint face = face_UUID - bbox_UUID_base;
+    const optix::float3 outward = bbox_vertices[optix::make_uint2(0, face)] - bbox_vertices[optix::make_uint2(0, face ^ 1u)];
+
     // Leaving through a low face moves the ray into the next periodic copy toward -x (or -y), and through a high face toward +x (or +y)
     int step_x = 0;
     int step_y = 0;
     ray_data.periodic_hit = hit_pos;
-    if (periodic_flag.x == 1 && fabs(hit_pos.x - xbounds.x) <= eps) { //-x facing boundary
-        ray_data.periodic_hit.x += width_x;
-        step_x = -1;
-    } else if (periodic_flag.x == 1 && fabs(hit_pos.x - xbounds.y) <= eps) { //+x facing boundary
-        ray_data.periodic_hit.x -= width_x;
-        step_x = 1;
-    } else if (periodic_flag.y == 1 && fabs(hit_pos.y - ybounds.x) <= eps) { //-y facing boundary
-        ray_data.periodic_hit.y += width_y;
-        step_y = -1;
-    } else if (periodic_flag.y == 1 && fabs(hit_pos.y - ybounds.y) <= eps) { //+y facing boundary
-        ray_data.periodic_hit.y -= width_y;
-        step_y = 1;
+    if (fabs(outward.x) > fabs(outward.y)) {
+        step_x = outward.x < 0.f ? -1 : 1;
+        ray_data.periodic_hit.x -= float(step_x) * width_x; // -x face → wrap to +x, +x face → wrap to -x
+    } else {
+        step_y = outward.y < 0.f ? -1 : 1;
+        ray_data.periodic_hit.y -= float(step_y) * width_y; // -y face → wrap to +y, +y face → wrap to -y
     }
 
     int tile_x = ray_data.tile_x + step_x;

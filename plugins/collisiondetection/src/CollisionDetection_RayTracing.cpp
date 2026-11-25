@@ -45,6 +45,15 @@
 
 using namespace helios;
 
+namespace {
+    // Capacity of the fixed-size CPU BVH traversal stacks (no per-ray heap allocation). An iterative DFS that pushes both
+    // children holds at most ~one node per tree level, so the capacity must exceed buildBVHRecursive's MAX_DEPTH (64). 128
+    // leaves generous headroom; the guarded push is a defensive backstop that must never actually trigger for a valid tree.
+    // It is at namespace scope rather than a constexpr local because the traversal lambdas use an explicit capture list, and
+    // MSVC rejects reading an uncaptured constexpr local there (C3493).
+    constexpr int TRAVERSAL_STACK_CAPACITY = 128;
+} // namespace
+
 #ifdef HELIOS_CUDA_AVAILABLE
 // GPU BVH node structure (must match the one in .cu file)
 struct GPUBVHNode {
@@ -104,7 +113,9 @@ CollisionDetection::HitResult CollisionDetection::castRayOnCurrentBVH(const vec3
     if (!bvh_nodes.empty()) {
         RayQuery query(origin, ray_direction, max_distance, target_UUIDs);
         RayTracingStats unused_stats;
-        return castRaySoATraversal(query, unused_stats);
+        HitResult result = castRaySoATraversal(query, unused_stats);
+        throwIfTraversalStackOverflowed("castRay");
+        return result;
     }
 
     // FALLBACK: Brute-force primitive testing (only when no BVH available or target UUIDs specified)
@@ -624,6 +635,7 @@ void CollisionDetection::castRaysSoA(const helios::vec3 *origins, const helios::
 #pragma omp atomic
         local_stats.bvh_nodes_visited += thread_stats.bvh_nodes_visited;
     }
+    throwIfTraversalStackOverflowed("castRaysSoA");
 
     if (local_stats.total_hits > 0) {
         local_stats.average_ray_distance /= local_stats.total_hits;
@@ -716,6 +728,7 @@ void CollisionDetection::castRaysSoA_packets(const helios::vec3 *origins, const 
 #pragma omp atomic
         local_stats.bvh_nodes_visited += thread_stats.bvh_nodes_visited;
     }
+    throwIfTraversalStackOverflowed("castRaysSoA_packets");
 
     if (local_stats.total_hits > 0) {
         local_stats.average_ray_distance /= local_stats.total_hits;
@@ -761,9 +774,17 @@ void CollisionDetection::castPacketSoATraversal(const helios::vec3 *origins, con
     }
 
     // Fixed-size shared traversal stack (BVH depth bounded by buildBVHRecursive MAX_DEPTH).
-    constexpr int STACK_CAPACITY = 128;
-    uint32_t node_stack[STACK_CAPACITY];
+    uint32_t node_stack[TRAVERSAL_STACK_CAPACITY];
     int stack_size = 0;
+    // A full stack can only come from a malformed tree. Dropping the child would silently lose its primitives, so record the
+    // overflow for the caller to raise once the (possibly parallel) traversal is over, as the GPU kernels do.
+    auto pushTraversalNode = [this](uint32_t *stack, int &size, uint32_t node) {
+        if (size < TRAVERSAL_STACK_CAPACITY) {
+            stack[size++] = node;
+        } else {
+            traversal_stack_overflowed.store(true, std::memory_order_relaxed);
+        }
+    };
     node_stack[stack_size++] = 0; // root
 
     while (stack_size > 0) {
@@ -837,16 +858,12 @@ void CollisionDetection::castPacketSoATraversal(const helios::vec3 *origins, con
                     first = right_child;
                     second = left_child;
                 }
-                if (stack_size < STACK_CAPACITY)
-                    node_stack[stack_size++] = second; // farther pushed first (popped last)
-                if (stack_size < STACK_CAPACITY)
-                    node_stack[stack_size++] = first; // nearer pushed last (popped first)
+                pushTraversalNode(node_stack, stack_size, second); // farther pushed first (popped last)
+                pushTraversalNode(node_stack, stack_size, first); // nearer pushed last (popped first)
             } else if (left_valid) {
-                if (stack_size < STACK_CAPACITY)
-                    node_stack[stack_size++] = left_child;
+                pushTraversalNode(node_stack, stack_size, left_child);
             } else if (right_valid) {
-                if (stack_size < STACK_CAPACITY)
-                    node_stack[stack_size++] = right_child;
+                pushTraversalNode(node_stack, stack_size, right_child);
             }
         }
     }
@@ -923,6 +940,7 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysSoA(const
 #pragma omp atomic
         stats.bvh_nodes_visited += local_stats.bvh_nodes_visited;
     }
+    throwIfTraversalStackOverflowed("castRays");
 
     if (stats.total_hits > 0) {
         stats.average_ray_distance /= stats.total_hits;
@@ -936,6 +954,12 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysSoA(const
 #include "CollisionDetection.h"
 
 using namespace helios;
+
+void CollisionDetection::throwIfTraversalStackOverflowed(const std::string &caller) {
+    if (traversal_stack_overflowed.exchange(false)) {
+        helios_runtime_error("ERROR (CollisionDetection::" + caller + "): BVH traversal stack overflow on the CPU - tree depth exceeded the traversal stack capacity (128). This must not happen for a valid SAH tree; check the BVH build.");
+    }
+}
 
 CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQuery &query, RayTracingStats &stats) {
     HitResult result;
@@ -951,12 +975,18 @@ CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQ
     }
     const vec3 ray_direction = query.direction / direction_magnitude;
 
-    // Fixed-size traversal stack (no per-ray heap allocation). An iterative DFS that pushes both children holds at most
-    // ~one node per tree level, so the capacity must exceed buildBVHRecursive's MAX_DEPTH (64). 128 leaves generous
-    // headroom; the guarded push below is a defensive backstop that must never actually trigger for a valid tree.
-    constexpr int STACK_CAPACITY = 128;
-    uint32_t node_stack[STACK_CAPACITY];
+    // Fixed-size traversal stack (no per-ray heap allocation); see TRAVERSAL_STACK_CAPACITY.
+    uint32_t node_stack[TRAVERSAL_STACK_CAPACITY];
     int stack_size = 0;
+    // A full stack can only come from a malformed tree. Dropping the child would silently lose its primitives, so record the
+    // overflow for the caller to raise once the (possibly parallel) traversal is over, as the GPU kernels do.
+    auto pushTraversalNode = [this](uint32_t *stack, int &size, uint32_t node) {
+        if (size < TRAVERSAL_STACK_CAPACITY) {
+            stack[size++] = node;
+        } else {
+            traversal_stack_overflowed.store(true, std::memory_order_relaxed);
+        }
+    };
     node_stack[stack_size++] = 0; // Start from root
 
     // Dense, BVH-leaf-ordered cache must be in lockstep with the SoA leaves' primitive ranges; fall back to the
@@ -1031,16 +1061,12 @@ CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQ
                     first = right_child;
                     second = left_child;
                 }
-                if (stack_size < STACK_CAPACITY)
-                    node_stack[stack_size++] = second; // farther child pushed first (popped last)
-                if (stack_size < STACK_CAPACITY)
-                    node_stack[stack_size++] = first; // nearer child pushed last (popped first)
+                pushTraversalNode(node_stack, stack_size, second); // farther child pushed first (popped last)
+                pushTraversalNode(node_stack, stack_size, first); // nearer child pushed last (popped first)
             } else if (left_valid) {
-                if (stack_size < STACK_CAPACITY)
-                    node_stack[stack_size++] = left_child;
+                pushTraversalNode(node_stack, stack_size, left_child);
             } else if (right_valid) {
-                if (stack_size < STACK_CAPACITY)
-                    node_stack[stack_size++] = right_child;
+                pushTraversalNode(node_stack, stack_size, right_child);
             }
         }
     }

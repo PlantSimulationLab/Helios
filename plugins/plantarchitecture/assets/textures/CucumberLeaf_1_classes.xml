@@ -1,0 +1,16 @@
+<helios>
+  <!-- Class definitions of CucumberLeaf_1_classes.png: the tones of a photographed leaf,
+       dark to light (heliades.plant.photo_blade). visible_reflectance_scale multiplies
+       the leaf's reflectance below 700 nm, blending to 1 at 750 nm; chlorophyll_scale
+       is 1. -->
+  <leaf_class_map provenance="Wilhelm Zimmerling, Wikimedia Commons, https://commons.wikimedia.org/wiki/File:Ruhland,_Grenzstr._3,_Gurke_am_Spalier,_Blatt,_Sommer,_02.jpg (CC BY-SA 4.0), photograph sha256 849ab699711b via heliades.plant.photo_blade">
+    <class id="1" chlorophyll_scale="1" visible_reflectance_scale="0.6928"/>
+    <class id="2" chlorophyll_scale="1" visible_reflectance_scale="0.8719"/>
+    <class id="3" chlorophyll_scale="1" visible_reflectance_scale="0.9531"/>
+    <class id="4" chlorophyll_scale="1" visible_reflectance_scale="1.0057"/>
+    <class id="5" chlorophyll_scale="1" visible_reflectance_scale="1.0491"/>
+    <class id="6" chlorophyll_scale="1" visible_reflectance_scale="1.0955"/>
+    <class id="7" chlorophyll_scale="1" visible_reflectance_scale="1.1590"/>
+    <class id="8" chlorophyll_scale="1" visible_reflectance_scale="1.3336"/>
+  </leaf_class_map>
+</helios>

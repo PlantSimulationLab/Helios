@@ -2836,6 +2836,45 @@ DOCTEST_TEST_CASE("ParameterOptimization write_result_to_file") {
     std::remove(tmpfile.c_str());
 }
 
+DOCTEST_TEST_CASE("ParameterOptimization write_result_to_file with Bayesian optimization") {
+    // Bayesian optimization was the one algorithm not given the result file path, so it validated the path and then never
+    // wrote the file, with no message.
+    ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}, {"y", {0.f, -5.f, 5.f}}};
+    const std::string result_file = "paramopt_test_bayesian_result.csv";
+    std::remove(result_file.c_str());
+
+    ParameterOptimization popt;
+    BayesianOptimization bo;
+    bo.max_evaluations = 12;
+    bo.initial_samples = 6;
+    bo.acquisition_samples = 200;
+    bo.random_seed = 7;
+    popt.setAlgorithm(bo);
+    popt.write_result_to_file = result_file;
+
+    const ParameterOptimization::Result result = popt.run(preset_quadratic, params);
+
+    std::ifstream file(result_file);
+    DOCTEST_REQUIRE(file.is_open());
+    std::string line;
+    std::getline(file, line);
+    DOCTEST_CHECK(line == "parameter,value,min,max");
+    std::map<std::string, float> written;
+    while (std::getline(file, line)) {
+        if (line.empty()) {
+            continue;
+        }
+        const size_t comma = line.find(',');
+        written[line.substr(0, comma)] = std::stof(line.substr(comma + 1));
+    }
+    file.close();
+    std::remove(result_file.c_str());
+
+    DOCTEST_REQUIRE(written.size() == 2);
+    DOCTEST_CHECK(written.at("x") == doctest::Approx(result.parameters.at("x").value).epsilon(1e-4));
+    DOCTEST_CHECK(written.at("y") == doctest::Approx(result.parameters.at("y").value).epsilon(1e-4));
+}
+
 // Test 74: write_progress_to_file produces valid CSV
 DOCTEST_TEST_CASE("ParameterOptimization write_progress_to_file") {
     ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}, {"y", {0.f, -5.f, 5.f}}};

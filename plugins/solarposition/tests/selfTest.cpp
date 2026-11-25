@@ -2014,3 +2014,32 @@ TEST_CASE("SolarPosition sun azimuth does not depend on the clock the time is gi
     DOCTEST_CHECK(sun_kiritimati.getSunElevation() > 0.f);
     DOCTEST_CHECK(sun_kiritimati.getSunAzimuth() > float(M_PI));
 }
+
+TEST_CASE("SolarPosition turbidity calibration leaves the atmospheric conditions unchanged") {
+    // calibrateTurbidityFromTimeseries() is a const method, but its solver set the atmospheric conditions in the Context on every
+    // iteration, so afterwards the Context held a pressure of 101325 Pa, a temperature of 300 K, a humidity of 0.5 and the last
+    // trial turbidity in place of what the user had set, and every later flux used them.
+    Context context;
+    SolarPosition solarposition(7, 40.125f, 105.2369f, &context);
+    context.loadTabularTimeseriesData("lib/testdata/cimis.csv", {"CIMIS"}, ",");
+
+    const float pressure = 95000.f;
+    const float temperature = 285.f;
+    const float humidity = 0.3f;
+    const float turbidity = 0.08f;
+    solarposition.setAtmosphericConditions(pressure, temperature, humidity, turbidity);
+
+    float calibrated = 0;
+    {
+        capture_cerr cerr_buffer; // the solver may report fzero warnings
+        calibrated = solarposition.calibrateTurbidityFromTimeseries("net_radiation");
+    }
+    DOCTEST_CHECK(calibrated > 0.f);
+
+    float pressure_after, temperature_after, humidity_after, turbidity_after;
+    solarposition.getAtmosphericConditions(pressure_after, temperature_after, humidity_after, turbidity_after);
+    DOCTEST_CHECK(pressure_after == doctest::Approx(pressure));
+    DOCTEST_CHECK(temperature_after == doctest::Approx(temperature));
+    DOCTEST_CHECK(humidity_after == doctest::Approx(humidity));
+    DOCTEST_CHECK(turbidity_after == doctest::Approx(turbidity));
+}

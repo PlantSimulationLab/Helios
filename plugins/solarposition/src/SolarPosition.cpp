@@ -378,11 +378,10 @@ float SolarPosition::turbidityResidualFunction(float turbidity, std::vector<floa
     // Clamp turbidity to minimum positive value (optimization can try negative values)
     float turbidity_clamped = std::max(1e-5f, turbidity);
 
-    // Use new API: set atmospheric conditions, then get flux
-    // Note: const_cast is needed here because this is an optimization callback that needs to modify internal state
-    auto *mutable_model = const_cast<SolarPosition *>(solarpositionmodel);
-    mutable_model->setAtmosphericConditions(pressure, temperature, humidity, turbidity_clamped);
-    float flux_model = mutable_model->getSolarFlux() * cosf(mutable_model->getSunZenith());
+    // The flux for the trial turbidity is computed from the given conditions directly. Setting them with setAtmosphericConditions() would write them to the
+    // Context, replacing the conditions the user had set for every later flux calculation.
+    const BroadbandSolarFlux flux = solarpositionmodel->computeBroadbandSolarFlux(pressure, temperature, humidity, turbidity_clamped);
+    const float flux_model = globalFluxNormalToSun(flux.direct_PAR + flux.direct_NIR, flux.diffuse_PAR + flux.diffuse_NIR, flux.cos_zenith) * cosf(solarpositionmodel->getSunZenith());
     return flux_model - flux_target;
 }
 

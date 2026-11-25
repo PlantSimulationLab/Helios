@@ -285,6 +285,11 @@ enum ScanMode {
  * = 1) two surfaces falling within the pulse range-resolution merge into one blended return at an intermediate range,
  * reproducing the "ghost"/"mixed pixel" point that a real single-return instrument records at an edge. A single ray per
  * pulse always produces an idealized exact intersection regardless of mode.
+ *
+ * \ref RETURN_MODE_MULTI is the idealized instrument with no return limit; it ignores \ref ScanMetadata::maxReturns. A
+ * real discrete-return instrument that records up to N echoes per pulse is modeled with \ref RETURN_MODE_SINGLE,
+ * \ref ScanMetadata::maxReturns = N and \ref SINGLE_RETURN_FIRST, which reports the N nearest of the returns
+ * \ref RETURN_MODE_MULTI resolves (with \ref ScanMetadata::recordPartialMisses false the two records are otherwise identical).
  */
 enum ReturnMode {
     //! Report every detected return above the detection threshold (discrete multi-return, no return limit)
@@ -502,9 +507,10 @@ struct ScanMetadata {
     /**
      * Used only when \ref returnMode is \ref RETURN_MODE_SINGLE. 1 = classic single-return (the default), 2 = dual-return,
      * N = N-return; the kept returns are the subset chosen by \ref singleReturnSelection, always ordered nearest-first.
-     * Ignored when \ref returnMode is \ref RETURN_MODE_MULTI (which reports every detected return), and also ignored when
-     * \ref singleReturnSelection is \ref SINGLE_RETURN_STRONGEST_PLUS_LAST (which intrinsically reports 1 or 2 returns).
-     * Must be >= 1.
+     * Ignored when \ref returnMode is \ref RETURN_MODE_MULTI (which reports every detected return; synthetic scanning prints a
+     * warning when this is not 1 in that mode), and also ignored when \ref singleReturnSelection is
+     * \ref SINGLE_RETURN_STRONGEST_PLUS_LAST (which intrinsically reports 1 or 2 returns). An N-echo discrete-return
+     * instrument is \ref RETURN_MODE_SINGLE with maxReturns N and \ref SINGLE_RETURN_FIRST. Must be >= 1.
      * \note This is only used for synthetic scan generation.
      */
     int maxReturns = 1;
@@ -2254,6 +2260,8 @@ public:
     /**
      * \param[in] scanID ID of scan.
      * \param[in] maxReturns Maximum returns per pulse (must be >= 1): 1 = single-return, 2 = dual-return, N = N-return. The kept returns are the subset chosen by \ref setScanSingleReturnSelection. Ignored in \ref RETURN_MODE_MULTI.
+     * \note The cap applies only in \ref RETURN_MODE_SINGLE. To model a discrete-return instrument that records up to N echoes per pulse, set \ref RETURN_MODE_SINGLE with maxReturns N and \ref SINGLE_RETURN_FIRST, which reports the N
+     * nearest of the returns \ref RETURN_MODE_MULTI would resolve. If a scan is in \ref RETURN_MODE_MULTI and maxReturns is not 1 when \ref syntheticScan runs, the cap is ignored and a warning is printed.
      */
     void setScanMaxReturns(uint scanID, int maxReturns);
 
@@ -2863,6 +2871,7 @@ public:
 
     //! Form an axis-aligned bounding box for all hit points in the point cloud
     /**
+     * \note An error is raised if the point cloud has no hit points.
      * \param[out] boxmin Coordinates of the bounding box vertex in the (-x,-y,-z) direction.
      * \param[out] boxmax Coordinates of the bounding box vertex in the (+x,+y,+z) direction.
      */
@@ -2870,6 +2879,7 @@ public:
 
     //! Form an axis-aligned bounding box for all grid cells in the point cloud
     /**
+     * \note An error is raised if the point cloud has no grid cells.
      * \param[out] boxmin Coordinates of the bounding box vertex in the (-x,-y,-z) direction.
      * \param[out] boxmax Coordinates of the bounding box vertex in the (+x,+y,+z) direction.
      */

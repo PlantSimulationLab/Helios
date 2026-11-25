@@ -859,11 +859,13 @@ void AerialLiDARcloud::syntheticScan(helios::Context *context, const char *xml_f
         size_t N = scandensity * extent.x * extent.y;
 
         if (extent.x <= 0 || extent.y <= 0) {
-            std::cerr << "ERROR (syntheticScan): The scan extent specified in the metadata file " << xml_file << " must be greater than zero." << std::endl;
-            exit(EXIT_FAILURE);
+            std::ostringstream message;
+            message << "ERROR (syntheticScan): The scan extent specified in the metadata file " << xml_file << " must be greater than zero.";
+            helios::helios_runtime_error(message.str());
         } else if (scandensity <= 0) {
-            std::cerr << "ERROR (syntheticScan): The scan density specified in the metadata file " << xml_file << " must be greater than zero." << std::endl;
-            exit(EXIT_FAILURE);
+            std::ostringstream message;
+            message << "ERROR (syntheticScan): The scan density specified in the metadata file " << xml_file << " must be greater than zero.";
+            helios::helios_runtime_error(message.str());
         }
 
         assert(N > 0);

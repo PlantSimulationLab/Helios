@@ -373,7 +373,9 @@ photo_model.run();
 
    \f$R_d = R\sqrt{T_s-273}\,\mathrm{exp}\left(-E_R/T_s\right)\f$,
 
-   where \f$R\f$ and \f$E_R\f$ are parameters, and temperature is in Kelvin.
+   where \f$R\f$ and \f$E_R\f$ are parameters, and temperature is in Kelvin. The expression falls to zero at 273 K and is not defined below it, so \f$R_d\f$ is taken as zero at or below 273 K.
+
+   Because \f$A\f$ is linear in \f$C_i\f$, it is solved together with the CO<sub>2</sub> supply through the stomata and boundary layer, \f$A = g_C\,(C_a - C_i)\f$, exactly rather than iteratively.
 
    \subsection CO2Response CO2 Response Function
 

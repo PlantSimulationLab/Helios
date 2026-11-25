@@ -989,7 +989,7 @@ PhytomerParameters::PhytomerParameters(std::minstd_rand0 *generator) {
     peduncle.roll.initialize(0, generator);
     peduncle.yaw.initialize(0, generator);
     peduncle.curvature.initialize(0, generator);
-    petiole.color = RGB::forestgreen;
+    peduncle.color = RGB::forestgreen;
     peduncle.length_segments = 3;
     peduncle.radial_subdivisions = 7;
 
@@ -1449,7 +1449,7 @@ helios::vec3 Phytomer::getLeafBasePosition(const uint petiole_index, const uint 
 void Phytomer::setVegetativeBudState(BudState state) {
     for (auto &petiole: axillary_vegetative_buds) {
         for (auto &bud: petiole) {
-            bud.state = state;
+            setVegetativeBudState(state, bud);
         }
     }
 }
@@ -1465,6 +1465,11 @@ void Phytomer::setVegetativeBudState(BudState state, uint petiole_index, uint bu
 }
 
 void Phytomer::setVegetativeBudState(BudState state, VegetativeBud &vbud) {
+    if (state == BUD_ACTIVE && vbud.state != BUD_ACTIVE) {
+        // The bud's clock toward breaking into a shoot starts now, whether the bud was just created or has just been woken from dormancy, and it gets a break time of its own when the clock is next read
+        vbud.time_counter = 0;
+        vbud.break_time_drawn = false;
+    }
     vbud.state = state;
 }
 
@@ -1495,6 +1500,10 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
         return;
     } else if (state == BUD_DORMANT || state == BUD_ACTIVE) {
         fbud.state = state;
+        if (state == BUD_ACTIVE) {
+            // The bud's clock toward its first reproductive stage starts now, so this is where its place in the plant's flowering window is decided
+            fbud.flowering_delay = plantarchitecture_ptr->samplePhenologicalDelay(plantarchitecture_ptr->plant_instances.at(this->plantID).flowering_duration);
+        }
         return;
     }
 
@@ -1538,6 +1547,9 @@ void Phytomer::setFloralBudState(BudState state, FloralBud &fbud) {
 
         updateInflorescence(fbud);
         fbud.time_counter = 0;
+        if (fbud.state == BUD_FRUITING) {
+            fbud.fruit_maturity_delay = plantarchitecture_ptr->samplePhenologicalDelay(plantarchitecture_ptr->plant_instances.at(this->plantID).fruit_maturity_duration);
+        }
         // A maturity period of zero is an inflorescence that is already full size when it forms.
         if (fbud.state == BUD_FRUITING && fbud.dd_to_inflorescence_maturity != 0.f) {
             setInflorescenceScaleFraction(fbud, 0.25);
@@ -2218,10 +2230,7 @@ int Shoot::appendPhytomerInternal(float internode_radius, float internode_length
     return (int) phytomers.size() - 1;
 }
 
-void Shoot::breakDormancy() {
-    isdormant = false;
-
-    int phytomer_ind = 0;
+void Shoot::wakeFloralBuds() {
     for (auto &phytomer: phytomers) {
         for (auto &petiole: phytomer->floral_buds) {
             for (auto &fbud: petiole) {
@@ -2234,6 +2243,20 @@ void Shoot::breakDormancy() {
                 fbud.time_counter = 0;
             }
         }
+    }
+    floral_buds_awake = true;
+}
+
+void Shoot::breakDormancy() {
+    // advanceTime() wakes the floral buds when the plant's dormancy breaks, which can be before this shoot breaks vegetative dormancy. Waking them a second time would restart the clocks of buds already on
+    // their way to flowering.
+    if (!isdormant || !floral_buds_awake) {
+        wakeFloralBuds();
+    }
+    isdormant = false;
+
+    int phytomer_ind = 0;
+    for (auto &phytomer: phytomers) {
         for (auto &petiole: phytomer->axillary_vegetative_buds) {
             for (auto &vbud: petiole) {
                 if (vbud.state != BUD_DEAD) {
@@ -2263,6 +2286,8 @@ void Shoot::breakDormancy() {
 
 void Shoot::makeDormant() {
     isdormant = true;
+    floral_buds_awake = false;
+    budbreak_delay = 0;
     dormancy_cycles++;
     nodes_this_season = 0;
 
@@ -5243,6 +5268,7 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
         own_rest.appended_vertices = own_state->second.rest_appended_vertices;
         own_rest.subdivisions_x = own_state->second.shape.subdivisions_x;
         own_rest.subdivisions_y = own_state->second.shape.subdivisions_y;
+        own_rest.lattice_frame_offset = own_state->second.lattice_frame_offset;
         rest_ptr = &own_rest;
     } else {
         const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
@@ -5311,8 +5337,9 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
     const vec3 world_gravity = make_vec3(0.f, 0.f, -1.f);
     const vec3 prototype_gravity = make_vec3(cross(column_y, column_z) * world_gravity, cross(column_z, column_x) * world_gravity, cross(column_x, column_y) * world_gravity) / determinant;
 
+    // The blade is held where its petiole meets it, the origin it was built about, which in the leaf object's own frame is minus the frame offset (see LeafRestGeometry::lattice_frame_offset).
     std::vector<vec3> deformed_prototype_frame =
-            deformLeafLattice(rest.vertices, rest.subdivisions_x, rest.subdivisions_y, current_scale, mature_scale, flexibility, phytomer_parameters.leaf.prototype.flexibility_taper.val(), prototype_gravity);
+            deformLeafLattice(rest.vertices, rest.subdivisions_x, rest.subdivisions_y, current_scale, mature_scale, flexibility, phytomer_parameters.leaf.prototype.flexibility_taper.val(), prototype_gravity, -rest.lattice_frame_offset);
     for (vec3 &vertex: deformed_prototype_frame) {
         vertex = vertex / current_scale;
     }
@@ -5349,68 +5376,6 @@ void Phytomer::deformLeafUnderSelfWeight(uint petiole_index, uint leaf_index) {
 
     context_ptr->setPolymeshObjectVertices(objID_leaf, deformed_global);
     last_scale = deflection_state;
-}
-
-//! Cumulative arclength at each node of a polyline
-static std::vector<float> polylineNodeArclengths(const std::vector<vec3> &polyline) {
-    std::vector<float> arclength(polyline.size(), 0.f);
-    for (size_t node = 1; node < polyline.size(); node++) {
-        arclength.at(node) = arclength.at(node - 1) + (polyline.at(node) - polyline.at(node - 1)).magnitude();
-    }
-    return arclength;
-}
-
-//! Index of the segment of a polyline containing a given arclength, for a polyline of at least two nodes
-static size_t polylineSegmentAtArclength(const std::vector<float> &node_arclength, float arclength) {
-    size_t segment = 0;
-    while (segment + 2 < node_arclength.size() && arclength > node_arclength.at(segment + 1)) {
-        segment++;
-    }
-    return segment;
-}
-
-//! Point at a given arclength along a polyline, for a polyline of at least two nodes
-static vec3 polylinePointAtArclength(const std::vector<vec3> &polyline, const std::vector<float> &node_arclength, float arclength) {
-    const size_t segment = polylineSegmentAtArclength(node_arclength, arclength);
-    const float segment_length = node_arclength.at(segment + 1) - node_arclength.at(segment);
-    const float t = segment_length > 0.f ? std::clamp((arclength - node_arclength.at(segment)) / segment_length, 0.f, 1.f) : 0.f;
-    return polyline.at(segment) + t * (polyline.at(segment + 1) - polyline.at(segment));
-}
-
-//! Unit tangent at a given arclength along a polyline, blended linearly between the tangents at its nodes so that it turns continuously along the curve rather than jumping at each node
-static vec3 polylineTangentAtArclength(const std::vector<vec3> &polyline, const std::vector<float> &node_arclength, float arclength) {
-    const size_t segment = polylineSegmentAtArclength(node_arclength, arclength);
-    auto segmentDirection = [&polyline](size_t s) { return normalize(polyline.at(s + 1) - polyline.at(s)); };
-    auto nodeTangent = [&](size_t node) {
-        if (node == 0) {
-            return segmentDirection(0);
-        } else if (node + 1 == polyline.size()) {
-            return segmentDirection(node - 1);
-        }
-        const vec3 sum = segmentDirection(node - 1) + segmentDirection(node);
-        return sum.magnitude() > 1e-6f ? normalize(sum) : segmentDirection(node);
-    };
-    const float segment_length = node_arclength.at(segment + 1) - node_arclength.at(segment);
-    const float t = segment_length > 0.f ? std::clamp((arclength - node_arclength.at(segment)) / segment_length, 0.f, 1.f) : 0.f;
-    const vec3 blended = (1.f - t) * nodeTangent(segment) + t * nodeTangent(segment + 1);
-    return blended.magnitude() > 1e-6f ? normalize(blended) : segmentDirection(segment);
-}
-
-//! Arclength along a polyline of the point on it closest to a given point, for a polyline of at least two nodes
-static float polylineArclengthOfClosestPoint(const std::vector<vec3> &polyline, const std::vector<float> &node_arclength, const vec3 &point) {
-    float nearest_distance = std::numeric_limits<float>::max();
-    float nearest_arclength = 0.f;
-    for (size_t segment = 0; segment + 1 < polyline.size(); segment++) {
-        const vec3 span = polyline.at(segment + 1) - polyline.at(segment);
-        const float span_squared = span * span;
-        const float t = span_squared > 0.f ? std::clamp(((point - polyline.at(segment)) * span) / span_squared, 0.f, 1.f) : 0.f;
-        const float distance = (point - (polyline.at(segment) + t * span)).magnitude();
-        if (distance < nearest_distance) {
-            nearest_distance = distance;
-            nearest_arclength = node_arclength.at(segment) + t * (node_arclength.at(segment + 1) - node_arclength.at(segment));
-        }
-    }
-    return nearest_arclength;
 }
 
 void Phytomer::recordPetioleRestShape(uint petiole_index) {
@@ -6277,6 +6242,15 @@ void Phytomer::reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeV
     const LeafShapeValues current = getLeafShape(petiole_index, leaf_index);
     const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
 
+    // A blade laid along a prescribed midrib takes its new cross-section along that midrib. Its stations are laid out in the proportions of the rest midrib's segments, which the longitudinal curvature sets,
+    // so that cannot change under it.
+    const bool has_midrib = hasLeafMidrib(petiole_index, leaf_index);
+    if (has_midrib && (shape_requested.longitudinal_curvature != current.longitudinal_curvature || shape_requested.longitudinal_curvature_exponent != current.longitudinal_curvature_exponent)) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::reshapeLeaf): The blade of leaf object " + std::to_string(objID_leaf) +
+                             " is laid along a prescribed midrib, which takes the place of its longitudinal curvature, so the curvature cannot be changed. Call clearLeafMidrib() first, or keep the "
+                             "longitudinal_curvature and longitudinal_curvature_exponent the leaf has.");
+    }
+
     LeafShapeValues shape = shape_requested;
     shape.subdivisions_y = reshapedLeafSubdivisionsY(petiole_index, leaf_index, shape_requested, "PlantArchitecture::Phytomer::reshapeLeaf");
 
@@ -6462,7 +6436,11 @@ void Phytomer::reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeV
     state.reshaped = true;
     state.lattice_frame_offset = lattice_frame_offset;
     state.deformable = deformable;
-    if (deformable) {
+    if (has_midrib) {
+        // The petiolule's rest shape and the midrib are the leaf's own and are kept; the blade is laid along the midrib again from its new rest shape
+        state.rest_vertices = lattice;
+        layLeafAlongRecordedMidrib(petiole_index, leaf_index);
+    } else if (deformable) {
         state.rest_vertices = lattice;
         state.rest_appended_vertices = rest_appended_vertices;
         leaf_last_deformed_scale.at(petiole_index).at(leaf_index) = -1.f;
@@ -6474,6 +6452,462 @@ void Phytomer::reshapeLeaf(uint petiole_index, uint leaf_index, const LeafShapeV
 
     context_ptr->computePolymeshObjectVertexNormals(objID_leaf, 180.f);
     plantarchitecture_ptr->invalidateOrganIndex();
+}
+
+namespace {
+
+    //! A leaf object's transformation from its own frame to world coordinates, with the inverse of its linear part
+    /**
+     * A leaf is only ever scaled uniformly, rotated and translated, so its transformation is a similarity with a positive determinant, and directions and right-handed angles keep their sense through it.
+     */
+    struct LeafObjectFrame {
+        float matrix[16];
+        float inverse_linear[9];
+
+        LeafObjectFrame(helios::Context *context_ptr, uint objID_leaf, const char *caller) {
+            context_ptr->getObjectTransformationMatrix(objID_leaf, matrix);
+            const vec3 column_x = make_vec3(matrix[0], matrix[4], matrix[8]);
+            const vec3 column_y = make_vec3(matrix[1], matrix[5], matrix[9]);
+            const vec3 column_z = make_vec3(matrix[2], matrix[6], matrix[10]);
+            const float determinant = column_x * cross(column_y, column_z);
+            if (!(determinant > 0.f)) {
+                helios_runtime_error(std::string("ERROR (") + caller + "): The transformation of leaf object " + std::to_string(objID_leaf) +
+                                     " is singular or mirrored, so its blade cannot be laid along a midrib.");
+            }
+            // Rows of the inverse are the cross products of the columns over the determinant
+            const vec3 row_x = cross(column_y, column_z) / determinant;
+            const vec3 row_y = cross(column_z, column_x) / determinant;
+            const vec3 row_z = cross(column_x, column_y) / determinant;
+            const vec3 rows[3] = {row_x, row_y, row_z};
+            for (int r = 0; r < 3; r++) {
+                inverse_linear[r * 3] = rows[r].x;
+                inverse_linear[r * 3 + 1] = rows[r].y;
+                inverse_linear[r * 3 + 2] = rows[r].z;
+            }
+        }
+
+        [[nodiscard]] vec3 toWorld(const vec3 &p) const {
+            return make_vec3(matrix[0] * p.x + matrix[1] * p.y + matrix[2] * p.z + matrix[3], matrix[4] * p.x + matrix[5] * p.y + matrix[6] * p.z + matrix[7],
+                             matrix[8] * p.x + matrix[9] * p.y + matrix[10] * p.z + matrix[11]);
+        }
+
+        [[nodiscard]] vec3 directionToWorld(const vec3 &d) const {
+            return make_vec3(matrix[0] * d.x + matrix[1] * d.y + matrix[2] * d.z, matrix[4] * d.x + matrix[5] * d.y + matrix[6] * d.z, matrix[8] * d.x + matrix[9] * d.y + matrix[10] * d.z);
+        }
+
+        [[nodiscard]] vec3 directionToLocal(const vec3 &d) const {
+            return make_vec3(inverse_linear[0] * d.x + inverse_linear[1] * d.y + inverse_linear[2] * d.z, inverse_linear[3] * d.x + inverse_linear[4] * d.y + inverse_linear[5] * d.z,
+                             inverse_linear[6] * d.x + inverse_linear[7] * d.y + inverse_linear[8] * d.z);
+        }
+
+        [[nodiscard]] vec3 toLocal(const vec3 &p) const {
+            return directionToLocal(p - make_vec3(matrix[3], matrix[7], matrix[11]));
+        }
+    };
+
+} // namespace
+
+std::vector<vec3> Phytomer::leafRestLatticeLocal(uint petiole_index, uint leaf_index, const char *caller, size_t &appended_count) const {
+    if (petiole_index >= leaf_objIDs.size() || leaf_index >= leaf_objIDs.at(petiole_index).size()) {
+        helios_runtime_error(std::string("ERROR (") + caller + "): Leaf " + std::to_string(leaf_index) + " of petiole " + std::to_string(petiole_index) + " does not exist on this phytomer.");
+    }
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const LeafShapeValues shape = getLeafShape(petiole_index, leaf_index);
+    if (!context_ptr->doesObjectExist(objID_leaf)) {
+        helios_runtime_error(std::string("ERROR (") + caller + "): Leaf object " + std::to_string(objID_leaf) + " no longer exists in the Context.");
+    }
+    const size_t lattice_count = size_t(shape.subdivisions_x + 1) * size_t(shape.subdivisions_y + 1);
+    const size_t vertex_count = context_ptr->getPolymeshObjectVertices(objID_leaf).size();
+    if (vertex_count < lattice_count || (vertex_count - lattice_count != 0 && vertex_count - lattice_count != petioluleVertexCount())) {
+        helios_runtime_error(std::string("ERROR (") + caller + "): Leaf object " + std::to_string(objID_leaf) + " does not carry the " + std::to_string(shape.subdivisions_x) + " x " +
+                             std::to_string(shape.subdivisions_y) + " blade lattice it was built with.");
+    }
+    appended_count = vertex_count - lattice_count;
+
+    // The rest shape the leaf droops from, where it has one, so that the blade is laid out from exactly the shape its droop starts from
+    const auto state = leaf_shape_state.find(objID_leaf);
+    if (state != leaf_shape_state.end()) {
+        if (state->second.rest_vertices.size() == lattice_count) {
+            return state->second.rest_vertices;
+        }
+    } else if (petiole_index < leaf_prototype_index.size() && leaf_index < leaf_prototype_index.at(petiole_index).size() && leaf_prototype_index.at(petiole_index).at(leaf_index) >= 0) {
+        const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
+        const PlantArchitecture::LeafPrototypeCacheKey cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaf_prototype_index.at(petiole_index).size()));
+        const auto cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(cache_key);
+        if (cache != plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() && cache->second.size() > uint(prototype) && cache->second.at(prototype).size() > leaf_index &&
+            cache->second.at(prototype).at(leaf_index).vertices.size() == lattice_count) {
+            return cache->second.at(prototype).at(leaf_index).vertices;
+        }
+    }
+
+    // Otherwise the lattice is built from the leaf's shape and moved into its object's frame, as reshapeLeaf() builds it
+    const vec3 lattice_frame_offset = leafLatticeFrameOffset(petiole_index, leaf_index);
+    std::vector<vec3> lattice = buildLeafBladeLattice(shape);
+    for (vec3 &vertex: lattice) {
+        vertex = vertex - lattice_frame_offset;
+    }
+    return lattice;
+}
+
+std::vector<vec3> Phytomer::leafRestAppendedVerticesLocal(uint petiole_index, uint leaf_index, size_t appended_count) const {
+    if (appended_count == 0) {
+        return {};
+    }
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const auto state = leaf_shape_state.find(objID_leaf);
+    if (state != leaf_shape_state.end()) {
+        if (state->second.rest_appended_vertices.size() == appended_count) {
+            return state->second.rest_appended_vertices;
+        }
+        if (state->second.deformable || state->second.has_midrib) {
+            helios_runtime_error("ERROR (PlantArchitecture::Phytomer::leafRestAppendedVerticesLocal): The rest shape of the petiolule of leaf object " + std::to_string(objID_leaf) +
+                                 " was not recorded. This is a bug in the plant architecture plug-in.");
+        }
+    } else if (petiole_index < leaf_prototype_index.size() && leaf_index < leaf_prototype_index.at(petiole_index).size() && leaf_prototype_index.at(petiole_index).at(leaf_index) >= 0) {
+        const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
+        const PlantArchitecture::LeafPrototypeCacheKey cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaf_prototype_index.at(petiole_index).size()));
+        const auto cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(cache_key);
+        if (cache != plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() && cache->second.size() > uint(prototype) && cache->second.at(prototype).size() > leaf_index &&
+            cache->second.at(prototype).at(leaf_index).appended_vertices.size() == appended_count) {
+            return cache->second.at(prototype).at(leaf_index).appended_vertices;
+        }
+    }
+    if (state == leaf_shape_state.end() && doesLeafDroop(petiole_index, leaf_index)) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::leafRestAppendedVerticesLocal): Leaf object " + std::to_string(objID_leaf) +
+                             " droops, but the rest shape of its petiolule was not recorded with its prototype, so it cannot be read back from the drooped leaf. This is a bug in the plant architecture plug-in.");
+    }
+    // A leaf that neither droops nor follows a midrib has its petiolule at rest, so it is read back from the object
+    const LeafObjectFrame frame(context_ptr, objID_leaf, "PlantArchitecture::Phytomer::leafRestAppendedVerticesLocal");
+    const std::vector<vec3> vertices = context_ptr->getPolymeshObjectVertices(objID_leaf);
+    std::vector<vec3> appended;
+    appended.reserve(appended_count);
+    for (size_t v = vertices.size() - appended_count; v < vertices.size(); v++) {
+        appended.push_back(frame.toLocal(vertices.at(v)));
+    }
+    return appended;
+}
+
+bool Phytomer::doesLeafDroop(uint petiole_index, uint leaf_index) const {
+    if (petiole_index >= leaf_objIDs.size() || leaf_index >= leaf_objIDs.at(petiole_index).size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::doesLeafDroop): Leaf " + std::to_string(leaf_index) + " of petiole " + std::to_string(petiole_index) + " does not exist on this phytomer.");
+    }
+    if (leaf_flexibility <= 0.f) {
+        return false;
+    }
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const auto state = leaf_shape_state.find(objID_leaf);
+    if (state != leaf_shape_state.end()) {
+        return state->second.deformable;
+    }
+    // A plain copy of a cached prototype droops from the prototype's rest shape if one was recorded (see deformLeafUnderSelfWeight())
+    if (petiole_index >= leaf_prototype_index.size() || leaf_index >= leaf_prototype_index.at(petiole_index).size() || leaf_prototype_index.at(petiole_index).at(leaf_index) < 0) {
+        return false;
+    }
+    const int prototype = leaf_prototype_index.at(petiole_index).at(leaf_index);
+    const PlantArchitecture::LeafPrototypeCacheKey cache_key(phytomer_parameters.leaf.prototype.unique_prototype_identifier, uint(leaf_prototype_index.at(petiole_index).size()));
+    const auto cache = plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.find(cache_key);
+    return cache != plantarchitecture_ptr->unique_leaf_prototype_rest_geometry.end() && cache->second.size() > uint(prototype) && cache->second.at(prototype).size() > leaf_index &&
+           !cache->second.at(prototype).at(leaf_index).vertices.empty() && cache->second.at(prototype).at(leaf_index).subdivisions_x > 0;
+}
+
+void Phytomer::setLeafDroop(uint petiole_index, uint leaf_index, bool droops) {
+    constexpr const char *caller = "PlantArchitecture::setLeafDroop";
+    size_t appended_count = 0;
+    const std::vector<vec3> rest_lattice = leafRestLatticeLocal(petiole_index, leaf_index, caller, appended_count);
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+
+    const auto state_existing = leaf_shape_state.find(objID_leaf);
+    if (droops && state_existing != leaf_shape_state.end() && state_existing->second.has_midrib) {
+        helios_runtime_error("ERROR (PlantArchitecture::setLeafDroop): The blade of leaf object " + std::to_string(objID_leaf) +
+                             " is laid along a prescribed midrib, which is its final shape, so it cannot also droop. Call clearLeafMidrib() first.");
+    }
+    if (droops && leaf_flexibility <= 0.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setLeafDroop): The leaves of this phytomer have a flexibility of zero (LeafPrototype::flexibility), so leaf object " + std::to_string(objID_leaf) +
+                             " has no droop to take.");
+    }
+    // A blade laid along a midrib does not droop while it is; turning droop off decides only that it will not droop again once its midrib is cleared
+    if (!droops && state_existing != leaf_shape_state.end() && state_existing->second.has_midrib) {
+        state_existing->second.deformable_before_midrib = false;
+        return;
+    }
+    if (doesLeafDroop(petiole_index, leaf_index) == droops) {
+        return;
+    }
+
+    // The rest shape is gathered before the leaf's state is touched, since it is looked up from that state
+    const std::vector<vec3> rest_appended = leafRestAppendedVerticesLocal(petiole_index, leaf_index, appended_count);
+    if (state_existing == leaf_shape_state.end()) {
+        LeafShapeState state;
+        state.shape = getLeafShape(petiole_index, leaf_index);
+        state.lattice_frame_offset = leafLatticeFrameOffset(petiole_index, leaf_index);
+        leaf_shape_state[objID_leaf] = state;
+    }
+    LeafShapeState &state = leaf_shape_state.at(objID_leaf);
+    // The rest shape is kept when droop is turned off as well, so that turning it on again bends exactly the blade that was bent before
+    state.rest_vertices = rest_lattice;
+    state.rest_appended_vertices = rest_appended;
+    state.deformable = droops;
+    leaf_last_deformed_scale.at(petiole_index).at(leaf_index) = -1.f;
+
+    if (droops) {
+        deformLeafUnderSelfWeight(petiole_index, leaf_index);
+    } else {
+        const LeafObjectFrame frame(context_ptr, objID_leaf, caller);
+        std::vector<vec3> vertices;
+        vertices.reserve(rest_lattice.size() + rest_appended.size());
+        for (const vec3 &vertex: rest_lattice) {
+            vertices.push_back(frame.toWorld(vertex));
+        }
+        for (const vec3 &vertex: rest_appended) {
+            vertices.push_back(frame.toWorld(vertex));
+        }
+        context_ptr->setPolymeshObjectVertices(objID_leaf, vertices);
+    }
+    plantarchitecture_ptr->invalidateOrganIndex();
+}
+
+void Phytomer::layLeafAlongRecordedMidrib(uint petiole_index, uint leaf_index) {
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const LeafShapeState &state = leaf_shape_state.at(objID_leaf);
+    const uint Nx = state.shape.subdivisions_x;
+    const uint Ny = state.shape.subdivisions_y;
+
+    const std::vector<vec3> lattice = layLeafLatticeAlongMidrib(state.rest_vertices, Nx, Ny, state.midrib_stations, state.midrib_rolls, state.midrib_length_scale);
+    const std::vector<vec3> appended = carryPointsAlongMidrib(state.rest_vertices, Nx, Ny, state.midrib_stations, state.midrib_rolls, state.midrib_length_scale, state.rest_appended_vertices);
+
+    const LeafObjectFrame frame(context_ptr, objID_leaf, "PlantArchitecture::setLeafMidrib");
+    std::vector<vec3> vertices;
+    vertices.reserve(lattice.size() + appended.size());
+    for (const vec3 &vertex: lattice) {
+        vertices.push_back(frame.toWorld(vertex));
+    }
+    for (const vec3 &vertex: appended) {
+        vertices.push_back(frame.toWorld(vertex));
+    }
+    context_ptr->setPolymeshObjectVertices(objID_leaf, vertices);
+    context_ptr->computePolymeshObjectVertexNormals(objID_leaf, 180.f);
+}
+
+void Phytomer::setLeafMidribFromPolyline(uint petiole_index, uint leaf_index, const std::vector<vec3> &midrib, const std::vector<float> *rolls, const std::vector<vec3> *normals) {
+    constexpr const char *caller = "PlantArchitecture::setLeafMidrib";
+    size_t appended_count = 0;
+    const std::vector<vec3> rest_lattice = leafRestLatticeLocal(petiole_index, leaf_index, caller, appended_count);
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const LeafShapeValues shape = getLeafShape(petiole_index, leaf_index);
+    const uint Nx = shape.subdivisions_x;
+    const uint Ny = shape.subdivisions_y;
+
+    if (midrib.size() < 2) {
+        helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): A midrib needs at least two points, but " + std::to_string(midrib.size()) + " were given for leaf object " + std::to_string(objID_leaf) + ".");
+    }
+    for (const vec3 &point: midrib) {
+        if (!std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(point.z)) {
+            helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): The midrib given for leaf object " + std::to_string(objID_leaf) + " has a point that is not finite.");
+        }
+    }
+    for (size_t point = 1; point < midrib.size(); point++) {
+        if ((midrib.at(point) - midrib.at(point - 1)).magnitude() == 0.f) {
+            helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): Points " + std::to_string(point - 1) + " and " + std::to_string(point) + " of the midrib given for leaf object " + std::to_string(objID_leaf) +
+                                 " coincide.");
+        }
+    }
+    if (rolls != nullptr) {
+        if (!rolls->empty() && rolls->size() != midrib.size()) {
+            helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): Expected one roll per midrib point (" + std::to_string(midrib.size()) + ") or none, but " + std::to_string(rolls->size()) +
+                                 " were given for leaf object " + std::to_string(objID_leaf) + ".");
+        }
+        for (const float roll: *rolls) {
+            if (!std::isfinite(roll)) {
+                helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): The rolls given for leaf object " + std::to_string(objID_leaf) + " must be finite.");
+            }
+        }
+    }
+    if (normals != nullptr && normals->size() != midrib.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): Expected one normal per midrib point (" + std::to_string(midrib.size()) + "), but " + std::to_string(normals->size()) +
+                             " were given for leaf object " + std::to_string(objID_leaf) + ".");
+    }
+
+    const LeafObjectFrame frame(context_ptr, objID_leaf, caller);
+
+    // The first point is the base of the blade, which does not move: it is where the blade leaves its stalk or its petiole, and every way the blade can be bent (droop, a midrib) holds it there.
+    const std::vector<vec3> rest_midrib = [&]() {
+        std::vector<vec3> row(Nx + 1);
+        for (uint i = 0; i <= Nx; i++) {
+            row.at(i) = rest_lattice.at(size_t(Ny / 2) * (Nx + 1) + i);
+        }
+        return row;
+    }();
+    const vec3 blade_base = frame.toWorld(rest_midrib.front());
+    float polyline_length = 0.f;
+    for (size_t point = 1; point < midrib.size(); point++) {
+        polyline_length += (midrib.at(point) - midrib.at(point - 1)).magnitude();
+    }
+    const vec3 shift = blade_base - midrib.front();
+    const float base_tolerance = std::max(1e-3f, 0.02f * polyline_length);
+    if (shift.magnitude() > base_tolerance) {
+        helios_runtime_error("ERROR (PlantArchitecture::setLeafMidrib): The midrib given for leaf object " + std::to_string(objID_leaf) + " starts " + std::to_string(shift.magnitude() * 1000.f) +
+                             " mm from the base of its blade, further than the " + std::to_string(base_tolerance * 1000.f) +
+                             " mm it may be moved onto it. A midrib starts where the blade begins: the leaf's base, or the end of its stalk for a leaf that has one. Place the leaf first (setPetioleLeafGeometry()).");
+    }
+
+    // Laid out in the leaf's own frame, where the rest lattice is, so that the midrib is carried by anything that later moves the leaf object
+    std::vector<vec3> polyline_local(midrib.size());
+    for (size_t point = 0; point < midrib.size(); point++) {
+        polyline_local.at(point) = frame.toLocal(midrib.at(point) + shift);
+    }
+    std::vector<float> rest_segment_lengths(Nx);
+    for (uint i = 1; i <= Nx; i++) {
+        rest_segment_lengths.at(i - 1) = (rest_midrib.at(i) - rest_midrib.at(i - 1)).magnitude();
+    }
+    float length_scale = 1.f;
+    std::vector<float> station_fractions;
+    std::vector<vec3> stations = placeMidribStationsAlongPolyline(polyline_local, rest_segment_lengths, length_scale, &station_fractions);
+    // The base station is the blade's base itself, exactly, so that the blade stays seated where it was
+    stations.front() = rest_midrib.front();
+
+    std::vector<float> station_rolls;
+    if (rolls != nullptr && !rolls->empty()) {
+        station_rolls = resamplePolylineValuesAtFractions(polyline_local, *rolls, station_fractions);
+    } else if (normals != nullptr) {
+        std::vector<vec3> station_normals(Nx + 1, nullorigin);
+        std::vector<float> component(midrib.size());
+        for (int axis = 0; axis < 3; axis++) {
+            for (size_t point = 0; point < midrib.size(); point++) {
+                const vec3 local_normal = frame.directionToLocal(normals->at(point));
+                component.at(point) = axis == 0 ? local_normal.x : (axis == 1 ? local_normal.y : local_normal.z);
+            }
+            const std::vector<float> resampled = resamplePolylineValuesAtFractions(polyline_local, component, station_fractions);
+            for (uint i = 0; i <= Nx; i++) {
+                (axis == 0 ? station_normals.at(i).x : (axis == 1 ? station_normals.at(i).y : station_normals.at(i).z)) = resampled.at(i);
+            }
+        }
+        station_rolls = leafMidribRollsFromNormals(rest_lattice, Nx, Ny, stations, station_normals);
+    }
+
+    // Checked before anything is changed, so that a midrib the blade cannot be laid along leaves the leaf as it was
+    static_cast<void>(layLeafLatticeAlongMidrib(rest_lattice, Nx, Ny, stations, station_rolls, length_scale));
+
+    const bool droops_now = doesLeafDroop(petiole_index, leaf_index);
+    const auto state_existing = leaf_shape_state.find(objID_leaf);
+    const bool had_midrib = state_existing != leaf_shape_state.end() && state_existing->second.has_midrib;
+    const std::vector<vec3> rest_appended = leafRestAppendedVerticesLocal(petiole_index, leaf_index, appended_count);
+
+    // The blade's size is now the midrib's, so growth must not rescale it
+    lockPetioleScale(petiole_index);
+
+    if (state_existing == leaf_shape_state.end()) {
+        LeafShapeState state;
+        state.shape = shape;
+        state.lattice_frame_offset = leafLatticeFrameOffset(petiole_index, leaf_index);
+        leaf_shape_state[objID_leaf] = state;
+    }
+    LeafShapeState &state = leaf_shape_state.at(objID_leaf);
+    if (!had_midrib) {
+        state.deformable_before_midrib = droops_now;
+    }
+    state.rest_vertices = rest_lattice;
+    state.rest_appended_vertices = rest_appended;
+    state.deformable = false;
+    state.has_midrib = true;
+    state.midrib_stations = stations;
+    state.midrib_rolls = station_rolls;
+    state.midrib_length_scale = length_scale;
+    leaf_last_deformed_scale.at(petiole_index).at(leaf_index) = -1.f;
+
+    layLeafAlongRecordedMidrib(petiole_index, leaf_index);
+    plantarchitecture_ptr->invalidateOrganIndex();
+}
+
+void Phytomer::setLeafMidrib(uint petiole_index, uint leaf_index, const std::vector<vec3> &midrib, const std::vector<float> &rolls) {
+    setLeafMidribFromPolyline(petiole_index, leaf_index, midrib, &rolls, nullptr);
+}
+
+void Phytomer::setLeafMidrib(uint petiole_index, uint leaf_index, const std::vector<vec3> &midrib, const std::vector<vec3> &normals) {
+    setLeafMidribFromPolyline(petiole_index, leaf_index, midrib, nullptr, &normals);
+}
+
+LeafMidrib Phytomer::getLeafMidrib(uint petiole_index, uint leaf_index) const {
+    constexpr const char *caller = "PlantArchitecture::getLeafMidrib";
+    size_t appended_count = 0;
+    const std::vector<vec3> rest_lattice = leafRestLatticeLocal(petiole_index, leaf_index, caller, appended_count);
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    const LeafShapeValues shape = getLeafShape(petiole_index, leaf_index);
+    const uint Nx = shape.subdivisions_x;
+    const uint Ny = shape.subdivisions_y;
+    const LeafObjectFrame frame(context_ptr, objID_leaf, caller);
+
+    std::vector<vec3> stations;
+    std::vector<float> rolls;
+    std::vector<vec3> rest_for_normals = rest_lattice;
+    const auto state = leaf_shape_state.find(objID_leaf);
+    if (state != leaf_shape_state.end() && state->second.has_midrib) {
+        stations = state->second.midrib_stations;
+        rolls = state->second.midrib_rolls;
+    } else {
+        // Read from the blade as it is, in the leaf's own frame
+        const std::vector<vec3> vertices = context_ptr->getPolymeshObjectVertices(objID_leaf);
+        std::vector<vec3> current_lattice(rest_lattice.size());
+        for (size_t v = 0; v < rest_lattice.size(); v++) {
+            current_lattice.at(v) = frame.toLocal(vertices.at(v));
+        }
+        stations.resize(Nx + 1);
+        for (uint i = 0; i <= Nx; i++) {
+            stations.at(i) = current_lattice.at(size_t(Ny / 2) * (Nx + 1) + i);
+        }
+        rolls = measureLeafMidribRolls(rest_lattice, current_lattice, Nx, Ny);
+    }
+    if (rolls.empty()) {
+        rolls.assign(Nx + 1, 0.f);
+    }
+    const std::vector<vec3> normals_local = leafMidribStationNormals(rest_for_normals, Nx, Ny, stations, rolls);
+
+    LeafMidrib result;
+    result.positions.reserve(Nx + 1);
+    result.normals.reserve(Nx + 1);
+    for (uint i = 0; i <= Nx; i++) {
+        result.positions.push_back(frame.toWorld(stations.at(i)));
+        result.normals.push_back(normalize(frame.directionToWorld(normals_local.at(i))));
+    }
+    result.rolls = rolls;
+    return result;
+}
+
+void Phytomer::clearLeafMidrib(uint petiole_index, uint leaf_index) {
+    if (!hasLeafMidrib(petiole_index, leaf_index)) {
+        return;
+    }
+    const uint objID_leaf = leaf_objIDs.at(petiole_index).at(leaf_index);
+    LeafShapeState &state = leaf_shape_state.at(objID_leaf);
+    state.has_midrib = false;
+    state.midrib_stations.clear();
+    state.midrib_rolls.clear();
+    state.midrib_length_scale = 1.f;
+    state.deformable = state.deformable_before_midrib;
+    leaf_last_deformed_scale.at(petiole_index).at(leaf_index) = -1.f;
+
+    const LeafObjectFrame frame(context_ptr, objID_leaf, "PlantArchitecture::clearLeafMidrib");
+    std::vector<vec3> vertices;
+    vertices.reserve(state.rest_vertices.size() + state.rest_appended_vertices.size());
+    for (const vec3 &vertex: state.rest_vertices) {
+        vertices.push_back(frame.toWorld(vertex));
+    }
+    for (const vec3 &vertex: state.rest_appended_vertices) {
+        vertices.push_back(frame.toWorld(vertex));
+    }
+    context_ptr->setPolymeshObjectVertices(objID_leaf, vertices);
+    if (state.deformable) {
+        deformLeafUnderSelfWeight(petiole_index, leaf_index);
+    }
+    context_ptr->computePolymeshObjectVertexNormals(objID_leaf, 180.f);
+    plantarchitecture_ptr->invalidateOrganIndex();
+}
+
+bool Phytomer::hasLeafMidrib(uint petiole_index, uint leaf_index) const {
+    if (petiole_index >= leaf_objIDs.size() || leaf_index >= leaf_objIDs.at(petiole_index).size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer::hasLeafMidrib): Leaf " + std::to_string(leaf_index) + " of petiole " + std::to_string(petiole_index) + " does not exist on this phytomer.");
+    }
+    const auto state = leaf_shape_state.find(leaf_objIDs.at(petiole_index).at(leaf_index));
+    return state != leaf_shape_state.end() && state->second.has_midrib;
 }
 
 void Phytomer::rebuildPetioleLeaves(uint petiole_index, uint leaf_count) {
@@ -7562,6 +7996,10 @@ int PlantArchitecture::appendPhytomerToShoot(uint plantID, uint shootID, const P
                     if (fbud.isterminal) {
                         fbud.state = state;
                         current_shoot_ptr->phytomers.back()->updateInflorescence(fbud);
+                        if (state == BUD_FRUITING) {
+                            // Set here directly rather than through Phytomer::setFloralBudState(), so the draw that function makes at fruit set is made here
+                            fbud.fruit_maturity_delay = samplePhenologicalDelay(plant_instances.at(plantID).fruit_maturity_duration);
+                        }
                         if (state == BUD_FRUITING && fbud.dd_to_inflorescence_maturity != 0.f) {
                             // Initialize the fruit at 25% scale so it grows in gradually, matching the behavior of
                             // setFloralBudState(). Without this, current_fruit_scale_factor remains at its default of 1.0
@@ -7902,6 +8340,53 @@ void PlantArchitecture::setPlantLeafRoll(uint plantID, float roll_fraction) {
             }
         }
     }
+}
+
+namespace {
+    //! Phytomer at a node of a shoot, with the shoot and node checked
+    std::shared_ptr<Phytomer> phytomerAtNode(const std::vector<std::shared_ptr<Shoot>> &shoot_tree, uint shootID, uint node_index, const char *caller) {
+        const auto &shoot = shoot_tree.at(shootID);
+        if (node_index >= shoot->phytomers.size()) {
+            helios_runtime_error(std::string("ERROR (PlantArchitecture::") + caller + "): Shoot " + std::to_string(shootID) + " does not have a node " + std::to_string(node_index) + "; it has " +
+                                 std::to_string(shoot->phytomers.size()) + " nodes.");
+        }
+        return shoot->phytomers.at(node_index);
+    }
+} // namespace
+
+void PlantArchitecture::setLeafDroop(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, bool droops) {
+    validateShootID(plantID, shootID, "setLeafDroop");
+    phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "setLeafDroop")->setLeafDroop(petiole_index, leaf_index, droops);
+}
+
+bool PlantArchitecture::doesLeafDroop(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const {
+    validateShootID(plantID, shootID, "doesLeafDroop");
+    return phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "doesLeafDroop")->doesLeafDroop(petiole_index, leaf_index);
+}
+
+void PlantArchitecture::setLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<float> &rolls) {
+    validateShootID(plantID, shootID, "setLeafMidrib");
+    phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "setLeafMidrib")->setLeafMidrib(petiole_index, leaf_index, midrib, rolls);
+}
+
+void PlantArchitecture::setLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index, const std::vector<helios::vec3> &midrib, const std::vector<helios::vec3> &normals) {
+    validateShootID(plantID, shootID, "setLeafMidrib");
+    phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "setLeafMidrib")->setLeafMidrib(petiole_index, leaf_index, midrib, normals);
+}
+
+LeafMidrib PlantArchitecture::getLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const {
+    validateShootID(plantID, shootID, "getLeafMidrib");
+    return phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "getLeafMidrib")->getLeafMidrib(petiole_index, leaf_index);
+}
+
+void PlantArchitecture::clearLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) {
+    validateShootID(plantID, shootID, "clearLeafMidrib");
+    phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "clearLeafMidrib")->clearLeafMidrib(petiole_index, leaf_index);
+}
+
+bool PlantArchitecture::hasLeafMidrib(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_index) const {
+    validateShootID(plantID, shootID, "hasLeafMidrib");
+    return phytomerAtNode(plant_instances.at(plantID).shoot_tree, shootID, node_index, "hasLeafMidrib")->hasLeafMidrib(petiole_index, leaf_index);
 }
 
 void PlantArchitecture::setPetioleLeaflets(uint plantID, uint shootID, uint node_index, uint petiole_index, uint leaf_count, float leaflet_offset, float leaflet_scale, float prototype_scale,
@@ -9857,16 +10342,17 @@ std::string PlantArchitecture::determinePhenologyStage(uint plantID) const {
         helios_runtime_error("ERROR (PlantArchitecture::determinePhenologyStage): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
 
-    // Check if plant is dormant
-    if (isPlantDormant(plantID)) {
-        return "dormant";
-    }
-
-    // Check if plant has flowers or fruits (reproductive stage)
+    // Check if plant has flowers or fruits (reproductive stage). Checked before dormancy because flowers can open before any shoot breaks vegetative dormancy (see setPlantPhenologicalSpread()), and a plant
+    // in flower is not dormant. A plant made dormant carries no flowers or fruit, since going dormant kills every bud that is not itself dormant.
     std::vector<uint> flowers = getPlantFlowerObjectIDs(plantID);
     std::vector<uint> fruits = getPlantFruitObjectIDs(plantID);
     if (!flowers.empty() || !fruits.empty()) {
         return "reproductive";
+    }
+
+    // Check if plant is dormant
+    if (isPlantDormant(plantID)) {
+        return "dormant";
     }
 
     // Check if plant is approaching senescence
@@ -11468,6 +11954,9 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
         copy.dd_to_dormancy = source.dd_to_dormancy;
         copy.max_leaf_lifespan = source.max_leaf_lifespan;
         copy.is_evergreen = source.is_evergreen;
+        copy.budbreak_duration = source.budbreak_duration;
+        copy.flowering_duration = source.flowering_duration;
+        copy.fruit_maturity_duration = source.fruit_maturity_duration;
         copy.minimum_leaf_texture_stage = source.minimum_leaf_texture_stage;
 
         copy.max_age = source.max_age;
@@ -11585,53 +12074,147 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
         }
     }
 
-    // Match the source's dormancy state. Shoot::Shoot() constructs every shoot dormant, so a duplicate of
-    // an actively-growing plant came back dormant and stalled until its dormancy broke, while the plant it
-    // was copied from kept growing. Done after the whole tree is built, since the shoots are created
-    // incrementally above.
+    // The tree above is rebuilt by replaying shoot creation, which reproduces the architecture but not where each shoot, phytomer
+    // and bud is in its season, nor the girth the wood has put on. Without this the copy of a plant in flower came back with every
+    // floral bud at the start of its clock, the copy of a dormant leafless tree came back in leaf, and the copy of an old tree came
+    // back with the trunk it was planted with. The state is assigned directly rather than through Shoot::breakDormancy() or
+    // Shoot::makeDormant(), which draw random numbers and change the buds, both of which are copied here instead.
     plant_instances.at(plantID_new).time_since_dormancy = plant_instances.at(plantID).time_since_dormancy;
     const std::vector<std::shared_ptr<Shoot>> &source_shoot_tree = plant_instances.at(plantID).shoot_tree;
     std::vector<std::shared_ptr<Shoot>> &new_shoot_tree = plant_instances.at(plantID_new).shoot_tree;
+    const std::string caller = "PlantArchitecture::duplicatePlantInstance";
     for (uint source_shootID = 0; source_shootID < source_shoot_tree.size(); source_shootID++) {
         if (copy_shootID_of_source.at(source_shootID) < 0) {
             continue; // a pruned shell, which the copy does not have
         }
-        const uint shootID = uint(copy_shootID_of_source.at(source_shootID));
-        if (!source_shoot_tree.at(source_shootID)->isdormant && new_shoot_tree.at(shootID)->isdormant) {
-            new_shoot_tree.at(shootID)->breakDormancy();
-        } else if (source_shoot_tree.at(source_shootID)->isdormant && !new_shoot_tree.at(shootID)->isdormant) {
-            new_shoot_tree.at(shootID)->makeDormant();
+        const Shoot &source_shoot = *source_shoot_tree.at(source_shootID);
+        Shoot &new_shoot = *new_shoot_tree.at(uint(copy_shootID_of_source.at(source_shootID)));
+        if (new_shoot.phytomers.size() != source_shoot.phytomers.size() || new_shoot.shoot_internode_radii.size() != source_shoot.shoot_internode_radii.size()) {
+            helios_runtime_error("ERROR (" + caller + "): Shoot " + std::to_string(source_shootID) + " of plant " + std::to_string(plantID) + " has " + std::to_string(source_shoot.phytomers.size()) +
+                                 " phytomers, but its copy was rebuilt with " + std::to_string(new_shoot.phytomers.size()) + ". The plant's shoot tree is inconsistent.");
         }
 
-        // The tree above is rebuilt by replaying shoot creation, which reproduces geometry but not the
-        // per-shoot growth state: a duplicate of a reconstructed plant would otherwise revert to being
-        // governed by the type its measured wood was built with, and grow differently from its original.
-        auto &new_shoot = new_shoot_tree.at(shootID);
-        new_shoot->growth_state = source_shoot_tree.at(source_shootID)->growth_state;
+        // Where the shoot is in its season
+        new_shoot.isdormant = source_shoot.isdormant;
+        new_shoot.floral_buds_awake = source_shoot.floral_buds_awake;
+        new_shoot.budbreak_delay = source_shoot.budbreak_delay;
+        new_shoot.dormancy_cycles = source_shoot.dormancy_cycles;
+        new_shoot.nodes_this_season = source_shoot.nodes_this_season;
+        new_shoot.meristem_is_alive = source_shoot.meristem_is_alive;
+        new_shoot.phyllochron_counter = source_shoot.phyllochron_counter;
 
-        // Two things do not follow from assigning growth_state, because both were already decided while
-        // the tree above was being replayed -- at which point the copy was still governed by its build
-        // type. Shoot::gravitropic_curvature is latched from that type in the Shoot constructor, and
-        // Shoot::sampleChildShootType() stamped each vegetative bud as its phytomer was created. The XML
-        // restore path resolves the identical hazard the same way.
-        if (!new_shoot->growth_state.growth_type_label.empty()) {
-            auto &shoot_types_snapshot = plant_instances.at(plantID_new).shoot_types_snapshot;
-            const std::string &growth_type_label = new_shoot->growth_state.growth_type_label;
-            if (shoot_types_snapshot.find(growth_type_label) == shoot_types_snapshot.end()) {
-                helios_runtime_error("ERROR (PlantArchitecture::duplicatePlantInstance): Shoot " + std::to_string(shootID) + " grows as shoot type " + growth_type_label + ", which is not defined for this plant.");
+        // How the shoot grows. Its own parameters may have been edited since it was created, or reassigned by the growth priority, and
+        // a reconstructed shoot is governed by its growth type rather than the type its wood was built with. The rates and the
+        // gravitropic curvature were drawn for this shoot when it was created, and the curvature perturbations are the state of its
+        // tortuosity process.
+        new_shoot.shoot_parameters = source_shoot.shoot_parameters;
+        new_shoot.growth_state = source_shoot.growth_state;
+        new_shoot.phyllochron_instantaneous = source_shoot.phyllochron_instantaneous;
+        new_shoot.elongation_rate_instantaneous = source_shoot.elongation_rate_instantaneous;
+        new_shoot.leaf_expansion_rate_instantaneous = source_shoot.leaf_expansion_rate_instantaneous;
+        new_shoot.internode_length_max_shoot_initial = source_shoot.internode_length_max_shoot_initial;
+        new_shoot.gravitropic_curvature = source_shoot.gravitropic_curvature;
+        new_shoot.curvature_perturbation = source_shoot.curvature_perturbation;
+        new_shoot.yaw_perturbation = source_shoot.yaw_perturbation;
+        new_shoot.growth_priority = source_shoot.growth_priority;
+        new_shoot.growth_priority_baseline_set = source_shoot.growth_priority_baseline_set;
+        new_shoot.growth_priority_base_max_nodes = source_shoot.growth_priority_base_max_nodes;
+        new_shoot.growth_priority_base_max_nodes_per_season = source_shoot.growth_priority_base_max_nodes_per_season;
+        new_shoot.growth_priority_base_internode_length_max = source_shoot.growth_priority_base_internode_length_max;
+        new_shoot.growth_priority_base_bud_break_max = source_shoot.growth_priority_base_bud_break_max;
+
+        // The girth the wood has put on, which only ever grows
+        for (size_t node = 0; node < source_shoot.shoot_internode_radii.size(); node++) {
+            if (new_shoot.shoot_internode_radii.at(node).size() != source_shoot.shoot_internode_radii.at(node).size()) {
+                helios_runtime_error("ERROR (" + caller + "): Internode " + std::to_string(node) + " of shoot " + std::to_string(source_shootID) + " of plant " + std::to_string(plantID) + " has " +
+                                     std::to_string(source_shoot.shoot_internode_radii.at(node).size()) + " segments, but its copy was rebuilt with " + std::to_string(new_shoot.shoot_internode_radii.at(node).size()) + ".");
             }
-            new_shoot->gravitropic_curvature = shoot_types_snapshot.at(growth_type_label).gravitropic_curvature.val();
+        }
+        new_shoot.shoot_internode_radii = source_shoot.shoot_internode_radii;
 
-            for (auto &phytomer: new_shoot->phytomers) {
-                for (auto &petiole: phytomer->axillary_vegetative_buds) {
-                    const std::string restamped_type = new_shoot->sampleChildShootType();
-                    for (auto &vbud: petiole) {
-                        vbud.shoot_type_label = restamped_type;
+        for (size_t node = 0; node < source_shoot.phytomers.size(); node++) {
+            const Phytomer &source_phytomer = *source_shoot.phytomers.at(node);
+            Phytomer &new_phytomer = *new_shoot.phytomers.at(node);
+            new_phytomer.age = source_phytomer.age;
+            new_phytomer.isdormant = source_phytomer.isdormant;
+            // Leaves that have fallen, to dormancy or to age, are not regrown on the copy
+            if (!source_phytomer.hasLeaf() && new_phytomer.hasLeaf()) {
+                new_phytomer.removeLeaf();
+            }
+            // Vegetative buds carry no geometry, so they are copied whole: state, the shoot type they would grow, and their clocks. A
+            // bud that has grown a shoot refers to it by its ID, which differs in the copy when the source has pruned shells.
+            new_phytomer.axillary_vegetative_buds = source_phytomer.axillary_vegetative_buds;
+            for (auto &petiole: new_phytomer.axillary_vegetative_buds) {
+                for (auto &vbud: petiole) {
+                    if (vbud.shoot_ID != uint(-1)) {
+                        vbud.shoot_ID = (vbud.shoot_ID < copy_shootID_of_source.size() && copy_shootID_of_source.at(vbud.shoot_ID) >= 0) ? uint(copy_shootID_of_source.at(vbud.shoot_ID)) : uint(-1);
                     }
                 }
             }
         }
     }
+
+    // Rebuild the internode tubes with the copied girth before the floral buds are placed on them
+    if (!new_shoot_tree.empty()) {
+        new_shoot_tree.front()->updateShootNodes(true);
+    }
+
+    // Floral buds: the copy is given the source's buds, with their states, clocks, delays and fruit sizes, and their flowers and fruit are
+    // built anew on the copy's own phytomers. The copy's phytomers drew their own buds when they were created, which may not even be as
+    // many as the source has, so they are removed first.
+    for (uint source_shootID = 0; source_shootID < source_shoot_tree.size(); source_shootID++) {
+        if (copy_shootID_of_source.at(source_shootID) < 0) {
+            continue;
+        }
+        const Shoot &source_shoot = *source_shoot_tree.at(source_shootID);
+        Shoot &new_shoot = *new_shoot_tree.at(uint(copy_shootID_of_source.at(source_shootID)));
+        for (size_t node = 0; node < source_shoot.phytomers.size(); node++) {
+            const Phytomer &source_phytomer = *source_shoot.phytomers.at(node);
+            Phytomer &new_phytomer = *new_shoot.phytomers.at(node);
+            for (auto &petiole: new_phytomer.floral_buds) {
+                for (auto &fbud: petiole) {
+                    context_ptr->deleteObject(fbud.inflorescence_objIDs);
+                    context_ptr->deleteObject(fbud.peduncle_objIDs);
+                }
+            }
+            new_phytomer.floral_buds = source_phytomer.floral_buds;
+            // Peduncle storage is indexed like the floral buds, and was sized only for the petioles when the phytomer was built
+            if (new_phytomer.peduncle_length.size() < new_phytomer.floral_buds.size()) {
+                const size_t bud_entries = new_phytomer.floral_buds.size();
+                new_phytomer.peduncle_vertices.resize(bud_entries);
+                new_phytomer.peduncle_radii.resize(bud_entries);
+                new_phytomer.peduncle_length.resize(bud_entries);
+                new_phytomer.peduncle_radius.resize(bud_entries);
+                new_phytomer.peduncle_pitch.resize(bud_entries);
+                new_phytomer.peduncle_curvature.resize(bud_entries);
+                new_phytomer.peduncle_roll.resize(bud_entries);
+                new_phytomer.peduncle_yaw.resize(bud_entries);
+            }
+            for (size_t petiole = 0; petiole < new_phytomer.floral_buds.size(); petiole++) {
+                for (FloralBud &fbud: new_phytomer.floral_buds.at(petiole)) {
+                    // The source's geometry belongs to the source; the bud is placed on the copy as Phytomer construction and the XML reader place it
+                    fbud.inflorescence_objIDs.clear();
+                    fbud.inflorescence_bases.clear();
+                    fbud.inflorescence_rotation.clear();
+                    fbud.inflorescence_base_scales.clear();
+                    fbud.peduncle_objIDs.clear();
+                    if (fbud.isterminal || petiole >= new_phytomer.petiole_vertices.size()) {
+                        fbud.base_position = new_shoot.shoot_internode_vertices.at(node).back();
+                    } else {
+                        fbud.base_position = new_phytomer.petiole_vertices.at(petiole).front();
+                    }
+                    if (fbud.state == BUD_FLOWER_CLOSED || fbud.state == BUD_FLOWER_OPEN || fbud.state == BUD_FRUITING) {
+                        // Built at full size, then scaled to the size the source's fruit had reached
+                        const float fruit_scale = fbud.current_fruit_scale_factor;
+                        new_phytomer.updateInflorescence(fbud);
+                        fbud.current_fruit_scale_factor = 1.f;
+                        new_phytomer.setInflorescenceScaleFraction(fbud, fruit_scale);
+                    }
+                }
+            }
+        }
+    }
+    invalidateOrganIndex();
 
     // The copy's leaves were built with the first image of their series, after its phytomers had recorded a stage
     updatePlantLeafTextureStages(plantID_new, true);
@@ -11666,11 +12249,25 @@ void PlantArchitecture::deletePlantInstance(const std::vector<uint> &plantIDs) {
     }
 }
 
+namespace {
+    //! Check that a budbreak spread leaves every shoot time to break before the season it breaks in ends
+    void validatePhenologicalSpread(const std::string &caller, float budbreak_duration, float time_to_dormancy) {
+        // A non-positive time_to_dormancy schedules no dormancy cycle, so there is no season end to overrun
+        if (budbreak_duration > 0.f && time_to_dormancy > 0.f && budbreak_duration >= time_to_dormancy) {
+            helios_runtime_error("ERROR (PlantArchitecture::" + caller + "): The budbreak duration (" + std::to_string(budbreak_duration) + " days) must be less than the time from dormancy break to dormancy (" +
+                                 std::to_string(time_to_dormancy) + " days), or shoots would break dormancy after the season had ended. Shorten the budbreak duration given to setPlantPhenologicalSpread(), or "
+                                 "lengthen time_to_dormancy given to setPlantPhenologicalThresholds().");
+        }
+    }
+} // namespace
+
 void PlantArchitecture::setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_dormancy,
                                                        float max_leaf_lifespan, bool is_evergreen) {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::setPlantPhenologicalThresholds): Plant with ID of " + std::to_string(plantID) + " does not exist.");
     }
+
+    validatePhenologicalSpread("setPlantPhenologicalThresholds", plant_instances.at(plantID).budbreak_duration, time_to_dormancy);
 
     plant_instances.at(plantID).dd_to_dormancy_break = time_to_dormancy_break;
     plant_instances.at(plantID).dd_to_flower_initiation = time_to_flower_initiation;
@@ -11684,6 +12281,34 @@ void PlantArchitecture::setPlantPhenologicalThresholds(uint plantID, float time_
         plant_instances.at(plantID).max_leaf_lifespan = max_leaf_lifespan;
     }
     plant_instances.at(plantID).is_evergreen = is_evergreen;
+}
+
+void PlantArchitecture::setPlantPhenologicalSpread(uint plantID, float budbreak_duration, float flowering_duration, float fruit_maturity_duration) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantPhenologicalSpread): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    const std::pair<const char *, float> durations[] = {{"budbreak_duration", budbreak_duration}, {"flowering_duration", flowering_duration}, {"fruit_maturity_duration", fruit_maturity_duration}};
+    for (const auto &[name, value]: durations) {
+        if (!std::isfinite(value) || value < 0.f) {
+            helios_runtime_error("ERROR (PlantArchitecture::setPlantPhenologicalSpread): " + std::string(name) + " was " + std::to_string(value) + ", but must be a finite, non-negative number of days. Use 0 for no spread.");
+        }
+    }
+
+    PlantInstance &plant_instance = plant_instances.at(plantID);
+    validatePhenologicalSpread("setPlantPhenologicalSpread", budbreak_duration, plant_instance.dd_to_dormancy);
+
+    plant_instance.budbreak_duration = budbreak_duration;
+    plant_instance.flowering_duration = flowering_duration;
+    plant_instance.fruit_maturity_duration = fruit_maturity_duration;
+}
+
+float PlantArchitecture::samplePhenologicalDelay(float duration) const {
+    if (duration <= 0.f) {
+        return 0.f;
+    }
+    // Truncated at two standard deviations either side of the mean, so the window holds about 95% of the untruncated distribution and its interquartile range is about a third of its width, as measured
+    // for the opening dates of individual apple flowers (Tang, Zhai & Xu 2025, Front. Agron. 7:1545070).
+    return BuildParameterDistribution::normal(0.5f * duration, 0.25f * duration, 0.f, duration).sample(*context_ptr->getRandomGenerator());
 }
 
 void PlantArchitecture::setPlantCarbohydrateModelParameters(uint plantID, const CarbohydrateParameters &carb_parameters) {
@@ -11710,6 +12335,9 @@ void PlantArchitecture::disablePlantPhenology(uint plantID) {
     // declaration for the full rationale. 1e6 makes the fruit simply never mature.
     plant_instances.at(plantID).dd_to_fruit_maturity = 1e6;
     plant_instances.at(plantID).dd_to_dormancy = 1e6;
+    plant_instances.at(plantID).budbreak_duration = 0;
+    plant_instances.at(plantID).flowering_duration = 0;
+    plant_instances.at(plantID).fruit_maturity_duration = 0;
 }
 
 void PlantArchitecture::advanceTime(float time_step_days) {
@@ -11930,6 +12558,14 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                 for (auto &phytomer: shoot->phytomers) {
                     phytomer->age += dt_max_days;
+                    // Advanced alongside the phytomer's age, so that a bud active since its node was created keeps a clock equal to the node's age
+                    for (auto &petiole: phytomer->axillary_vegetative_buds) {
+                        for (auto &vbud: petiole) {
+                            if (vbud.state == BUD_ACTIVE) {
+                                vbud.time_counter += dt_max_days;
+                            }
+                        }
+                    }
                     phytomer->updateLeafTextureStage();
 
                     if (phytomer->phytomer_parameters.phytomer_callback_function != nullptr) {
@@ -11941,22 +12577,34 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 // ****** PHENOLOGICAL TRANSITIONS ****** //
 
                 // breaking dormancy
-                if (shoot->isdormant && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
-                    shoot->phyllochron_counter = 0;
-                    shoot->breakDormancy();
-                    if (carbon_model_enabled)
-                    {
+                //
+                // The floral buds of every shoot wake when the plant's dormancy breaks, and the starch reserves the flowers draw on are mobilized with them. Each shoot then breaks vegetative dormancy once
+                // its own budbreak delay has passed, which is the same step when the plant has no budbreak spread. Starch is mobilized before the vegetative buds are sampled, which does not affect that
+                // sampling: mobilizing moves carbon between the shoot's pools without changing the total it reads.
+                if (shoot->isdormant && !shoot->floral_buds_awake && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
+                    shoot->wakeFloralBuds();
+                    shoot->budbreak_delay = samplePhenologicalDelay(plant_instance.budbreak_duration);
+                    if (carbon_model_enabled) {
                         shoot->mobilizeStarch();
                     }
                 }
+                if (shoot->isdormant && shoot->floral_buds_awake && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break + shoot->budbreak_delay) {
+                    // The shoot tip is a vegetative bud like its laterals, so after a dormancy it waits its vegetative_bud_break_time before it grows its first new node (the counter starts that far
+                    // below zero). A shoot that has never been dormant, such as the stem of a plant just built, starts at once.
+                    shoot->phyllochron_counter = shoot->dormancy_cycles > 0 ? -std::max(0.f, shoot->shoot_parameters.vegetative_bud_break_time.resample()) : 0.f;
+                    shoot->breakDormancy();
+                }
 
-                if (shoot->isdormant) {
+                if (shoot->isdormant && !shoot->floral_buds_awake) {
                     // dormant, don't do anything
                     continue;
                 }
 
+                // A shoot that is still dormant here has woken floral buds but has not yet broken vegetative dormancy: its flowers and fruit develop, but its leaves and stem do not grow.
+                const bool shoot_growing = !shoot->isdormant;
+
                 for (auto &phytomer: shoot->phytomers) {
-                    if (phytomer->age > plant_instance.max_leaf_lifespan) {
+                    if (shoot_growing && phytomer->age > plant_instance.max_leaf_lifespan) {
                         // delete old leaves that exceed maximum lifespan, resorbing their nitrogen first
                         if (nitrogen_model_enabled && !phytomer->leaf_objIDs.empty()) {
                             resorbLeafNitrogen(plant_instance, *shoot, *phytomer);
@@ -11985,8 +12633,8 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                                 // -- Flower initiation (closed flowers) -- //
                                 if (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation >= 0.f) {
                                     // bud is active and flower initiation is enabled
-                                    if ((!shoot->shoot_parameters.flowers_require_dormancy && fbud.time_counter >= plant_instance.dd_to_flower_initiation) ||
-                                        (shoot->shoot_parameters.flowers_require_dormancy && fbud.time_counter >= plant_instance.dd_to_flower_initiation)) {
+                                    // Leaving BUD_ACTIVE is the bud's first reproductive transition, so its flowering delay applies (see setPlantPhenologicalSpread())
+                                    if (fbud.time_counter >= plant_instance.dd_to_flower_initiation + fbud.flowering_delay) {
                                         fbud.time_counter = 0;
                                         if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val()) {
                                             phytomer->setFloralBudState(BUD_FLOWER_CLOSED, fbud);
@@ -12001,7 +12649,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
                                     // -- Flower opening -- //
                                 } else if ((fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening >= 0.f) || (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation < 0.f && plant_instance.dd_to_flower_opening >= 0.f)) {
-                                    if (fbud.time_counter >= plant_instance.dd_to_flower_opening) {
+                                    // A bud opening straight from BUD_ACTIVE is making its first reproductive transition, so its flowering delay applies
+                                    const float opening_delay = fbud.state == BUD_ACTIVE ? fbud.flowering_delay : 0.f;
+                                    if (fbud.time_counter >= plant_instance.dd_to_flower_opening + opening_delay) {
                                         fbud.time_counter = 0;
                                         if (fbud.state == BUD_FLOWER_CLOSED) {
                                             phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud);
@@ -12030,7 +12680,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                                     // jumped straight to fruit set with no flowering (either flower opening disabled OR no flower prototype defined)
                                     (fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f)) {
                                     // jumped from closed flower to fruit set with no flower opening
-                                    if (fbud.time_counter >= plant_instance.dd_to_fruit_set) {
+                                    // A bud setting fruit straight from BUD_ACTIVE is making its first reproductive transition, so its flowering delay applies
+                                    const float fruit_set_delay = fbud.state == BUD_ACTIVE ? fbud.flowering_delay : 0.f;
+                                    if (fbud.time_counter >= plant_instance.dd_to_fruit_set + fruit_set_delay) {
                                         fbud.time_counter = 0;
                                         // When skipping flowering entirely (BUD_ACTIVE -> BUD_FRUITING), apply compound probability
                                         float fruit_set_prob = shoot->shoot_parameters.fruit_set_probability.val();
@@ -12055,6 +12707,41 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 }
 
                 // ****** GROWTH/SCALING OF CURRENT PHYTOMERS/FRUIT ****** //
+
+                auto growFruit = [&plant_instance](Phytomer &phytomer) {
+                    for (auto &petiole: phytomer.floral_buds) {
+                        for (auto &fbud: petiole) {
+                            // If the floral bud it in a 'fruiting' state, the fruit grows with time.
+                            // dd_to_fruit_maturity is a divisor here, so a non-positive value would give an
+                            // infinite or negative scale factor; guard rather than trust the call sites, since
+                            // setPlantPhenologicalThresholds() accepts any value and readPlantStructureXML()
+                            // feeds it whatever the file contains.
+                            // A bud may override the plant-level period with one of its own. An inflorescence that finishes
+                            // elongating long before the fruit it subtends ripens -- a maize tassel is fully expanded at VT, about
+                            // two months ahead of the ear -- cannot share the ear's clock without spending its whole life
+                            // undersized. The fruit maturity spread varies only the plant-level period.
+                            // The delay is added only to a positive plant-level period, so it cannot turn a disabled one into a usable one.
+                            float dd_to_maturity = plant_instance.dd_to_fruit_maturity > 0 ? plant_instance.dd_to_fruit_maturity + fbud.fruit_maturity_delay : plant_instance.dd_to_fruit_maturity;
+                            if (fbud.dd_to_inflorescence_maturity > 0) {
+                                dd_to_maturity = fbud.dd_to_inflorescence_maturity;
+                            }
+                            if (fbud.state == BUD_FRUITING && fbud.time_counter > 0 && dd_to_maturity > 0 && fbud.dd_to_inflorescence_maturity != 0.f) {
+                                // Save current scale for nitrogen model growth tracking
+                                fbud.previous_fruit_scale_factor = fbud.current_fruit_scale_factor;
+                                float scale = fmin(1, 0.25f + 0.75f * fbud.time_counter / dd_to_maturity);
+                                phytomer.setInflorescenceScaleFraction(fbud, scale);
+                            }
+                        }
+                    }
+                };
+
+                if (!shoot_growing) {
+                    // Woken floral buds on a shoot still waiting to break vegetative dormancy: only its fruit grows
+                    for (auto &phytomer: shoot->phytomers) {
+                        growFruit(*phytomer);
+                    }
+                    continue;
+                }
 
                 int node_index = 0;
                 for (auto &phytomer: shoot->phytomers) {
@@ -12136,33 +12823,19 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                         }
                     }
 
-                    // Fruit Growth
-                    for (auto &petiole: phytomer->floral_buds) {
-                        for (auto &fbud: petiole) {
-                            // If the floral bud it in a 'fruiting' state, the fruit grows with time.
-                            // dd_to_fruit_maturity is a divisor here, so a non-positive value would give an
-                            // infinite or negative scale factor; guard rather than trust the call sites, since
-                            // setPlantPhenologicalThresholds() accepts any value and readPlantStructureXML()
-                            // feeds it whatever the file contains.
-                            // A bud may override the plant-level period with one of its own. An inflorescence that finishes
-                            // elongating long before the fruit it subtends ripens -- a maize tassel is fully expanded at VT, about
-                            // two months ahead of the ear -- cannot share the ear's clock without spending its whole life
-                            // undersized.
-                            const float dd_to_maturity = fbud.dd_to_inflorescence_maturity > 0 ? fbud.dd_to_inflorescence_maturity : plant_instance.dd_to_fruit_maturity;
-                            if (fbud.state == BUD_FRUITING && fbud.time_counter > 0 && dd_to_maturity > 0 && fbud.dd_to_inflorescence_maturity != 0.f) {
-                                // Save current scale for nitrogen model growth tracking
-                                fbud.previous_fruit_scale_factor = fbud.current_fruit_scale_factor;
-                                float scale = fmin(1, 0.25f + 0.75f * fbud.time_counter / dd_to_maturity);
-                                phytomer->setInflorescenceScaleFraction(fbud, scale);
-                            }
-                        }
-                    }
+                    growFruit(*phytomer);
 
                     // ****** NEW CHILD SHOOTS FROM VEGETATIVE BUDS ****** //
                     uint parent_petiole_index = 0;
                     for (auto &petiole: phytomer->axillary_vegetative_buds) {
                         for (auto &vbud: petiole) {
-                            if (vbud.state == BUD_ACTIVE && phytomer->age + dt_max_days > shoot->shoot_parameters.vegetative_bud_break_time.val()) {
+                            // Each bud draws its own break time, from the shoot bearing it, and counts it from when it became active: on new growth that is when its node formed, and on older wood the
+                            // dormancy break that woke it. A constant break time draws no random number.
+                            if (vbud.state == BUD_ACTIVE && !vbud.break_time_drawn) {
+                                vbud.break_time = shoot->shoot_parameters.vegetative_bud_break_time.resample();
+                                vbud.break_time_drawn = true;
+                            }
+                            if (vbud.state == BUD_ACTIVE && vbud.time_counter + dt_max_days > vbud.break_time) {
                                 ShootParameters *new_shoot_parameters = &plant_instance.shoot_types_snapshot.at(vbud.shoot_type_label);
                                 int parent_node_count = shoot->current_node_number;
 
@@ -13329,6 +14002,7 @@ void PlantArchitecture::setGeometryUpdateScheduling(int update_frequency, bool f
     }
 
     geometry_update_frequency = update_frequency;
+    this->force_update_on_collision = force_update_on_collision;
     geometry_update_counter = 0; // Reset counter
 }
 

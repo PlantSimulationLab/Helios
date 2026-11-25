@@ -227,6 +227,68 @@ DOCTEST_TEST_CASE("LiDAR triangulateHitPoints Memory-Optimization Equivalence") 
     DOCTEST_CHECK(meshChecksum(cloud_b2) == meshChecksum(cloud_b));
 }
 
+DOCTEST_TEST_CASE("LiDAR handles an empty point cloud the same with messages on or off") {
+    // These checks were written as `if (printmessages && <empty>) { warn; return; }`, so the early return happened only
+    // when messages were enabled. With messages off the methods went on: a bounding box of an empty cloud came back as
+    // the inverted box (1e6, -1e6) the search starts from, and a grid-only synthetic scan with no grid ran with that
+    // box as its cull volume.
+    for (const bool messages: {true, false}) {
+        DOCTEST_CAPTURE(messages);
+        LiDARcloud cloud;
+        if (messages) {
+            cloud.enableMessages();
+        } else {
+            cloud.disableMessages();
+        }
+        std::vector<std::string> column_format;
+        ScanMetadata scan(make_vec3(0, 0, 0), 10, 0.0f, M_PI, 10, 0.0f, 2.0f * M_PI, 0.0f, 0.0f, 0.0f, 0.0f, column_format);
+        cloud.addScan(scan);
+
+        bool hit_box_rejected = false;
+        bool grid_box_rejected = false;
+        bool grid_only_scan_rejected = false;
+        uint triangle_count = 1;
+        bool triangulation_threw = false;
+        {
+            capture_cout cout_buffer;
+            capture_cerr cerr_buffer;
+            vec3 boxmin, boxmax;
+            try {
+                cloud.getHitBoundingBox(boxmin, boxmax);
+            } catch (const std::runtime_error &) {
+                hit_box_rejected = true;
+            }
+            try {
+                cloud.getGridBoundingBox(boxmin, boxmax);
+            } catch (const std::runtime_error &) {
+                grid_box_rejected = true;
+            }
+
+            Context context;
+            context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+            try {
+                cloud.syntheticScan(&context, true, false);
+            } catch (const std::runtime_error &) {
+                grid_only_scan_rejected = true;
+            }
+
+            // A cloud with a scan but no hits has nothing to triangulate; it is skipped, not an error
+            try {
+                cloud.triangulateHitPoints(0.5f, 5.f);
+                cloud.triangulateHitPoints(0.5f, 5.f, "reflectance", 0.f, ">");
+                triangle_count = cloud.getTriangleCount();
+            } catch (const std::exception &) {
+                triangulation_threw = true;
+            }
+        }
+        DOCTEST_CHECK(hit_box_rejected);
+        DOCTEST_CHECK(grid_box_rejected);
+        DOCTEST_CHECK(grid_only_scan_rejected);
+        DOCTEST_CHECK(!triangulation_threw);
+        DOCTEST_CHECK(triangle_count == 0);
+    }
+}
+
 DOCTEST_TEST_CASE("LiDAR syntheticScan Progress Callback") {
     LiDARcloud cloud;
     cloud.disableMessages();
@@ -4655,6 +4717,144 @@ DOCTEST_TEST_CASE("LiDAR N-Return - Partial Miss Dropped") {
     }
     DOCTEST_REQUIRE(lidar_lim.getHitCount() >= 1);
     DOCTEST_CHECK(lim_miss == 0); // partial-transmission miss dropped in limited mode
+}
+
+DOCTEST_TEST_CASE("LiDAR N-Return - SINGLE+FIRST keeps the nearest N of MULTI") {
+    // An N-echo discrete-return instrument is modeled as RETURN_MODE_SINGLE + maxReturns N + SINGLE_RETURN_FIRST. On the
+    // same pulse this must report exactly the N nearest of the returns RETURN_MODE_MULTI resolves (same ranges), indexed
+    // 0..N-1 nearest-first, with target_count equal to the number of returns kept. Five laterally disjoint strips at
+    // separated depths each intercept part of one divergent pulse, and the uncovered wings of the footprint escape, so the
+    // pulse is only partly intercepted.
+    const int N = 3;
+    auto buildScene = [](Context &context) {
+        const float strip_x[5] = {-0.20f, -0.08f, 0.04f, 0.16f, 0.28f};
+        const float strip_z[5] = {4.0f, 3.2f, 2.4f, 1.6f, 0.8f};
+        for (int k = 0; k < 5; k++) {
+            context.addPatch(make_vec3(strip_x[k], 0.f, strip_z[k]), make_vec2(0.10f, 0.6f));
+        }
+    };
+
+    auto runScan = [&](ReturnMode mode, bool record_partial_misses) {
+        Context ctx;
+        ctx.seedRandomGenerator(0); // identical sub-ray sampling in every run, so the resolved returns can be compared
+        buildScene(ctx);
+        LiDARcloud lidar;
+        lidar.disableMessages();
+        ScanMetadata scan(make_vec3(0, 0, 10), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+        uint id = lidar.addScan(scan);
+        lidar.setScanPulseWidth(id, 0.3f);
+        lidar.setScanDetectionThreshold(id, 0.f); // keep every strip, however small its share of the footprint
+        lidar.setScanRecordPartialMisses(id, record_partial_misses);
+        lidar.setScanReturnMode(id, mode);
+        if (mode == RETURN_MODE_SINGLE) {
+            lidar.setScanMaxReturns(id, N);
+            lidar.setScanSingleReturnSelection(id, SINGLE_RETURN_FIRST);
+        }
+        lidar.syntheticScan(&ctx, 400, 0.3f, false, true); // record_misses=true
+        return lidar;
+    };
+
+    // Split a cloud into its real-return distances (ascending) and its miss count, and check target_count on every row.
+    auto summarize = [](LiDARcloud &cloud, std::vector<double> &real_distances, int &miss_count, bool &target_count_is_row_count) {
+        real_distances.clear();
+        miss_count = 0;
+        target_count_is_row_count = true;
+        for (uint i = 0; i < cloud.getHitCount(); i++) {
+            if (cloud.getHitData(i, "target_count") != double(cloud.getHitCount())) {
+                target_count_is_row_count = false;
+            }
+            if (cloud.getHitData(i, "is_miss") == 1.0) {
+                miss_count++;
+            } else {
+                real_distances.push_back(cloud.getHitData(i, "distance"));
+            }
+        }
+        std::sort(real_distances.begin(), real_distances.end());
+    };
+
+    // Real-instrument record (no partial-miss point): SINGLE+FIRST is exactly the nearest N of MULTI.
+    LiDARcloud multi = runScan(RETURN_MODE_MULTI, false);
+    LiDARcloud single = runScan(RETURN_MODE_SINGLE, false);
+    std::vector<double> multi_real, single_real;
+    int multi_miss = 0, single_miss = 0;
+    bool multi_count_ok = false, single_count_ok = false;
+    summarize(multi, multi_real, multi_miss, multi_count_ok);
+    summarize(single, single_real, single_miss, single_count_ok);
+
+    DOCTEST_REQUIRE(multi_real.size() > size_t(N)); // the cap must bind, or the comparison below proves nothing
+    DOCTEST_CHECK(multi_miss == 0);
+    DOCTEST_CHECK(multi_count_ok);
+    DOCTEST_REQUIRE(single_real.size() == size_t(N));
+    DOCTEST_CHECK(single_miss == 0);
+    DOCTEST_CHECK(single_count_ok); // target_count is the number of returns kept, not the number resolved
+    for (int k = 0; k < N; k++) {
+        DOCTEST_CHECK(single_real.at(k) == doctest::Approx(multi_real.at(k)).epsilon(1e-6));
+    }
+    // target_index runs 0..N-1 nearest-first.
+    for (uint i = 0; i < single.getHitCount(); i++) {
+        const int target_index = int(single.getHitData(i, "target_index"));
+        DOCTEST_REQUIRE(target_index >= 0);
+        DOCTEST_REQUIRE(target_index < N);
+        DOCTEST_CHECK(single.getHitData(i, "distance") == doctest::Approx(single_real.at(target_index)).epsilon(1e-6));
+    }
+
+    // With partial misses recorded, MULTI adds one miss row (counted in target_count); SINGLE never records it.
+    LiDARcloud multi_pm = runScan(RETURN_MODE_MULTI, true);
+    LiDARcloud single_pm = runScan(RETURN_MODE_SINGLE, true);
+    std::vector<double> multi_pm_real, single_pm_real;
+    int multi_pm_miss = 0, single_pm_miss = 0;
+    bool multi_pm_count_ok = false, single_pm_count_ok = false;
+    summarize(multi_pm, multi_pm_real, multi_pm_miss, multi_pm_count_ok);
+    summarize(single_pm, single_pm_real, single_pm_miss, single_pm_count_ok);
+    DOCTEST_CHECK(multi_pm_miss == 1);
+    DOCTEST_CHECK(multi_pm_real.size() == multi_real.size());
+    DOCTEST_CHECK(multi_pm_count_ok);
+    DOCTEST_CHECK(multi_pm.getHitCount() == multi_real.size() + 1);
+    DOCTEST_CHECK(single_pm_miss == 0);
+    DOCTEST_CHECK(single_pm_real == single_real);
+}
+
+DOCTEST_TEST_CASE("LiDAR N-Return - MULTI warns that maxReturns is ignored") {
+    // RETURN_MODE_MULTI reports every detected return and ignores maxReturns. A scan configured with a cap in MULTI mode
+    // must say so at scan time rather than silently produce an unlimited-return cloud.
+    auto runScan = [](ReturnMode stored_mode, int max_returns, bool override_with_multi, uint &hit_count) {
+        Context ctx;
+        ctx.seedRandomGenerator(0);
+        ctx.addPatch(make_vec3(0.13f, 0.f, 2.5f), make_vec2(0.10f, 0.4f));
+        ctx.addPatch(make_vec3(0.f, 0.f, 0.4f), make_vec2(2.0f, 2.0f));
+        LiDARcloud lidar; // messages left enabled: the warning is what is under test
+        ScanMetadata scan(make_vec3(0, 0, 5), 1, M_PI, M_PI, 1, 0, 0, 0.0f, 0.06f, 0.0f, 0.0f, {});
+        uint id = lidar.addScan(scan);
+        lidar.setScanPulseWidth(id, 0.5f);
+        lidar.setScanReturnMode(id, stored_mode);
+        lidar.setScanMaxReturns(id, max_returns);
+        std::string warnings;
+        {
+            capture_cout cout_buffer;
+            capture_cerr cerr_buffer;
+            if (override_with_multi) {
+                lidar.syntheticScan(&ctx, 100, 0.5f, RETURN_MODE_MULTI);
+            } else {
+                lidar.syntheticScan(&ctx, 100, 0.5f);
+            }
+            warnings = cerr_buffer.get_captured_output();
+        }
+        hit_count = lidar.getHitCount();
+        return warnings;
+    };
+
+    uint hits_capped = 0, hits_default = 0, hits_single = 0, hits_override = 0;
+    const std::string capped = runScan(RETURN_MODE_MULTI, 5, false, hits_capped);
+    const std::string multi_default = runScan(RETURN_MODE_MULTI, 1, false, hits_default);
+    const std::string single_capped = runScan(RETURN_MODE_SINGLE, 5, false, hits_single);
+    const std::string overridden = runScan(RETURN_MODE_SINGLE, 5, true, hits_override);
+
+    DOCTEST_CHECK(capped.find("multi_return_cap_ignored") != std::string::npos);
+    DOCTEST_CHECK(capped.find("RETURN_MODE_SINGLE") != std::string::npos);
+    DOCTEST_CHECK(hits_capped == hits_default); // the cap is not applied in MULTI
+    DOCTEST_CHECK(multi_default.find("multi_return_cap_ignored") == std::string::npos);
+    DOCTEST_CHECK(single_capped.find("multi_return_cap_ignored") == std::string::npos);
+    DOCTEST_CHECK(overridden.find("multi_return_cap_ignored") != std::string::npos); // per-call MULTI override also ignores the cap
 }
 
 DOCTEST_TEST_CASE("LiDAR N-Return - Backward Compatibility (single/multi unchanged)") {

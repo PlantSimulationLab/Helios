@@ -34,7 +34,15 @@ constexpr float R = 8.314462618f;
 //! Ratio of the boundary-layer conductance to water vapor to that to heat, used when only the conductance to heat is known. Water vapor diffuses more readily than heat, so the conductance to it is larger.
 constexpr float moisture_conductance_ratio = 1.08f;
 
-inline float esat_Pa(float T_K) {
+//! Marks a function compiled for both the host and, in a CUDA translation unit, the device
+#ifdef __CUDACC__
+#define ENERGYBALANCE_HOST_DEVICE __host__ __device__
+#else
+#define ENERGYBALANCE_HOST_DEVICE
+#endif
+
+//! Saturation vapor pressure of water, Pa, at temperature \p T_K in kelvin
+ENERGYBALANCE_HOST_DEVICE inline float esat_Pa(float T_K) {
     float Tc = T_K - 273.15f;
     // This is Clausius-Clapeyron equation (See Campbell and Norman pp. 41 Eq. 3.8).  Note that temperature must be in Kelvin, and result is in Pascals
     return 611.0f * expf(17.502f * Tc / (Tc + 240.97f));

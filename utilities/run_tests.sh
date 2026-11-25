@@ -16,7 +16,9 @@ usage() {
     echo "  --debugbuild     Build with Debug configuration"
     echo "  --verbose        Show full build/compile output"
     echo "  --log-file <file>  Redirect all output to a specified log file"
-    echo "  --test <name>    Run only the specified test (e.g., --test radiation)"
+    echo "  --test <name>    Run only the specified test (e.g., --test radiation)."
+    echo "                   A full run includes the CUDA-only plug-ins (aeriallidar, voxelintersection) when nvcc is found or"
+    echo "                   --requiregpu is given."
     echo "  --tests <list>   Run specified tests (comma-separated, e.g., --tests \"radiation,lidar\")"
     echo "  --testcase <case> Pass specific test case(s) to doctest, comma-separated, with * wildcards (e.g., --testcase \"My Test Case\" or --testcase \"*first*,*second*\")"
     echo "  --doctestargs <args> Pass arguments directly to doctest (e.g., --doctestargs \"--help --list-test-cases\"); words are split on spaces, so quote any containing one (e.g., --doctestargs \"'--subcase=*a b*'\")"
@@ -583,6 +585,13 @@ optional_plugins_for_tests() {
     *) echo "" ;;
   esac
 }
+
+# Plug-ins that require the CUDA toolkit to compile (find_package(CUDAToolkit REQUIRED)). They join a full run when nvcc is on the
+# PATH, or when --requiregpu is given, so that a GPU runner that has lost its toolkit fails instead of silently leaving them out.
+CUDA_TEST_PLUGINS="aeriallidar voxelintersection"
+if command -v nvcc >/dev/null 2>&1 || [ "$REQUIREGPU" == "ON" ]; then
+  TEST_PLUGINS="${TEST_PLUGINS} ${CUDA_TEST_PLUGINS}"
+fi
 
 # Determine which plugins are needed for current test selection
 PLUGINS_TO_BUILD=${TEST_PLUGINS}

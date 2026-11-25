@@ -105,6 +105,26 @@ namespace {
         rotation[8] = cosine + z * z * versine;
     }
 
+    //! Rotation matrix, in row-major order, of a turn about an axis given in double precision (Rodrigues' formula)
+    void makeAxisRotation(const double axis[3], double angle_radians, double rotation[9]) {
+        const double axis_length = std::sqrt(axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]);
+        const double x = axis[0] / axis_length;
+        const double y = axis[1] / axis_length;
+        const double z = axis[2] / axis_length;
+        const double cosine = std::cos(angle_radians);
+        const double sine = std::sin(angle_radians);
+        const double versine = 1.0 - cosine;
+        rotation[0] = cosine + x * x * versine;
+        rotation[1] = x * y * versine - z * sine;
+        rotation[2] = x * z * versine + y * sine;
+        rotation[3] = y * x * versine + z * sine;
+        rotation[4] = cosine + y * y * versine;
+        rotation[5] = y * z * versine - x * sine;
+        rotation[6] = z * x * versine - y * sine;
+        rotation[7] = z * y * versine + x * sine;
+        rotation[8] = cosine + z * z * versine;
+    }
+
     //! Product of two 3x3 matrices in row-major order
     void multiplyRotations(const double left[9], const double right[9], double product[9]) {
         for (int row = 0; row < 3; row++) {
@@ -153,6 +173,162 @@ namespace {
         tip_translation.translation[1] = (double(pose.length_scale) - 1.0) * (double(rest_tip.y) - rest_frame.pivot.y);
         tip_translation.translation[2] = (double(pose.length_scale) - 1.0) * (double(rest_tip.z) - rest_frame.pivot.z);
         return tip_translation;
+    }
+
+    //! Axis, perpendicular to the organ axis and the pitch axis of a joint, about which a positive turn carries the organ the way a positive yaw does
+    vec3 jointLateralAxis(const PlantJointFrame &rest_frame) {
+        return normalize(cross(rest_frame.organ_axis, rest_frame.pitch_axis));
+    }
+
+    //! Whether a petiole's centerline has the two segments of non-zero length before its last that a bend needs (see bendCenterline())
+    bool petioleCenterlineCanBend(const std::vector<vec3> &centerline) {
+        return centerline.size() >= 3 && centerlineLength(std::vector<vec3>(centerline.begin(), centerline.end() - 1)) > 0.f;
+    }
+
+    //! Bend of a petiole set by a joint pose, about the axes of its joint as the plant grew
+    PosePetioleBend makePetioleBend(const PlantJointFrame &rest_frame, double bend_radians, double bend_lateral_radians) {
+        PosePetioleBend bend;
+        const vec3 lateral_axis = jointLateralAxis(rest_frame);
+        const double vector[3] = {bend_radians * rest_frame.pitch_axis.x + bend_lateral_radians * lateral_axis.x, bend_radians * rest_frame.pitch_axis.y + bend_lateral_radians * lateral_axis.y,
+                                  bend_radians * rest_frame.pitch_axis.z + bend_lateral_radians * lateral_axis.z};
+        const double magnitude = std::sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]);
+        if (magnitude == 0.0) {
+            return bend;
+        }
+        bend.angle = magnitude;
+        for (int i = 0; i < 3; i++) {
+            bend.axis[i] = vector[i] / magnitude;
+        }
+        return bend;
+    }
+
+    PosePetioleBend makePetioleBend(const PlantJointFrame &rest_frame, const PlantJointPose &pose) {
+        return makePetioleBend(rest_frame, deg2rad(double(pose.bend_degrees)), deg2rad(double(pose.bend_lateral_degrees)));
+    }
+
+    //! A centerline bent along its length, in double precision
+    /**
+     * Segment k (from node k to node k+1) is turned about the bend's axis by angle * s_k / s_last, where s_k is the arclength at its first node and s_last the arclength at the first node of the last
+     * segment. The first segment therefore keeps its direction and the last is turned by the whole angle, so the difference between the directions at the base and the tip changes by exactly the angle,
+     * however many segments there are, and the turn in between grows evenly with arclength. Also gives the turn at each node, used to turn what is attached along the centerline: the turn of the segment
+     * it starts at the base, of the segment it ends at the tip, and the mean of the two segments it joins elsewhere, so that the turn varies continuously along the centerline.
+     */
+    struct BentCenterline {
+        std::vector<std::array<double, 3>> nodes;
+        std::vector<double> node_turn;
+        std::vector<double> segment_turn;
+    };
+
+    BentCenterline bendCenterline(const std::vector<vec3> &rest_nodes, const PosePetioleBend &bend) {
+        BentCenterline bent;
+        const size_t node_count = rest_nodes.size();
+        bent.nodes.resize(node_count);
+        bent.node_turn.assign(node_count, 0.0);
+        bent.segment_turn.assign(node_count > 0 ? node_count - 1 : 0, 0.0);
+        if (node_count == 0) {
+            return bent;
+        }
+        std::vector<double> arclength(node_count, 0.0);
+        for (size_t node = 1; node < node_count; node++) {
+            const vec3 segment = rest_nodes.at(node) - rest_nodes.at(node - 1);
+            arclength.at(node) = arclength.at(node - 1) + std::sqrt(double(segment.x) * segment.x + double(segment.y) * segment.y + double(segment.z) * segment.z);
+        }
+        bent.nodes.front() = {double(rest_nodes.front().x), double(rest_nodes.front().y), double(rest_nodes.front().z)};
+        // Arclength at the start of the last segment, over which the turn is spread
+        const double bend_length = node_count >= 2 ? arclength.at(node_count - 2) : 0.0;
+        if (bend.angle != 0.0 && !(bend_length > 0.0)) {
+            helios_runtime_error("ERROR (PlantArchitecture::setPlantJointPose): A centerline with fewer than two segments of non-zero length cannot be bent, since its direction at its base and at its tip are the same. "
+                                 "This should have been refused when the pose was set; it is a bug in the plant architecture plug-in.");
+        }
+        for (size_t segment = 0; segment + 1 < node_count; segment++) {
+            const double turn = bend.angle != 0.0 ? bend.angle * arclength.at(segment) / bend_length : 0.0;
+            bent.segment_turn.at(segment) = turn;
+            double rotation[9];
+            makeAxisRotation(bend.axis, turn, rotation);
+            const double d[3] = {double(rest_nodes.at(segment + 1).x) - rest_nodes.at(segment).x, double(rest_nodes.at(segment + 1).y) - rest_nodes.at(segment).y,
+                                 double(rest_nodes.at(segment + 1).z) - rest_nodes.at(segment).z};
+            for (int row = 0; row < 3; row++) {
+                bent.nodes.at(segment + 1)[row] = bent.nodes.at(segment)[row] + rotation[row * 3] * d[0] + rotation[row * 3 + 1] * d[1] + rotation[row * 3 + 2] * d[2];
+            }
+        }
+        if (node_count >= 2) {
+            bent.node_turn.front() = bent.segment_turn.front();
+            bent.node_turn.back() = bent.segment_turn.back();
+            for (size_t node = 1; node + 1 < node_count; node++) {
+                bent.node_turn.at(node) = 0.5 * (bent.segment_turn.at(node - 1) + bent.segment_turn.at(node));
+            }
+        }
+        return bent;
+    }
+
+    //! Bend the stored geometry of a petiole, as the plant grew, in place, and give the rigid motion of each of its leaves
+    /**
+     * The centerline, the leaf bases and the bases of placed leaf stalks are moved, each attached point carried with the point of the centerline nearest it and turned with the centerline there. The rest
+     * shape the petiole droops from is bent along with it, so that a flexible petiole settles under gravity from its bent shape. The petiole's axes at its base are unchanged, since the bend leaves the
+     * direction in which it leaves its base alone.
+     * \return The motion of each leaf of the petiole, by leaf index.
+     */
+    std::vector<PoseRigidTransform> bendPetioleStoredState(Phytomer &phytomer, uint petiole_index, const PosePetioleBend &bend) {
+        std::vector<vec3> &centerline = phytomer.petiole_vertices.at(petiole_index);
+        const std::vector<vec3> rest_centerline = centerline;
+        const BentCenterline bent = bendCenterline(rest_centerline, bend);
+        const std::vector<float> node_arclength = polylineNodeArclengths(rest_centerline);
+        // Where a point attached to the centerline goes, and the turn it takes with it
+        auto carry = [&](const vec3 &point, double &turn) {
+            const float s = polylineArclengthOfClosestPoint(rest_centerline, node_arclength, point);
+            const size_t segment = polylineSegmentAtArclength(node_arclength, s);
+            const float segment_length = node_arclength.at(segment + 1) - node_arclength.at(segment);
+            const double t = segment_length > 0.f ? std::clamp(double(s - node_arclength.at(segment)) / segment_length, 0.0, 1.0) : 0.0;
+            const vec3 on_centerline = rest_centerline.at(segment) + float(t) * (rest_centerline.at(segment + 1) - rest_centerline.at(segment));
+            turn = (1.0 - t) * bent.node_turn.at(segment) + t * bent.node_turn.at(segment + 1);
+            double rotation[9];
+            makeAxisRotation(bend.axis, turn, rotation);
+            const std::array<double, 3> &a = bent.nodes.at(segment);
+            const std::array<double, 3> &b = bent.nodes.at(segment + 1);
+            const vec3 from_centerline = point - on_centerline;
+            double moved[3];
+            for (int row = 0; row < 3; row++) {
+                moved[row] = a[row] + t * (b[row] - a[row]) + rotation[row * 3] * from_centerline.x + rotation[row * 3 + 1] * from_centerline.y + rotation[row * 3 + 2] * from_centerline.z;
+            }
+            return make_vec3(float(moved[0]), float(moved[1]), float(moved[2]));
+        };
+
+        std::vector<PoseRigidTransform> leaf_motions;
+        if (petiole_index < phytomer.leaf_bases.size()) {
+            for (vec3 &leaf_base: phytomer.leaf_bases.at(petiole_index)) {
+                double turn = 0;
+                const vec3 rest_base = leaf_base;
+                leaf_base = carry(rest_base, turn);
+                PoseRigidTransform motion;
+                makeAxisRotation(bend.axis, turn, motion.rotation);
+                // The leaf is turned about its base and taken to where the base goes: p -> R (p - b) + b'
+                const double bent_base[3] = {leaf_base.x, leaf_base.y, leaf_base.z};
+                for (int row = 0; row < 3; row++) {
+                    motion.translation[row] = bent_base[row] - (motion.rotation[row * 3] * rest_base.x + motion.rotation[row * 3 + 1] * rest_base.y + motion.rotation[row * 3 + 2] * rest_base.z);
+                }
+                leaf_motions.push_back(motion);
+            }
+        }
+        if (petiole_index < phytomer.leaf_objIDs.size()) {
+            for (const uint leaf_objID: phytomer.leaf_objIDs.at(petiole_index)) {
+                const auto stalk_base = phytomer.leaf_stalk_base_placed.find(leaf_objID);
+                if (stalk_base != phytomer.leaf_stalk_base_placed.end()) {
+                    double turn = 0;
+                    stalk_base->second = carry(stalk_base->second, turn);
+                }
+            }
+        }
+        for (size_t node = 0; node < centerline.size(); node++) {
+            centerline.at(node) = make_vec3(float(bent.nodes.at(node)[0]), float(bent.nodes.at(node)[1]), float(bent.nodes.at(node)[2]));
+        }
+        if (petiole_index < phytomer.petiole_rest_offsets.size() && phytomer.petiole_rest_offsets.at(petiole_index).size() >= 2) {
+            std::vector<vec3> &rest_offsets = phytomer.petiole_rest_offsets.at(petiole_index);
+            const BentCenterline bent_offsets = bendCenterline(rest_offsets, bend);
+            for (size_t node = 0; node < rest_offsets.size(); node++) {
+                rest_offsets.at(node) = make_vec3(float(bent_offsets.nodes.at(node)[0]), float(bent_offsets.nodes.at(node)[1]), float(bent_offsets.nodes.at(node)[2]));
+            }
+        }
+        return leaf_motions;
     }
 
     //! Pose of a joint that carries the chord of its organ, from the joint to the organ's tip, onto another chord
@@ -1259,8 +1435,10 @@ void PlantArchitecture::capturePlantRestPose(PlantInstance &plant_instance) cons
         for (const PoseGroupObject &object: poseGroupObjects(group, context_ptr)) {
             group.state->objects.push_back(captureObjectState(context_ptr, object.objID));
             // A leaf that droops, or hangs from a petiole that bends, is rewritten through its mesh's shared vertices each time it settles, so those are recorded too
+            // A leaf whose stalk was placed is likewise rewritten through them when its petiole is bent (see evaluatePlantPose()), and without them a reset would leave its stalk where the bend put it.
             const bool leaf_can_resettle = object.leaf_index >= 0 && (group.phytomer->leaf_flexibility > 0.f || group.phytomer->petiole_flexibility > 0.f);
-            if (leaf_can_resettle && context_ptr->getObjectType(object.objID) == OBJECT_TYPE_POLYMESH && !context_ptr->getPolymeshObjectFaces(object.objID).empty()) {
+            const bool leaf_has_placed_stalk = object.leaf_index >= 0 && group.phytomer->leaf_stalk_base_placed.find(object.objID) != group.phytomer->leaf_stalk_base_placed.end();
+            if ((leaf_can_resettle || leaf_has_placed_stalk) && context_ptr->getObjectType(object.objID) == OBJECT_TYPE_POLYMESH && !context_ptr->getPolymeshObjectFaces(object.objID).empty()) {
                 group.state->objects.back().rest_shared_vertices = context_ptr->getPolymeshObjectVertices(object.objID);
             }
         }
@@ -1422,7 +1600,12 @@ void PlantArchitecture::computeShootPoseTransforms(uint plantID, uint shootID, c
         joint.type = PLANT_JOINT_PETIOLE;
         for (uint petiole_index = 0; petiole_index < shoot_state.petioles.at(node_index).size(); petiole_index++) {
             joint.petiole_index = petiole_index;
-            shoot_state.petioles.at(node_index).at(petiole_index).pending_transform = withJoint(transform, joint, nullorigin, unused_beyond_tip);
+            PoseGroupState &petiole_state = shoot_state.petioles.at(node_index).at(petiole_index);
+            petiole_state.pending_transform = withJoint(transform, joint, nullorigin, unused_beyond_tip);
+            const auto joint_pose = pose_state.joint_poses.find(joint);
+            if (joint_pose != pose_state.joint_poses.end() && (joint_pose->second.bend_degrees != 0.f || joint_pose->second.bend_lateral_degrees != 0.f)) {
+                petiole_state.pending_bend = makePetioleBend(getPlantJointFrame(plantID, joint), joint_pose->second);
+            }
         }
 
         joint.type = PLANT_JOINT_PEDUNCLE;
@@ -1452,6 +1635,7 @@ void PlantArchitecture::computePlantPoseTransforms(uint plantID) {
         RestoreVisitor restore(group.state->rest);
         visitPoseGroup(group, restore);
         group.state->pending_transform = PoseRigidTransform();
+        group.state->pending_bend = PosePetioleBend();
     });
 
     PoseRigidTransform root_transform;
@@ -1482,15 +1666,25 @@ void PlantArchitecture::evaluatePlantPose(uint plantID) {
     std::set<Shoot *> shoots_with_moved_internodes;
     forEachPoseGroup(plant_instance, pose_state, false, [this, &moved_groups, &shoots_with_moved_internodes](PoseGroupReference &group) {
         PoseGroupState &state = *group.state;
-        if (state.pending_transform == state.transform) {
+        if (state.pending_transform == state.transform && state.pending_bend == state.bend) {
             RestoreVisitor restore_posed(state.posed);
             visitPoseGroup(group, restore_posed);
             return;
         }
 
-        const bool is_as_grown = state.pending_transform.isIdentity();
+        const bool is_bent = state.pending_bend.angle != 0.0;
+        const bool is_as_grown = state.pending_transform.isIdentity() && !is_bent;
 
-        // A leaf is carried by where its base goes. The bases are read here, while the stored geometry is still as the plant grew.
+        // A bent petiole is bent as it grew, before it is moved; its leaves are carried with it
+        std::vector<PoseRigidTransform> leaf_bend_motions;
+        if (is_bent) {
+            if (group.kind != PoseGroupReference::PETIOLE) {
+                helios_runtime_error("ERROR (PlantArchitecture::setPlantJointPose): A part of the plant other than a petiole is bent, which should not be possible. This is a bug in the plant architecture plug-in.");
+            }
+            leaf_bend_motions = bendPetioleStoredState(*group.phytomer, group.petiole_index, state.pending_bend);
+        }
+
+        // A leaf is carried by where its base goes. The bases are read here, while the stored geometry is still as the plant grew (bent, if the petiole is bent).
         const std::vector<PoseGroupObject> objects = poseGroupObjects(group, context_ptr);
         std::vector<PoseRigidTransform> object_motions(objects.size(), state.pending_transform);
         if (state.pending_transform.scale != 1.0) {
@@ -1504,8 +1698,16 @@ void PlantArchitecture::evaluatePlantPose(uint plantID) {
                 object_motions.at(object) = state.pending_transform.rigidMotionOfBodyAt(group.phytomer->leaf_bases.at(group.petiole_index).at(objects.at(object).leaf_index));
             }
         }
+        if (is_bent) {
+            for (size_t object = 0; object < objects.size(); object++) {
+                const int leaf_index = objects.at(object).leaf_index;
+                if (leaf_index >= 0 && size_t(leaf_index) < leaf_bend_motions.size()) {
+                    object_motions.at(object) = object_motions.at(object).composedWith(leaf_bend_motions.at(leaf_index));
+                }
+            }
+        }
 
-        if (!is_as_grown) {
+        if (!state.pending_transform.isIdentity()) {
             TransformVisitor transform(state.pending_transform);
             visitPoseGroup(group, transform);
             if (group.kind == PoseGroupReference::SHOOT) {
@@ -1527,8 +1729,23 @@ void PlantArchitecture::evaluatePlantPose(uint plantID) {
                 writeRigidObject(context_ptr, state.objects.at(object), object_motions.at(object));
             }
         }
+        // A leaf is carried rigidly about its base, but a stalk placed to leave the petiole elsewhere is carried by the petiole where it leaves it, which a bend turns differently. The stalk is placed
+        // again from where its base has gone, so that it stays on the petiole.
+        if (is_bent) {
+            for (const PoseGroupObject &object: objects) {
+                if (object.leaf_index < 0) {
+                    continue;
+                }
+                const auto stalk_base = group.phytomer->leaf_stalk_base_placed.find(object.objID);
+                if (stalk_base != group.phytomer->leaf_stalk_base_placed.end()) {
+                    const float leaf_size = group.phytomer->leaf_size_max.at(group.petiole_index).at(object.leaf_index) * group.phytomer->current_leaf_scale_factor.at(group.petiole_index);
+                    group.phytomer->placeLeafStalk(object.objID, group.petiole_index, stalk_base->second, leaf_size);
+                }
+            }
+        }
 
         state.transform = state.pending_transform;
+        state.bend = state.pending_bend;
         moved_groups.push_back(group);
         if (group.kind == PoseGroupReference::INTERNODE) {
             shoots_with_moved_internodes.insert(group.shoot);
@@ -1554,7 +1771,7 @@ void PlantArchitecture::evaluatePlantPose(uint plantID) {
 
     // Petioles and leaves that bend under their own weight were in balance where they grew, and are no longer once they have been turned
     for (const PoseGroupReference &group: moved_groups) {
-        if (group.kind == PoseGroupReference::PETIOLE && (!group.state->transform.isRotationIdentity() || group.state->transform.scale != 1.0 || group.state->resettle_at_rest)) {
+        if (group.kind == PoseGroupReference::PETIOLE && (!group.state->transform.isRotationIdentity() || group.state->transform.scale != 1.0 || group.state->bend.angle != 0.0 || group.state->resettle_at_rest)) {
             group.phytomer->resettlePetioleUnderGravity(group.petiole_index);
         }
     }
@@ -1678,13 +1895,26 @@ void PlantArchitecture::setPlantJointPoses(uint plantID, const std::vector<Plant
                              "holds positions that would not be moved with it. Call it from outside the callback, for example between calls to advanceTime().");
     }
     for (size_t i = 0; i < joints.size(); i++) {
-        validatePlantJoint(plantID, joints.at(i), "setPlantJointPoses");
+        const Phytomer *joint_phytomer = validatePlantJoint(plantID, joints.at(i), "setPlantJointPoses");
         if (!std::isfinite(poses.at(i).pitch_degrees) || !std::isfinite(poses.at(i).yaw_degrees) || !std::isfinite(poses.at(i).roll_degrees)) {
             helios_runtime_error("ERROR (PlantArchitecture::setPlantJointPoses): The pose given for joint " + std::to_string(i) + " has an angle that is not a finite number.");
         }
         if (!std::isfinite(poses.at(i).length_scale) || poses.at(i).length_scale <= 0.f) {
             helios_runtime_error("ERROR (PlantArchitecture::setPlantJointPoses): The pose given for joint " + std::to_string(i) + " has a length scale of " + std::to_string(poses.at(i).length_scale) +
                                  ", but it must be a positive number: 1 leaves the organ at the length it grew to.");
+        }
+        if (!std::isfinite(poses.at(i).bend_degrees) || !std::isfinite(poses.at(i).bend_lateral_degrees)) {
+            helios_runtime_error("ERROR (PlantArchitecture::setPlantJointPoses): The pose given for joint " + std::to_string(i) + " has a bend that is not a finite number.");
+        }
+        if ((poses.at(i).bend_degrees != 0.f || poses.at(i).bend_lateral_degrees != 0.f) && joints.at(i).type != PLANT_JOINT_PETIOLE) {
+            helios_runtime_error("ERROR (PlantArchitecture::setPlantJointPoses): The pose given for joint " + std::to_string(i) +
+                                 " has a bend, but only a petiole joint (PLANT_JOINT_PETIOLE) can be bent along its length. Turn other joints with their pitch, yaw and roll.");
+        }
+        if ((poses.at(i).bend_degrees != 0.f || poses.at(i).bend_lateral_degrees != 0.f) && !petioleCenterlineCanBend(joint_phytomer->petiole_vertices.at(joints.at(i).petiole_index))) {
+            helios_runtime_error("ERROR (PlantArchitecture::setPlantJointPoses): The pose given for joint " + std::to_string(i) + " bends petiole " + std::to_string(joints.at(i).petiole_index) + " of node " +
+                                 std::to_string(joints.at(i).node_index) + " of shoot " + std::to_string(joints.at(i).shootID) +
+                                 ", but its centerline has a single segment, so its direction is the same at its base and its tip and it cannot be bent. Turn it with pitch_degrees and yaw_degrees instead; a "
+                                 "shoot type gives its petioles more segments through PetioleParameters::length_segments.");
         }
         if (poses.at(i).length_scale != 1.f && joints.at(i).type != PLANT_JOINT_INTERNODE && joints.at(i).type != PLANT_JOINT_PETIOLE) {
             helios_runtime_error("ERROR (PlantArchitecture::setPlantJointPoses): The pose given for joint " + std::to_string(i) + " has a length scale of " + std::to_string(poses.at(i).length_scale) +
@@ -1699,7 +1929,7 @@ void PlantArchitecture::setPlantJointPoses(uint plantID, const std::vector<Plant
     const std::map<PlantJointID, PlantJointPose> previous_joint_poses = joint_poses;
     for (size_t i = 0; i < joints.size(); i++) {
         const PlantJointPose &pose = poses.at(i);
-        if (pose.pitch_degrees == 0.f && pose.yaw_degrees == 0.f && pose.roll_degrees == 0.f && pose.length_scale == 1.f) {
+        if (pose.pitch_degrees == 0.f && pose.yaw_degrees == 0.f && pose.roll_degrees == 0.f && pose.length_scale == 1.f && pose.bend_degrees == 0.f && pose.bend_lateral_degrees == 0.f) {
             joint_poses.erase(joints.at(i));
         } else {
             joint_poses[joints.at(i)] = pose;
@@ -1867,6 +2097,197 @@ void PlantArchitecture::setPlantJointLength(uint plantID, const PlantJointID &jo
     }
     pose.length_scale = length / grown_length;
     setPlantJointPose(plantID, joint, pose);
+}
+
+void PlantArchitecture::setPetioleTipPosition(uint plantID, uint shootID, uint node_index, uint petiole_index, const helios::vec3 &tip_position_requested) {
+    // Copied, since a caller may pass a position the plant stores (such as the petiole's own tip), which is put back as the plant grew while the bend is worked out
+    const vec3 tip_position = tip_position_requested;
+    PlantJointID joint;
+    joint.type = PLANT_JOINT_PETIOLE;
+    joint.shootID = shootID;
+    joint.node_index = node_index;
+    joint.petiole_index = petiole_index;
+    Phytomer *phytomer = validatePlantJoint(plantID, joint, "setPetioleTipPosition");
+    if (isInsidePhytomerCallback()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleTipPosition): A plant cannot be re-posed inside a phytomer callback. Call it from outside the callback, for example between calls to advanceTime().");
+    }
+    if (!std::isfinite(tip_position.x) || !std::isfinite(tip_position.y) || !std::isfinite(tip_position.z)) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleTipPosition): The tip position is not finite.");
+    }
+    if (!petioleCenterlineCanBend(phytomer->petiole_vertices.at(petiole_index))) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPetioleTipPosition): Petiole " + std::to_string(petiole_index) + " of node " + std::to_string(node_index) + " of shoot " + std::to_string(shootID) +
+                             " has a single segment, so it cannot be bent. Turn it toward the position with the joint's pitch and yaw (setPlantJointPose()) instead.");
+    }
+
+    PlantInstance &plant_instance = plant_instances.at(plantID);
+    preparePlantForPosing(plantID);
+    PlantPoseState &pose_state = *plant_instance.pose_state;
+    const std::map<PlantJointID, PlantJointPose> previous_joint_poses = pose_state.joint_poses;
+    PlantJointPose pose;
+    if (pose_state.joint_poses.find(joint) != pose_state.joint_poses.end()) {
+        pose = pose_state.joint_poses.at(joint);
+    }
+
+    // Limits on the solution, beyond which a target is taken to be out of reach rather than reached by a petiole bent into a loop or stretched out of all proportion
+    constexpr double maximum_bend_degrees = 180.0;
+    constexpr double minimum_length_scale = 0.25;
+    constexpr double maximum_length_scale = 4.0;
+
+    // Work out the bend and length that put the tip of the bent centerline, before it settles under gravity, on aimed_position. Leaves the plant's stored geometry as it grew.
+    auto solveForAim = [&](const vec3 &aimed_position) {
+        computePlantPoseTransforms(plantID);
+        const PlantJointFrame rest_frame = getPlantJointFrame(plantID, joint);
+        const std::vector<vec3> rest_centerline = phytomer->petiole_vertices.at(petiole_index);
+
+        // The aim in the frame of the petiole as it grew: with the motion of everything that carries the petiole, and the joint's own turn, taken back out
+        const PoseRigidTransform turned = pose_state.shoots.at(shootID).nodes.at(node_index).pending_transform.composedWith(makeJointRotation(rest_frame, pose));
+        const vec3 aim_offset = make_vec3(float(double(aimed_position.x) - turned.translation[0]), float(double(aimed_position.y) - turned.translation[1]), float(double(aimed_position.z) - turned.translation[2]));
+        const vec3 aim_as_grown = turned.applyInverseToDirection(aim_offset);
+        const double target[3] = {double(aim_as_grown.x) - rest_frame.pivot.x, double(aim_as_grown.y) - rest_frame.pivot.y, double(aim_as_grown.z) - rest_frame.pivot.z};
+        const double target_distance = std::sqrt(target[0] * target[0] + target[1] * target[1] + target[2] * target[2]);
+        if (target_distance < 1e-6 * double(rest_frame.length)) {
+            helios_runtime_error("ERROR (PlantArchitecture::setPetioleTipPosition): The tip position is at the base of the petiole.");
+        }
+
+        // Tip of the bent, stretched centerline relative to the pivot, for a bend about the joint's two axes (radians) and a length scale
+        auto tipOffset = [&](double bend, double bend_lateral, double length_scale, double out[3]) {
+            const BentCenterline bent = bendCenterline(rest_centerline, makePetioleBend(rest_frame, bend, bend_lateral));
+            const std::array<double, 3> &tip = bent.nodes.back();
+            out[0] = length_scale * (tip[0] - rest_frame.pivot.x);
+            out[1] = length_scale * (tip[1] - rest_frame.pivot.y);
+            out[2] = length_scale * (tip[2] - rest_frame.pivot.z);
+        };
+
+        double unknowns[3] = {deg2rad(double(pose.bend_degrees)), deg2rad(double(pose.bend_lateral_degrees)), double(pose.length_scale)};
+        const double tolerance = 1e-9 * std::max(1e-3, double(rest_frame.length));
+        bool converged = false;
+        constexpr int maximum_iterations = 100;
+        for (int iteration = 0; iteration < maximum_iterations; iteration++) {
+            double tip[3];
+            tipOffset(unknowns[0], unknowns[1], unknowns[2], tip);
+            const double residual[3] = {tip[0] - target[0], tip[1] - target[1], tip[2] - target[2]};
+            if (std::sqrt(residual[0] * residual[0] + residual[1] * residual[1] + residual[2] * residual[2]) < tolerance) {
+                converged = true;
+                break;
+            }
+            // Newton step: the bends by central differences, the length scale exactly (the tip is linear in it)
+            double jacobian[3][3];
+            const double step = 1e-6;
+            for (int unknown = 0; unknown < 2; unknown++) {
+                double plus[3] = {unknowns[0], unknowns[1], unknowns[2]};
+                double minus[3] = {unknowns[0], unknowns[1], unknowns[2]};
+                plus[unknown] += step;
+                minus[unknown] -= step;
+                double tip_plus[3], tip_minus[3];
+                tipOffset(plus[0], plus[1], plus[2], tip_plus);
+                tipOffset(minus[0], minus[1], minus[2], tip_minus);
+                for (int row = 0; row < 3; row++) {
+                    jacobian[row][unknown] = (tip_plus[row] - tip_minus[row]) / (2.0 * step);
+                }
+            }
+            for (int row = 0; row < 3; row++) {
+                jacobian[row][2] = tip[row] / unknowns[2];
+            }
+            // Solve J delta = -residual by Cramer's rule
+            auto determinant3 = [](const double m[3][3]) {
+                return m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+            };
+            const double determinant = determinant3(jacobian);
+            if (!(std::fabs(determinant) > 1e-30) || !std::isfinite(determinant)) {
+                break;
+            }
+            double delta[3];
+            for (int unknown = 0; unknown < 3; unknown++) {
+                double replaced[3][3];
+                for (int row = 0; row < 3; row++) {
+                    for (int column = 0; column < 3; column++) {
+                        replaced[row][column] = (column == unknown) ? -residual[row] : jacobian[row][column];
+                    }
+                }
+                delta[unknown] = determinant3(replaced) / determinant;
+            }
+            // Limit the step, so that a target far from the petiole is approached rather than overshot, and keep the length positive
+            const double bend_step = std::sqrt(delta[0] * delta[0] + delta[1] * delta[1]);
+            double damping = bend_step > 0.5 ? 0.5 / bend_step : 1.0;
+            while (unknowns[2] + damping * delta[2] <= 0.1 * unknowns[2]) {
+                damping *= 0.5;
+            }
+            for (int unknown = 0; unknown < 3; unknown++) {
+                unknowns[unknown] += damping * delta[unknown];
+            }
+            if (!std::isfinite(unknowns[0]) || !std::isfinite(unknowns[1]) || !std::isfinite(unknowns[2])) {
+                break;
+            }
+        }
+
+        const std::string petiole_description = "petiole " + std::to_string(petiole_index) + " of node " + std::to_string(node_index) + " of shoot " + std::to_string(shootID);
+        const std::string remedy = " Turn the petiole toward the position first with the joint's pitch and yaw (setPlantJointPose()).";
+        if (!converged) {
+            helios_runtime_error("ERROR (PlantArchitecture::setPetioleTipPosition): No bend and length were found that bring the tip of " + petiole_description + " to the given position." + remedy);
+        }
+        const double bend_degrees_total = rad2deg(std::sqrt(unknowns[0] * unknowns[0] + unknowns[1] * unknowns[1]));
+        if (bend_degrees_total > maximum_bend_degrees) {
+            helios_runtime_error("ERROR (PlantArchitecture::setPetioleTipPosition): Reaching the given position would bend " + petiole_description + " by " + std::to_string(bend_degrees_total) +
+                                 " degrees from base to tip, more than the " + std::to_string(int(maximum_bend_degrees)) + " allowed." + remedy);
+        }
+        if (unknowns[2] < minimum_length_scale || unknowns[2] > maximum_length_scale) {
+            helios_runtime_error("ERROR (PlantArchitecture::setPetioleTipPosition): Reaching the given position would scale the length of " + petiole_description + " by " + std::to_string(unknowns[2]) +
+                                 ", outside the range " + std::to_string(minimum_length_scale) + " to " + std::to_string(maximum_length_scale) +
+                                 " allowed. Check that the position is in meters and near the petiole; set a length outside this range with setPlantJointLength().");
+        }
+        PlantJointPose solved = pose;
+        solved.bend_degrees = static_cast<float>(rad2deg(unknowns[0]));
+        solved.bend_lateral_degrees = static_cast<float>(rad2deg(unknowns[1]));
+        solved.length_scale = static_cast<float>(unknowns[2]);
+        return solved;
+    };
+
+    auto setJointPose = [&](const PlantJointPose &new_pose) {
+        if (new_pose.pitch_degrees == 0.f && new_pose.yaw_degrees == 0.f && new_pose.roll_degrees == 0.f && new_pose.length_scale == 1.f && new_pose.bend_degrees == 0.f && new_pose.bend_lateral_degrees == 0.f) {
+            pose_state.joint_poses.erase(joint);
+        } else {
+            pose_state.joint_poses[joint] = new_pose;
+        }
+    };
+
+    // A petiole that bends under the weight of its leaves settles once it has been posed, which moves its tip away from where the bend put it. The aim is moved by however far the settled tip missed
+    // the target, and the bend worked out again, until the settled tip is on the target. A rigid petiole lands on the first pass.
+    try {
+        const float tip_tolerance = std::max(1e-6f, 1e-5f * getPlantJointFrame(plantID, joint).length);
+        constexpr int maximum_settling_passes = 50;
+        vec3 aimed_position = tip_position;
+        bool landed = false;
+        float miss = 0.f;
+        for (int pass = 0; pass < maximum_settling_passes; pass++) {
+            pose = solveForAim(aimed_position);
+            setJointPose(pose);
+            evaluatePlantPose(plantID);
+            const vec3 settled_tip = phytomer->petiole_vertices.at(petiole_index).back();
+            const vec3 miss_vector = tip_position - settled_tip;
+            miss = miss_vector.magnitude();
+            if (miss <= tip_tolerance) {
+                landed = true;
+                break;
+            }
+            aimed_position = aimed_position + miss_vector;
+        }
+        if (!landed) {
+            helios_runtime_error("ERROR (PlantArchitecture::setPetioleTipPosition): The tip of petiole " + std::to_string(petiole_index) + " of node " + std::to_string(node_index) + " of shoot " + std::to_string(shootID) +
+                                 " still settled " + std::to_string(miss * 1000.f) + " mm from the given position under the weight of its leaves after " + std::to_string(maximum_settling_passes) +
+                                 " attempts to aim it there.");
+        }
+    } catch (...) {
+        pose_state.joint_poses = previous_joint_poses;
+        evaluatePlantPose(plantID);
+        if (pose_state.joint_poses.empty()) {
+            releasePlantPoseState(plant_instance);
+        }
+        throw;
+    }
+
+    if (pose_state.joint_poses.empty()) {
+        releasePlantPoseState(plant_instance);
+    }
 }
 
 void PlantArchitecture::resetPlantPose(uint plantID) {

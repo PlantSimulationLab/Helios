@@ -1356,20 +1356,7 @@ namespace helios {
             submit_info.commandBufferCount = 1;
             submit_info.pCommandBuffers = &compute_command_buffer;
 
-            vkResetFences(vk_device, 1, &compute_fence);
-            VkResult result = vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, compute_fence);
-            if (result != VK_SUCCESS) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
-            }
-
-            // Wait for compute to complete (no timeout - large scenes can take minutes)
-            VkResult wait_result;
-            do {
-                wait_result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, 1000000000ULL);
-                if (wait_result != VK_SUCCESS && wait_result != VK_TIMEOUT) {
-                    helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkWaitForFences failed. VkResult: " + std::to_string(wait_result));
-                }
-            } while (wait_result == VK_TIMEOUT);
+            submitAndWait(submit_info, compute_fence, "launchDirectRays");
         }
 
         // With a background radiation field, the direct shader leaves in the background's flux slots only what the excluded primitives kept from the scene as it is (see
@@ -1810,20 +1797,7 @@ namespace helios {
             submit_info.commandBufferCount = 1;
             submit_info.pCommandBuffers = &compute_command_buffer;
 
-            vkResetFences(vk_device, 1, &compute_fence);
-            VkResult result = vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, compute_fence);
-            if (result != VK_SUCCESS) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
-            }
-
-            // Wait for compute to complete (no timeout - large scenes can take minutes)
-            VkResult wait_result;
-            do {
-                wait_result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, 1000000000ULL);
-                if (wait_result != VK_SUCCESS && wait_result != VK_TIMEOUT) {
-                    helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): vkWaitForFences failed. VkResult: " + std::to_string(wait_result));
-                }
-            } while (wait_result == VK_TIMEOUT);
+            submitAndWait(submit_info, compute_fence, "launchDiffuseRays");
         }
     }
 
@@ -1990,20 +1964,7 @@ namespace helios {
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &compute_command_buffer;
 
-        vkResetFences(vk_device, 1, &compute_fence);
-        VkResult result = vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, compute_fence);
-        if (result != VK_SUCCESS) {
-            helios_runtime_error("ERROR (VulkanComputeBackend::launchCameraRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
-        }
-
-        // Wait for compute to complete (no timeout - large scenes can take minutes)
-        VkResult wait_result;
-        do {
-            wait_result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, 1000000000ULL);
-            if (wait_result != VK_SUCCESS && wait_result != VK_TIMEOUT) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::launchCameraRays): vkWaitForFences failed. VkResult: " + std::to_string(wait_result));
-            }
-        } while (wait_result == VK_TIMEOUT);
+        submitAndWait(submit_info, compute_fence, "launchCameraRays");
     }
 
     void VulkanComputeBackend::launchPixelLabelRays(const RayTracingLaunchParams &params) {
@@ -2145,20 +2106,7 @@ namespace helios {
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &compute_command_buffer;
 
-        vkResetFences(vk_device, 1, &compute_fence);
-        VkResult result = vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, compute_fence);
-        if (result != VK_SUCCESS) {
-            helios_runtime_error("ERROR (VulkanComputeBackend::launchPixelLabelRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
-        }
-
-        // Wait for compute to complete (no timeout - large scenes can take minutes)
-        VkResult wait_result;
-        do {
-            wait_result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, 1000000000ULL);
-            if (wait_result != VK_SUCCESS && wait_result != VK_TIMEOUT) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::launchPixelLabelRays): vkWaitForFences failed. VkResult: " + std::to_string(wait_result));
-            }
-        } while (wait_result == VK_TIMEOUT);
+        submitAndWait(submit_info, compute_fence, "launchPixelLabelRays");
     }
 
     void VulkanComputeBackend::requireMapSucceeded(int map_result, const char *buffer_name) const {
@@ -3170,6 +3118,32 @@ namespace helios {
         }
     }
 
+    void VulkanComputeBackend::submitAndWait(const VkSubmitInfo &submit_info, VkFence fence, const char *caller, uint32_t time_limit_seconds) {
+        VkDevice vk_device = device->getDevice();
+        vkResetFences(vk_device, 1, &fence);
+        const VkResult submit_result = vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, fence);
+        if (submit_result != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::" + std::string(caller) + "): vkQueueSubmit failed. VkResult: " + std::to_string(submit_result));
+        }
+
+        // Waited for in one-second steps, because MoltenVK does not honor a long timeout. A large scene, or a large buffer on a software device, can take minutes.
+        VkResult wait_result;
+        uint32_t seconds_waited = 0;
+        do {
+            wait_result = vkWaitForFences(vk_device, 1, &fence, VK_TRUE, 1000000000ULL);
+            if (wait_result != VK_SUCCESS && wait_result != VK_TIMEOUT) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::" + std::string(caller) + "): vkWaitForFences failed. VkResult: " + std::to_string(wait_result));
+            }
+            if (wait_result == VK_TIMEOUT) {
+                seconds_waited++;
+                if (time_limit_seconds > 0 && seconds_waited >= time_limit_seconds) {
+                    helios_runtime_error("ERROR (VulkanComputeBackend::" + std::string(caller) + "): The GPU did not finish the operation within " + std::to_string(time_limit_seconds) +
+                                         " seconds, so it is treated as hung. The GPU may be unresponsive or the driver may have stopped processing work; restart the program, and if this repeats, update the GPU driver.");
+                }
+            }
+        } while (wait_result == VK_TIMEOUT);
+    }
+
     void VulkanComputeBackend::uploadBufferData(Buffer &buffer, const void *data, size_t size) {
         // Create staging buffer
         Buffer staging = createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
@@ -3211,27 +3185,7 @@ namespace helios {
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &transfer_command_buffer;
 
-        vkResetFences(device->getDevice(), 1, &transfer_fence);
-        vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, transfer_fence);
-
-        // Polling-based timeout (MoltenVK doesn't respect timeout parameter)
-        const int max_attempts = 50;
-        const uint64_t poll_interval_ns = 100000000ULL; // 100ms
-        bool completed = false;
-
-        for (int attempt = 0; attempt < max_attempts; ++attempt) {
-            VkResult result = vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, poll_interval_ns);
-            if (result == VK_SUCCESS) {
-                completed = true;
-                break;
-            } else if (result != VK_TIMEOUT) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::uploadBufferData): vkWaitForFences failed. VkResult: " + std::to_string(result));
-            }
-        }
-
-        if (!completed) {
-            helios_runtime_error("ERROR (VulkanComputeBackend::uploadBufferData): GPU buffer upload timed out after 5 seconds. Buffer size: " + std::to_string(size));
-        }
+        submitAndWait(submit_info, transfer_fence, "uploadBufferData", transfer_time_limit_seconds);
 
         // SAFETY: Staging buffer destroyed only after fence signals (GPU copy complete)
         destroyBuffer(staging);
@@ -3276,27 +3230,7 @@ namespace helios {
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &transfer_command_buffer;
 
-        vkResetFences(device->getDevice(), 1, &transfer_fence);
-        vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, transfer_fence);
-
-        // Polling-based timeout (MoltenVK doesn't respect timeout parameter)
-        const int max_attempts = 50;
-        const uint64_t poll_interval_ns = 100000000ULL; // 100ms
-        bool completed = false;
-
-        for (int attempt = 0; attempt < max_attempts; ++attempt) {
-            VkResult result = vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, poll_interval_ns);
-            if (result == VK_SUCCESS) {
-                completed = true;
-                break;
-            } else if (result != VK_TIMEOUT) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::downloadBufferData): vkWaitForFences failed. VkResult: " + std::to_string(result));
-            }
-        }
-
-        if (!completed) {
-            helios_runtime_error("ERROR (VulkanComputeBackend::downloadBufferData): GPU buffer download timed out after 5 seconds. Buffer size: " + std::to_string(size));
-        }
+        submitAndWait(submit_info, transfer_fence, "downloadBufferData", transfer_time_limit_seconds);
 
         // Map and read
         void *mapped;
@@ -3324,27 +3258,7 @@ namespace helios {
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &transfer_command_buffer;
 
-        vkResetFences(device->getDevice(), 1, &transfer_fence);
-        vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, transfer_fence);
-
-        // Polling-based timeout (MoltenVK doesn't respect timeout parameter)
-        const int max_attempts = 50;
-        const uint64_t poll_interval_ns = 100000000ULL; // 100ms
-        bool completed = false;
-
-        for (int attempt = 0; attempt < max_attempts; ++attempt) {
-            VkResult result = vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, poll_interval_ns);
-            if (result == VK_SUCCESS) {
-                completed = true;
-                break;
-            } else if (result != VK_TIMEOUT) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::zeroBuffer): vkWaitForFences failed. VkResult: " + std::to_string(result));
-            }
-        }
-
-        if (!completed) {
-            helios_runtime_error("ERROR (VulkanComputeBackend::zeroBuffer): GPU buffer clear timed out after 5 seconds. Buffer size: " + std::to_string(buffer.size));
-        }
+        submitAndWait(submit_info, transfer_fence, "zeroBuffer", transfer_time_limit_seconds);
     }
 
     void VulkanComputeBackend::createCommandResources() {

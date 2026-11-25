@@ -1834,8 +1834,27 @@ static ParameterOptimization::Result evaluatePopulation(const std::vector<Parame
     return best;
 }
 
+//! Write the best parameter set to a CSV file of parameter, value, min and max, if a file name is given
+static void writeResultFile(const std::string &write_result_to_file, const ParameterOptimization::Result &best, bool message_flag) {
+    if (write_result_to_file.empty()) {
+        return;
+    }
+    std::ofstream out(write_result_to_file);
+    if (!out.is_open()) {
+        helios_runtime_error("ERROR (ParameterOptimization): Failed to write to result file '" + write_result_to_file + "'.");
+    }
+    out << "parameter,value,min,max\n";
+    for (const auto &[name, param]: best.parameters) {
+        out << name << "," << param.value << "," << param.min << "," << param.max << "\n";
+    }
+    out.close();
+    if (message_flag) {
+        std::cout << "Best parameters written to: " << write_result_to_file << "\n";
+    }
+}
+
 static ParameterOptimization::Result runBayesianOptimization(std::function<float(const ParametersToOptimize &)> simulation, const ParametersToOptimize &parameters, const BayesianOptimization &bo, bool print_progress,
-                                                             const std::string &write_progress_to_file, std::ofstream &outProgress, bool message_flag) {
+                                                             const std::string &write_progress_to_file, const std::string &write_result_to_file, std::ofstream &outProgress, bool message_flag) {
 
     validateParameters(parameters);
     validateContinuousParameters(parameters);
@@ -2019,6 +2038,8 @@ static ParameterOptimization::Result runBayesianOptimization(std::function<float
         }
         std::cout << "========================================\n";
     }
+
+    writeResultFile(write_result_to_file, best, message_flag);
 
     return best;
 }
@@ -2416,21 +2437,7 @@ static ParameterOptimization::Result runGeneticAlgorithm(std::function<float(con
         }
     }
 
-    if (!write_result_to_file.empty()) {
-        std::ofstream out(write_result_to_file);
-        if (out.is_open()) {
-            out << "parameter,value,min,max\n";
-            for (const auto &[name, param]: best.parameters) {
-                out << name << "," << param.value << "," << param.min << "," << param.max << "\n";
-            }
-            out.close();
-            if (message_flag) {
-                std::cout << "Best parameters written to: " << write_result_to_file << "\n";
-            }
-        } else {
-            helios_runtime_error("ERROR (ParameterOptimization): Failed to write to result file '" + write_result_to_file + "'.");
-        }
-    }
+    writeResultFile(write_result_to_file, best, message_flag);
 
     if (!write_progress_to_file.empty()) {
         outProgress.close();
@@ -2690,22 +2697,7 @@ static ParameterOptimization::Result runCMAES(std::function<float(const Paramete
         gen++;
     }
 
-    // Write final result to file if requested
-    if (!write_result_to_file.empty()) {
-        std::ofstream out(write_result_to_file);
-        if (out.is_open()) {
-            out << "parameter,value,min,max\n";
-            for (const auto &[name, param]: best.parameters) {
-                out << name << "," << param.value << "," << param.min << "," << param.max << "\n";
-            }
-            out.close();
-            if (message_flag) {
-                std::cout << "Best parameters written to: " << write_result_to_file << "\n";
-            }
-        } else {
-            helios_runtime_error("ERROR (ParameterOptimization): Failed to write to result file '" + write_result_to_file + "'.");
-        }
-    }
+    writeResultFile(write_result_to_file, best, message_flag);
 
     // Print final summary
     if (print_progress) {
@@ -2842,22 +2834,7 @@ static ParameterOptimization::Result runTPE(std::function<float(const Parameters
         }
     }
 
-    // Write final result to file if requested
-    if (!write_result_to_file.empty()) {
-        std::ofstream out(write_result_to_file);
-        if (out.is_open()) {
-            out << "parameter,value,min,max\n";
-            for (const auto &[name, param]: best.parameters) {
-                out << name << "," << param.value << "," << param.min << "," << param.max << "\n";
-            }
-            out.close();
-            if (message_flag) {
-                std::cout << "Best parameters written to: " << write_result_to_file << "\n";
-            }
-        } else {
-            helios_runtime_error("ERROR (ParameterOptimization): Failed to write to result file '" + write_result_to_file + "'.");
-        }
-    }
+    writeResultFile(write_result_to_file, best, message_flag);
 
     // Print final summary
     if (print_progress) {
@@ -3044,7 +3021,7 @@ ParameterOptimization::Result ParameterOptimization::run(std::function<float(con
                     helios_runtime_error("ERROR (ParameterOptimization::run): SLSQP requires a gradient function and constraints. Use run(objective, parameters, gradient, constraints) instead.");
                     return Result{}; // unreachable
                 } else if constexpr (std::is_same_v<T, BayesianOptimization>) {
-                    return runBayesianOptimization(simulation, parameters, algo, print_progress, write_progress_to_file, outProgress, message_flag);
+                    return runBayesianOptimization(simulation, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
                 } else if constexpr (std::is_same_v<T, CMAES>) {
                     return runCMAES(simulation, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
                 } else if constexpr (std::is_same_v<T, TPE>) {
@@ -3082,7 +3059,7 @@ ParameterOptimization::Result ParameterOptimization::run(ObjectiveFunction objec
                     // SLSQP without constraints — works like unconstrained gradient optimizer
                     return runSLSQP(bundle, parameters, algo, {}, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
                 } else if constexpr (std::is_same_v<T, BayesianOptimization>) {
-                    return runBayesianOptimization(objective, parameters, algo, print_progress, write_progress_to_file, outProgress, message_flag);
+                    return runBayesianOptimization(objective, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
                 } else if constexpr (std::is_same_v<T, CMAES>) {
                     return runCMAES(objective, parameters, algo, print_progress, write_progress_to_file, write_result_to_file, outProgress, message_flag);
                 } else if constexpr (std::is_same_v<T, TPE>) {

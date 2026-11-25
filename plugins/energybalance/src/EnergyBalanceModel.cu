@@ -20,6 +20,7 @@
 
 #include <cuda_runtime.h>
 #include "EnergyBalanceModel.h"
+#include "EnergyBalanceSolver.h"
 
 using namespace std;
 
@@ -27,57 +28,16 @@ using namespace std;
     {                                                                                                                                                                                                                                                    \
         gpuAssert((ans), __FILE__, __LINE__);                                                                                                                                                                                                            \
     }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true) {
+inline void gpuAssert(cudaError_t code, const char *file, int line) {
     if (code != cudaSuccess) {
-        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-        if (abort)
-            exit(code);
+        helios::helios_runtime_error("ERROR (EnergyBalanceModel::solveSurfaceTemperatures_GPU): CUDA call failed: " + std::string(cudaGetErrorString(code)) + " (" + std::string(file) + ":" + std::to_string(line) +
+                                     "). Disable GPU acceleration with EnergyBalanceModel::disableGPUAcceleration() to solve on the CPU.");
     }
 }
 
-// Total conductance to water vapor of a surface: the stomata of each face and that face's boundary layer act in series, and the two faces act in parallel. A face with no stomata or no boundary-layer conductance has no vapor pathway,
-// which also avoids a 0/0 in the series expression. Same expression as moistureConductance() in EnergyBalanceModel.cpp.
-__device__ float moistureConductance(float gbv_front, float gbv_back, float gS, float stomatal_sidedness) {
-    float gM = 0.f;
-    float gS_front = gS * stomatal_sidedness;
-    float gS_back = gS * (1.f - stomatal_sidedness);
-    if (gbv_front != 0.f && gS_front != 0.f) {
-        gM += gbv_front * gS_front / (gbv_front + gS_front);
-    }
-    if (gbv_back != 0.f && gS_back != 0.f) {
-        gM += gbv_back * gS_back / (gbv_back + gS_back);
-    }
-    return gM;
-}
-
-__device__ float evaluateEnergyBalance(float T, float R, float Qother, float eps, float Ta, float ea, float pressure, float gH, float gbv_front, float gbv_back, float gS, uint Nsides, float stomatal_sidedness, float heatcapacity,
-                                       float surfacehumidity, float dt, float Tprev) {
-
-    // Outgoing emission flux
-    float Rout = float(Nsides) * eps * 5.67e-8F * T * T * T * T;
-
-    // Sensible heat flux
-    float QH = cp_air_mol * gH * (T - Ta); // (see Campbell and Norman Eq. 6.8)
-
-    // Latent heat flux
-    // Same expression as esat_Pa(), which is host-only. The latent flux reported after the solve uses esat_Pa(), so the two must agree for the reported fluxes to close the energy balance.
-    float es = 611.0f * expf(17.502f * (T - 273.15f) / (T - 273.15f + 240.97f));
-    float gM = moistureConductance(gbv_front, gbv_back, gS, stomatal_sidedness);
-
-    float QL = gM * lambda_mol * (es * surfacehumidity - ea) / pressure;
-
-    // Storage heat flux
-    float storage = 0.f;
-    if (dt > 0) {
-        storage = heatcapacity * (T - Tprev) / dt;
-    }
-
-    // Residual
-    return R - Rout - QH - QL - Qother - storage;
-}
-
+//! Solve the energy balance of each primitive (one thread per primitive) with the same per-surface solve as the CPU
 __global__ void solveEnergyBalance(uint Nprimitives, float *To, float *R, float *Qother, float *eps, float *Ta, float *ea, float *pressure, float *gH, float *gbv_front, float *gbv_back, float *gS, uint *Nsides, float *stomatal_sidedness, float *TL,
-                                   float *heatcapacity, float *surfacehumidity, float dt) {
+                                   float *heatcapacity, float *surfacehumidity, float dt, uint8_t *converged) {
 
     uint p = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -85,55 +45,9 @@ __global__ void solveEnergyBalance(uint Nprimitives, float *To, float *R, float 
         return;
     }
 
-    float err_max = 0.0001;
-    uint max_iter = 100;
-
-    // Initial guesses. The second guess must differ from the first, otherwise the two residuals are
-    // identical and the secant update below divides by zero (this happens when the supplied initial
-    // temperature equals the hardcoded second guess of 400 K).
-    float T_old = To[p];
-    float T_old_old = 400.f;
-    if (T_old_old == T_old) {
-        T_old_old = T_old + 100.f;
-    }
-
-    // Initialize the result to the current best guess so that a degenerate early exit (identical
-    // residuals) never leaves the surface temperature uninitialized.
-    float T = T_old;
-
-    float resid_old = evaluateEnergyBalance(T_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-    float resid_old_old = evaluateEnergyBalance(T_old_old, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-
-    float resid = 100;
-    float err = resid;
-    uint iter = 0;
-    while (err > err_max && iter < max_iter) {
-
-        if (resid_old == resid_old_old) { // secant denominator would be zero
-            err = 0;
-            break;
-        }
-
-        T = fabs((T_old_old * resid_old - T_old * resid_old_old) / (resid_old - resid_old_old));
-
-        resid = evaluateEnergyBalance(T, R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]);
-
-        // Relative change of the newest secant step (measures the latest iterate, not the previous one)
-        err = fabs(T - T_old) / fabs(T_old);
-
-        resid_old_old = resid_old;
-        resid_old = resid;
-
-        T_old_old = T_old;
-        T_old = T;
-
-        iter++;
-    }
-
-    if (err > err_max) {
-        printf("WARNING (EnergyBalanceModel::solveEnergyBalance): Energy balance did not converge.\n");
-    }
-
+    const SurfaceEnergyBalanceTerms terms{R[p], Qother[p], eps[p], Ta[p], ea[p], pressure[p], gH[p], gbv_front[p], gbv_back[p], gS[p], Nsides[p], stomatal_sidedness[p], heatcapacity[p], surfacehumidity[p], dt, To[p]};
+    float T;
+    converged[p] = solveSurfaceEnergyBalance(terms, To[p], T) ? 1 : 0;
     TL[p] = T;
 }
 
@@ -169,18 +83,22 @@ void EnergyBalanceModel::solveSurfaceTemperatures_GPU(const SurfaceEnergyBalance
 
     float *d_T;
     CUDA_CHECK_ERROR(cudaMalloc((void **) &d_T, float_bytes));
+    uint8_t *d_converged;
+    CUDA_CHECK_ERROR(cudaMalloc((void **) &d_converged, Nprimitives * sizeof(uint8_t)));
 
     // launch kernel
     dim3 dimBlock(64, 1);
     dim3 dimGrid(ceil(Nprimitives / 64.f));
 
-    solveEnergyBalance<<<dimGrid, dimBlock>>>(Nprimitives, d_To, d_R, d_Qother, d_eps, d_Ta, d_ea, d_pressure, d_gH, d_gbv_front, d_gbv_back, d_gS, d_Nsides, d_stomatal_sidedness, d_T, d_heatcapacity, d_surfacehumidity, dt);
+    solveEnergyBalance<<<dimGrid, dimBlock>>>(Nprimitives, d_To, d_R, d_Qother, d_eps, d_Ta, d_ea, d_pressure, d_gH, d_gbv_front, d_gbv_back, d_gS, d_Nsides, d_stomatal_sidedness, d_T, d_heatcapacity, d_surfacehumidity, dt, d_converged);
 
     CUDA_CHECK_ERROR(cudaPeekAtLastError());
     CUDA_CHECK_ERROR(cudaDeviceSynchronize());
 
     T.resize(Nprimitives);
     CUDA_CHECK_ERROR(cudaMemcpy(T.data(), d_T, float_bytes, cudaMemcpyDeviceToHost));
+    std::vector<uint8_t> converged(Nprimitives);
+    CUDA_CHECK_ERROR(cudaMemcpy(converged.data(), d_converged, Nprimitives * sizeof(uint8_t), cudaMemcpyDeviceToHost));
 
     CUDA_CHECK_ERROR(cudaFree(d_To));
     CUDA_CHECK_ERROR(cudaFree(d_R));
@@ -198,6 +116,12 @@ void EnergyBalanceModel::solveSurfaceTemperatures_GPU(const SurfaceEnergyBalance
     CUDA_CHECK_ERROR(cudaFree(d_heatcapacity));
     CUDA_CHECK_ERROR(cudaFree(d_surfacehumidity));
     CUDA_CHECK_ERROR(cudaFree(d_T));
+    CUDA_CHECK_ERROR(cudaFree(d_converged));
+
+    const size_t convergence_failures = Nprimitives - std::count(converged.begin(), converged.end(), uint8_t(1));
+    if (convergence_failures > 0 && message_flag) {
+        std::cout << "WARNING (EnergyBalanceModel::solveEnergyBalance): Energy balance did not converge for " << convergence_failures << " primitives." << std::endl;
+    }
 }
 
 #endif // HELIOS_CUDA_AVAILABLE

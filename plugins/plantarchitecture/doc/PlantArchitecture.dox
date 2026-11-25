@@ -96,10 +96,14 @@ A number of plant models are available in the plant architecture library, which 
 | Plant Type/Species                       | Variety/Variation                  | Plant type string argument | %Shoot types                                       |
 |------------------------------------------|------------------------------------|----------------------------|----------------------------------------------------|
 | Almond Tree (*Prunus dulcis*)            | Nonpareil                          | "almond"                   | trunk, scaffold, proleptic                         |
+| Almond Tree (*Prunus dulcis*)            | Aldrich                            | "almond_aldrich"           | trunk, scaffold, proleptic, sylleptic              |
+| Almond Tree (*Prunus dulcis*)            | Wood Colony                        | "almond_wood_colony"       | trunk, scaffold, proleptic, sylleptic              |
 | Almond Tree (*Prunus dulcis*)            | Independence                       | "almond_independence"      | trunk, scaffold, proleptic                         |
 | Apple Tree (*Malus pumila*)              | Fuji                               | "apple"                    | trunk, proleptic, spur                             |
 | Apple Tree (*Malus pumila*)              | Fuji, tall-spindle fruiting wall   | "apple_fruitingwall"       | leader, branch, renewal, proleptic, spur           |
+| Asparagus (*Asparagus officinalis*)      | generic                            | "asparagus"                | main                                               |
 | Bindweed (*Convolvulus arvensis*)        | generic                            | "bindweed"                 | base, offshoots, children                          |
+| Bougainvillea (*Bougainvillea* spp.)     | generic                            | "bougainvillea"            | mainstem, secondary, tertiary, quaternary          |
 | Butter Lettuce (*Lactuca sativa*)        | generic                            | "butterlettuce"            | mainstem                                           |
 | Capsicum Pepper (*Capsicum annuum*)      | generic                            | "capsicum"                 | mainstem                                           |
 | Cheeseweed (*Malva neglecta*)            | generic                            | "cheeseweed"               | mainstem                                           |
@@ -483,30 +487,65 @@ The phenological cycle starts when the plant enters dormancy, and thus a period 
 
 Plant type string argument | time_to_dormancy_break | time_to_flower_initiation | time_to_flower_opening | time_to_fruit_set | time_to_fruit_maturity | time_to_senescence | Age at time = 0 | Maximum age         |
 | ------| ------ | ------ | ------ | ------ | ------ | ------ | ------ |---------------------|
-"almond" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1825 days (5 years) |
-"almond_independence" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 3000 days (8.2 years) |
+"almond" | 90 | -1 | 3 | 7 | 20 | 275 | 3 years | 3000 days (8.2 years) |
+"almond_aldrich" | 90 | -1 | 3 | 7 | 20 | 275 | 3 years | 3000 days (8.2 years) |
+"almond_independence" | 90 | -1 | 3 | 7 | 20 | 275 | 3 years | 3000 days (8.2 years) |
+"almond_wood_colony" | 90 | -1 | 3 | 7 | 20 | 275 | 3 years | 1825 days (5 years) |
 "apple" | 165 | -1 | 3 | 7 | 30 | 200 | 3 years | 1460 days (4 years) |
 "apple_fruitingwall" | 165 | -1 | 3 | 7 | 30 | 200 | 6 years | 3650 days (10 years) |
+"asparagus" | 0 | -1 | -1 | -1 | 5 | 100 | 0 | 20 days |
 "bean" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "bindweed" | 0 | -1 | 14 | -1 | -1 | \f$\infty\f$ | 0 | 50 days             |
+"bougainvillea" | 0 | -1 | 75 | 1000 | 1000 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "butterlettuce" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"capsicum" | 0 | -1 | -1 | 75 | 14 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "cheeseweed" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 40 days             |
 "cowpea" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "easternredbud" | 165 | -1 | 3 | 7 | 30 | 200 | 2 years | 1460 days (4 years) |
 "grapevine_VSP" | 165 | -1 | -1 | 45 | 45 | 200 | 3 years | 365 days (1 year)   |
 "grapevine_Wye" | 165 | -1 | -1 | 45 | 45 | 200 | 3 years | 365 days (1 year)   |
+"groundcherryweed" | 0 | 20 | -1 | 20 | 30 | \f$\infty\f$ | 0 | 80 days |
 "maize" | 0 | -1 | -1 | 4 | 58 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "olive" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1825 days (5 years) |
-"pistachio" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1825 days (5 years) |
+"pistachio" | 165 | -1 | -1 | 7 | 20 | 200 | 3 years | 1825 days (5 years) |
 "puncturevine" | 0 | -1 | 14 | -1 | -1 | \f$\infty\f$ | 0 | 45 days             |
 "rice" | 0 | 4 | 3 | 7 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "sorghum" | 0 | -1 | -1 | 4 | 35 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "soybean" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"strawberry" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 120 days |
 "sugarbeet" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "tomato" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
-"walnut" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1095 days (3 years) |
+"cherrytomato" | 0 | 50 | 10 | 5 | 30 | \f$\infty\f$ | 0 | 175 days |
+"walnut" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1460 days (4 years) |
 "wheat" | 0 | -1 | -1 | 4 | 39 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "cucumber" | 0 | 12 | 6 | 2 | 14 | \f$\infty\f$ | 0 | 165 days |
+
+\subsubsection PlantArchPhenoSpread Spreading Phenological Events Within a Plant
+
+By default every shoot of a plant breaks dormancy on the same day, and every floral bud reaches each stage on the same day. For a species whose flower buds wait out the winter on the wood, such as almond or apple, the whole tree then blooms in a single day, where a real tree blooms over one to three weeks. \ref PlantArchitecture::setPlantPhenologicalSpread() spreads three events over time, each given as a duration in days:
+
+| Duration | What is spread |
+| ------| ------ |
+| budbreak_duration | The day each shoot breaks vegetative dormancy. The floral buds of every shoot still wake at the plant's dormancy break, so flowers can open before the leaves. A shoot then waits its ShootParameters::vegetative_bud_break_time before its tip and lateral buds grow, so leaf-out can be held until after bloom begins by giving the shoot types a break time longer than time_to_flower_opening. |
+| flowering_duration | The day each floral bud makes its first reproductive transition after it becomes active: flower initiation, or flower opening, or fruit set, whichever is the first stage the thresholds enable. The later stages follow at their usual intervals, so a flower that opens late also sets fruit late. |
+| fruit_maturity_duration | The time each fruit takes to reach full size, beyond time_to_fruit_maturity. |
+
+With a spread, the phenological thresholds mark the start of each event: the first shoot breaks dormancy time_to_dormancy_break days into the cycle and the last one budbreak_duration days later, and likewise for the others. Each shoot or bud is given its own delay within the window, drawn from a normal distribution with a mean of half the duration and a standard deviation of a quarter of it, truncated to the window. The budbreak duration must be shorter than time_to_dormancy.
+
+The flowering duration is the time between the first and the last flower opening. The "bloom period" usually reported, from first bloom to petal fall, is longer by about the time one flower stays open (time_to_fruit_set). Species whose flowers do not wait on dormancy, such as tomato or bean, already flower over time, node by node as the shoot grows, and need no spread for that.
+
+The plant library sets a flowering duration only where a measured value was found. Budbreak and fruit maturity durations are 0 throughout, since no within-plant measurements were found for them.
+
+Plant type string argument | flowering_duration (days) | Basis |
+| ------| ------ | ------ |
+"almond", "almond_aldrich", "almond_independence", "almond_wood_colony" | 8 | The 'Kester' bloom period at the Kern County Regional Variety Trials averages February 18 to March 5, about 15 days from first bloom to petal fall (US Plant Patent PP27367). Less the 7 days a flower stays open, that leaves about 8 days between the first and the last flower opening. As a figure for a whole planting, it is an upper bound on the spread within one tree. |
+"apple", "apple_fruitingwall" | 15 | Tagged flowers of five cultivars opened over 18 to 22 days in 2022 and 10 to 12 days in 2023 (Tang, Zhai and Xu 2025, Frontiers in Agronomy 7:1545070). |
+"grapevine_VSP", "grapevine_Wye" | 8 | These models have no flower stage, so the spread falls on fruit set. One inflorescence flowers over about 7 to 10 days. |
+
+~~~~~~
+// Leaf-out over 10 days, flowers opening over 12 days, fruit taking up to 5 days longer than time_to_fruit_maturity to size
+plantarchitecture.setPlantPhenologicalSpread( plantID, 10, 12, 5 );
+~~~~~~
 
 \subsection PlantArchCollision Collision Avoidance
 
@@ -855,7 +894,8 @@ The built-in function for procedural leaf generation generates leaf geometries b
 | leaf_texture_stage_ages | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::vector&lt;float&gt;</span>\endhtmlonly | empty | Age of a leaf in days at which each image of a variant in leaf_texture_series begins. See \ref LeafTextureStages. |
 | leaf_aspect_ratio | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 1.0 | Ratio of leaf width to leaf length. |
 | midrib_fold_fraction | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half). |
-| longitudinal_curvature | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Curvature factor along x-direction (lengthwise). (+curves upward, -curved downward) |
+| longitudinal_curvature | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Angle in radians through which the blade bends along its length, from base to tip (+curves upward, -curved downward). The blade bends without stretching, so its midrib keeps its length. Values set before v1.3.99 give about (longitudinal_curvature_exponent + 1) times less curl now; multiply them by that factor to keep their look. |
+| longitudinal_curvature_exponent | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 4.0 | How the longitudinal curvature is distributed along the blade: the midrib has turned through longitudinal_curvature * x^exponent at a fraction x along it. A larger value keeps the inner blade straight and bends it near the tip; a value near 2 arcs it along its whole length. |
 | lateral_curvature | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Curvature factor along y-direction (widthwise). (+curves upward, -curved downward) The cross-section bends without stretching, so the blade keeps its area. |
 | roll_fraction | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Roll of the blade about its midrib toward its upper side, as a fraction of a closed tube (=0 flat, =1 edges meeting). The blade keeps its area while its projected area falls. See \ref PlantArch_leafroll. |
 | wave_period | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Period factor of leaf waves/wrinkles. |
@@ -1331,6 +1371,20 @@ parameters, which kinked the leaf by a fixed angle at a fixed station along its 
 The mature leaf is shaped much as it was, but now arrives at that shape as it expands rather than starting out with it. Setting \htmlonly<span style="font-family: Courier, monospace; color: blue;">flexibility</span>\endhtmlonly
 explicitly always takes precedence, and the deprecated parameters will be removed in a future version.
 
+A leaf placed from measurements with \ref PlantArchitecture::setPetioleLeafGeometry(), or rebuilt by \ref PlantArchitecture::setPetioleLeafCount(), keeps its prototype's rest shape and does not droop.
+\ref PlantArchitecture::setLeafDroop() turns the droop on for such a leaf, one leaf at a time. The bend is the plug-in's own, worked out from the orientation the leaf has been placed in, with its
+size taken as its fully grown size and its compliance aged with its phytomer, so a leaf placed exactly where a grown leaf of the same shape is takes that leaf's droop to well under a micrometre. This
+matters for a long grass blade placed from a fit to a point cloud: the droop a free fit finds cannot be folded into the blade's rest shape (its longitudinal curvature), because a blade that rises, arches
+over and hangs is not a shape at rest. The same call turns the droop off for any leaf, giving it its rest shape, and \ref PlantArchitecture::doesLeafDroop() reports the setting. The leaf keeps its object
+and primitives, and the setting is recorded by \ref PlantArchitecture::writePlantStructureXML().
+
+~~~~~~{cpp}
+plantarchitecture.setPetioleLeafGeometry(plantID, shootID, node, 0, {leaf_base}, {leaf_angles}, {leaf_size});
+plantarchitecture.setLeafDroop(plantID, shootID, node, 0, 0, true);   // bend the placed blade under its own weight
+~~~~~~
+
+To give a blade a measured shape rather than the one its own weight gives it, lay it along its midrib instead (\ref PlantArch_blademidrib).
+
 \subsection PlantArch_petioledroop Petiole Droop Under Leaf Weight
 
 The leaf droop described above bends the blade about its own base, so it cannot change the shape of the petiole that carries it. In many dicots the petiole is not rigid: as a leaf enlarges and ages, its petiole
@@ -1423,7 +1477,7 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 | elongation_rate_max | RandomParameter_float | 0.2 | meter/meter/day | Maximum relative rate of elongation of the internode of the shoot. Units are meters of elongation per meter of maximum internode length per day. The actual elongation rate can be reduced dynamically if the carbohydrate model is enabled. |
 | leaf_expansion_rate_max | RandomParameter_float | -1 | meter/meter/day | Maximum relative rate of expansion of the leaf blades of the shoot. Units are meters of expansion per meter of fully-expanded leaf size per day. Petioles are not included: they are stem segments and elongate at \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate_max</span>\endhtmlonly. A negative value (the default) means the blades expand at the shoot's \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate_max</span>\endhtmlonly. |
 | girth_area_factor | RandomParameter_float | 0 | cm^2 branch area / m^2 downstream leaf area | Cross-sectional area of internode (girth), determined by the amount of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling. |
-| vegetative_bud_break_time | RandomParameter_float | 5 | days | Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break. |
+| vegetative_bud_break_time | RandomParameter_float | 5 | days | Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break. Read from the shoot bearing the bud, and drawn separately for each bud when given as a distribution. After a dormancy, the shoot's own tip also waits this long before growing its first new node, so it sets the delay between the end of dormancy and leaf-out. |
 | vegetative_bud_break_probability_decay_rate | RandomParameter_float | -0.5 | 1/nodes | Rate at which the probability that a vegetative bud produces a shoot falls from \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_max</span>\endhtmlonly to \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly along the shoot. If >0, highest at the apex; if <0, highest at the base (only when \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly is true). See \ref ShootParam_vegetative_prob. |
 | vegetative_bud_break_probability_max | RandomParameter_float | 1 | - | Bud-break probability at the end of the shoot where it is highest. Used only when the decay rate is non-zero. |
 | vegetative_bud_break_probability_min | RandomParameter_float | 0 | - | Lowest bud-break probability along the shoot, and the probability used for every bud when the decay rate is zero (or negative with \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly false). |
@@ -1698,6 +1752,8 @@ uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
 
 plantarchitecture.setPlantPhenologicalThresholds( plantID, 0, 20, 10, 10, 5, 70 );
 ~~~~~~
+
+The thresholds give every shoot and bud of the plant the same timing. To spread budbreak, flowering or fruit maturity over a window of days instead, see \ref PlantArchPhenoSpread.
 
 <b>Default phenology for manually-built plants.</b> Every plant model in the library calls \ref PlantArchitecture::setPlantPhenologicalThresholds() as part of its builder, so library-built plants always have thresholds configured. A plant assembled manually (\ref PlantArchitecture::addPlantInstance() together with \ref PlantArchitecture::addBaseStemShoot(), \ref PlantArchitecture::appendShoot(), and \ref PlantArchitecture::addChildShoot()) does not, and instead keeps the default thresholds, which encode "no phenology scheduled": the plant grows vegetatively and never flowers, sets fruit, or enters dormancy. This is the same configuration produced by \ref PlantArchitecture::disablePlantPhenology(). To give a manually-built plant a reproductive cycle or a dormancy period, call \ref PlantArchitecture::setPlantPhenologicalThresholds() on it explicitly.
 
@@ -1988,7 +2044,8 @@ Points worth knowing:
 - <b>Prescribed organs do not change as the plant grows.</b> The petiole is not re-scaled and the leaves are
   neither re-scaled nor re-placed by \ref PlantArchitecture::advanceTime(). Prescribed leaves are also
   exempt from the self-weight droop, so the blade keeps the prototype's rest shape rather than continuing to
-  arch over as the leaf ages.
+  arch over as the leaf ages, unless the droop is turned on with \ref PlantArchitecture::setLeafDroop()
+  (see \ref PlantArch_leafdroop).
 - <b>Prescribed organs survive a save and reload.</b> \ref PlantArchitecture::writePlantStructureXML() records a
   prescribed petiole path, and each prescribed leaf's base and pose, and
   \ref PlantArchitecture::readPlantStructureXML() restores them. A prescribed leaf is rebuilt from the prototype
@@ -1996,6 +2053,46 @@ Points worth knowing:
 - <b>Rebuilding a leaf discards primitive data attached to it.</b> Each leaf object is rebuilt from its
   prototype so that it can be given an absolute orientation. The object label and material are restored;
   any other primitive data a caller has set on that leaf is not.
+
+\subsection PlantArch_blademidrib Laying a Blade Along a Measured Midrib
+
+A blade's own shape terms -- its longitudinal curvature, fold, lateral curvature, roll and waves -- and its droop
+under its own weight describe a blade that bends in one plane with a curvature that varies smoothly from base to
+tip. A measured blade often does not: a long maize or sorghum blade rises, arches over and hangs, its curvature
+changes along it, and it twists. \ref PlantArchitecture::setLeafMidrib() lays an existing blade along a midrib
+traced from a scan, which is what "pulling" on a blade means:
+
+~~~~~~{cpp}
+// The midrib from the base of the blade to its tip, in world coordinates, as many points as the scan resolves
+std::vector<helios::vec3> midrib = { /* traced midrib points */ };
+
+// Either the blade's twist at each point, as a roll about the midrib in radians...
+std::vector<float> rolls = { /* one per point, or none for an untwisted blade */ };
+plantarchitecture.setLeafMidrib(plantID, shootID, node, 0, 0, midrib, rolls);
+
+// ...or the normal of its upper surface at each point, as a point cloud gives it
+std::vector<helios::vec3> normals = { /* one per point */ };
+plantarchitecture.setLeafMidrib(plantID, shootID, node, 0, 0, midrib, normals);
+
+// Read the blade's midrib back, for any leaf built by the generic leaf prototype
+LeafMidrib current = plantarchitecture.getLeafMidrib(plantID, shootID, node, 0, 0);
+~~~~~~
+
+Each row of the blade's lattice across its width is carried rigidly with its station on the midrib, so the blade
+keeps its outline (its texture) and its cross-section and is bent without being stretched. The stations keep the
+proportions of the blade's own midrib, and the blade takes the midrib's length: a longer or shorter midrib scales the
+blade, its width with it.
+
+<ul>
+<li><b>The midrib starts at the base of the blade.</b> That is the leaf's base, or the end of its stalk for a leaflet that has one. The first point is moved onto it, and the rest of the midrib with it; an error is raised if it is further than 1 mm or 2% of the midrib's length away. Place the leaf first, with \ref PlantArchitecture::setPetioleLeafGeometry(), so that its base is where the midrib starts.</li>
+<li><b>Each row turns with the midrib segment ending at its station.</b> The rotation is carried out from the blade's base without twisting (a rotation-minimizing frame), so a roll of zero everywhere gives an untwisted blade. The row at the base keeps the orientation the blade has where it leaves its stalk or petiole. Because the frame has no special direction, a blade that leaves its base pointing straight up, as a grass blade leaving its whorl does, is handled like any other.</li>
+<li><b>Rolls and normals.</b> A roll is the blade's twist about the midrib, in radians, right-handed about the direction from base to tip, measured from the untwisted blade. A normal is the direction of the blade's upper surface, ignoring its fold and curvature across the midrib; it is taken perpendicular to the midrib, and one that lies along the midrib is refused. Both are interpolated along the midrib between the points they are given at.</li>
+<li><b>Exact by any path.</b> The call sets the blade's shape, not a change to it, and the midrib, normals and rolls that \ref PlantArchitecture::getLeafMidrib() returns put the blade back as it is. A blade drooped under its own weight reads rolls of zero, and a blade at rest laid along a drooped blade's midrib takes the drooped blade's shape to well under a micrometre, because the droop carries the blade along its midrib in the same way.</li>
+<li><b>The midrib takes the place of the droop and the longitudinal curvature.</b> The droop is turned off while a midrib is prescribed, and \ref PlantArchitecture::setLeafDroop() refuses to turn it back on. \ref Phytomer::reshapeLeaf() lays a new cross-section (fold, lateral curvature, roll, waves) along the same midrib but refuses a change to the longitudinal curvature, which the midrib supersedes. \ref PlantArchitecture::clearLeafMidrib() returns the blade to its own shape at the size it had before, drooping again if it drooped then.</li>
+<li><b>The midrib moves with the leaf.</b> It is held in the leaf's own frame, so a joint pose (\ref PlantArchPose) or \ref PlantArchitecture::setPlantBasePosition() carries the laid blade rigidly. The petiole's growth is pinned as \ref PlantArchitecture::setPetioleLeafGeometry() pins it, so that \ref PlantArchitecture::advanceTime() does not rescale the blade.</li>
+<li><b>Identity and persistence.</b> The leaf keeps its object and primitives. \ref PlantArchitecture::setPetioleLeafGeometry() and \ref PlantArchitecture::setPetioleLeafCount() rebuild the leaf and so discard its midrib. The midrib is recorded by \ref PlantArchitecture::writePlantStructureXML().</li>
+<li><b>Generic blades only.</b> A leaf loaded from an OBJ model or built by a custom prototype function has no lattice to lay along a midrib, and raises an error.</li>
+</ul>
 
 \subsection PlantArchRealizedParameters Measuring What the Model Actually Built
 
@@ -2191,6 +2288,48 @@ they are rebuilt whenever their bud changes state.
 \ref PlantArchitecture::writePlantStructureXML() or copied with \ref PlantArchitecture::duplicatePlantInstance().
 Both rebuild a plant from its growth parameters, which do not describe a pose, and so raise an error rather
 than write a plant that would be read back in a different shape.
+
+\subsection PlantArchPoseBend Bending a Petiole
+
+The pitch, yaw and roll of a petiole joint turn the petiole rigidly about its base. To push or pull a petiole into a
+new shape without putting a kink in it, a petiole joint can also be bent along its length:
+\ref PlantJointPose::bend_degrees bends it in the plane of its pitch (positive curls it further from the stem, as a
+positive pitch tilts it), and \ref PlantJointPose::bend_lateral_degrees bends it sideways (positive turns it the way a
+positive yaw does). A bend is the change, from the way the petiole grew, in the angle between the petiole's direction
+at its base and its direction at its tip. The petiole leaves its base in the direction it had, its last segment is
+turned by the whole bend, and the segments between are turned by shares that grow evenly along its arclength, so it
+curves from base to tip without a kink. Zero leaves the curvature the petiole grew with. Each leaf is carried rigidly
+to where its point of attachment goes and turned with the centerline there. A petiole whose centerline has a single
+segment (PetioleParameters::length_segments of 1, as in many grass models) has one direction and cannot be bent; turn
+it with its pitch and yaw instead.
+
+~~~~~~{cpp}
+PlantJointID petiole_joint;
+petiole_joint.type = PLANT_JOINT_PETIOLE;
+petiole_joint.shootID = shootID;
+petiole_joint.node_index = 3;
+
+PlantJointPose pose;
+pose.pitch_degrees = 10;      // tilt the whole petiole away from the stem...
+pose.bend_degrees = -25;      // ...and curl it back up along its length
+plantarchitecture.setPlantJointPose(plantID, petiole_joint, pose);
+
+// Or drag its tip to a point: the bend and length are worked out, the joint's pitch, yaw and roll kept
+plantarchitecture.setPetioleTipPosition(plantID, shootID, 3, 0, measured_petiole_tip);
+~~~~~~
+
+A bend is part of the joint's pose like its angles and its length: it is an offset from the petiole as it grew,
+applied to the petiole as it grew and about the joint's axes as it grew, before the joint is turned, so the same pose
+gives the same petiole by any path and \ref PlantArchitecture::resetPlantPose() undoes it exactly. Object IDs and
+primitive UUIDs are kept. A petiole that bends under the weight of its leaves (\ref PlantArch_petioledroop) settles from
+its bent shape. Only a petiole joint can be bent.
+
+\ref PlantArchitecture::setPetioleTipPosition() solves for the two bends and the length scale that put the tip of the
+petiole's centerline on a given point. A petiole that bends under the weight of its leaves is aimed again until its
+tip settles on the point. A point is out of reach, and an error is raised with the plant left as it was, when no bend
+brings the tip to it, when it would take a bend of more than 180 degrees, or when it would scale the petiole's length
+by less than 0.25 or more than 4. A point behind the petiole's base is usually out of reach; turning the joint toward
+it first with its pitch and yaw brings it within reach.
 
 \section PlantArchConventions Coordinate Frames and Internal Storage Conventions
 
