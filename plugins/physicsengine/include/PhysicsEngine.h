@@ -46,6 +46,10 @@ struct PhysicsEngineParameters {
     bool ground_collisions = false;
     //! Sliding friction coefficient of contacts
     float friction = 0.5f;
+    //! Sliding friction coefficient of contacts with the ground when ground_collisions is enabled. Zero (the default) leaves the ground frictionless when articulation_collisions is enabled, since its contacts then take the articulation links' frictionless contact model, so that a link that reaches the ground slides on indefinitely. A positive value gives ground contacts sliding, torsional, and rolling friction.
+    float ground_friction = 0.f;
+    //! Rolling friction of contacts with the ground in meters (the lever arm of the resisting torque), used when ground_friction is positive. Without it a sphere, such as a fallen fruit, rolls on the ground indefinitely; a few millimeters stops it as soil and grass would.
+    float ground_rolling_friction = 0.f;
     //! Apply gravity
     bool gravity = true;
     //! Simulate each link welded to its parent (\ref PHYSICS_JOINT_WELDED) as part of the body of the nearest link above it that can move, or as part of the static world if none can, rather than as a body of its own.
@@ -525,6 +529,16 @@ ef PHYSICS_JOINT_DETACHABLE.
      * \param[in] instance ID of the simulation instance.
      */
     [[nodiscard]] helios::vec3 getLinkPosition(uint articulationID, uint link_index, uint instance = 0) const;
+
+    //! Get the current world position of a point fixed to an articulation link
+    /**
+     * The point moves rigidly with the link, so this is where a point on the link's surface or axis is now.
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     * \param[in] link_index Index of the link within the articulation.
+     * \param[in] rest_point Position of the point in world coordinates when the link is in its rest pose (PhysicsLink::position and orientation).
+     * \param[in] instance ID of the simulation instance.
+     */
+    [[nodiscard]] helios::vec3 getLinkPointPosition(uint articulationID, uint link_index, const helios::vec3 &rest_point, uint instance = 0) const;
 
     //! Disable informational messages
     void disableMessages();

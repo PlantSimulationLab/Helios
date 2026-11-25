@@ -288,7 +288,12 @@ std::string PhysicsEngine::buildMJCF(const PhysicsEngineParameters &params) cons
     assets << std::setprecision(9);
     bodies << "    <light pos=\"0 0 10\" dir=\"0 0 -1\" directional=\"true\"/>\n";
     // A colliding ground uses the same bits as a kinematic box: it collides with articulation links, but not with kinematic boxes or loaded models
-    bodies << "    <geom name=\"ground\" type=\"plane\" size=\"10 10 0.1\" contype=\"" << (params.ground_collisions ? 1 : 0) << "\" conaffinity=\"" << (params.ground_collisions ? 2 : 0) << "\" rgba=\"0.35 0.45 0.3 1\"/>\n";
+    bodies << "    <geom name=\"ground\" type=\"plane\" size=\"10 10 0.1\" contype=\"" << (params.ground_collisions ? 1 : 0) << "\" conaffinity=\"" << (params.ground_collisions ? 2 : 0) << "\"";
+    if (params.ground_friction > 0.f) {
+        // A contact takes the larger condim of its two geoms, so condim 6 gives ground contacts torsional and rolling friction whatever the links use
+        bodies << " condim=\"6\" friction=\"" << params.ground_friction << " 0.005 " << params.ground_rolling_friction << "\"";
+    }
+    bodies << " rgba=\"0.35 0.45 0.3 1\"/>\n";
 
     std::ostringstream exclusions;
     std::ostringstream equalities;
@@ -640,6 +645,9 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
     }
     if (params.memory_arena_megabytes < 0.f) {
         helios_runtime_error("ERROR (PhysicsEngine::initialize): The memory arena size must not be negative; use 0 to choose it automatically.");
+    }
+    if (!(params.ground_friction >= 0.f) || !(params.ground_rolling_friction >= 0.f)) {
+        helios_runtime_error("ERROR (PhysicsEngine::initialize): The ground friction (" + std::to_string(params.ground_friction) + ") and rolling friction (" + std::to_string(params.ground_rolling_friction) + " m) must not be negative.");
     }
     // MuJoCo silently replaces contacts stiffer than the time step can resolve, so a smaller value would not take effect
     if (params.contact_time_constant < 2.f * params.timestep) {
@@ -1589,4 +1597,25 @@ vec3 PhysicsEngine::getLinkPosition(uint articulationID, uint link_index, uint i
     const mjData *data = getInstance(instance, "getLinkPosition").data;
     requireLink(articulationID, link_index, "getLinkPosition");
     return linkWorldPosition(data, articulations[articulationID], link_index);
+}
+
+vec3 PhysicsEngine::getLinkPointPosition(uint articulationID, uint link_index, const vec3 &rest_point, uint instance) const {
+    const mjData *data = getInstance(instance, "getLinkPointPosition").data;
+    requireLink(articulationID, link_index, "getLinkPointPosition");
+    const ArticulationRecord &record = articulations[articulationID];
+    // The point in the frame of the body that carries the link, as link_offset holds the link's own position
+    const int host = record.link_host[link_index];
+    vec3 offset = rest_point;
+    if (host >= 0) {
+        const PhysicsLink &host_link = record.description.links[host];
+        mjtNum R_host[9];
+        quaternionToMatrix(host_link.qw, host_link.qx, host_link.qy, host_link.qz, R_host);
+        offset = rotateToBodyFrame(R_host, rest_point - host_link.position);
+    }
+    const int body_ID = record.link_body_IDs[link_index];
+    const mjtNum local[3] = {offset.x, offset.y, offset.z};
+    mjtNum world[3];
+    mju_mulMatVec3(world, data->xmat + 9 * body_ID, local);
+    mju_addTo3(world, data->xpos + 3 * body_ID);
+    return make_vec3(float(world[0]), float(world[1]), float(world[2]));
 }

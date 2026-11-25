@@ -815,6 +815,52 @@ DOCTEST_TEST_CASE("PhysicsEngine - a detached link comes to rest on the ground w
     DOCTEST_CHECK(finalHeight(false) < -1.f);
 }
 
+DOCTEST_TEST_CASE("PhysicsEngine - a body sliding on the ground stops only when the ground has friction") {
+    // A sphere held to the bob of a swinging pendulum is let go near the bottom of the swing, so that it lands moving sideways
+    auto distanceTravelledLate = [](float ground_friction, float ground_rolling_friction) {
+        Context context;
+        PhysicsArticulation pendulum = makePendulum("pendulum", 0.6f, 0.5f, 1.2f);
+        PhysicsLink sphere = pendulum.links[1];
+        sphere.name = "sphere";
+        sphere.parent_index = 1;
+        sphere.joint_type = PHYSICS_JOINT_DETACHABLE;
+        sphere.mass = 0.15f;
+        pendulum.links[1].shapes.clear();
+        pendulum.links.push_back(sphere);
+        PhysicsEngine engine(&context);
+        engine.disableMessages();
+        uint pendulumID = engine.addArticulation(pendulum);
+        PhysicsEngineParameters params;
+        params.ground_collisions = true;
+        params.articulation_collisions = true;
+        params.ground_friction = ground_friction;
+        params.ground_rolling_friction = ground_rolling_friction;
+        engine.initialize(params);
+        // A quarter of the period of a 0.5 m pendulum
+        engine.step(177);
+        engine.detachLink(pendulumID, 2);
+        engine.step(1000);
+        const vec3 after_2s = engine.getLinkPosition(pendulumID, 2);
+        engine.step(1000);
+        const vec3 after_4s = engine.getLinkPosition(pendulumID, 2);
+        DOCTEST_CHECK(after_4s.z < 0.05f);
+        return (after_4s - after_2s).magnitude();
+    };
+    // Without ground friction (the default), the bob slides on indefinitely
+    DOCTEST_CHECK(distanceTravelledLate(0.f, 0.f) > 0.5f);
+    // With sliding and rolling friction, it has stopped within two seconds
+    DOCTEST_CHECK(distanceTravelledLate(1.f, 0.003f) < 0.01f);
+
+    PhysicsEngineParameters params;
+    params.ground_collisions = true;
+    params.ground_rolling_friction = -0.1f;
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    engine.addArticulation(makePendulum("pendulum", 0.6f, 0.5f, 0.f));
+    DOCTEST_CHECK_THROWS(engine.initialize(params));
+}
+
 DOCTEST_TEST_CASE("PhysicsEngine - links that overlap as built can be kept overlapped while every other pair still collides") {
     // Pendulums a and b hang with their bobs 2 cm apart, so that the 2 cm spheres overlap. Pendulum c starts swung out to the side and swings
     // through where a's bob hangs, about 0.35 s later.
@@ -1701,6 +1747,74 @@ DOCTEST_TEST_CASE("PlantPhysics - listed internodes stay flexible when the other
     DOCTEST_CHECK_THROWS(addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID, USDExportParameters(), params));
 }
 
+DOCTEST_TEST_CASE("PlantPhysics - the stiffness of chosen joints is scaled, together with their damping and armature") {
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    uint plantID = buildTestPlant(context, plantarchitecture);
+    const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+
+    std::vector<uint> internodes;
+    for (uint i = 0; i < articulation.links.size(); i++) {
+        if (articulation.links[i].type == ARTICULATION_LINK_INTERNODE && articulation.links[i].parent_index >= 0) {
+            internodes.push_back(i);
+        }
+    }
+    DOCTEST_REQUIRE(internodes.size() >= 2);
+    const uint flexible = internodes.back();
+    const uint rigid = internodes.front();
+
+    // Stiffness, damping, and armature of the flexible link's joint
+    auto jointOf = [&](const std::vector<uint> &scaled_links, const std::vector<float> &scales) {
+        PlantPhysicsParameters params;
+        params.rigid_internodes = true;
+        params.leaf_collisions = false;
+        params.apply_joint_armature = true;
+        params.flexible_links = {flexible};
+        params.stiffness_scaled_links = scaled_links;
+        params.stiffness_scales = scales;
+        PhysicsEngine engine(&context);
+        engine.disableMessages();
+        uint articulationID = addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID, USDExportParameters(), params);
+        engine.initialize();
+        const mjModel *model = engine.getMuJoCoModel();
+        const int body = engine.getLinkBodyID(articulationID, flexible);
+        const int dof = model->jnt_dofadr[model->body_jntadr[body]];
+        return std::make_tuple(double(model->jnt_stiffness[model->body_jntadr[body]]), double(model->dof_damping[dof]), double(model->dof_armature[dof]));
+    };
+
+    const auto [k1, d1, a1] = jointOf({}, {});
+    const auto [k4, d4, a4] = jointOf({flexible}, {0.25f});
+    DOCTEST_REQUIRE(k1 > 0.0);
+    DOCTEST_CHECK(k4 == doctest::Approx(0.25 * k1).epsilon(1e-5));
+    DOCTEST_CHECK(d4 == doctest::Approx(0.25 * d1).epsilon(1e-5));
+    DOCTEST_CHECK(a4 == doctest::Approx(0.25 * a1).epsilon(1e-5));
+
+    // A link without a joint of its own, a missing link, a mismatched list, or a scale that is not positive are errors
+    auto fails = [&](const std::vector<uint> &scaled_links, const std::vector<float> &scales) {
+        PlantPhysicsParameters params;
+        params.rigid_internodes = true;
+        params.leaf_collisions = false;
+        params.flexible_links = {flexible};
+        params.stiffness_scaled_links = scaled_links;
+        params.stiffness_scales = scales;
+        PhysicsEngine engine(&context);
+        engine.disableMessages();
+        bool threw = false;
+        try {
+            addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID, USDExportParameters(), params);
+        } catch (const std::exception &) {
+            threw = true;
+        }
+        return threw;
+    };
+    DOCTEST_CHECK(fails({rigid}, {0.5f}));
+    DOCTEST_CHECK(fails({static_cast<uint>(articulation.links.size())}, {0.5f}));
+    DOCTEST_CHECK(fails({flexible}, {}));
+    DOCTEST_CHECK(fails({flexible}, {0.f}));
+    DOCTEST_CHECK(!fails({flexible}, {2.f}));
+}
+
 DOCTEST_TEST_CASE("PlantPhysics - rigid leaves have no joints of their own, and follow the wood") {
     Context context;
     context.seedRandomGenerator(3);
@@ -1827,6 +1941,73 @@ DOCTEST_TEST_CASE("PlantPhysics - the nearest organ to a point is found among or
     DOCTEST_CHECK_THROWS(NearestPlantOrgan(articulation, ARTICULATION_LINK_LEAF));
     PlantArticulation no_wood;
     DOCTEST_CHECK_THROWS(NearestPlantOrgan(no_wood, ARTICULATION_LINK_INTERNODE));
+}
+
+DOCTEST_TEST_CASE("PlantPhysics - the nearest organ is found where the simulated plant is now") {
+    // A two-internode "plant": a short stub fixed at the pivot, and a horizontal rod on a free ball joint that swings down under gravity
+    const float c45 = std::sqrt(0.5f);
+    PlantArticulation plant;
+    PlantArticulationLink stub;
+    stub.name = "stub";
+    stub.position = make_vec3(0, 0, 1);
+    stub.radius = 0.005f;
+    stub.half_length = 0.005f;
+    PlantArticulationLink rod;
+    rod.name = "rod";
+    rod.parent_index = 0;
+    rod.position = make_vec3(0.1f, 0, 1);
+    rod.qw = c45; // its axis (local z) along world x
+    rod.qy = c45;
+    rod.radius = 0.01f;
+    rod.half_length = 0.1f;
+    plant.links = {stub, rod};
+
+    PhysicsArticulation simulated;
+    simulated.name = "plant";
+    PhysicsLink pivot;
+    pivot.name = "stub";
+    pivot.position = stub.position;
+    pivot.mass = 0.01f;
+    pivot.inertia_diagonal = make_vec3(1e-6f, 1e-6f, 1e-6f);
+    PhysicsLink arm;
+    arm.name = "rod";
+    arm.parent_index = 0;
+    arm.position = rod.position;
+    arm.qw = rod.qw;
+    arm.qy = rod.qy;
+    arm.mass = 0.1f;
+    arm.inertia_diagonal = make_vec3(3.3e-4f, 3.3e-4f, 5e-6f);
+    arm.joint_type = PHYSICS_JOINT_BALL;
+    simulated.links = {pivot, arm};
+
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint articulationID = engine.addArticulation(simulated);
+    engine.initialize();
+    engine.step(100);
+
+    const vec3 now = engine.getLinkPosition(articulationID, 1);
+    DOCTEST_REQUIRE((now - rod.position).magnitude() > 0.03f);
+
+    // A point fixed to the rod, given in its rest pose, moves with it, keeping its distance from the rod's center
+    DOCTEST_CHECK((engine.getLinkPointPosition(articulationID, 1, rod.position) - now).magnitude() < 1e-5f);
+    const vec3 rest_offset = make_vec3(0.05f, 0.f, 0.02f);
+    DOCTEST_CHECK((engine.getLinkPointPosition(articulationID, 1, rod.position + rest_offset) - now).magnitude() == doctest::Approx(rest_offset.magnitude()).epsilon(1e-4));
+    // The pivot does not move: its own points stay where they were
+    DOCTEST_CHECK((engine.getLinkPointPosition(articulationID, 0, stub.position) - stub.position).magnitude() < 1e-5f);
+
+    // At the rod's center now: the live search finds it with the point inside it by its radius; the search of the rest shape does not
+    NearestPlantOrgan nearest_wood(plant, ARTICULATION_LINK_INTERNODE);
+    const NearestPlantOrganResult live = nearest_wood.find(now, engine, articulationID);
+    DOCTEST_CHECK(live.link_index == 1);
+    DOCTEST_CHECK(live.surface_distance == doctest::Approx(-rod.radius).epsilon(1e-3));
+    DOCTEST_CHECK(live.axis_offset.magnitude() < 1e-4f);
+    const NearestPlantOrganResult at_rest = nearest_wood.find(now);
+    DOCTEST_CHECK(at_rest.surface_distance > 0.01f);
+
+    DOCTEST_CHECK_THROWS(engine.getLinkPointPosition(articulationID, 2, now));
+    DOCTEST_CHECK_THROWS(nearest_wood.find(now, engine, articulationID + 1));
 }
 
 DOCTEST_TEST_CASE("PlantPhysics - organs are found in a box, and the internodes that carry an organ are found toward the root") {

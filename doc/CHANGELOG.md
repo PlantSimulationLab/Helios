@@ -79,6 +79,9 @@
 - Added `PhysicsEngine::setResetPose()`, which makes the pose of a settled instance the one every instance is reset to.
 - Added `PhysicsEngine::getDisplayBodyPoses()` and `showDisplayBodyPoses()`, which record the poses of the bodies that move Context geometry and show them again, for drawing movies after a run.
 - Added `findPlantLinksInBox()`, `findBearingInternode()` and `findSupportingInternodes()`, which choose organs of a plant and the wood that carries them, and `NearestPlantOrgan`.
+- Added `PlantPhysicsParameters::stiffness_scaled_links` and `stiffness_scales`, which scale chosen plant joints' stiffness, damping and armature, so that a flexible internode can stand for the welded internodes it carries.
+- Added `PhysicsEngineParameters::ground_friction` and `ground_rolling_friction`; without them the ground is frictionless when articulation collisions are enabled, so a fallen link slides or rolls on indefinitely.
+- Added `PhysicsEngine::getLinkPointPosition()` and a `NearestPlantOrgan::find()` that takes a simulation, which follow a plant's links where they are now rather than in their rest pose.
 
 ## Robotics
 - Added the robotics plug-in (`robotics`). `Robot` loads a robot from a URDF or MJCF file into a `PhysicsEngine` simulation, with servo-driven joints, inverse kinematics of its tool, the contact force on its tool, and a home pose, for each parallel simulation instance. Instances can be simulated and solved from separate threads.

@@ -24,7 +24,7 @@
 
 //! Settings of how a plant is converted to an articulation
 struct PlantPhysicsParameters {
-    //! Add the joint armature computed by PlantArchitecture::getPlantArticulation(). It is needed for integrators that apply joint springs explicitly.
+    //! Add the joint armature computed by PlantArchitecture::getPlantArticulation(). It is needed for integrators that apply joint springs explicitly. With the discrete integrator the simulation is stable without it, but the iterative constraint solvers (PGS and CG) then need several times more iterations, because stiff joints on very light links (such as the end of a fruit stem, which carries only the fruit held to it) leave their problem badly conditioned; Newton is unaffected.
     bool apply_joint_armature = false;
     //! Maximum bending angle of each joint in degrees. Zero leaves the joints unlimited.
     float max_joint_bend_degrees = 60.f;
@@ -42,6 +42,15 @@ struct PlantPhysicsParameters {
     std::vector<uint> flexible_links;
     //! Indices of the links in PlantArchitecture::getPlantArticulation() that can later be released with PhysicsEngine::detachLink(), such as branches that may be cut or fruit that may be picked. Each one adds six degrees of freedom and a constraint to the model, and is rigidly held to its parent until released.
     std::vector<uint> detachable_links;
+    //! Indices of links whose joint stiffness is multiplied by the matching entry of stiffness_scales, together with their joint damping and armature, which are proportional to it. Each must be a link that keeps its joint (not welded to its parent).
+    /**
+     * With rigid_internodes, a flexible internode carries the welded internodes beyond it as one rigid piece, so its joint alone stands for the bending of all of them. Its stiffness from getPlantArticulation() is that of the one internode; the
+     * springs of the welded internodes in series are softer. Giving a flexible link that carries n welded internodes the scale 1 / (1 + n), as for n + 1 equal springs in series, keeps the branch about as compliant as when every internode
+     * bends, with fewer joints. Summing the welded joints' own compliances (1 / K_series = sum of 1 / K) over-softens it: the thin internodes nearest a load, which bend little under it, then dominate.
+     */
+    std::vector<uint> stiffness_scaled_links;
+    //! Positive factor for each link in stiffness_scaled_links
+    std::vector<float> stiffness_scales;
 };
 
 //! Add a plant to a physics simulation, and make its Context geometry follow the simulated links. Must be called before PhysicsEngine::initialize().
@@ -124,6 +133,16 @@ public:
      */
     [[nodiscard]] NearestPlantOrganResult find(const helios::vec3 &point) const;
 
+    //! Find the organ whose surface is nearest to a point, with the organs where they are now in a simulation
+    /**
+     * The search of the rest shape is faster but does not follow wood that bends; this one moves every organ with its link.
+     * \param[in] point Point in world coordinates.
+     * \param[in] engine Physics simulation the plant was added to with addPlantToPhysicsEngine().
+     * \param[in] articulationID ID of the plant's articulation, returned by addPlantToPhysicsEngine().
+     * \param[in] instance ID of the simulation instance.
+     */
+    [[nodiscard]] NearestPlantOrganResult find(const helios::vec3 &point, const PhysicsEngine &engine, uint articulationID, uint instance = 0) const;
+
 private:
     struct Segment {
         uint link_index;
@@ -132,6 +151,9 @@ private:
         float radius;
     };
     std::vector<Segment> segments;
+    size_t link_count = 0;
+
+    [[nodiscard]] static NearestPlantOrganResult nearestOnSegment(const helios::vec3 &point, const helios::vec3 &start, const helios::vec3 &end, float radius, uint link_index);
 };
 
 #endif

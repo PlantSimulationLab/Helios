@@ -281,6 +281,7 @@ NearestPlantOrgan::NearestPlantOrgan(const PlantArticulation &articulation, Plan
     if (type != ARTICULATION_LINK_INTERNODE && type != ARTICULATION_LINK_PETIOLE && type != ARTICULATION_LINK_PEDUNCLE) {
         helios_runtime_error("ERROR (NearestPlantOrgan): Only organs with a capsule shape can be searched (internodes, petioles, and peduncles), but " + plantLinkLabel(type) + " was given.");
     }
+    link_count = articulation.links.size();
     for (uint i = 0; i < articulation.links.size(); i++) {
         const PlantArticulationLink &link = articulation.links[i];
         if (link.type != type) {
@@ -295,19 +296,41 @@ NearestPlantOrgan::NearestPlantOrgan(const PlantArticulation &articulation, Plan
     }
 }
 
+NearestPlantOrganResult NearestPlantOrgan::nearestOnSegment(const vec3 &point, const vec3 &start, const vec3 &end, float radius, uint link_index) {
+    const vec3 along = end - start;
+    const float length_squared = along * along;
+    const float t = length_squared > 0.f ? std::clamp((point - start) * along / length_squared, 0.f, 1.f) : 0.f;
+    NearestPlantOrganResult result;
+    result.axis_offset = start + t * along - point;
+    result.surface_distance = result.axis_offset.magnitude() - radius;
+    result.link_index = link_index;
+    return result;
+}
+
 NearestPlantOrganResult NearestPlantOrgan::find(const vec3 &point) const {
     NearestPlantOrganResult nearest;
     nearest.surface_distance = std::numeric_limits<float>::max();
     for (const Segment &segment: segments) {
-        const vec3 along = segment.end - segment.start;
-        const float length_squared = along * along;
-        const float t = length_squared > 0.f ? std::clamp((point - segment.start) * along / length_squared, 0.f, 1.f) : 0.f;
-        const vec3 offset = segment.start + t * along - point;
-        const float distance = offset.magnitude() - segment.radius;
-        if (distance < nearest.surface_distance) {
-            nearest.surface_distance = distance;
-            nearest.axis_offset = offset;
-            nearest.link_index = segment.link_index;
+        const NearestPlantOrganResult candidate = nearestOnSegment(point, segment.start, segment.end, segment.radius, segment.link_index);
+        if (candidate.surface_distance < nearest.surface_distance) {
+            nearest = candidate;
+        }
+    }
+    return nearest;
+}
+
+NearestPlantOrganResult NearestPlantOrgan::find(const vec3 &point, const PhysicsEngine &engine, uint articulationID, uint instance) const {
+    if (articulationID >= engine.getArticulationCount() || engine.getArticulationLinkCount(articulationID) != link_count) {
+        helios_runtime_error("ERROR (NearestPlantOrgan::find): Articulation " + std::to_string(articulationID) + " of the physics engine is not the plant this search was built from (" + std::to_string(link_count) + " links).");
+    }
+    NearestPlantOrganResult nearest;
+    nearest.surface_distance = std::numeric_limits<float>::max();
+    for (const Segment &segment: segments) {
+        const vec3 start = engine.getLinkPointPosition(articulationID, segment.link_index, segment.start, instance);
+        const vec3 end = engine.getLinkPointPosition(articulationID, segment.link_index, segment.end, instance);
+        const NearestPlantOrganResult candidate = nearestOnSegment(point, start, end, segment.radius, segment.link_index);
+        if (candidate.surface_distance < nearest.surface_distance) {
+            nearest = candidate;
         }
     }
     return nearest;
@@ -325,6 +348,22 @@ uint addPlantToPhysicsEngine(PhysicsEngine &engine, const Context &context, cons
     std::vector<int> joint_of_child(links.size(), -1);
     for (size_t j = 0; j < plant.joints.size(); j++) {
         joint_of_child.at(plant.joints[j].child_index) = static_cast<int>(j);
+    }
+
+    if (params.stiffness_scales.size() != params.stiffness_scaled_links.size()) {
+        helios_runtime_error("ERROR (addPlantToPhysicsEngine): " + std::to_string(params.stiffness_scaled_links.size()) + " stiffness-scaled links were given with " + std::to_string(params.stiffness_scales.size()) +
+                             " stiffness scales; give one scale per link.");
+    }
+    std::vector<float> stiffness_scale(links.size(), 1.f);
+    for (size_t k = 0; k < params.stiffness_scaled_links.size(); k++) {
+        const uint link_index = params.stiffness_scaled_links[k];
+        if (link_index >= links.size() || links[link_index].parent_index < 0) {
+            helios_runtime_error("ERROR (addPlantToPhysicsEngine): Stiffness-scaled link " + std::to_string(link_index) + " of plant " + std::to_string(plantID) + " does not exist or has no joint.");
+        }
+        if (!(params.stiffness_scales[k] > 0.f) || !std::isfinite(params.stiffness_scales[k])) {
+            helios_runtime_error("ERROR (addPlantToPhysicsEngine): The stiffness scale of link " + std::to_string(link_index) + " must be positive and finite, but " + std::to_string(params.stiffness_scales[k]) + " was given.");
+        }
+        stiffness_scale[link_index] = params.stiffness_scales[k];
     }
 
     std::vector<char> is_flexible(links.size(), 0);
@@ -363,11 +402,15 @@ uint addPlantToPhysicsEngine(PhysicsEngine &engine, const Context &context, cons
         bool welded = (params.rigid_internodes && link.type == ARTICULATION_LINK_INTERNODE && !is_flexible[i]) || (params.rigid_leaves && (link.type == ARTICULATION_LINK_PETIOLE || link.type == ARTICULATION_LINK_LEAF));
         if (link.parent_index >= 0 && !welded) {
             const PlantArticulationJoint &joint = plant.joints.at(joint_of_child[i]);
+            // Damping and armature are proportional to the stiffness (see computeJointDamping() and computeJointArmature()), so they scale with it
+            const float scale = stiffness_scale[i];
             physics_link.joint_type = PHYSICS_JOINT_BALL;
-            physics_link.stiffness = joint.stiffness;
-            physics_link.damping = joint.damping;
-            physics_link.armature = params.apply_joint_armature ? joint.armature : 0.f;
+            physics_link.stiffness = scale * joint.stiffness;
+            physics_link.damping = scale * joint.damping;
+            physics_link.armature = params.apply_joint_armature ? scale * joint.armature : 0.f;
             physics_link.max_rotation = params.max_joint_bend_degrees * float(M_PI) / 180.f;
+        } else if (stiffness_scale[i] != 1.f) {
+            helios_runtime_error("ERROR (addPlantToPhysicsEngine): Stiffness-scaled link " + link.name + " of plant " + std::to_string(plantID) + " is welded to its parent, so it has no joint to scale.");
         }
 
         if (link.type == ARTICULATION_LINK_INTERNODE || link.type == ARTICULATION_LINK_PETIOLE || link.type == ARTICULATION_LINK_PEDUNCLE) {
