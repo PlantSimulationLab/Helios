@@ -16107,8 +16107,9 @@ DOCTEST_TEST_CASE("PlantArchitecture apple_fruitingwall is a mature tall spindle
     // leaf area (the length-preserving lateral leaf curvature) turned one of about thirty branch tips upward. A columnar wall has almost none.
     DOCTEST_CHECK(rising_tips * 20 <= branches.branchIDs.size());
     // Renewal is capped at three a winter, so a few candidates wait a winter or two for their turn. How many are waiting varies with the
-    // random stream, which differs between C++ standard libraries for the same seed (7 with MSVC on the GitHub Windows GPU runner).
-    DOCTEST_CHECK(over_ratio <= 8);
+    // random stream, which differs between C++ standard libraries for the same seed, and grows with branch girth: branches as thick as
+    // measured tall-spindle branches (about 0.3 of the trunk) reach half the leader's diameter sooner (9 with gcc).
+    DOCTEST_CHECK(over_ratio <= 10);
     DOCTEST_CHECK(branches.stubs + renewals >= 1);
     DOCTEST_CHECK(branches.stubs <= 3);
 }

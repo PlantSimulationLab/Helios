@@ -2460,7 +2460,10 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     shoot_parameters_branch.max_nodes_per_season = 10;
     shoot_parameters_branch.phyllochron_min = 2.0;
     shoot_parameters_branch.elongation_rate_max = 0.15;
-    shoot_parameters_branch.girth_area_factor = 0.55f;
+    // Fruiting branches of 5-7 year tall-spindle trees measure 1.4-2.1 cm across on average, 0.3 of the trunk's diameter, and at most
+    // 0.3-0.5 of it (10 'Aztec Fuji' trees, Frontiers in Plant Science 2025, doi:10.3389/fpls.2025.1616611), within the rule of keeping
+    // limbs under half the leader's diameter. This factor gives a median of 1.7 cm and 0.31 of the trunk at six years.
+    shoot_parameters_branch.girth_area_factor = 2.2f;
     shoot_parameters_branch.vegetative_bud_break_probability_max = 0.15;
     shoot_parameters_branch.vegetative_bud_break_probability_min = 0.03;
     shoot_parameters_branch.vegetative_bud_break_probability_decay_rate = 0.03;
