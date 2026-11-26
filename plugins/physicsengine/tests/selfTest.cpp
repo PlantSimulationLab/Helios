@@ -815,6 +815,100 @@ DOCTEST_TEST_CASE("PhysicsEngine - a detached link comes to rest on the ground w
     DOCTEST_CHECK(finalHeight(false) < -1.f);
 }
 
+DOCTEST_TEST_CASE("PhysicsEngine - a joint whose elastic moment passes its rupture moment breaks, and then moves as a joint without a spring") {
+    // A 0.5 m pendulum held out at 0.8 rad by a joint spring that gravity overloads at once
+    auto makeBreakable = [](float stiffness, float damping, float rupture_moment, float max_rotation) {
+        PhysicsArticulation pendulum = makePendulum("pendulum", 1.f, 0.5f, 0.8f);
+        pendulum.links[1].stiffness = stiffness;
+        pendulum.links[1].damping = damping;
+        pendulum.links[1].max_rotation = max_rotation;
+        pendulum.links[1].rupture_moment = rupture_moment;
+        return pendulum;
+    };
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint pendulumID = engine.addArticulation(makeBreakable(2.f, 0.2f, 1.f, 1.f));
+    PhysicsEngineParameters params;
+    engine.initialize(params);
+    DOCTEST_CHECK(engine.getMuJoCoModel(0) == engine.getMuJoCoModel());
+    uint steps = 0;
+    while (!engine.isLinkBroken(pendulumID, 1) && steps < 500) {
+        engine.step(1);
+        steps++;
+    }
+    DOCTEST_REQUIRE(engine.isLinkBroken(pendulumID, 1));
+    DOCTEST_CHECK(engine.getBrokenLinkCount() == 1);
+    DOCTEST_CHECK(steps >= static_cast<uint>(params.rupture_persistence_steps));
+    // The broken instance runs on its own copy of the model; the shared model keeps the spring
+    DOCTEST_CHECK(engine.getMuJoCoModel(0) != engine.getMuJoCoModel());
+
+    // From the moment it broke, it moves exactly as the same pendulum compiled without a spring, with the damping a broken joint keeps and
+    // its rotation limit widened to a full half turn
+    Context reference_context;
+    PhysicsEngine reference(&reference_context);
+    reference.disableMessages();
+    reference.addArticulation(makeBreakable(0.f, 0.2f * params.broken_joint_damping_fraction, 0.f, float(M_PI)));
+    reference.initialize(params);
+    const mjModel *broken_model = engine.getMuJoCoModel(0);
+    mjData *broken = engine.getMuJoCoData(0);
+    mjData *unsprung = reference.getMuJoCoData(0);
+    mju_copy(unsprung->qpos, broken->qpos, broken_model->nq);
+    mju_copy(unsprung->qvel, broken->qvel, broken_model->nv);
+    engine.step(300);
+    reference.step(300);
+    for (int i = 0; i < broken_model->nq; i++) {
+        DOCTEST_CHECK(broken->qpos[i] == doctest::Approx(unsprung->qpos[i]).epsilon(1e-9));
+    }
+}
+
+DOCTEST_TEST_CASE("PhysicsEngine - breaking is per instance, a reset restores the joint, and breakage can be turned off") {
+    // A pendulum hanging straight down: gravity does not bend its joint, a sideways push on the bob does
+    PhysicsArticulation pendulum = makePendulum("pendulum", 1.f, 0.5f, 0.f);
+    pendulum.links[1].stiffness = 20.f;
+    pendulum.links[1].damping = 2.f;
+    pendulum.links[1].rupture_moment = 1.f;
+    Context context;
+    PhysicsEngine engine(&context);
+    engine.disableMessages();
+    uint pendulumID = engine.addArticulation(pendulum);
+    engine.initialize();
+    engine.createInstance();
+    const int bob = engine.getLinkBodyID(pendulumID, 1);
+    auto push = [&](uint instance, float force, uint steps) {
+        engine.getMuJoCoData(instance)->xfrc_applied[6 * bob] = force;
+        engine.step(steps, instance);
+        engine.getMuJoCoData(instance)->xfrc_applied[6 * bob] = 0;
+    };
+    // 5 N on a 0.5 m arm is 2.5 N m, past the 1 N m rupture moment; 1 N is 0.5 N m, within it
+    push(0, 5.f, 500);
+    push(1, 1.f, 500);
+    DOCTEST_CHECK(engine.isLinkBroken(pendulumID, 1, 0));
+    DOCTEST_CHECK(!engine.isLinkBroken(pendulumID, 1, 1));
+    DOCTEST_CHECK(engine.getBrokenLinkCount(0) == 1);
+    DOCTEST_CHECK(engine.getBrokenLinkCount(1) == 0);
+    DOCTEST_CHECK(engine.getMuJoCoModel(1) == engine.getMuJoCoModel());
+
+    // A reset restores the joint: the instance is back on the shared model and the bob springs back from a push within the rupture moment
+    engine.resetInstance(0);
+    DOCTEST_CHECK(!engine.isLinkBroken(pendulumID, 1, 0));
+    DOCTEST_CHECK(engine.getBrokenLinkCount(0) == 0);
+    DOCTEST_CHECK(engine.getMuJoCoModel(0) == engine.getMuJoCoModel());
+    push(0, 1.f, 500);
+    engine.step(1000, 0);
+    DOCTEST_CHECK(!engine.isLinkBroken(pendulumID, 1, 0));
+    DOCTEST_CHECK(std::abs(engine.getLinkPosition(pendulumID, 1, 0).x) < 1e-3f);
+
+    // With breakage off, the same overload bends the joint without breaking it
+    engine.setBreakageEnabled(false);
+    push(1, 5.f, 500);
+    DOCTEST_CHECK(!engine.isLinkBroken(pendulumID, 1, 1));
+    engine.setBreakageEnabled(true);
+
+    DOCTEST_CHECK_THROWS(engine.isLinkBroken(pendulumID, 2, 0));
+    DOCTEST_CHECK_THROWS(engine.getBrokenLinkCount(2));
+}
+
 DOCTEST_TEST_CASE("PhysicsEngine - a body sliding on the ground stops only when the ground has friction") {
     // A sphere held to the bob of a swinging pendulum is let go near the bottom of the swing, so that it lands moving sideways
     auto distanceTravelledLate = [](float ground_friction, float ground_rolling_friction) {
@@ -1813,6 +1907,43 @@ DOCTEST_TEST_CASE("PlantPhysics - the stiffness of chosen joints is scaled, toge
     DOCTEST_CHECK(fails({flexible}, {}));
     DOCTEST_CHECK(fails({flexible}, {0.f}));
     DOCTEST_CHECK(!fails({flexible}, {2.f}));
+}
+
+DOCTEST_TEST_CASE("PlantPhysics - a modulus of rupture gives each flexible internode the rupture moment of its section") {
+    Context context;
+    context.seedRandomGenerator(3);
+    PlantArchitecture plantarchitecture(&context);
+    uint plantID = buildTestPlant(context, plantarchitecture);
+    const PlantArticulation articulation = plantarchitecture.getPlantArticulation(plantID);
+    std::vector<uint> internodes;
+    for (uint i = 0; i < articulation.links.size(); i++) {
+        if (articulation.links[i].type == ARTICULATION_LINK_INTERNODE && articulation.links[i].parent_index >= 0) {
+            internodes.push_back(i);
+        }
+    }
+    DOCTEST_REQUIRE(internodes.size() >= 2);
+    const uint flexible = internodes.back();
+    const uint rigid = internodes.front();
+
+    auto ruptureMoments = [&](float modulus_of_rupture) {
+        PlantPhysicsParameters params;
+        params.rigid_internodes = true;
+        params.leaf_collisions = false;
+        params.flexible_links = {flexible};
+        params.modulus_of_rupture = modulus_of_rupture;
+        PhysicsEngine engine(&context);
+        engine.disableMessages();
+        uint articulationID = addPlantToPhysicsEngine(engine, context, plantarchitecture, plantID, USDExportParameters(), params);
+        return std::make_pair(engine.getLinkRuptureMoment(articulationID, flexible), engine.getLinkRuptureMoment(articulationID, rigid));
+    };
+    // sigma pi r^3 / 4 for a solid circular section; welded internodes have no joint to break
+    const float r = articulation.links[flexible].radius;
+    const auto [flexible_moment, rigid_moment] = ruptureMoments(50e6f);
+    DOCTEST_CHECK(flexible_moment == doctest::Approx(50e6f * float(M_PI) * r * r * r / 4.f).epsilon(1e-5));
+    DOCTEST_CHECK(rigid_moment == 0.f);
+    // The default is wood that does not break
+    DOCTEST_CHECK(ruptureMoments(0.f).first == 0.f);
+    DOCTEST_CHECK_THROWS(ruptureMoments(-1.f));
 }
 
 DOCTEST_TEST_CASE("PlantPhysics - rigid leaves have no joints of their own, and follow the wood") {

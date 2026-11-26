@@ -51,6 +51,10 @@ struct PlantPhysicsParameters {
     std::vector<uint> stiffness_scaled_links;
     //! Positive factor for each link in stiffness_scaled_links
     std::vector<float> stiffness_scales;
+    //! Modulus of rupture of the wood in Pa, past which an internode's joint breaks: each internode with a joint is given the rupture moment of a solid circular section, modulus_of_rupture * pi * r^3 / 4
+    //! (PhysicsLink::rupture_moment). Green apple wood is about 45-60 MPa. Zero, the default, makes wood that does not break. Only internodes that keep their joint can break; with rigid_internodes, a thin welded internode
+    //! carried by a thicker flexible one cannot.
+    float modulus_of_rupture = 0.f;
 };
 
 //! Add a plant to a physics simulation, and make its Context geometry follow the simulated links. Must be called before PhysicsEngine::initialize().

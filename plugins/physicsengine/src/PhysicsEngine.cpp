@@ -105,6 +105,9 @@ PhysicsEngine::PhysicsEngine(Context *context) : context(context) {
 PhysicsEngine::~PhysicsEngine() {
     for (Instance &instance: instances) {
         mj_deleteData(instance.data);
+        if (instance.own_model != nullptr) {
+            mj_deleteModel(instance.own_model);
+        }
     }
     if (model != nullptr) {
         mj_deleteModel(model);
@@ -156,6 +159,14 @@ void PhysicsEngine::requireLink(uint articulationID, uint link_index, const std:
 }
 
 uint PhysicsEngine::addArticulation(const PhysicsArticulation &articulation) {
+    for (const PhysicsLink &link: articulation.links) {
+        if (!(link.rupture_moment >= 0.f) || !std::isfinite(link.rupture_moment)) {
+            helios_runtime_error("ERROR (PhysicsEngine::addArticulation): The rupture moment of link " + link.name + " must be zero or positive and finite.");
+        }
+        if (link.rupture_moment > 0.f && (link.parent_index < 0 || link.joint_type != PHYSICS_JOINT_BALL)) {
+            helios_runtime_error("ERROR (PhysicsEngine::addArticulation): Link " + link.name + " has a rupture moment, but only a ball joint can break.");
+        }
+    }
     requireNotInitialized("addArticulation");
     if (articulation.name.empty()) {
         helios_runtime_error("ERROR (PhysicsEngine::addArticulation): The articulation must have a name.");
@@ -646,6 +657,11 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
     if (params.memory_arena_megabytes < 0.f) {
         helios_runtime_error("ERROR (PhysicsEngine::initialize): The memory arena size must not be negative; use 0 to choose it automatically.");
     }
+    if (params.rupture_persistence_steps < 1 || !(params.broken_joint_damping_fraction >= 0.f && params.broken_joint_damping_fraction <= 1.f)) {
+        helios_runtime_error("ERROR (PhysicsEngine::initialize): rupture_persistence_steps must be at least 1 and broken_joint_damping_fraction from 0 to 1.");
+    }
+    rupture_persistence_steps = params.rupture_persistence_steps;
+    broken_joint_damping_fraction = params.broken_joint_damping_fraction;
     if (!(params.ground_friction >= 0.f) || !(params.ground_rolling_friction >= 0.f)) {
         helios_runtime_error("ERROR (PhysicsEngine::initialize): The ground friction (" + std::to_string(params.ground_friction) + ") and rolling friction (" + std::to_string(params.ground_rolling_friction) + " m) must not be negative.");
     }
@@ -710,6 +726,24 @@ void PhysicsEngine::initialize(const PhysicsEngineParameters &params) {
             }
         }
     }
+    breakable_joints.clear();
+    for (uint a = 0; a < articulations.size(); a++) {
+        const ArticulationRecord &record = articulations[a];
+        for (uint i = 0; i < record.description.links.size(); i++) {
+            if (record.description.links[i].rupture_moment <= 0.f) {
+                continue;
+            }
+            const int joint_ID = model->body_jntadr[record.link_body_IDs[i]];
+            if (joint_ID < 0 || model->jnt_type[joint_ID] != mjJNT_BALL) {
+                helios_runtime_error("ERROR (PhysicsEngine::initialize): The ball joint of breakable link " + record.description.links[i].name + " is missing from the compiled model.");
+            }
+            breakable_joints.push_back({a, i, joint_ID, model->jnt_qposadr[joint_ID], model->jnt_dofadr[joint_ID], record.description.links[i].rupture_moment});
+        }
+    }
+    for (Instance &instance: instances) {
+        instance.broken.assign(breakable_joints.size(), 0);
+        instance.overloaded_steps.assign(breakable_joints.size(), 0);
+    }
     geom_link_articulation.assign(model->ngeom, -1);
     geom_link_index.assign(model->ngeom, -1);
     body_is_external.assign(model->nbody, 1);
@@ -760,6 +794,8 @@ uint PhysicsEngine::createInstance() {
         helios_runtime_error("ERROR (PhysicsEngine::createInstance): MuJoCo could not allocate the simulation data.");
     }
     instance.box_velocities.resize(boxes.size());
+    instance.broken.assign(breakable_joints.size(), 0);
+    instance.overloaded_steps.assign(breakable_joints.size(), 0);
     applyResetPose(instance);
     mj_forward(model, instance.data);
     instances.push_back(std::move(instance));
@@ -772,6 +808,15 @@ uint PhysicsEngine::getInstanceCount() const {
 
 void PhysicsEngine::resetInstance(uint instance) {
     static_cast<void>(getInstance(instance, "resetInstance"));
+    Instance &record = instances[instance];
+    // Back on the shared model, with every joint whole again
+    if (record.own_model != nullptr) {
+        mj_deleteModel(record.own_model);
+        record.own_model = nullptr;
+    }
+    std::fill(record.broken.begin(), record.broken.end(), 0);
+    std::fill(record.overloaded_steps.begin(), record.overloaded_steps.end(), 0);
+    record.broken_count = 0;
     mj_resetData(model, instances[instance].data);
     std::fill(instances[instance].box_velocities.begin(), instances[instance].box_velocities.end(), make_vec3(0, 0, 0));
     instances[instance].load_detachments = 0;
@@ -1114,8 +1159,11 @@ void PhysicsEngine::stepInstance(Instance &instance, uint step_count) const {
             instance.data->qvel[boxes[b].dof_address + 1] = instance.box_velocities[b].y;
             instance.data->qvel[boxes[b].dof_address + 2] = instance.box_velocities[b].z;
         }
-        mj_step(model, instance.data);
+        mj_step(instanceModel(instance), instance.data);
         checkSimulationHealth(instance.data);
+        if (breakage_enabled && !breakable_joints.empty()) {
+            checkRupture(instance);
+        }
         for (const DetachForce &detach: instance.detach_forces) {
             if (instance.data->eq_active[detach.equality_ID] && equalityLoad(instance.data, detach.equality_ID) > detach.force) {
                 instance.data->eq_active[detach.equality_ID] = 0;
@@ -1597,6 +1645,85 @@ vec3 PhysicsEngine::getLinkPosition(uint articulationID, uint link_index, uint i
     const mjData *data = getInstance(instance, "getLinkPosition").data;
     requireLink(articulationID, link_index, "getLinkPosition");
     return linkWorldPosition(data, articulations[articulationID], link_index);
+}
+
+mjModel *PhysicsEngine::instanceModel(const Instance &instance) const {
+    return instance.own_model != nullptr ? instance.own_model : model;
+}
+
+mjModel *PhysicsEngine::getMuJoCoModel(uint instance) const {
+    return instanceModel(getInstance(instance, "getMuJoCoModel"));
+}
+
+void PhysicsEngine::checkRupture(Instance &instance) const {
+    const mjModel *m = instanceModel(instance);
+    for (size_t b = 0; b < breakable_joints.size(); b++) {
+        if (instance.broken[b]) {
+            continue;
+        }
+        const BreakableJoint &joint = breakable_joints[b];
+        // The joint's bend from its spring's rest orientation, and the elastic moment it carries there
+        const mjtNum *q = instance.data->qpos + joint.qpos_address;
+        const mjtNum *rest = m->qpos_spring + joint.qpos_address;
+        mjtNum rest_inverse[4], relative[4];
+        mju_negQuat(rest_inverse, rest);
+        mju_mulQuat(relative, rest_inverse, q);
+        const mjtNum bend = 2.0 * std::acos(std::min<mjtNum>(1.0, std::abs(relative[0])));
+        if (m->jnt_stiffness[joint.joint_ID] * bend > joint.rupture_moment) {
+            if (++instance.overloaded_steps[b] >= rupture_persistence_steps) {
+                breakJoint(instance, b);
+            }
+        } else {
+            instance.overloaded_steps[b] = 0;
+        }
+    }
+}
+
+void PhysicsEngine::breakJoint(Instance &instance, size_t breakable) const {
+    if (instance.own_model == nullptr) {
+        instance.own_model = mj_copyModel(nullptr, model);
+        if (instance.own_model == nullptr) {
+            helios_runtime_error("ERROR (PhysicsEngine::step): MuJoCo could not copy the model for an instance in which a joint broke.");
+        }
+    }
+    mjModel *m = instance.own_model;
+    const BreakableJoint &joint = breakable_joints[breakable];
+    m->jnt_stiffness[joint.joint_ID] = 0;
+    for (int d = 0; d < 3; d++) {
+        m->dof_damping[joint.dof_address + d] *= broken_joint_damping_fraction;
+    }
+    // A ball joint's range is its largest rotation: the torn joint may swing all the way round
+    m->jnt_range[2 * joint.joint_ID + 1] = mjPI;
+    instance.broken[breakable] = 1;
+    instance.broken_count++;
+}
+
+bool PhysicsEngine::isLinkBroken(uint articulationID, uint link_index, uint instance) const {
+    const Instance &record = getInstance(instance, "isLinkBroken");
+    requireLink(articulationID, link_index, "isLinkBroken");
+    for (size_t b = 0; b < breakable_joints.size(); b++) {
+        if (breakable_joints[b].articulationID == articulationID && breakable_joints[b].link_index == link_index) {
+            return record.broken[b] != 0;
+        }
+    }
+    return false;
+}
+
+uint PhysicsEngine::getBrokenLinkCount(uint instance) const {
+    return getInstance(instance, "getBrokenLinkCount").broken_count;
+}
+
+float PhysicsEngine::getLinkRuptureMoment(uint articulationID, uint link_index) const {
+    requireLink(articulationID, link_index, "getLinkRuptureMoment");
+    return articulations[articulationID].description.links[link_index].rupture_moment;
+}
+
+void PhysicsEngine::setBreakageEnabled(bool enabled) {
+    breakage_enabled = enabled;
+}
+
+bool PhysicsEngine::isBreakageEnabled() const {
+    return breakage_enabled;
 }
 
 vec3 PhysicsEngine::getLinkPointPosition(uint articulationID, uint link_index, const vec3 &rest_point, uint instance) const {

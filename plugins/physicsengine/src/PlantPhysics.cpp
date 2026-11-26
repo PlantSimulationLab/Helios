@@ -354,6 +354,9 @@ uint addPlantToPhysicsEngine(PhysicsEngine &engine, const Context &context, cons
         helios_runtime_error("ERROR (addPlantToPhysicsEngine): " + std::to_string(params.stiffness_scaled_links.size()) + " stiffness-scaled links were given with " + std::to_string(params.stiffness_scales.size()) +
                              " stiffness scales; give one scale per link.");
     }
+    if (!(params.modulus_of_rupture >= 0.f) || !std::isfinite(params.modulus_of_rupture)) {
+        helios_runtime_error("ERROR (addPlantToPhysicsEngine): The modulus of rupture must be zero or positive and finite, but " + std::to_string(params.modulus_of_rupture) + " was given.");
+    }
     std::vector<float> stiffness_scale(links.size(), 1.f);
     for (size_t k = 0; k < params.stiffness_scaled_links.size(); k++) {
         const uint link_index = params.stiffness_scaled_links[k];
@@ -409,6 +412,9 @@ uint addPlantToPhysicsEngine(PhysicsEngine &engine, const Context &context, cons
             physics_link.damping = scale * joint.damping;
             physics_link.armature = params.apply_joint_armature ? scale * joint.armature : 0.f;
             physics_link.max_rotation = params.max_joint_bend_degrees * float(M_PI) / 180.f;
+            if (link.type == ARTICULATION_LINK_INTERNODE && params.modulus_of_rupture > 0.f) {
+                physics_link.rupture_moment = params.modulus_of_rupture * float(M_PI) * link.radius * link.radius * link.radius / 4.f;
+            }
         } else if (stiffness_scale[i] != 1.f) {
             helios_runtime_error("ERROR (addPlantToPhysicsEngine): Stiffness-scaled link " + link.name + " of plant " + std::to_string(plantID) + " is welded to its parent, so it has no joint to scale.");
         }

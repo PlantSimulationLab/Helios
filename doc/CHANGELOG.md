@@ -83,6 +83,7 @@
 - Added `PlantPhysicsParameters::stiffness_scaled_links` and `stiffness_scales`, which scale chosen plant joints' stiffness, damping and armature, so that a flexible internode can stand for the welded internodes it carries.
 - Added `PhysicsEngineParameters::ground_friction` and `ground_rolling_friction`; without them the ground is frictionless when articulation collisions are enabled, so a fallen link slides or rolls on indefinitely.
 - Added `PhysicsEngine::getLinkPointPosition()` and a `NearestPlantOrgan::find()` that takes a simulation, which follow a plant's links where they are now rather than in their rest pose.
+- Added `PhysicsLink::rupture_moment` and `PlantPhysicsParameters::modulus_of_rupture`: a ball joint whose elastic moment passes its rupture moment breaks and hangs limp, separately in each simulation instance, until the instance is reset.
 
 ## Robotics
 - Added the robotics plug-in (`robotics`). `Robot` loads a robot from a URDF or MJCF file into a `PhysicsEngine` simulation, with servo-driven joints, inverse kinematics of its tool, the contact force on its tool, and a home pose, for each parallel simulation instance. Instances can be simulated and solved from separate threads.

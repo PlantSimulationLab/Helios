@@ -50,6 +50,10 @@ struct PhysicsEngineParameters {
     float ground_friction = 0.f;
     //! Rolling friction of contacts with the ground in meters (the lever arm of the resisting torque), used when ground_friction is positive. Without it a sphere, such as a fallen fruit, rolls on the ground indefinitely; a few millimeters stops it as soil and grass would.
     float ground_rolling_friction = 0.f;
+    //! Physics steps in a row that a joint's elastic moment must exceed its PhysicsLink::rupture_moment before the joint breaks, so that a transient spike (a branch whipping back) does not break it
+    int rupture_persistence_steps = 3;
+    //! Share of its damping a joint keeps once it has broken: the torn joint swings limp, damped enough to settle
+    float broken_joint_damping_fraction = 0.05f;
     //! Apply gravity
     bool gravity = true;
     //! Simulate each link welded to its parent (\ref PHYSICS_JOINT_WELDED) as part of the body of the nearest link above it that can move, or as part of the static world if none can, rather than as a body of its own.
@@ -136,6 +140,12 @@ struct PhysicsLink {
     float armature = 0;
     //! Maximum joint rotation in radians. Zero leaves the joint unlimited.
     float max_rotation = 0;
+    //! Elastic moment in N*m (stiffness times the joint's bend from its rest pose) past which a ball joint breaks, as wood breaks past its modulus of rupture. Zero, the default, never breaks.
+    /**
+     * A broken joint loses its spring and most of its damping and is no longer limited, so the link and its descendants hang from it as from a hinge. Breaking is separate in each simulation instance, and resetInstance()
+     * restores the joint. See PhysicsEngineParameters::rupture_persistence_steps and PhysicsEngineParameters::broken_joint_damping_fraction.
+     */
+    float rupture_moment = 0;
     //! Collision shapes of the link
     std::vector<PhysicsCollisionShape> shapes;
 };
@@ -411,6 +421,14 @@ ef PHYSICS_JOINT_DETACHABLE.
     //! Get the compiled MuJoCo model, for direct use of the MuJoCo API
     [[nodiscard]] mjModel_ *getMuJoCoModel() const;
 
+    //! Get the MuJoCo model one simulation instance runs on
+    /**
+     * This is the shared model of getMuJoCoModel() until a joint of the instance breaks (PhysicsLink::rupture_moment); from then until resetInstance() the instance runs on its own copy, in which its broken joints have no spring. Anything that
+     * computes dynamics on the instance's data (such as mj_forward()) should use this model.
+     * \param[in] instance ID of the simulation instance.
+     */
+    [[nodiscard]] mjModel_ *getMuJoCoModel(uint instance) const;
+
     //! Get the MuJoCo state of an instance, for direct use of the MuJoCo API
     /**
      * \param[in] instance ID of the simulation instance.
@@ -540,6 +558,29 @@ ef PHYSICS_JOINT_DETACHABLE.
      */
     [[nodiscard]] helios::vec3 getLinkPointPosition(uint articulationID, uint link_index, const helios::vec3 &rest_point, uint instance = 0) const;
 
+    //! Check whether a link's joint has broken (see PhysicsLink::rupture_moment)
+    /**
+     * \param[in] articulationID ID of the articulation returned by addArticulation().
+     * \param[in] link_index Index of the link within the articulation.
+     * \param[in] instance ID of the simulation instance.
+     */
+    [[nodiscard]] bool isLinkBroken(uint articulationID, uint link_index, uint instance = 0) const;
+
+    //! Get the number of joints broken in a simulation instance since it was created or last reset
+    /**
+     * \param[in] instance ID of the simulation instance.
+     */
+    [[nodiscard]] uint getBrokenLinkCount(uint instance = 0) const;
+
+    //! Get the rupture moment of a link's joint in N*m (PhysicsLink::rupture_moment); zero if it never breaks
+    [[nodiscard]] float getLinkRuptureMoment(uint articulationID, uint link_index) const;
+
+    //! Turn breaking of joints on or off for every instance (on by default). With it off, joints bend past their rupture moment without breaking, for example while a plant settles under gravity.
+    void setBreakageEnabled(bool enabled);
+
+    //! Check whether joints break past their rupture moment (see setBreakageEnabled())
+    [[nodiscard]] bool isBreakageEnabled() const;
+
     //! Disable informational messages
     void disableMessages();
 
@@ -604,7 +645,30 @@ private:
         std::vector<helios::vec3> box_velocities;
         std::vector<DetachForce> detach_forces;
         uint load_detachments = 0; // links released by load since the instance was created or reset
+        mjModel_ *own_model = nullptr; // the instance's own copy of the model once a joint has broken, with its broken joints unsprung; otherwise it runs on the shared model
+        std::vector<char> broken; // per entry of breakable_joints
+        std::vector<int> overloaded_steps; // consecutive steps each breakable joint has been past its rupture moment
+        uint broken_count = 0;
     };
+
+    // A joint that breaks past its rupture moment
+    struct BreakableJoint {
+        uint articulationID;
+        uint link_index;
+        int joint_ID;
+        int qpos_address;
+        int dof_address;
+        float rupture_moment;
+    };
+    std::vector<BreakableJoint> breakable_joints;
+    int rupture_persistence_steps = 3;
+    float broken_joint_damping_fraction = 0.05f;
+    bool breakage_enabled = true;
+
+    // The model an instance runs on: its own copy once a joint has broken, otherwise the shared one
+    [[nodiscard]] mjModel_ *instanceModel(const Instance &instance) const;
+    void checkRupture(Instance &instance) const;
+    void breakJoint(Instance &instance, size_t breakable) const;
 
     // Rest pose of a MuJoCo body, against which its current pose gives the rigid motion applied to its geometry
     struct BodyRestPose {
