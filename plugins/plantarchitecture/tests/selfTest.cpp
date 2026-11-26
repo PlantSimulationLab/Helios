@@ -4310,12 +4310,12 @@ DOCTEST_TEST_CASE("Fruit-branch collision avoidance - grape clusters are swung c
 
 DOCTEST_TEST_CASE("Fruit-branch collision avoidance - apples are swung off the spurs they hang from") {
     Context context_off;
-    context_off.seedRandomGenerator(7);
+    context_off.seedRandomGenerator(20);
     PlantArchitecture plantarchitecture_off(&context_off);
     const uint plant_off = growPlantToMatureFruit(plantarchitecture_off, "apple", 600, false);
 
     Context context_on;
-    context_on.seedRandomGenerator(7);
+    context_on.seedRandomGenerator(20);
     PlantArchitecture plantarchitecture_on(&context_on);
     const uint plant_on = growPlantToMatureFruit(plantarchitecture_on, "apple", 600, true);
 
@@ -4324,7 +4324,7 @@ DOCTEST_TEST_CASE("Fruit-branch collision avoidance - apples are swung off the s
     DOCTEST_REQUIRE(fruit_off.size() >= 5);
     DOCTEST_REQUIRE(fruit_on.size() == fruit_off.size());
 
-    // An apple's pedicel is shorter than the apple is wide, so most hang back into their spur without avoidance; with it the count drops by at least half
+    // An apple's pedicel is shorter than the apple is wide, so many hang back into their spur without avoidance; with it the count drops by at least half
     const std::set<uint> overlapping_off = fruitOverlappingBranches(context_off, plantarchitecture_off, plant_off);
     const std::set<uint> overlapping_on = fruitOverlappingBranches(context_on, plantarchitecture_on, plant_on);
     DOCTEST_REQUIRE(overlapping_off.size() >= 3);

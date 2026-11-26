@@ -2182,8 +2182,8 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     phytomer_parameters_apple.leaf.prototype_scale = 0.09;
     phytomer_parameters_apple.leaf.prototype = leaf_prototype;
 
-    // The peduncle of the model is the pedicel of one apple flower, 2-3 cm long.
-    phytomer_parameters_apple.peduncle.length = 0.025;
+    // The peduncle of the model is the pedicel of one apple flower: 38.9 +/- 3.5 mm long and 2.1 +/- 0.19 mm across at harvest ('Pinova' on M9, n = 30; Horbens et al. 2014, Ann. Bot. 113(1):137-146)
+    phytomer_parameters_apple.peduncle.length = 0.039;
     phytomer_parameters_apple.peduncle.radius = 0.001;
     phytomer_parameters_apple.peduncle.pitch.uniformDistribution(40, 70);
     phytomer_parameters_apple.peduncle.roll = 90;
@@ -2194,8 +2194,8 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     phytomer_parameters_apple.inflorescence.roll = 0;
     phytomer_parameters_apple.inflorescence.flower_prototype_scale = 0.03;
     phytomer_parameters_apple.inflorescence.flower_prototype_function = AppleFlowerPrototype;
-    // An apple about 8 cm across.
-    phytomer_parameters_apple.inflorescence.fruit_prototype_scale = 0.08;
+    // An apple about 71 mm across, as Gala and Honeycrisp are at harvest (about 71 mm and 140-165 g in Michigan State maturity sampling, 2023-2024). The prototype is 0.98 of this scale across.
+    phytomer_parameters_apple.inflorescence.fruit_prototype_scale = 0.0725;
     phytomer_parameters_apple.inflorescence.fruit_prototype_function = AppleFruitPrototype;
     // The fruit's reflectivity spectrum and waxy surface layer are set as primitive data by AppleFruitPrototype(). The class map is the skin's blush pattern, whose classes scale the body under the
     // layer relative to that spectrum (utilities/leaf_class_maps)
@@ -2390,8 +2390,8 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     phytomer_parameters_apple.leaf.prototype_scale = 0.09;
     phytomer_parameters_apple.leaf.prototype = leaf_prototype;
 
-    // The peduncle of the model is the pedicel of one apple flower, 2-3 cm long.
-    phytomer_parameters_apple.peduncle.length = 0.025;
+    // The peduncle of the model is the pedicel of one apple flower: 38.9 +/- 3.5 mm long and 2.1 +/- 0.19 mm across at harvest ('Pinova' on M9, n = 30; Horbens et al. 2014, Ann. Bot. 113(1):137-146)
+    phytomer_parameters_apple.peduncle.length = 0.039;
     phytomer_parameters_apple.peduncle.radius = 0.001;
     phytomer_parameters_apple.peduncle.pitch.uniformDistribution(40, 70);
     phytomer_parameters_apple.peduncle.roll = 90;
@@ -2402,8 +2402,8 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     phytomer_parameters_apple.inflorescence.roll = 0;
     phytomer_parameters_apple.inflorescence.flower_prototype_scale = 0.03;
     phytomer_parameters_apple.inflorescence.flower_prototype_function = AppleFlowerPrototype;
-    // An apple about 8 cm across.
-    phytomer_parameters_apple.inflorescence.fruit_prototype_scale = 0.08;
+    // An apple about 71 mm across, as Gala and Honeycrisp are at harvest (about 71 mm and 140-165 g in Michigan State maturity sampling, 2023-2024). The prototype is 0.98 of this scale across.
+    phytomer_parameters_apple.inflorescence.fruit_prototype_scale = 0.0725;
     phytomer_parameters_apple.inflorescence.fruit_prototype_function = AppleFruitPrototype;
     // The fruit's reflectivity spectrum and waxy surface layer are set as primitive data by AppleFruitPrototype(). The class map is the skin's blush pattern, whose classes scale the body under the
     // layer relative to that spectrum (utilities/leaf_class_maps)
